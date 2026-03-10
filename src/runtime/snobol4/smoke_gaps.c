@@ -124,7 +124,7 @@ static void test_collections(void) {
 
     /* sno_array_create("1:4") */
     SnoVal arr = sno_array_create(SNO_STR_VAL("1:4"));
-    CHECK("array_create returns non-null", SNO_TYPE(arr) != SNO_TYPE_NULL);
+    CHECK("array_create returns non-null", arr.type != SNO_NULL);
 
     sno_subscript_set(arr, SNO_INT_VAL(1), SNO_INT_VAL(18));
     sno_subscript_set(arr, SNO_INT_VAL(2), SNO_INT_VAL(33));
@@ -143,11 +143,11 @@ static void test_collections(void) {
     CHECK("table set/get 'key'='value'", strcmp(sno_to_str(got), "value") == 0);
 
     /* sno_tree_new — the tree DATA type */
-    SnoVal t = sno_tree_new(SNO_STR_VAL("snoId"),
-                             SNO_STR_VAL("hello"),
-                             SNO_INT_VAL(0),
-                             SNO_NULL_VAL);
-    CHECK("tree_new returns non-null", SNO_TYPE(t) != SNO_TYPE_NULL);
+    SnoVal t = sno_make_tree(SNO_STR_VAL("snoId"),
+                              SNO_STR_VAL("hello"),
+                              SNO_INT_VAL(0),
+                              SNO_NULL_VAL);
+    CHECK("tree_new returns non-null", t.type != SNO_NULL);
     SnoVal ttype = sno_field_get(t, "t");
     SnoVal tval  = sno_field_get(t, "v");
     CHECK("tree t field = 'snoId'",  strcmp(sno_to_str(ttype), "snoId") == 0);

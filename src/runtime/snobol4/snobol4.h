@@ -316,10 +316,73 @@ extern char sno_digits[11];  /* digits constant from global.inc */
 void sno_runtime_init(void);  /* call once at program start */
 
 /* ============================================================
+ * Pattern constructors (snobol4_pattern.c)
+ * ============================================================ */
+
+SnoVal sno_pat_lit(const char *s);
+SnoVal sno_pat_span(const char *chars);
+SnoVal sno_pat_break_(const char *chars);
+SnoVal sno_pat_any_cs(const char *chars);
+SnoVal sno_pat_notany(const char *chars);
+SnoVal sno_pat_len(int64_t n);
+SnoVal sno_pat_pos(int64_t n);
+SnoVal sno_pat_rpos(int64_t n);
+SnoVal sno_pat_tab(int64_t n);
+SnoVal sno_pat_rtab(int64_t n);
+SnoVal sno_pat_arb(void);
+SnoVal sno_pat_arbno(SnoVal inner);
+SnoVal sno_pat_rem(void);
+SnoVal sno_pat_fence(void);
+SnoVal sno_pat_fence_p(SnoVal inner);
+SnoVal sno_pat_fail(void);
+SnoVal sno_pat_abort(void);
+SnoVal sno_pat_succeed(void);
+SnoVal sno_pat_bal(void);
+SnoVal sno_pat_epsilon(void);
+SnoVal sno_pat_cat(SnoVal left, SnoVal right);
+SnoVal sno_pat_alt(SnoVal left, SnoVal right);
+SnoVal sno_pat_ref(const char *name);
+SnoVal sno_pat_assign_imm(SnoVal child, SnoVal var);
+SnoVal sno_pat_assign_cond(SnoVal child, SnoVal var);
+SnoVal sno_var_as_pattern(SnoVal v);
+SnoVal sno_pat_user_call(const char *name, SnoVal *args, int nargs);
+
+/* Pattern matching */
+int  sno_match_pattern(SnoVal pat, const char *subject);
+int  sno_match_and_replace(SnoVal *subject, SnoVal pat, SnoVal replacement);
+
+/* ============================================================
+ * Array/Table/Tree SnoVal-level API (snobol4_pattern.c)
+ * ============================================================ */
+
+SnoVal sno_array_create(SnoVal spec);            /* ARRAY('lo:hi') */
+SnoVal sno_subscript_get(SnoVal arr, SnoVal idx);
+void   sno_subscript_set(SnoVal arr, SnoVal idx, SnoVal val);
+SnoVal sno_subscript_get2(SnoVal arr, SnoVal i, SnoVal j);
+void   sno_subscript_set2(SnoVal arr, SnoVal i, SnoVal j, SnoVal val);
+SnoVal sno_make_tree(SnoVal tag, SnoVal val, SnoVal n, SnoVal children);
+
+/* Value stack aliases */
+SnoVal sno_push_val(SnoVal x);
+SnoVal sno_pop_val(void);
+SnoVal sno_top_val(void);
+
+/* Function registration */
+void   sno_register_fn(const char *name, SnoVal (*fn)(SnoVal*, int), int min_args, int max_args);
+void   sno_define_spec(SnoVal spec);
+SnoVal sno_apply_val(SnoVal fnval, SnoVal *args, int nargs);
+SnoVal sno_eval(SnoVal expr);
+SnoVal sno_opsyn(SnoVal newname, SnoVal oldname, SnoVal type);
+SnoVal sno_sort_fn(SnoVal arr);
+
+/* SNO_TABLE_VAL macro */
+#define SNO_TABLE_VAL(tbl_) ((SnoVal){ .type = SNO_TABLE, .tbl = (tbl_) })
+#define SNO_ARRAY_VAL(a_)   ((SnoVal){ .type = SNO_ARRAY, .a   = (a_)   })
+
+/* ============================================================
  * Pattern matching interface (matches existing runtime.h)
  * ============================================================ */
 
-/* These match the existing sno_enter/sno_exit arena API */
 #include "../runtime.h"
 
 #endif /* SNOBOL4_H */
