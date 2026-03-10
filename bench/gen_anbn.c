@@ -106,6 +106,7 @@ static str_t S(S_t **zz, int entry) {
 
 /* Public driver — wraps the static-scoped generated engine */
 int engine_anbn(const char *s, int n) {
+    sno_arena_reset();   /* reset arena before each match */
     Sigma = s; Omega = n; Delta = 0;
     S_t *frame = 0;
     int first = 1;

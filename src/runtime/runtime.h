@@ -39,5 +39,6 @@ void sno_output_cstr(const char *s);
 
 void *sno_enter(void **frame_ptr, size_t frame_size);
 void  sno_exit(void **frame_ptr);
+void  sno_arena_reset(void);   /* call between matches — resets arena to empty */
 
 #endif /* SNOBOL4_TINY_RUNTIME_H */
