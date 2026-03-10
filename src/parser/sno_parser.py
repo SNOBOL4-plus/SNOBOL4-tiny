@@ -240,7 +240,9 @@ def tokenise(source, base_dir='.'):
     all_tokens = []
     for entry in logical_lines:
         if entry[0] == '__INCLUDE__':
-            all_tokens.extend(entry[2])
+            # Strip the trailing EOF sentinel from the included token list
+            inc_toks = [t for t in entry[2] if t.kind != 'EOF']
+            all_tokens.extend(inc_toks)
         else:
             text, lineno = entry
             line_toks = []
