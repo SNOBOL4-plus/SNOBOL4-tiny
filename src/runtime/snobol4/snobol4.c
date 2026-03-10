@@ -13,6 +13,7 @@
 #include <math.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <inttypes.h>
 
 /* ============================================================
  * Runtime initialization
