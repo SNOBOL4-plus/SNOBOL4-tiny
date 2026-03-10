@@ -486,6 +486,8 @@ static unsigned _var_hash(const char *name) {
 SnoVal sno_var_get(const char *name) {
     _var_init();
     if (!name) return SNO_NULL_VAL;
+    /* Special I/O variables */
+    if (strcmp(name, "INPUT") == 0) return sno_input_read();
     unsigned h = _var_hash(name);
     for (VarEntry *e = _var_buckets[h]; e; e = e->next)
         if (strcmp(e->name, name) == 0) return e->val;
@@ -496,6 +498,8 @@ void sno_var_set(const char *name, SnoVal val) {
     _var_init();
     if (!name) return;
     sno_comm_var(name, val);
+    /* Special I/O variables */
+    if (strcmp(name, "OUTPUT") == 0) { sno_output_val(val); return; }
     unsigned h = _var_hash(name);
     for (VarEntry *e = _var_buckets[h]; e; e = e->next) {
         if (strcmp(e->name, name) == 0) { e->val = val; return; }
