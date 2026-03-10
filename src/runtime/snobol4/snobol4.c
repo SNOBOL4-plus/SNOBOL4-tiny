@@ -47,9 +47,23 @@ void sno_comm_stno(int n) {
 
 void sno_comm_var(const char *name, SnoVal val) {
     if (sno_monitor_fd < 0) return;
-    /* skip noisy internal variables */
     if (!name) return;
     if (name[0] == '_') return;          /* internal scratch vars */
+    /* SNO_WATCH: comma-separated watchlist. If set, only emit watched names.
+     * If unset, emit all (firehose — useful for calibration only). */
+    const char *watch = getenv("SNO_WATCH");
+    if (watch) {
+        const char *p = watch;
+        size_t nlen = strlen(name);
+        int found = 0;
+        while (*p) {
+            if (strncmp(p, name, nlen) == 0 &&
+                (p[nlen] == ',' || p[nlen] == '\0')) { found = 1; break; }
+            while (*p && *p != ',') p++;
+            if (*p == ',') p++;
+        }
+        if (!found) return;
+    }
     const char *s = sno_to_str(val);
     dprintf(sno_monitor_fd, "VAR %s \"%s\"\n", name, s ? s : "<null>");
 }
