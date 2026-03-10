@@ -105,7 +105,7 @@ class Emitter:
             self.emit_node(node.left,  left_id,  gamma=f"{right_id}_alpha", omega=f"{nid}_beta")
             self.emit_node(node.right, right_id, gamma=gamma,               omega=f"{left_id}_beta")
             self.emit(f"{nid}_beta:")
-            self.emit(f"    goto {left_id}_beta;")
+            self.emit(f"    goto {omega};")
 
         elif isinstance(node, Alt):
             left_id  = self.fresh_id("alt_l")
@@ -162,8 +162,8 @@ def emit_program(graph: Graph, root_name: str,
         em.emit_node(node, nid=name,
                      gamma=f"{name}_MATCH_SUCCESS",
                      omega=f"{name}_MATCH_FAIL")
-        em.emit(f"{name}_MATCH_SUCCESS: /* matched */ ;")
-        em.emit(f"{name}_MATCH_FAIL:    /* failed  */ ;")
+        em.emit(f"{name}_MATCH_SUCCESS: return 0; /* matched */")
+        em.emit(f"{name}_MATCH_FAIL:    return 1; /* failed  */")
 
     # Assemble final C file
     out = []
@@ -193,7 +193,6 @@ def emit_program(graph: Graph, root_name: str,
         out.append("    " + line if include_main else line)
 
     if include_main:
-        out.append("    return 0;")
         out.append("}")
 
     return "\n".join(out) + "\n"
