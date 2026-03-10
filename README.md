@@ -155,6 +155,30 @@ Test corpus: `SNOBOL4-corpus` (shared submodule), Gimpel library, Shafto AI corp
 
 ---
 
+## Open Decisions
+
+Two foundational questions are currently on the table. See
+[`doc/DECISIONS.md`](doc/DECISIONS.md) for the full analysis.
+
+**Decision 1 — Compiler implementation language:**
+Python now (fast iteration) → SNOBOL4 later (self-hosting), using the Python
+compiler as a permanent bootstrap oracle. This mirrors the lbForth strategy:
+Lisp metacompiler → working kernel → Forth metacompiler replaces the Lisp.
+Needs explicit sign-off before Sprint 5.
+
+**Decision 2 — What language does SNOBOL4-tiny implement first:**
+The right sequence appears to be B → C → D:
+- **B** (Sprints 0–4): single pattern, stdin/stdout, no naming — already underway
+- **C** (Sprints 5–6): two named patterns with mutual recursion — the minimum
+  for a real language, validates the graph IR, first thing no other pattern
+  language can express
+- **D** (Sprint 7+): full SNOBOL4 statement model — recognizable SNOBOL4,
+  programs run unchanged on CSNOBOL4/SPITBOL
+
+The question of whether Stage C deserves its own name is open.
+
+---
+
 ## Repository Layout
 
 ```

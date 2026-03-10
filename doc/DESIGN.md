@@ -172,3 +172,12 @@ Derivable (write in SNOBOL4, not as C templates):
 ARBNO, TAB, RTAB, and most compound patterns.
 
 See `doc/BOOTSTRAP.md` for the full three-phase bootstrap strategy.
+
+---
+
+## Open Decisions
+
+See `doc/DECISIONS.md` for the two foundational questions currently on the
+table: (1) what language to write the compiler in, and (2) what language
+SNOBOL4-tiny implements first (full SNOBOL4 vs. a minimal sublanguage staged
+as B → C → D). Conclusions will be copied here once decided.
