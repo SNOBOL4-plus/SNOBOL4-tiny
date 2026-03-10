@@ -1,198 +1,419 @@
 """
-emit_c.py — SNOBOL4-tiny C-with-gotos code generator
+emit_c.py — SNOBOL4-tiny C-with-gotos code generator  (Sprint 6 revision)
 
-Takes an IR Graph and emits a self-contained C file that:
-  - declares all static storage in a .bss-equivalent (static globals)
-  - emits each node as inlined alpha/beta/gamma/omega labels
-  - wires gamma/omega according to the node's position in the pattern
+Sprint 6 adds the function-per-pattern model needed for Ref / mutual recursion.
+When the graph contains NO Ref nodes the original flat-goto path is used
+unchanged (Sprints 0-5 backward compatibility).
 
-Entry point: emit_program(graph, root_name, subject) -> str
+Function-per-pattern convention (mirrors test_sno_2.c / test_sno_3.c gold std):
+    str_t NAME(NAME_t **zz, int entry)
+    entry 0 = alpha (first call, allocate frame)
+    entry 1 = beta  (backtrack)
+    return: SNO_EMPTY (.ptr==0) = failure; anything else = matched span
 
-The emitter resolves Ref nodes lazily: a Ref("X") emits gotos to
-X_alpha / X_beta, which must be defined elsewhere in the same output.
+All match state is global: Sigma (subject), Omega (length), Delta (cursor).
 """
 
 from ir import (Graph, Node, Lit, Any as IrAny, Span, Break,
                 Len, Pos, Rpos, Arb, Arbno, Alt, Cat, Assign, Ref)
 
 
-class Emitter:
-    def __init__(self, graph: Graph):
-        self.graph = graph
-        self.lines: list[str] = []
+# ---------------------------------------------------------------------------
+# helpers
+# ---------------------------------------------------------------------------
+
+def _has_ref(node):
+    if isinstance(node, Ref): return True
+    if isinstance(node, (Alt, Cat)):    return _has_ref(node.left) or _has_ref(node.right)
+    if isinstance(node, (Arbno, Assign)): return _has_ref(node.child)
+    return False
+
+def _graph_has_ref(graph):
+    return any(_has_ref(graph.get(n)) for n in graph.names())
+
+
+# ---------------------------------------------------------------------------
+# FlatEmitter — original model (Sprints 0-5, no Ref)
+# ---------------------------------------------------------------------------
+
+class FlatEmitter:
+    def __init__(self, graph):
+        self.graph   = graph
+        self.lines   = []
+        self.statics = []
         self.counter = 0
-        self.statics: list[str] = []  # static variable declarations
 
-    def fresh_id(self, prefix: str) -> str:
+    def fresh(self, p):
         self.counter += 1
-        return f"{prefix}{self.counter}"
+        return f"{p}{self.counter}"
 
-    def emit(self, line: str):
-        self.lines.append(line)
+    def L(self, s):  self.lines.append(s)
+    def S(self, s):  self.statics.append(s)
 
-    def static(self, decl: str):
-        self.statics.append(decl)
-
-    def emit_node(self, node: Node, nid: str,
-                  gamma: str, omega: str):
-        """Emit C labels for one IR node."""
-
+    def emit_node(self, node, nid, gamma, omega):
         if isinstance(node, Lit):
-            n = len(node.s.encode())
-            safe = node.s.replace('\\', '\\\\').replace('"', '\\"')
-            self.static(f"static int64_t {nid}_saved_cursor;")
-            self.emit(f"{nid}_alpha:")
-            self.emit(f"    if (cursor + {n} > subject_len) goto {omega};")
-            self.emit(f'    if (memcmp(subject + cursor, "{safe}", {n}) != 0) goto {omega};')
-            self.emit(f"    {nid}_saved_cursor = cursor;")
-            self.emit(f"    cursor += {n};")
-            self.emit(f"    goto {gamma};")
-            self.emit(f"{nid}_beta:")
-            self.emit(f"    cursor = {nid}_saved_cursor;")
-            self.emit(f"    goto {omega};")
+            n    = len(node.s.encode())
+            safe = node.s.replace('\\','\\\\').replace('"','\\"')
+            self.S(f"static int64_t {nid}_saved_cursor;")
+            self.L(f"{nid}_alpha:")
+            self.L(f"    if (cursor + {n} > subject_len) goto {omega};")
+            self.L(f'    if (memcmp(subject + cursor, "{safe}", {n}) != 0) goto {omega};')
+            self.L(f"    {nid}_saved_cursor = cursor;  cursor += {n};  goto {gamma};")
+            self.L(f"{nid}_beta:  cursor = {nid}_saved_cursor;  goto {omega};")
 
         elif isinstance(node, Pos):
-            self.emit(f"{nid}_alpha:")
-            self.emit(f"    if (cursor != {node.n}) goto {omega};")
-            self.emit(f"    goto {gamma};")
-            self.emit(f"{nid}_beta:")
-            self.emit(f"    goto {omega};")
+            self.L(f"{nid}_alpha:  if (cursor != {node.n}) goto {omega};  goto {gamma};")
+            self.L(f"{nid}_beta:   goto {omega};")
 
         elif isinstance(node, Rpos):
-            self.emit(f"{nid}_alpha:")
-            self.emit(f"    if (cursor != subject_len - {node.n}) goto {omega};")
-            self.emit(f"    goto {gamma};")
-            self.emit(f"{nid}_beta:")
-            self.emit(f"    goto {omega};")
+            self.L(f"{nid}_alpha:  if (cursor != subject_len - {node.n}) goto {omega};  goto {gamma};")
+            self.L(f"{nid}_beta:   goto {omega};")
 
         elif isinstance(node, Len):
-            self.static(f"static int64_t {nid}_saved_cursor;")
-            self.emit(f"{nid}_alpha:")
-            self.emit(f"    if (cursor + {node.n} > subject_len) goto {omega};")
-            self.emit(f"    {nid}_saved_cursor = cursor;")
-            self.emit(f"    cursor += {node.n};")
-            self.emit(f"    goto {gamma};")
-            self.emit(f"{nid}_beta:")
-            self.emit(f"    cursor = {nid}_saved_cursor;")
-            self.emit(f"    goto {omega};")
+            self.S(f"static int64_t {nid}_saved_cursor;")
+            self.L(f"{nid}_alpha:")
+            self.L(f"    if (cursor + {node.n} > subject_len) goto {omega};")
+            self.L(f"    {nid}_saved_cursor = cursor;  cursor += {node.n};  goto {gamma};")
+            self.L(f"{nid}_beta:  cursor = {nid}_saved_cursor;  goto {omega};")
 
         elif isinstance(node, Span):
-            safe_cs = node.charset.replace('\\', '\\\\').replace('"', '\\"')
-            self.static(f"static int64_t {nid}_saved_cursor;")
-            self.emit(f"{nid}_alpha:")
-            self.emit(f"    {{")
-            self.emit(f'        const char *cs = "{safe_cs}";')
-            self.emit(f"        int64_t start = cursor;")
-            self.emit(f"        while (cursor < subject_len && strchr(cs, subject[cursor])) cursor++;")
-            self.emit(f"        if (cursor == start) goto {omega};")
-            self.emit(f"        {nid}_saved_cursor = start;")
-            self.emit(f"    }}")
-            self.emit(f"    goto {gamma};")
-            self.emit(f"{nid}_beta:")
-            self.emit(f"    if (cursor <= {nid}_saved_cursor + 1) {{")
-            self.emit(f"        cursor = {nid}_saved_cursor;")
-            self.emit(f"        goto {omega};")
-            self.emit(f"    }}")
-            self.emit(f"    cursor--;")
-            self.emit(f"    goto {gamma};")
+            safe = node.charset.replace('\\','\\\\').replace('"','\\"')
+            self.S(f"static int64_t {nid}_saved_cursor;")
+            self.L(f"{nid}_alpha: {{")
+            self.L(f'    const char *cs = "{safe}"; int64_t st = cursor;')
+            self.L(f"    while (cursor < subject_len && strchr(cs, subject[cursor])) cursor++;")
+            self.L(f"    if (cursor == st) goto {omega};")
+            self.L(f"    {nid}_saved_cursor = st; }}")
+            self.L(f"    goto {gamma};")
+            self.L(f"{nid}_beta:")
+            self.L(f"    if (cursor <= {nid}_saved_cursor + 1) {{ cursor = {nid}_saved_cursor; goto {omega}; }}")
+            self.L(f"    cursor--;  goto {gamma};")
 
         elif isinstance(node, Cat):
-            # Inline both children; wire P_gamma -> Q_alpha, Q_omega -> P_beta
-            left_id  = self.fresh_id("cat_l")
-            right_id = self.fresh_id("cat_r")
-            self.emit(f"{nid}_alpha: /* CAT — enter left */")
-            self.emit(f"    goto {left_id}_alpha;")
-            self.emit_node(node.left,  left_id,  gamma=f"{right_id}_alpha", omega=f"{nid}_beta")
-            self.emit_node(node.right, right_id, gamma=gamma,               omega=f"{left_id}_beta")
-            self.emit(f"{nid}_beta:")
-            self.emit(f"    goto {omega};")
+            li = self.fresh("cat_l"); ri = self.fresh("cat_r")
+            self.L(f"{nid}_alpha:  goto {li}_alpha;")
+            self.emit_node(node.left,  li, gamma=f"{ri}_alpha",  omega=f"{nid}_beta")
+            self.emit_node(node.right, ri, gamma=gamma,           omega=f"{li}_beta")
+            self.L(f"{nid}_beta:  goto {omega};")
 
         elif isinstance(node, Alt):
-            left_id  = self.fresh_id("alt_l")
-            right_id = self.fresh_id("alt_r")
-            self.emit(f"{nid}_alpha: /* ALT — try left */")
-            self.emit(f"    goto {left_id}_alpha;")
-            self.emit_node(node.left,  left_id,  gamma=gamma, omega=f"{right_id}_alpha")
-            self.emit_node(node.right, right_id, gamma=gamma, omega=omega)
-            self.emit(f"{nid}_beta:")
-            self.emit(f"    goto {right_id}_beta;")
+            li = self.fresh("alt_l"); ri = self.fresh("alt_r")
+            self.L(f"{nid}_alpha:  goto {li}_alpha;")
+            self.emit_node(node.left,  li, gamma=gamma, omega=f"{ri}_alpha")
+            self.emit_node(node.right, ri, gamma=gamma, omega=omega)
+            self.L(f"{nid}_beta:  goto {ri}_beta;")
 
         elif isinstance(node, Assign):
-            child_id = self.fresh_id("assign_c")
-            var_safe = node.var.upper()
-            self.static(f"static str_t var_{var_safe};")
-            self.emit(f"{nid}_alpha:")
-            self.static(f"static int64_t {nid}_start;")
-            self.emit(f"    {nid}_start = cursor;")
-            self.emit(f"    goto {child_id}_alpha;")
-            self.emit_node(node.child, child_id,
-                           gamma=f"{nid}_do_assign",
-                           omega=omega)
-            self.emit(f"{nid}_do_assign:")
-            self.emit(f"    var_{var_safe}.ptr = subject + {nid}_start;")
-            self.emit(f"    var_{var_safe}.len = cursor - {nid}_start;")
-            if var_safe == "OUTPUT":
-                self.emit(f"    sno_output(var_{var_safe});")
-            self.emit(f"    goto {gamma};")
-            self.emit(f"{nid}_beta:")
-            self.emit(f"    goto {child_id}_beta;")
+            ci      = self.fresh("assign_c")
+            var_up  = node.var.upper()
+            self.S(f"static str_t var_{var_up};")
+            self.S(f"static int64_t {nid}_start;")
+            self.L(f"{nid}_alpha:  {nid}_start = cursor;  goto {ci}_alpha;")
+            self.emit_node(node.child, ci, gamma=f"{nid}_ok", omega=omega)
+            self.L(f"{nid}_ok:")
+            self.L(f"    var_{var_up}.ptr = subject + {nid}_start;")
+            self.L(f"    var_{var_up}.len = cursor - {nid}_start;")
+            if var_up == "OUTPUT":
+                self.L(f"    sno_output(var_{var_up});")
+            self.L(f"    goto {gamma};")
+            self.L(f"{nid}_beta:  goto {ci}_beta;")
 
         elif isinstance(node, Arbno):
-            # ARBNO(child): zero-or-more non-overlapping matches of child.
-            # α: succeed immediately (zero iterations).
-            # β: push cursor, try child_α fresh (one more iteration).
-            # child_γ: child matched — succeed again (cursor advanced).
-            # child_ω: child failed — restore cursor, propagate failure.
-            child_id = self.fresh_id("arbno_c")
-            self.static(f"static int64_t {nid}_cursors[64];")
-            self.static(f"static int     {nid}_depth;")
-            self.emit(f"{nid}_alpha:")
-            self.emit(f"    {nid}_depth = -1;")
-            self.emit(f"    goto {gamma};              /* ARBNO: zero matches → succeed */")
-            self.emit(f"{nid}_beta:")
-            self.emit(f"    {nid}_depth++;")
-            self.emit(f"    if ({nid}_depth >= 64) goto {omega};  /* stack overflow */")
-            self.emit(f"    {nid}_cursors[{nid}_depth] = cursor;")
-            self.emit(f"    goto {child_id}_alpha;")
-            self.emit_node(node.child, child_id,
-                           gamma=f"{nid}_child_ok",
-                           omega=f"{nid}_child_fail")
-            self.emit(f"{nid}_child_ok:")
-            self.emit(f"    goto {gamma};              /* child matched → ARBNO succeeds again */")
-            self.emit(f"{nid}_child_fail:")
-            self.emit(f"    cursor = {nid}_cursors[{nid}_depth];")
-            self.emit(f"    {nid}_depth--;")
-            self.emit(f"    goto {omega};              /* child failed → ARBNO fails */")
+            ci = self.fresh("arbno_c")
+            self.S(f"static int64_t {nid}_cursors[64];")
+            self.S(f"static int     {nid}_depth;")
+            self.L(f"{nid}_alpha:  {nid}_depth = -1;  goto {gamma};")
+            self.L(f"{nid}_beta:")
+            self.L(f"    {nid}_depth++;")
+            self.L(f"    if ({nid}_depth >= 64) goto {omega};")
+            self.L(f"    {nid}_cursors[{nid}_depth] = cursor;")
+            self.L(f"    goto {ci}_alpha;")
+            self.emit_node(node.child, ci,
+                           gamma=f"{nid}_child_ok", omega=f"{nid}_child_fail")
+            self.L(f"{nid}_child_ok:   goto {gamma};")
+            self.L(f"{nid}_child_fail:")
+            self.L(f"    cursor = {nid}_cursors[{nid}_depth];  {nid}_depth--;")
+            self.L(f"    goto {omega};")
 
         elif isinstance(node, Ref):
-            # Forward / backward reference to a named top-level pattern
-            self.emit(f"{nid}_alpha:")
-            self.emit(f"    goto {node.name}_alpha;")
-            self.emit(f"{nid}_beta:")
-            self.emit(f"    goto {node.name}_beta;")
+            self.L(f"{nid}_alpha:  goto {node.name}_alpha;")
+            self.L(f"{nid}_beta:   goto {node.name}_beta;")
 
         else:
-            self.emit(f"/* TODO: {type(node).__name__} not yet implemented */")
-            self.emit(f"{nid}_alpha: goto {omega};")
-            self.emit(f"{nid}_beta:  goto {omega};")
+            self.L(f"/* TODO {type(node).__name__} */")
+            self.L(f"{nid}_alpha: goto {omega};  {nid}_beta: goto {omega};")
 
 
-def emit_program(graph: Graph, root_name: str,
-                 subject: str = "", include_main: bool = True) -> str:
+# ---------------------------------------------------------------------------
+# FuncEmitter — function-per-pattern model (Sprint 6+)
+# ---------------------------------------------------------------------------
+
+class FuncEmitter:
+    ALPHA = 0
+    BETA  = 1
+
+    def __init__(self, graph):
+        self.graph    = graph
+        self.counter  = 0
+        self.fields   = {}   # name -> list[str]
+        self.body     = {}   # name -> list[str]
+        self.var_decls = set()
+
+    def fresh(self, p):
+        self.counter += 1
+        return f"{p}{self.counter}"
+
+    def F(self, pat, s):  self.fields.setdefault(pat, []).append(s)
+    def L(self, pat, s):  self.body.setdefault(pat, []).append(s)
+
+    def emit_node(self, pat, node, nid, gamma, omega):
+        L = lambda s: self.L(pat, s)
+
+        if isinstance(node, Alt):
+            li = self.fresh("al"); ri = self.fresh("ar")
+            self.F(pat, f"    int {nid}_i;")
+            L(f"{nid}_alpha:")
+            L(f"    z->{nid}_i = 1;  goto {li}_alpha;")
+            self.emit_node(pat, node.left,  li,
+                           gamma=f"{nid}_lg", omega=f"{nid}_lo")
+            L(f"{nid}_lg:  z->{nid}_i = 1;  goto {gamma};")
+            L(f"{nid}_lo:  z->{nid}_i = 2;  goto {ri}_alpha;")
+            self.emit_node(pat, node.right, ri,
+                           gamma=f"{nid}_rg", omega=omega)
+            L(f"{nid}_rg:  z->{nid}_i = 2;  goto {gamma};")
+            L(f"{nid}_beta:")
+            L(f"    if (z->{nid}_i == 1) goto {li}_beta;")
+            L(f"    if (z->{nid}_i == 2) goto {ri}_beta;")
+            L(f"    goto {omega};")
+
+        elif isinstance(node, Lit):
+            n    = len(node.s.encode())
+            safe = node.s.replace('\\','\\\\').replace('"','\\"')
+            self.F(pat, f"    int64_t {nid}_saved;")
+            L(f"{nid}_alpha:")
+            L(f"    if (Delta + {n} > Omega) goto {omega};")
+            L(f'    if (memcmp(Sigma + Delta, "{safe}", {n}) != 0) goto {omega};')
+            L(f"    z->{nid}_saved = Delta;  Delta += {n};  goto {gamma};")
+            L(f"{nid}_beta:  Delta = z->{nid}_saved;  goto {omega};")
+
+        elif isinstance(node, Pos):
+            L(f"{nid}_alpha:  if (Delta != {node.n}) goto {omega};  goto {gamma};")
+            L(f"{nid}_beta:   goto {omega};")
+
+        elif isinstance(node, Rpos):
+            L(f"{nid}_alpha:  if (Delta != Omega - {node.n}) goto {omega};  goto {gamma};")
+            L(f"{nid}_beta:   goto {omega};")
+
+        elif isinstance(node, Len):
+            self.F(pat, f"    int64_t {nid}_saved;")
+            L(f"{nid}_alpha:")
+            L(f"    if (Delta + {node.n} > Omega) goto {omega};")
+            L(f"    z->{nid}_saved = Delta;  Delta += {node.n};  goto {gamma};")
+            L(f"{nid}_beta:  Delta = z->{nid}_saved;  goto {omega};")
+
+        elif isinstance(node, Span):
+            safe = node.charset.replace('\\','\\\\').replace('"','\\"')
+            self.F(pat, f"    int64_t {nid}_saved;")
+            L(f"{nid}_alpha: {{")
+            L(f'    const char *cs = "{safe}"; int64_t st = Delta;')
+            L(f"    while (Delta < Omega && strchr(cs, Sigma[Delta])) Delta++;")
+            L(f"    if (Delta == st) goto {omega};")
+            L(f"    z->{nid}_saved = st; }}")
+            L(f"    goto {gamma};")
+            L(f"{nid}_beta:")
+            L(f"    if (Delta <= z->{nid}_saved + 1) {{ Delta = z->{nid}_saved; goto {omega}; }}")
+            L(f"    Delta--;  goto {gamma};")
+
+        elif isinstance(node, Cat):
+            li = self.fresh("cl"); ri = self.fresh("cr")
+            self.F(pat, f"    int {nid}_entered;")
+            L(f"{nid}_alpha:  z->{nid}_entered = 0;  goto {li}_alpha;")
+            self.emit_node(pat, node.left,  li,
+                           gamma=f"{nid}_li_ok", omega=f"{nid}_beta")
+            L(f"{nid}_li_ok:")
+            L(f"    z->{nid}_entered = 1;  goto {ri}_alpha;")
+            self.emit_node(pat, node.right, ri, gamma=gamma, omega=f"{nid}_ri_fail")
+            # Right child failed: clear entered, backtrack left
+            L(f"{nid}_ri_fail:")
+            L(f"    z->{nid}_entered = 0;  goto {li}_beta;")
+            # Cat beta: retry right if entered; otherwise backtrack left
+            L(f"{nid}_beta:")
+            L(f"    if (z->{nid}_entered) goto {ri}_beta;")
+            L(f"    goto {omega};")
+
+        elif isinstance(node, Assign):
+            ci     = self.fresh("ac")
+            var_up = node.var.upper()
+            if var_up != "OUTPUT":
+                self.var_decls.add(f"static str_t var_{var_up};")
+            self.F(pat, f"    int64_t {nid}_start;")
+            L(f"{nid}_alpha:  z->{nid}_start = Delta;  goto {ci}_alpha;")
+            self.emit_node(pat, node.child, ci, gamma=f"{nid}_ok", omega=omega)
+            L(f"{nid}_ok: {{")
+            L(f"    str_t _v = {{ Sigma + z->{nid}_start, Delta - z->{nid}_start }};")
+            if var_up == "OUTPUT":
+                L(f"    sno_output(_v);")
+            else:
+                L(f"    var_{var_up} = _v;")
+            L(f"    }} goto {gamma};")
+            L(f"{nid}_beta:  goto {ci}_beta;")
+
+        elif isinstance(node, Arbno):
+            ci = self.fresh("an")
+            self.F(pat, f"    int64_t {nid}_cursors[64];")
+            self.F(pat, f"    int     {nid}_depth;")
+            L(f"{nid}_alpha:  z->{nid}_depth = -1;  goto {gamma};")
+            L(f"{nid}_beta:")
+            L(f"    z->{nid}_depth++;")
+            L(f"    if (z->{nid}_depth >= 64) goto {omega};")
+            L(f"    z->{nid}_cursors[z->{nid}_depth] = Delta;")
+            L(f"    goto {ci}_alpha;")
+            self.emit_node(pat, node.child, ci,
+                           gamma=f"{nid}_cok", omega=f"{nid}_cfail")
+            L(f"{nid}_cok:   goto {gamma};")
+            L(f"{nid}_cfail:")
+            L(f"    Delta = z->{nid}_cursors[z->{nid}_depth];  z->{nid}_depth--;")
+            L(f"    goto {omega};")
+
+        elif isinstance(node, Ref):
+            # ── The Sprint 6 mechanism ────────────────────────────────────────
+            # Each Ref call site gets its own child frame pointer in the parent
+            # struct, named <nid>_z.  We allocate it on alpha (sno_enter sets
+            # frame to NULL so the callee allocates fresh), and reuse on beta.
+            target = node.name
+            fld    = f"{nid}_z"
+            self.F(pat, f"    {target}_t *{fld};")
+            L(f"{nid}_alpha:  z->{fld} = 0;")
+            L(f"    {{ str_t _r = {target}(&z->{fld}, {self.ALPHA});")
+            L(f"      if (_r.ptr == 0) goto {omega};")
+            L(f"      goto {gamma}; }}")
+            L(f"{nid}_beta:")
+            L(f"    {{ str_t _r = {target}(&z->{fld}, {self.BETA});")
+            L(f"      if (_r.ptr == 0) goto {omega};")
+            L(f"      goto {gamma}; }}")
+
+        else:
+            L(f"/* TODO {type(node).__name__} */")
+            L(f"{nid}_alpha: goto {omega};  {nid}_beta: goto {omega};")
+
+    def generate_source(self, root_name, subject, include_main):
+        names = self.graph.names()
+
+        # populate fields + body for every pattern
+        for name in names:
+            self.fields.setdefault(name, [])
+            self.body.setdefault(name, [])
+            self.emit_node(name, self.graph.get(name),
+                           nid=name,
+                           gamma=f"{name}_match_ok",
+                           omega=f"{name}_match_fail")
+
+        out = []
+        out.append("/* Generated by SNOBOL4-tiny emit_c.py — DO NOT EDIT */")
+        out.append("#include <stdint.h>")
+        out.append("#include <string.h>")
+        out.append("#include <stdio.h>")
+        out.append('#include "../../src/runtime/runtime.h"')
+        out.append("")
+        out.append("/* === global match state === */")
+        out.append("static const char *Sigma = 0;")
+        out.append("static int64_t     Omega = 0;")
+        out.append("static int64_t     Delta = 0;")
+        out.append("static const str_t SNO_EMPTY = {0, 0};")
+        out.append("static inline int64_t _slen(const char *s) { int64_t n=0; while(*s++) n++; return n; }")
+        out.append("")
+
+        for d in sorted(self.var_decls):
+            out.append(d)
+        if self.var_decls:
+            out.append("")
+
+        # forward typedef + function declarations (required for cycles)
+        out.append("/* === forward declarations === */")
+        for name in names:
+            out.append(f"typedef struct _{name} {name}_t;")
+        out.append("")
+        for name in names:
+            out.append(f"static str_t {name}({name}_t **, int);")
+        out.append("")
+
+        # one struct + function per pattern
+        for name in names:
+            flds = self.fields.get(name, [])
+            bdy  = self.body.get(name, [])
+
+            out.append(f"struct _{name} {{")
+            if flds:
+                for f in flds:
+                    out.append(f)
+            else:
+                out.append("    int _dummy;")
+            out.append("};")
+            out.append("")
+
+            out.append(f"static str_t {name}({name}_t **zz, int entry) {{")
+            out.append(f"    {name}_t *z = *zz;")
+            out.append( "    if (entry == 0) {")
+            out.append(f"        z = ({name}_t *)sno_enter((void **)zz, sizeof({name}_t));")
+            out.append(f"        goto {name}_alpha;")
+            out.append( "    }")
+            out.append( "    if (!z) return SNO_EMPTY;  /* no frame = nothing to backtrack */")
+            out.append(f"    goto {name}_beta;")
+            out.append("")
+            for line in bdy:
+                out.append("    " + line)
+            out.append(f"    {name}_match_ok:   return (str_t){{ Sigma, Delta }};")
+            out.append(f"    {name}_match_fail: return SNO_EMPTY;")
+            out.append("}")
+            out.append("")
+
+        if include_main:
+            safe = subject.replace('\\','\\\\').replace('"','\\"')
+            out.append("int main(void) {")
+            out.append(f'    Sigma = "{safe}";')
+            out.append( "    Omega = _slen(Sigma);")
+            out.append( "    Delta = 0;")
+            out.append(f"    {root_name}_t *frame = 0;")
+            out.append( "    int first = 1;")
+            out.append( "    int64_t prev_delta = -1;")
+            out.append( "    while (1) {")
+            out.append(f"        str_t r = {root_name}(&frame, first ? 0 : 1);")
+            out.append( "        first = 0;")
+            out.append( "        if (r.ptr == 0) { sno_output_cstr(\"Failure.\"); return 1; }")
+            out.append( "        if (Delta == Omega) { sno_output_cstr(\"Success!\"); return 0; }")
+            out.append( "        /* no progress — beta is stuck, all alternatives exhausted */")
+            out.append( "        if (Delta == prev_delta) { sno_output_cstr(\"Failure.\"); return 1; }")
+            out.append( "        prev_delta = Delta;")
+            out.append( "    }")
+            out.append("}")
+
+        return "\n".join(out) + "\n"
+
+
+# ---------------------------------------------------------------------------
+# public API
+# ---------------------------------------------------------------------------
+
+def emit_program(graph, root_name, subject="", include_main=True):
     """Emit a complete compilable C file for the given pattern graph."""
-    em = Emitter(graph)
+    if _graph_has_ref(graph):
+        fe = FuncEmitter(graph)
+        return fe.generate_source(root_name, subject, include_main)
+    else:
+        return _emit_flat_program(graph, root_name, subject, include_main)
 
-    # Emit all named top-level nodes
+
+def _emit_flat_program(graph, root_name, subject, include_main):
+    em = FlatEmitter(graph)
     for name in graph.names():
         node = graph.get(name)
-        em.emit(f"\n/* ===== pattern: {name} ===== */")
+        em.L(f"\n/* ===== pattern: {name} ===== */")
         em.emit_node(node, nid=name,
                      gamma=f"{name}_MATCH_SUCCESS",
                      omega=f"{name}_MATCH_FAIL")
-        em.emit(f"{name}_MATCH_SUCCESS: return 0; /* matched */")
-        em.emit(f"{name}_MATCH_FAIL:    return 1; /* failed  */")
+        em.L(f"{name}_MATCH_SUCCESS: return 0;")
+        em.L(f"{name}_MATCH_FAIL:    return 1;")
 
-    # Assemble final C file
     out = []
     out.append("/* Generated by SNOBOL4-tiny emit_c.py — DO NOT EDIT */")
     out.append("#include <stdint.h>")
@@ -201,14 +422,13 @@ def emit_program(graph: Graph, root_name: str,
     out.append('#include "../../src/runtime/runtime.h"')
     out.append("")
     out.append("/* === static storage === */")
-    for s in em.statics:
-        out.append(s)
+    for s in em.statics: out.append(s)
     out.append("")
 
     if include_main:
-        safe_subj = subject.replace('\\', '\\\\').replace('"', '\\"')
+        safe = subject.replace('\\','\\\\').replace('"','\\"')
         out.append("int main(void) {")
-        out.append(f'    const char *subject    = "{safe_subj}";')
+        out.append(f'    const char *subject    = "{safe}";')
         out.append(f"    int64_t     subject_len = {len(subject.encode())};")
         out.append( "    int64_t     cursor      = 0;")
         out.append( "    (void)cursor; (void)subject; (void)subject_len;")
@@ -225,9 +445,19 @@ def emit_program(graph: Graph, root_name: str,
     return "\n".join(out) + "\n"
 
 
-# ---------- smoke test -----------------------------------------------
+# ---------------------------------------------------------------------------
+# smoke test
+# ---------------------------------------------------------------------------
 if __name__ == "__main__":
-    from ir import Graph, Cat, Pos, Rpos, Lit
-    g = Graph()
-    g.add("root", Cat(Pos(0), Cat(Lit("hello"), Rpos(0))))
-    print(emit_program(g, "root", subject="hello"))
+    from ir import Graph, Cat, Pos, Rpos, Lit, Alt, Ref
+
+    print("/* ===== FLAT (no Ref) ===== */")
+    g1 = Graph()
+    g1.add("root", Cat(Pos(0), Cat(Lit("hello"), Rpos(0))))
+    print(emit_program(g1, "root", subject="hello"))
+
+    print("/* ===== FUNC (EVEN/ODD mutual recursion) ===== */")
+    g2 = Graph()
+    g2.add("EVEN", Alt(Lit(""), Cat(Lit("x"), Ref("ODD"))))
+    g2.add("ODD",  Cat(Lit("x"), Ref("EVEN")))
+    print(emit_program(g2, "EVEN", subject="xxxx"))
