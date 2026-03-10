@@ -160,11 +160,13 @@ Test corpus: `SNOBOL4-corpus` (shared submodule), Gimpel library, Shafto AI corp
 Two foundational questions are currently on the table. See
 [`doc/DECISIONS.md`](doc/DECISIONS.md) for the full analysis.
 
-**Decision 1 — Compiler implementation language:**
-Python now (fast iteration) → SNOBOL4 later (self-hosting), using the Python
-compiler as a permanent bootstrap oracle. This mirrors the lbForth strategy:
-Lisp metacompiler → working kernel → Forth metacompiler replaces the Lisp.
-Needs explicit sign-off before Sprint 5.
+**Decision 1 — Compiler implementation language: leading candidate identified**
+`SNOBOL4c.c` is a complete 1,064-line SNOBOL4 pattern interpreter in C with
+heap allocator, GC, variable dictionary, and full match engine. It is the
+runtime. The `.h` files (BEAD, BEARDS, C, CALC, TESTS patterns) are compiled
+pattern data `#include`d into it — exactly the output a compiler would emit.
+Leading path: add a yacc/lex front-end that reads SNOBOL4 source and emits
+these `.h` files. Interpreter becomes compiler. See `doc/DECISIONS.md`.
 
 **Decision 2 — What language does SNOBOL4-tiny implement first: DECIDED**
 Expressions first, statements second. Sequence B → C → D confirmed:

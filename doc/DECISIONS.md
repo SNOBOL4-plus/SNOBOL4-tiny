@@ -307,3 +307,108 @@ This gives:
 **Status: UNDECIDED — but C + yacc is now the leading candidate given the
 existing transl8r.py as specification and the test_sno_*.c files as the
 emission gold standard. Needs Lon's sign-off.**
+
+---
+
+## Decision 1 (final analysis): SNOBOL4c.c — the complete picture
+
+`SNOBOL4c.c` (1,064 lines) is a **complete, working SNOBOL4 pattern interpreter
+in C**. It is not a sketch. It is production-quality code with a heap allocator,
+garbage collector, global variable dictionary, and a full match engine covering
+every SNOBOL4python primitive. This changes the Decision 1 analysis substantially.
+
+### What SNOBOL4c.c contains
+
+**The PATTERN struct** (lines 1–60):
+All 43 node types defined as integer constants — ABORT, ANY, ARB, ARBNO, BAL,
+BREAK, BREAKX, FAIL, FENCE, LEN, POS, RPOS, SPAN, TAB, and the Greek-letter
+operators (Σ=SEQ, Π=ALT, σ=LIT, ζ=deferred-ref, δ=capture, λ=lambda, ε=epsilon,
+etc.). One unified `PATTERN` struct with a tagged union handles all of them.
+
+**The .h files are compiled pattern data** — not code. They are `#include`d
+directly into `SNOBOL4c.c`:
+- `BEAD_PATTERN.h`, `BEARDS_PATTERN.h` — simple string matching tests
+- `C_PATTERN.h` — recursive arithmetic expression grammar (`x+y*z`)
+- `CALC_PATTERN.h` — calculator with stack operations via λ nodes
+- `TESTS_PATTERN.h` — identifier and real number patterns
+
+These are exactly the output that `_bootstrap.c` (the Python C extension)
+generates from SNOBOL4python pattern objects. The pipeline is:
+
+```
+SNOBOL4python pattern expression
+    → _bootstrap.c (Python C extension)
+    → static const PATTERN NAME_N = {...}; declarations
+    → #included into SNOBOL4c.c
+    → executed by the MATCH() engine
+```
+
+**The heap** (lines 100–360): A bump-pointer allocator with mark-compact GC.
+Three stamped object types: STRING, COMMAND, STATE. Handles backtracking
+state without touching the C stack.
+
+**The global variable dictionary** (lines 360–430): Hash table mapping pattern
+names (strings) to `PATTERN *` pointers. This is how `ζ` (deferred reference)
+resolves `*EXPR` → looks up `"EXPR"` in this table at match time.
+
+**The match engine** (lines 430–1000): A single `while (Z.PI)` loop over a
+`state_t Z`. The dispatch is `switch (type<<2 | action)` — 4 actions:
+PROCEED (α), SUCCESS (γ), FAILURE, RECEDE (β). This is the interpreter
+equivalent of the α/β/γ/ω protocol — same four states, heap-allocated instead
+of goto-compiled.
+
+Every node type is fully implemented: Σ (SEQ/concatenation), Π (ALT/alternation),
+ARBNO, ARB, FENCE, BAL, all primitives, ζ (dynamic pattern reference), δ
+(immediate capture to OUTPUT or variable), λ (execute command string), and more.
+
+**The test harness** (`main()`): Registers patterns by name, calls `MATCH()`.
+Commented-out test cases cover BEAD, BEARDS, C (expression grammar), CALC
+(calculator), ARB, ARBNO, BAL, identifier, real_number, RE_RegEx.
+
+### What this means for Decision 1
+
+**SNOBOL4c.c is the runtime.** It is not a compiler — it interprets the
+`PATTERN` struct graph at runtime. But the struct format IS the IR. The
+`.h` files ARE compiled pattern data. The interpreter IS the reference
+implementation of every node's semantics.
+
+The path to SNOBOL4-tiny as a compiler now has two routes:
+
+**Route A: Add a front-end to SNOBOL4c.c (C + yacc)**
+
+Add a yacc/lex parser that reads SNOBOL4 source and emits `.h` files
+(static PATTERN declarations) instead of interpreting at runtime. The
+`MATCH()` engine already works. The `.h` file format is already defined.
+A yacc grammar for the expression language can be derived mechanically
+from `transl8r_SNOBOL4.py`.
+
+- Fastest path to a working system
+- Zero new infrastructure — the runtime is done
+- yacc grammar is well-understood
+- Self-hosting is deferred (yacc is not SNOBOL4)
+- This is the "add a compiler to an interpreter" path Chuck Moore used
+  for early Forth systems
+
+**Route B: Use SNOBOL4c.c as the bootstrap interpreter, emit C-with-gotos**
+
+Run the interpreter to parse SNOBOL4 source (writing the parser itself as
+SNOBOL4 patterns in `SNOBOL4c.c`), and have the parser *emit* C-with-gotos
+(the `test_sno_*.c` format) instead of executing. The interpreter becomes
+the compiler's front-end.
+
+- The parser is written in SNOBOL4 — dog-fooding from day one
+- The emitted code is the faster α/β/γ/ω goto format
+- More complex to set up initially
+- But: this IS self-hosting — the language parses itself
+
+### Current recommendation
+
+**Route A first, Route B as Sprint 5.**
+
+Route A gives a working compiler immediately. Route B is the natural Phase 2
+(self-hosting emitter) described in BOOTSTRAP.md — but now the bootstrap
+interpreter is already written. SNOBOL4c.c is the seed kernel. It is Chuck
+Moore's "12 primitives in C."
+
+**Status: UNDECIDED — but Route A (C + yacc front-end to SNOBOL4c.c) is
+the leading candidate. The interpreter is done. We need the parser.**
