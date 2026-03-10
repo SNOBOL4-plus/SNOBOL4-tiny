@@ -302,7 +302,7 @@ extern SnoVal sno_field_get(SnoVal obj, const char *field);
 SnoVal sno_Shift(SnoVal t_arg) {
     /* Shift(t, v) — but in beauty_run.sno it's called as Shift('tag', value) */
     /* For now t_arg is the tree type tag, value is empty */
-    SnoVal s = sno_tree_new(t_arg, SNO_STR_VAL(""), SNO_INT_VAL(0), SNO_NULL_VAL);
+    SnoVal s = sno_make_tree(t_arg, SNO_STR_VAL(""), SNO_INT_VAL(0), SNO_NULL_VAL);
     sno_push_val(s);
     return SNO_NULL_VAL;
 }
@@ -322,7 +322,7 @@ SnoVal sno_Reduce(SnoVal t_arg, SnoVal n_arg) {
         sno_subscript_set(children, SNO_INT_VAL(i), child);
     }
 
-    SnoVal r = sno_tree_new(t, SNO_STR_VAL(""), SNO_INT_VAL(count), children);
+    SnoVal r = sno_make_tree(t, SNO_STR_VAL(""), SNO_INT_VAL(count), children);
     sno_push_val(r);
     return SNO_NULL_VAL;
 }
@@ -523,6 +523,7 @@ void sno_inc_init(void) {
     sno_register_fn("LLT",        _w_LLT,       2, 2);
     sno_register_fn("LLE",        _w_LLE,       2, 2);
     sno_register_fn("LNE",        _w_LNE,       2, 2);
+    void sno_inc_init_extra(void);  /* forward declaration */
     sno_inc_init_extra();
 }
 

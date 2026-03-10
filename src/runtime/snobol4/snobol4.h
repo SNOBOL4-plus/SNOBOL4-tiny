@@ -63,6 +63,7 @@ typedef struct SnoVal {
 #define SNO_INT_VAL(i_) ((SnoVal){ .type = SNO_INT,  .i = (i_) })
 #define SNO_REAL_VAL(r_)((SnoVal){ .type = SNO_REAL, .r = (r_) })
 #define SNO_TREE_VAL(t_)((SnoVal){ .type = SNO_TREE, .t = (t_) })
+#define SNO_TYPE(v_)    ((v_).type)
 
 /* ============================================================
  * String operations

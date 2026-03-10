@@ -28,24 +28,62 @@ from ir import Expr, PatExpr, Goto, Stmt, Program
 # Helpers
 # -----------------------------------------------------------------------
 
+def sno_val_to_c_literal(s: str) -> str:
+    """
+    Convert a Python str (holding a raw SNOBOL4 runtime value) to a valid
+    C string literal including surrounding double-quotes.
+
+    Rules (see HQ/STRING_ESCAPES.md):
+      SNOBOL4 backslash is just a backslash — no escape meaning.
+      In C a backslash MUST be doubled.
+      In C a double-quote MUST be escaped.
+      Control chars (newline, tab, etc.) MUST be escaped.
+
+    This function is the ONLY place where SNOBOL4 values are converted to
+    C literals. Never apply .replace() chains elsewhere — call this.
+    """
+    result = []
+    for ch in s:
+        if ch == '\\':
+            result.append('\\\\')
+        elif ch == '"':
+            result.append('\\"')
+        elif ch == '\n':
+            result.append('\\n')
+        elif ch == '\r':
+            result.append('\\r')
+        elif ch == '\t':
+            result.append('\\t')
+        elif ch == '\0':
+            result.append('\\0')
+        elif ch == '\f':
+            result.append('\\f')
+        elif ch == '\b':
+            result.append('\\b')
+        elif ord(ch) < 32 or ord(ch) > 126:
+            result.append(f'\\x{ord(ch):02x}')
+        else:
+            result.append(ch)
+    return '"' + ''.join(result) + '"'
+
 def _c_label(label_name):
     """Convert a SNOBOL4 label to a valid C label — every special char gets a unique name."""
     char_map = {
-        "'": "_q_",   "#": "_H_",   "@": "_A_",   "-": "_",
-        ".": "_dot_", ":": "_col_", "(": "_lp_",  ")": "_rp_",
-        "<": "_lt_",  ">": "_gt_",  "!": "_bang_","$": "_dol_",
-        "?": "_q2_",  "&": "_amp_", "*": "_star_","^": "_hat_",
-        "~": "_til_", "%": "_pct_", "/": "_sl_",  "|": "_bar_",
-        "+": "_plus_","=": "_eq_",  ",": "_com_", " ": "_",
-        "[": "_lb_",  "]": "_rb_",  "{": "_lc_",  "}": "_rc_",
-        ";": "_sc_",  "\\": "_bs_",
+        "'": "_q_",     "#": "_H_",     "@": "_A_",    "-": "_minus_",
+        ".": "_dot_",   ":": "_col_",   "(": "_lp_",   ")": "_rp_",
+        "<": "_lt_",    ">": "_gt_",    "!": "_bang_", "$": "_dol_",
+        "?": "_q2_",    "&": "_amp_",   "*": "_star_", "^": "_hat_",
+        "~": "_til_",   "%": "_pct_",   "/": "_sl_",   "|": "_bar_",
+        "+": "_plus_",  "=": "_eq_",    ",": "_com_",  " ": "_sp_",
+        "[": "_lb_",    "]": "_rb_",    "{": "_lc_",   "}": "_rc_",
+        ";": "_sc_",    "\\": "_bs_",
     }
     s = label_name
     for ch, rep in char_map.items():
         s = s.replace(ch, rep)
     # Remove any remaining non-identifier chars
     import re as _re
-    s = _re.sub(r'[^a-zA-Z0-9_]', '_', s)
+    s = _re.sub(r'[^a-zA-Z0-9_]', '_x_', s)
     # Collapse multiple underscores
     s = _re.sub(r'_+', '_', s).strip('_')
     # Prefix if starts with digit
@@ -78,9 +116,7 @@ def emit_expr(e):
         return 'SNO_NULL_VAL'
 
     if k == 'str':
-        # Escape the string for C
-        s = e.val.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
-        return f'SNO_STR_VAL("{s}")'
+        return f'SNO_STR_VAL({sno_val_to_c_literal(e.val or "")})'
 
     if k == 'int':
         return f'SNO_INT_VAL({e.val}LL)'
@@ -164,6 +200,20 @@ def emit_expr(e):
             'EVAL':     lambda a: f'sno_eval({a[0]})',
             'OPSYN':    lambda a: f'(sno_opsyn({a[0]},{a[1]},{len(a)>2 and a[2] or "SNO_INT_VAL(2)"}), SNO_NULL_VAL)',
             'CODE':     lambda a: f'sno_code({a[0]})',
+            # Pattern-returning builtins — when called from Expr context
+            'NOTANY':   lambda a: f'sno_pat_notany(sno_to_str({a[0]}))',
+            'ANY':      lambda a: f'sno_pat_any_cs(sno_to_str({a[0]}))',
+            'SPAN':     lambda a: f'sno_pat_span(sno_to_str({a[0]}))',
+            'BREAK':    lambda a: f'sno_pat_break_(sno_to_str({a[0]}))',
+            'LEN':      lambda a: f'sno_pat_len(sno_to_int({a[0]}))',
+            'POS':      lambda a: f'sno_pat_pos(sno_to_int({a[0]}))',
+            'RPOS':     lambda a: f'sno_pat_rpos(sno_to_int({a[0]}))',
+            'TAB':      lambda a: f'sno_pat_tab(sno_to_int({a[0]}))',
+            'RTAB':     lambda a: f'sno_pat_rtab(sno_to_int({a[0]}))',
+            'ARB':      lambda a: 'sno_pat_arb()',
+            'ARBNO':    lambda a: f'sno_pat_arbno(sno_var_as_pattern({a[0]}))',
+            'FENCE':    lambda a: f'sno_pat_fence_p(sno_var_as_pattern({a[0]}))',
+            'BAL':      lambda a: 'sno_pat_bal()',
         }
 
         ca = [emit_expr(a) for a in args]
@@ -307,8 +357,7 @@ def emit_pattern_expr(p):
     k = p.kind
 
     if k == 'lit':
-        s = (p.val or '').replace('\\', '\\\\').replace('"', '\\"')
-        return f'sno_pat_lit("{s}")'
+        return f'sno_pat_lit({sno_val_to_c_literal(p.val or "")})'
 
     if k == 'var':
         if isinstance(p.val, str):
@@ -369,10 +418,6 @@ def emit_pattern_expr(p):
 
         # Pattern builtins that return patterns
         pat_builtins = {
-            'SPAN':    lambda a: f'sno_pat_span(sno_to_str({a[0]}))',
-            'BREAK':   lambda a: f'sno_pat_break_(sno_to_str({a[0]}))',
-            'ANY':     lambda a: f'sno_pat_any_cs(sno_to_str({a[0]}))',
-            'NOTANY':  lambda a: f'sno_pat_notany(sno_to_str({a[0]}))',
             'LEN':     lambda a: f'sno_pat_len(sno_to_int({a[0]}))',
             'POS':     lambda a: f'sno_pat_pos(sno_to_int({a[0]}))',
             'RPOS':    lambda a: f'sno_pat_rpos(sno_to_int({a[0]}))',
@@ -380,15 +425,48 @@ def emit_pattern_expr(p):
             'RTAB':    lambda a: f'sno_pat_rtab(sno_to_int({a[0]}))',
             'ARB':     lambda a: 'sno_pat_arb()',
             'REM':     lambda a: 'sno_pat_rem()',
-            'FENCE':   lambda a: f'sno_pat_fence_p({emit_pat_or_expr(a[0]) if a else "sno_pat_epsilon()"})',
-            'ARBNO':   lambda a: f'sno_pat_arbno({emit_pat_or_expr(a[0])})',
+            # a[0] is already an emitted C expression — use directly
+            'FENCE':   lambda a: f'sno_pat_fence_p({a[0] if a else "sno_pat_epsilon()"})',
+            'ARBNO':   lambda a: f'sno_pat_arbno({a[0]})',
             'BAL':     lambda a: 'sno_pat_bal()',
             'FAIL':    lambda a: 'sno_pat_fail()',
             'ABORT':   lambda a: 'sno_pat_abort()',
             'SUCCEED': lambda a: 'sno_pat_succeed()',
         }
 
-        # Build C args
+        # Build C args — for string-taking builtins, emit args as string expressions
+        str_builtins = {'SPAN', 'BREAK', 'ANY', 'NOTANY'}
+
+        def emit_as_str(a):
+            """Emit a pattern or expr arg as a C string expression."""
+            from ir import PatExpr as _PatExpr, Expr as _Expr
+            if isinstance(a, _Expr):
+                return f'sno_to_str({emit_expr(a)})'
+            if isinstance(a, _PatExpr):
+                pk = a.kind
+                if pk == 'lit':
+                    # val is the raw SNOBOL4 character — convert once via canonical function
+                    return sno_val_to_c_literal(a.val or '')
+                if pk == 'var':
+                    return f'sno_to_str(sno_var_get("{a.val}"))'
+                if pk == 'cat':
+                    l = emit_as_str(a.left)
+                    r = emit_as_str(a.right)
+                    return f'sno_concat({l}, {r})'
+                # Fallback — emit as pattern and convert
+                return f'sno_to_str({emit_pattern_expr(a)})'
+            return 'sno_to_str(SNO_NULL_VAL)'
+
+        if name in str_builtins:
+            arg_str = emit_as_str(args[0]) if args else '""'
+            str_map = {
+                'SPAN':   f'sno_pat_span({arg_str})',
+                'BREAK':  f'sno_pat_break_({arg_str})',
+                'ANY':    f'sno_pat_any_cs({arg_str})',
+                'NOTANY': f'sno_pat_notany({arg_str})',
+            }
+            return str_map[name]
+
         ca_expr = [emit_expr(a) if isinstance(a, Expr) else emit_pattern_expr(a)
                    for a in args]
 
@@ -487,7 +565,10 @@ class StmtEmitter:
                 elif name == 'DATA':
                     self._w(f'    sno_data_define(sno_to_str({ca[0] if ca else "SNO_NULL_VAL"}));')
                 elif name == 'OPSYN':
-                    self._w(f'    sno_opsyn({", ".join(ca)});')
+                    if len(ca) >= 3:
+                        self._w(f'    sno_opsyn({", ".join(ca)});')
+                    else:
+                        self._w(f'    sno_opsyn2({", ".join(ca)});')
                 else:
                     args_c = ', '.join(ca)
                     n_args = len(ca)
