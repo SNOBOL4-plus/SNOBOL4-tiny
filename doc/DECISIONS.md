@@ -228,3 +228,82 @@ The naming question (does Stage C deserve its own name?) remains open.
 When a decision is made, update this file (mark DECIDED, record the choice
 and rationale), then copy the conclusion to DESIGN.md.
 Push both files in the same commit.
+
+---
+
+## Decision 1 (updated): What's already in the ByrdBox C code
+
+Before finalizing Decision 1, it's important to understand what already exists
+in the ByrdBox codebase uploaded by Lon. There are three distinct C artifacts:
+
+### What exists in ByrdBox
+
+**`_bootstrap.c`** (126 lines) — a Python C extension (`PyInit__bootstrap`).
+It walks a SNOBOL4python PATTERN object tree and dumps it as static C struct
+declarations. This is a *serializer*, not an interpreter. Output looks like:
+
+```c
+static const PATTERN root_0 = {SPAN, .chars="0123456789"};
+static const PATTERN root_1 = {Δ, .s="OUTPUT", &root_0};
+```
+
+These structs would need a separate C runtime to execute.
+
+**`test_sno_1.c` through `test_sno_4.c`** — these ARE the compiled output.
+They are self-contained C-with-gotos programs using the α/β/γ/ω protocol
+directly. No struct interpreter needed — the pattern matching IS the C code.
+These are hand-written examples of exactly what SNOBOL4-tiny's emitter should
+produce automatically.
+
+**`transl8r_SNOBOL4.py`** (1,103 lines) — a SNOBOL4→C compiler written in
+Python using SNOBOL4python patterns to parse SNOBOL4 source. It has:
+- A complete SNOBOL4 lexer (Id, String, Integer, Real, Goto, Label, Stmt)
+- A parser producing an AST (Parse, Stmt, Subject, Call, String, Id, ...)
+- An `emit()` function that walks the AST and produces C-with-gotos output
+- Handles: pattern concatenation (`..`), alternation (`|`), immediate assign
+  (`$`), conditional assign (`.`), arithmetic, comparisons, calls, variables,
+  gotos, labels, recursive patterns via `*name` deferred references
+
+This is a working SNOBOL4→C compiler in Python. It is not finished (CODE/EVAL,
+DATA, DEFINE are not fully implemented) but it handles the full expression
+language including mutual recursion.
+
+### What this means for Decision 1
+
+The `transl8r_SNOBOL4.py` + `test_sno_*.c` combination IS the compiler,
+already written. The question is not "what language do we write the compiler
+in" but rather "how do we take what already exists and make it the SNOBOL4-tiny
+compiler."
+
+**Revised candidate: C + yacc/lex as the front-end**
+
+The transl8r is already Python. The test files show the C output format
+exactly. The natural next step Lon identified: rewrite the front-end
+(parser) in C using yacc/lex, keeping the C-with-gotos emission model.
+
+This gives:
+- `lex` handles tokenization (replaces `Id`, `String`, `Integer`, etc. patterns)
+- `yacc` handles grammar (replaces the SNOBOL4python-based parse rules)
+- C emission functions (replaces `emit()`, `eStmt()`, `eString()`, etc.)
+- The test_sno_*.c files are the gold standard for what the emitter must produce
+
+**Why this is compelling:**
+- Zero new language dependencies — the entire toolchain is C
+- yacc grammars are well-understood, debuggable, and fast
+- The grammar is already implicit in `transl8r_SNOBOL4.py` — porting it to
+  yacc is mechanical
+- The runtime (str_t, output_t, α/β/γ/ω) is already C and stays C
+- The compiler and runtime become a single C program — one binary does both
+
+**The concern:**
+- yacc grammars are not self-hosting. The bootstrap path (Phase 2) becomes:
+  C compiler → SNOBOL4-tiny output → eventually a SNOBOL4 program that
+  can describe its own grammar. This is further from self-hosting than the
+  Python→SNOBOL4 path.
+- But: SNOBOL4-tiny is a *compiler*, not an interpreter. Self-hosting is
+  a long-term goal, not Sprint 1. For getting to Stage C (mutual recursion,
+  working patterns), C + yacc is the fastest path.
+
+**Status: UNDECIDED — but C + yacc is now the leading candidate given the
+existing transl8r.py as specification and the test_sno_*.c files as the
+emission gold standard. Needs Lon's sign-off.**
