@@ -147,6 +147,11 @@ def emit_expr(e):
         return f'sno_var_get(sno_to_str({inner}))'
 
     if k == 'concat':
+        # If either side is a pattern expression, emit as pattern concatenation
+        if _is_pattern_expr(e.left) or _is_pattern_expr(e.right):
+            l = emit_as_pattern(e.left)
+            r = emit_as_pattern(e.right)
+            return f'sno_pat_cat({l}, {r})'
         l = emit_expr(e.left)
         r = emit_expr(e.right)
         return f'sno_concat_sv({l}, {r})'  # P003: propagates SNO_FAIL_VAL
@@ -156,6 +161,9 @@ def emit_expr(e):
     if k == 'sub':
         return f'sno_sub({emit_expr(e.left)}, {emit_expr(e.right)})'
     if k == 'mul':
+        # *var in pattern context = indirect pattern ref
+        if e.left is not None and e.left.kind == 'null':
+            return f'sno_pat_ref("{e.right.val}")' if e.right and e.right.kind == 'var' else f'sno_pat_ref_val({emit_expr(e.right)})'
         return f'sno_mul({emit_expr(e.left)}, {emit_expr(e.right)})'
     if k == 'div':
         return f'sno_div({emit_expr(e.left)}, {emit_expr(e.right)})'
@@ -238,6 +246,13 @@ def emit_expr(e):
         return f'sno_field_get({child}, "{e.name}")'
 
     if k == 'array':
+        # PAT(expr) in pattern context = conditional pattern assignment
+        if _is_pattern_expr(e.obj):
+            obj_p = emit_as_pattern(e.obj)
+            subs = e.subscripts or []
+            if len(subs) == 1:
+                sub_c = emit_expr(subs[0])
+                return f'sno_pat_assign_cond({obj_p}, {sub_c})'
         obj  = emit_expr(e.obj)
         subs = [emit_expr(s) for s in (e.subscripts or [])]
         if len(subs) == 1:
@@ -246,6 +261,13 @@ def emit_expr(e):
             return f'sno_subscript_get2({obj}, {subs[0]}, {subs[1]})'
         return f'SNO_NULL_VAL /* array subscript */'
 
+    # Pattern-type expressions that may appear in replacement context
+    if k == 'alt':
+        return f'sno_pat_alt({emit_as_pattern(e.left)}, {emit_as_pattern(e.right)})'
+    if k == 'cond_assign' or k == 'assign_cond':
+        return f'sno_pat_assign_cond({emit_as_pattern(e.child)}, {emit_expr(e.var) if e.var else "SNO_NULL_VAL"})'
+    if k == 'assign_imm':
+        return f'sno_pat_assign_imm({emit_as_pattern(e.child)}, {emit_expr(e.var) if e.var else "SNO_NULL_VAL"})'
     return f'SNO_NULL_VAL /* unhandled expr kind={k} */'
 
 
@@ -336,12 +358,84 @@ def emit_pattern_match(subject_c, pat, success_label, fail_label):
     return lines
 
 
+def emit_as_pattern(p):
+    """Emit p as a pattern expression (wraps non-pattern values via sno_var_as_pattern)."""
+    from ir import Expr, PatExpr
+    if isinstance(p, PatExpr):
+        return emit_pattern_expr(p)
+    if isinstance(p, Expr):
+        # *var = indirect pattern ref
+        if p.kind == 'mul' and p.left and p.left.kind == 'null':
+            varname = p.right.val if p.right and p.right.kind == 'var' else None
+            if varname:
+                return f'sno_pat_ref("{varname}")'
+            return f'sno_pat_ref_val({emit_expr(p.right)})'
+        # Recursive pattern types
+        if p.kind == 'concat':
+            return f'sno_pat_cat({emit_as_pattern(p.left)}, {emit_as_pattern(p.right)})'
+        if p.kind == 'alt':
+            return f'sno_pat_alt({emit_as_pattern(p.left)}, {emit_as_pattern(p.right)})'
+        if p.kind == 'call':
+            # Let emit_pattern_expr handle known pattern builtins
+            from ir import PatExpr
+            try:
+                return emit_pattern_expr(p)
+            except Exception:
+                pass
+        # String/var/other: wrap as pattern
+        return f'sno_var_as_pattern({emit_expr(p)})'
+    if isinstance(p, str):
+        s = p.replace('"', '\\"  ')
+        return f'sno_pat_lit("{s}")'
+    return 'sno_pat_epsilon()'
+
+def _is_indirect_pat_ref(p):
+    """Return variable name if p is *varname (unary * as indirect pattern ref)."""
+    from ir import Expr
+    if (isinstance(p, Expr) and p.kind == 'mul' and
+            p.left is not None and p.left.kind == 'null' and
+            p.right is not None and p.right.kind == 'var'):
+        return p.right.val  # variable name
+    return None
+
+def _is_pattern_expr(p):
+    """Heuristic: does this expression likely produce a SnoVal of type PATTERN?"""
+    from ir import Expr, PatExpr
+    if isinstance(p, PatExpr):
+        return True
+    if not isinstance(p, Expr):
+        return False
+    k = p.kind
+    # *var = indirect pattern ref
+    if k == 'mul' and p.left and p.left.kind == 'null':
+        return True
+    # Pattern builtins
+    _PAT_FNS = {'FENCE','ARBNO','SPAN','BREAK','BREAKX','ANY','NOTANY',
+                'LEN','POS','RPOS','TAB','RTAB','ARB','REM','BAL',
+                'FENCE','FAIL','SUCCEED','ABORT'}
+    if k == 'call' and p.name and p.name.upper() in _PAT_FNS:
+        return True
+    # concat/alt where either side is a pattern
+    if k in ('concat', 'alt'):
+        return _is_pattern_expr(p.left) or _is_pattern_expr(p.right)
+    # ~ assign operator (pattern conditional assign)
+    if k in ('cond_assign', 'assign_cond', 'assign_imm'):
+        return True
+    # array/subscript where the base is a pattern (pattern conditional assign)
+    if k == 'array' and _is_pattern_expr(p.obj):
+        return True
+    return False
+
 def emit_pat_or_expr(p):
     """Emit either a pattern or an expression as a pattern."""
     from ir import Expr, PatExpr
     if isinstance(p, PatExpr):
         return emit_pattern_expr(p)
     elif isinstance(p, Expr):
+        # *varname in pattern context = indirect pattern reference
+        varname = _is_indirect_pat_ref(p)
+        if varname:
+            return f'sno_pat_ref("{varname}")'
         return f'sno_var_as_pattern({emit_expr(p)})'
     elif isinstance(p, str):
         s = p.replace('"', '\\"')

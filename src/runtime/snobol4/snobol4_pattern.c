@@ -231,6 +231,10 @@ SnoVal sno_pat_ref(const char *name) {
     return spat_val(p);
 }
 
+SnoVal sno_pat_ref_val(SnoVal nameVal) {
+    return sno_pat_ref(sno_to_str(nameVal));
+}
+
 SnoVal sno_pat_assign_imm(SnoVal child, SnoVal var) {
     SnoPattern *p = spat_new(SPAT_ASSIGN_IMM);
     p->left = spat_of(child);

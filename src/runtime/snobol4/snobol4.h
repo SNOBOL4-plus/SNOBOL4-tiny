@@ -354,6 +354,7 @@ SnoVal sno_pat_epsilon(void);
 SnoVal sno_pat_cat(SnoVal left, SnoVal right);
 SnoVal sno_pat_alt(SnoVal left, SnoVal right);
 SnoVal sno_pat_ref(const char *name);
+SnoVal sno_pat_ref_val(SnoVal nameVal);
 SnoVal sno_pat_assign_imm(SnoVal child, SnoVal var);
 SnoVal sno_pat_assign_cond(SnoVal child, SnoVal var);
 SnoVal sno_var_as_pattern(SnoVal v);

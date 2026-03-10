@@ -692,8 +692,17 @@ class _ExprParser:
         return None
 
     def parse(self):
-        e = self.parse_concat()
+        e = self.parse_alt()
         return e
+
+    def parse_alt(self):
+        """Alternation: a | b (pattern alternation, lowest precedence in SNOBOL4)."""
+        left = self.parse_concat()
+        while self.at('PIPE'):
+            self.consume()
+            right = self.parse_concat()
+            left = Expr(kind='alt', left=left, right=right)
+        return left
 
     def parse_concat(self):
         """Concatenation: sequence of terms juxtaposed (no operator needed).
