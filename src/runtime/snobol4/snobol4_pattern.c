@@ -604,6 +604,9 @@ int sno_match_and_replace(SnoVal *subject, SnoVal pat, SnoVal replacement) {
     /* P002: if replacement value signals failure, propagate it as F-branch */
     if (sno_is_fail(replacement)) return 0;
 
+    /* P002: out-of-bounds subscript returns SNO_FAIL_VAL — fail the statement */
+    if (sno_is_fail(*subject) || sno_is_fail(replacement)) return 0;
+
     const char *s = sno_to_str(*subject);
     if (!s) s = "";
     int slen = (int)strlen(s);
@@ -668,7 +671,7 @@ SnoVal sno_array_create(SnoVal spec) {
 /* sno_subscript_get — get arr[idx] */
 SnoVal sno_subscript_get(SnoVal arr, SnoVal idx) {
     if (arr.type == SNO_ARRAY) {
-        return sno_array_get(arr.a, (int)sno_to_int(idx));
+        return sno_array_get(arr.a, (int)sno_to_int(idx));  /* returns FAIL if OOB */
     }
     if (arr.type == SNO_TABLE) {
         return sno_table_get(arr.tbl, sno_to_str(idx));
@@ -677,9 +680,9 @@ SnoVal sno_subscript_get(SnoVal arr, SnoVal idx) {
     if (arr.type == SNO_TREE) {
         int i = (int)sno_to_int(idx);
         Tree *child = sno_c_i(arr.t, i);
-        return child ? SNO_TREE_VAL(child) : SNO_NULL_VAL;
+        return child ? SNO_TREE_VAL(child) : SNO_FAIL_VAL;  /* P002: no child = fail */
     }
-    return SNO_NULL_VAL;
+    return SNO_FAIL_VAL;  /* P002: unknown container type = fail */
 }
 
 /* sno_subscript_set — arr[idx] = val */
@@ -698,7 +701,7 @@ void sno_subscript_set(SnoVal arr, SnoVal idx, SnoVal val) {
 SnoVal sno_subscript_get2(SnoVal arr, SnoVal i, SnoVal j) {
     if (arr.type == SNO_ARRAY)
         return sno_array_get2(arr.a, (int)sno_to_int(i), (int)sno_to_int(j));
-    return SNO_NULL_VAL;
+    return SNO_FAIL_VAL;  /* P002: not an array — fail the statement */
 }
 
 void sno_subscript_set2(SnoVal arr, SnoVal i, SnoVal j, SnoVal val) {

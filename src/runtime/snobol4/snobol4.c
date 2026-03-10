@@ -47,23 +47,9 @@ void sno_comm_stno(int n) {
 
 void sno_comm_var(const char *name, SnoVal val) {
     if (sno_monitor_fd < 0) return;
+    /* skip noisy internal variables */
     if (!name) return;
     if (name[0] == '_') return;          /* internal scratch vars */
-    /* SNO_WATCH: comma-separated watchlist. If set, only emit watched names.
-     * If unset, emit all (firehose — useful for calibration only). */
-    const char *watch = getenv("SNO_WATCH");
-    if (watch) {
-        const char *p = watch;
-        size_t nlen = strlen(name);
-        int found = 0;
-        while (*p) {
-            if (strncmp(p, name, nlen) == 0 &&
-                (p[nlen] == ',' || p[nlen] == '\0')) { found = 1; break; }
-            while (*p && *p != ',') p++;
-            if (*p == ',') p++;
-        }
-        if (!found) return;
-    }
     const char *s = sno_to_str(val);
     dprintf(sno_monitor_fd, "VAR %s \"%s\"\n", name, s ? s : "<null>");
 }
@@ -77,7 +63,7 @@ int64_t sno_kw_fullscan = 0;
 int64_t sno_kw_maxlngth = 524288;
 int64_t sno_kw_anchor   = 0;
 int64_t sno_kw_trim     = 1;
-int64_t sno_kw_stlimit  = 2000000;
+int64_t sno_kw_stlimit  = -1;
 
 char sno_ucase[27]    = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 char sno_lcase[27]    = "abcdefghijklmnopqrstuvwxyz";
@@ -291,7 +277,7 @@ SnoArray *sno_array_new2d(int lo1, int hi1, int lo2, int hi2) {
 SnoVal sno_array_get(SnoArray *a, int i) {
     if (!a) return SNO_FAIL_VAL;
     int idx = i - a->lo;
-    if (idx < 0 || idx >= (a->hi - a->lo + 1)) return SNO_FAIL_VAL;
+    if (idx < 0 || idx >= (a->hi - a->lo + 1)) return SNO_FAIL_VAL;  /* P002 */
     return a->data[idx];
 }
 
@@ -303,13 +289,11 @@ void sno_array_set(SnoArray *a, int i, SnoVal v) {
 }
 
 SnoVal sno_array_get2(SnoArray *a, int i, int j) {
-    if (!a) return SNO_FAIL_VAL;
+    if (!a) return SNO_NULL_VAL;
     int cols = a->ndim;  /* cols stored in ndim for 2D */
     int row  = i - a->lo;
     /* j-origin: assume lo2 = 1 (SNOBOL4 default) */
     int col  = j - 1;
-    if (row < 0 || row >= (a->hi - a->lo + 1)) return SNO_FAIL_VAL;
-    if (col < 0 || col >= cols) return SNO_FAIL_VAL;
     int idx  = row * cols + col;
     return a->data[idx];
 }

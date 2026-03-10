@@ -28,6 +28,7 @@ typedef enum {
     SNO_NULL    = 0,   /* unset / empty string / NULL */
     SNO_STR     = 1,   /* char * (GC-managed) */
     SNO_INT     = 2,   /* int64_t */
+    SNO_FAIL    = 99,  /* P002: out-of-bounds subscript — causes statement failure */
     SNO_REAL    = 3,   /* double */
     SNO_TREE    = 4,   /* Tree* (GC-managed) */
     SNO_PATTERN = 5,   /* Pattern* (GC-managed) */
@@ -62,6 +63,7 @@ typedef struct SnoVal {
 #define SNO_NULL_VAL    ((SnoVal){ .type = SNO_NULL, .s = "" })
 #define SNO_STR_VAL(s_) ((SnoVal){ .type = SNO_STR,  .s = (s_) })
 #define SNO_INT_VAL(i_) ((SnoVal){ .type = SNO_INT,  .i = (i_) })
+#define SNO_FAIL_VAL    ((SnoVal){ .type = SNO_FAIL, .s = "" })  /* P002: stmt failure */
 #define SNO_REAL_VAL(r_)((SnoVal){ .type = SNO_REAL, .r = (r_) })
 #define SNO_TREE_VAL(t_)((SnoVal){ .type = SNO_TREE, .t = (t_) })
 #define SNO_FAIL_VAL    ((SnoVal){ .type = SNO_FAIL, .i = 0 })
@@ -79,6 +81,7 @@ static inline int sno_is_fail(SnoVal v) { return v.type == SNO_FAIL; }
 static inline int sno_is_null(SnoVal v)  { return v.type == SNO_NULL || (v.type == SNO_STR && (!v.s || !*v.s)); }
 static inline int sno_is_str(SnoVal v)   { return v.type == SNO_STR || v.type == SNO_NULL; }
 static inline int sno_is_int(SnoVal v)   { return v.type == SNO_INT; }
+static inline int sno_is_fail(SnoVal v)  { return v.type == SNO_FAIL; }
 static inline int sno_is_real(SnoVal v)  { return v.type == SNO_REAL; }
 static inline int sno_is_tree(SnoVal v)  { return v.type == SNO_TREE; }
 static inline int sno_is_udef(SnoVal v)  { return v.type == SNO_UDEF; }
