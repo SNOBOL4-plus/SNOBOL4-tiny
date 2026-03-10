@@ -30,7 +30,7 @@ void sno_output_cstr(const char *s) {
  * with a clear error message. Increase SNO_ARENA_SIZE if needed.
  */
 
-#define SNO_ARENA_SIZE (64 * 1024)
+#define SNO_ARENA_SIZE (4 * 1024 * 1024)  /* 4MB — handles deeply nested recursive grammars */
 
 typedef struct frame_header {
     struct frame_header *prev;

@@ -528,6 +528,7 @@ class FuncEmitter:
             out.append( "    Omega = _slen(Sigma);")
             out.append( "    Delta = 0;")
             out.append(f"    {root_name}_t *frame = 0;")
+            out.append( "    sno_arena_reset();  /* fresh arena for each top-level match */")
             out.append( "    int first = 1;")
             out.append( "    int64_t prev_delta = -1;")
             out.append( "    while (1) {")
