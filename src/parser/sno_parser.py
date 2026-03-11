@@ -711,10 +711,24 @@ class _ExprParser:
         treating two adjacent primary expressions as concatenation.
         We use SPACE tokens (were stripped) so just parse multiple terms."""
         left = self.parse_additive()
+        # Pattern capture operators: . (conditional) and $ (immediate)
+        while self.at('DOT', 'DOLLAR'):
+            op = self.consume().kind
+            var = self._parse_var_expr() if hasattr(self, '_parse_var_expr') else self.parse_additive()
+            from ir import PatExpr
+            kind = 'assign_cond' if op == 'DOT' else 'assign_imm'
+            left = PatExpr(kind=kind, child=left, var=var)
         # Concatenation: if more tokens remain and they form a value expr, concat
         while not self.eof() and self._starts_primary():
             right = self.parse_additive()
             left = Expr(kind='concat', left=left, right=right)
+            # Check for capture after each piece
+            while self.at('DOT', 'DOLLAR'):
+                op = self.consume().kind
+                var = self._parse_var_expr() if hasattr(self, '_parse_var_expr') else self.parse_additive()
+                from ir import PatExpr
+                kind = 'assign_cond' if op == 'DOT' else 'assign_imm'
+                left = PatExpr(kind=kind, child=left, var=var)
         return left
 
     def parse_additive(self):
