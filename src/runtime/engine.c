@@ -372,10 +372,11 @@ MatchResult engine_match_ex(Pattern *root, const char *subject, int subject_len,
         case T_ARBNO<<2|CONCEDE: { a = RECEDE;   omega_pop(&omega, &Z, &psi);                                  break; }
         case T_ARBNO<<2|RECEDE:
             if (getenv("SNO_PAT_DEBUG") && Z.OMEGA <= 6)
-                fprintf(stderr, "  ARBNO RECEDE ctx=%d yielded=%d fenced=%d DELTA=%d\n", Z.ctx, Z.yielded, Z.fenced, Z.DELTA);
-            if (Z.fenced)        { a = CONCEDE;                                 z_up_fail(&Z, &psi);           break; }
-            else if (Z.yielded)  { a = PROCEED;                                 z_move_next(&Z);               break; }
-            else                 { a = CONCEDE;                                 z_up_fail(&Z, &psi);           break; }
+                fprintf(stderr, "  ARBNO RECEDE ctx=%d yielded=%d fenced=%d DELTA=%d delta=%d\n", Z.ctx, Z.yielded, Z.fenced, Z.DELTA, Z.delta);
+            if (Z.fenced)                         { a = CONCEDE; z_up_fail(&Z, &psi); break; }
+            else if (Z.yielded && Z.delta > Z.DELTA) { a = PROCEED; z_move_next(&Z);     break; } /* made progress */
+            else if (Z.yielded)                   { a = CONCEDE; z_up_fail(&Z, &psi); break; } /* zero-progress: stop */
+            else                                  { a = CONCEDE; z_up_fail(&Z, &psi); break; }
 /*--- ARB ---------------------------------------------------------------------------*/
         case T_ARB<<2|PROCEED:
             if (scan_ARB(&Z))    { a = SUCCEED;  omega_push(&omega, &Z, &psi); z_up(&Z, &psi);                break; }
