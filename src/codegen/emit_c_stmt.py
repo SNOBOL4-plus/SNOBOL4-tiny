@@ -444,7 +444,8 @@ def emit_as_pattern(p):
                     'TAB','RTAB','REM','ARB','BAL','FENCE','FAIL','SUCCEED',
                     'DIFFER','IDENT','EQ','NE','LT','LE','GT','GE','APPLY','SIZE',
                     'DUPL','REPLACE','SUBSTR','REVERSE','TRIM','INTEGER','REAL',
-                    'STRING','CONVERT','INPUT','OUTPUT','DATATYPE'}
+                    'STRING','CONVERT','INPUT','OUTPUT','DATATYPE',
+                    'REDUCE','EVAL'}   # dynamic pattern builders via OPSYN/EVAL
             nm2 = (p.name or '').upper()
             if nm2 not in {x.upper() for x in _PAT_FUNCS2} and nm2 not in _KB2:
                 # Pattern variable juxtaposed with next piece: ref(name) cat next
@@ -486,7 +487,9 @@ def _is_pattern_expr(p):
     _PAT_FNS = {'FENCE','ARBNO','SPAN','BREAK','BREAKX','ANY','NOTANY',
                 'LEN','POS','RPOS','TAB','RTAB','ARB','REM','BAL',
                 'FENCE','FAIL','SUCCEED','ABORT'}
-    if k == 'call' and p.name and p.name.upper() in _PAT_FNS:
+    # reduce() is OPSYN('&','reduce',2) — returns a pattern via EVAL
+    _PAT_FNS_DYNAMIC = {'REDUCE', 'EVAL'}
+    if k == 'call' and p.name and (p.name.upper() in _PAT_FNS or p.name.upper() in _PAT_FNS_DYNAMIC):
         return True
     # concat/alt where either side is a pattern
     if k in ('concat', 'alt'):
@@ -594,6 +597,28 @@ def emit_pattern_expr(p):
     if k == 'call':
         name = (p.name or '').upper()
         args = p.args or []
+
+        # OPSYN reduce: & between two pattern atoms → reduce(left, right)
+        # reduce() returns a pattern via EVAL("epsilon . *Reduce(t, n)")
+        if name == 'REDUCE':
+            # Args are PatExpr nodes — emit left as C expr (its value), right as C expr
+            def _emit_reduce_arg(a):
+                from ir import PatExpr as _PE, Expr as _E
+                if isinstance(a, _E):
+                    return emit_expr(a)
+                if isinstance(a, _PE):
+                    if a.kind == 'lit':
+                        return f'SNO_STR_VAL({sno_val_to_c_literal(a.val or "")})'
+                    if a.kind == 'var':
+                        return f'sno_var_get("{a.val}")'
+                    # For any other PatExpr, emit as pattern (reduce will receive it)
+                    return emit_pattern_expr(a)
+                return 'SNO_NULL_VAL'
+            ca = [_emit_reduce_arg(a) for a in args]
+            nargs = len(ca)
+            args_c = ', '.join(ca)
+            return (f'sno_var_as_pattern(sno_apply("reduce", '
+                    f'(SnoVal[{max(nargs,1)}]){{{args_c}}}, {nargs}))')
 
         # Pattern builtins that return patterns
         pat_builtins = {

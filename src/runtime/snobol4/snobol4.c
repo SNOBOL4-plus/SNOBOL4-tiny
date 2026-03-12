@@ -245,6 +245,15 @@ static SnoVal _b_tree_c(SnoVal *a, int n) {
     if (n < 1) return SNO_NULL_VAL;
     return sno_field_get(a[0], "c");
 }
+/* link_counter / link_tag field accessors: value(x), next(x) */
+static SnoVal _b_field_value(SnoVal *a, int n) {
+    if (n < 1) return SNO_NULL_VAL;
+    return sno_field_get(a[0], "value");
+}
+static SnoVal _b_field_next(SnoVal *a, int n) {
+    if (n < 1) return SNO_NULL_VAL;
+    return sno_field_get(a[0], "next");
+}
 
 void sno_runtime_init(void) {
     GC_INIT();
@@ -287,10 +296,12 @@ void sno_runtime_init(void) {
     sno_register_fn("nDec",     _b_nDec,     0, 0);
     sno_register_fn("nTop",     _b_nTop,     0, 0);
     sno_register_fn("nPop",     _b_nPop,     0, 0);
-    sno_register_fn("n",        _b_tree_n,   1, 1);
-    sno_register_fn("t",        _b_tree_t,   1, 1);
-    sno_register_fn("v",        _b_tree_v,   1, 1);
-    sno_register_fn("c",        _b_tree_c,   1, 1);
+    sno_register_fn("n",        _b_tree_n,      1, 1);
+    sno_register_fn("t",        _b_tree_t,      1, 1);
+    sno_register_fn("v",        _b_tree_v,      1, 1);
+    sno_register_fn("c",        _b_tree_c,      1, 1);
+    sno_register_fn("value",    _b_field_value, 1, 1);
+    sno_register_fn("next",     _b_field_next,  1, 1);
     /* Sprint 23: pre-init &ALPHABET-derived constants from global.sno
      * &ALPHABET is a 256-char binary string; POS(n) LEN(1) . var extracts char(n).
      * Since SNO_STR_VAL uses strlen, &ALPHABET[0]=NUL causes all matches to fail.

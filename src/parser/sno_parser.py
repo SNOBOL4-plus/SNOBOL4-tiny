@@ -755,11 +755,15 @@ class _ExprParser:
         # Concatenation loop: juxtaposed terms OR explicit '&'
         while not self.eof() and (self._starts_primary() or self.at('AMP')):
             if self.at('AMP'):
-                self.consume()   # consume & — semantically identical to blank concat
+                self.consume()   # consume &
                 if self.eof() or not self._starts_primary():
                     break        # trailing & — ignore
-            right = self.parse_additive()
-            left = Expr(kind='concat', left=left, right=right)
+                right = self.parse_additive()
+                # & = reduce(left, right) per OPSYN('&','reduce',2) in beauty.sno
+                left = Expr(kind='call', name='reduce', args=[left, right])
+            else:
+                right = self.parse_additive()
+                left = Expr(kind='concat', left=left, right=right)
             # Check for capture after each piece
             while self.at('DOT', 'DOLLAR'):
                 op = self.consume().kind
@@ -939,16 +943,25 @@ class _PatParser:
         return left
 
     def parse_cat(self):
-        """Concatenation of pattern atoms (juxtaposition)."""
-        parts = [self.parse_capture()]
+        """Concatenation of pattern atoms (juxtaposition).
+        AMP (&) between two pattern atoms is emitted as reduce(left, right)
+        per SNOBOL4 OPSYN semantics used by beauty.sno (OPSYN('&','reduce',2)).
+        """
+        left = self.parse_capture()
         while not self.eof() and self._starts_pat_atom():
-            parts.append(self.parse_capture())
-        if len(parts) == 1:
-            return parts[0]
-        result = parts[0]
-        for p in parts[1:]:
-            result = PatExpr(kind='cat', left=result, right=p)
-        return result
+            if self.at('AMP'):
+                # & infix: reduce(left, right) — OPSYN('&','reduce',2)
+                self.consume()
+                if self.eof() or not self._starts_pat_atom():
+                    break
+                right = self.parse_capture()
+                from ir import Expr
+                left = PatExpr(kind='call', name='reduce',
+                               args=[left, right])
+            else:
+                right = self.parse_capture()
+                left = PatExpr(kind='cat', left=left, right=right)
+        return left
 
     def parse_capture(self):
         """pat_atom ('$'|'.') expr  — capture assignment."""

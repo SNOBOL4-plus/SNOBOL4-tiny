@@ -819,25 +819,162 @@ SnoVal sno_apply_val(SnoVal fnval, SnoVal *args, int nargs) {
     return sno_apply(name, args, nargs);
 }
 
-/* sno_eval — EVAL(expr) — evaluate a string as a SNOBOL4 expression */
-SnoVal sno_eval(SnoVal expr) {
-    /* Full EVAL requires a compiler/interpreter loop — for now,
-     * if the expression is already a value, return it.
-     * If it's a string that names a variable, return that variable's value.
-     * TODO: full expression evaluator */
-    const char *s = sno_to_str(expr);
-    if (!s || !*s) return SNO_NULL_VAL;
-    /* Try as a variable name first */
-    SnoVal v = sno_var_get(s);
-    if (v.type != SNO_NULL) return v;
-    /* Try as an integer */
-    if (isdigit((unsigned char)s[0]) || s[0] == '-') {
-        char *end;
-        long long i = strtoll(s, &end, 10);
-        if (*end == '\0') return SNO_INT_VAL(i);
+/* =========================================================================
+ * sno_eval — EVAL(expr)
+ *
+ * Hand-rolled recursive descent over the subset of SNOBOL4 pattern
+ * expressions that beauty.sno produces:
+ *
+ *   expr : term ('.' term)*
+ *   term : '*' ident ['(' args ')']   deferred ref / user_call node
+ *        | ident '(' args ')'          function call — evaluate now
+ *        | '\'' str '\''               string literal → pat_lit
+ *        | ident                       plain name → SNO_STR sentinel
+ *   args : val (',' val)*
+ *   val  : ident '(' args ')'          function call → value
+ *        | '\'' str '\''               string value
+ *        | ident                       var lookup
+ *        | integer
+ *
+ * Key semantic: plain IDENT in term position returns SNO_STR_VAL(name).
+ * Dot handler checks right operand type:
+ *   SNO_STR     → assign_cond(left, right)   capture into named var
+ *   SNO_PATTERN → pat_cat(left, right)        pattern concat
+ * ========================================================================= */
+
+typedef struct { const char *s; int pos; } SnoEvalCtx;
+
+static void _ev_skip(SnoEvalCtx *e) {
+    while (e->s[e->pos] == ' ' || e->s[e->pos] == '\t') e->pos++;
+}
+
+static char *_ev_ident(SnoEvalCtx *e) {
+    int start = e->pos;
+    while (isalnum((unsigned char)e->s[e->pos]) || e->s[e->pos] == '_') e->pos++;
+    int len = e->pos - start;
+    if (len == 0) return NULL;
+    char *nm = GC_malloc(len + 1);
+    memcpy(nm, e->s + start, len);
+    nm[len] = '\0';
+    return nm;
+}
+
+static char *_ev_strlit(SnoEvalCtx *e) {
+    char delim = e->s[e->pos]; e->pos++;
+    int start = e->pos;
+    while (e->s[e->pos] && e->s[e->pos] != delim) e->pos++;
+    int len = e->pos - start;
+    char *lit = GC_malloc(len + 1);
+    memcpy(lit, e->s + start, len);
+    lit[len] = '\0';
+    if (e->s[e->pos] == delim) e->pos++;
+    return lit;
+}
+
+static SnoVal _ev_val(SnoEvalCtx *e);
+static SnoVal _ev_term(SnoEvalCtx *e);
+static SnoVal _ev_expr(SnoEvalCtx *e);
+
+static int _ev_args(SnoEvalCtx *e, SnoVal *args, int maxargs) {
+    int na = 0;
+    _ev_skip(e);
+    while (e->s[e->pos] && e->s[e->pos] != ')') {
+        if (na > 0) { if (e->s[e->pos] == ',') e->pos++; _ev_skip(e); }
+        if (na < maxargs) args[na++] = _ev_val(e);
+        else _ev_val(e);
+        _ev_skip(e);
     }
-    /* Return as string */
-    return SNO_STR_VAL(GC_strdup(s));
+    if (e->s[e->pos] == ')') e->pos++;
+    return na;
+}
+
+static SnoVal _ev_val(SnoEvalCtx *e) {
+    _ev_skip(e);
+    char c = e->s[e->pos];
+    if (c == '\'' || c == '"') return SNO_STR_VAL(_ev_strlit(e));
+    if (isalpha((unsigned char)c) || c == '_') {
+        char *nm = _ev_ident(e);
+        _ev_skip(e);
+        if (e->s[e->pos] == '(') {
+            e->pos++;
+            SnoVal args[8]; int na = _ev_args(e, args, 8);
+            return sno_apply(nm, args, na);
+        }
+        return sno_var_get(nm);
+    }
+    if (isdigit((unsigned char)c) || c == '-') {
+        char *end;
+        long long iv = strtoll(e->s + e->pos, &end, 10);
+        e->pos = (int)(end - e->s);
+        return SNO_INT_VAL(iv);
+    }
+    return SNO_NULL_VAL;
+}
+
+static SnoVal _ev_term(SnoEvalCtx *e) {
+    _ev_skip(e);
+    char c = e->s[e->pos];
+    if (c == '*') {
+        e->pos++;
+        _ev_skip(e);
+        char *nm = _ev_ident(e);
+        if (!nm) return sno_pat_epsilon();
+        _ev_skip(e);
+        if (e->s[e->pos] == '(') {
+            e->pos++;
+            SnoVal args[8]; int na = _ev_args(e, args, 8);
+            SnoVal *ac = na ? GC_malloc(na * sizeof(SnoVal)) : NULL;
+            if (ac) memcpy(ac, args, na * sizeof(SnoVal));
+            return sno_pat_user_call(nm, ac, na);
+        }
+        return sno_pat_ref(nm);
+    }
+    if (c == '\'' || c == '"') return sno_pat_lit(_ev_strlit(e));
+    if (isalpha((unsigned char)c) || c == '_') {
+        char *nm = _ev_ident(e);
+        _ev_skip(e);
+        if (e->s[e->pos] == '(') {
+            e->pos++;
+            SnoVal args[8]; int na = _ev_args(e, args, 8);
+            return sno_apply(nm, args, na);
+        }
+        return SNO_STR_VAL(GC_strdup(nm));
+    }
+    return sno_pat_epsilon();
+}
+
+static SnoVal _ev_expr(SnoEvalCtx *e) {
+    SnoVal left = _ev_term(e);
+    if (left.type == SNO_STR) {
+        SnoVal v = sno_var_get(left.s);
+        if (v.type == SNO_PATTERN) left = v;
+        else if (v.type == SNO_STR && v.s && v.s[0]) left = sno_pat_lit(v.s);
+        else left = sno_pat_epsilon();
+    } else if (left.type == SNO_NULL) {
+        left = sno_pat_epsilon();
+    }
+    _ev_skip(e);
+    while (e->s[e->pos] == '.') {
+        e->pos++;
+        _ev_skip(e);
+        SnoVal right = _ev_term(e);
+        _ev_skip(e);
+        if (right.type == SNO_STR) {
+            left = sno_pat_assign_cond(left, right);
+        } else {
+            if (right.type == SNO_NULL) right = sno_pat_epsilon();
+            left = sno_pat_cat(left, right);
+        }
+    }
+    return left;
+}
+
+SnoVal sno_eval(SnoVal expr) {
+    if (expr.type != SNO_STR && expr.type != SNO_NULL) return expr;
+    const char *s = sno_to_str(expr);
+    if (!s || !*s) return sno_pat_epsilon();
+    SnoEvalCtx ctx = { s, 0 };
+    return _ev_expr(&ctx);
 }
 
 /* sno_opsyn — OPSYN(new, old, type) */
