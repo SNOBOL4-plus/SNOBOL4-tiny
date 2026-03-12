@@ -990,10 +990,63 @@ SnoVal sno_opsyn(SnoVal newname, SnoVal oldname, SnoVal type) {
     return SNO_NULL_VAL;
 }
 
-/* sno_sort_fn — SORT(array) */
+/* sno_sort_fn — SORT(table_or_array) -> 2D array[1..n,1..2] */
+/* Compare function for qsort: sort by string key */
+static int _sort_cmp(const void *a, const void *b) {
+    const char **sa = (const char **)a;
+    const char **sb = (const char **)b;
+    return strcmp(sa[0], sb[0]);
+}
 SnoVal sno_sort_fn(SnoVal arr) {
-    /* Stub — return input unchanged */
-    return arr;
+    if (arr.type != SNO_TABLE) return arr;  /* pass-through for non-table */
+    SnoTable *tbl = arr.tbl;
+    if (!tbl) return SNO_FAIL_VAL;
+
+    /* Count entries */
+    int n = 0;
+    for (int h = 0; h < SNO_TABLE_BUCKETS; h++)
+        for (SnoTableEntry *e = tbl->buckets[h]; e; e = e->next) n++;
+    if (n == 0) return SNO_FAIL_VAL;
+
+    /* Collect all (key, value) pairs */
+    const char **keys = GC_malloc(n * sizeof(char *));
+    SnoVal *vals = GC_malloc(n * sizeof(SnoVal));
+    int idx = 0;
+    for (int h = 0; h < SNO_TABLE_BUCKETS; h++)
+        for (SnoTableEntry *e = tbl->buckets[h]; e; e = e->next) {
+            keys[idx] = e->key;
+            vals[idx] = e->val;
+            idx++;
+        }
+
+    /* Sort keys (indirect sort via index array) */
+    /* Build index array and sort */
+    int *order = GC_malloc(n * sizeof(int));
+    for (int i = 0; i < n; i++) order[i] = i;
+    /* Simple insertion sort to avoid qsort complexity with indirect */
+    for (int i = 1; i < n; i++) {
+        int tmp = order[i];
+        int j = i - 1;
+        while (j >= 0 && strcmp(keys[order[j]], keys[tmp]) > 0) {
+            order[j+1] = order[j]; j--;
+        }
+        order[j+1] = tmp;
+    }
+
+    /* Build 2D array[1..n, 1..2] */
+    SnoArray *a = GC_malloc(sizeof(SnoArray));
+    a->lo   = 1;
+    a->hi   = n;
+    a->ndim = 2;   /* 2 columns */
+    a->data = GC_malloc(n * 2 * sizeof(SnoVal));
+    for (int i = 0; i < n; i++) {
+        a->data[i * 2 + 0] = SNO_STR_VAL(GC_strdup(keys[order[i]]));
+        a->data[i * 2 + 1] = vals[order[i]];
+    }
+    SnoVal result = {0};
+    result.type = SNO_ARRAY;
+    result.a    = a;
+    return result;
 }
 
 /* sno_pat_call — call a user-defined function with one arg and use result as pattern value.

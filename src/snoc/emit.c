@@ -300,11 +300,16 @@ static void emit_pat(Expr *e) {
 /* ============================================================
  * Emit lvalue assignment target
  * ============================================================ */
+
+/* cur_fn_def and is_fn_local() are defined after FnDef (below) */
+static int is_fn_local(const char *varname);
+
 static void emit_assign_target(Expr *lhs, const char *rhs_str) {
     if (!lhs) return;
     if (lhs->kind == E_VAR) {
         E("sno_set(%s, %s);\n", cs(lhs->sval), rhs_str);
-        E("sno_var_set(\"%s\", %s);\n", lhs->sval, cs(lhs->sval));
+        if (!is_fn_local(lhs->sval))  /* sync globals; skip declared fn locals */
+            E("sno_var_set(\"%s\", %s);\n", lhs->sval, cs(lhs->sval));
     } else if (lhs->kind == E_ARRAY) {
         E("sno_aset(%s,(SnoVal[]){", cs(lhs->sval));
         for (int i=0; i<lhs->nargs; i++) {
@@ -589,7 +594,8 @@ static void emit_stmt(Stmt *s, const char *fn) {
                     E("    sno_var_set(\"%s\", _s%d);\n", s->subject->sval, u);
                 else {
                     E("    sno_set(%s, _s%d);\n", cs(s->subject->sval), u);
-                    E("    sno_var_set(\"%s\", %s);\n", s->subject->sval, cs(s->subject->sval));
+                    if (!is_fn_local(s->subject->sval))  /* skip fn locals */
+                        E("    sno_var_set(\"%s\", %s);\n", s->subject->sval, cs(s->subject->sval));
                 }
             }
             E("}\n");
@@ -713,6 +719,21 @@ typedef struct {
 
 static FnDef fn_table[FN_MAX];
 static int   fn_count = 0;
+
+/* cur_fn_def: set to the current FnDef* during emit_fn, NULL during emit_main */
+static FnDef *cur_fn_def = NULL;
+
+/* is_fn_local: return 1 if varname is a declared param, local, or return-value
+ * of the current function.  Returns 0 when in global (main) scope. */
+static int is_fn_local(const char *varname) {
+    if (!cur_fn_def || !varname) return 0;
+    if (strcasecmp(cur_fn_def->name, varname) == 0) return 1;
+    for (int i = 0; i < cur_fn_def->nargs; i++)
+        if (strcasecmp(cur_fn_def->args[i], varname) == 0) return 1;
+    for (int i = 0; i < cur_fn_def->nlocals; i++)
+        if (strcasecmp(cur_fn_def->locals[i], varname) == 0) return 1;
+    return 0;
+}
 
 /* Return fn index if label matches a known function entry, else -1 */
 static int fn_by_label(const char *label) {
@@ -980,6 +1001,7 @@ static void emit_fn(FnDef *fn, Program *prog) {
     (void)prog;
     lreg_reset();
     cur_fn_name = fn->name;
+    cur_fn_def  = fn;
     E("static SnoVal _sno_fn_%s(SnoVal *_args, int _nargs) {\n", fn->name);
 
     E("    jmp_buf _fn_abort_jmp;\n");
@@ -1052,6 +1074,7 @@ static int stmt_in_phantom_body(Stmt *s) {
 static void emit_main(Program *prog) {
     lreg_reset();
     cur_fn_name = "main";
+    cur_fn_def  = NULL;   /* NULL = global scope; is_fn_local returns 0 for all vars */
     E("int main(void) {\n");
     E("    sno_init();\n\n");
 

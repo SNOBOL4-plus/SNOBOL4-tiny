@@ -566,12 +566,15 @@ void sno_array_set(SnoArray *a, int i, SnoVal v) {
 }
 
 SnoVal sno_array_get2(SnoArray *a, int i, int j) {
-    if (!a) return SNO_NULL_VAL;
+    if (!a) return SNO_FAIL_VAL;
     int cols = a->ndim;  /* cols stored in ndim for 2D */
     int row  = i - a->lo;
     /* j-origin: assume lo2 = 1 (SNOBOL4 default) */
     int col  = j - 1;
     int idx  = row * cols + col;
+    int total = (a->hi - a->lo + 1) * cols;
+    if (row < 0 || row >= (a->hi - a->lo + 1) || col < 0 || col >= cols || idx < 0 || idx >= total)
+        return SNO_FAIL_VAL;
     return a->data[idx];
 }
 
