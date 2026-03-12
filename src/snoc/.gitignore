@@ -1,0 +1,5 @@
+lex.yy.c
+sno.tab.c
+sno.tab.h
+*.o
+snoc
