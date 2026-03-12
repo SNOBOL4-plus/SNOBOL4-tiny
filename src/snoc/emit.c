@@ -539,6 +539,7 @@ typedef struct {
     int    nbody_starts;
     Stmt  *define_stmt;        /* the last DEFINE(...) statement */
     char  *end_label;          /* label that ends the body (from DEFINE's goto) */
+    char  *entry_label;        /* explicit entry label from DEFINE('proto','label') */
 } FnDef;
 
 static FnDef fn_table[FN_MAX];
@@ -547,8 +548,10 @@ static int   fn_count = 0;
 /* Return fn index if label matches a known function entry, else -1 */
 static int fn_by_label(const char *label) {
     if (!label) return -1;
-    for (int i=0; i<fn_count; i++)
+    for (int i=0; i<fn_count; i++) {
         if (strcasecmp(fn_table[i].name, label)==0) return i;
+        if (fn_table[i].entry_label && strcasecmp(fn_table[i].entry_label, label)==0) return i;
+    }
     return -1;
 }
 
@@ -670,6 +673,13 @@ static void collect_functions(Program *prog) {
         memset(fn, 0, sizeof *fn);
         parse_proto(proto, fn);
         fn->define_stmt = s;
+        /* Extract entry label from 2nd DEFINE arg: DEFINE('proto','entry_label') */
+        fn->entry_label = NULL;
+        if (s->subject && s->subject->kind == E_CALL &&
+            s->subject->nargs >= 2) {
+            const char *el = flatten_str_expr(s->subject->args[1]);
+            if (el && el[0]) fn->entry_label = strdup(el);
+        }
         /* Extract end-of-body label from DEFINE's goto.
          * Two forms:
          *   1. DEFINE('fn()')  :(FnEnd)   -- goto on same statement
@@ -703,8 +713,10 @@ static void collect_functions(Program *prog) {
     /* Second pass: find ALL body_starts for each function */
     for (int i=0; i<fn_count; i++) {
         fn_table[i].nbody_starts = 0;
+        /* The entry label is: entry_label if set, else function name */
+        const char *entry = fn_table[i].entry_label ? fn_table[i].entry_label : fn_table[i].name;
         for (Stmt *s = prog->head; s; s = s->next) {
-            if (s->label && strcasecmp(s->label, fn_table[i].name)==0) {
+            if (s->label && strcasecmp(s->label, entry)==0) {
                 if (fn_table[i].nbody_starts < BODY_MAX)
                     fn_table[i].body_starts[fn_table[i].nbody_starts++] = s;
             }
@@ -728,7 +740,9 @@ static void collect_functions(Program *prog) {
 static int is_body_boundary(const char *label, const char *cur_fn) {
     if (!label) return 0;
     for (int i = 0; i < fn_count; i++) {
-        if (strcasecmp(fn_table[i].name, label) == 0 &&
+        /* The "entry" for this function is entry_label if set, else name */
+        const char *entry = fn_table[i].entry_label ? fn_table[i].entry_label : fn_table[i].name;
+        if (strcasecmp(entry, label) == 0 &&
             strcasecmp(fn_table[i].name, cur_fn) != 0) return 1;
         if (fn_table[i].end_label &&
             strcasecmp(fn_table[i].end_label, label) == 0) return 1;
