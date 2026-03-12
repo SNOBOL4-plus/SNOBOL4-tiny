@@ -264,6 +264,53 @@ static SnoVal _b_field_next(SnoVal *a, int n) {
     return sno_field_get(a[0], "next");
 }
 
+/* DUMP builtin — dump all variables to stderr (implementation after var table) */
+static void sno_var_dump(void);
+static SnoVal _b_DUMP(SnoVal *a, int n) {
+    (void)a; (void)n;
+    sno_var_dump();
+    return SNO_NULL_VAL;
+}
+
+/* Pattern builtins callable via sno_apply() — used when SPAN/BREAK/etc appear
+ * inside argument lists and are tokenised as IDENT rather than PAT_BUILTIN. */
+extern SnoVal sno_pat_span(const char *);
+extern SnoVal sno_pat_break_(const char *);
+extern SnoVal sno_pat_any_cs(const char *);
+extern SnoVal sno_pat_notany(const char *);
+extern SnoVal sno_pat_len(int64_t);
+extern SnoVal sno_pat_pos(int64_t);
+extern SnoVal sno_pat_rpos(int64_t);
+extern SnoVal sno_pat_tab(int64_t);
+extern SnoVal sno_pat_rtab(int64_t);
+extern SnoVal sno_pat_arb(void);
+extern SnoVal sno_pat_rem(void);
+extern SnoVal sno_pat_fail(void);
+extern SnoVal sno_pat_abort(void);
+extern SnoVal sno_pat_succeed(void);
+extern SnoVal sno_pat_bal(void);
+extern SnoVal sno_pat_arbno(SnoVal);
+extern SnoVal sno_pat_fence(void);
+extern SnoVal sno_pat_fence_p(SnoVal);
+
+static SnoVal _b_PAT_SPAN(SnoVal *a, int n)    { return n>=1 ? sno_pat_span(sno_to_str(a[0]))    : SNO_FAIL_VAL; }
+static SnoVal _b_PAT_BREAK(SnoVal *a, int n)   { return n>=1 ? sno_pat_break_(sno_to_str(a[0]))  : SNO_FAIL_VAL; }
+static SnoVal _b_PAT_ANY(SnoVal *a, int n)     { return n>=1 ? sno_pat_any_cs(sno_to_str(a[0]))  : SNO_FAIL_VAL; }
+static SnoVal _b_PAT_NOTANY(SnoVal *a, int n)  { return n>=1 ? sno_pat_notany(sno_to_str(a[0]))  : SNO_FAIL_VAL; }
+static SnoVal _b_PAT_LEN(SnoVal *a, int n)     { return n>=1 ? sno_pat_len(sno_to_int(a[0]))   : SNO_FAIL_VAL; }
+static SnoVal _b_PAT_POS(SnoVal *a, int n)     { return n>=1 ? sno_pat_pos(sno_to_int(a[0]))   : SNO_FAIL_VAL; }
+static SnoVal _b_PAT_RPOS(SnoVal *a, int n)    { return n>=1 ? sno_pat_rpos(sno_to_int(a[0]))  : SNO_FAIL_VAL; }
+static SnoVal _b_PAT_TAB(SnoVal *a, int n)     { return n>=1 ? sno_pat_tab(sno_to_int(a[0]))   : SNO_FAIL_VAL; }
+static SnoVal _b_PAT_RTAB(SnoVal *a, int n)    { return n>=1 ? sno_pat_rtab(sno_to_int(a[0]))  : SNO_FAIL_VAL; }
+static SnoVal _b_PAT_ARB(SnoVal *a, int n)     { (void)a;(void)n; return sno_pat_arb();     }
+static SnoVal _b_PAT_REM(SnoVal *a, int n)     { (void)a;(void)n; return sno_pat_rem();     }
+static SnoVal _b_PAT_FAIL(SnoVal *a, int n)    { (void)a;(void)n; return sno_pat_fail();    }
+static SnoVal _b_PAT_ABORT(SnoVal *a, int n)   { (void)a;(void)n; return sno_pat_abort();   }
+static SnoVal _b_PAT_SUCCEED(SnoVal *a, int n) { (void)a;(void)n; return sno_pat_succeed(); }
+static SnoVal _b_PAT_BAL(SnoVal *a, int n)     { (void)a;(void)n; return sno_pat_bal();     }
+static SnoVal _b_PAT_ARBNO(SnoVal *a, int n)   { return n>=1 ? sno_pat_arbno(a[0])  : SNO_FAIL_VAL; }
+static SnoVal _b_PAT_FENCE(SnoVal *a, int n)   { return n>=1 ? sno_pat_fence_p(a[0]) : sno_pat_fence(); }
+
 void sno_runtime_init(void) {
     GC_INIT();
     /* Build &ALPHABET: all 256 chars in order */
@@ -313,6 +360,25 @@ void sno_runtime_init(void) {
     sno_register_fn("c",        _b_tree_c,      1, 1);
     sno_register_fn("value",    _b_field_value, 1, 1);
     sno_register_fn("next",     _b_field_next,  1, 1);
+    sno_register_fn("DUMP",     _b_DUMP,        0, 1);
+    /* Pattern builtins callable via sno_apply (when inside arglist parens) */
+    sno_register_fn("SPAN",    _b_PAT_SPAN,    1, 1);
+    sno_register_fn("BREAK",   _b_PAT_BREAK,   1, 1);
+    sno_register_fn("ANY",     _b_PAT_ANY,     1, 1);
+    sno_register_fn("NOTANY",  _b_PAT_NOTANY,  1, 1);
+    sno_register_fn("LEN",     _b_PAT_LEN,     1, 1);
+    sno_register_fn("POS",     _b_PAT_POS,     1, 1);
+    sno_register_fn("RPOS",    _b_PAT_RPOS,    1, 1);
+    sno_register_fn("TAB",     _b_PAT_TAB,     1, 1);
+    sno_register_fn("RTAB",    _b_PAT_RTAB,    1, 1);
+    sno_register_fn("ARB",     _b_PAT_ARB,     0, 0);
+    sno_register_fn("REM",     _b_PAT_REM,     0, 0);
+    sno_register_fn("FAIL",    _b_PAT_FAIL,    0, 0);
+    sno_register_fn("ABORT",   _b_PAT_ABORT,   0, 0);
+    sno_register_fn("SUCCEED", _b_PAT_SUCCEED, 0, 0);
+    sno_register_fn("BAL",     _b_PAT_BAL,     0, 0);
+    sno_register_fn("ARBNO",   _b_PAT_ARBNO,   1, 1);
+    sno_register_fn("FENCE",   _b_PAT_FENCE,   0, 1);
     /* Sprint 23: pre-init &ALPHABET-derived constants from global.sno
      * &ALPHABET is a 256-char binary string; POS(n) LEN(1) . var extracts char(n).
      * Since SNO_STR_VAL uses strlen, &ALPHABET[0]=NUL causes all matches to fail.
@@ -793,6 +859,36 @@ void sno_indirect_set(const char *name, SnoVal val) {
     SnoVal indirect_name = sno_var_get(name);
     const char *target = sno_to_str(indirect_name);
     sno_var_set(target, val);
+}
+
+/* DUMP implementation — used by _b_DUMP above */
+static void sno_var_dump(void) {
+    fprintf(stderr, "[DUMP start]\n");
+    for (int i = 0; i < VAR_BUCKETS; i++) {
+        for (VarEntry *e = _var_buckets[i]; e; e = e->next) {
+            const char *tname;
+            switch(e->val.type) {
+                case 0: tname="NULL"; break;
+                case 1: tname="STR"; break;
+                case 2: tname="INT"; break;
+                case 3: tname="REAL"; break;
+                case 5: tname="PATTERN"; break;
+                case 6: tname="ARRAY"; break;
+                case 7: tname="TABLE"; break;
+                case 8: tname="UDEF"; break;
+                case 9: tname="FAIL"; break;
+                default: tname="OTHER"; break;
+            }
+            if (e->val.type == SNO_STR) {
+                const char *s = e->val.s ? e->val.s : "(null)";
+                int len = (int)strlen(s);
+                fprintf(stderr, "  %s = STR(%.*s)\n", e->name, len > 40 ? 40 : len, s);
+            } else {
+                fprintf(stderr, "  %s = %s\n", e->name, tname);
+            }
+        }
+    }
+    fprintf(stderr, "[DUMP end]\n");
 }
 
 /* ============================================================

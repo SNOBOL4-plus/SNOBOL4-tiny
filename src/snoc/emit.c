@@ -130,8 +130,16 @@ static void emit_expr(Expr *e) {
             /* $expr — indirect lookup */
             E("sno_deref("); emit_expr(e->right); E(")");
         } else if (e->left->kind == E_VAR) {
-            /* *varname — deref in value context */
-            E("sno_get(%s)", cs(e->left->sval));
+            /* *varname — deferred pattern reference (resolved at match time) */
+            E("sno_var_as_pattern(sno_pat_ref(\"%s\"))", e->left->sval);
+        } else if (e->left->kind == E_CALL && e->left->nargs == 1) {
+            /* *varname(arg) — parser misparse: *varname concatenated with (arg).
+             * SNOBOL4 continuation lines cause the parser to greedily consume the
+             * next '(' as a function-call argument to varname.  The correct
+             * semantics are: deferred-ref(*varname) cat arg. */
+            E("sno_concat(sno_var_as_pattern(sno_pat_ref(\"%s\")),", e->left->sval);
+            emit_expr(e->left->args[0]);
+            E(")");
         } else {
             /* *(expr) — deref of compound expression */
             E("sno_deref("); emit_expr(e->left); E(")");
@@ -222,7 +230,12 @@ static void emit_pat(Expr *e) {
         /* *X — deferred pattern reference */
         if (e->left && e->left->kind == E_VAR)
             E("sno_pat_ref(\"%s\")", e->left->sval);
-        else {
+        else if (e->left && e->left->kind == E_CALL && e->left->nargs == 1) {
+            /* *varname(arg) — continuation-line misparse: deref-ref cat arg */
+            E("sno_pat_cat(sno_pat_ref(\"%s\"),", e->left->sval);
+            emit_pat(e->left->args[0]);
+            E(")");
+        } else {
             E("sno_pat_deref("); emit_expr(e->right ? e->right : e->left); E(")");
         }
         break;
