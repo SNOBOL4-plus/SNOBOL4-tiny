@@ -68,9 +68,12 @@ static void emit_expr(Expr *e) {
         if (!e->left) {
             /* $expr — indirect lookup */
             E("sno_deref("); emit_expr(e->right); E(")");
-        } else {
-            /* used as *X in pattern context — shouldn't reach here */
+        } else if (e->left->kind == E_VAR) {
+            /* *varname — deref in value context */
             E("sno_get(%s)", cs(e->left->sval));
+        } else {
+            /* *(expr) — deref of compound expression */
+            E("sno_deref("); emit_expr(e->left); E(")");
         }
         break;
 
