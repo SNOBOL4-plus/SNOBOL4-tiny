@@ -401,6 +401,12 @@ void sno_runtime_init(void) {
         _ch = GC_malloc_atomic(2);
         _ch[0] = (char)8;  _ch[1] = '\0'; sno_var_set("bs", SNO_STR_VAL(_ch));
         sno_var_set("nul", SNO_STR_VAL(""));  /* char(0) = empty in string context */
+        /* epsilon = the always-succeeds zero-match pattern.
+         * USER CONTRACT (Lon, Session 47): epsilon is NEVER assigned by user code.
+         * It is the pattern equivalent of NULL (empty string).
+         * NULL = empty string sentinel; epsilon = always-succeed pattern sentinel.
+         * Pre-initialize here exactly like nl/tab/cr. */
+        sno_var_set("epsilon", sno_pat_epsilon());
         _ch = GC_malloc_atomic(2);
         _ch[0] = (char)47; _ch[1] = '\0'; sno_var_set("fSlash", SNO_STR_VAL(_ch));
         _ch = GC_malloc_atomic(2);
