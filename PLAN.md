@@ -705,3 +705,74 @@ Proposed test file: `test/smoke/test_snoCommand_match.sh`
 - Created `test/smoke/` with three shell scripts replacing obsolete Python sprint tests
 - Decisions 12+13 written to DECISIONS.md
 - Session interrupted before fixing `sno.y` parser rule for `STAR IDENT (expr)`
+
+---
+
+## §17 — Smoke Test Infrastructure (Session 50, 2026-03-12)
+
+### Convention: per-session artifacts and outputs committed to GitHub
+
+Every session that produces a meaningfully different compiler output commits:
+
+1. **`artifacts/beauty_full_sessionNN.c`** — generated C from `snoc beauty.sno -I $INC`
+   - Debuggable without rebuilding
+   - README entry with line count, md5, active bug status
+
+2. **`test/smoke/outputs/sessionNN/`** — captured smoke test results
+   - `build_beauty.log` — gcc compile result
+   - `test_snoCommand_match.log` — per-statement grammar match results
+   - `test_self_beautify.log` — Milestone 0 diff result
+   - `beauty_oracle.sno` — CSNOBOL4 oracle output
+   - `beauty_compiled.sno` — compiled binary output
+   - `beauty_diff.txt` — diff oracle vs compiled
+   - `README.md` — summary table of pass/fail status
+
+### Session 50 smoke test results summary
+
+| Smoke Test | Result |
+|------------|--------|
+| build_beauty | ✅ PASS — 0 gcc errors, 12847 lines C |
+| snoCommand match | ❌ 0/21 — every statement type fails with "Parse Error" |
+| self-beautify (Milestone 0) | ❌ NOT ACHIEVED — 785 line diff, oracle=790 compiled=10 |
+
+### Smoke test scripts (test/smoke/)
+
+| Script | Purpose |
+|--------|---------|
+| `build_beauty.sh` | Compile beauty.sno → C → binary (Milestone 1+2 validation) |
+| `test_snoCommand_match.sh` | Match 21 statement types against snoCommand pattern |
+| `test_self_beautify.sh` | Self-beautify diff vs oracle (Milestone 0 gate) |
+
+### How to run
+
+```bash
+REPO=/path/to/SNOBOL4-tiny
+
+# Step 1: build
+bash $REPO/test/smoke/build_beauty.sh
+
+# Step 2: grammar smoke
+bash $REPO/test/smoke/test_snoCommand_match.sh /tmp/beauty_full_bin
+
+# Step 3: milestone 0
+bash $REPO/test/smoke/test_self_beautify.sh /tmp/beauty_full_bin
+```
+
+### Passing criteria for Milestone 0
+
+1. `build_beauty.sh` — ALL PASS
+2. `test_snoCommand_match.sh` — ALL PASS (21/21)
+3. `test_self_beautify.sh` — EMPTY DIFF
+
+### Note on old test suite
+
+`test/sprint*/` contain Python-based tests using `sno_parser` / `emit_c_stmt`
+(the old Python snoc pipeline). These do NOT run against the current C compiler.
+Retained for historical reference only. See Decision 13 in `doc/DECISIONS.md`.
+
+
+### Session 50 addendum — artifacts committed
+- `artifacts/beauty_full_session50.c` — 12847 lines, md5 `7fcbb3951a95f3f77de5dfe4afc49e49`
+- `test/smoke/outputs/session50/` — full logs, oracle, compiled output, diff
+- Smoke test convention documented in §17
+- Commits: `375d55c` (findings+tests), `7d3d0b6` (artifact), `05b80c2` (outputs)
