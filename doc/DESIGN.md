@@ -284,9 +284,9 @@ snoExpr15      → snoExpr17 (function calls, parens, literals)
 Plus: `snoStmt` (7-child: label/subject/pattern/=/replacement/goto1/goto2),
 `snoLabel`, `snoGoto`, `snoComment`, `snoControl`, `snoParse`, `snoCompiland`.
 
-### The stdin→stdout bridge (Expression.sno)
+### The stdin→stdout bridge (S4_expression.sno)
 
-The 5-line main pattern from `Expression.sno`:
+The 5-line main pattern from `S4_expression.sno`:
 
 ```snobol4
 START   LINE = INPUT                               :F(END)

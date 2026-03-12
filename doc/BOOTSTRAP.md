@@ -77,7 +77,7 @@ Sprint 5 deliverable:
    `src/patterns/SNOBOL4_EXPRESSION_PATTERN.h` (static PATTERN struct format,
    same as `BEAD_PATTERN.h`, `C_PATTERN.h`, etc.)
 2. `#include` it in `SNOBOL4c.c`
-3. Add a stdin read loop to `main()` (5 lines — see `Expression.sno`)
+3. Add a stdin read loop to `main()` (5 lines — see `S4_expression.sno`)
 
 Result: `SNOBOL4c.c` reads SNOBOL4 expressions from stdin with zero new
 C infrastructure. The language parses itself from Sprint 5, not Sprint 8.

@@ -425,7 +425,7 @@ parser written as SNOBOL4 patterns: `snoExpr` through `snoExpr17`, plus
 This is the full grammar — 17 precedence levels, all operators, function calls,
 subscripts, gotos.
 
-`Expression.sno` (the stripped-down version in the same folder) shows exactly
+`S4_expression.sno` (the stripped-down version in the same folder) shows exactly
 how to use it:
 
 ```snobol4
@@ -455,7 +455,7 @@ The plan:
 2. **`#include "SNOBOL4_EXPRESSION_PATTERN.h"` in `SNOBOL4c.c`** alongside
    the existing test patterns.
 
-3. **Add 5 lines to `main()`** mirroring `Expression.sno`: register
+3. **Add 5 lines to `main()`** mirroring `S4_expression.sno`: register
    `snoExpr` in the globals table, read stdin line by line, call `MATCH()`.
 
 4. **`SNOBOL4c.c` now reads stdin and parses SNOBOL4 expressions.** No new
