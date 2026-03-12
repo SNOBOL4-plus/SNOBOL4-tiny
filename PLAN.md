@@ -26,92 +26,77 @@ collide when emitted flat into one C `main()`.
 
 ---
 
-## §6 — The Execution Model: Statement-Level Exception Handling
+## §6 — The Execution Model: Byrd Box + Exception Hygiene
 
-### The Byrd box insight applied to statements
+### ⚡ EUREKA — Session 27, 2026-03-12 (Lon)
 
-The `test_icon*.py` and `test_sno_1.c` files in ByrdBox establish the gold standard:
-**each node in the compiled graph has exactly four ports: α (enter), β (resume/retry),
-γ (succeed), ω (fail)**. This is the Byrd Box model — see `doc/DESIGN.md`.
+**Normal Byrd Box gotos handle success and failure. C exceptions (longjmp/throw)
+handle ABORT and genuinely bad things only.**
 
-For SNOBOL4 *statements*, the same four-port model applies. Each statement is a
-box. SUCCESS and FAILURE are not thrown/caught with C exceptions — they are
-**goto edges** between ports. The granularity is exactly one statement per box.
+This is the clean separation:
 
-### The two-level architecture
+### Hot path — pure Byrd Box gotos (zero overhead)
 
-**Level 1 — Statement boxes (current model, flat C gotos)**
+Normal SNOBOL4 control flow — pattern success, pattern failure, backtracking,
+`:S()` / `:F()` goto routing — uses **pure C labeled gotos** exactly as in
+`test_sno_1.c`. No `setjmp`. No exception machinery on the hot path. The ω port
+(CONCEDE) is a goto, not a throw.
 
-Each SNOBOL4 statement compiles to a labeled region with:
+### Cold path — C exceptions for ABORT and bad things only
 
-```c
-_stmt_N_alpha:   /* enter — evaluate subject, attempt pattern match */
-    ...
-    if (match_failed) goto _stmt_N_omega;
-    ...
-    goto _stmt_N_gamma;
+**ABORT**, runtime errors, FENCE bare, divide-by-zero, stack overflow —
+**throw a C exception** (`longjmp` to nearest handler). These are not
+normal control flow. They are signals that something genuinely went wrong
+or that execution must halt unconditionally.
 
-_stmt_N_gamma:   /* success path — execute replacement, follow :S() goto */
-    ...
-    goto _stmt_M_alpha;   /* next stmt or :S(label) */
-
-_stmt_N_omega:   /* failure path — follow :F() goto */
-    ...
-    goto _stmt_K_alpha;   /* :F(label) or fall-through */
-```
-
-No C `try`/`catch`. No `setjmp`/`longjmp`. The SUCCESS and FAILURE branches ARE
-the goto wiring — exactly as in `test_sno_1.c` and `test_icon.c`.
-
-This is what the current `emit.c` approximates with `_SNO_NEXT_N` labels. The
-fix is to make the alpha/gamma/omega structure explicit and symmetric.
-
-**Level 2 — Function boxes (the Sprint 24 fix)**
-
-Each `DEFINE('fn(args)locals')` in SNOBOL4 compiles to a **separate C function**:
+Each SNOBOL4 **statement** is a `try/catch` boundary for these signals:
 
 ```c
-SnoVal _sno_fn_pp(SnoVal *args, int nargs) {
-    /* local variable declarations */
-    static SnoVal _a = {0}, _b = {0};  /* args */
-    static SnoVal _loc = {0};          /* locals */
-
-    /* statement boxes for the body of pp */
-    _stmt_0_alpha: ...
-    _stmt_0_gamma: ...
-    _stmt_0_omega: ...
-
-    _SNO_RETURN_pp:   return sno_get(_pp);   /* :(RETURN) lands here */
-    _SNO_FRETURN_pp:  return SNO_FAIL_VAL;   /* :(FRETURN) lands here */
+/* Statement: subject pattern = replacement :S(foo) :F(bar) */
+if (setjmp(sno_abort_jmp) == 0) {
+    /* HOT PATH — pure Byrd Box gotos, no exception overhead */
+    SnoVal _s = ...; SnoPattern *_p = ...;
+    SnoMatch _m = sno_match(&_s, _p);   /* Byrd Box runs here */
+    if (!_m.failed) { ...; goto _L_foo; }
+    goto _L_bar;
+} else {
+    /* COLD PATH — caught SnoAbort (ABORT pattern, runtime error, etc.) */
+    goto _SNO_ABORT_HANDLER;
 }
 ```
 
-`main()` becomes the top-level "program function" — it holds only the statements
-that precede the first DEFINE and the END label.
+Each SNOBOL4 **DEFINE'd function** is also a catch boundary:
 
-Duplicate label problem: **solved** — each C function has its own label namespace.
+```c
+SnoVal _sno_fn_pp(SnoVal *args, int nargs) {
+    if (setjmp(sno_fn_jmp) != 0)
+        return SNO_FAIL_VAL;   /* ABORT inside function → FRETURN */
+    /* ... function body with per-statement setjmp guards ... */
+    _SNO_RETURN_pp:  return sno_get(_pp);
+    _SNO_FRETURN_pp: return SNO_FAIL_VAL;
+}
+```
 
-### Why this is better than both alternatives
+### Why this separation is correct
 
-| Approach | Duplicate labels | RETURN/FRETURN | Locals scope | Notes |
-|----------|-----------------|----------------|--------------|-------|
-| Flat main() | ❌ duplicates | ❌ undefined | ❌ shared | Current broken state |
-| Flat with uid mangling | ✅ | ✅ | ~ok | Ugly, fragile, limits optimization |
-| **Function-per-DEFINE** | ✅ | ✅ | ✅ | **The right model** |
+| Signal | Mechanism | Overhead |
+|--------|-----------|----------|
+| Pattern ω (CONCEDE) | Byrd Box goto | Zero |
+| `:S()` / `:F()` routing | C goto via `_ok` flag | Zero |
+| Backtrack (β / RECEDE) | Byrd Box goto | Zero |
+| ABORT pattern | `longjmp` / throw | Only when triggered |
+| Runtime error | `longjmp` / throw | Only on error |
+| FENCE bare | `longjmp` / throw | Only when triggered |
 
-### The optimization angle
+Stack unwinding IS the cleanup for the abort case. No omega stack needed
+for abnormal termination — the C call stack unwinds through statement and
+function catch boundaries automatically.
 
-Statement-level granularity (Level 1) is **the baseline semantics** — it is how
-SNOBOL4 is supposed to work and is required for correctness.
+### Statement is the right catch granularity
 
-Function-level C functions (Level 2) are an **architectural consequence** of
-proper scoping — they happen to also be where C compiler optimizations apply.
-The C compiler sees a real function, can inline it, allocate registers, etc.
-
-Future: once both levels work, statement boxes *within* a function can be
-flattened further using the `test_icon-2.py` model (one C function per port:
-`pp_alpha`, `pp_beta`, `pp_gamma`, `pp_omega`) as a micro-optimization for
-hot inner loops. This is **not needed now** — get correctness first.
+SNOBOL4 guarantees a statement succeeds or fails atomically. ABORT inside a
+pattern mid-statement should abort the whole statement cleanly, not leave
+a half-executed replacement. The statement boundary is exactly right.
 
 ---
 
