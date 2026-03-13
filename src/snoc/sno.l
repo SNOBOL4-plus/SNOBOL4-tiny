@@ -6,8 +6,9 @@
  * handles -INCLUDE, and prefixes label-bearing lines with \x01 (LABEL_MARK).
  * Flex sees a clean one-statement-per-line buffer via YY_INPUT.
  *
- * PAT_BUILTIN: the closed set of SNOBOL4 pattern primitives is tokenised
- * distinctly so the grammar stays unambiguous LALR(1).
+ * Space is returned as a SPACE token — it is the concat operator.
+ * IDENT immediately followed by '(' has no space between, so it is
+ * unambiguous as a function call vs concat-with-group.
  */
 
 #include <stdio.h>
@@ -144,28 +145,6 @@ static void join_file(FILE *fp, const char *fname) {
     #undef FLUSH
 }
 
-/* ---- PAT_BUILTIN detection ---- */
-static int is_pat_builtin(const char *s) {
-    static const char *pb[] = {
-        "LEN","POS","RPOS","TAB","RTAB","SPAN","BREAK",
-        "NOTANY","ANY","ARB","REM","FAIL","ABORT",
-        "FENCE","SUCCEED","BAL","ARBNO", NULL
-    };
-    for (int i = 0; pb[i]; i++)
-        if (strcasecmp(s, pb[i]) == 0) return 1;
-    return 0;
-}
-
-/* ---- bracket type stack for comma-as-alternation disambiguation ----
- * In SNOBOL4, (expr, expr) means ALT when the paren is a grouping paren (not a function call).
- * We track whether the current open-paren was preceded by IDENT/PAT_BUILTIN (= function call)
- * or was a plain grouping paren. Commas in grouping parens return PIPE (alt).
- */
-#define BSTACK_MAX 64
-static int bstack[BSTACK_MAX];   /* 1 = function-call paren, 0 = grouping paren */
-static int bstack_top = 0;
-static int last_was_callable = 0;  /* set after IDENT( or PAT_BUILTIN( */
-
 %}
 
 %option noyywrap never-interactive yylineno
@@ -194,7 +173,7 @@ WS      [ \t]+
                     yylval.sval = lab; return LABEL;
                 }
 
-{WS}            { /* skip */ }
+{WS}            { return SPACE; }
 \n              { BEGIN(INITIAL); lineno_stmt = yylineno; return NEWLINE; }
 
     /* ---- strings ---- */
@@ -234,18 +213,8 @@ WS      [ \t]+
 "~"             { return DOT; }        /* ~ is alias for . */
 ":"             { BEGIN(GT); return COLON; }
 "="             { return EQ; }
-"("             {
-                    /* push: was last token callable? 1=function-call paren, 0=grouping paren */
-                    if (bstack_top < BSTACK_MAX)
-                        bstack[bstack_top++] = last_was_callable;
-                    last_was_callable = 0;
-                    return LPAREN;
-                }
-")"             {
-                    if (bstack_top > 0) bstack_top--;
-                    last_was_callable = 0;
-                    return RPAREN;
-                }
+"("             { return LPAREN; }
+")"             { return RPAREN; }
 "["             { return LBRACKET; }
 "]"             { return RBRACKET; }
 "+"             { return PLUS; }
