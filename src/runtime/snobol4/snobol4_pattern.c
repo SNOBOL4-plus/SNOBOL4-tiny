@@ -289,7 +289,10 @@ SnoVal sno_pat_user_call(const char *name, SnoVal *args, int nargs) {
  * ===================================================================== */
 
 typedef struct {
-    char   *var_name;   /* variable name to assign to */
+    char   *var_name;   /* variable name to assign to (static, or NULL if deferred) */
+    /* Deferred var name: when var is *FuncCall(), evaluate at apply time */
+    char *(*var_fn)(void *data); /* if set, call this at apply time to get var name */
+    void   *var_data;   /* userdata for var_fn */
     int     start;      /* match start cursor */
     int     end;        /* match end cursor */
     int     is_imm;     /* 1 = immediate ($), 0 = conditional (.) */
@@ -316,6 +319,17 @@ static void *user_call_fn(void *userdata) {
     if (r.type == SNO_FAIL) return (void *)(intptr_t)-1;
     /* NRETURN / normal return => succeed zero-width */
     return (void *)1;
+}
+
+/* Deferred var name evaluation: call SNOBOL4 function at apply_captures time
+ * to get the variable name for a capture.  Used for  pat . *FuncCall()  where
+ * the function's return value names the target variable. */
+static char *deferred_var_fn(void *data) {
+    UCData *d = (UCData *)data;
+    SnoVal r = sno_apply(d->name, d->args, d->nargs);
+    if (r.type == SNO_STR && r.s && r.s[0]) return (char *)r.s;
+    if (r.type == SNO_NULL) return NULL; /* NRETURN — no assignment */
+    return NULL;
 }
 
 static Pattern *materialise(SnoPattern *sp, MatchCtx *ctx);
@@ -541,9 +555,29 @@ static Pattern *materialise(SnoPattern *sp, MatchCtx *ctx) {
         /* Record capture metadata */
         const char *vname = NULL;
         SnoVal vv = sp->var;
-        if (vv.type == SNO_STR) vname = vv.s;
         int slot = ctx->ncaptures;
-        ctx->captures[slot].var_name = vname ? GC_strdup(vname) : NULL;
+        ctx->captures[slot].var_name = NULL;
+        ctx->captures[slot].var_fn   = NULL;
+        ctx->captures[slot].var_data = NULL;
+        if (vv.type == SNO_STR) {
+            vname = vv.s;
+            ctx->captures[slot].var_name = vname ? GC_strdup(vname) : NULL;
+        } else if (vv.type == SNO_PATTERN) {
+            /* Deferred: var is *FuncCall() — evaluate at apply_captures time */
+            SnoPattern *vsp = spat_of(vv);
+            if (vsp && vsp->kind == SPAT_USER_CALL) {
+                UCData *d = (UCData *)GC_MALLOC(sizeof(UCData));
+                d->name  = vsp->str;
+                d->nargs = vsp->nargs;
+                d->args  = NULL;
+                if (vsp->nargs > 0) {
+                    d->args = (SnoVal *)GC_MALLOC(vsp->nargs * sizeof(SnoVal));
+                    memcpy(d->args, vsp->args, vsp->nargs * sizeof(SnoVal));
+                }
+                ctx->captures[slot].var_fn   = deferred_var_fn;
+                ctx->captures[slot].var_data = d;
+            }
+        }
         ctx->captures[slot].is_imm   = (sp->kind == SPAT_ASSIGN_IMM);
         ctx->captures[slot].start    = -1;
         ctx->captures[slot].end      = -1;
@@ -617,16 +651,24 @@ static void capture_callback(int cap_slot, int start, int end, void *userdata) {
 static void apply_captures(MatchCtx *ctx) {
     for (int i = 0; i < ctx->ncaptures; i++) {
         Capture *cap = &ctx->captures[i];
-        if (cap->start < 0 || !cap->var_name || !cap->var_name[0]) continue;
+        if (cap->start < 0) continue;
+
+        /* Resolve variable name: static or deferred */
+        const char *vname = cap->var_name;
+        if (!vname && cap->var_fn) {
+            vname = cap->var_fn(cap->var_data);
+        }
+        if (!vname || !vname[0]) continue;
+
         int len = cap->end - cap->start;
         if (len < 0) len = 0;
         char *text = (char *)GC_MALLOC(len + 1);
         if (ctx->subject)
             memcpy(text, ctx->subject + cap->start, len);
         text[len] = '\0';
-        sno_var_set(cap->var_name, SNO_STR_VAL(text));
+        sno_var_set(vname, SNO_STR_VAL(text));
         if (getenv("SNO_PAT_DEBUG"))
-            fprintf(stderr, "CAPTURE: %s = \"%.*s\"\n", cap->var_name, len, text);
+            fprintf(stderr, "CAPTURE: %s = \"%.*s\"\n", vname, len, text);
     }
 }
 

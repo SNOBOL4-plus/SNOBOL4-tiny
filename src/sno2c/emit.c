@@ -1354,6 +1354,16 @@ void snoc_emit(Program *prog, FILE *f) {
     collect_symbols(prog);
     collect_functions(prog);
 
+    /* DEBUG: dump fn_table after collect */
+    if (getenv("SNOC_FN_DEBUG")) {
+        for (int _di = 0; _di < fn_count; _di++)
+            fprintf(stderr, "FN[%d] name=%-20s entry=%-12s end=%-14s nbody=%d\n",
+                _di, fn_table[_di].name,
+                fn_table[_di].entry_label ? fn_table[_di].entry_label : "(null)",
+                fn_table[_di].end_label   ? fn_table[_di].end_label   : "(null)",
+                fn_table[_di].nbody_starts);
+    }
+
     /* Phase 1b: inject phantom FnDef entries for every runtime-owned function
      * whose source body appears in the expanded -INCLUDE stream but whose DEFINE
      * is handled by snobol4_inc.c at runtime (so collect_functions never sees it).
@@ -1405,10 +1415,15 @@ void snoc_emit(Program *prog, FILE *f) {
         { NULL, NULL }
     };
     for (int pi = 0; phantoms[pi].name && fn_count < FN_MAX; pi++) {
-        /* Skip if already in fn_table (defined by SNOBOL4 DEFINE in-stream) */
+        /* Skip if already in fn_table (defined by SNOBOL4 DEFINE in-stream).
+         * Two-arg DEFINE('nInc()', 'nInc_') stores name="nInc", entry_label="nInc_".
+         * Phantom name is "nInc_" — must check entry_label to avoid double-registering. */
         int already = 0;
         for (int fi = 0; fi < fn_count; fi++)
-            if (strcmp(fn_table[fi].name, phantoms[pi].name) == 0) { already=1; break; }
+            if (strcmp(fn_table[fi].name, phantoms[pi].name) == 0 ||
+                (fn_table[fi].entry_label &&
+                 strcmp(fn_table[fi].entry_label, phantoms[pi].name) == 0))
+            { already=1; break; }
         if (already) continue;
         FnDef *ph = &fn_table[fn_count++];
         memset(ph, 0, sizeof *ph);
