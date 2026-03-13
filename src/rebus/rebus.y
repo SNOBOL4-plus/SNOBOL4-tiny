@@ -594,7 +594,7 @@ unary_expr
     | '-' unary_expr %prec UMINUS           { $$ = rbinop(RE_NEG,   NULL, $2, yylineno); }
     | '+' unary_expr %prec UPLUS            { $$ = rbinop(RE_POS,   NULL, $2, yylineno); }
     | '~' unary_expr %prec UTILDE          { $$ = rbinop(RE_NOT,   NULL, $2, yylineno); }
-    | '\\' unary_expr %prec UBACK          { $$ = rbinop(RE_VALUE, NULL, $2, yylineno); }
+    | '\\' unary_expr %prec UBACK          { $$ = rbinop(RE_NOT,   NULL, $2, yylineno); }
     | '/' unary_expr %prec USLASH          { $$ = rbinop(RE_VALUE, NULL, $2, yylineno); }
     | '!' unary_expr %prec UBANG           { $$ = rbinop(RE_BANG,  NULL, $2, yylineno); }
     | '@' T_IDENT %prec UAT                 {

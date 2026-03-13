@@ -260,7 +260,12 @@ static void emit_stmt(RStmt *s, FILE *out) {
     switch (s->kind) {
 
         case RS_EXPR:
-            fprintf(out,"        "); emit_expr(s->expr,out);
+            /* void function call needs dummy LHS to avoid pattern-match semantics */
+            if (s->expr && s->expr->kind == RE_CALL)
+                fprintf(out,"        RB_ = ");
+            else
+                fprintf(out,"        ");
+            emit_expr(s->expr,out);
             if (rb_stmt_fail_label) fprintf(out," :F(rb_end_%d)", rb_stmt_fail_label);
             fprintf(out,"\n"); break;
 
