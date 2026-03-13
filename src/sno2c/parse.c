@@ -709,9 +709,9 @@ static Stmt *parse_body_field(const char *body, int lineno) {
                 s->replacement = parse_expr(lx);
         } else if (!lex_at_end(lx)) {
             /* subject WS pattern [= replacement]
-             * Use parse_expr2 (not parse_expr0) so trailing '=' is NOT
+             * Use parse_expr3 (not parse_expr0) so trailing '=' is NOT
              * consumed as an assignment operator inside the pattern. */
-            s->pattern = parse_expr2(lx);
+            s->pattern = parse_expr3(lx);  /* includes |, excludes = and ? */
 
             if (lex_peek(lx).kind == T_WS) {
                 lex_next(lx); skip_ws(lx);

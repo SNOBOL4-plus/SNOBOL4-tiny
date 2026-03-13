@@ -13,6 +13,7 @@
  *======================================================================================*/
 #include "engine.h"
 #include <stdio.h>
+#include <stdint.h>
 
 /*======================================================================================
  * Psi — realloc'd array.  Plain push/pop stack.  Deep-copied into omega snapshots.
@@ -530,6 +531,16 @@ MatchResult engine_match_ex(Pattern *root, const char *subject, int subject_len,
             a = CONCEDE;
             z_up_fail(&Z, &psi);
             break;
+/*--- T_FUNC (zero-width side-effect call at match time) ----------------------------*/
+        case T_FUNC<<2|PROCEED:
+            if (Z.PI->func) {
+                void *r = Z.PI->func(Z.PI->func_data);
+                if (r == (void *)(intptr_t)-1) { a = CONCEDE; z_up_fail(&Z, &psi); break; }
+            }
+            a = SUCCEED; z_up(&Z, &psi); break;
+        case T_FUNC<<2|SUCCEED:  { a = SUCCEED; z_up(&Z, &psi);      break; }
+        case T_FUNC<<2|CONCEDE:  { a = CONCEDE; z_up_fail(&Z, &psi); break; }
+        case T_FUNC<<2|RECEDE:   { a = CONCEDE; z_up_fail(&Z, &psi); break; }
 /*-----------------------------------------------------------------------------------*/
         default:
             a = CONCEDE;

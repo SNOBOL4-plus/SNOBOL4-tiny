@@ -405,6 +405,9 @@ static void emit_assign_target(Expr *lhs, const char *rhs_str) {
         E("sno_kw_set(\"%s\",%s);\n", lhs->sval, rhs_str);
     } else if (lhs->kind == E_DEREF) {
         E("sno_iset("); emit_expr(lhs->right); E(",%s);\n", rhs_str);
+    } else if (lhs->kind == E_CALL && lhs->nargs == 1) {
+        /* field accessor lvalue: val(n) = x  →  sno_field_set(n, "val", x) */
+        E("sno_field_set("); emit_expr(lhs->args[0]); E(", \"%s\", %s);\n", lhs->sval, rhs_str);
     } else {
         /* complex lvalue: evaluate and assign indirectly */
         E("sno_iset("); emit_expr(lhs); E(",%s);\n", rhs_str);

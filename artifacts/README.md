@@ -46,7 +46,25 @@ gcc -O0 -g beauty_full_first_clean.c \
 
 ---
 
-## `beauty_full_session51.c`
+## `beauty_full_session52.c`
+
+**What**: Generated C from `sno2c beauty.sno -I $INC` at Session 52.
+emit.c fix: `E_CALL && nargs==1` LHS now emits `sno_field_set` instead of
+`sno_iset`. Exactly 6 field-assignment sites corrected vs session51.
+`value($'#N') = ...`, `n(x) = ...`, `c(x) = ...` all now mutate heap correctly.
+
+**When**: Session 52, 2026-03-13.
+
+**Stats**: 12,744 lines of C. md5: `e9f8eab4a2ee5e9c8efc67d7a6d6dbb0`
+
+**Compiles with 0 gcc errors.** Binary runs but smoke tests still 0/21.
+Active bug: capture var-name deferred evaluation — `epsilon . *IncCounter()`
+stores `var_name=NULL` at materialise time instead of evaluating `*IncCounter()`
+at match time. Fix needed in `snobol4_pattern.c` capture materialisation.
+
+---
+
+
 
 **What**: Generated C from `sno2c beauty.sno -I $INC` at Session 51 (this session).
 The `parse_expr3` fix — pattern field now correctly includes `|` alternation while

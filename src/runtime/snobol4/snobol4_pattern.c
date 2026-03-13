@@ -306,6 +306,18 @@ typedef struct {
 } MatchCtx;
 
 /* Forward decl */
+
+/* T_FUNC callback for SPAT_USER_CALL side-effect functions */
+typedef struct { const char *name; SnoVal *args; int nargs; } UCData;
+static void *user_call_fn(void *userdata) {
+    UCData *d = (UCData *)userdata;
+    SnoVal r = sno_apply(d->name, d->args, d->nargs);
+    /* FRETURN => SNO_FAIL — signal failure to engine */
+    if (r.type == SNO_FAIL) return (void *)(intptr_t)-1;
+    /* NRETURN / normal return => succeed zero-width */
+    return (void *)1;
+}
+
 static Pattern *materialise(SnoPattern *sp, MatchCtx *ctx);
 
 /* Build a Σ (sequence/concatenation) node */
@@ -551,18 +563,35 @@ static Pattern *materialise(SnoPattern *sp, MatchCtx *ctx) {
     case SPAT_USER_CALL: {
         if (getenv("SNO_PAT_DEBUG"))
             fprintf(stderr, "SPAT_USER_CALL %s\n", sp->str);
-        /* Call a user function that returns a pattern, then materialise */
+        /* First: call eagerly to see if it returns a real pattern.
+         * If it returns SNO_PATTERN or SNO_STR, materialise statically.
+         * If it returns SNO_NULL (epsilon/.dummy via NRETURN), it's a
+         * side-effect function — wrap in T_FUNC for deferred match-time call. */
         SnoVal result = sno_apply(sp->str, sp->args, sp->nargs);
         if (result.type == SNO_PATTERN) {
             return materialise(spat_of(result), ctx);
         }
-        if (result.type == SNO_STR || result.type == SNO_NULL) {
+        if (result.type == SNO_STR) {
             p->type  = T_LITERAL;
             p->s     = sno_to_str(result);
             p->s_len = (int)strlen(p->s);
             return p;
         }
-        return make_epsilon(&ctx->pl);
+        /* SNO_NULL / SNO_FAIL / epsilon — side-effect function.
+         * Build a T_FUNC node that calls this function at match time. */
+        typedef struct { const char *name; SnoVal *args; int nargs; } UCData;
+        UCData *d = (UCData *)GC_MALLOC(sizeof(UCData));
+        d->name  = sp->str;
+        d->nargs = sp->nargs;
+        d->args  = NULL;
+        if (sp->nargs > 0) {
+            d->args = (SnoVal *)GC_MALLOC(sp->nargs * sizeof(SnoVal));
+            memcpy(d->args, sp->args, sp->nargs * sizeof(SnoVal));
+        }
+        p->type      = T_FUNC;
+        p->func      = user_call_fn;
+        p->func_data = d;
+        return p;
     }
 
     default:

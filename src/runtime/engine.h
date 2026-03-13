@@ -57,6 +57,7 @@ enum {
     T_ALPHA   = 32,     /* α  beginning of line     */
     T_OMEGA   = 42,     /* ω  end of line           */
     T_CAPTURE = 43,     /* capture: single child; on success fires cap_fn(cap_slot, start, end) */
+    T_FUNC    = 44,     /* zero-width: call func(userdata) at match time; succeed if returns non-NULL */
 };
 
 /* The four Byrd Box signals */
@@ -76,6 +77,8 @@ typedef struct Pattern {
     const char      *s;           /* string arg (σ literal)                         */
     int              s_len;       /* length of s                                    */
     const char      *chars;       /* char set (ANY, SPAN, BREAK, NOTANY)            */
+    void           *(*func)(void *userdata);  /* T_FUNC callback                    */
+    void            *func_data;   /* T_FUNC userdata                                */
     struct Pattern  *children[MAX_CHILDREN];
 } Pattern;
 
