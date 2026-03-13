@@ -1,0 +1,18 @@
+CC     = gcc
+CFLAGS = -Wall -Wno-unused-function -g -O0 -I.
+
+SRCS   = lex.c parse.c emit.c main.c
+OBJS   = $(SRCS:.c=.o)
+
+.PHONY: all clean
+
+all: sno2c
+
+sno2c: $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $^
+
+%.o: %.c snoc.h lex.h
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+clean:
+	rm -f sno2c $(OBJS)

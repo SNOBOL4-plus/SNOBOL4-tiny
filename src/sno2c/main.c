@@ -1,6 +1,6 @@
 /*
  * main.c — snoc driver
- * Usage: snoc [-I dir] [-o out.c] input.sno
+ * Usage: sno2c [-I dir] [-o out.c] input.sno
  */
 #include "snoc.h"
 #include <stdio.h>
@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
         } else if (argv[i][0]!='-') {
             infile = argv[i];
         } else {
-            fprintf(stderr,"snoc: unknown option %s\n",argv[i]); return 1;
+            fprintf(stderr,"sno2c: unknown option %s\n",argv[i]); return 1;
         }
     }
 
@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
     Program *prog = snoc_parse(in, infile ? infile : "<stdin>");
 
     if (snoc_nerrors) {
-        fprintf(stderr,"snoc: %d error(s)\n", snoc_nerrors); return 1;
+        fprintf(stderr,"sno2c: %d error(s)\n", snoc_nerrors); return 1;
     }
 
     snoc_emit(prog, out);
