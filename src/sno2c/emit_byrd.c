@@ -823,10 +823,11 @@ static void emit_imm(Expr *child, const char *varname,
     /* do_assign: write span into variable */
     B("%s:\n", do_assign);
     if (strcasecmp(varname, "OUTPUT") == 0) {
-        /* OUTPUT is a special IO stream — use sno_output */
-        B("    { str_t _s = { %s + %s, (int64_t)(%s - %s) };\n",
-          subj, start_var, cursor, start_var);
-        B("      sno_output(_s); }\n");
+        /* OUTPUT is a special IO stream — use sno_output_str */
+        B("    { int64_t _len = %s - %s;\n", cursor, start_var);
+        B("      char *_os = malloc(_len + 1); memcpy(_os, %s + %s, _len); _os[_len] = 0;\n",
+          subj, start_var);
+        B("      sno_output_str(_os); free(_os); }\n");
     } else {
         /* Regular variable: declare str_t and assign */
         char var_decl[LBUF];
