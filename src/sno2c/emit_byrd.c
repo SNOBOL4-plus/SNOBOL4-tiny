@@ -828,7 +828,8 @@ static void emit_span(const char *cs,
     PG(gamma);
 
     PLG(beta, NULL);
-    PS(omega,  "if (%s <= 1) { %s = %s; }", delta, cursor, start);
+    B("                  if (%s <= 1) { %s = %s; goto %s; }\n",
+      delta, cursor, start, omega);
     PS(gamma,  "%s--; %s--;", delta, cursor);
 }
 
@@ -850,7 +851,10 @@ static void emit_break(const char *cs,
     PS(NULL,  "%s = %s;", saved, cursor);
     PS(NULL,  "while (%s < %s && !strchr(%s, %s[%s])) %s++;",
               cursor, subj_len, cs, subj, cursor, cursor);
-    PS(omega, "if (%s >= %s) { %s = %s; }", cursor, subj_len, cursor, saved);
+    /* Fail-check: if we hit end-of-subject without finding delimiter, restore+fail.
+     * Use explicit goto inside braces so wrap never splits the condition from its goto. */
+    B("                  if (%s >= %s) { %s = %s; goto %s; }\n",
+      cursor, subj_len, cursor, saved, omega);
     PG(gamma);
     PL(beta, omega, "%s = %s;", cursor, saved);
 }

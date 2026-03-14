@@ -285,7 +285,9 @@ static Expr *parse_expr13(Lex *lx) {
         lex_next(lx); /* consume ~ */
         skip_ws(lx);  /* consume trailing WS of binary ~ */
         Expr *r = parse_expr13(lx);
-        l = binop(E_CONCAT, l, r);  /* ~ is CONCAT in sno2c; not in sno2c.h, map to E_CONCAT */
+        (void)r;      /* tag is tree metadata — not matched against subject.
+                       * In the compiled path ~ X ~ 'tag' → just X (epsilon for tag). */
+        /* l = binop(E_CONCAT, l, r);  ← old: wrongly matched 'tag' as literal */
     }
     return l;
 }
