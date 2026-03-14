@@ -599,8 +599,9 @@ static int is_pat_node(Expr *e) {
 static int expr_contains_pattern(Expr *e) {
     if (!e) return 0;
     if (is_pat_node(e)) return 1;
-    /* *varname — deferred pattern ref */
-    if (e->kind == E_DEREF && e->left && e->left->kind == E_VAR) return 1;
+    /* *varname — deferred pattern ref (grammar: left=NULL, right=E_VAR) */
+    if (e->kind == E_DEREF && e->right && e->right->kind == E_VAR) return 1;
+    if (e->kind == E_DEREF && e->left  && e->left->kind  == E_VAR) return 1;
     /* *varname(arg) — parser misparse deref+ccat */
     if (e->kind == E_DEREF && e->left && e->left->kind == E_CALL) return 1;
     /* recurse into children */

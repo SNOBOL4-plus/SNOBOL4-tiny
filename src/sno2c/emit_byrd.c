@@ -1059,6 +1059,31 @@ static void emit_arbno(Expr *child,
 }
 
 /* -----------------------------------------------------------------------
+ * is_sideeffect_call — returns 1 if e is an E_CALL to a counter side-effect
+ * (nPush/nInc/nPop/nDec/nTop) that has no pattern-matching semantics.
+ * ----------------------------------------------------------------------- */
+
+static int is_sideeffect_call(Expr *e) {
+    if (!e || e->kind != E_CALL || !e->sval) return 0;
+    return (strcasecmp(e->sval, "nPush") == 0 ||
+            strcasecmp(e->sval, "nInc")  == 0 ||
+            strcasecmp(e->sval, "nPop")  == 0 ||
+            strcasecmp(e->sval, "nDec")  == 0 ||
+            strcasecmp(e->sval, "nTop")  == 0);
+}
+
+/* emit_sideeffect_call_inline — emit a single C statement for a side-effect call */
+static void emit_sideeffect_call_inline(Expr *e) {
+    if (!e || e->kind != E_CALL || !e->sval) return;
+    if (strcasecmp(e->sval, "nPush") == 0) B("npush();");
+    else if (strcasecmp(e->sval, "nInc") == 0) B("ninc();");
+    else if (strcasecmp(e->sval, "nPop") == 0) B("npop();");
+    else if (strcasecmp(e->sval, "nDec") == 0) B("ndec();");
+    else if (strcasecmp(e->sval, "nTop") == 0) B("(void)ntop();");
+    else B("/* unknown sideeffect %s */", e->sval);
+}
+
+/* -----------------------------------------------------------------------
  * E_IMM ($ capture) node
  *
  * Pattern node:  <child> $ var
@@ -1077,6 +1102,12 @@ static void emit_arbno(Expr *child,
  *       goto cat_r6_alpha;
  *   cat_l5_beta:
  *       goto assign_c7_beta;
+ *
+ * Special case — Gimpel SNOBOL4 side-effect pattern: nPush() $'('
+ *   The grammar parses this as E_IMM(left=nPush(), right=E_STR("(")).
+ *   left is NOT a pattern child — it's a side-effect call with no cursor advance.
+ *   right is NOT a variable name — it's a literal to match and capture to OUTPUT.
+ *   Fix: emit the side-effect call inline, then match+capture the literal.
  * ----------------------------------------------------------------------- */
 
 static void emit_imm(Expr *child, const char *varname,
@@ -1085,6 +1116,61 @@ static void emit_imm(Expr *child, const char *varname,
                      const char *subj, const char *subj_len,
                      const char *cursor, int depth) {
     int uid = byrd_uid();
+
+    /* -------------------------------------------------------------------
+     * Special case: nPush() $'(' — side-effect call + literal capture.
+     *
+     * Grammar parses `nPush() $'('` as E_IMM(left=nPush(), right=E_STR("(")).
+     * child (left) = nPush() — no cursor advance, just a side-effect.
+     * varname (from right) = "(" — not a valid variable; it IS the literal.
+     *
+     * Correct semantics: emit the side-effect inline, then match+capture
+     * the literal string (varname) to OUTPUT.  β → ω (no backtrack over
+     * a side-effect call — the call already fired).
+     * ------------------------------------------------------------------- */
+    if (is_sideeffect_call(child) && varname && varname[0] != '\0') {
+        /* Check that varname looks like a non-identifier (e.g. punctuation
+         * like '(' or ')') — if it IS a valid identifier, it could be a
+         * genuine capture variable paired with a side-effect, which we
+         * handle the same way (side-effect fires, then match literal). */
+        int uid2 = byrd_uid();
+        Label lit_α, lit_β;
+        label_fmt(lit_α, "imm_se_lit", uid2, "α");
+        label_fmt(lit_β, "imm_se_lit", uid2, "β");
+
+        char start_var[LBUF], do_assign[LBUF];
+        snprintf(start_var, LBUF, "%s_start",     alpha);
+        snprintf(do_assign, LBUF, "%s_do_assign", alpha);
+        decl_add("int64_t %s", start_var);
+
+        /* α: emit side-effect inline, record start, enter literal match */
+        PLG(alpha, NULL);
+        PS(NULL, "%s_start = %s;", alpha, cursor);
+        emit_sideeffect_call_inline(child);
+        B("\n");
+        PS(lit_α, "goto %s;", lit_α);
+
+        /* literal match for varname */
+        emit_lit(varname,
+                 lit_α, lit_β,
+                 do_assign, omega,
+                 subj, subj_len, cursor);
+
+        /* do_assign: capture matched span → OUTPUT, then γ */
+        PLG(do_assign, NULL);
+        PS(NULL,  "{ int64_t _len = %s - %s;", cursor, start_var);
+        PS(NULL,  "  char *_os = malloc(_len + 1);");
+        PS(NULL,  "  memcpy(_os, %s + %s, _len); _os[_len] = 0;", subj, start_var);
+        PS(gamma, "  output_str(_os); free(_os); }");
+
+        /* β → ω: side-effect already fired, cannot resume */
+        PLG(beta, omega);
+        return;
+    }
+
+    /* -------------------------------------------------------------------
+     * Normal E_IMM path: child is a real pattern, varname is a variable.
+     * ------------------------------------------------------------------- */
 
     /* Sanitize varname: non-alnum/underscore chars → '_' */
     char safe_varname[NAMED_PAT_NAMELEN];
@@ -1455,9 +1541,51 @@ static void byrd_emit(Expr *pat,
     /* ---------------------------------------------------------------- E_DEREF (deferred ref) */
     case E_DEREF: {
         const char *varname = NULL;
-        if (pat->left && pat->left->kind == E_VAR)
+        /* Grammar: unary *X  → E_DEREF(left=NULL, right=E_VAR("X"))
+         * Also seen: left=E_VAR in some paths — check both.
+         * Also: left=E_CALL("name") — *name() where name is a named pattern fn.
+         * Also: left=NULL, right=E_STR("x") — unary $'x' output capture. */
+        if (pat->right && pat->right->kind == E_VAR)
+            varname = pat->right->sval;
+        else if (pat->left && pat->left->kind == E_VAR)
+            varname = pat->left->sval;
+        else if (pat->left && pat->left->kind == E_CALL && pat->left->sval)
             varname = pat->left->sval;
         if (!varname) varname = "";
+
+        /* -------------------------------------------------------------------
+         * Category: unary $'literal' — E_DEREF(left=NULL, right=E_STR("x"))
+         * Semantics: match the literal, capture matched span to OUTPUT.
+         * ------------------------------------------------------------------- */
+        if (!pat->left && pat->right && pat->right->kind == E_STR && pat->right->sval) {
+            const char *lit = pat->right->sval;
+            int uid2 = byrd_uid();
+            Label lit_α, lit_β;
+            label_fmt(lit_α, "dlit", uid2, "α");
+            label_fmt(lit_β, "dlit", uid2, "β");
+            char start_var[LBUF], do_assign[LBUF];
+            snprintf(start_var, LBUF, "dlit_%d_start", uid2);
+            snprintf(do_assign, LBUF, "dlit_%d_do_assign", uid2);
+            decl_add("int64_t %s", start_var);
+
+            /* α: record start, match literal */
+            PLG(alpha, NULL);
+            PS(NULL, "%s = %s;", start_var, cursor);
+            PS(lit_α, "goto %s;", lit_α);
+
+            emit_lit(lit, lit_α, lit_β, do_assign, omega,
+                     subj, subj_len, cursor);
+
+            /* do_assign: capture span → OUTPUT, then γ */
+            PLG(do_assign, NULL);
+            PS(NULL,  "{ int64_t _len = %s - %s;", cursor, start_var);
+            PS(NULL,  "  char *_os = malloc(_len + 1);");
+            PS(NULL,  "  memcpy(_os, %s + %s, _len); _os[_len] = 0;", subj, start_var);
+            PS(gamma, "  output_str(_os); free(_os); }");
+
+            PLG(beta, lit_β);
+            return;
+        }
 
         const NamedPat *np = named_pat_lookup(varname);
 
