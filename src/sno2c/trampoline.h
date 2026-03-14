@@ -40,6 +40,21 @@ typedef void *(*block_fn_t)(void);
 /* -----------------------------------------------------------------------
  * Trampoline: runs until pc returns NULL.
  * ----------------------------------------------------------------------- */
+/* &STCOUNT / &STLIMIT — statement counter visible to SNOBOL4 programs.
+ * kw_stlimit < 0 means unlimited (default).
+ * Each stmt_N function calls trampoline_stno(n) once on entry.       */
+extern int64_t kw_stlimit;
+extern int64_t kw_stcount;
+static inline void trampoline_stno(int n) {
+    if (kw_stlimit >= 0 && ++kw_stcount > kw_stlimit) {
+        fprintf(stderr,
+            "\n** &STLIMIT exceeded at statement %d"
+            " (&STCOUNT=%lld &STLIMIT=%lld)\n",
+            n, (long long)kw_stcount, (long long)kw_stlimit);
+        exit(1);
+    }
+}
+
 static inline void trampoline_run(block_fn_t start) {
     block_fn_t pc = start;
     while (pc) {

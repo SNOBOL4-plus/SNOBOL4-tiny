@@ -743,6 +743,7 @@ static void emit_stmt(Stmt *s, const char *fn) {
 
     E("/* line %d */\n", s->lineno);
     if (s->label) E("_L%s:;\n", cs_label(s->label));
+    E("trampoline_stno(%d);\n", s->lineno);
 
     /* label-only statement */
     if (!s->subject) {
