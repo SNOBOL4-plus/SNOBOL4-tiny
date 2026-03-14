@@ -19,7 +19,7 @@
  *
  * The caller (emit.c, emit_stmt pattern-mtch case) is responsible for:
  *   - emitting subject/cursor/subject_len setup
- *   - jumping to root_alpha
+ *   - jumping to root_α
  *   - handling gamma_label (mtch succeeded) and omega_label (mtch failed)
  *
  * Byrd four-port model per node:
@@ -254,12 +254,19 @@ static void child_decl_add(const char *decl) {
 
 /* Extract the field name from a declaration string "TYPE name" or "TYPE *name"
  * or "TYPE name[N]". Returns a pointer into the string at the start of the name. */
+/* Walk backwards over one character that is part of a C identifier,
+ * including ASCII alnum/underscore AND UTF-8 multibyte sequences
+ * (for Greek port suffixes α β γ ω which are 2-byte UTF-8). */
+static int is_ident_byte(unsigned char c) {
+    return isalnum(c) || c == '_' || c >= 0x80;
+}
+
 static const char *decl_field_name(const char *decl) {
     /* If there's an array bracket, the name ends just before '[' */
     const char *bracket = strchr(decl, '[');
     const char *end = bracket ? bracket : decl + strlen(decl);
-    /* Walk backwards over the identifier */
-    while (end > decl && (isalnum((unsigned char)end[-1]) || end[-1] == '_')) end--;
+    /* Walk backwards over the identifier (ASCII + UTF-8 multibyte) */
+    while (end > decl && is_ident_byte((unsigned char)end[-1])) end--;
     return end;
 }
 
@@ -268,7 +275,7 @@ static int decl_field_name_len(const char *decl) {
     const char *bracket = strchr(decl, '[');
     const char *end = bracket ? bracket : decl + strlen(decl);
     const char *start = end;
-    while (start > decl && (isalnum((unsigned char)start[-1]) || start[-1] == '_')) start--;
+    while (start > decl && is_ident_byte((unsigned char)start[-1])) start--;
     return (int)(end - start);
 }
 
@@ -833,10 +840,10 @@ static void emit_rem(const char *alpha, const char *beta,
  *   right fails    → left_β  (backtrack left)
  *
  * Oracle (sprint2):
- *   root_alpha:  goto cat_l1_alpha;
+ *   root_α:  goto cat_l1_alpha;
  *   cat_l1_*     POS
  *   cat_l1_gamma: goto cat_r2_alpha;
- *   cat_l1_omega: goto root_beta;
+ *   cat_l1_omega: goto root_β;
  *   cat_r2_*     ...
  *   cat_r2_omega: goto cat_l1_beta;
  * ----------------------------------------------------------------------- */
@@ -848,30 +855,30 @@ static void emit_seq(Expr *left, Expr *right,
                      const char *cursor, int depth) {
     int uid = byrd_uid();
 
-    Label left_alpha, left_beta, right_alpha, right_beta;
-    label_fmt(left_alpha,  "cat_l", uid, "alpha");
-    label_fmt(left_beta,   "cat_l", uid, "beta");
-    label_fmt(right_alpha, "cat_r", uid, "alpha");
-    label_fmt(right_beta,  "cat_r", uid, "beta");
+    Label left_α, left_β, right_α, right_β;
+    label_fmt(left_α,  "cat_l", uid, "α");
+    label_fmt(left_β,   "cat_l", uid, "β");
+    label_fmt(right_α, "cat_r", uid, "α");
+    label_fmt(right_β,  "cat_r", uid, "β");
 
     /* α → left_α */
     B("%s: /* CAT — entr left */\n", alpha);
-    B("    goto %s;\n", left_alpha);
+    B("    goto %s;\n", left_α);
 
     /* β → right_β (resume right first) */
     B("%s:\n", beta);
-    B("    goto %s;\n", right_beta);
+    B("    goto %s;\n", right_β);
 
     /* lower left: succeed→right_α, concede→ω */
     byrd_emit(left,
-              left_alpha, left_beta,
-              right_alpha, omega,
+              left_α, left_β,
+              right_α, omega,
               subj, subj_len, cursor, depth + 1);
 
     /* lower right: succeed→γ, concede→left_β */
     byrd_emit(right,
-              right_alpha, right_beta,
-              gamma, left_beta,
+              right_α, right_β,
+              gamma, left_β,
               subj, subj_len, cursor, depth + 1);
 }
 
@@ -905,33 +912,33 @@ static void emit_alt(Expr *left, Expr *right,
                      const char *cursor, int depth) {
     int uid = byrd_uid();
 
-    Label left_alpha, left_beta, right_alpha, right_beta;
-    label_fmt(left_alpha,  "alt_l", uid, "alpha");
-    label_fmt(left_beta,   "alt_l", uid, "beta");
-    label_fmt(right_alpha, "alt_r", uid, "alpha");
-    label_fmt(right_beta,  "alt_r", uid, "beta");
+    Label left_α, left_β, right_α, right_β;
+    label_fmt(left_α,  "alt_l", uid, "α");
+    label_fmt(left_β,   "alt_l", uid, "β");
+    label_fmt(right_α, "alt_r", uid, "α");
+    label_fmt(right_β,  "alt_r", uid, "β");
 
     /* α → left_α */
     B("%s: /* ALT — try left */\n", alpha);
-    B("    goto %s;\n", left_alpha);
+    B("    goto %s;\n", left_α);
 
-    /* β → left_beta first, then right_beta
+    /* β → left_β first, then right_β
      * Per oracle: cat_l3_beta: goto alt_r6_beta;
-     * The active arm's beta is wired directly: left_omega→right_alpha,
-     * right_omega→omega; β goes to right_beta (second arm backtrack).
+     * The active arm's beta is wired directly: left_omega→right_α,
+     * right_omega→omega; β goes to right_β (second arm backtrack).
      * This matches the oracle pattern exactly. */
     B("%s:\n", beta);
-    B("    goto %s;\n", right_beta);
+    B("    goto %s;\n", right_β);
 
     /* lower left: succeed→γ, concede→right_α */
     byrd_emit(left,
-              left_alpha, left_beta,
-              gamma, right_alpha,
+              left_α, left_β,
+              gamma, right_α,
               subj, subj_len, cursor, depth + 1);
 
     /* lower right: succeed→γ, concede→ω */
     byrd_emit(right,
-              right_alpha, right_beta,
+              right_α, right_β,
               gamma, omega,
               subj, subj_len, cursor, depth + 1);
 }
@@ -971,9 +978,9 @@ static void emit_arbno(Expr *child,
                        const char *cursor, int depth) {
     int uid = byrd_uid();
 
-    Label child_alpha, child_beta, child_ok, child_fail;
-    label_fmt(child_alpha, "arbno_c", uid, "alpha");
-    label_fmt(child_beta,  "arbno_c", uid, "beta");
+    Label child_α, child_β, child_ok, child_fail;
+    label_fmt(child_α, "arbno_c", uid, "α");
+    label_fmt(child_β,  "arbno_c", uid, "β");
     snprintf(child_ok,   LBUF, "%s_child_ok",   alpha);
     snprintf(child_fail, LBUF, "%s_child_fail", alpha);
 
@@ -993,7 +1000,7 @@ static void emit_arbno(Expr *child,
     B("    %s++;\n", depth_var);
     B("    if (%s >= 64) goto %s;  /* stack overflow */\n", depth_var, omega);
     B("    %s[%s] = %s;\n", stack_var, depth_var, cursor);
-    B("    goto %s;\n", child_alpha);
+    B("    goto %s;\n", child_α);
 
     /* child_ok: child matched → ARBNO succeeds again */
     B("%s:\n", child_ok);
@@ -1007,7 +1014,7 @@ static void emit_arbno(Expr *child,
 
     /* lower child: succeed→child_ok, concede→child_fail */
     byrd_emit(child,
-              child_alpha, child_beta,
+              child_α, child_β,
               child_ok, child_fail,
               subj, subj_len, cursor, depth + 1);
 }
@@ -1048,9 +1055,9 @@ static void emit_imm(Expr *child, const char *varname,
       safe_varname[i] = '\0'; }
     varname = safe_varname;
 
-    Label child_alpha, child_beta;
-    label_fmt(child_alpha, "assign_c", uid, "alpha");
-    label_fmt(child_beta,  "assign_c", uid, "beta");
+    Label child_α, child_β;
+    label_fmt(child_α, "assign_c", uid, "α");
+    label_fmt(child_β,  "assign_c", uid, "β");
 
     char start_var[LBUF], do_assign[LBUF];
     snprintf(start_var, LBUF, "%s_start", alpha);
@@ -1061,11 +1068,11 @@ static void emit_imm(Expr *child, const char *varname,
     /* alpha: record start, entr child */
     B("%s:\n", alpha);
     B("    %s = %s;\n", start_var, cursor);
-    B("    goto %s;\n", child_alpha);
+    B("    goto %s;\n", child_α);
 
     /* lower child: succeed → do_assign, concede → omega */
     byrd_emit(child,
-              child_alpha, child_beta,
+              child_α, child_β,
               do_assign, omega,
               subj, subj_len, cursor, depth + 1);
 
@@ -1078,18 +1085,18 @@ static void emit_imm(Expr *child, const char *varname,
           subj, start_var);
         B("      output_str(_os); free(_os); }\n");
     } else {
-        /* Regular variable: declare str_t and assign */
-        char var_decl[LBUF];
-        snprintf(var_decl, LBUF, "str_t var_%s", varname);
-        decl_add("%s", var_decl);
-        B("    var_%s.ptr = %s + %s;\n", varname, subj, start_var);
-        B("    var_%s.len = %s - %s;\n", varname, cursor, start_var);
+        /* Regular variable: capture span and write into SNOBOL4 variable table.
+         * Use GC_malloc so the string is GC-managed (var_set stores raw pointer). */
+        B("    { int64_t _len = %s - %s;\n", cursor, start_var);
+        B("      char *_os = (char*)GC_malloc(_len + 1);\n");
+        B("      memcpy(_os, %s + %s, _len); _os[_len] = 0;\n", subj, start_var);
+        B("      var_set(\"%s\", STR_VAL(_os)); }\n", varname);
     }
     B("    goto %s;\n", gamma);
 
     /* beta: backtrack into child */
     B("%s:\n", beta);
-    B("    goto %s;\n", child_beta);
+    B("    goto %s;\n", child_β);
 }
 
 /* -----------------------------------------------------------------------
@@ -1323,8 +1330,8 @@ static void byrd_emit(Expr *pat,
             /* FENCE(p): mtch p then prevent backtrack into it */
             int uid = byrd_uid();
             Label ca, cb;
-            label_fmt(ca, "fence_p", uid, "alpha");
-            label_fmt(cb, "fence_p", uid, "beta");
+            label_fmt(ca, "fence_p", uid, "α");
+            label_fmt(cb, "fence_p", uid, "β");
             /* alpha: entr child */
             B("%s: /* FENCE(p) */\n", alpha);
             B("    goto %s;\n", ca);
@@ -1598,9 +1605,9 @@ void byrd_emit_pattern(Expr *pat, FILE *out_file,
     decl_reset();
 
     /* Root labels */
-    char root_alpha[LBUF], root_beta[LBUF];
-    snprintf(root_alpha, LBUF, "%s_alpha", root_name);
-    snprintf(root_beta,  LBUF, "%s_beta",  root_name);
+    char root_α[LBUF], root_β[LBUF];
+    snprintf(root_α, LBUF, "%s_α", root_name);
+    snprintf(root_β,  LBUF, "%s_β",  root_name);
 
     /* First pass: collect declarations by running emit into /dev/null,
      * then second pass: emit the real code.
@@ -1629,12 +1636,12 @@ void byrd_emit_pattern(Expr *pat, FILE *out_file,
 
     /* Lower the pattern — byrd_emit emits both alpha and beta labels */
     byrd_emit(pat,
-              root_alpha, root_beta,
+              root_α, root_β,
               gamma_label, omega_label,
               subject_var, subj_len_var, cursor_var,
               0);
 
-    /* Note: root_beta is emitted by byrd_emit above for all node types.
+    /* Note: root_β is emitted by byrd_emit above for all node types.
      * Do NOT emit it again here — that causes duplicate label errors. */
 
     fflush(code_file);
@@ -1645,7 +1652,7 @@ void byrd_emit_pattern(Expr *pat, FILE *out_file,
      * static decls must appear before the first goto in the function. */
     byrd_out = out_file;
     decl_flush();            /* static declarations — before any goto */
-    B("    goto %s;\n", root_alpha);
+    B("    goto %s;\n", root_α);
 
     /* Splice code body */
     if (code_buf && code_size > 0)
@@ -1703,12 +1710,12 @@ void byrd_emit_named_pattern(const char *varname, Expr *pat, FILE *out_file) {
     int uid_saved = byrd_uid_ctr;
     decl_reset();
 
-    char gamma_lbl[LBUF], omega_lbl[LBUF];
-    char root_alpha[LBUF], root_beta[LBUF];
-    snprintf(gamma_lbl,  LBUF, "_%s_ok",    safe);
-    snprintf(omega_lbl,  LBUF, "_%s_fail",  safe);
-    snprintf(root_alpha, LBUF, "_%s_alpha", safe);
-    snprintf(root_beta,  LBUF, "_%s_beta",  safe);
+    char γ_lbl[LBUF], ω_lbl[LBUF];
+    char root_α[LBUF], root_β[LBUF];
+    snprintf(γ_lbl,  LBUF, "_%s_γ",    safe);
+    snprintf(ω_lbl,  LBUF, "_%s_ω",  safe);
+    snprintf(root_α, LBUF, "_%s_α", safe);
+    snprintf(root_β,  LBUF, "_%s_β",  safe);
 
     /* Struct mode ON — decl_add will collect into struct fields,
      * child_decl_add will collect child frame pointers separately. */
@@ -1719,8 +1726,8 @@ void byrd_emit_named_pattern(const char *varname, Expr *pat, FILE *out_file) {
     decl_reset();
 
     byrd_emit(pat,
-              root_alpha, root_beta,
-              gamma_lbl, omega_lbl,
+              root_α, root_β,
+              γ_lbl, ω_lbl,
               "_subj_np", "_slen_np", "_cur_np",
               0);
 
@@ -1750,7 +1757,7 @@ void byrd_emit_named_pattern(const char *varname, Expr *pat, FILE *out_file) {
         "    if (_entry_np == 0) goto %s;\n"
         "    if (_entry_np == 1) goto %s;\n"
         "    goto %s;\n",
-        root_alpha, root_beta, omega_lbl);
+        root_α, root_β, ω_lbl);
 
     /* 5. Splice the code body */
     if (code_buf && code_size > 0)
@@ -1764,7 +1771,7 @@ void byrd_emit_named_pattern(const char *varname, Expr *pat, FILE *out_file) {
         "        return STR_VAL(\"\");\n"
         "    %s:;\n"
         "        return FAIL_VAL;\n",
-        gamma_lbl, omega_lbl);
+        γ_lbl, ω_lbl);
 
     /* 7. Emit #undefs and close function */
     decl_emit_undefs(out_file);
