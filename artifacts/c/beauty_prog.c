@@ -1087,7 +1087,10 @@ static int64_t alt_l_4_α_saved_cursor;
     _SNO_NEXT_5:
 /* line 15 */
                   trampoline_stno(15);
-SnoVal _v8 = concat_sv(aply("IDENT",(SnoVal[]){aply("upr",(SnoVal[]){get(_type)},1),strv("NULL")},2),aply("IDENT",(SnoVal[]){get(_it)},1));
+SnoVal _v8 = concat_sv(
+                 aply("IDENT",(SnoVal[]){aply("upr",(SnoVal[]){get(_type)},1),strv("NULL")},2),
+                 aply("IDENT",(SnoVal[]){get(_it)},1)
+             );
 int _ok8 = !IS_FAIL(_v8);
                   if(_ok8)                                  goto _SNO_RETURN_IsType;
                                                             goto _SNO_NEXT_7;
@@ -1186,7 +1189,7 @@ static SnoVal _sno_fn_input_(SnoVal *_args, int _nargs) {
 /* line 25 */
     _L_input_:
                   trampoline_stno(25);
-SnoVal _v13 = pat_cond(pat_var("input__"),"?");
+SnoVal _v13 = pat_val(get(_input__));
 int _ok13 = !IS_FAIL(_v13);
 if(_ok13) {
 set(_io, _v13);
@@ -1265,7 +1268,7 @@ static SnoVal _sno_fn_output_(SnoVal *_args, int _nargs) {
 /* line 26 */
     _L_output_:
                   trampoline_stno(26);
-SnoVal _v15 = pat_cond(pat_var("output__"),"?");
+SnoVal _v15 = pat_val(get(_output__));
 int _ok15 = !IS_FAIL(_v15);
 if(_ok15) {
 set(_io, _v15);
@@ -1629,7 +1632,10 @@ static SnoVal _sno_fn_cap(SnoVal *_args, int _nargs) {
 /* line 14 */
     _L_cap:
                   trampoline_stno(14);
-SnoVal _v34 = concat_sv(aply("REPLACE",(SnoVal[]){aply("SUBSTR",(SnoVal[]){get(_cap),vint(1),vint(1)},3),kw("LCASE"),kw("UCASE")},3),aply("REPLACE",(SnoVal[]){aply("SUBSTR",(SnoVal[]){get(_cap),vint(2)},2),kw("UCASE"),kw("LCASE")},3));
+SnoVal _v34 = concat_sv(
+                  aply("REPLACE",(SnoVal[]){aply("SUBSTR",(SnoVal[]){get(_cap),vint(1),vint(1)},3),kw("LCASE"),kw("UCASE")},3),
+                  aply("REPLACE",(SnoVal[]){aply("SUBSTR",(SnoVal[]){get(_cap),vint(2)},2),kw("UCASE"),kw("LCASE")},3)
+              );
 int _ok34 = !IS_FAIL(_v34);
 if(_ok34) {
 set(_cap, _v34);
@@ -1732,7 +1738,13 @@ static int64_t assign_c_16_α_saved_cursor;
     _SNO_NEXT_37:
 /* line 23 */
                   trampoline_stno(23);
-SnoVal _v40 = pat_cat(pat_var("icase"),pat_alt(pat_user_call("upr",(SnoVal[]){get(_letter)},1),pat_user_call("lwr",(SnoVal[]){get(_letter)},1)));
+SnoVal _v40 = pat_cat(
+                  pat_var("icase"),
+                  pat_alt(
+                      pat_user_call("upr",(SnoVal[]){get(_letter)},1),
+                      pat_user_call("lwr",(SnoVal[]){get(_letter)},1)
+                  )
+              );
 int _ok40 = !IS_FAIL(_v40);
 if(_ok40) {
 set(_icase, _v40);
@@ -1837,7 +1849,7 @@ static SnoVal _sno_fn_assign(SnoVal *_args, int _nargs) {
 /* line 9 */
     _L_assign:
                   trampoline_stno(9);
-SnoVal _v46 = pat_cond(pat_var("dummy"),"?");
+SnoVal _v46 = pat_val(get(_dummy));
 int _ok46 = !IS_FAIL(_v46);
 if(_ok46) {
 set(_assign, _v46);
@@ -1906,7 +1918,7 @@ static SnoVal _sno_fn_match(SnoVal *_args, int _nargs) {
 /* line 7 */
     _L_match:
                   trampoline_stno(7);
-SnoVal _v54 = pat_cond(pat_var("dummy"),"?");
+SnoVal _v54 = pat_val(get(_dummy));
 int _ok54 = !IS_FAIL(_v54);
 if(_ok54) {
 set(_match, _v54);
@@ -1996,7 +2008,7 @@ static SnoVal _sno_fn_notmatch(SnoVal *_args, int _nargs) {
 /* line 12 */
     _L_notmatch:
                   trampoline_stno(12);
-SnoVal _v58 = pat_cond(pat_var("dummy"),"?");
+SnoVal _v58 = pat_val(get(_dummy));
 int _ok58 = !IS_FAIL(_v58);
 if(_ok58) {
 set(_notmatch, _v58);
@@ -2080,7 +2092,7 @@ static SnoVal _sno_fn_InitCounter(SnoVal *_args, int _nargs) {
 /* line 14 */
     _L_InitCounter:
                   trampoline_stno(14);
-SnoVal _v62 = deref(strv("#N"));
+SnoVal _v62 = deref(NULL_VAL);
 int _ok62 = !IS_FAIL(_v62);
                                                             goto _SNO_RETURN_InitCounter;
     _SNO_NEXT_61:
@@ -2116,7 +2128,7 @@ var_set("OUTPUT", _v64);
     _SNO_NEXT_63:
 /* line 16 */
                   trampoline_stno(16);
-SnoVal _v66 = aply("link_counter",(SnoVal[]){deref(strv("#N")),vint(0)},2);
+SnoVal _v66 = aply("link_counter",(SnoVal[]){deref(NULL_VAL),vint(0)},2);
 int _ok66 = !IS_FAIL(_v66);
 if(_ok66) {
 iset(strv("#N"),_v66);
@@ -2125,7 +2137,7 @@ iset(strv("#N"),_v66);
     _SNO_NEXT_65:
 /* line 17 */
                   trampoline_stno(17);
-SnoVal _v68 = pat_cond(pat_var("dummy"),"?");
+SnoVal _v68 = pat_val(get(_dummy));
 int _ok68 = !IS_FAIL(_v68);
 if(_ok68) {
 set(_PushCounter, _v68);
@@ -2156,7 +2168,7 @@ static SnoVal _sno_fn_IncCounter(SnoVal *_args, int _nargs) {
 /* line 18 */
     _L_IncCounter:
                   trampoline_stno(18);
-SnoVal _v70 = add(aply("value",(SnoVal[]){deref(strv("#N"))},1),vint(1));
+SnoVal _v70 = add(aply("value",(SnoVal[]){deref(NULL_VAL)},1),vint(1));
 int _ok70 = !IS_FAIL(_v70);
 if(_ok70) {
 field_set(deref(strv("#N")), "value", _v70);
@@ -2165,7 +2177,10 @@ field_set(deref(strv("#N")), "value", _v70);
     _SNO_NEXT_69:
 /* line 19 */
                   trampoline_stno(19);
-SnoVal _v72 = concat_sv(concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),aply("value",(SnoVal[]){deref(strv("#N"))},1)),strv(" = IncCounter()"));
+SnoVal _v72 = concat_sv(
+                  concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),aply("value",(SnoVal[]){deref(NULL_VAL)},1)),
+                  strv(" = IncCounter()")
+              );
 int _ok72 = !IS_FAIL(_v72);
 if(_ok72) {
 var_set("OUTPUT", _v72);
@@ -2174,7 +2189,7 @@ var_set("OUTPUT", _v72);
     _SNO_NEXT_71:
 /* line 20 */
                   trampoline_stno(20);
-SnoVal _v74 = pat_cond(pat_var("dummy"),"?");
+SnoVal _v74 = pat_val(get(_dummy));
 int _ok74 = !IS_FAIL(_v74);
 if(_ok74) {
 set(_IncCounter, _v74);
@@ -2205,7 +2220,7 @@ static SnoVal _sno_fn_DecCounter(SnoVal *_args, int _nargs) {
 /* line 21 */
     _L_DecCounter:
                   trampoline_stno(21);
-SnoVal _v76 = sub(aply("value",(SnoVal[]){deref(strv("#N"))},1),vint(1));
+SnoVal _v76 = sub(aply("value",(SnoVal[]){deref(NULL_VAL)},1),vint(1));
 int _ok76 = !IS_FAIL(_v76);
 if(_ok76) {
 field_set(deref(strv("#N")), "value", _v76);
@@ -2214,7 +2229,10 @@ field_set(deref(strv("#N")), "value", _v76);
     _SNO_NEXT_75:
 /* line 22 */
                   trampoline_stno(22);
-SnoVal _v78 = concat_sv(concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),aply("value",(SnoVal[]){deref(strv("#N"))},1)),strv(" = DecCounter()"));
+SnoVal _v78 = concat_sv(
+                  concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),aply("value",(SnoVal[]){deref(NULL_VAL)},1)),
+                  strv(" = DecCounter()")
+              );
 int _ok78 = !IS_FAIL(_v78);
 if(_ok78) {
 var_set("OUTPUT", _v78);
@@ -2223,7 +2241,7 @@ var_set("OUTPUT", _v78);
     _SNO_NEXT_77:
 /* line 23 */
                   trampoline_stno(23);
-SnoVal _v80 = pat_cond(pat_var("dummy"),"?");
+SnoVal _v80 = pat_val(get(_dummy));
 int _ok80 = !IS_FAIL(_v80);
 if(_ok80) {
 set(_DecCounter, _v80);
@@ -2254,7 +2272,7 @@ static SnoVal _sno_fn_TopCounter(SnoVal *_args, int _nargs) {
 /* line 27 */
     _L_TopCounter:
                   trampoline_stno(27);
-SnoVal _v82 = concat_sv(aply("DIFFER",(SnoVal[]){deref(strv("#N"))},1),aply("value",(SnoVal[]){deref(strv("#N"))},1));
+SnoVal _v82 = concat_sv(aply("DIFFER",(SnoVal[]){deref(NULL_VAL)},1),aply("value",(SnoVal[]){deref(NULL_VAL)},1));
 int _ok82 = !IS_FAIL(_v82);
 if(_ok82) {
 set(_TopCounter, _v82);
@@ -2265,7 +2283,10 @@ var_set("TopCounter", _TopCounter);
     _SNO_NEXT_81:
 /* line 28 */
                   trampoline_stno(28);
-SnoVal _v84 = concat_sv(concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),get(_TopCounter)),strv(" = TopCounter()"));
+SnoVal _v84 = concat_sv(
+                  concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),get(_TopCounter)),
+                  strv(" = TopCounter()")
+              );
 int _ok84 = !IS_FAIL(_v84);
 if(_ok84) {
 var_set("OUTPUT", _v84);
@@ -2345,7 +2366,7 @@ var_set("OUTPUT", _v99);
     _SNO_NEXT_98:
 /* line 25 */
                   trampoline_stno(25);
-SnoVal _v101 = concat_sv(aply("DIFFER",(SnoVal[]){deref(strv("#N"))},1),aply("next",(SnoVal[]){deref(strv("#N"))},1));
+SnoVal _v101 = concat_sv(aply("DIFFER",(SnoVal[]){deref(NULL_VAL)},1),aply("next",(SnoVal[]){deref(NULL_VAL)},1));
 int _ok101 = !IS_FAIL(_v101);
 if(_ok101) {
 iset(strv("#N"),_v101);
@@ -2355,7 +2376,7 @@ iset(strv("#N"),_v101);
     _SNO_NEXT_100:
 /* line 26 */
                   trampoline_stno(26);
-SnoVal _v103 = pat_cond(pat_var("dummy"),"?");
+SnoVal _v103 = pat_val(get(_dummy));
 int _ok103 = !IS_FAIL(_v103);
 if(_ok103) {
 set(_PopCounter, _v103);
@@ -2386,7 +2407,7 @@ static SnoVal _sno_fn_InitBegTag(SnoVal *_args, int _nargs) {
 /* line 43 */
     _L_InitBegTag:
                   trampoline_stno(43);
-SnoVal _v105 = deref(strv("@B"));
+SnoVal _v105 = deref(NULL_VAL);
 int _ok105 = !IS_FAIL(_v105);
                                                             goto _SNO_RETURN_InitBegTag;
     _SNO_NEXT_104:
@@ -2417,11 +2438,12 @@ static SnoVal _sno_fn_PushBegTag(SnoVal *_args, int _nargs) {
     _L_PushBegTag:
                   trampoline_stno(44);
 SnoVal _v107 = concat_sv(
-    concat_sv(
-    concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),
-    strv("PushBegTag(")),
-    aply("upr",(SnoVal[]){get(_t)},1)),
-    strv(")"));
+                   concat_sv(
+                       concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),strv("PushBegTag(")),
+                       aply("upr",(SnoVal[]){get(_t)},1)
+                   ),
+                   strv(")")
+               );
 int _ok107 = !IS_FAIL(_v107);
 if(_ok107) {
 var_set("OUTPUT", _v107);
@@ -2430,7 +2452,7 @@ var_set("OUTPUT", _v107);
     _SNO_NEXT_106:
 /* line 45 */
                   trampoline_stno(45);
-SnoVal _v109 = aply("link_tag",(SnoVal[]){deref(strv("@B")),aply("upr",(SnoVal[]){get(_t)},1)},2);
+SnoVal _v109 = aply("link_tag",(SnoVal[]){deref(NULL_VAL),aply("upr",(SnoVal[]){get(_t)},1)},2);
 int _ok109 = !IS_FAIL(_v109);
 if(_ok109) {
 iset(strv("@B"),_v109);
@@ -2439,7 +2461,7 @@ iset(strv("@B"),_v109);
     _SNO_NEXT_108:
 /* line 46 */
                   trampoline_stno(46);
-SnoVal _v111 = pat_cond(pat_user_call("IDENT",(SnoVal[]){get(_t)},1),"?");
+SnoVal _v111 = pat_val(aply("IDENT",(SnoVal[]){get(_t)},1));
 int _ok111 = !IS_FAIL(_v111);
 if(_ok111) {
 set(_PushBegTag, _v111);
@@ -2450,7 +2472,7 @@ var_set("PushBegTag", _PushBegTag);
     _SNO_NEXT_110:
 /* line 47 */
                   trampoline_stno(47);
-SnoVal _v113 = pat_cond(pat_user_call("DIFFER",(SnoVal[]){get(_t)},1),"dummy");
+SnoVal _v113 = pat_val(aply("DIFFER",(SnoVal[]){get(_t)},1));
 int _ok113 = !IS_FAIL(_v113);
 if(_ok113) {
 set(_PushBegTag, _v113);
@@ -2484,7 +2506,19 @@ static SnoVal _sno_fn_PopBegTag(SnoVal *_args, int _nargs) {
 /* line 48 */
     _L_PopBegTag:
                   trampoline_stno(48);
-SnoVal _v115 = pat_cat(pat_cat(pat_user_call("GT",(SnoVal[]){get(_xTrace),vint(4)},2),pat_alt(pat_cat(pat_user_call("DIFFER",(SnoVal[]){deref(strv("@B"))},1),pat_cat(pat_var("value"),pat_deref(strv("@B")))),pat_lit("FAIL"))),pat_lit(" = PopBegTag()"));
+SnoVal _v115 = pat_cat(
+                   pat_cat(
+                       pat_user_call("GT",(SnoVal[]){get(_xTrace),vint(4)},2),
+                       pat_alt(
+                           pat_cat(
+                               pat_user_call("DIFFER",(SnoVal[]){deref(NULL_VAL)},1),
+                               pat_user_call("value",(SnoVal[]){deref(NULL_VAL)},1)
+                           ),
+                           pat_lit(strv("FAIL"))
+                       )
+                   ),
+                   pat_lit(strv(" = PopBegTag()"))
+               );
 int _ok115 = !IS_FAIL(_v115);
 if(_ok115) {
 var_set("OUTPUT", _v115);
@@ -2493,7 +2527,7 @@ var_set("OUTPUT", _v115);
     _SNO_NEXT_114:
 /* line 49 */
                   trampoline_stno(49);
-SnoVal _v117 = concat_sv(aply("DIFFER",(SnoVal[]){deref(strv("@B"))},1),aply("next",(SnoVal[]){deref(strv("@B"))},1));
+SnoVal _v117 = concat_sv(aply("DIFFER",(SnoVal[]){deref(NULL_VAL)},1),aply("next",(SnoVal[]){deref(NULL_VAL)},1));
 int _ok117 = !IS_FAIL(_v117);
 if(_ok117) {
 iset(strv("@B"),_v117);
@@ -2503,7 +2537,7 @@ iset(strv("@B"),_v117);
     _SNO_NEXT_116:
 /* line 50 */
                   trampoline_stno(50);
-SnoVal _v119 = pat_cond(pat_var("dummy"),"?");
+SnoVal _v119 = pat_val(get(_dummy));
 int _ok119 = !IS_FAIL(_v119);
 if(_ok119) {
 set(_PopBegTag, _v119);
@@ -2534,7 +2568,7 @@ static SnoVal _sno_fn_TopBegTag(SnoVal *_args, int _nargs) {
 /* line 51 */
     _L_TopBegTag:
                   trampoline_stno(51);
-SnoVal _v121 = concat_sv(aply("DIFFER",(SnoVal[]){deref(strv("@B"))},1),aply("value",(SnoVal[]){deref(strv("@B"))},1));
+SnoVal _v121 = concat_sv(aply("DIFFER",(SnoVal[]){deref(NULL_VAL)},1),aply("value",(SnoVal[]){deref(NULL_VAL)},1));
 int _ok121 = !IS_FAIL(_v121);
 if(_ok121) {
 set(_TopBegTag, _v121);
@@ -2545,7 +2579,10 @@ var_set("TopBegTag", _TopBegTag);
     _SNO_NEXT_120:
 /* line 52 */
                   trampoline_stno(52);
-SnoVal _v123 = concat_sv(concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),get(_TopBegTag)),strv(" = TopBegTag()"));
+SnoVal _v123 = concat_sv(
+                   concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),get(_TopBegTag)),
+                   strv(" = TopBegTag()")
+               );
 int _ok123 = !IS_FAIL(_v123);
 if(_ok123) {
 var_set("OUTPUT", _v123);
@@ -2584,7 +2621,7 @@ static SnoVal _sno_fn_DumpBegTag(SnoVal *_args, int _nargs) {
 /* line 53 */
     _L_DumpBegTag:
                   trampoline_stno(53);
-SnoVal _v125 = pat_cond(pat_var("dummy"),"?");
+SnoVal _v125 = pat_val(get(_dummy));
 int _ok125 = !IS_FAIL(_v125);
 if(_ok125) {
 set(_DumpBegTag, _v125);
@@ -2601,7 +2638,7 @@ int _ok127 = !IS_FAIL(_v127);
     _SNO_NEXT_126:
 /* line 55 */
                   trampoline_stno(55);
-SnoVal _v129 = deref(strv("@B"));
+SnoVal _v129 = deref(NULL_VAL);
 int _ok129 = !IS_FAIL(_v129);
 if(_ok129) {
 set(_b, _v129);
@@ -2623,7 +2660,16 @@ var_set("v", _v);
     _SNO_NEXT_130:
 /* line 57 */
                   trampoline_stno(57);
-SnoVal _v133 = pat_cat(pat_cat(pat_var("list"),pat_alt(pat_cat(pat_user_call("DIFFER",(SnoVal[]){get(_list)},1),pat_lit(", ")),pat_lit(""))),pat_var("v"));
+SnoVal _v133 = pat_cat(
+                   pat_cat(
+                       pat_var("list"),
+                       pat_alt(
+                           pat_cat(pat_user_call("DIFFER",(SnoVal[]){get(_list)},1),pat_lit(strv(", "))),
+                           pat_lit(strv(""))
+                       )
+                   ),
+                   pat_var("v")
+               );
 int _ok133 = !IS_FAIL(_v133);
 if(_ok133) {
 set(_list, _v133);
@@ -2683,7 +2729,7 @@ static SnoVal _sno_fn_InitEndTag(SnoVal *_args, int _nargs) {
 /* line 67 */
     _L_InitEndTag:
                   trampoline_stno(67);
-SnoVal _v139 = deref(strv("@E"));
+SnoVal _v139 = deref(NULL_VAL);
 int _ok139 = !IS_FAIL(_v139);
                                                             goto _SNO_RETURN_InitEndTag;
     _SNO_NEXT_138:
@@ -2714,11 +2760,12 @@ static SnoVal _sno_fn_PushEndTag(SnoVal *_args, int _nargs) {
     _L_PushEndTag:
                   trampoline_stno(68);
 SnoVal _v141 = concat_sv(
-    concat_sv(
-    concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),
-    strv("PushEndTag(")),
-    aply("upr",(SnoVal[]){get(_t)},1)),
-    strv(")"));
+                   concat_sv(
+                       concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),strv("PushEndTag(")),
+                       aply("upr",(SnoVal[]){get(_t)},1)
+                   ),
+                   strv(")")
+               );
 int _ok141 = !IS_FAIL(_v141);
 if(_ok141) {
 var_set("OUTPUT", _v141);
@@ -2727,7 +2774,7 @@ var_set("OUTPUT", _v141);
     _SNO_NEXT_140:
 /* line 69 */
                   trampoline_stno(69);
-SnoVal _v143 = aply("link_tag",(SnoVal[]){deref(strv("@E")),aply("upr",(SnoVal[]){get(_t)},1)},2);
+SnoVal _v143 = aply("link_tag",(SnoVal[]){deref(NULL_VAL),aply("upr",(SnoVal[]){get(_t)},1)},2);
 int _ok143 = !IS_FAIL(_v143);
 if(_ok143) {
 iset(strv("@E"),_v143);
@@ -2736,7 +2783,7 @@ iset(strv("@E"),_v143);
     _SNO_NEXT_142:
 /* line 70 */
                   trampoline_stno(70);
-SnoVal _v145 = pat_cond(pat_user_call("IDENT",(SnoVal[]){get(_t)},1),"?");
+SnoVal _v145 = pat_val(aply("IDENT",(SnoVal[]){get(_t)},1));
 int _ok145 = !IS_FAIL(_v145);
 if(_ok145) {
 set(_PushEndTag, _v145);
@@ -2747,7 +2794,7 @@ var_set("PushEndTag", _PushEndTag);
     _SNO_NEXT_144:
 /* line 71 */
                   trampoline_stno(71);
-SnoVal _v147 = pat_cond(pat_user_call("DIFFER",(SnoVal[]){get(_t)},1),"dummy");
+SnoVal _v147 = pat_val(aply("DIFFER",(SnoVal[]){get(_t)},1));
 int _ok147 = !IS_FAIL(_v147);
 if(_ok147) {
 set(_PushEndTag, _v147);
@@ -2781,7 +2828,19 @@ static SnoVal _sno_fn_PopEndTag(SnoVal *_args, int _nargs) {
 /* line 72 */
     _L_PopEndTag:
                   trampoline_stno(72);
-SnoVal _v149 = pat_cat(pat_cat(pat_user_call("GT",(SnoVal[]){get(_xTrace),vint(4)},2),pat_alt(pat_cat(pat_user_call("DIFFER",(SnoVal[]){deref(strv("@E"))},1),pat_cat(pat_var("value"),pat_deref(strv("@E")))),pat_lit("FAIL"))),pat_lit(" = PopEndTag()"));
+SnoVal _v149 = pat_cat(
+                   pat_cat(
+                       pat_user_call("GT",(SnoVal[]){get(_xTrace),vint(4)},2),
+                       pat_alt(
+                           pat_cat(
+                               pat_user_call("DIFFER",(SnoVal[]){deref(NULL_VAL)},1),
+                               pat_user_call("value",(SnoVal[]){deref(NULL_VAL)},1)
+                           ),
+                           pat_lit(strv("FAIL"))
+                       )
+                   ),
+                   pat_lit(strv(" = PopEndTag()"))
+               );
 int _ok149 = !IS_FAIL(_v149);
 if(_ok149) {
 var_set("OUTPUT", _v149);
@@ -2790,7 +2849,7 @@ var_set("OUTPUT", _v149);
     _SNO_NEXT_148:
 /* line 73 */
                   trampoline_stno(73);
-SnoVal _v151 = concat_sv(aply("DIFFER",(SnoVal[]){deref(strv("@E"))},1),aply("next",(SnoVal[]){deref(strv("@E"))},1));
+SnoVal _v151 = concat_sv(aply("DIFFER",(SnoVal[]){deref(NULL_VAL)},1),aply("next",(SnoVal[]){deref(NULL_VAL)},1));
 int _ok151 = !IS_FAIL(_v151);
 if(_ok151) {
 iset(strv("@E"),_v151);
@@ -2800,7 +2859,7 @@ iset(strv("@E"),_v151);
     _SNO_NEXT_150:
 /* line 74 */
                   trampoline_stno(74);
-SnoVal _v153 = pat_cond(pat_var("dummy"),"?");
+SnoVal _v153 = pat_val(get(_dummy));
 int _ok153 = !IS_FAIL(_v153);
 if(_ok153) {
 set(_PopEndTag, _v153);
@@ -2831,7 +2890,7 @@ static SnoVal _sno_fn_TopEndTag(SnoVal *_args, int _nargs) {
 /* line 75 */
     _L_TopEndTag:
                   trampoline_stno(75);
-SnoVal _v155 = concat_sv(aply("DIFFER",(SnoVal[]){deref(strv("@E"))},1),aply("value",(SnoVal[]){deref(strv("@E"))},1));
+SnoVal _v155 = concat_sv(aply("DIFFER",(SnoVal[]){deref(NULL_VAL)},1),aply("value",(SnoVal[]){deref(NULL_VAL)},1));
 int _ok155 = !IS_FAIL(_v155);
 if(_ok155) {
 set(_TopEndTag, _v155);
@@ -2842,7 +2901,10 @@ var_set("TopEndTag", _TopEndTag);
     _SNO_NEXT_154:
 /* line 76 */
                   trampoline_stno(76);
-SnoVal _v157 = concat_sv(concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),get(_TopEndTag)),strv(" = TopEndTag()"));
+SnoVal _v157 = concat_sv(
+                   concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),get(_TopEndTag)),
+                   strv(" = TopEndTag()")
+               );
 int _ok157 = !IS_FAIL(_v157);
 if(_ok157) {
 var_set("OUTPUT", _v157);
@@ -2881,7 +2943,7 @@ static SnoVal _sno_fn_DumpEndTag(SnoVal *_args, int _nargs) {
 /* line 77 */
     _L_DumpEndTag:
                   trampoline_stno(77);
-SnoVal _v159 = pat_cond(pat_var("dummy"),"?");
+SnoVal _v159 = pat_val(get(_dummy));
 int _ok159 = !IS_FAIL(_v159);
 if(_ok159) {
 set(_DumpEndTag, _v159);
@@ -2898,7 +2960,7 @@ int _ok161 = !IS_FAIL(_v161);
     _SNO_NEXT_160:
 /* line 79 */
                   trampoline_stno(79);
-SnoVal _v163 = deref(strv("@E"));
+SnoVal _v163 = deref(NULL_VAL);
 int _ok163 = !IS_FAIL(_v163);
 if(_ok163) {
 set(_e, _v163);
@@ -2920,7 +2982,16 @@ var_set("v", _v);
     _SNO_NEXT_164:
 /* line 81 */
                   trampoline_stno(81);
-SnoVal _v167 = pat_cat(pat_cat(pat_var("list"),pat_alt(pat_cat(pat_user_call("DIFFER",(SnoVal[]){get(_list)},1),pat_lit(", ")),pat_lit(""))),pat_var("v"));
+SnoVal _v167 = pat_cat(
+                   pat_cat(
+                       pat_var("list"),
+                       pat_alt(
+                           pat_cat(pat_user_call("DIFFER",(SnoVal[]){get(_list)},1),pat_lit(strv(", "))),
+                           pat_lit(strv(""))
+                       )
+                   ),
+                   pat_var("v")
+               );
 int _ok167 = !IS_FAIL(_v167);
 if(_ok167) {
 set(_list, _v167);
@@ -2980,7 +3051,7 @@ static SnoVal _sno_fn_InitStack(SnoVal *_args, int _nargs) {
 /* line 12 */
     _L_InitStack:
                   trampoline_stno(12);
-SnoVal _v173 = deref(strv("@S"));
+SnoVal _v173 = deref(NULL_VAL);
 int _ok173 = !IS_FAIL(_v173);
                                                             goto _SNO_RETURN_InitStack;
     _SNO_NEXT_172:
@@ -3011,11 +3082,12 @@ static SnoVal _sno_fn_Push(SnoVal *_args, int _nargs) {
     _L_Push:
                   trampoline_stno(13);
 SnoVal _v175 = concat_sv(
-    concat_sv(
-    concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),
-    strv("Push(")),
-    aply("t",(SnoVal[]){get(_x)},1)),
-    strv(")"));
+                   concat_sv(
+                       concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),strv("Push(")),
+                       aply("t",(SnoVal[]){get(_x)},1)
+                   ),
+                   strv(")")
+               );
 int _ok175 = !IS_FAIL(_v175);
 if(_ok175) {
 var_set("OUTPUT", _v175);
@@ -3024,7 +3096,7 @@ var_set("OUTPUT", _v175);
     _SNO_NEXT_174:
 /* line 14 */
                   trampoline_stno(14);
-SnoVal _v177 = aply("link",(SnoVal[]){deref(strv("@S")),get(_x)},2);
+SnoVal _v177 = aply("link",(SnoVal[]){deref(NULL_VAL),get(_x)},2);
 int _ok177 = !IS_FAIL(_v177);
 if(_ok177) {
 iset(strv("@S"),_v177);
@@ -3033,7 +3105,7 @@ iset(strv("@S"),_v177);
     _SNO_NEXT_176:
 /* line 15 */
                   trampoline_stno(15);
-SnoVal _v179 = pat_cond(pat_user_call("IDENT",(SnoVal[]){get(_x)},1),"?");
+SnoVal _v179 = pat_val(aply("IDENT",(SnoVal[]){get(_x)},1));
 int _ok179 = !IS_FAIL(_v179);
 if(_ok179) {
 set(_Push, _v179);
@@ -3044,7 +3116,7 @@ var_set("Push", _Push);
     _SNO_NEXT_178:
 /* line 16 */
                   trampoline_stno(16);
-SnoVal _v181 = pat_cond(pat_user_call("DIFFER",(SnoVal[]){get(_x)},1),"dummy");
+SnoVal _v181 = pat_val(aply("DIFFER",(SnoVal[]){get(_x)},1));
 int _ok181 = !IS_FAIL(_v181);
 if(_ok181) {
 set(_Push, _v181);
@@ -3081,7 +3153,7 @@ static SnoVal _sno_fn_Pop(SnoVal *_args, int _nargs) {
 /* line 17 */
     _L_Pop:
                   trampoline_stno(17);
-SnoVal _v183 = aply("DIFFER",(SnoVal[]){deref(strv("@S"))},1);
+SnoVal _v183 = aply("DIFFER",(SnoVal[]){deref(NULL_VAL)},1);
 int _ok183 = !IS_FAIL(_v183);
                   if(!_ok183)                               goto _SNO_FRETURN_Pop;
                                                             goto _SNO_NEXT_182;
@@ -3095,7 +3167,7 @@ int _ok185 = !IS_FAIL(_v185);
     _SNO_NEXT_184:
 /* line 19 */
                   trampoline_stno(19);
-SnoVal _v187 = aply("value",(SnoVal[]){deref(strv("@S"))},1);
+SnoVal _v187 = aply("value",(SnoVal[]){deref(NULL_VAL)},1);
 int _ok187 = !IS_FAIL(_v187);
 if(_ok187) {
 set(_Pop, _v187);
@@ -3105,7 +3177,10 @@ var_set("Pop", _Pop);
     _SNO_NEXT_186:
 /* line 20 */
                   trampoline_stno(20);
-SnoVal _v189 = concat_sv(concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),strv("Pop() = ")),aply("t",(SnoVal[]){get(_Pop)},1));
+SnoVal _v189 = concat_sv(
+                   concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),strv("Pop() = ")),
+                   aply("t",(SnoVal[]){get(_Pop)},1)
+               );
 int _ok189 = !IS_FAIL(_v189);
 if(_ok189) {
 var_set("OUTPUT", _v189);
@@ -3114,7 +3189,7 @@ var_set("OUTPUT", _v189);
     _SNO_NEXT_188:
 /* line 21 */
                   trampoline_stno(21);
-SnoVal _v191 = aply("next",(SnoVal[]){deref(strv("@S"))},1);
+SnoVal _v191 = aply("next",(SnoVal[]){deref(NULL_VAL)},1);
 int _ok191 = !IS_FAIL(_v191);
 if(_ok191) {
 iset(strv("@S"),_v191);
@@ -3124,7 +3199,7 @@ iset(strv("@S"),_v191);
 /* line 22 */
     _L_Pop1:
                   trampoline_stno(22);
-SnoVal _v193 = pat_cond(pat_var("dummy"),"?");
+SnoVal _v193 = pat_val(get(_dummy));
 int _ok193 = !IS_FAIL(_v193);
 if(_ok193) {
 set(_Pop, _v193);
@@ -3134,7 +3209,7 @@ var_set("Pop", _Pop);
     _SNO_NEXT_192:
 /* line 23 */
                   trampoline_stno(23);
-SnoVal _v195 = aply("value",(SnoVal[]){deref(strv("@S"))},1);
+SnoVal _v195 = aply("value",(SnoVal[]){deref(NULL_VAL)},1);
 int _ok195 = !IS_FAIL(_v195);
 if(_ok195) {
 iset(get(_var),_v195);
@@ -3143,7 +3218,10 @@ iset(get(_var),_v195);
     _SNO_NEXT_194:
 /* line 24 */
                   trampoline_stno(24);
-SnoVal _v197 = pat_cat(pat_cat(pat_user_call("GT",(SnoVal[]){get(_xTrace),vint(4)},2),pat_lit("Pop() = ")),pat_cat(pat_var("t"),pat_deref(get(_var))));
+SnoVal _v197 = pat_cat(
+                   pat_cat(pat_user_call("GT",(SnoVal[]){get(_xTrace),vint(4)},2),pat_lit(strv("Pop() = "))),
+                   pat_user_call("t",(SnoVal[]){deref(strv("var"))},1)
+               );
 int _ok197 = !IS_FAIL(_v197);
 if(_ok197) {
 var_set("OUTPUT", _v197);
@@ -3152,7 +3230,7 @@ var_set("OUTPUT", _v197);
     _SNO_NEXT_196:
 /* line 25 */
                   trampoline_stno(25);
-SnoVal _v199 = aply("next",(SnoVal[]){deref(strv("@S"))},1);
+SnoVal _v199 = aply("next",(SnoVal[]){deref(NULL_VAL)},1);
 int _ok199 = !IS_FAIL(_v199);
 if(_ok199) {
 iset(strv("@S"),_v199);
@@ -3185,14 +3263,14 @@ static SnoVal _sno_fn_Top(SnoVal *_args, int _nargs) {
 /* line 26 */
     _L_Top:
                   trampoline_stno(26);
-SnoVal _v201 = aply("DIFFER",(SnoVal[]){deref(strv("@S"))},1);
+SnoVal _v201 = aply("DIFFER",(SnoVal[]){deref(NULL_VAL)},1);
 int _ok201 = !IS_FAIL(_v201);
                   if(!_ok201)                               goto _SNO_FRETURN_Top;
                                                             goto _SNO_NEXT_200;
     _SNO_NEXT_200:
 /* line 27 */
                   trampoline_stno(27);
-SnoVal _v203 = pat_cond(pat_cat(pat_var("value"),pat_deref(strv("@S"))),"?");
+SnoVal _v203 = pat_val(aply("value",(SnoVal[]){deref(NULL_VAL)},1));
 int _ok203 = !IS_FAIL(_v203);
 if(_ok203) {
 set(_Top, _v203);
@@ -3202,7 +3280,10 @@ var_set("Top", _Top);
     _SNO_NEXT_202:
 /* line 28 */
                   trampoline_stno(28);
-SnoVal _v205 = concat_sv(concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),strv("Top() = ")),aply("t",(SnoVal[]){get(_Top)},1));
+SnoVal _v205 = concat_sv(
+                   concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),strv("Top() = ")),
+                   aply("t",(SnoVal[]){get(_Top)},1)
+               );
 int _ok205 = !IS_FAIL(_v205);
 if(_ok205) {
 var_set("OUTPUT", _v205);
@@ -3527,7 +3608,10 @@ var_set("Remove", _Remove);
     _SNO_NEXT_241:
 /* line 30 */
                   trampoline_stno(30);
-SnoVal _v244 = concat_sv(aply("GT",(SnoVal[]){sub(aply("n",(SnoVal[]){get(_x)},1),vint(1)),vint(0)},2),aply("ARRAY",(SnoVal[]){concat_sv(strv("1:"),sub(aply("n",(SnoVal[]){get(_x)},1),vint(1)))},1));
+SnoVal _v244 = concat_sv(
+                   aply("GT",(SnoVal[]){sub(aply("n",(SnoVal[]){get(_x)},1),vint(1)),vint(0)},2),
+                   aply("ARRAY",(SnoVal[]){concat_sv(strv("1:"),sub(aply("n",(SnoVal[]){get(_x)},1),vint(1)))},1)
+               );
 int _ok244 = !IS_FAIL(_v244);
 if(_ok244) {
 set(_c, _v244);
@@ -3702,7 +3786,10 @@ var_set("nc", _nc);
 /* line 43 */
     _L_Tree1:
                   trampoline_stno(43);
-SnoVal _v264 = concat_sv(concat_sv(aply("GT",(SnoVal[]){get(_nc),vint(0)},2),aply("IDENT",(SnoVal[]){deref(concat_sv(strv("c"),get(_nc)))},1)),sub(get(_nc),vint(1)));
+SnoVal _v264 = concat_sv(
+                   concat_sv(aply("GT",(SnoVal[]){get(_nc),vint(0)},2),aply("IDENT",(SnoVal[]){deref(NULL_VAL)},1)),
+                   sub(get(_nc),vint(1))
+               );
 int _ok264 = !IS_FAIL(_v264);
 if(_ok264) {
 set(_nc, _v264);
@@ -3713,7 +3800,13 @@ var_set("nc", _nc);
     _SNO_NEXT_263:
 /* line 44 */
                   trampoline_stno(44);
-SnoVal _v266 = pat_user_call("tree",(SnoVal[]){get(_t),get(_v),alt(concat_sv(aply("GT",(SnoVal[]){get(_nc),vint(0)},2),get(_nc)),get(_NULL))},3);
+SnoVal _v266 = pat_user_call("tree",(SnoVal[]){get(_t),get(_v),alt(
+                                                                   concat_sv(
+                                                                       aply("GT",(SnoVal[]){get(_nc),vint(0)},2),
+                                                                       get(_nc)
+                                                                   ),
+                                                                   get(_NULL)
+                                                               )},3);
 int _ok266 = !IS_FAIL(_v266);
 if(_ok266) {
 set(_Tree, _v266);
@@ -3745,7 +3838,7 @@ var_set("i", _i);
     _SNO_NEXT_269:
 /* line 50 */
                   trampoline_stno(50);
-SnoVal _v272 = deref(concat_sv(strv("c"),get(_i)));
+SnoVal _v272 = deref(NULL_VAL);
 int _ok272 = !IS_FAIL(_v272);
 if(_ok272) {
 iset(indx(aply("c",(SnoVal[]){get(_Tree)},1),(SnoVal[]){get(_i)},1),_v272);
@@ -4168,7 +4261,10 @@ var_set("i", _i);
     _SNO_NEXT_297:
 /* line 70 */
                   trampoline_stno(70);
-SnoVal _v300 = concat_sv(aply("DIFFER",(SnoVal[]){aply("c",(SnoVal[]){get(_y)},1)},1),indx(aply("c",(SnoVal[]){get(_y)},1),(SnoVal[]){get(_i)},1));
+SnoVal _v300 = concat_sv(
+                   aply("DIFFER",(SnoVal[]){aply("c",(SnoVal[]){get(_y)},1)},1),
+                   indx(aply("c",(SnoVal[]){get(_y)},1),(SnoVal[]){get(_i)},1)
+               );
 int _ok300 = !IS_FAIL(_v300);
                   if(!_ok300)                               goto _SNO_RETURN_Equiv;
                                                             goto _SNO_NEXT_299;
@@ -4225,14 +4321,17 @@ static SnoVal _sno_fn_Find(SnoVal *_args, int _nargs) {
 /* line 75 */
     _L_Find:
                   trampoline_stno(75);
-SnoVal _v304 = aply("DIFFER",(SnoVal[]){deref(get(_xn))},1);
+SnoVal _v304 = aply("DIFFER",(SnoVal[]){deref(strv("xn"))},1);
 int _ok304 = !IS_FAIL(_v304);
                   if(!_ok304)                               goto _SNO_RETURN_Find;
                                                             goto _SNO_NEXT_303;
     _SNO_NEXT_303:
 /* line 76 */
                   trampoline_stno(76);
-SnoVal _v306 = concat_sv(aply("Equiv",(SnoVal[]){deref(get(_xn)),get(_y)},2),aply("APPLY",(SnoVal[]){get(_f),get(_xn)},2));
+SnoVal _v306 = concat_sv(
+                   aply("Equiv",(SnoVal[]){deref(strv("xn")),get(_y)},2),
+                   aply("APPLY",(SnoVal[]){get(_f),get(_xn)},2)
+               );
 int _ok306 = !IS_FAIL(_v306);
                   if(_ok306)                                goto _SNO_RETURN_Find;
                                                             goto _SNO_NEXT_305;
@@ -4250,7 +4349,10 @@ var_set("i", _i);
 /* line 78 */
     _L_Find5:
                   trampoline_stno(78);
-SnoVal _v310 = pat_cat(pat_user_call("LT",(SnoVal[]){get(_i),aply("n",(SnoVal[]){deref(get(_xn))},1)},2),pat_val(add(get(_i),vint(1))));
+SnoVal _v310 = pat_cat(
+                   pat_user_call("LT",(SnoVal[]){get(_i),aply("n",(SnoVal[]){deref(strv("xn"))},1)},2),
+                   pat_val(add(get(_i),vint(1)))
+               );
 int _ok310 = !IS_FAIL(_v310);
 if(_ok310) {
 set(_i, _v310);
@@ -4261,7 +4363,7 @@ var_set("i", _i);
     _SNO_NEXT_309:
 /* line 79 */
                   trampoline_stno(79);
-SnoVal _v312 = aply("Find",(SnoVal[]){indx(aply("c",(SnoVal[]){deref(get(_xn))},1),(SnoVal[]){get(_i)},1),get(_y),get(_f)},3);
+SnoVal _v312 = aply("Find",(SnoVal[]){indx(aply("c",(SnoVal[]){deref(strv("xn"))},1),(SnoVal[]){get(_i)},1),get(_y),get(_f)},3);
 int _ok312 = !IS_FAIL(_v312);
                                                             goto _L_Find5;
     _SNO_NEXT_311:
@@ -4443,15 +4545,15 @@ int _ok326 = !IS_FAIL(_v326);
 /* line 13 */
                   trampoline_stno(13);
 SnoVal _v328 = concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(3)},2),
-    strv("Shift(")),
-    get(_t)),
-    strv(", ")),
-    get(_v)),
-    strv(")"));
+                   concat_sv(
+                       concat_sv(
+                           concat_sv(concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(3)},2),strv("Shift(")),get(_t)),
+                           strv(", ")
+                       ),
+                       get(_v)
+                   ),
+                   strv(")")
+               );
 int _ok328 = !IS_FAIL(_v328);
 if(_ok328) {
 var_set("OUTPUT", _v328);
@@ -4460,7 +4562,7 @@ var_set("OUTPUT", _v328);
     _SNO_NEXT_327:
 /* line 15 */
                   trampoline_stno(15);
-SnoVal _v330 = pat_cond(pat_user_call("IDENT",(SnoVal[]){get(_v)},1),"?");
+SnoVal _v330 = pat_val(aply("IDENT",(SnoVal[]){get(_v)},1));
 int _ok330 = !IS_FAIL(_v330);
 if(_ok330) {
 set(_Shift, _v330);
@@ -4471,7 +4573,7 @@ var_set("Shift", _Shift);
     _SNO_NEXT_329:
 /* line 16 */
                   trampoline_stno(16);
-SnoVal _v332 = pat_cond(pat_user_call("DIFFER",(SnoVal[]){get(_v)},1),"dummy");
+SnoVal _v332 = pat_val(aply("DIFFER",(SnoVal[]){get(_v)},1));
 int _ok332 = !IS_FAIL(_v332);
 if(_ok332) {
 set(_Shift, _v332);
@@ -4526,7 +4628,7 @@ static SnoVal _sno_fn_Reduce(SnoVal *_args, int _nargs) {
 /* line 20 */
     _L_Reduce:
                   trampoline_stno(20);
-SnoVal _v334 = pat_cond(pat_var("dummy"),"?");
+SnoVal _v334 = pat_val(get(_dummy));
 int _ok334 = !IS_FAIL(_v334);
 if(_ok334) {
 set(_Reduce, _v334);
@@ -4575,15 +4677,15 @@ var_set("n", _n);
     _L_Reduce1:
                   trampoline_stno(25);
 SnoVal _v344 = concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(3)},2),
-    strv("Reduce(")),
-    get(_t)),
-    strv(", ")),
-    get(_n)),
-    strv(")"));
+                   concat_sv(
+                       concat_sv(
+                           concat_sv(concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(3)},2),strv("Reduce(")),get(_t)),
+                           strv(", ")
+                       ),
+                       get(_n)
+                   ),
+                   strv(")")
+               );
 int _ok344 = !IS_FAIL(_v344);
 if(_ok344) {
 var_set("OUTPUT", _v344);
@@ -4592,7 +4694,10 @@ var_set("OUTPUT", _v344);
     _SNO_NEXT_343:
 /* line 26 */
                   trampoline_stno(26);
-SnoVal _v346 = concat_sv(aply("GE",(SnoVal[]){get(_n),vint(1)},2),aply("ARRAY",(SnoVal[]){concat_sv(strv("1:"),get(_n))},1));
+SnoVal _v346 = concat_sv(
+                   aply("GE",(SnoVal[]){get(_n),vint(1)},2),
+                   aply("ARRAY",(SnoVal[]){concat_sv(strv("1:"),get(_n))},1)
+               );
 int _ok346 = !IS_FAIL(_v346);
 if(_ok346) {
 set(_c, _v346);
@@ -4707,7 +4812,10 @@ var_set("TValue", _TValue);
     _SNO_NEXT_358:
 /* line 13 */
                   trampoline_stno(13);
-SnoVal _v361 = concat_sv(aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("Name")},2),aply("v",(SnoVal[]){get(_x)},1));
+SnoVal _v361 = concat_sv(
+                   aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("Name")},2),
+                   aply("v",(SnoVal[]){get(_x)},1)
+               );
 int _ok361 = !IS_FAIL(_v361);
 if(_ok361) {
 set(_TValue, _v361);
@@ -4718,7 +4826,10 @@ var_set("TValue", _TValue);
     _SNO_NEXT_360:
 /* line 14 */
                   trampoline_stno(14);
-SnoVal _v363 = concat_sv(aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("float")},2),aply("v",(SnoVal[]){get(_x)},1));
+SnoVal _v363 = concat_sv(
+                   aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("float")},2),
+                   aply("v",(SnoVal[]){get(_x)},1)
+               );
 int _ok363 = !IS_FAIL(_v363);
 if(_ok363) {
 set(_TValue, _v363);
@@ -4729,7 +4840,10 @@ var_set("TValue", _TValue);
     _SNO_NEXT_362:
 /* line 15 */
                   trampoline_stno(15);
-SnoVal _v365 = concat_sv(aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("integer")},2),aply("v",(SnoVal[]){get(_x)},1));
+SnoVal _v365 = concat_sv(
+                   aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("integer")},2),
+                   aply("v",(SnoVal[]){get(_x)},1)
+               );
 int _ok365 = !IS_FAIL(_v365);
 if(_ok365) {
 set(_TValue, _v365);
@@ -4740,7 +4854,10 @@ var_set("TValue", _TValue);
     _SNO_NEXT_364:
 /* line 16 */
                   trampoline_stno(16);
-SnoVal _v367 = concat_sv(aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("bool")},2),aply("v",(SnoVal[]){get(_x)},1));
+SnoVal _v367 = concat_sv(
+                   aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("bool")},2),
+                   aply("v",(SnoVal[]){get(_x)},1)
+               );
 int _ok367 = !IS_FAIL(_v367);
 if(_ok367) {
 set(_TValue, _v367);
@@ -4752,11 +4869,12 @@ var_set("TValue", _TValue);
 /* line 17 */
                   trampoline_stno(17);
 SnoVal _v369 = concat_sv(
-    concat_sv(
-    concat_sv(aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("datetime")},2),
-    strv("'")),
-    aply("SqlSQize",(SnoVal[]){aply("v",(SnoVal[]){get(_x)},1)},1)),
-    strv("'"));
+                   concat_sv(
+                       concat_sv(aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("datetime")},2),strv("'")),
+                       aply("SqlSQize",(SnoVal[]){aply("v",(SnoVal[]){get(_x)},1)},1)
+                   ),
+                   strv("'")
+               );
 int _ok369 = !IS_FAIL(_v369);
 if(_ok369) {
 set(_TValue, _v369);
@@ -4768,11 +4886,15 @@ var_set("TValue", _TValue);
 /* line 18 */
                   trampoline_stno(18);
 SnoVal _v371 = concat_sv(
-    concat_sv(
-    concat_sv(aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("character")},2),
-    strv("'")),
-    aply("SqlSQize",(SnoVal[]){aply("v",(SnoVal[]){get(_x)},1)},1)),
-    strv("'"));
+                   concat_sv(
+                       concat_sv(
+                           aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("character")},2),
+                           strv("'")
+                       ),
+                       aply("SqlSQize",(SnoVal[]){aply("v",(SnoVal[]){get(_x)},1)},1)
+                   ),
+                   strv("'")
+               );
 int _ok371 = !IS_FAIL(_v371);
 if(_ok371) {
 set(_TValue, _v371);
@@ -4784,11 +4906,12 @@ var_set("TValue", _TValue);
 /* line 19 */
                   trampoline_stno(19);
 SnoVal _v373 = concat_sv(
-    concat_sv(
-    concat_sv(aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("string")},2),
-    strv("'")),
-    aply("SqlSQize",(SnoVal[]){aply("v",(SnoVal[]){get(_x)},1)},1)),
-    strv("'"));
+                   concat_sv(
+                       concat_sv(aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("string")},2),strv("'")),
+                       aply("SqlSQize",(SnoVal[]){aply("v",(SnoVal[]){get(_x)},1)},1)
+                   ),
+                   strv("'")
+               );
 int _ok373 = !IS_FAIL(_v373);
 if(_ok373) {
 set(_TValue, _v373);
@@ -4799,7 +4922,10 @@ var_set("TValue", _TValue);
     _SNO_NEXT_372:
 /* line 20 */
                   trampoline_stno(20);
-SnoVal _v375 = concat_sv(aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("identifier")},2),aply("v",(SnoVal[]){get(_x)},1));
+SnoVal _v375 = concat_sv(
+                   aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("identifier")},2),
+                   aply("v",(SnoVal[]){get(_x)},1)
+               );
 int _ok375 = !IS_FAIL(_v375);
 if(_ok375) {
 set(_TValue, _v375);
@@ -4844,7 +4970,16 @@ var_set("i", _i);
     _SNO_NEXT_380:
 /* line 24 */
                   trampoline_stno(24);
-SnoVal _v383 = pat_cat(pat_cat(pat_var("TValue"),pat_alt(pat_cat(pat_user_call("DIFFER",(SnoVal[]){get(_TValue)},1),pat_lit(".")),pat_lit(""))),pat_cat(pat_var("v"),pat_val(indx(aply("c",(SnoVal[]){get(_x)},1),(SnoVal[]){get(_i)},1))));
+SnoVal _v383 = pat_cat(
+                   pat_cat(
+                       pat_var("TValue"),
+                       pat_alt(
+                           pat_cat(pat_user_call("DIFFER",(SnoVal[]){get(_TValue)},1),pat_lit(strv("."))),
+                           pat_lit(strv(""))
+                       )
+                   ),
+                   pat_user_call("v",(SnoVal[]){indx(aply("c",(SnoVal[]){get(_x)},1),(SnoVal[]){get(_i)},1)},1)
+               );
 int _ok383 = !IS_FAIL(_v383);
 if(_ok383) {
 set(_TValue, _v383);
@@ -4893,7 +5028,7 @@ static SnoVal _sno_fn_TDump(SnoVal *_args, int _nargs) {
 /* line 28 */
     _L_TDump:
                   trampoline_stno(28);
-SnoVal _v385 = pat_cond(pat_user_call("IDENT",(SnoVal[]){get(_outNm)},1),"OUTPUT");
+SnoVal _v385 = pat_val(aply("IDENT",(SnoVal[]){get(_outNm)},1));
 int _ok385 = !IS_FAIL(_v385);
 if(_ok385) {
 set(_outNm, _v385);
@@ -4913,7 +5048,10 @@ var_set("x", _x);
     _SNO_NEXT_386:
 /* line 30 */
                   trampoline_stno(30);
-SnoVal _v389 = aply("Gen",(SnoVal[]){concat_sv(aply("TLump",(SnoVal[]){get(_x),sub(vint(140),aply("GetLevel",NULL,0))},2),get(_nl)),get(_outNm)},2);
+SnoVal _v389 = aply("Gen",(SnoVal[]){concat_sv(
+                                         aply("TLump",(SnoVal[]){get(_x),sub(vint(140),aply("GetLevel",NULL,0))},2),
+                                         get(_nl)
+                                     ),get(_outNm)},2);
 int _ok389 = !IS_FAIL(_v389);
                   if(_ok389)                                goto _SNO_RETURN_TDump;
                                                             goto _SNO_NEXT_388;
@@ -5386,7 +5524,16 @@ var_set("i", _i);
     _SNO_NEXT_436:
 /* line 60 */
                   trampoline_stno(60);
-SnoVal _v439 = concat_sv(concat_sv(get(_TLump),strv(" ")),aply("TLump",(SnoVal[]){indx(aply("c",(SnoVal[]){get(_x)},1),(SnoVal[]){get(_i)},1),sub(sub(get(_len),aply("SIZE",(SnoVal[]){get(_TLump)},1)),vint(2))},2));
+SnoVal _v439 = concat_sv(
+                   concat_sv(get(_TLump),strv(" ")),
+                   aply("TLump",(SnoVal[]){indx(aply("c",(SnoVal[]){get(_x)},1),(SnoVal[]){get(_i)},1),sub(
+                                                                                                           sub(
+                                                                                                               get(_len),
+                                                                                                               aply("SIZE",(SnoVal[]){get(_TLump)},1)
+                                                                                                           ),
+                                                                                                           vint(2)
+                                                                                                       )},2)
+               );
 int _ok439 = !IS_FAIL(_v439);
 if(_ok439) {
 set(_TLump, _v439);
@@ -5445,7 +5592,7 @@ static SnoVal _sno_fn_IncLevel(SnoVal *_args, int _nargs) {
 /* line 25 */
     _L_IncLevel:
                   trampoline_stno(25);
-SnoVal _v443 = pat_cond(pat_var("dummy"),"?");
+SnoVal _v443 = pat_val(get(_dummy));
 int _ok443 = !IS_FAIL(_v443);
 if(_ok443) {
 set(_IncLevel, _v443);
@@ -5465,7 +5612,7 @@ var_set("delta", _delta);
     _SNO_NEXT_444:
 /* line 27 */
                   trampoline_stno(27);
-SnoVal _v447 = add(deref(strv("#L")),get(_delta));
+SnoVal _v447 = add(deref(NULL_VAL),get(_delta));
 int _ok447 = !IS_FAIL(_v447);
 if(_ok447) {
 iset(strv("#L"),_v447);
@@ -5501,7 +5648,7 @@ static SnoVal _sno_fn_DecLevel(SnoVal *_args, int _nargs) {
 /* line 28 */
     _L_DecLevel:
                   trampoline_stno(28);
-SnoVal _v449 = pat_cond(pat_var("dummy"),"?");
+SnoVal _v449 = pat_val(get(_dummy));
 int _ok449 = !IS_FAIL(_v449);
 if(_ok449) {
 set(_DecLevel, _v449);
@@ -5521,7 +5668,7 @@ var_set("delta", _delta);
     _SNO_NEXT_450:
 /* line 30 */
                   trampoline_stno(30);
-SnoVal _v453 = sub(deref(strv("#L")),get(_delta));
+SnoVal _v453 = sub(deref(NULL_VAL),get(_delta));
 int _ok453 = !IS_FAIL(_v453);
 if(_ok453) {
 iset(strv("#L"),_v453);
@@ -5557,7 +5704,7 @@ static SnoVal _sno_fn_SetLevel(SnoVal *_args, int _nargs) {
 /* line 31 */
     _L_SetLevel:
                   trampoline_stno(31);
-SnoVal _v455 = pat_cond(pat_var("dummy"),"?");
+SnoVal _v455 = pat_val(get(_dummy));
 int _ok455 = !IS_FAIL(_v455);
 if(_ok455) {
 set(_SetLevel, _v455);
@@ -5600,7 +5747,7 @@ static SnoVal _sno_fn_GetLevel(SnoVal *_args, int _nargs) {
 /* line 33 */
     _L_GetLevel:
                   trampoline_stno(33);
-SnoVal _v459 = deref(strv("#L"));
+SnoVal _v459 = deref(NULL_VAL);
 int _ok459 = !IS_FAIL(_v459);
 if(_ok459) {
 set(_GetLevel, _v459);
@@ -5643,7 +5790,7 @@ static SnoVal _sno_fn_Gen(SnoVal *_args, int _nargs) {
 /* line 40 */
     _L_Gen:
                   trampoline_stno(40);
-SnoVal _v461 = pat_cond(pat_var("dummy"),"?");
+SnoVal _v461 = pat_val(get(_dummy));
 int _ok461 = !IS_FAIL(_v461);
 if(_ok461) {
 set(_Gen, _v461);
@@ -5653,7 +5800,7 @@ var_set("Gen", _Gen);
     _SNO_NEXT_460:
 /* line 41 */
                   trampoline_stno(41);
-SnoVal _v463 = pat_cond(pat_user_call("IDENT",(SnoVal[]){get(_outNm)},1),"OUTPUT");
+SnoVal _v463 = pat_val(aply("IDENT",(SnoVal[]){get(_outNm)},1));
 int _ok463 = !IS_FAIL(_v463);
 if(_ok463) {
 set(_outNm, _v463);
@@ -5717,7 +5864,7 @@ static int64_t assign_c_55_α_saved_cursor;
     _SNO_NEXT_464:
 /* line 43 */
                   trampoline_stno(43);
-SnoVal _v467 = concat_sv(aply("DIFFER",(SnoVal[]){deref(strv("$B"))},1),get(_str));
+SnoVal _v467 = concat_sv(aply("DIFFER",(SnoVal[]){deref(NULL_VAL)},1),get(_str));
 int _ok467 = !IS_FAIL(_v467);
 if(_ok467) {
 iset(strv("$B"),_v467);
@@ -5726,7 +5873,7 @@ iset(strv("$B"),_v467);
     _SNO_NEXT_466:
 /* line 44 */
                   trampoline_stno(44);
-SnoVal _v469 = concat_sv(concat_sv(aply("IDENT",(SnoVal[]){deref(strv("$B"))},1),get(_ind)),get(_str));
+SnoVal _v469 = concat_sv(concat_sv(aply("IDENT",(SnoVal[]){deref(NULL_VAL)},1),get(_ind)),get(_str));
 int _ok469 = !IS_FAIL(_v469);
 if(_ok469) {
 iset(strv("$B"),_v469);
@@ -5736,7 +5883,7 @@ iset(strv("$B"),_v469);
 /* line 45 */
                   trampoline_stno(45);
 /* byrd mtch u471 */
-SnoVal _s471 = deref(strv("$B"));
+SnoVal _s471 = deref(NULL_VAL);
 const char *_subj471 = to_str(_s471);
 int64_t _slen471 = _subj471 ? (int64_t)strlen(_subj471) : 0;
 int64_t _cur471  = 0;
@@ -5823,7 +5970,7 @@ assign_c_61_β:
     _SNO_NEXT_470:
 /* line 46 */
                   trampoline_stno(46);
-SnoVal _v473 = deref(strv("$C"));
+SnoVal _v473 = deref(NULL_VAL);
 int _ok473 = !IS_FAIL(_v473);
 if(_ok473) {
 iset(strv("$X"),_v473);
@@ -5843,7 +5990,7 @@ iset(get(_outNm),_v475);
     _L_Gen10:
                   trampoline_stno(48);
 /* byrd mtch u477 */
-SnoVal _s477 = deref(strv("$B"));
+SnoVal _s477 = deref(NULL_VAL);
 const char *_subj477 = to_str(_s477);
 int64_t _slen477 = _subj477 ? (int64_t)strlen(_subj477) : 0;
 int64_t _cur477  = 0;
@@ -5930,7 +6077,7 @@ assign_c_68_β:
     _SNO_NEXT_476:
 /* line 49 */
                   trampoline_stno(49);
-SnoVal _v479 = concat_sv(concat_sv(deref(strv("$C")),get(_ind)),get(_outline));
+SnoVal _v479 = concat_sv(concat_sv(deref(NULL_VAL),get(_ind)),get(_outline));
 int _ok479 = !IS_FAIL(_v479);
 if(_ok479) {
 iset(get(_outNm),_v479);
@@ -5975,7 +6122,7 @@ static SnoVal _sno_fn_GenTab(SnoVal *_args, int _nargs) {
 /* line 50 */
     _L_GenTab:
                   trampoline_stno(50);
-SnoVal _v481 = pat_cond(pat_var("dummy"),"?");
+SnoVal _v481 = pat_val(get(_dummy));
 int _ok481 = !IS_FAIL(_v481);
 if(_ok481) {
 set(_GenTab, _v481);
@@ -5995,7 +6142,13 @@ var_set("pos", _pos);
     _SNO_NEXT_482:
 /* line 52 */
                   trampoline_stno(52);
-SnoVal _v485 = concat_sv(concat_sv(aply("IDENT",(SnoVal[]){deref(strv("$B"))},1),strv(" ")),aply("DUPL",(SnoVal[]){strv(" "),sub(sub(get(_pos),aply("SIZE",(SnoVal[]){deref(strv("$X"))},1)),vint(1))},2));
+SnoVal _v485 = concat_sv(
+                   concat_sv(aply("IDENT",(SnoVal[]){deref(NULL_VAL)},1),strv(" ")),
+                   aply("DUPL",(SnoVal[]){strv(" "),sub(
+                                                        sub(get(_pos),aply("SIZE",(SnoVal[]){deref(NULL_VAL)},1)),
+                                                        vint(1)
+                                                    )},2)
+               );
 int _ok485 = !IS_FAIL(_v485);
 if(_ok485) {
 iset(strv("$B"),_v485);
@@ -6005,7 +6158,13 @@ iset(strv("$B"),_v485);
     _SNO_NEXT_484:
 /* line 53 */
                   trampoline_stno(53);
-SnoVal _v487 = concat_sv(concat_sv(deref(strv("$B")),strv(" ")),aply("DUPL",(SnoVal[]){strv(" "),sub(sub(get(_pos),aply("SIZE",(SnoVal[]){deref(strv("$B"))},1)),vint(1))},2));
+SnoVal _v487 = concat_sv(
+                   concat_sv(deref(NULL_VAL),strv(" ")),
+                   aply("DUPL",(SnoVal[]){strv(" "),sub(
+                                                        sub(get(_pos),aply("SIZE",(SnoVal[]){deref(NULL_VAL)},1)),
+                                                        vint(1)
+                                                    )},2)
+               );
 int _ok487 = !IS_FAIL(_v487);
 if(_ok487) {
 iset(strv("$B"),_v487);
@@ -6015,7 +6174,7 @@ iset(strv("$B"),_v487);
     _SNO_NEXT_486:
 /* line 54 */
                   trampoline_stno(54);
-SnoVal _v489 = concat_sv(aply("IDENT",(SnoVal[]){deref(strv("$B"))},1),strv(" "));
+SnoVal _v489 = concat_sv(aply("IDENT",(SnoVal[]){deref(NULL_VAL)},1),strv(" "));
 int _ok489 = !IS_FAIL(_v489);
 if(_ok489) {
 iset(strv("$B"),_v489);
@@ -6025,7 +6184,7 @@ iset(strv("$B"),_v489);
     _SNO_NEXT_488:
 /* line 55 */
                   trampoline_stno(55);
-SnoVal _v491 = concat_sv(deref(strv("$B")),strv(" "));
+SnoVal _v491 = concat_sv(deref(NULL_VAL),strv(" "));
 int _ok491 = !IS_FAIL(_v491);
 if(_ok491) {
 iset(strv("$B"),_v491);
@@ -6061,7 +6220,7 @@ static SnoVal _sno_fn_GenSetCont(SnoVal *_args, int _nargs) {
 /* line 56 */
     _L_GenSetCont:
                   trampoline_stno(56);
-SnoVal _v493 = pat_cond(pat_var("dummy"),"?");
+SnoVal _v493 = pat_val(get(_dummy));
 int _ok493 = !IS_FAIL(_v493);
 if(_ok493) {
 set(_GenSetCont, _v493);
@@ -6071,7 +6230,7 @@ var_set("GenSetCont", _GenSetCont);
     _SNO_NEXT_492:
 /* line 57 */
                   trampoline_stno(57);
-SnoVal _v495 = deref(strv("$X"));
+SnoVal _v495 = deref(NULL_VAL);
 int _ok495 = !IS_FAIL(_v495);
                                                             goto _SNO_NEXT_494;
     _SNO_NEXT_494:
@@ -6098,15 +6257,9 @@ int _ok500 = !IS_FAIL(_v500);
 /* line 5 */
                   trampoline_stno(5);
 SnoVal _v502 = concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(get(_bSlash),
-    get(_bs)),
-    get(_ff)),
-    get(_nl)),
-    get(_cr)),
-    get(_tab));
+                   concat_sv(concat_sv(concat_sv(concat_sv(get(_bSlash),get(_bs)),get(_ff)),get(_nl)),get(_cr)),
+                   get(_tab)
+               );
 int _ok502 = !IS_FAIL(_v502);
 if(_ok502) {
 set(_QizeWierd, _v502);
@@ -6652,12 +6805,7 @@ assign_c_105_β:
 /* line 25 */
     _L_Qize1:
                   trampoline_stno(25);
-SnoVal _v520 = concat_sv(
-    concat_sv(
-    concat_sv(get(_Qize),
-    strv("'")),
-    get(_part)),
-    strv("'"));
+SnoVal _v520 = concat_sv(concat_sv(concat_sv(get(_Qize),strv("'")),get(_part)),strv("'"));
 int _ok520 = !IS_FAIL(_v520);
 if(_ok520) {
 set(_Qize, _v520);
@@ -6668,12 +6816,7 @@ var_set("Qize", _Qize);
 /* line 26 */
     _L_Qize2:
                   trampoline_stno(26);
-SnoVal _v522 = concat_sv(
-    concat_sv(
-    concat_sv(get(_Qize),
-    strv("\"")),
-    get(_part)),
-    strv("\""));
+SnoVal _v522 = concat_sv(concat_sv(concat_sv(get(_Qize),strv("\"")),get(_part)),strv("\""));
 int _ok522 = !IS_FAIL(_v522);
 if(_ok522) {
 set(_Qize, _v522);
@@ -6872,17 +7015,15 @@ assign_c_111_β:
     _L_SQize1:
                   trampoline_stno(35);
 SnoVal _v537 = concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(get(_SQize),
-    strv("'")),
-    get(_part)),
-    strv("'")),
-    strv(" \"")),
-    strv("'")),
-    strv("\""));
+                   concat_sv(
+                       concat_sv(
+                           concat_sv(concat_sv(concat_sv(get(_SQize),strv("'")),get(_part)),strv("'")),
+                           strv(" \"")
+                       ),
+                       strv("'")
+                   ),
+                   strv("\"")
+               );
 int _ok537 = !IS_FAIL(_v537);
 if(_ok537) {
 set(_SQize, _v537);
@@ -6893,12 +7034,7 @@ var_set("SQize", _SQize);
 /* line 36 */
     _L_SQize2:
                   trampoline_stno(36);
-SnoVal _v539 = concat_sv(
-    concat_sv(
-    concat_sv(get(_SQize),
-    strv("'")),
-    get(_part)),
-    strv("'"));
+SnoVal _v539 = concat_sv(concat_sv(concat_sv(get(_SQize),strv("'")),get(_part)),strv("'"));
 int _ok539 = !IS_FAIL(_v539);
 if(_ok539) {
 set(_SQize, _v539);
@@ -7075,17 +7211,15 @@ assign_c_117_β:
     _L_DQize1:
                   trampoline_stno(44);
 SnoVal _v549 = concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(get(_DQize),
-    strv("\"")),
-    get(_part)),
-    strv("\"")),
-    strv(" '")),
-    strv("\"")),
-    strv("'"));
+                   concat_sv(
+                       concat_sv(
+                           concat_sv(concat_sv(concat_sv(get(_DQize),strv("\"")),get(_part)),strv("\"")),
+                           strv(" '")
+                       ),
+                       strv("\"")
+                   ),
+                   strv("'")
+               );
 int _ok549 = !IS_FAIL(_v549);
 if(_ok549) {
 set(_DQize, _v549);
@@ -7096,12 +7230,7 @@ var_set("DQize", _DQize);
 /* line 45 */
     _L_DQize2:
                   trampoline_stno(45);
-SnoVal _v551 = concat_sv(
-    concat_sv(
-    concat_sv(get(_DQize),
-    strv("\"")),
-    get(_part)),
-    strv("\""));
+SnoVal _v551 = concat_sv(concat_sv(concat_sv(get(_DQize),strv("\"")),get(_part)),strv("\""));
 int _ok551 = !IS_FAIL(_v551);
 if(_ok551) {
 set(_DQize, _v551);
@@ -8658,13 +8787,9 @@ alt_r_182_β:
 /* line 27 */
                   trampoline_stno(27);
 SnoVal _v658 = concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(get(_nm),
-    strv(" = ")),
-    strv("ARRAY['")),
-    get(_objProto)),
-    strv("']"));
+                   concat_sv(concat_sv(concat_sv(get(_nm),strv(" = ")),strv("ARRAY['")),get(_objProto)),
+                   strv("']")
+               );
 int _ok658 = !IS_FAIL(_v658);
 if(_ok658) {
 var_set("OUTPUT", _v658);
@@ -8696,11 +8821,12 @@ var_set("i", _i);
 /* line 30 */
                   trampoline_stno(30);
 SnoVal _v664 = aply("XDump",(SnoVal[]){indx(get(_object),(SnoVal[]){get(_i)},1),concat_sv(
-    concat_sv(
-    concat_sv(get(_nm),
-    strv("[")),
-    get(_i)),
-    strv("]"))},2);
+                                                                                    concat_sv(
+                                                                                        concat_sv(get(_nm),strv("[")),
+                                                                                        get(_i)
+                                                                                    ),
+                                                                                    strv("]")
+                                                                                )},2);
 int _ok664 = !IS_FAIL(_v664);
                                                             goto _L_XDump25;
     _SNO_NEXT_663:
@@ -8769,7 +8895,10 @@ var_set("objVal", _objVal);
     _SNO_NEXT_675:
 /* line 38 */
                   trampoline_stno(38);
-SnoVal _v678 = concat_sv(aply("IDENT",(SnoVal[]){aply("DATATYPE",(SnoVal[]){get(_objKey)},1),strv("INTEGER")},2),get(_objKey));
+SnoVal _v678 = concat_sv(
+                   aply("IDENT",(SnoVal[]){aply("DATATYPE",(SnoVal[]){get(_objKey)},1),strv("INTEGER")},2),
+                   get(_objKey)
+               );
 int _ok678 = !IS_FAIL(_v678);
 if(_ok678) {
 set(_objKeyNm, _v678);
@@ -8780,7 +8909,10 @@ var_set("objKeyNm", _objKeyNm);
     _SNO_NEXT_677:
 /* line 39 */
                   trampoline_stno(39);
-SnoVal _v680 = concat_sv(aply("IDENT",(SnoVal[]){aply("DATATYPE",(SnoVal[]){get(_objKey)},1),strv("STRING")},2),aply("Qize",(SnoVal[]){get(_objKey)},1));
+SnoVal _v680 = concat_sv(
+                   aply("IDENT",(SnoVal[]){aply("DATATYPE",(SnoVal[]){get(_objKey)},1),strv("STRING")},2),
+                   aply("Qize",(SnoVal[]){get(_objKey)},1)
+               );
 int _ok680 = !IS_FAIL(_v680);
 if(_ok680) {
 set(_objKeyNm, _v680);
@@ -8803,23 +8935,16 @@ var_set("objKeyNm", _objKeyNm);
     _L_XDump37:
                   trampoline_stno(41);
 SnoVal _v684 = aply("XDump",(SnoVal[]){get(_objVal),concat_sv(
-    concat_sv(
-    concat_sv(get(_nm),
-    strv("[")),
-    get(_objKeyNm)),
-    strv("]"))},2);
+                                                        concat_sv(concat_sv(get(_nm),strv("[")),get(_objKeyNm)),
+                                                        strv("]")
+                                                    )},2);
 int _ok684 = !IS_FAIL(_v684);
                                                             goto _L_XDump35;
     _SNO_NEXT_683:
 /* line 42 */
     _L_XDump40:
                   trampoline_stno(42);
-SnoVal _v686 = concat_sv(
-    concat_sv(
-    concat_sv(get(_nm),
-    strv(" = ")),
-    get(_objType)),
-    strv("()"));
+SnoVal _v686 = concat_sv(concat_sv(concat_sv(get(_nm),strv(" = ")),get(_objType)),strv("()"));
 int _ok686 = !IS_FAIL(_v686);
 if(_ok686) {
 var_set("OUTPUT", _v686);
@@ -8861,11 +8986,15 @@ var_set("objField", _objField);
 /* line 46 */
                   trampoline_stno(46);
 SnoVal _v694 = aply("XDump",(SnoVal[]){aply("APPLY",(SnoVal[]){get(_objField),get(_object)},2),concat_sv(
-    concat_sv(
-    concat_sv(get(_objField),
-    strv("(")),
-    get(_nm)),
-    strv(")"))},2);
+                                                                                                   concat_sv(
+                                                                                                       concat_sv(
+                                                                                                           get(_objField),
+                                                                                                           strv("(")
+                                                                                                       ),
+                                                                                                       get(_nm)
+                                                                                                   ),
+                                                                                                   strv(")")
+                                                                                               )},2);
 int _ok694 = !IS_FAIL(_v694);
                                                             goto _L_XDump45;
     _SNO_NEXT_693:
@@ -8975,13 +9104,12 @@ static SnoVal _sno_fn_reduce(SnoVal *_args, int _nargs) {
     _L_reduce_:
                   trampoline_stno(18);
 SnoVal _v698 = aply("EVAL",(SnoVal[]){concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(strv("epsilon . *Reduce("),
-    get(_t)),
-    strv(", ")),
-    get(_n)),
-    strv(")"))},1);
+                                          concat_sv(
+                                              concat_sv(concat_sv(strv("epsilon . *Reduce("),get(_t)),strv(", ")),
+                                              get(_n)
+                                          ),
+                                          strv(")")
+                                      )},1);
 int _ok698 = !IS_FAIL(_v698);
 if(_ok698) {
 set(_reduce, _v698);
@@ -9018,7 +9146,7 @@ static SnoVal _sno_fn_pop(SnoVal *_args, int _nargs) {
 /* line 19 */
     _L_pop_:
                   trampoline_stno(19);
-SnoVal _v700 = pat_cond(pat_var("epsilon"),"?");
+SnoVal _v700 = pat_val(get(_epsilon));
 int _ok700 = !IS_FAIL(_v700);
 if(_ok700) {
 set(_pop, _v700);
@@ -9049,7 +9177,7 @@ static SnoVal _sno_fn_nPush(SnoVal *_args, int _nargs) {
 /* line 21 */
     _L_nPush_:
                   trampoline_stno(21);
-SnoVal _v702 = pat_cond(pat_var("epsilon"),"?");
+SnoVal _v702 = pat_val(get(_epsilon));
 int _ok702 = !IS_FAIL(_v702);
 if(_ok702) {
 set(_nPush, _v702);
@@ -9080,7 +9208,7 @@ static SnoVal _sno_fn_nInc(SnoVal *_args, int _nargs) {
 /* line 22 */
     _L_nInc_:
                   trampoline_stno(22);
-SnoVal _v704 = pat_cond(pat_var("epsilon"),"?");
+SnoVal _v704 = pat_val(get(_epsilon));
 int _ok704 = !IS_FAIL(_v704);
 if(_ok704) {
 set(_nInc, _v704);
@@ -9111,7 +9239,7 @@ static SnoVal _sno_fn_nDec(SnoVal *_args, int _nargs) {
 /* line 23 */
     _L_nDec_:
                   trampoline_stno(23);
-SnoVal _v706 = pat_cond(pat_var("epsilon"),"?");
+SnoVal _v706 = pat_val(get(_epsilon));
 int _ok706 = !IS_FAIL(_v706);
 if(_ok706) {
 set(_nDec, _v706);
@@ -9173,7 +9301,7 @@ static SnoVal _sno_fn_nPop(SnoVal *_args, int _nargs) {
 /* line 25 */
     _L_nPop_:
                   trampoline_stno(25);
-SnoVal _v710 = pat_cond(pat_var("epsilon"),"?");
+SnoVal _v710 = pat_val(get(_epsilon));
 int _ok710 = !IS_FAIL(_v710);
 if(_ok710) {
 set(_nPop, _v710);
@@ -9237,11 +9365,9 @@ var_set("omega", _omega);
 /* line 5 */
                   trampoline_stno(5);
 SnoVal _v716 = concat_sv(
-    concat_sv(
-    concat_sv(get(_omega),
-    strv(" $ tx *LEQ(lwr(tx), \"")),
-    aply("lwr",(SnoVal[]){get(_name)},1)),
-    strv("\")"));
+                   concat_sv(concat_sv(get(_omega),strv(" $ tx *LEQ(lwr(tx), \"")),aply("lwr",(SnoVal[]){get(_name)},1)),
+                   strv("\")")
+               );
 int _ok716 = !IS_FAIL(_v716);
 if(_ok716) {
 set(_omega, _v716);
@@ -9329,11 +9455,9 @@ var_set("omega", _omega);
 /* line 12 */
                   trampoline_stno(12);
 SnoVal _v724 = concat_sv(
-    concat_sv(
-    concat_sv(get(_omega),
-    strv(" $ tx *LEQ(upr(tx), '")),
-    aply("upr",(SnoVal[]){get(_name)},1)),
-    strv("')"));
+                   concat_sv(concat_sv(get(_omega),strv(" $ tx *LEQ(upr(tx), '")),aply("upr",(SnoVal[]){get(_name)},1)),
+                   strv("')")
+               );
 int _ok724 = !IS_FAIL(_v724);
 if(_ok724) {
 set(_omega, _v724);
@@ -9420,12 +9544,7 @@ var_set("omega", _omega);
     _SNO_NEXT_729:
 /* line 19 */
                   trampoline_stno(19);
-SnoVal _v732 = concat_sv(
-    concat_sv(
-    concat_sv(get(_omega),
-    strv(" $ tx *LEQ(tx, '")),
-    get(_name)),
-    strv("')"));
+SnoVal _v732 = concat_sv(concat_sv(concat_sv(get(_omega),strv(" $ tx *LEQ(tx, '")),get(_name)),strv("')"));
 int _ok732 = !IS_FAIL(_v732);
 if(_ok732) {
 set(_omega, _v732);
@@ -9504,17 +9623,18 @@ var_set("TY", _TY);
 /* line 26 */
                   trampoline_stno(26);
 SnoVal _v738 = concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(strv("pat $ tz"),
-    strv(" @txOfs")),
-    strv(" $ *T8Trace(")),
-    get(_lvl)),
-    strv(", ")),
-    aply("Qize",(SnoVal[]){concat_sv(get(_name),strv(": "))},1)),
-    strv(" tz, txOfs)"));
+                   concat_sv(
+                       concat_sv(
+                           concat_sv(
+                               concat_sv(concat_sv(strv("pat $ tz"),strv(" @txOfs")),strv(" $ *T8Trace(")),
+                               get(_lvl)
+                           ),
+                           strv(", ")
+                       ),
+                       aply("Qize",(SnoVal[]){concat_sv(get(_name),strv(": "))},1)
+                   ),
+                   strv(" tz, txOfs)")
+               );
 int _ok738 = !IS_FAIL(_v738);
 if(_ok738) {
 set(_omega, _v738);
@@ -9593,27 +9713,36 @@ var_set("TZ", _TZ);
 /* line 37 */
                   trampoline_stno(37);
 SnoVal _v744 = concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(strv("@txOfs $ *T8Trace("),
-    get(_lvl)),
-    strv(", '?' ")),
-    aply("Qize",(SnoVal[]){get(_name)},1)),
-    strv(", txOfs)")),
-    strv(" pat $ tz")),
-    strv(" @txOfs")),
-    strv(" $ *T8Trace(")),
-    get(_lvl)),
-    strv(", ")),
-    aply("Qize",(SnoVal[]){concat_sv(get(_name),strv(": "))},1)),
-    strv(" tz, txOfs)"));
+                   concat_sv(
+                       concat_sv(
+                           concat_sv(
+                               concat_sv(
+                                   concat_sv(
+                                       concat_sv(
+                                           concat_sv(
+                                               concat_sv(
+                                                   concat_sv(
+                                                       concat_sv(strv("@txOfs $ *T8Trace("),get(_lvl)),
+                                                       strv(", '?' ")
+                                                   ),
+                                                   aply("Qize",(SnoVal[]){get(_name)},1)
+                                               ),
+                                               strv(", txOfs)")
+                                           ),
+                                           strv(" pat $ tz")
+                                       ),
+                                       strv(" @txOfs")
+                                   ),
+                                   strv(" $ *T8Trace(")
+                               ),
+                               get(_lvl)
+                           ),
+                           strv(", ")
+                       ),
+                       aply("Qize",(SnoVal[]){concat_sv(get(_name),strv(": "))},1)
+                   ),
+                   strv(" tz, txOfs)")
+               );
 int _ok744 = !IS_FAIL(_v744);
 if(_ok744) {
 set(_omega, _v744);
@@ -9680,7 +9809,7 @@ static SnoVal _sno_fn_T8Trace(SnoVal *_args, int _nargs) {
 /* line 6 */
     _L_T8Trace:
                   trampoline_stno(6);
-SnoVal _v748 = pat_cond(pat_var("dummy"),"?");
+SnoVal _v748 = pat_val(get(_dummy));
 int _ok748 = !IS_FAIL(_v748);
 if(_ok748) {
 set(_T8Trace, _v748);
@@ -10044,21 +10173,27 @@ var_set("t8MaxPos", _t8MaxPos);
 /* line 30 */
                   trampoline_stno(30);
 SnoVal _v793 = concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(strv("("),
-    aply("LPAD",(SnoVal[]){get(_t8MaxLine),vint(5)},2)),
-    strv(", ")),
-    aply("LPAD",(SnoVal[]){get(_t8MaxPos),vint(3)},2)),
-    strv(", ")),
-    aply("LPAD",(SnoVal[]){get(_t8Line),vint(5)},2)),
-    strv(", ")),
-    aply("LPAD",(SnoVal[]){get(_t8Pos),vint(3)},2)),
-    strv(")"));
+                   concat_sv(
+                       concat_sv(
+                           concat_sv(
+                               concat_sv(
+                                   concat_sv(
+                                       concat_sv(
+                                           concat_sv(strv("("),aply("LPAD",(SnoVal[]){get(_t8MaxLine),vint(5)},2)),
+                                           strv(", ")
+                                       ),
+                                       aply("LPAD",(SnoVal[]){get(_t8MaxPos),vint(3)},2)
+                                   ),
+                                   strv(", ")
+                               ),
+                               aply("LPAD",(SnoVal[]){get(_t8Line),vint(5)},2)
+                           ),
+                           strv(", ")
+                       ),
+                       aply("LPAD",(SnoVal[]){get(_t8Pos),vint(3)},2)
+                   ),
+                   strv(")")
+               );
 int _ok793 = !IS_FAIL(_v793);
 if(_ok793) {
 set(_T8Pos, _v793);
@@ -10167,23 +10302,30 @@ var_set("c", _c);
 /* line 432 */
                   trampoline_stno(432);
 SnoVal _v805 = concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(aply("GT",(SnoVal[]){get(_doDebug),vint(0)},2),
-    strv("pp(")),
-    get(_t)),
-    strv(")")),
-    strv(", sz = ")),
-    get(_level)),
-    strv("+")),
-    aply("SIZE",(SnoVal[]){get(_v)},1)),
-    strv(", v = ")),
-    get(_v));
+                   concat_sv(
+                       concat_sv(
+                           concat_sv(
+                               concat_sv(
+                                   concat_sv(
+                                       concat_sv(
+                                           concat_sv(
+                                               concat_sv(aply("GT",(SnoVal[]){get(_doDebug),vint(0)},2),strv("pp(")),
+                                               get(_t)
+                                           ),
+                                           strv(")")
+                                       ),
+                                       strv(", sz = ")
+                                   ),
+                                   get(_level)
+                               ),
+                               strv("+")
+                           ),
+                           aply("SIZE",(SnoVal[]){get(_v)},1)
+                       ),
+                       strv(", v = ")
+                   ),
+                   get(_v)
+               );
 int _ok805 = !IS_FAIL(_v805);
 if(_ok805) {
 var_set("OUTPUT", _v805);
@@ -10842,11 +10984,15 @@ int _ok967 = !IS_FAIL(_v967);
 /* line 522 */
                   trampoline_stno(522);
 SnoVal _v969 = concat_sv(
-    concat_sv(
-    concat_sv(aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_ppPatrn)},1)},1),
-    aply("IDENT",(SnoVal[]){get(_ppAsgn)},1)),
-    aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_ppGo1)},1)},1)),
-    add(indx(get(_ppStop),(SnoVal[]){vint(4)},1),get(_ppLgBump)));
+                   concat_sv(
+                       concat_sv(
+                           aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_ppPatrn)},1)},1),
+                           aply("IDENT",(SnoVal[]){get(_ppAsgn)},1)
+                       ),
+                       aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_ppGo1)},1)},1)
+                   ),
+                   add(indx(get(_ppStop),(SnoVal[]){vint(4)},1),get(_ppLgBump))
+               );
 int _ok969 = !IS_FAIL(_v969);
 if(_ok969) {
 set(_ppWidth, _v969);
@@ -10887,7 +11033,13 @@ int _ok979 = !IS_FAIL(_v979);
     _SNO_NEXT_978:
 /* line 528 */
                   trampoline_stno(528);
-SnoVal _v981 = concat_sv(concat_sv(aply("IDENT",(SnoVal[]){get(_ppAsgn)},1),aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_ppGo1)},1)},1)),add(indx(get(_ppStop),(SnoVal[]){vint(4)},1),get(_ppLgBump)));
+SnoVal _v981 = concat_sv(
+                   concat_sv(
+                       aply("IDENT",(SnoVal[]){get(_ppAsgn)},1),
+                       aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_ppGo1)},1)},1)
+                   ),
+                   add(indx(get(_ppStop),(SnoVal[]){vint(4)},1),get(_ppLgBump))
+               );
 int _ok981 = !IS_FAIL(_v981);
 if(_ok981) {
 set(_ppWidth, _v981);
@@ -10992,7 +11144,10 @@ int _ok1011 = !IS_FAIL(_v1011);
     _SNO_NEXT_1010:
 /* line 544 */
                   trampoline_stno(544);
-SnoVal _v1013 = concat_sv(aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_ppGo1)},1)},1),add(indx(get(_ppStop),(SnoVal[]){vint(4)},1),get(_ppLgBump)));
+SnoVal _v1013 = concat_sv(
+                    aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_ppGo1)},1)},1),
+                    add(indx(get(_ppStop),(SnoVal[]){vint(4)},1),get(_ppLgBump))
+                );
 int _ok1013 = !IS_FAIL(_v1013);
 if(_ok1013) {
 set(_ppWidth, _v1013);
@@ -11705,23 +11860,30 @@ var_set("c", _c);
 /* line 648 */
                   trampoline_stno(648);
 SnoVal _v1193 = concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(aply("GT",(SnoVal[]){get(_doDebug),vint(0)},2),
-    strv("ss(")),
-    get(_t)),
-    strv(")")),
-    strv(", sz = ")),
-    get(_level)),
-    strv("+")),
-    aply("SIZE",(SnoVal[]){get(_v)},1)),
-    strv(", v = ")),
-    get(_v));
+                    concat_sv(
+                        concat_sv(
+                            concat_sv(
+                                concat_sv(
+                                    concat_sv(
+                                        concat_sv(
+                                            concat_sv(
+                                                concat_sv(aply("GT",(SnoVal[]){get(_doDebug),vint(0)},2),strv("ss(")),
+                                                get(_t)
+                                            ),
+                                            strv(")")
+                                        ),
+                                        strv(", sz = ")
+                                    ),
+                                    get(_level)
+                                ),
+                                strv("+")
+                            ),
+                            aply("SIZE",(SnoVal[]){get(_v)},1)
+                        ),
+                        strv(", v = ")
+                    ),
+                    get(_v)
+                );
 int _ok1193 = !IS_FAIL(_v1193);
 if(_ok1193) {
 var_set("OUTPUT", _v1193);
@@ -11923,7 +12085,13 @@ int _ok1221 = !IS_FAIL(_v1221);
 /* line 665 */
     _L_ss____:
                   trampoline_stno(665);
-SnoVal _v1223 = concat_sv(concat_sv(strv("("),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),sub(get(_len),vint(2))},2)),strv(")"));
+SnoVal _v1223 = concat_sv(
+                    concat_sv(
+                        strv("("),
+                        aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),sub(get(_len),vint(2))},2)
+                    ),
+                    strv(")")
+                );
 int _ok1223 = !IS_FAIL(_v1223);
 if(_ok1223) {
 set(_ss, _v1223);
@@ -11936,7 +12104,13 @@ var_set("ss", _ss);
 /* line 666 */
     _L_ss_____2:
                   trampoline_stno(666);
-SnoVal _v1225 = concat_sv(concat_sv(strv("<"),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),sub(get(_len),vint(2))},2)),strv(">"));
+SnoVal _v1225 = concat_sv(
+                    concat_sv(
+                        strv("<"),
+                        aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),sub(get(_len),vint(2))},2)
+                    ),
+                    strv(">")
+                );
 int _ok1225 = !IS_FAIL(_v1225);
 if(_ok1225) {
 set(_ss, _v1225);
@@ -11949,7 +12123,13 @@ var_set("ss", _ss);
 /* line 667 */
     _L_ss__S__:
                   trampoline_stno(667);
-SnoVal _v1227 = concat_sv(concat_sv(strv("S("),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),sub(get(_len),vint(3))},2)),strv(")"));
+SnoVal _v1227 = concat_sv(
+                    concat_sv(
+                        strv("S("),
+                        aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),sub(get(_len),vint(3))},2)
+                    ),
+                    strv(")")
+                );
 int _ok1227 = !IS_FAIL(_v1227);
 if(_ok1227) {
 set(_ss, _v1227);
@@ -11962,7 +12142,13 @@ var_set("ss", _ss);
 /* line 668 */
     _L_ss__S___2:
                   trampoline_stno(668);
-SnoVal _v1229 = concat_sv(concat_sv(strv("S<"),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),sub(get(_len),vint(3))},2)),strv(">"));
+SnoVal _v1229 = concat_sv(
+                    concat_sv(
+                        strv("S<"),
+                        aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),sub(get(_len),vint(3))},2)
+                    ),
+                    strv(">")
+                );
 int _ok1229 = !IS_FAIL(_v1229);
 if(_ok1229) {
 set(_ss, _v1229);
@@ -11975,7 +12161,13 @@ var_set("ss", _ss);
 /* line 669 */
     _L_ss__F__:
                   trampoline_stno(669);
-SnoVal _v1231 = concat_sv(concat_sv(strv("F("),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),sub(get(_len),vint(3))},2)),strv(")"));
+SnoVal _v1231 = concat_sv(
+                    concat_sv(
+                        strv("F("),
+                        aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),sub(get(_len),vint(3))},2)
+                    ),
+                    strv(")")
+                );
 int _ok1231 = !IS_FAIL(_v1231);
 if(_ok1231) {
 set(_ss, _v1231);
@@ -11988,7 +12180,13 @@ var_set("ss", _ss);
 /* line 670 */
     _L_ss__F___2:
                   trampoline_stno(670);
-SnoVal _v1233 = concat_sv(concat_sv(strv("F<"),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),sub(get(_len),vint(3))},2)),strv(">"));
+SnoVal _v1233 = concat_sv(
+                    concat_sv(
+                        strv("F<"),
+                        aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),sub(get(_len),vint(3))},2)
+                    ),
+                    strv(">")
+                );
 int _ok1233 = !IS_FAIL(_v1233);
 if(_ok1233) {
 set(_ss, _v1233);
@@ -12001,7 +12199,13 @@ var_set("ss", _ss);
 /* line 672 */
     _L_ssUnOp:
                   trampoline_stno(672);
-SnoVal _v1235 = concat_sv(get(_t),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),sub(get(_len),aply("SIZE",(SnoVal[]){get(_t)},1))},2));
+SnoVal _v1235 = concat_sv(
+                    get(_t),
+                    aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),sub(
+                                                                                 get(_len),
+                                                                                 aply("SIZE",(SnoVal[]){get(_t)},1)
+                                                                             )},2)
+                );
 int _ok1235 = !IS_FAIL(_v1235);
 if(_ok1235) {
 set(_ss, _v1235);
@@ -12026,13 +12230,18 @@ var_set("ss", _ss);
 /* line 674 */
                   trampoline_stno(674);
 SnoVal _v1239 = concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(get(_ss),
-    strv(" ")),
-    get(_t)),
-    strv(" ")),
-    aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(2)},1),sub(sub(sub(get(_len),aply("SIZE",(SnoVal[]){get(_ss)},1)),aply("SIZE",(SnoVal[]){get(_t)},1)),vint(2))},2));
+                    concat_sv(concat_sv(concat_sv(get(_ss),strv(" ")),get(_t)),strv(" ")),
+                    aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(2)},1),sub(
+                                                                                 sub(
+                                                                                     sub(
+                                                                                         get(_len),
+                                                                                         aply("SIZE",(SnoVal[]){get(_ss)},1)
+                                                                                     ),
+                                                                                     aply("SIZE",(SnoVal[]){get(_t)},1)
+                                                                                 ),
+                                                                                 vint(2)
+                                                                             )},2)
+                );
 int _ok1239 = !IS_FAIL(_v1239);
 if(_ok1239) {
 set(_ss, _v1239);
@@ -12303,7 +12512,16 @@ var_set("i", _i);
     _SNO_NEXT_1300:
 /* line 708 */
                   trampoline_stno(708);
-SnoVal _v1303 = concat_sv(concat_sv(get(_ss),strv(", ")),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_i)},1),sub(sub(get(_len),aply("SIZE",(SnoVal[]){get(_ss)},1)),vint(2))},2));
+SnoVal _v1303 = concat_sv(
+                    concat_sv(get(_ss),strv(", ")),
+                    aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_i)},1),sub(
+                                                                                 sub(
+                                                                                     get(_len),
+                                                                                     aply("SIZE",(SnoVal[]){get(_ss)},1)
+                                                                                 ),
+                                                                                 vint(2)
+                                                                             )},2)
+                );
 int _ok1303 = !IS_FAIL(_v1303);
 if(_ok1303) {
 set(_ss, _v1303);
@@ -12349,7 +12567,16 @@ var_set("i", _i);
     _SNO_NEXT_1308:
 /* line 713 */
                   trampoline_stno(713);
-SnoVal _v1311 = concat_sv(concat_sv(get(_ss),strv(", ")),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_i)},1),sub(sub(get(_len),aply("SIZE",(SnoVal[]){get(_ss)},1)),vint(3))},2));
+SnoVal _v1311 = concat_sv(
+                    concat_sv(get(_ss),strv(", ")),
+                    aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_i)},1),sub(
+                                                                                 sub(
+                                                                                     get(_len),
+                                                                                     aply("SIZE",(SnoVal[]){get(_ss)},1)
+                                                                                 ),
+                                                                                 vint(3)
+                                                                             )},2)
+                );
 int _ok1311 = !IS_FAIL(_v1311);
 if(_ok1311) {
 set(_ss, _v1311);
@@ -12413,7 +12640,16 @@ var_set("i", _i);
     _SNO_NEXT_1320:
 /* line 720 */
                   trampoline_stno(720);
-SnoVal _v1323 = concat_sv(concat_sv(get(_ss),strv(" | ")),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_i)},1),sub(sub(get(_len),aply("SIZE",(SnoVal[]){get(_ss)},1)),vint(3))},2));
+SnoVal _v1323 = concat_sv(
+                    concat_sv(get(_ss),strv(" | ")),
+                    aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_i)},1),sub(
+                                                                                 sub(
+                                                                                     get(_len),
+                                                                                     aply("SIZE",(SnoVal[]){get(_ss)},1)
+                                                                                 ),
+                                                                                 vint(3)
+                                                                             )},2)
+                );
 int _ok1323 = !IS_FAIL(_v1323);
 if(_ok1323) {
 set(_ss, _v1323);
@@ -12459,7 +12695,16 @@ var_set("i", _i);
     _SNO_NEXT_1328:
 /* line 725 */
                   trampoline_stno(725);
-SnoVal _v1331 = concat_sv(concat_sv(get(_ss),strv(" ")),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_i)},1),sub(sub(get(_len),aply("SIZE",(SnoVal[]){get(_ss)},1)),vint(1))},2));
+SnoVal _v1331 = concat_sv(
+                    concat_sv(get(_ss),strv(" ")),
+                    aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_i)},1),sub(
+                                                                                 sub(
+                                                                                     get(_len),
+                                                                                     aply("SIZE",(SnoVal[]){get(_ss)},1)
+                                                                                 ),
+                                                                                 vint(1)
+                                                                             )},2)
+                );
 int _ok1331 = !IS_FAIL(_v1331);
 if(_ok1331) {
 set(_ss, _v1331);
@@ -12506,11 +12751,18 @@ var_set("i", _i);
 /* line 730 */
                   trampoline_stno(730);
 SnoVal _v1339 = concat_sv(
-    concat_sv(
-    concat_sv(get(_ss),
-    strv("[")),
-    aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_i)},1),sub(sub(get(_len),aply("SIZE",(SnoVal[]){get(_ss)},1)),vint(2))},2)),
-    strv("]"));
+                    concat_sv(
+                        concat_sv(get(_ss),strv("[")),
+                        aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_i)},1),sub(
+                                                                                     sub(
+                                                                                         get(_len),
+                                                                                         aply("SIZE",(SnoVal[]){get(_ss)},1)
+                                                                                     ),
+                                                                                     vint(2)
+                                                                                 )},2)
+                    ),
+                    strv("]")
+                );
 int _ok1339 = !IS_FAIL(_v1339);
 if(_ok1339) {
 set(_ss, _v1339);
@@ -12523,7 +12775,13 @@ var_set("ss", _ss);
 /* line 732 */
     _L_ss____3:
                   trampoline_stno(732);
-SnoVal _v1341 = concat_sv(concat_sv(strv("("),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),sub(get(_len),vint(2))},2)),strv(")"));
+SnoVal _v1341 = concat_sv(
+                    concat_sv(
+                        strv("("),
+                        aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),sub(get(_len),vint(2))},2)
+                    ),
+                    strv(")")
+                );
 int _ok1341 = !IS_FAIL(_v1341);
 if(_ok1341) {
 set(_ss, _v1341);
@@ -12537,11 +12795,18 @@ var_set("ss", _ss);
     _L_ss_Call:
                   trampoline_stno(734);
 SnoVal _v1343 = concat_sv(
-    concat_sv(
-    concat_sv(aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1)},1),
-    strv("(")),
-    aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(2)},1),sub(sub(get(_len),aply("SIZE",(SnoVal[]){get(_v)},1)),vint(2))},2)),
-    strv(")"));
+                    concat_sv(
+                        concat_sv(aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1)},1),strv("(")),
+                        aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(2)},1),sub(
+                                                                                     sub(
+                                                                                         get(_len),
+                                                                                         aply("SIZE",(SnoVal[]){get(_v)},1)
+                                                                                     ),
+                                                                                     vint(2)
+                                                                                 )},2)
+                    ),
+                    strv(")")
+                );
 int _ok1343 = !IS_FAIL(_v1343);
 if(_ok1343) {
 set(_ss, _v1343);
@@ -12730,7 +12995,10 @@ int _ok1361 = !IS_FAIL(_v1361);
 /* line 751 */
     _L_findRefs_1:
                   trampoline_stno(751);
-SnoVal _v1363 = concat_sv(aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("&")},2),aply("EQ",(SnoVal[]){aply("n",(SnoVal[]){get(_x)},1),vint(1)},2));
+SnoVal _v1363 = concat_sv(
+                    aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("&")},2),
+                    aply("EQ",(SnoVal[]){aply("n",(SnoVal[]){get(_x)},1),vint(1)},2)
+                );
 int _ok1363 = !IS_FAIL(_v1363);
                   if(!_ok1363)                              goto _L_findRefs_2;
                                                             goto _SNO_NEXT_1362;
@@ -12815,12 +13083,7 @@ static int64_t cat_r_191_α_start;
     _SNO_NEXT_1370:
 /* line 756 */
                   trampoline_stno(756);
-SnoVal _v1373 = concat_sv(
-    concat_sv(
-    concat_sv(aply("DIFFER",(SnoVal[]){get(_Refs)},1),
-    get(_Refs)),
-    strv(" ")),
-    get(_v));
+SnoVal _v1373 = concat_sv(concat_sv(concat_sv(aply("DIFFER",(SnoVal[]){get(_Refs)},1),get(_Refs)),strv(" ")),get(_v));
 int _ok1373 = !IS_FAIL(_v1373);
 if(_ok1373) {
 set(_Refs, _v1373);
@@ -12953,21 +13216,27 @@ int _ok1390 = !IS_FAIL(_v1390);
     _SNO_NEXT_1389:
 /* line 767 */
                   trampoline_stno(767);
-SnoVal _v1392 = aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){indx(aply("c",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_n)},1)},1),(SnoVal[]){vint(4)},1)},1),strv("=")},2);
+SnoVal _v1392 = aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){indx(aply("c",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_n)},1)},1),(SnoVal[]){vint(4)},1)},1),strv(
+                                                                                                                                                            "="
+                                                                                                                                                        )},2);
 int _ok1392 = !IS_FAIL(_v1392);
                   if(!_ok1392)                              goto _L_refs_0;
                                                             goto _SNO_NEXT_1391;
     _SNO_NEXT_1391:
 /* line 768 */
                   trampoline_stno(768);
-SnoVal _v1394 = aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){indx(aply("c",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_n)},1)},1),(SnoVal[]){vint(2)},1)},1),strv("Id")},2);
+SnoVal _v1394 = aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){indx(aply("c",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_n)},1)},1),(SnoVal[]){vint(2)},1)},1),strv(
+                                                                                                                                                            "Id"
+                                                                                                                                                        )},2);
 int _ok1394 = !IS_FAIL(_v1394);
                   if(_ok1394)                               goto _L_refs_1;
                                                             goto _SNO_NEXT_1393;
     _SNO_NEXT_1393:
 /* line 769 */
                   trampoline_stno(769);
-SnoVal _v1396 = aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){indx(aply("c",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_n)},1)},1),(SnoVal[]){vint(2)},1)},1),strv("$")},2);
+SnoVal _v1396 = aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){indx(aply("c",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_n)},1)},1),(SnoVal[]){vint(2)},1)},1),strv(
+                                                                                                                                                            "$"
+                                                                                                                                                        )},2);
 int _ok1396 = !IS_FAIL(_v1396);
                   if(_ok1396)                               goto _L_refs_1;
                   if(!_ok1396)                              goto _L_refs_0;
@@ -12999,13 +13268,15 @@ int _ok1402 = !IS_FAIL(_v1402);
 /* line 773 */
                   trampoline_stno(773);
 SnoVal _v1404 = concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(aply("LPAD",(SnoVal[]){get(_s),vint(3),vint(0)},3),
-    strv(": ")),
-    aply("RPAD",(SnoVal[]){get(_subj),vint(38)},2)),
-    strv(" ")),
-    get(_Refs));
+                    concat_sv(
+                        concat_sv(
+                            concat_sv(aply("LPAD",(SnoVal[]){get(_s),vint(3),vint(0)},3),strv(": ")),
+                            aply("RPAD",(SnoVal[]){get(_subj),vint(38)},2)
+                        ),
+                        strv(" ")
+                    ),
+                    get(_Refs)
+                );
 int _ok1404 = !IS_FAIL(_v1404);
 if(_ok1404) {
 var_set("OUTPUT", _v1404);
@@ -23567,7 +23838,10 @@ static void *stmt_54(void) { /* line 59 */
 SnoVal _v1511 = strv("EN_QUAD");
 int _ok1511 = !IS_FAIL(_v1511);
 if(_ok1511) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(128)},1)),aply("CHAR",(SnoVal[]){vint(128)},1))},1),_v1511);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(128)},1)),
+    aply("CHAR",(SnoVal[]){vint(128)},1))},1),_v1511);
 }
     return (void*)_tramp_next_1510;
 }
@@ -23580,7 +23854,10 @@ static void *stmt_55(void) { /* line 60 */
 SnoVal _v1513 = strv("EM_QUAD");
 int _ok1513 = !IS_FAIL(_v1513);
 if(_ok1513) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(128)},1)),aply("CHAR",(SnoVal[]){vint(129)},1))},1),_v1513);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(128)},1)),
+    aply("CHAR",(SnoVal[]){vint(129)},1))},1),_v1513);
 }
     return (void*)_tramp_next_1512;
 }
@@ -23593,7 +23870,10 @@ static void *stmt_56(void) { /* line 61 */
 SnoVal _v1515 = strv("EN_DASH");
 int _ok1515 = !IS_FAIL(_v1515);
 if(_ok1515) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(128)},1)),aply("CHAR",(SnoVal[]){vint(147)},1))},1),_v1515);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(128)},1)),
+    aply("CHAR",(SnoVal[]){vint(147)},1))},1),_v1515);
 }
     return (void*)_tramp_next_1514;
 }
@@ -23606,7 +23886,10 @@ static void *stmt_57(void) { /* line 62 */
 SnoVal _v1517 = strv("EM_DASH");
 int _ok1517 = !IS_FAIL(_v1517);
 if(_ok1517) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(128)},1)),aply("CHAR",(SnoVal[]){vint(148)},1))},1),_v1517);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(128)},1)),
+    aply("CHAR",(SnoVal[]){vint(148)},1))},1),_v1517);
 }
     return (void*)_tramp_next_1516;
 }
@@ -23619,7 +23902,10 @@ static void *stmt_58(void) { /* line 63 */
 SnoVal _v1519 = strv("LEFT_SINGLE_QUOTATION_MARK");
 int _ok1519 = !IS_FAIL(_v1519);
 if(_ok1519) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(128)},1)),aply("CHAR",(SnoVal[]){vint(152)},1))},1),_v1519);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(128)},1)),
+    aply("CHAR",(SnoVal[]){vint(152)},1))},1),_v1519);
 }
     return (void*)_tramp_next_1518;
 }
@@ -23632,7 +23918,10 @@ static void *stmt_59(void) { /* line 64 */
 SnoVal _v1521 = strv("RIGHT_SINGLE_QUOTATION_MARK");
 int _ok1521 = !IS_FAIL(_v1521);
 if(_ok1521) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(128)},1)),aply("CHAR",(SnoVal[]){vint(153)},1))},1),_v1521);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(128)},1)),
+    aply("CHAR",(SnoVal[]){vint(153)},1))},1),_v1521);
 }
     return (void*)_tramp_next_1520;
 }
@@ -23645,7 +23934,10 @@ static void *stmt_60(void) { /* line 65 */
 SnoVal _v1523 = strv("LEFT_DOUBLE_QUOTATION_MARK");
 int _ok1523 = !IS_FAIL(_v1523);
 if(_ok1523) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(128)},1)),aply("CHAR",(SnoVal[]){vint(156)},1))},1),_v1523);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(128)},1)),
+    aply("CHAR",(SnoVal[]){vint(156)},1))},1),_v1523);
 }
     return (void*)_tramp_next_1522;
 }
@@ -23658,7 +23950,10 @@ static void *stmt_61(void) { /* line 66 */
 SnoVal _v1525 = strv("RIGHT_DOUBLE_QUOTATION_MARK");
 int _ok1525 = !IS_FAIL(_v1525);
 if(_ok1525) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(128)},1)),aply("CHAR",(SnoVal[]){vint(157)},1))},1),_v1525);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(128)},1)),
+    aply("CHAR",(SnoVal[]){vint(157)},1))},1),_v1525);
 }
     return (void*)_tramp_next_1524;
 }
@@ -23671,7 +23966,10 @@ static void *stmt_62(void) { /* line 67 */
 SnoVal _v1527 = strv("BULLET");
 int _ok1527 = !IS_FAIL(_v1527);
 if(_ok1527) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(128)},1)),aply("CHAR",(SnoVal[]){vint(162)},1))},1),_v1527);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(128)},1)),
+    aply("CHAR",(SnoVal[]){vint(162)},1))},1),_v1527);
 }
     return (void*)_tramp_next_1526;
 }
@@ -23684,7 +23982,10 @@ static void *stmt_63(void) { /* line 68 */
 SnoVal _v1529 = strv("HORIZONTAL_ELLIPSIS");
 int _ok1529 = !IS_FAIL(_v1529);
 if(_ok1529) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(128)},1)),aply("CHAR",(SnoVal[]){vint(166)},1))},1),_v1529);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(128)},1)),
+    aply("CHAR",(SnoVal[]){vint(166)},1))},1),_v1529);
 }
     return (void*)_tramp_next_1528;
 }
@@ -23697,7 +23998,10 @@ static void *stmt_64(void) { /* line 69 */
 SnoVal _v1531 = strv("NARROW_NO_BREAK_SPACE");
 int _ok1531 = !IS_FAIL(_v1531);
 if(_ok1531) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(128)},1)),aply("CHAR",(SnoVal[]){vint(175)},1))},1),_v1531);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(128)},1)),
+    aply("CHAR",(SnoVal[]){vint(175)},1))},1),_v1531);
 }
     return (void*)_tramp_next_1530;
 }
@@ -23710,7 +24014,10 @@ static void *stmt_65(void) { /* line 70 */
 SnoVal _v1533 = strv("PRIME");
 int _ok1533 = !IS_FAIL(_v1533);
 if(_ok1533) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(128)},1)),aply("CHAR",(SnoVal[]){vint(178)},1))},1),_v1533);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(128)},1)),
+    aply("CHAR",(SnoVal[]){vint(178)},1))},1),_v1533);
 }
     return (void*)_tramp_next_1532;
 }
@@ -23723,7 +24030,10 @@ static void *stmt_66(void) { /* line 71 */
 SnoVal _v1535 = strv("FRACTION_SLASH");
 int _ok1535 = !IS_FAIL(_v1535);
 if(_ok1535) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(129)},1)),aply("CHAR",(SnoVal[]){vint(132)},1))},1),_v1535);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(129)},1)),
+    aply("CHAR",(SnoVal[]){vint(132)},1))},1),_v1535);
 }
     return (void*)_tramp_next_1534;
 }
@@ -23736,7 +24046,10 @@ static void *stmt_67(void) { /* line 72 */
 SnoVal _v1537 = strv("SOUND_RECORDING_COPYRIGHT");
 int _ok1537 = !IS_FAIL(_v1537);
 if(_ok1537) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(132)},1)),aply("CHAR",(SnoVal[]){vint(151)},1))},1),_v1537);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(132)},1)),
+    aply("CHAR",(SnoVal[]){vint(151)},1))},1),_v1537);
 }
     return (void*)_tramp_next_1536;
 }
@@ -23749,7 +24062,10 @@ static void *stmt_68(void) { /* line 73 */
 SnoVal _v1539 = strv("VULGAR_FRACTION_ONE_SEVENTH");
 int _ok1539 = !IS_FAIL(_v1539);
 if(_ok1539) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(133)},1)),aply("CHAR",(SnoVal[]){vint(144)},1))},1),_v1539);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(133)},1)),
+    aply("CHAR",(SnoVal[]){vint(144)},1))},1),_v1539);
 }
     return (void*)_tramp_next_1538;
 }
@@ -23762,7 +24078,10 @@ static void *stmt_69(void) { /* line 74 */
 SnoVal _v1541 = strv("VULGAR_FRACTION_ONE_NINTH");
 int _ok1541 = !IS_FAIL(_v1541);
 if(_ok1541) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(133)},1)),aply("CHAR",(SnoVal[]){vint(145)},1))},1),_v1541);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(133)},1)),
+    aply("CHAR",(SnoVal[]){vint(145)},1))},1),_v1541);
 }
     return (void*)_tramp_next_1540;
 }
@@ -23775,7 +24094,10 @@ static void *stmt_70(void) { /* line 75 */
 SnoVal _v1543 = strv("VULGAR_FRACTION_ONE_TENTH");
 int _ok1543 = !IS_FAIL(_v1543);
 if(_ok1543) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(133)},1)),aply("CHAR",(SnoVal[]){vint(146)},1))},1),_v1543);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(133)},1)),
+    aply("CHAR",(SnoVal[]){vint(146)},1))},1),_v1543);
 }
     return (void*)_tramp_next_1542;
 }
@@ -23788,7 +24110,10 @@ static void *stmt_71(void) { /* line 76 */
 SnoVal _v1545 = strv("VULGAR_FRACTION_ONE_THIRD");
 int _ok1545 = !IS_FAIL(_v1545);
 if(_ok1545) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(133)},1)),aply("CHAR",(SnoVal[]){vint(147)},1))},1),_v1545);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(133)},1)),
+    aply("CHAR",(SnoVal[]){vint(147)},1))},1),_v1545);
 }
     return (void*)_tramp_next_1544;
 }
@@ -23801,7 +24126,10 @@ static void *stmt_72(void) { /* line 77 */
 SnoVal _v1547 = strv("VULGAR_FRACTION_TWO_THIRDS");
 int _ok1547 = !IS_FAIL(_v1547);
 if(_ok1547) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(133)},1)),aply("CHAR",(SnoVal[]){vint(148)},1))},1),_v1547);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(133)},1)),
+    aply("CHAR",(SnoVal[]){vint(148)},1))},1),_v1547);
 }
     return (void*)_tramp_next_1546;
 }
@@ -23814,7 +24142,10 @@ static void *stmt_73(void) { /* line 78 */
 SnoVal _v1549 = strv("VULGAR_FRACTION_ONE_FIFTH");
 int _ok1549 = !IS_FAIL(_v1549);
 if(_ok1549) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(133)},1)),aply("CHAR",(SnoVal[]){vint(149)},1))},1),_v1549);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(133)},1)),
+    aply("CHAR",(SnoVal[]){vint(149)},1))},1),_v1549);
 }
     return (void*)_tramp_next_1548;
 }
@@ -23827,7 +24158,10 @@ static void *stmt_74(void) { /* line 79 */
 SnoVal _v1551 = strv("VULGAR_FRACTION_TWO_FIFTHS");
 int _ok1551 = !IS_FAIL(_v1551);
 if(_ok1551) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(133)},1)),aply("CHAR",(SnoVal[]){vint(150)},1))},1),_v1551);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(133)},1)),
+    aply("CHAR",(SnoVal[]){vint(150)},1))},1),_v1551);
 }
     return (void*)_tramp_next_1550;
 }
@@ -23840,7 +24174,10 @@ static void *stmt_75(void) { /* line 80 */
 SnoVal _v1553 = strv("VULGAR_FRACTION_THREE_FIFTHS");
 int _ok1553 = !IS_FAIL(_v1553);
 if(_ok1553) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(133)},1)),aply("CHAR",(SnoVal[]){vint(151)},1))},1),_v1553);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(133)},1)),
+    aply("CHAR",(SnoVal[]){vint(151)},1))},1),_v1553);
 }
     return (void*)_tramp_next_1552;
 }
@@ -23853,7 +24190,10 @@ static void *stmt_76(void) { /* line 81 */
 SnoVal _v1555 = strv("VULGAR_FRACTION_FOUR_FIFTHS");
 int _ok1555 = !IS_FAIL(_v1555);
 if(_ok1555) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(133)},1)),aply("CHAR",(SnoVal[]){vint(152)},1))},1),_v1555);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(133)},1)),
+    aply("CHAR",(SnoVal[]){vint(152)},1))},1),_v1555);
 }
     return (void*)_tramp_next_1554;
 }
@@ -23866,7 +24206,10 @@ static void *stmt_77(void) { /* line 82 */
 SnoVal _v1557 = strv("VULGAR_FRACTION_ONE_SIXTH");
 int _ok1557 = !IS_FAIL(_v1557);
 if(_ok1557) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(133)},1)),aply("CHAR",(SnoVal[]){vint(153)},1))},1),_v1557);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(133)},1)),
+    aply("CHAR",(SnoVal[]){vint(153)},1))},1),_v1557);
 }
     return (void*)_tramp_next_1556;
 }
@@ -23879,7 +24222,10 @@ static void *stmt_78(void) { /* line 83 */
 SnoVal _v1559 = strv("VULGAR_FRACTION_FIVE_SIXTHS");
 int _ok1559 = !IS_FAIL(_v1559);
 if(_ok1559) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(133)},1)),aply("CHAR",(SnoVal[]){vint(154)},1))},1),_v1559);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(133)},1)),
+    aply("CHAR",(SnoVal[]){vint(154)},1))},1),_v1559);
 }
     return (void*)_tramp_next_1558;
 }
@@ -23892,7 +24238,10 @@ static void *stmt_79(void) { /* line 84 */
 SnoVal _v1561 = strv("VULGAR_FRACTION_ONE_EIGHTH");
 int _ok1561 = !IS_FAIL(_v1561);
 if(_ok1561) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(133)},1)),aply("CHAR",(SnoVal[]){vint(155)},1))},1),_v1561);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(133)},1)),
+    aply("CHAR",(SnoVal[]){vint(155)},1))},1),_v1561);
 }
     return (void*)_tramp_next_1560;
 }
@@ -23905,7 +24254,10 @@ static void *stmt_80(void) { /* line 85 */
 SnoVal _v1563 = strv("VULGAR_FRACTION_THREE_EIGHTHS");
 int _ok1563 = !IS_FAIL(_v1563);
 if(_ok1563) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(133)},1)),aply("CHAR",(SnoVal[]){vint(156)},1))},1),_v1563);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(133)},1)),
+    aply("CHAR",(SnoVal[]){vint(156)},1))},1),_v1563);
 }
     return (void*)_tramp_next_1562;
 }
@@ -23918,7 +24270,10 @@ static void *stmt_81(void) { /* line 86 */
 SnoVal _v1565 = strv("VULGAR_FRACTION_FIVE_EIGHTHS");
 int _ok1565 = !IS_FAIL(_v1565);
 if(_ok1565) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(133)},1)),aply("CHAR",(SnoVal[]){vint(157)},1))},1),_v1565);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(133)},1)),
+    aply("CHAR",(SnoVal[]){vint(157)},1))},1),_v1565);
 }
     return (void*)_tramp_next_1564;
 }
@@ -23931,7 +24286,10 @@ static void *stmt_82(void) { /* line 87 */
 SnoVal _v1567 = strv("VULGAR_FRACTION_SEVEN_EIGHTHS");
 int _ok1567 = !IS_FAIL(_v1567);
 if(_ok1567) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(133)},1)),aply("CHAR",(SnoVal[]){vint(158)},1))},1),_v1567);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(133)},1)),
+    aply("CHAR",(SnoVal[]){vint(158)},1))},1),_v1567);
 }
     return (void*)_tramp_next_1566;
 }
@@ -23944,7 +24302,10 @@ static void *stmt_83(void) { /* line 88 */
 SnoVal _v1569 = strv("MINUS_SIGN");
 int _ok1569 = !IS_FAIL(_v1569);
 if(_ok1569) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(136)},1)),aply("CHAR",(SnoVal[]){vint(146)},1))},1),_v1569);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(136)},1)),
+    aply("CHAR",(SnoVal[]){vint(146)},1))},1),_v1569);
 }
     return (void*)_tramp_next_1568;
 }
@@ -23957,7 +24318,10 @@ static void *stmt_84(void) { /* line 89 */
 SnoVal _v1571 = strv("LESS_THAN_OR_EQUAL_TO");
 int _ok1571 = !IS_FAIL(_v1571);
 if(_ok1571) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(137)},1)),aply("CHAR",(SnoVal[]){vint(164)},1))},1),_v1571);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(137)},1)),
+    aply("CHAR",(SnoVal[]){vint(164)},1))},1),_v1571);
 }
     return (void*)_tramp_next_1570;
 }
@@ -23970,7 +24334,10 @@ static void *stmt_85(void) { /* line 90 */
 SnoVal _v1573 = strv("CIRCLED_LATIN_CAPITAL_LETTER_M");
 int _ok1573 = !IS_FAIL(_v1573);
 if(_ok1573) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(147)},1)),aply("CHAR",(SnoVal[]){vint(130)},1))},1),_v1573);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(147)},1)),
+    aply("CHAR",(SnoVal[]){vint(130)},1))},1),_v1573);
 }
     return (void*)_tramp_next_1572;
 }
@@ -23983,7 +24350,10 @@ static void *stmt_86(void) { /* line 91 */
 SnoVal _v1575 = strv("WHITE_BULLET");
 int _ok1575 = !IS_FAIL(_v1575);
 if(_ok1575) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(151)},1)),aply("CHAR",(SnoVal[]){vint(166)},1))},1),_v1575);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(151)},1)),
+    aply("CHAR",(SnoVal[]){vint(166)},1))},1),_v1575);
 }
     return (void*)_tramp_next_1574;
 }
@@ -23996,7 +24366,10 @@ static void *stmt_87(void) { /* line 92 */
 SnoVal _v1577 = strv("BALLOT_BOX");
 int _ok1577 = !IS_FAIL(_v1577);
 if(_ok1577) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(152)},1)),aply("CHAR",(SnoVal[]){vint(144)},1))},1),_v1577);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(152)},1)),
+    aply("CHAR",(SnoVal[]){vint(144)},1))},1),_v1577);
 }
     return (void*)_tramp_next_1576;
 }
@@ -24009,7 +24382,10 @@ static void *stmt_88(void) { /* line 93 */
 SnoVal _v1579 = strv("PRIVATE_UNKNOWN_1");
 int _ok1579 = !IS_FAIL(_v1579);
 if(_ok1579) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(238)},1),aply("CHAR",(SnoVal[]){vint(131)},1)),aply("CHAR",(SnoVal[]){vint(169)},1))},1),_v1579);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(238)},1),
+    aply("CHAR",(SnoVal[]){vint(131)},1)),
+    aply("CHAR",(SnoVal[]){vint(169)},1))},1),_v1579);
 }
     return (void*)_tramp_next_1578;
 }
@@ -24022,7 +24398,10 @@ static void *stmt_89(void) { /* line 94 */
 SnoVal _v1581 = strv("PRIVATE_UNKNOWN_2");
 int _ok1581 = !IS_FAIL(_v1581);
 if(_ok1581) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(238)},1),aply("CHAR",(SnoVal[]){vint(134)},1)),aply("CHAR",(SnoVal[]){vint(171)},1))},1),_v1581);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(238)},1),
+    aply("CHAR",(SnoVal[]){vint(134)},1)),
+    aply("CHAR",(SnoVal[]){vint(171)},1))},1),_v1581);
 }
     return (void*)_tramp_next_1580;
 }
@@ -24035,7 +24414,10 @@ static void *stmt_90(void) { /* line 96 */
 SnoVal _v1583 = strv("OGHAM_SPACE_MARK");
 int _ok1583 = !IS_FAIL(_v1583);
 if(_ok1583) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(225)},1),aply("CHAR",(SnoVal[]){vint(154)},1)),aply("CHAR",(SnoVal[]){vint(128)},1))},1),_v1583);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(225)},1),
+    aply("CHAR",(SnoVal[]){vint(154)},1)),
+    aply("CHAR",(SnoVal[]){vint(128)},1))},1),_v1583);
 }
     return (void*)_tramp_next_1582;
 }
@@ -24048,7 +24430,10 @@ static void *stmt_91(void) { /* line 97 */
 SnoVal _v1585 = strv("MONGOLIAN_VOWEL_SEPARATOR");
 int _ok1585 = !IS_FAIL(_v1585);
 if(_ok1585) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(225)},1),aply("CHAR",(SnoVal[]){vint(160)},1)),aply("CHAR",(SnoVal[]){vint(142)},1))},1),_v1585);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(225)},1),
+    aply("CHAR",(SnoVal[]){vint(160)},1)),
+    aply("CHAR",(SnoVal[]){vint(142)},1))},1),_v1585);
 }
     return (void*)_tramp_next_1584;
 }
@@ -24061,7 +24446,10 @@ static void *stmt_92(void) { /* line 98 */
 SnoVal _v1587 = strv("EN_SPACE");
 int _ok1587 = !IS_FAIL(_v1587);
 if(_ok1587) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(128)},1)),aply("CHAR",(SnoVal[]){vint(130)},1))},1),_v1587);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(128)},1)),
+    aply("CHAR",(SnoVal[]){vint(130)},1))},1),_v1587);
 }
     return (void*)_tramp_next_1586;
 }
@@ -24074,7 +24462,10 @@ static void *stmt_93(void) { /* line 99 */
 SnoVal _v1589 = strv("EM_SPACE");
 int _ok1589 = !IS_FAIL(_v1589);
 if(_ok1589) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(128)},1)),aply("CHAR",(SnoVal[]){vint(131)},1))},1),_v1589);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(128)},1)),
+    aply("CHAR",(SnoVal[]){vint(131)},1))},1),_v1589);
 }
     return (void*)_tramp_next_1588;
 }
@@ -24087,7 +24478,10 @@ static void *stmt_94(void) { /* line 100 */
 SnoVal _v1591 = strv("THREE_PER_EM_SPACE");
 int _ok1591 = !IS_FAIL(_v1591);
 if(_ok1591) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(128)},1)),aply("CHAR",(SnoVal[]){vint(132)},1))},1),_v1591);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(128)},1)),
+    aply("CHAR",(SnoVal[]){vint(132)},1))},1),_v1591);
 }
     return (void*)_tramp_next_1590;
 }
@@ -24100,7 +24494,10 @@ static void *stmt_95(void) { /* line 101 */
 SnoVal _v1593 = strv("FOUR_PER_EM_SPACE");
 int _ok1593 = !IS_FAIL(_v1593);
 if(_ok1593) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(128)},1)),aply("CHAR",(SnoVal[]){vint(133)},1))},1),_v1593);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(128)},1)),
+    aply("CHAR",(SnoVal[]){vint(133)},1))},1),_v1593);
 }
     return (void*)_tramp_next_1592;
 }
@@ -24113,7 +24510,10 @@ static void *stmt_96(void) { /* line 102 */
 SnoVal _v1595 = strv("SIX_PER_EM_SPACE");
 int _ok1595 = !IS_FAIL(_v1595);
 if(_ok1595) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(128)},1)),aply("CHAR",(SnoVal[]){vint(134)},1))},1),_v1595);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(128)},1)),
+    aply("CHAR",(SnoVal[]){vint(134)},1))},1),_v1595);
 }
     return (void*)_tramp_next_1594;
 }
@@ -24126,7 +24526,10 @@ static void *stmt_97(void) { /* line 103 */
 SnoVal _v1597 = strv("FIGURE_SPACE");
 int _ok1597 = !IS_FAIL(_v1597);
 if(_ok1597) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(128)},1)),aply("CHAR",(SnoVal[]){vint(135)},1))},1),_v1597);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(128)},1)),
+    aply("CHAR",(SnoVal[]){vint(135)},1))},1),_v1597);
 }
     return (void*)_tramp_next_1596;
 }
@@ -24139,7 +24542,10 @@ static void *stmt_98(void) { /* line 104 */
 SnoVal _v1599 = strv("PUNCTUATION_SPACE");
 int _ok1599 = !IS_FAIL(_v1599);
 if(_ok1599) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(128)},1)),aply("CHAR",(SnoVal[]){vint(136)},1))},1),_v1599);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(128)},1)),
+    aply("CHAR",(SnoVal[]){vint(136)},1))},1),_v1599);
 }
     return (void*)_tramp_next_1598;
 }
@@ -24152,7 +24558,10 @@ static void *stmt_99(void) { /* line 105 */
 SnoVal _v1601 = strv("THIN_SPACE");
 int _ok1601 = !IS_FAIL(_v1601);
 if(_ok1601) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(128)},1)),aply("CHAR",(SnoVal[]){vint(137)},1))},1),_v1601);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(128)},1)),
+    aply("CHAR",(SnoVal[]){vint(137)},1))},1),_v1601);
 }
     return (void*)_tramp_next_1600;
 }
@@ -24165,7 +24574,10 @@ static void *stmt_100(void) { /* line 106 */
 SnoVal _v1603 = strv("HAIR_SPACE");
 int _ok1603 = !IS_FAIL(_v1603);
 if(_ok1603) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(128)},1)),aply("CHAR",(SnoVal[]){vint(138)},1))},1),_v1603);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(128)},1)),
+    aply("CHAR",(SnoVal[]){vint(138)},1))},1),_v1603);
 }
     return (void*)_tramp_next_1602;
 }
@@ -24178,7 +24590,10 @@ static void *stmt_101(void) { /* line 107 */
 SnoVal _v1605 = strv("LINE_SEPERATOR");
 int _ok1605 = !IS_FAIL(_v1605);
 if(_ok1605) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(128)},1)),aply("CHAR",(SnoVal[]){vint(168)},1))},1),_v1605);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(128)},1)),
+    aply("CHAR",(SnoVal[]){vint(168)},1))},1),_v1605);
 }
     return (void*)_tramp_next_1604;
 }
@@ -24191,7 +24606,10 @@ static void *stmt_102(void) { /* line 108 */
 SnoVal _v1607 = strv("PARAGRAPH_SEPERATOR");
 int _ok1607 = !IS_FAIL(_v1607);
 if(_ok1607) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(128)},1)),aply("CHAR",(SnoVal[]){vint(169)},1))},1),_v1607);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(128)},1)),
+    aply("CHAR",(SnoVal[]){vint(169)},1))},1),_v1607);
 }
     return (void*)_tramp_next_1606;
 }
@@ -24204,7 +24622,10 @@ static void *stmt_103(void) { /* line 109 */
 SnoVal _v1609 = strv("MEDIUM_MATHEMATICAL_SPACE");
 int _ok1609 = !IS_FAIL(_v1609);
 if(_ok1609) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(129)},1)),aply("CHAR",(SnoVal[]){vint(159)},1))},1),_v1609);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(129)},1)),
+    aply("CHAR",(SnoVal[]){vint(159)},1))},1),_v1609);
 }
     return (void*)_tramp_next_1608;
 }
@@ -24217,7 +24638,10 @@ static void *stmt_104(void) { /* line 110 */
 SnoVal _v1611 = strv("IDEOGRAPHIC_SPACE");
 int _ok1611 = !IS_FAIL(_v1611);
 if(_ok1611) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(227)},1),aply("CHAR",(SnoVal[]){vint(128)},1)),aply("CHAR",(SnoVal[]){vint(128)},1))},1),_v1611);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(227)},1),
+    aply("CHAR",(SnoVal[]){vint(128)},1)),
+    aply("CHAR",(SnoVal[]){vint(128)},1))},1),_v1611);
 }
     return (void*)_tramp_next_1610;
 }
@@ -24230,7 +24654,10 @@ static void *stmt_105(void) { /* line 112 */
 SnoVal _v1613 = strv("VERTICAL_ELLIPSIS");
 int _ok1613 = !IS_FAIL(_v1613);
 if(_ok1613) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(139)},1)),aply("CHAR",(SnoVal[]){vint(174)},1))},1),_v1613);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(139)},1)),
+    aply("CHAR",(SnoVal[]){vint(174)},1))},1),_v1613);
 }
     return (void*)_tramp_next_1612;
 }
@@ -24243,7 +24670,10 @@ static void *stmt_106(void) { /* line 113 */
 SnoVal _v1615 = strv("LEFTWARDS_ARROW");
 int _ok1615 = !IS_FAIL(_v1615);
 if(_ok1615) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(134)},1)),aply("CHAR",(SnoVal[]){vint(144)},1))},1),_v1615);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(134)},1)),
+    aply("CHAR",(SnoVal[]){vint(144)},1))},1),_v1615);
 }
     return (void*)_tramp_next_1614;
 }
@@ -24256,7 +24686,10 @@ static void *stmt_107(void) { /* line 114 */
 SnoVal _v1617 = strv("RIGHTWARDS_ARROW");
 int _ok1617 = !IS_FAIL(_v1617);
 if(_ok1617) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(134)},1)),aply("CHAR",(SnoVal[]){vint(146)},1))},1),_v1617);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(134)},1)),
+    aply("CHAR",(SnoVal[]){vint(146)},1))},1),_v1617);
 }
     return (void*)_tramp_next_1616;
 }
@@ -24269,7 +24702,10 @@ static void *stmt_108(void) { /* line 115 */
 SnoVal _v1619 = strv("LEFTWARDS_DOUBLE_ARROW");
 int _ok1619 = !IS_FAIL(_v1619);
 if(_ok1619) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(135)},1)),aply("CHAR",(SnoVal[]){vint(144)},1))},1),_v1619);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(135)},1)),
+    aply("CHAR",(SnoVal[]){vint(144)},1))},1),_v1619);
 }
     return (void*)_tramp_next_1618;
 }
@@ -24282,7 +24718,10 @@ static void *stmt_109(void) { /* line 116 */
 SnoVal _v1621 = strv("RIGHTWARDS_DOUBLE_ARROW");
 int _ok1621 = !IS_FAIL(_v1621);
 if(_ok1621) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(135)},1)),aply("CHAR",(SnoVal[]){vint(146)},1))},1),_v1621);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(135)},1)),
+    aply("CHAR",(SnoVal[]){vint(146)},1))},1),_v1621);
 }
     return (void*)_tramp_next_1620;
 }
@@ -24295,7 +24734,10 @@ static void *stmt_110(void) { /* line 117 */
 SnoVal _v1623 = strv("LONG_LEFTWARDS_ARROW");
 int _ok1623 = !IS_FAIL(_v1623);
 if(_ok1623) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(159)},1)),aply("CHAR",(SnoVal[]){vint(181)},1))},1),_v1623);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(159)},1)),
+    aply("CHAR",(SnoVal[]){vint(181)},1))},1),_v1623);
 }
     return (void*)_tramp_next_1622;
 }
@@ -24308,7 +24750,10 @@ static void *stmt_111(void) { /* line 118 */
 SnoVal _v1625 = strv("LONG_RIGHTWARDS_ARROW");
 int _ok1625 = !IS_FAIL(_v1625);
 if(_ok1625) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(159)},1)),aply("CHAR",(SnoVal[]){vint(182)},1))},1),_v1625);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(159)},1)),
+    aply("CHAR",(SnoVal[]){vint(182)},1))},1),_v1625);
 }
     return (void*)_tramp_next_1624;
 }
@@ -24321,7 +24766,10 @@ static void *stmt_112(void) { /* line 119 */
 SnoVal _v1627 = strv("LONG_LEFTWARDS_DOUBLE_ARROW");
 int _ok1627 = !IS_FAIL(_v1627);
 if(_ok1627) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(159)},1)),aply("CHAR",(SnoVal[]){vint(184)},1))},1),_v1627);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(159)},1)),
+    aply("CHAR",(SnoVal[]){vint(184)},1))},1),_v1627);
 }
     return (void*)_tramp_next_1626;
 }
@@ -24334,7 +24782,10 @@ static void *stmt_113(void) { /* line 120 */
 SnoVal _v1629 = strv("LONG_RIGHTWARDS_DOUBLE_ARROW");
 int _ok1629 = !IS_FAIL(_v1629);
 if(_ok1629) {
-iset(indx(get(_UTF),(SnoVal[]){concat_sv(concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),aply("CHAR",(SnoVal[]){vint(159)},1)),aply("CHAR",(SnoVal[]){vint(185)},1))},1),_v1629);
+iset(indx(get(_UTF),(SnoVal[]){concat_sv(
+    concat_sv(aply("CHAR",(SnoVal[]){vint(226)},1),
+    aply("CHAR",(SnoVal[]){vint(159)},1)),
+    aply("CHAR",(SnoVal[]){vint(185)},1))},1),_v1629);
 }
     return (void*)_tramp_next_1628;
 }
@@ -25167,7 +25618,16 @@ static char _tramp_sentinel_1730;
 static void *stmt_166(void) { /* line 14 */
 /* line 14 */
                   trampoline_stno(14);
-SnoVal _v1731 = pat_alt(pat_alt(pat_alt(pat_cat(pat_lit("-l"),pat_cond(pat_span(to_str(get(_digits))),"?")),pat_cat(pat_lit("-m"),pat_span(to_str(get(_digits))))),pat_cond(pat_lit("-a"),"?")),pat_cond(pat_lit("-w"),"?"));
+SnoVal _v1731 = pat_alt(
+                    pat_alt(
+                        pat_alt(
+                            pat_cat(pat_lit(strv("-l")),pat_val(aply("SPAN",(SnoVal[]){get(_digits)},1))),
+                            pat_cat(pat_lit(strv("-m")),pat_user_call("SPAN",(SnoVal[]){get(_digits)},1))
+                        ),
+                        pat_val(strv("-a"))
+                    ),
+                    pat_val(strv("-w"))
+                );
 int _ok1731 = !IS_FAIL(_v1731);
 if(_ok1731) {
 set(_ioFileOptDash, _v1731);
@@ -25181,7 +25641,13 @@ static char _tramp_sentinel_1732;
 static void *stmt_167(void) { /* line 20 */
 /* line 20 */
                   trampoline_stno(20);
-SnoVal _v1733 = pat_cat(pat_ref("ioFileOptDash"),pat_alt(pat_cat(pat_span(to_str(strv(" ,"))),pat_ref("ioFileOptList")),pat_var("epsilon")));
+SnoVal _v1733 = pat_cat(
+                    pat_ref("ioFileOptDash"),
+                    pat_alt(
+                        pat_cat(pat_user_call("SPAN",(SnoVal[]){strv(" ,")},1),pat_ref("ioFileOptList")),
+                        pat_var("epsilon")
+                    )
+                );
 int _ok1733 = !IS_FAIL(_v1733);
 if(_ok1733) {
 set(_ioFileOptList, _v1733);
@@ -25195,7 +25661,7 @@ static char _tramp_sentinel_1734;
 static void *stmt_168(void) { /* line 21 */
 /* line 21 */
                   trampoline_stno(21);
-SnoVal _v1735 = pat_cat(pat_cat(pat_lit("["),pat_ref("ioFileOptList")),pat_lit("]"));
+SnoVal _v1735 = pat_cat(pat_cat(pat_lit(strv("[")),pat_ref("ioFileOptList")),pat_lit(strv("]")));
 int _ok1735 = !IS_FAIL(_v1735);
 if(_ok1735) {
 set(_ioFileOptPat, _v1735);
@@ -25223,7 +25689,13 @@ static char _tramp_sentinel_1738;
 static void *stmt_170(void) { /* line 23 */
 /* line 23 */
                   trampoline_stno(23);
-SnoVal _v1739 = pat_cat(pat_cat(pat_imm(pat_len(to_int(vint(1))),"bch"),pat_cond(pat_break(to_str(var_as_pattern(pat_ref("bch")))),"cmd")),pat_ref("bch"));
+SnoVal _v1739 = pat_cat(
+                    pat_cat(
+                        pat_val(aply("LEN",(SnoVal[]){vint(1)},1)),
+                        pat_val(aply("BREAK",(SnoVal[]){var_as_pattern(pat_ref("bch"))},1))
+                    ),
+                    pat_ref("bch")
+                );
 int _ok1739 = !IS_FAIL(_v1739);
 if(_ok1739) {
 set(_ioCmdDlmtPat1, _v1739);
@@ -25237,7 +25709,7 @@ static char _tramp_sentinel_1740;
 static void *stmt_171(void) { /* line 24 */
 /* line 24 */
                   trampoline_stno(24);
-SnoVal _v1741 = pat_cat(pat_len(to_int(vint(1))),pat_cond(pat_var("REM"),"cmd"));
+SnoVal _v1741 = pat_cat(pat_user_call("LEN",(SnoVal[]){vint(1)},1),pat_val(get(_REM)));
 int _ok1741 = !IS_FAIL(_v1741);
 if(_ok1741) {
 set(_ioCmdDlmtPat2, _v1741);
@@ -25786,7 +26258,19 @@ static char _tramp_sentinel_1811;
 static void *stmt_225(void) { /* line 80 */
 /* line 80 */
                   trampoline_stno(80);
-SnoVal _v1812 = pat_cat(pat_cat(pat_lit("--"),pat_cond(pat_alt(pat_break(to_str(strv("= "))),pat_var("REM")),"ppTokName")),pat_alt(pat_cat(pat_lit("="),pat_cond(pat_alt(pat_break(to_str(strv(" "))),pat_var("REM")),"ppTokVal")),pat_cond(pat_lit(""),"ppTokVal")));
+SnoVal _v1812 = pat_cat(
+                    pat_cat(
+                        pat_lit(strv("--")),
+                        pat_val(pat_alt(pat_user_call("BREAK",(SnoVal[]){strv("= ")},1),pat_var("REM")))
+                    ),
+                    pat_alt(
+                        pat_cat(
+                            pat_lit(strv("=")),
+                            pat_val(pat_alt(pat_user_call("BREAK",(SnoVal[]){strv(" ")},1),pat_var("REM")))
+                        ),
+                        pat_val(strv(""))
+                    )
+                );
 int _ok1812 = !IS_FAIL(_v1812);
 if(_ok1812) {
 set(_ppTokPat, _v1812);
@@ -26595,7 +27079,22 @@ static char _tramp_sentinel_1924;
 static void *stmt_282(void) { /* line 150 */
 /* line 150 */
                   trampoline_stno(150);
-SnoVal _v1925 = pat_cat(pat_cat(pat_cat(pat_cat(pat_alt(pat_span(to_str(concat_sv(strv(" "),get(_ppTab)))),pat_lit("")),pat_lit(":")),pat_alt(pat_any(to_str(strv("SF"))),pat_lit(""))),pat_alt(pat_any(to_str(strv("(<"))),pat_lit(""))),pat_var("REM"));
+SnoVal _v1925 = pat_cat(
+                    pat_cat(
+                        pat_cat(
+                            pat_cat(
+                                pat_alt(
+                                    pat_user_call("SPAN",(SnoVal[]){concat_sv(strv(" "),get(_ppTab))},1),
+                                    pat_lit(strv(""))
+                                ),
+                                pat_lit(strv(":"))
+                            ),
+                            pat_alt(pat_user_call("ANY",(SnoVal[]){strv("SF")},1),pat_lit(strv("")))
+                        ),
+                        pat_alt(pat_user_call("ANY",(SnoVal[]){strv("(<")},1),pat_lit(strv("")))
+                    ),
+                    pat_var("REM")
+                );
 int _ok1925 = !IS_FAIL(_v1925);
 if(_ok1925) {
 set(_ppGSfx, _v1925);
@@ -26609,7 +27108,7 @@ static char _tramp_sentinel_1926;
 static void *stmt_283(void) { /* line 152 */
 /* line 152 */
                   trampoline_stno(152);
-SnoVal _v1927 = pat_cat(pat_cond(pat_break(to_str(strv(":"))),"ppGCon"),pat_var("ppGSfx"));
+SnoVal _v1927 = pat_cat(pat_val(aply("BREAK",(SnoVal[]){strv(":")},1)),pat_var("ppGSfx"));
 int _ok1927 = !IS_FAIL(_v1927);
 if(_ok1927) {
 set(_ppGPat, _v1927);
@@ -26623,7 +27122,12 @@ static char _tramp_sentinel_1928;
 static void *stmt_284(void) { /* line 153 */
 /* line 153 */
                   trampoline_stno(153);
-SnoVal _v1929 = pat_cond(pat_cat(pat_span(to_str(concat_sv(strv(" "),get(_ppTab)))),pat_rpos(to_int(vint(0)))),"ppDrop");
+SnoVal _v1929 = pat_val(
+                    concat_sv(
+                        aply("SPAN",(SnoVal[]){concat_sv(strv(" "),get(_ppTab))},1),
+                        aply("RPOS",(SnoVal[]){vint(0)},1)
+                    )
+                );
 int _ok1929 = !IS_FAIL(_v1929);
 if(_ok1929) {
 set(_ppTrimPat, _v1929);
@@ -27383,35 +27887,48 @@ static void *stmt_331(void) { /* line 210 label:ppAutoMsg */
     _L_ppAutoMsg:
                   trampoline_stno(210);
 SnoVal _v2022 = concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(strv("* --auto: n="),
-    get(_ppNg)),
-    strv(" p90=")),
-    get(_ppP90)),
-    strv(" s1=")),
-    indx(get(_ppStop),(SnoVal[]){vint(1)},1)),
-    strv(" s2=")),
-    indx(get(_ppStop),(SnoVal[]){vint(2)},1)),
-    strv(" s3=")),
-    indx(get(_ppStop),(SnoVal[]){vint(3)},1)),
-    strv(" s4=")),
-    indx(get(_ppStop),(SnoVal[]){vint(4)},1)),
-    strv(" smbump=")),
-    get(_ppSmBump)),
-    strv(" lgbump=")),
-    get(_ppLgBump));
+                    concat_sv(
+                        concat_sv(
+                            concat_sv(
+                                concat_sv(
+                                    concat_sv(
+                                        concat_sv(
+                                            concat_sv(
+                                                concat_sv(
+                                                    concat_sv(
+                                                        concat_sv(
+                                                            concat_sv(
+                                                                concat_sv(
+                                                                    concat_sv(
+                                                                        concat_sv(strv("* --auto: n="),get(_ppNg)),
+                                                                        strv(" p90=")
+                                                                    ),
+                                                                    get(_ppP90)
+                                                                ),
+                                                                strv(" s1=")
+                                                            ),
+                                                            indx(get(_ppStop),(SnoVal[]){vint(1)},1)
+                                                        ),
+                                                        strv(" s2=")
+                                                    ),
+                                                    indx(get(_ppStop),(SnoVal[]){vint(2)},1)
+                                                ),
+                                                strv(" s3=")
+                                            ),
+                                            indx(get(_ppStop),(SnoVal[]){vint(3)},1)
+                                        ),
+                                        strv(" s4=")
+                                    ),
+                                    indx(get(_ppStop),(SnoVal[]){vint(4)},1)
+                                ),
+                                strv(" smbump=")
+                            ),
+                            get(_ppSmBump)
+                        ),
+                        strv(" lgbump=")
+                    ),
+                    get(_ppLgBump)
+                );
 int _ok2022 = !IS_FAIL(_v2022);
 if(_ok2022) {
 var_set("OUTPUT", _v2022);
@@ -27443,7 +27960,7 @@ static char _tramp_sentinel_2026;
 static void *stmt_334(void) { /* line 221 */
 /* line 221 */
                   trampoline_stno(221);
-SnoVal _v2027 = pat_span(to_str(get(_digits)));
+SnoVal _v2027 = pat_user_call("SPAN",(SnoVal[]){get(_digits)},1);
 int _ok2027 = !IS_FAIL(_v2027);
 if(_ok2027) {
 set(_Integer, _v2027);
@@ -27457,7 +27974,10 @@ static char _tramp_sentinel_2028;
 static void *stmt_335(void) { /* line 222 */
 /* line 222 */
                   trampoline_stno(222);
-SnoVal _v2029 = pat_cat(pat_cat(pat_lit("\""),pat_break(to_str(concat_sv(strv("\""),get(_nl))))),pat_lit("\""));
+SnoVal _v2029 = pat_cat(
+                    pat_cat(pat_lit(strv("\"")),pat_user_call("BREAK",(SnoVal[]){concat_sv(strv("\""),get(_nl))},1)),
+                    pat_lit(strv("\""))
+                );
 int _ok2029 = !IS_FAIL(_v2029);
 if(_ok2029) {
 set(_DQ, _v2029);
@@ -27471,7 +27991,10 @@ static char _tramp_sentinel_2030;
 static void *stmt_336(void) { /* line 223 */
 /* line 223 */
                   trampoline_stno(223);
-SnoVal _v2031 = pat_cat(pat_cat(pat_lit("'"),pat_break(to_str(concat_sv(strv("'"),get(_nl))))),pat_lit("'"));
+SnoVal _v2031 = pat_cat(
+                    pat_cat(pat_lit(strv("'")),pat_user_call("BREAK",(SnoVal[]){concat_sv(strv("'"),get(_nl))},1)),
+                    pat_lit(strv("'"))
+                );
 int _ok2031 = !IS_FAIL(_v2031);
 if(_ok2031) {
 set(_SQ, _v2031);
@@ -27499,7 +28022,36 @@ static char _tramp_sentinel_2034;
 static void *stmt_338(void) { /* line 225 */
 /* line 225 */
                   trampoline_stno(225);
-SnoVal _v2035 = pat_alt(pat_cat(pat_cat(pat_cat(pat_cat(pat_span(to_str(get(_digits))),pat_alt(pat_cat(pat_lit("."),pat_fence_p(pat_alt(pat_span(to_str(get(_digits))),pat_var("epsilon")))),pat_var("epsilon"))),pat_alt(pat_lit("E"),pat_lit("e"))),pat_alt(pat_alt(pat_lit("+"),pat_lit("-")),pat_var("epsilon"))),pat_span(to_str(get(_digits)))),pat_cat(pat_cat(pat_span(to_str(get(_digits))),pat_lit(".")),pat_fence_p(pat_alt(pat_span(to_str(get(_digits))),pat_var("epsilon")))));
+SnoVal _v2035 = pat_alt(
+                    pat_cat(
+                        pat_cat(
+                            pat_cat(
+                                pat_cat(
+                                    pat_user_call("SPAN",(SnoVal[]){get(_digits)},1),
+                                    pat_alt(
+                                        pat_cat(
+                                            pat_lit(strv(".")),
+                                            pat_fence_p(
+                                                pat_alt(
+                                                    pat_user_call("SPAN",(SnoVal[]){get(_digits)},1),
+                                                    pat_var("epsilon")
+                                                )
+                                            )
+                                        ),
+                                        pat_var("epsilon")
+                                    )
+                                ),
+                                pat_alt(pat_lit(strv("E")),pat_lit(strv("e")))
+                            ),
+                            pat_alt(pat_alt(pat_lit(strv("+")),pat_lit(strv("-"))),pat_var("epsilon"))
+                        ),
+                        pat_user_call("SPAN",(SnoVal[]){get(_digits)},1)
+                    ),
+                    pat_cat(
+                        pat_cat(pat_user_call("SPAN",(SnoVal[]){get(_digits)},1),pat_lit(strv("."))),
+                        pat_fence_p(pat_alt(pat_user_call("SPAN",(SnoVal[]){get(_digits)},1),pat_var("epsilon")))
+                    )
+                );
 int _ok2035 = !IS_FAIL(_v2035);
 if(_ok2035) {
 set(_Real, _v2035);
@@ -27513,14 +28065,24 @@ static char _tramp_sentinel_2036;
 static void *stmt_339(void) { /* line 232 */
 /* line 232 */
                   trampoline_stno(232);
-SnoVal _v2037 = pat_cat(pat_any(to_str(concat_sv(kw("UCASE"),kw("LCASE")))),pat_fence_p(pat_alt(pat_span(to_str(concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(strv("."),
-    get(_digits)),
-    kw("UCASE")),
-    strv("_")),
-    kw("LCASE")))),pat_var("epsilon"))));
+SnoVal _v2037 = pat_cat(
+                    pat_user_call("ANY",(SnoVal[]){concat_sv(kw("UCASE"),kw("LCASE"))},1),
+                    pat_fence_p(
+                        pat_alt(
+                            pat_user_call("SPAN",(SnoVal[]){concat_sv(
+                                                                concat_sv(
+                                                                    concat_sv(
+                                                                        concat_sv(strv("."),get(_digits)),
+                                                                        kw("UCASE")
+                                                                    ),
+                                                                    strv("_")
+                                                                ),
+                                                                kw("LCASE")
+                                                            )},1),
+                            pat_var("epsilon")
+                        )
+                    )
+                );
 int _ok2037 = !IS_FAIL(_v2037);
 if(_ok2037) {
 set(_Id, _v2037);
@@ -27534,14 +28096,15 @@ static char _tramp_sentinel_2038;
 static void *stmt_340(void) { /* line 234 */
 /* line 234 */
                   trampoline_stno(234);
-SnoVal _v2039 = pat_imm(pat_span(to_str(concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(strv("."),
-    get(_digits)),
-    kw("UCASE")),
-    strv("_")),
-    kw("LCASE")))),"?");
+SnoVal _v2039 = pat_val(
+                    aply("SPAN",(SnoVal[]){concat_sv(
+                                               concat_sv(
+                                                   concat_sv(concat_sv(strv("."),get(_digits)),kw("UCASE")),
+                                                   strv("_")
+                                               ),
+                                               kw("LCASE")
+                                           )},1)
+                );
 int _ok2039 = !IS_FAIL(_v2039);
 if(_ok2039) {
 set(_Function, _v2039);
@@ -27555,14 +28118,15 @@ static char _tramp_sentinel_2040;
 static void *stmt_341(void) { /* line 236 */
 /* line 236 */
                   trampoline_stno(236);
-SnoVal _v2041 = pat_imm(pat_span(to_str(concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(strv("."),
-    get(_digits)),
-    kw("UCASE")),
-    strv("_")),
-    kw("LCASE")))),"?");
+SnoVal _v2041 = pat_val(
+                    aply("SPAN",(SnoVal[]){concat_sv(
+                                               concat_sv(
+                                                   concat_sv(concat_sv(strv("."),get(_digits)),kw("UCASE")),
+                                                   strv("_")
+                                               ),
+                                               kw("LCASE")
+                                           )},1)
+                );
 int _ok2041 = !IS_FAIL(_v2041);
 if(_ok2041) {
 set(_BuiltinVar, _v2041);
@@ -27576,14 +28140,15 @@ static char _tramp_sentinel_2042;
 static void *stmt_342(void) { /* line 238 */
 /* line 238 */
                   trampoline_stno(238);
-SnoVal _v2043 = pat_imm(pat_span(to_str(concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(strv("."),
-    get(_digits)),
-    kw("UCASE")),
-    strv("_")),
-    kw("LCASE")))),"?");
+SnoVal _v2043 = pat_val(
+                    aply("SPAN",(SnoVal[]){concat_sv(
+                                               concat_sv(
+                                                   concat_sv(concat_sv(strv("."),get(_digits)),kw("UCASE")),
+                                                   strv("_")
+                                               ),
+                                               kw("LCASE")
+                                           )},1)
+                );
 int _ok2043 = !IS_FAIL(_v2043);
 if(_ok2043) {
 set(_SpecialNm, _v2043);
@@ -27597,7 +28162,7 @@ static char _tramp_sentinel_2044;
 static void *stmt_343(void) { /* line 240 */
 /* line 240 */
                   trampoline_stno(240);
-SnoVal _v2045 = pat_cat(pat_lit("&"),pat_imm(pat_span(to_str(concat_sv(kw("UCASE"),kw("LCASE")))),"?"));
+SnoVal _v2045 = pat_cat(pat_lit(strv("&")),pat_val(aply("SPAN",(SnoVal[]){concat_sv(kw("UCASE"),kw("LCASE"))},1)));
 int _ok2045 = !IS_FAIL(_v2045);
 if(_ok2045) {
 set(_ProtKwd, _v2045);
@@ -27611,7 +28176,7 @@ static char _tramp_sentinel_2046;
 static void *stmt_344(void) { /* line 241 */
 /* line 241 */
                   trampoline_stno(241);
-SnoVal _v2047 = pat_cat(pat_lit("&"),pat_imm(pat_span(to_str(concat_sv(kw("UCASE"),kw("LCASE")))),"?"));
+SnoVal _v2047 = pat_cat(pat_lit(strv("&")),pat_val(aply("SPAN",(SnoVal[]){concat_sv(kw("UCASE"),kw("LCASE"))},1)));
 int _ok2047 = !IS_FAIL(_v2047);
 if(_ok2047) {
 set(_UnprotKwd, _v2047);
@@ -27639,7 +28204,34 @@ static char _tramp_sentinel_2050;
 static void *stmt_346(void) { /* line 244 */
 /* line 244 */
                   trampoline_stno(244);
-SnoVal _v2051 = pat_alt(pat_cat(pat_span(to_str(concat_sv(strv(" "),get(_tab)))),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_var("nl"),pat_alt(pat_lit("+"),pat_lit("."))),pat_fence_p(pat_alt(pat_span(to_str(concat_sv(strv(" "),get(_tab)))),pat_var("epsilon")))),pat_var("epsilon")))),pat_cat(pat_cat(pat_var("nl"),pat_alt(pat_lit("+"),pat_lit("."))),pat_fence_p(pat_alt(pat_span(to_str(concat_sv(strv(" "),get(_tab)))),pat_var("epsilon")))));
+SnoVal _v2051 = pat_alt(
+                    pat_cat(
+                        pat_user_call("SPAN",(SnoVal[]){concat_sv(strv(" "),get(_tab))},1),
+                        pat_fence_p(
+                            pat_alt(
+                                pat_cat(
+                                    pat_cat(pat_var("nl"),pat_alt(pat_lit(strv("+")),pat_lit(strv(".")))),
+                                    pat_fence_p(
+                                        pat_alt(
+                                            pat_user_call("SPAN",(SnoVal[]){concat_sv(strv(" "),get(_tab))},1),
+                                            pat_var("epsilon")
+                                        )
+                                    )
+                                ),
+                                pat_var("epsilon")
+                            )
+                        )
+                    ),
+                    pat_cat(
+                        pat_cat(pat_var("nl"),pat_alt(pat_lit(strv("+")),pat_lit(strv(".")))),
+                        pat_fence_p(
+                            pat_alt(
+                                pat_user_call("SPAN",(SnoVal[]){concat_sv(strv(" "),get(_tab))},1),
+                                pat_var("epsilon")
+                            )
+                        )
+                    )
+                );
 int _ok2051 = !IS_FAIL(_v2051);
 if(_ok2051) {
 set(_White, _v2051);
@@ -27653,7 +28245,13 @@ static char _tramp_sentinel_2052;
 static void *stmt_347(void) { /* line 249 */
 /* line 249 */
                   trampoline_stno(249);
-SnoVal _v2053 = pat_cat(pat_cat(pat_alt(pat_pos(to_int(vint(0))),pat_lit(" ")),pat_deref(aply("upr",(SnoVal[]){get(_tx)},1))),pat_alt(pat_lit(" "),pat_rpos(to_int(vint(0)))));
+SnoVal _v2053 = pat_cat(
+                    pat_cat(
+                        pat_alt(pat_user_call("POS",(SnoVal[]){vint(0)},1),pat_lit(strv(" "))),
+                        pat_deref(aply("upr",(SnoVal[]){get(_tx)},1))
+                    ),
+                    pat_alt(pat_lit(strv(" ")),pat_user_call("RPOS",(SnoVal[]){vint(0)},1))
+                );
 int _ok2053 = !IS_FAIL(_v2053);
 if(_ok2053) {
 set(_TxInList, _v2053);
@@ -27695,7 +28293,13 @@ static char _tramp_sentinel_2058;
 static void *stmt_350(void) { /* line 252 */
 /* line 252 */
                   trampoline_stno(252);
-SnoVal _v2059 = concat_sv(concat_sv(strv("ABORT ALPHABET ARB BAL FAIL FENCE FILE FNCLEVEL "),strv("LASTFILE LASTLINE LASTNO LCASE LINE REM RTNTYPE ")),strv("STCOUNT STNO SUCCEED UCASE"));
+SnoVal _v2059 = concat_sv(
+                    concat_sv(
+                        strv("ABORT ALPHABET ARB BAL FAIL FENCE FILE FNCLEVEL "),
+                        strv("LASTFILE LASTLINE LASTNO LCASE LINE REM RTNTYPE ")
+                    ),
+                    strv("STCOUNT STNO SUCCEED UCASE")
+                );
 int _ok2059 = !IS_FAIL(_v2059);
 if(_ok2059) {
 set(_ProtKwds, _v2059);
@@ -27709,7 +28313,13 @@ static char _tramp_sentinel_2060;
 static void *stmt_351(void) { /* line 255 */
 /* line 255 */
                   trampoline_stno(255);
-SnoVal _v2061 = concat_sv(concat_sv(strv("ABEND ANCHOR CASE CODE COMPARE DUMP ERRLIMIT "),strv("ERRTEXT ERRTYPE FTRACE INPUT MAXLNGTH OUTPUT ")),strv("PROFILE STLIMIT TRACE TRIM FULLSCAN"));
+SnoVal _v2061 = concat_sv(
+                    concat_sv(
+                        strv("ABEND ANCHOR CASE CODE COMPARE DUMP ERRLIMIT "),
+                        strv("ERRTEXT ERRTYPE FTRACE INPUT MAXLNGTH OUTPUT ")
+                    ),
+                    strv("PROFILE STLIMIT TRACE TRIM FULLSCAN")
+                );
 int _ok2061 = !IS_FAIL(_v2061);
 if(_ok2061) {
 set(_UnprotKwds, _v2061);
@@ -27724,21 +28334,30 @@ static void *stmt_352(void) { /* line 258 */
 /* line 258 */
                   trampoline_stno(258);
 SnoVal _v2063 = concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(
-    concat_sv(strv("ANY APPLY ARBNO ARG ARRAY ATAN BACKSPACE BREAK BREAKX "),
-    strv("CHAR CHOP CLEAR CODE COLLECT CONVERT COPY COS DATA ")),
-    strv("DATATYPE DATE DEFINE DETACH DIFFER DUMP DUPL EJECT ")),
-    strv("ENDFILE EQ EVAL EXIT EXP FENCE FIELD GE GT HOST ")),
-    strv("IDENT INPUT INTEGER ITEM LE LEN LEQ LGE LGT LLE ")),
-    strv("LLT LN LNE LOAD LOCAL LPAD LT NE NOTANY OPSYN OUTPUT ")),
-    strv("POS PROTOTYPE REMDR REPLACE REVERSE REWIND RPAD RPOS ")),
-    strv("RSORT RTAB SET SETEXIT SIN SIZE SORT SPAN SQRT STOPTR ")),
-    strv("SUBSTR TAB TABLE TAN TIME TRACE TRIM UNLOAD"));
+                    concat_sv(
+                        concat_sv(
+                            concat_sv(
+                                concat_sv(
+                                    concat_sv(
+                                        concat_sv(
+                                            concat_sv(
+                                                strv("ANY APPLY ARBNO ARG ARRAY ATAN BACKSPACE BREAK BREAKX "),
+                                                strv("CHAR CHOP CLEAR CODE COLLECT CONVERT COPY COS DATA ")
+                                            ),
+                                            strv("DATATYPE DATE DEFINE DETACH DIFFER DUMP DUPL EJECT ")
+                                        ),
+                                        strv("ENDFILE EQ EVAL EXIT EXP FENCE FIELD GE GT HOST ")
+                                    ),
+                                    strv("IDENT INPUT INTEGER ITEM LE LEN LEQ LGE LGT LLE ")
+                                ),
+                                strv("LLT LN LNE LOAD LOCAL LPAD LT NE NOTANY OPSYN OUTPUT ")
+                            ),
+                            strv("POS PROTOTYPE REMDR REPLACE REVERSE REWIND RPAD RPOS ")
+                        ),
+                        strv("RSORT RTAB SET SETEXIT SIN SIZE SORT SPAN SQRT STOPTR ")
+                    ),
+                    strv("SUBSTR TAB TABLE TAN TIME TRACE TRIM UNLOAD")
+                );
 int _ok2063 = !IS_FAIL(_v2063);
 if(_ok2063) {
 set(_Functions, _v2063);
@@ -27752,7 +28371,7 @@ static char _tramp_sentinel_2064;
 static void *stmt_353(void) { /* line 268 */
 /* line 268 */
                   trampoline_stno(268);
-SnoVal _v2065 = pat_cat(pat_cat(pat_ref("White"),pat_lit("=")),pat_ref("White"));
+SnoVal _v2065 = pat_cat(pat_cat(pat_ref("White"),pat_lit(strv("="))),pat_ref("White"));
 int _ok2065 = !IS_FAIL(_v2065);
 if(_ok2065) {
 iset(strv("="),_v2065);
@@ -27765,7 +28384,7 @@ static char _tramp_sentinel_2066;
 static void *stmt_354(void) { /* line 269 */
 /* line 269 */
                   trampoline_stno(269);
-SnoVal _v2067 = pat_cat(pat_cat(pat_ref("White"),pat_lit("?")),pat_ref("White"));
+SnoVal _v2067 = pat_cat(pat_cat(pat_ref("White"),pat_lit(strv("?"))),pat_ref("White"));
 int _ok2067 = !IS_FAIL(_v2067);
 if(_ok2067) {
 iset(strv("?"),_v2067);
@@ -27778,7 +28397,7 @@ static char _tramp_sentinel_2068;
 static void *stmt_355(void) { /* line 270 */
 /* line 270 */
                   trampoline_stno(270);
-SnoVal _v2069 = pat_cat(pat_cat(pat_ref("White"),pat_lit("|")),pat_ref("White"));
+SnoVal _v2069 = pat_cat(pat_cat(pat_ref("White"),pat_lit(strv("|"))),pat_ref("White"));
 int _ok2069 = !IS_FAIL(_v2069);
 if(_ok2069) {
 iset(strv("|"),_v2069);
@@ -27791,7 +28410,7 @@ static char _tramp_sentinel_2070;
 static void *stmt_356(void) { /* line 271 */
 /* line 271 */
                   trampoline_stno(271);
-SnoVal _v2071 = pat_cat(pat_cat(pat_ref("White"),pat_lit("+")),pat_ref("White"));
+SnoVal _v2071 = pat_cat(pat_cat(pat_ref("White"),pat_lit(strv("+"))),pat_ref("White"));
 int _ok2071 = !IS_FAIL(_v2071);
 if(_ok2071) {
 iset(strv("+"),_v2071);
@@ -27804,7 +28423,7 @@ static char _tramp_sentinel_2072;
 static void *stmt_357(void) { /* line 272 */
 /* line 272 */
                   trampoline_stno(272);
-SnoVal _v2073 = pat_cat(pat_cat(pat_ref("White"),pat_lit("-")),pat_ref("White"));
+SnoVal _v2073 = pat_cat(pat_cat(pat_ref("White"),pat_lit(strv("-"))),pat_ref("White"));
 int _ok2073 = !IS_FAIL(_v2073);
 if(_ok2073) {
 iset(strv("-"),_v2073);
@@ -27817,7 +28436,7 @@ static char _tramp_sentinel_2074;
 static void *stmt_358(void) { /* line 273 */
 /* line 273 */
                   trampoline_stno(273);
-SnoVal _v2075 = pat_cat(pat_cat(pat_ref("White"),pat_lit("/")),pat_ref("White"));
+SnoVal _v2075 = pat_cat(pat_cat(pat_ref("White"),pat_lit(strv("/"))),pat_ref("White"));
 int _ok2075 = !IS_FAIL(_v2075);
 if(_ok2075) {
 iset(strv("/"),_v2075);
@@ -27830,7 +28449,7 @@ static char _tramp_sentinel_2076;
 static void *stmt_359(void) { /* line 274 */
 /* line 274 */
                   trampoline_stno(274);
-SnoVal _v2077 = pat_cat(pat_cat(pat_ref("White"),pat_lit("*")),pat_ref("White"));
+SnoVal _v2077 = pat_cat(pat_cat(pat_ref("White"),pat_lit(strv("*"))),pat_ref("White"));
 int _ok2077 = !IS_FAIL(_v2077);
 if(_ok2077) {
 iset(strv("*"),_v2077);
@@ -27843,7 +28462,7 @@ static char _tramp_sentinel_2078;
 static void *stmt_360(void) { /* line 275 */
 /* line 275 */
                   trampoline_stno(275);
-SnoVal _v2079 = pat_cat(pat_cat(pat_ref("White"),pat_lit("^")),pat_ref("White"));
+SnoVal _v2079 = pat_cat(pat_cat(pat_ref("White"),pat_lit(strv("^"))),pat_ref("White"));
 int _ok2079 = !IS_FAIL(_v2079);
 if(_ok2079) {
 iset(strv("^"),_v2079);
@@ -27856,7 +28475,7 @@ static char _tramp_sentinel_2080;
 static void *stmt_361(void) { /* line 276 */
 /* line 276 */
                   trampoline_stno(276);
-SnoVal _v2081 = pat_cat(pat_cat(pat_ref("White"),pat_lit("!")),pat_ref("White"));
+SnoVal _v2081 = pat_cat(pat_cat(pat_ref("White"),pat_lit(strv("!"))),pat_ref("White"));
 int _ok2081 = !IS_FAIL(_v2081);
 if(_ok2081) {
 iset(strv("!"),_v2081);
@@ -27869,7 +28488,7 @@ static char _tramp_sentinel_2082;
 static void *stmt_362(void) { /* line 277 */
 /* line 277 */
                   trampoline_stno(277);
-SnoVal _v2083 = pat_cat(pat_cat(pat_ref("White"),pat_lit("**")),pat_ref("White"));
+SnoVal _v2083 = pat_cat(pat_cat(pat_ref("White"),pat_lit(strv("**"))),pat_ref("White"));
 int _ok2083 = !IS_FAIL(_v2083);
 if(_ok2083) {
 iset(strv("**"),_v2083);
@@ -27882,7 +28501,7 @@ static char _tramp_sentinel_2084;
 static void *stmt_363(void) { /* line 278 */
 /* line 278 */
                   trampoline_stno(278);
-SnoVal _v2085 = pat_cat(pat_cat(pat_ref("White"),pat_lit("$")),pat_ref("White"));
+SnoVal _v2085 = pat_cat(pat_cat(pat_ref("White"),pat_lit(strv("$"))),pat_ref("White"));
 int _ok2085 = !IS_FAIL(_v2085);
 if(_ok2085) {
 iset(strv("$"),_v2085);
@@ -27895,7 +28514,7 @@ static char _tramp_sentinel_2086;
 static void *stmt_364(void) { /* line 279 */
 /* line 279 */
                   trampoline_stno(279);
-SnoVal _v2087 = pat_cat(pat_cat(pat_ref("White"),pat_lit(".")),pat_ref("White"));
+SnoVal _v2087 = pat_cat(pat_cat(pat_ref("White"),pat_lit(strv("."))),pat_ref("White"));
 int _ok2087 = !IS_FAIL(_v2087);
 if(_ok2087) {
 iset(strv("."),_v2087);
@@ -27908,7 +28527,7 @@ static char _tramp_sentinel_2088;
 static void *stmt_365(void) { /* line 280 */
 /* line 280 */
                   trampoline_stno(280);
-SnoVal _v2089 = pat_cat(pat_cat(pat_ref("White"),pat_lit("&")),pat_ref("White"));
+SnoVal _v2089 = pat_cat(pat_cat(pat_ref("White"),pat_lit(strv("&"))),pat_ref("White"));
 int _ok2089 = !IS_FAIL(_v2089);
 if(_ok2089) {
 iset(strv("&"),_v2089);
@@ -27921,7 +28540,7 @@ static char _tramp_sentinel_2090;
 static void *stmt_366(void) { /* line 281 */
 /* line 281 */
                   trampoline_stno(281);
-SnoVal _v2091 = pat_cat(pat_cat(pat_ref("White"),pat_lit("@")),pat_ref("White"));
+SnoVal _v2091 = pat_cat(pat_cat(pat_ref("White"),pat_lit(strv("@"))),pat_ref("White"));
 int _ok2091 = !IS_FAIL(_v2091);
 if(_ok2091) {
 iset(strv("@"),_v2091);
@@ -27934,7 +28553,7 @@ static char _tramp_sentinel_2092;
 static void *stmt_367(void) { /* line 282 */
 /* line 282 */
                   trampoline_stno(282);
-SnoVal _v2093 = pat_cat(pat_cat(pat_ref("White"),pat_lit("#")),pat_ref("White"));
+SnoVal _v2093 = pat_cat(pat_cat(pat_ref("White"),pat_lit(strv("#"))),pat_ref("White"));
 int _ok2093 = !IS_FAIL(_v2093);
 if(_ok2093) {
 iset(strv("#"),_v2093);
@@ -27947,7 +28566,7 @@ static char _tramp_sentinel_2094;
 static void *stmt_368(void) { /* line 283 */
 /* line 283 */
                   trampoline_stno(283);
-SnoVal _v2095 = pat_cat(pat_cat(pat_ref("White"),pat_lit("%")),pat_ref("White"));
+SnoVal _v2095 = pat_cat(pat_cat(pat_ref("White"),pat_lit(strv("%"))),pat_ref("White"));
 int _ok2095 = !IS_FAIL(_v2095);
 if(_ok2095) {
 iset(strv("%"),_v2095);
@@ -27960,7 +28579,7 @@ static char _tramp_sentinel_2096;
 static void *stmt_369(void) { /* line 284 */
 /* line 284 */
                   trampoline_stno(284);
-SnoVal _v2097 = pat_cat(pat_cat(pat_ref("White"),pat_lit("~")),pat_ref("White"));
+SnoVal _v2097 = pat_cat(pat_cat(pat_ref("White"),pat_lit(strv("~"))),pat_ref("White"));
 int _ok2097 = !IS_FAIL(_v2097);
 if(_ok2097) {
 iset(strv("~"),_v2097);
@@ -27973,7 +28592,7 @@ static char _tramp_sentinel_2098;
 static void *stmt_370(void) { /* line 285 */
 /* line 285 */
                   trampoline_stno(285);
-SnoVal _v2099 = pat_cat(pat_cat(pat_ref("Gray"),pat_lit(",")),pat_ref("Gray"));
+SnoVal _v2099 = pat_cat(pat_cat(pat_ref("Gray"),pat_lit(strv(","))),pat_ref("Gray"));
 int _ok2099 = !IS_FAIL(_v2099);
 if(_ok2099) {
 iset(strv(","),_v2099);
@@ -27986,7 +28605,7 @@ static char _tramp_sentinel_2100;
 static void *stmt_371(void) { /* line 286 */
 /* line 286 */
                   trampoline_stno(286);
-SnoVal _v2101 = pat_cat(pat_lit("("),pat_ref("Gray"));
+SnoVal _v2101 = pat_cat(pat_lit(strv("(")),pat_ref("Gray"));
 int _ok2101 = !IS_FAIL(_v2101);
 if(_ok2101) {
 iset(strv("("),_v2101);
@@ -27999,7 +28618,7 @@ static char _tramp_sentinel_2102;
 static void *stmt_372(void) { /* line 287 */
 /* line 287 */
                   trampoline_stno(287);
-SnoVal _v2103 = pat_cat(pat_lit("["),pat_ref("Gray"));
+SnoVal _v2103 = pat_cat(pat_lit(strv("[")),pat_ref("Gray"));
 int _ok2103 = !IS_FAIL(_v2103);
 if(_ok2103) {
 iset(strv("["),_v2103);
@@ -28012,7 +28631,7 @@ static char _tramp_sentinel_2104;
 static void *stmt_373(void) { /* line 288 */
 /* line 288 */
                   trampoline_stno(288);
-SnoVal _v2105 = pat_cat(pat_lit("<"),pat_ref("Gray"));
+SnoVal _v2105 = pat_cat(pat_lit(strv("<")),pat_ref("Gray"));
 int _ok2105 = !IS_FAIL(_v2105);
 if(_ok2105) {
 iset(strv("<"),_v2105);
@@ -28025,7 +28644,7 @@ static char _tramp_sentinel_2106;
 static void *stmt_374(void) { /* line 289 */
 /* line 289 */
                   trampoline_stno(289);
-SnoVal _v2107 = pat_cat(pat_ref("Gray"),pat_lit(")"));
+SnoVal _v2107 = pat_cat(pat_ref("Gray"),pat_lit(strv(")")));
 int _ok2107 = !IS_FAIL(_v2107);
 if(_ok2107) {
 iset(strv(")"),_v2107);
@@ -28038,7 +28657,7 @@ static char _tramp_sentinel_2108;
 static void *stmt_375(void) { /* line 290 */
 /* line 290 */
                   trampoline_stno(290);
-SnoVal _v2109 = pat_cat(pat_ref("Gray"),pat_lit("]"));
+SnoVal _v2109 = pat_cat(pat_ref("Gray"),pat_lit(strv("]")));
 int _ok2109 = !IS_FAIL(_v2109);
 if(_ok2109) {
 iset(strv("]"),_v2109);
@@ -28051,7 +28670,7 @@ static char _tramp_sentinel_2110;
 static void *stmt_376(void) { /* line 291 */
 /* line 291 */
                   trampoline_stno(291);
-SnoVal _v2111 = pat_cat(pat_ref("Gray"),pat_lit(">"));
+SnoVal _v2111 = pat_cat(pat_ref("Gray"),pat_lit(strv(">")));
 int _ok2111 = !IS_FAIL(_v2111);
 if(_ok2111) {
 iset(strv(">"),_v2111);
@@ -28064,7 +28683,13 @@ static char _tramp_sentinel_2112;
 static void *stmt_377(void) { /* line 293 */
 /* line 293 */
                   trampoline_stno(293);
-SnoVal _v2113 = pat_cat(pat_cat(pat_cat(pat_user_call("nPush",NULL,0),pat_ref("XList")),pat_user_call("reduce",(SnoVal[]){strv("'ExprList'"),strv("*(GT(nTop(), 1) nTop())")},2)),pat_user_call("nPop",NULL,0));
+SnoVal _v2113 = pat_cat(
+                    pat_cat(
+                        pat_cat(pat_user_call("nPush",NULL,0),pat_ref("XList")),
+                        pat_val(aply("reduce",(SnoVal[]){strv("'ExprList'"),strv("*(GT(nTop(), 1) nTop())")},2))
+                    ),
+                    pat_user_call("nPop",NULL,0)
+                );
 int _ok2113 = !IS_FAIL(_v2113);
 if(_ok2113) {
 set(_ExprList, _v2113);
@@ -28078,7 +28703,10 @@ static char _tramp_sentinel_2114;
 static void *stmt_378(void) { /* line 297 */
 /* line 297 */
                   trampoline_stno(297);
-SnoVal _v2115 = pat_cat(pat_cat(pat_user_call("nInc",NULL,0),pat_alt(pat_ref("Expr"),pat_cond(pat_var("epsilon"),"?"))),pat_fence_p(pat_alt(pat_cat(pat_deref(strv(",")),pat_ref("XList")),pat_var("epsilon"))));
+SnoVal _v2115 = pat_cat(
+                    pat_cat(pat_user_call("nInc",NULL,0),pat_alt(pat_ref("Expr"),pat_val(get(_epsilon)))),
+                    pat_fence_p(pat_alt(pat_cat(pat_deref(strv(",")),pat_ref("XList")),pat_var("epsilon")))
+                );
 int _ok2115 = !IS_FAIL(_v2115);
 if(_ok2115) {
 set(_XList, _v2115);
@@ -28106,7 +28734,18 @@ static char _tramp_sentinel_2118;
 static void *stmt_380(void) { /* line 299 */
 /* line 299 */
                   trampoline_stno(299);
-SnoVal _v2119 = pat_cat(pat_ref("Expr1"),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_deref(strv("=")),pat_ref("Expr0")),pat_user_call("reduce",(SnoVal[]){strv("'='"),vint(2)},2)),pat_var("epsilon"))));
+SnoVal _v2119 = pat_cat(
+                    pat_ref("Expr1"),
+                    pat_fence_p(
+                        pat_alt(
+                            pat_cat(
+                                pat_cat(pat_deref(strv("=")),pat_ref("Expr0")),
+                                pat_val(aply("reduce",(SnoVal[]){strv("'='"),vint(2)},2))
+                            ),
+                            pat_var("epsilon")
+                        )
+                    )
+                );
 int _ok2119 = !IS_FAIL(_v2119);
 if(_ok2119) {
 set(_Expr0, _v2119);
@@ -28120,7 +28759,18 @@ static char _tramp_sentinel_2120;
 static void *stmt_381(void) { /* line 300 */
 /* line 300 */
                   trampoline_stno(300);
-SnoVal _v2121 = pat_cat(pat_ref("Expr2"),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_deref(strv("?")),pat_ref("Expr1")),pat_user_call("reduce",(SnoVal[]){strv("'?'"),vint(2)},2)),pat_var("epsilon"))));
+SnoVal _v2121 = pat_cat(
+                    pat_ref("Expr2"),
+                    pat_fence_p(
+                        pat_alt(
+                            pat_cat(
+                                pat_cat(pat_deref(strv("?")),pat_ref("Expr1")),
+                                pat_val(aply("reduce",(SnoVal[]){strv("'?'"),vint(2)},2))
+                            ),
+                            pat_var("epsilon")
+                        )
+                    )
+                );
 int _ok2121 = !IS_FAIL(_v2121);
 if(_ok2121) {
 set(_Expr1, _v2121);
@@ -28134,7 +28784,18 @@ static char _tramp_sentinel_2122;
 static void *stmt_382(void) { /* line 301 */
 /* line 301 */
                   trampoline_stno(301);
-SnoVal _v2123 = pat_cat(pat_ref("Expr3"),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_deref(strv("&")),pat_ref("Expr2")),pat_user_call("reduce",(SnoVal[]){strv("'&'"),vint(2)},2)),pat_var("epsilon"))));
+SnoVal _v2123 = pat_cat(
+                    pat_ref("Expr3"),
+                    pat_fence_p(
+                        pat_alt(
+                            pat_cat(
+                                pat_cat(pat_deref(strv("&")),pat_ref("Expr2")),
+                                pat_val(aply("reduce",(SnoVal[]){strv("'&'"),vint(2)},2))
+                            ),
+                            pat_var("epsilon")
+                        )
+                    )
+                );
 int _ok2123 = !IS_FAIL(_v2123);
 if(_ok2123) {
 set(_Expr2, _v2123);
@@ -28148,7 +28809,13 @@ static char _tramp_sentinel_2124;
 static void *stmt_383(void) { /* line 302 */
 /* line 302 */
                   trampoline_stno(302);
-SnoVal _v2125 = pat_cat(pat_cat(pat_cat(pat_user_call("nPush",NULL,0),pat_ref("X3")),pat_user_call("reduce",(SnoVal[]){strv("'|'"),strv("*(GT(nTop(), 1) nTop())")},2)),pat_user_call("nPop",NULL,0));
+SnoVal _v2125 = pat_cat(
+                    pat_cat(
+                        pat_cat(pat_user_call("nPush",NULL,0),pat_ref("X3")),
+                        pat_val(aply("reduce",(SnoVal[]){strv("'|'"),strv("*(GT(nTop(), 1) nTop())")},2))
+                    ),
+                    pat_user_call("nPop",NULL,0)
+                );
 int _ok2125 = !IS_FAIL(_v2125);
 if(_ok2125) {
 set(_Expr3, _v2125);
@@ -28162,7 +28829,10 @@ static char _tramp_sentinel_2126;
 static void *stmt_384(void) { /* line 303 */
 /* line 303 */
                   trampoline_stno(303);
-SnoVal _v2127 = pat_cat(pat_cat(pat_user_call("nInc",NULL,0),pat_ref("Expr4")),pat_fence_p(pat_alt(pat_cat(pat_deref(strv("|")),pat_ref("X3")),pat_var("epsilon"))));
+SnoVal _v2127 = pat_cat(
+                    pat_cat(pat_user_call("nInc",NULL,0),pat_ref("Expr4")),
+                    pat_fence_p(pat_alt(pat_cat(pat_deref(strv("|")),pat_ref("X3")),pat_var("epsilon")))
+                );
 int _ok2127 = !IS_FAIL(_v2127);
 if(_ok2127) {
 set(_X3, _v2127);
@@ -28176,7 +28846,13 @@ static char _tramp_sentinel_2128;
 static void *stmt_385(void) { /* line 304 */
 /* line 304 */
                   trampoline_stno(304);
-SnoVal _v2129 = pat_cat(pat_cat(pat_cat(pat_user_call("nPush",NULL,0),pat_ref("X4")),pat_user_call("reduce",(SnoVal[]){strv("'..'"),strv("*(GT(nTop(), 1) nTop())")},2)),pat_user_call("nPop",NULL,0));
+SnoVal _v2129 = pat_cat(
+                    pat_cat(
+                        pat_cat(pat_user_call("nPush",NULL,0),pat_ref("X4")),
+                        pat_val(aply("reduce",(SnoVal[]){strv("'..'"),strv("*(GT(nTop(), 1) nTop())")},2))
+                    ),
+                    pat_user_call("nPop",NULL,0)
+                );
 int _ok2129 = !IS_FAIL(_v2129);
 if(_ok2129) {
 set(_Expr4, _v2129);
@@ -28190,7 +28866,10 @@ static char _tramp_sentinel_2130;
 static void *stmt_386(void) { /* line 305 */
 /* line 305 */
                   trampoline_stno(305);
-SnoVal _v2131 = pat_cat(pat_cat(pat_user_call("nInc",NULL,0),pat_ref("Expr5")),pat_fence_p(pat_alt(pat_cat(pat_ref("White"),pat_ref("X4")),pat_var("epsilon"))));
+SnoVal _v2131 = pat_cat(
+                    pat_cat(pat_user_call("nInc",NULL,0),pat_ref("Expr5")),
+                    pat_fence_p(pat_alt(pat_cat(pat_ref("White"),pat_ref("X4")),pat_var("epsilon")))
+                );
 int _ok2131 = !IS_FAIL(_v2131);
 if(_ok2131) {
 set(_X4, _v2131);
@@ -28204,7 +28883,18 @@ static char _tramp_sentinel_2132;
 static void *stmt_387(void) { /* line 306 */
 /* line 306 */
                   trampoline_stno(306);
-SnoVal _v2133 = pat_cat(pat_ref("Expr6"),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_deref(strv("@")),pat_ref("Expr5")),pat_user_call("reduce",(SnoVal[]){strv("'@'"),vint(2)},2)),pat_var("epsilon"))));
+SnoVal _v2133 = pat_cat(
+                    pat_ref("Expr6"),
+                    pat_fence_p(
+                        pat_alt(
+                            pat_cat(
+                                pat_cat(pat_deref(strv("@")),pat_ref("Expr5")),
+                                pat_val(aply("reduce",(SnoVal[]){strv("'@'"),vint(2)},2))
+                            ),
+                            pat_var("epsilon")
+                        )
+                    )
+                );
 int _ok2133 = !IS_FAIL(_v2133);
 if(_ok2133) {
 set(_Expr5, _v2133);
@@ -28218,7 +28908,24 @@ static char _tramp_sentinel_2134;
 static void *stmt_388(void) { /* line 307 */
 /* line 307 */
                   trampoline_stno(307);
-SnoVal _v2135 = pat_cat(pat_ref("Expr7"),pat_fence_p(pat_alt(pat_alt(pat_cat(pat_cat(pat_deref(strv("+")),pat_ref("Expr6")),pat_user_call("reduce",(SnoVal[]){strv("'+'"),vint(2)},2)),pat_cat(pat_cat(pat_deref(strv("-")),pat_ref("Expr6")),pat_user_call("reduce",(SnoVal[]){strv("'-'"),vint(2)},2))),pat_var("epsilon"))));
+SnoVal _v2135 = pat_cat(
+                    pat_ref("Expr7"),
+                    pat_fence_p(
+                        pat_alt(
+                            pat_alt(
+                                pat_cat(
+                                    pat_cat(pat_deref(strv("+")),pat_ref("Expr6")),
+                                    pat_val(aply("reduce",(SnoVal[]){strv("'+'"),vint(2)},2))
+                                ),
+                                pat_cat(
+                                    pat_cat(pat_deref(strv("-")),pat_ref("Expr6")),
+                                    pat_val(aply("reduce",(SnoVal[]){strv("'-'"),vint(2)},2))
+                                )
+                            ),
+                            pat_var("epsilon")
+                        )
+                    )
+                );
 int _ok2135 = !IS_FAIL(_v2135);
 if(_ok2135) {
 set(_Expr6, _v2135);
@@ -28232,7 +28939,18 @@ static char _tramp_sentinel_2136;
 static void *stmt_389(void) { /* line 311 */
 /* line 311 */
                   trampoline_stno(311);
-SnoVal _v2137 = pat_cat(pat_ref("Expr8"),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_deref(strv("#")),pat_ref("Expr7")),pat_user_call("reduce",(SnoVal[]){strv("'#'"),vint(2)},2)),pat_var("epsilon"))));
+SnoVal _v2137 = pat_cat(
+                    pat_ref("Expr8"),
+                    pat_fence_p(
+                        pat_alt(
+                            pat_cat(
+                                pat_cat(pat_deref(strv("#")),pat_ref("Expr7")),
+                                pat_val(aply("reduce",(SnoVal[]){strv("'#'"),vint(2)},2))
+                            ),
+                            pat_var("epsilon")
+                        )
+                    )
+                );
 int _ok2137 = !IS_FAIL(_v2137);
 if(_ok2137) {
 set(_Expr7, _v2137);
@@ -28246,7 +28964,18 @@ static char _tramp_sentinel_2138;
 static void *stmt_390(void) { /* line 312 */
 /* line 312 */
                   trampoline_stno(312);
-SnoVal _v2139 = pat_cat(pat_ref("Expr9"),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_deref(strv("/")),pat_ref("Expr8")),pat_user_call("reduce",(SnoVal[]){strv("'/'"),vint(2)},2)),pat_var("epsilon"))));
+SnoVal _v2139 = pat_cat(
+                    pat_ref("Expr9"),
+                    pat_fence_p(
+                        pat_alt(
+                            pat_cat(
+                                pat_cat(pat_deref(strv("/")),pat_ref("Expr8")),
+                                pat_val(aply("reduce",(SnoVal[]){strv("'/'"),vint(2)},2))
+                            ),
+                            pat_var("epsilon")
+                        )
+                    )
+                );
 int _ok2139 = !IS_FAIL(_v2139);
 if(_ok2139) {
 set(_Expr8, _v2139);
@@ -28260,7 +28989,18 @@ static char _tramp_sentinel_2140;
 static void *stmt_391(void) { /* line 313 */
 /* line 313 */
                   trampoline_stno(313);
-SnoVal _v2141 = pat_cat(pat_ref("Expr10"),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_deref(strv("*")),pat_ref("Expr9")),pat_user_call("reduce",(SnoVal[]){strv("'*'"),vint(2)},2)),pat_var("epsilon"))));
+SnoVal _v2141 = pat_cat(
+                    pat_ref("Expr10"),
+                    pat_fence_p(
+                        pat_alt(
+                            pat_cat(
+                                pat_cat(pat_deref(strv("*")),pat_ref("Expr9")),
+                                pat_val(aply("reduce",(SnoVal[]){strv("'*'"),vint(2)},2))
+                            ),
+                            pat_var("epsilon")
+                        )
+                    )
+                );
 int _ok2141 = !IS_FAIL(_v2141);
 if(_ok2141) {
 set(_Expr9, _v2141);
@@ -28274,7 +29014,18 @@ static char _tramp_sentinel_2142;
 static void *stmt_392(void) { /* line 314 */
 /* line 314 */
                   trampoline_stno(314);
-SnoVal _v2143 = pat_cat(pat_ref("Expr11"),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_deref(strv("%")),pat_ref("Expr10")),pat_user_call("reduce",(SnoVal[]){strv("'%'"),vint(2)},2)),pat_var("epsilon"))));
+SnoVal _v2143 = pat_cat(
+                    pat_ref("Expr11"),
+                    pat_fence_p(
+                        pat_alt(
+                            pat_cat(
+                                pat_cat(pat_deref(strv("%")),pat_ref("Expr10")),
+                                pat_val(aply("reduce",(SnoVal[]){strv("'%'"),vint(2)},2))
+                            ),
+                            pat_var("epsilon")
+                        )
+                    )
+                );
 int _ok2143 = !IS_FAIL(_v2143);
 if(_ok2143) {
 set(_Expr10, _v2143);
@@ -28288,7 +29039,21 @@ static char _tramp_sentinel_2144;
 static void *stmt_393(void) { /* line 315 */
 /* line 315 */
                   trampoline_stno(315);
-SnoVal _v2145 = pat_cat(pat_ref("Expr12"),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_alt(pat_alt(pat_deref(strv("^")),pat_deref(strv("!"))),pat_deref(strv("**"))),pat_ref("Expr11")),pat_user_call("reduce",(SnoVal[]){strv("'^'"),vint(2)},2)),pat_var("epsilon"))));
+SnoVal _v2145 = pat_cat(
+                    pat_ref("Expr12"),
+                    pat_fence_p(
+                        pat_alt(
+                            pat_cat(
+                                pat_cat(
+                                    pat_alt(pat_alt(pat_deref(strv("^")),pat_deref(strv("!"))),pat_deref(strv("**"))),
+                                    pat_ref("Expr11")
+                                ),
+                                pat_val(aply("reduce",(SnoVal[]){strv("'^'"),vint(2)},2))
+                            ),
+                            pat_var("epsilon")
+                        )
+                    )
+                );
 int _ok2145 = !IS_FAIL(_v2145);
 if(_ok2145) {
 set(_Expr11, _v2145);
@@ -28302,7 +29067,24 @@ static char _tramp_sentinel_2146;
 static void *stmt_394(void) { /* line 317 */
 /* line 317 */
                   trampoline_stno(317);
-SnoVal _v2147 = pat_cat(pat_ref("Expr13"),pat_fence_p(pat_alt(pat_alt(pat_cat(pat_cat(pat_deref(strv("$")),pat_ref("Expr12")),pat_user_call("reduce",(SnoVal[]){strv("'$'"),vint(2)},2)),pat_cat(pat_cat(pat_deref(strv(".")),pat_ref("Expr12")),pat_user_call("reduce",(SnoVal[]){strv("'.'"),vint(2)},2))),pat_var("epsilon"))));
+SnoVal _v2147 = pat_cat(
+                    pat_ref("Expr13"),
+                    pat_fence_p(
+                        pat_alt(
+                            pat_alt(
+                                pat_cat(
+                                    pat_cat(pat_deref(strv("$")),pat_ref("Expr12")),
+                                    pat_val(aply("reduce",(SnoVal[]){strv("'$'"),vint(2)},2))
+                                ),
+                                pat_cat(
+                                    pat_cat(pat_deref(strv(".")),pat_ref("Expr12")),
+                                    pat_val(aply("reduce",(SnoVal[]){strv("'.'"),vint(2)},2))
+                                )
+                            ),
+                            pat_var("epsilon")
+                        )
+                    )
+                );
 int _ok2147 = !IS_FAIL(_v2147);
 if(_ok2147) {
 set(_Expr12, _v2147);
@@ -28316,7 +29098,18 @@ static char _tramp_sentinel_2148;
 static void *stmt_395(void) { /* line 323 */
 /* line 323 */
                   trampoline_stno(323);
-SnoVal _v2149 = pat_cat(pat_ref("Expr14"),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_deref(strv("~")),pat_ref("Expr13")),pat_user_call("reduce",(SnoVal[]){strv("'~'"),vint(2)},2)),pat_var("epsilon"))));
+SnoVal _v2149 = pat_cat(
+                    pat_ref("Expr14"),
+                    pat_fence_p(
+                        pat_alt(
+                            pat_cat(
+                                pat_cat(pat_deref(strv("~")),pat_ref("Expr13")),
+                                pat_val(aply("reduce",(SnoVal[]){strv("'~'"),vint(2)},2))
+                            ),
+                            pat_var("epsilon")
+                        )
+                    )
+                );
 int _ok2149 = !IS_FAIL(_v2149);
 if(_ok2149) {
 set(_Expr13, _v2149);
@@ -28330,7 +29123,130 @@ static char _tramp_sentinel_2150;
 static void *stmt_396(void) { /* line 324 */
 /* line 324 */
                   trampoline_stno(324);
-SnoVal _v2151 = pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_cat(pat_cat(pat_lit("@"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'@'"),vint(1)},2)),pat_cat(pat_cat(pat_lit("~"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'~'"),vint(1)},2))),pat_cat(pat_cat(pat_lit("?"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'?'"),vint(1)},2))),pat_cond(pat_ref("ProtKwd"),"?")),pat_cond(pat_ref("UnprotKwd"),"?")),pat_cat(pat_cat(pat_lit("&"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'&'"),vint(1)},2))),pat_cat(pat_cat(pat_lit("+"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'+'"),vint(1)},2))),pat_cat(pat_cat(pat_lit("-"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'-'"),vint(1)},2))),pat_cat(pat_cat(pat_lit("*"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'*'"),vint(1)},2))),pat_cat(pat_cat(pat_lit("$"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'$'"),vint(1)},2))),pat_cat(pat_cat(pat_lit("."),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'.'"),vint(1)},2))),pat_cat(pat_cat(pat_lit("!"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'!'"),vint(1)},2))),pat_cat(pat_cat(pat_lit("%"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'%'"),vint(1)},2))),pat_cat(pat_cat(pat_lit("/"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'/'"),vint(1)},2))),pat_cat(pat_cat(pat_lit("#"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'#'"),vint(1)},2))),pat_cat(pat_cat(pat_lit("="),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'='"),vint(1)},2))),pat_cat(pat_cat(pat_lit("|"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'|'"),vint(1)},2))),pat_ref("Expr15"));
+SnoVal _v2151 = pat_alt(
+                    pat_alt(
+                        pat_alt(
+                            pat_alt(
+                                pat_alt(
+                                    pat_alt(
+                                        pat_alt(
+                                            pat_alt(
+                                                pat_alt(
+                                                    pat_alt(
+                                                        pat_alt(
+                                                            pat_alt(
+                                                                pat_alt(
+                                                                    pat_alt(
+                                                                        pat_alt(
+                                                                            pat_alt(
+                                                                                pat_alt(
+                                                                                    pat_cat(
+                                                                                        pat_cat(
+                                                                                            pat_lit(strv("@")),
+                                                                                            pat_ref("Expr14")
+                                                                                        ),
+                                                                                        pat_val(
+                                                                                            aply("reduce",(SnoVal[]){strv(
+                                                                                                                         "'@'"
+                                                                                                                     ),vint(1)},2)
+                                                                                        )
+                                                                                    ),
+                                                                                    pat_cat(
+                                                                                        pat_cat(
+                                                                                            pat_lit(strv("~")),
+                                                                                            pat_ref("Expr14")
+                                                                                        ),
+                                                                                        pat_val(
+                                                                                            aply("reduce",(SnoVal[]){strv(
+                                                                                                                         "'~'"
+                                                                                                                     ),vint(1)},2)
+                                                                                        )
+                                                                                    )
+                                                                                ),
+                                                                                pat_cat(
+                                                                                    pat_cat(
+                                                                                        pat_lit(strv("?")),
+                                                                                        pat_ref("Expr14")
+                                                                                    ),
+                                                                                    pat_val(
+                                                                                        aply("reduce",(SnoVal[]){strv(
+                                                                                                                     "'?'"
+                                                                                                                 ),vint(1)},2)
+                                                                                    )
+                                                                                )
+                                                                            ),
+                                                                            pat_val(var_as_pattern(pat_ref("ProtKwd")))
+                                                                        ),
+                                                                        pat_val(var_as_pattern(pat_ref("UnprotKwd")))
+                                                                    ),
+                                                                    pat_cat(
+                                                                        pat_cat(pat_lit(strv("&")),pat_ref("Expr14")),
+                                                                        pat_val(
+                                                                            aply("reduce",(SnoVal[]){strv("'&'"),vint(1)},2)
+                                                                        )
+                                                                    )
+                                                                ),
+                                                                pat_cat(
+                                                                    pat_cat(pat_lit(strv("+")),pat_ref("Expr14")),
+                                                                    pat_val(
+                                                                        aply("reduce",(SnoVal[]){strv("'+'"),vint(1)},2)
+                                                                    )
+                                                                )
+                                                            ),
+                                                            pat_cat(
+                                                                pat_cat(pat_lit(strv("-")),pat_ref("Expr14")),
+                                                                pat_val(
+                                                                    aply("reduce",(SnoVal[]){strv("'-'"),vint(1)},2)
+                                                                )
+                                                            )
+                                                        ),
+                                                        pat_cat(
+                                                            pat_cat(pat_lit(strv("*")),pat_ref("Expr14")),
+                                                            pat_val(aply("reduce",(SnoVal[]){strv("'*'"),vint(1)},2))
+                                                        )
+                                                    ),
+                                                    pat_cat(
+                                                        pat_cat(pat_lit(strv("$")),pat_ref("Expr14")),
+                                                        pat_val(aply("reduce",(SnoVal[]){strv("'$'"),vint(1)},2))
+                                                    )
+                                                ),
+                                                pat_cat(
+                                                    pat_cat(pat_lit(strv(".")),pat_ref("Expr14")),
+                                                    pat_val(aply("reduce",(SnoVal[]){strv("'.'"),vint(1)},2))
+                                                )
+                                            ),
+                                            pat_cat(
+                                                pat_cat(pat_lit(strv("!")),pat_ref("Expr14")),
+                                                pat_val(aply("reduce",(SnoVal[]){strv("'!'"),vint(1)},2))
+                                            )
+                                        ),
+                                        pat_cat(
+                                            pat_cat(pat_lit(strv("%")),pat_ref("Expr14")),
+                                            pat_val(aply("reduce",(SnoVal[]){strv("'%'"),vint(1)},2))
+                                        )
+                                    ),
+                                    pat_cat(
+                                        pat_cat(pat_lit(strv("/")),pat_ref("Expr14")),
+                                        pat_val(aply("reduce",(SnoVal[]){strv("'/'"),vint(1)},2))
+                                    )
+                                ),
+                                pat_cat(
+                                    pat_cat(pat_lit(strv("#")),pat_ref("Expr14")),
+                                    pat_val(aply("reduce",(SnoVal[]){strv("'#'"),vint(1)},2))
+                                )
+                            ),
+                            pat_cat(
+                                pat_cat(pat_lit(strv("=")),pat_ref("Expr14")),
+                                pat_val(aply("reduce",(SnoVal[]){strv("'='"),vint(1)},2))
+                            )
+                        ),
+                        pat_cat(
+                            pat_cat(pat_lit(strv("|")),pat_ref("Expr14")),
+                            pat_val(aply("reduce",(SnoVal[]){strv("'|'"),vint(1)},2))
+                        )
+                    ),
+                    pat_ref("Expr15")
+                );
 int _ok2151 = !IS_FAIL(_v2151);
 if(_ok2151) {
 set(_Expr14, _v2151);
@@ -28344,7 +29260,21 @@ static char _tramp_sentinel_2152;
 static void *stmt_397(void) { /* line 342 */
 /* line 342 */
                   trampoline_stno(342);
-SnoVal _v2153 = pat_cat(pat_ref("Expr17"),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_cat(pat_user_call("nPush",NULL,0),pat_ref("Expr16")),pat_user_call("reduce",(SnoVal[]){strv("'[]'"),strv("nTop() + 1")},2)),pat_user_call("nPop",NULL,0)),pat_var("epsilon"))));
+SnoVal _v2153 = pat_cat(
+                    pat_ref("Expr17"),
+                    pat_fence_p(
+                        pat_alt(
+                            pat_cat(
+                                pat_cat(
+                                    pat_cat(pat_user_call("nPush",NULL,0),pat_ref("Expr16")),
+                                    pat_val(aply("reduce",(SnoVal[]){strv("'[]'"),strv("nTop() + 1")},2))
+                                ),
+                                pat_user_call("nPop",NULL,0)
+                            ),
+                            pat_var("epsilon")
+                        )
+                    )
+                );
 int _ok2153 = !IS_FAIL(_v2153);
 if(_ok2153) {
 set(_Expr15, _v2153);
@@ -28358,7 +29288,16 @@ static char _tramp_sentinel_2154;
 static void *stmt_398(void) { /* line 344 */
 /* line 344 */
                   trampoline_stno(344);
-SnoVal _v2155 = pat_cat(pat_cat(pat_user_call("nInc",NULL,0),pat_alt(pat_cat(pat_deref(strv("[")),pat_imm(pat_ref("ExprList"),"?")),pat_cat(pat_deref(strv("<")),pat_imm(pat_ref("ExprList"),"?")))),pat_fence_p(pat_alt(pat_ref("Expr16"),pat_var("epsilon"))));
+SnoVal _v2155 = pat_cat(
+                    pat_cat(
+                        pat_user_call("nInc",NULL,0),
+                        pat_alt(
+                            pat_cat(pat_deref(strv("[")),pat_val(var_as_pattern(pat_ref("ExprList")))),
+                            pat_cat(pat_deref(strv("<")),pat_val(var_as_pattern(pat_ref("ExprList"))))
+                        )
+                    ),
+                    pat_fence_p(pat_alt(pat_ref("Expr16"),pat_var("epsilon")))
+                );
 int _ok2155 = !IS_FAIL(_v2155);
 if(_ok2155) {
 set(_Expr16, _v2155);
@@ -28372,7 +29311,68 @@ static char _tramp_sentinel_2156;
 static void *stmt_399(void) { /* line 347 */
 /* line 347 */
                   trampoline_stno(347);
-SnoVal _v2157 = pat_fence_p(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_cat(pat_cat(pat_cat(pat_imm(pat_user_call("nPush",NULL,0),"?"),pat_ref("Expr")),pat_imm(pat_alt(pat_cat(pat_cat(pat_deref(strv(",")),pat_ref("XList")),pat_user_call("reduce",(SnoVal[]){strv("','"),strv("nTop() + 1")},2)),pat_cat(pat_var("epsilon"),pat_user_call("reduce",(SnoVal[]){strv("'()'"),vint(1)},2))),"?")),pat_user_call("nPop",NULL,0)),pat_cat(pat_cat(pat_imm(pat_cond(pat_ref("Function"),"?"),"?"),pat_imm(pat_ref("ExprList"),"?")),pat_user_call("reduce",(SnoVal[]){strv("'Call'"),vint(2)},2))),pat_cat(pat_cat(pat_imm(pat_cond(pat_ref("Id"),"?"),"?"),pat_imm(pat_ref("ExprList"),"?")),pat_user_call("reduce",(SnoVal[]){strv("'Call'"),vint(2)},2))),pat_cond(pat_ref("BuiltinVar"),"?")),pat_cond(pat_ref("SpecialNm"),"?")),pat_cond(pat_ref("Id"),"?")),pat_cond(pat_ref("String"),"?")),pat_cond(pat_ref("Real"),"?")),pat_cond(pat_ref("Integer"),"?")));
+SnoVal _v2157 = pat_fence_p(
+                    pat_alt(
+                        pat_alt(
+                            pat_alt(
+                                pat_alt(
+                                    pat_alt(
+                                        pat_alt(
+                                            pat_alt(
+                                                pat_alt(
+                                                    pat_cat(
+                                                        pat_cat(
+                                                            pat_cat(pat_val(aply("nPush",NULL,0)),pat_ref("Expr")),
+                                                            pat_val(
+                                                                pat_alt(
+                                                                    pat_cat(
+                                                                        pat_cat(pat_deref(strv(",")),pat_ref("XList")),
+                                                                        pat_val(
+                                                                            aply("reduce",(SnoVal[]){strv("','"),strv(
+                                                                                                                     "nTop() + 1"
+                                                                                                                 )},2)
+                                                                        )
+                                                                    ),
+                                                                    pat_cat(
+                                                                        pat_var("epsilon"),
+                                                                        pat_val(
+                                                                            aply("reduce",(SnoVal[]){strv("'()'"),vint(1)},2)
+                                                                        )
+                                                                    )
+                                                                )
+                                                            )
+                                                        ),
+                                                        pat_user_call("nPop",NULL,0)
+                                                    ),
+                                                    pat_cat(
+                                                        pat_cat(
+                                                            pat_val(var_as_pattern(pat_ref("Function"))),
+                                                            pat_val(var_as_pattern(pat_ref("ExprList")))
+                                                        ),
+                                                        pat_val(aply("reduce",(SnoVal[]){strv("'Call'"),vint(2)},2))
+                                                    )
+                                                ),
+                                                pat_cat(
+                                                    pat_cat(
+                                                        pat_val(var_as_pattern(pat_ref("Id"))),
+                                                        pat_val(var_as_pattern(pat_ref("ExprList")))
+                                                    ),
+                                                    pat_val(aply("reduce",(SnoVal[]){strv("'Call'"),vint(2)},2))
+                                                )
+                                            ),
+                                            pat_val(var_as_pattern(pat_ref("BuiltinVar")))
+                                        ),
+                                        pat_val(var_as_pattern(pat_ref("SpecialNm")))
+                                    ),
+                                    pat_val(var_as_pattern(pat_ref("Id")))
+                                ),
+                                pat_val(var_as_pattern(pat_ref("String")))
+                            ),
+                            pat_val(var_as_pattern(pat_ref("Real")))
+                        ),
+                        pat_val(var_as_pattern(pat_ref("Integer")))
+                    )
+                );
 int _ok2157 = !IS_FAIL(_v2157);
 if(_ok2157) {
 set(_Expr17, _v2157);
@@ -28386,7 +29386,7 @@ static char _tramp_sentinel_2158;
 static void *stmt_400(void) { /* line 366 */
 /* line 366 */
                   trampoline_stno(366);
-SnoVal _v2159 = pat_cond(pat_alt(pat_lit("S"),pat_lit("s")),"?");
+SnoVal _v2159 = pat_val(alt(strv("S"),strv("s")));
 int _ok2159 = !IS_FAIL(_v2159);
 if(_ok2159) {
 set(_SGoto, _v2159);
@@ -28400,7 +29400,7 @@ static char _tramp_sentinel_2160;
 static void *stmt_401(void) { /* line 367 */
 /* line 367 */
                   trampoline_stno(367);
-SnoVal _v2161 = pat_cond(pat_alt(pat_lit("F"),pat_lit("f")),"?");
+SnoVal _v2161 = pat_val(alt(strv("F"),strv("f")));
 int _ok2161 = !IS_FAIL(_v2161);
 if(_ok2161) {
 set(_FGoto, _v2161);
@@ -28428,7 +29428,10 @@ static char _tramp_sentinel_2164;
 static void *stmt_403(void) { /* line 369 */
 /* line 369 */
                   trampoline_stno(369);
-SnoVal _v2165 = pat_alt(pat_cat(pat_cond(pat_deref(strv("(")),"?"),pat_imm(pat_ref("Expr"),"?")),pat_cat(pat_cond(pat_deref(strv("<")),"?"),pat_imm(pat_ref("Expr"),"?")));
+SnoVal _v2165 = pat_alt(
+                    pat_cat(pat_val(deref(NULL_VAL)),pat_val(var_as_pattern(pat_ref("Expr")))),
+                    pat_cat(pat_val(deref(NULL_VAL)),pat_val(var_as_pattern(pat_ref("Expr"))))
+                );
 int _ok2165 = !IS_FAIL(_v2165);
 if(_ok2165) {
 set(_Target, _v2165);
@@ -28442,7 +29445,35 @@ static char _tramp_sentinel_2166;
 static void *stmt_404(void) { /* line 371 */
 /* line 371 */
                   trampoline_stno(371);
-SnoVal _v2167 = pat_cat(pat_cat(pat_cat(pat_ref("Gray"),pat_lit(":")),pat_ref("Gray")),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_ref("Target"),pat_user_call("reduce",(SnoVal[]){strv("*(':' Brackets)"),vint(1)},2)),pat_cond(pat_var("epsilon"),"?")),pat_cat(pat_cat(pat_cat(pat_ref("SorF"),pat_ref("Target")),pat_user_call("reduce",(SnoVal[]){strv("*(':' SorF Brackets)"),vint(1)},2)),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_cat(pat_ref("Gray"),pat_ref("SorF")),pat_ref("Target")),pat_user_call("reduce",(SnoVal[]){strv("*(':' SorF Brackets)"),vint(1)},2)),pat_cond(pat_var("epsilon"),"?")))))));
+SnoVal _v2167 = pat_cat(
+                    pat_cat(pat_cat(pat_ref("Gray"),pat_lit(strv(":"))),pat_ref("Gray")),
+                    pat_fence_p(
+                        pat_alt(
+                            pat_cat(
+                                pat_cat(
+                                    pat_ref("Target"),
+                                    pat_val(aply("reduce",(SnoVal[]){strv("*(':' Brackets)"),vint(1)},2))
+                                ),
+                                pat_val(get(_epsilon))
+                            ),
+                            pat_cat(
+                                pat_cat(
+                                    pat_cat(pat_ref("SorF"),pat_ref("Target")),
+                                    pat_val(aply("reduce",(SnoVal[]){strv("*(':' SorF Brackets)"),vint(1)},2))
+                                ),
+                                pat_fence_p(
+                                    pat_alt(
+                                        pat_cat(
+                                            pat_cat(pat_cat(pat_ref("Gray"),pat_ref("SorF")),pat_ref("Target")),
+                                            pat_val(aply("reduce",(SnoVal[]){strv("*(':' SorF Brackets)"),vint(1)},2))
+                                        ),
+                                        pat_val(get(_epsilon))
+                                    )
+                                )
+                            )
+                        )
+                    )
+                );
 int _ok2167 = !IS_FAIL(_v2167);
 if(_ok2167) {
 set(_Goto, _v2167);
@@ -28456,7 +29487,7 @@ static char _tramp_sentinel_2168;
 static void *stmt_405(void) { /* line 378 */
 /* line 378 */
                   trampoline_stno(378);
-SnoVal _v2169 = pat_cat(pat_lit("-"),pat_break(to_str(concat_sv(get(_nl),strv(";")))));
+SnoVal _v2169 = pat_cat(pat_lit(strv("-")),pat_user_call("BREAK",(SnoVal[]){concat_sv(get(_nl),strv(";"))},1));
 int _ok2169 = !IS_FAIL(_v2169);
 if(_ok2169) {
 set(_Control, _v2169);
@@ -28470,7 +29501,7 @@ static char _tramp_sentinel_2170;
 static void *stmt_406(void) { /* line 379 */
 /* line 379 */
                   trampoline_stno(379);
-SnoVal _v2171 = pat_cat(pat_lit("*"),pat_break(to_str(get(_nl))));
+SnoVal _v2171 = pat_cat(pat_lit(strv("*")),pat_user_call("BREAK",(SnoVal[]){get(_nl)},1));
 int _ok2171 = !IS_FAIL(_v2171);
 if(_ok2171) {
 set(_Comment, _v2171);
@@ -28484,12 +29515,9 @@ static char _tramp_sentinel_2172;
 static void *stmt_407(void) { /* line 380 */
 /* line 380 */
                   trampoline_stno(380);
-SnoVal _v2173 = pat_cond(pat_break(to_str(concat_sv(
-    concat_sv(
-    concat_sv(strv(" "),
-    get(_tab)),
-    get(_nl)),
-    strv(";")))),"?");
+SnoVal _v2173 = pat_val(
+                    aply("BREAK",(SnoVal[]){concat_sv(concat_sv(concat_sv(strv(" "),get(_tab)),get(_nl)),strv(";"))},1)
+                );
 int _ok2173 = !IS_FAIL(_v2173);
 if(_ok2173) {
 set(_Label, _v2173);
@@ -28503,7 +29531,68 @@ static char _tramp_sentinel_2174;
 static void *stmt_408(void) { /* line 381 */
 /* line 381 */
                   trampoline_stno(381);
-SnoVal _v2175 = pat_cat(pat_cat(pat_cat(pat_ref("Label"),pat_alt(pat_cat(pat_cat(pat_ref("White"),pat_ref("Expr14")),pat_fence_p(pat_alt(pat_alt(pat_cat(pat_cat(pat_cond(pat_var("epsilon"),"?"),pat_ref("White")),pat_alt(pat_cat(pat_cat(pat_cond(pat_lit("="),"?"),pat_ref("White")),pat_ref("Expr")),pat_cat(pat_cond(pat_lit("="),"?"),pat_cond(pat_var("epsilon"),"?")))),pat_cat(pat_cat(pat_alt(pat_deref(strv("?")),pat_ref("White")),pat_ref("Expr1")),pat_fence_p(pat_alt(pat_cat(pat_ref("White"),pat_alt(pat_cat(pat_cat(pat_cond(pat_lit("="),"?"),pat_ref("White")),pat_ref("Expr")),pat_cat(pat_cond(pat_lit("="),"?"),pat_cond(pat_var("epsilon"),"?")))),pat_cat(pat_cond(pat_var("epsilon"),"?"),pat_cond(pat_var("epsilon"),"?")))))),pat_cat(pat_cat(pat_cond(pat_var("epsilon"),"?"),pat_cond(pat_var("epsilon"),"?")),pat_cond(pat_var("epsilon"),"?"))))),pat_cat(pat_cat(pat_cat(pat_cond(pat_var("epsilon"),"?"),pat_cond(pat_var("epsilon"),"?")),pat_cond(pat_var("epsilon"),"?")),pat_cond(pat_var("epsilon"),"?")))),pat_fence_p(pat_alt(pat_ref("Goto"),pat_cat(pat_cond(pat_var("epsilon"),"?"),pat_cond(pat_var("epsilon"),"?"))))),pat_ref("Gray"));
+SnoVal _v2175 = pat_cat(
+                    pat_cat(
+                        pat_cat(
+                            pat_ref("Label"),
+                            pat_alt(
+                                pat_cat(
+                                    pat_cat(pat_ref("White"),pat_ref("Expr14")),
+                                    pat_fence_p(
+                                        pat_alt(
+                                            pat_alt(
+                                                pat_cat(
+                                                    pat_cat(pat_val(get(_epsilon)),pat_ref("White")),
+                                                    pat_alt(
+                                                        pat_cat(
+                                                            pat_cat(pat_val(strv("=")),pat_ref("White")),
+                                                            pat_ref("Expr")
+                                                        ),
+                                                        pat_cat(pat_val(strv("=")),pat_val(get(_epsilon)))
+                                                    )
+                                                ),
+                                                pat_cat(
+                                                    pat_cat(
+                                                        pat_alt(pat_deref(strv("?")),pat_ref("White")),
+                                                        pat_ref("Expr1")
+                                                    ),
+                                                    pat_fence_p(
+                                                        pat_alt(
+                                                            pat_cat(
+                                                                pat_ref("White"),
+                                                                pat_alt(
+                                                                    pat_cat(
+                                                                        pat_cat(pat_val(strv("=")),pat_ref("White")),
+                                                                        pat_ref("Expr")
+                                                                    ),
+                                                                    pat_cat(pat_val(strv("=")),pat_val(get(_epsilon)))
+                                                                )
+                                                            ),
+                                                            pat_cat(pat_val(get(_epsilon)),pat_val(get(_epsilon)))
+                                                        )
+                                                    )
+                                                )
+                                            ),
+                                            pat_cat(
+                                                pat_cat(pat_val(get(_epsilon)),pat_val(get(_epsilon))),
+                                                pat_val(get(_epsilon))
+                                            )
+                                        )
+                                    )
+                                ),
+                                pat_cat(
+                                    pat_cat(
+                                        pat_cat(pat_val(get(_epsilon)),pat_val(get(_epsilon))),
+                                        pat_val(get(_epsilon))
+                                    ),
+                                    pat_val(get(_epsilon))
+                                )
+                            )
+                        ),
+                        pat_fence_p(pat_alt(pat_ref("Goto"),pat_cat(pat_val(get(_epsilon)),pat_val(get(_epsilon)))))
+                    ),
+                    pat_ref("Gray")
+                );
 int _ok2175 = !IS_FAIL(_v2175);
 if(_ok2175) {
 set(_Stmt, _v2175);
@@ -28531,7 +29620,33 @@ static char _tramp_sentinel_2178;
 static void *stmt_410(void) { /* line 403 */
 /* line 403 */
                   trampoline_stno(403);
-SnoVal _v2179 = pat_cat(pat_user_call("nInc",NULL,0),pat_fence_p(pat_alt(pat_alt(pat_cat(pat_cat(pat_cond(pat_ref("Comment"),"?"),pat_user_call("reduce",(SnoVal[]){strv("'Comment'"),vint(1)},2)),pat_var("nl")),pat_cat(pat_cat(pat_cond(pat_ref("Control"),"?"),pat_user_call("reduce",(SnoVal[]){strv("'Control'"),vint(1)},2)),pat_alt(pat_var("nl"),pat_lit(";")))),pat_cat(pat_cat(pat_ref("Stmt"),pat_user_call("reduce",(SnoVal[]){strv("'Stmt'"),vint(7)},2)),pat_alt(pat_var("nl"),pat_lit(";"))))));
+SnoVal _v2179 = pat_cat(
+                    pat_user_call("nInc",NULL,0),
+                    pat_fence_p(
+                        pat_alt(
+                            pat_alt(
+                                pat_cat(
+                                    pat_cat(
+                                        pat_val(var_as_pattern(pat_ref("Comment"))),
+                                        pat_val(aply("reduce",(SnoVal[]){strv("'Comment'"),vint(1)},2))
+                                    ),
+                                    pat_var("nl")
+                                ),
+                                pat_cat(
+                                    pat_cat(
+                                        pat_val(var_as_pattern(pat_ref("Control"))),
+                                        pat_val(aply("reduce",(SnoVal[]){strv("'Control'"),vint(1)},2))
+                                    ),
+                                    pat_alt(pat_var("nl"),pat_lit(strv(";")))
+                                )
+                            ),
+                            pat_cat(
+                                pat_cat(pat_ref("Stmt"),pat_val(aply("reduce",(SnoVal[]){strv("'Stmt'"),vint(7)},2))),
+                                pat_alt(pat_var("nl"),pat_lit(strv(";")))
+                            )
+                        )
+                    )
+                );
 int _ok2179 = !IS_FAIL(_v2179);
 if(_ok2179) {
 set(_Command, _v2179);
@@ -28545,7 +29660,16 @@ static char _tramp_sentinel_2180;
 static void *stmt_411(void) { /* line 410 */
 /* line 410 */
                   trampoline_stno(410);
-SnoVal _v2181 = pat_cat(pat_cat(pat_cat(pat_user_call("nPush",NULL,0),pat_arbno(var_as_pattern(pat_ref("Command")))),pat_user_call("reduce",(SnoVal[]){strv("'Parse'"),strv("nTop()")},2)),pat_user_call("nPop",NULL,0));
+SnoVal _v2181 = pat_cat(
+                    pat_cat(
+                        pat_cat(
+                            pat_user_call("nPush",NULL,0),
+                            pat_user_call("ARBNO",(SnoVal[]){var_as_pattern(pat_ref("Command"))},1)
+                        ),
+                        pat_val(aply("reduce",(SnoVal[]){strv("'Parse'"),strv("nTop()")},2))
+                    ),
+                    pat_user_call("nPop",NULL,0)
+                );
 int _ok2181 = !IS_FAIL(_v2181);
 if(_ok2181) {
 set(_Parse, _v2181);
@@ -28559,7 +29683,37 @@ static char _tramp_sentinel_2182;
 static void *stmt_412(void) { /* line 415 */
 /* line 415 */
                   trampoline_stno(415);
-SnoVal _v2183 = pat_cat(pat_cat(pat_cat(pat_cat(pat_user_call("nPush",NULL,0),pat_arbno(var_as_pattern(pat_ref("Command")))),pat_user_call("reduce",(SnoVal[]){strv("'Parse'"),strv("nTop()")},2)),pat_alt(pat_cat(pat_cat(pat_user_call("icase",(SnoVal[]){strv("END")},1),pat_alt(pat_cat(pat_cat(pat_lit(" "),pat_break(to_str(get(_nl)))),pat_var("nl")),pat_var("nl"))),pat_arbno(concat_sv(aply("BREAK",(SnoVal[]){get(_nl)},1),get(_nl)))),pat_var("epsilon"))),pat_user_call("nPop",NULL,0));
+SnoVal _v2183 = pat_cat(
+                    pat_cat(
+                        pat_cat(
+                            pat_cat(
+                                pat_user_call("nPush",NULL,0),
+                                pat_user_call("ARBNO",(SnoVal[]){var_as_pattern(pat_ref("Command"))},1)
+                            ),
+                            pat_val(aply("reduce",(SnoVal[]){strv("'Parse'"),strv("nTop()")},2))
+                        ),
+                        pat_alt(
+                            pat_cat(
+                                pat_cat(
+                                    pat_user_call("icase",(SnoVal[]){strv("END")},1),
+                                    pat_alt(
+                                        pat_cat(
+                                            pat_cat(pat_lit(strv(" ")),pat_user_call("BREAK",(SnoVal[]){get(_nl)},1)),
+                                            pat_var("nl")
+                                        ),
+                                        pat_var("nl")
+                                    )
+                                ),
+                                pat_user_call("ARBNO",(SnoVal[]){concat_sv(
+                                                                     aply("BREAK",(SnoVal[]){get(_nl)},1),
+                                                                     get(_nl)
+                                                                 )},1)
+                            ),
+                            pat_var("epsilon")
+                        )
+                    ),
+                    pat_user_call("nPop",NULL,0)
+                );
 int _ok2183 = !IS_FAIL(_v2183);
 if(_ok2183) {
 set(_Compiland, _v2183);
@@ -28633,7 +29787,7 @@ static char _tramp_sentinel_2192;
 static void *stmt_419(void) { /* line 782 */
 /* line 782 */
                   trampoline_stno(782);
-SnoVal _v2193 = pat_alt(pat_span(to_str(concat_sv(strv(" "),get(_tab)))),pat_var("epsilon"));
+SnoVal _v2193 = pat_alt(pat_user_call("SPAN",(SnoVal[]){concat_sv(strv(" "),get(_tab))},1),pat_var("epsilon"));
 int _ok2193 = !IS_FAIL(_v2193);
 if(_ok2193) {
 set(_Space, _v2193);
