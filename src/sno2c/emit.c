@@ -717,28 +717,69 @@ static void emit_stmt(Stmt *s, const char *fn) {
     }
 
     /* ---- pattern match: subject pattern [= replacement] ---- */
+    /* Compiled Byrd box path — replaces sno_pat_* / engine.c stopgap. */
     if (s->pattern) {
         int u = uid();
-        E("/* match u%d */\n", u);
-        E("SnoVal   _s%d = ", u); emit_expr(s->subject); E(";\n");
-        E("SnoVal   _p%d = ", u); emit_pat(s->pattern); E(";\n");
-        E("SnoMatch _m%d = sno_match(&_s%d, _p%d);\n", u,u,u);
-        E("int      _ok%d = !_m%d.failed;\n", u, u);
+        E("/* byrd match u%d */\n", u);
+        E("SnoVal _s%d = ", u); emit_expr(s->subject); E(";\n");
+        E("const char *_subj%d = sno_to_str(_s%d);\n", u, u);
+        E("int64_t _slen%d = _subj%d ? (int64_t)strlen(_subj%d) : 0;\n", u, u, u);
+        E("int64_t _cur%d  = 0;\n", u);
+        E("int64_t _mstart%d = 0;\n", u);  /* cursor before match — for replacement */
+
+        char root_lbl[64], ok_lbl[64], fail_lbl[64], done_lbl[64];
+        snprintf(root_lbl, sizeof root_lbl, "_byrd_%d",      u);
+        snprintf(ok_lbl,   sizeof ok_lbl,   "_byrd_%d_ok",   u);
+        snprintf(fail_lbl, sizeof fail_lbl, "_byrd_%d_fail", u);
+        snprintf(done_lbl, sizeof done_lbl, "_byrd_%d_done", u);
+
+        char sv[32], sl[32], cv[32];
+        snprintf(sv, sizeof sv, "_subj%d", u);
+        snprintf(sl, sizeof sl, "_slen%d", u);
+        snprintf(cv, sizeof cv, "_cur%d",  u);
+
+        /* Declare _ok before the Byrd block (C: no jumps over declarations) */
+        E("int _ok%d = 0;\n", u);
+        E("_mstart%d = _cur%d;\n", u, u);
+
+        byrd_emit_pattern(s->pattern, out, root_lbl, sv, sl, cv, ok_lbl, fail_lbl);
+
+        /* gamma: match succeeded */
+        E("%s:;\n", ok_lbl);
+        E("_ok%d = 1;\n", u);
         if (s->replacement) {
-            E("if(_ok%d) {\n", u);
+            /* Replace matched region [_mstart%d .. _cur%d) with replacement */
+            E("{\n");
             E("    SnoVal _r%d = ", u); emit_expr(s->replacement); E(";\n");
-            E("    sno_replace(&_s%d, &_m%d, _r%d);\n", u,u,u);
+            E("    const char *_rs%d = sno_to_str(_r%d);\n", u, u);
+            E("    int64_t _rlen%d = _rs%d ? (int64_t)strlen(_rs%d) : 0;\n", u, u, u);
+            E("    int64_t _tail%d = _slen%d - _cur%d;\n", u, u, u);
+            E("    int64_t _newlen%d = _mstart%d + _rlen%d + _tail%d;\n", u, u, u, u);
+            E("    char *_nb%d = (char*)GC_malloc(_newlen%d + 1);\n", u, u);
+            E("    if (_mstart%d > 0) memcpy(_nb%d, _subj%d, (size_t)_mstart%d);\n", u, u, u, u);
+            E("    if (_rlen%d  > 0) memcpy(_nb%d + _mstart%d, _rs%d, (size_t)_rlen%d);\n", u, u, u, u, u);
+            E("    if (_tail%d  > 0) memcpy(_nb%d + _mstart%d + _rlen%d, _subj%d + _cur%d, (size_t)_tail%d);\n", u, u, u, u, u, u, u);
+            E("    _nb%d[_newlen%d] = '\\0';\n", u, u);
+            E("    _s%d = SNO_STR_VAL(_nb%d);\n", u, u);
             /* write back to subject variable */
-            if (s->subject->kind == E_VAR) {
+            if (s->subject && s->subject->kind == E_VAR) {
                 if (is_io_name(s->subject->sval))
                     E("    sno_var_set(\"%s\", _s%d);\n", s->subject->sval, u);
                 else {
                     E("    sno_set(%s, _s%d);\n", cs(s->subject->sval), u);
-                    E("    sno_var_set(\"%s\", %s);\n", s->subject->sval, cs(s->subject->sval)); /* natural var */
+                    E("    sno_var_set(\"%s\", %s);\n", s->subject->sval, cs(s->subject->sval));
                 }
             }
             E("}\n");
         }
+        E("goto %s;\n", done_lbl);
+
+        /* omega: match failed */
+        E("%s:;\n", fail_lbl);
+        E("_ok%d = 0;\n", u);
+
+        E("%s:;\n", done_lbl);
+
         /* emit goto using _ok%d */
         if (!s->go) { E("    goto _SNO_NEXT_%d;\n", cur_stmt_next_uid); }
         else if (s->go->uncond) { emit_goto(s->go, fn, 0); }
