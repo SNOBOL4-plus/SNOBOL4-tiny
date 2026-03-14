@@ -2,7 +2,7 @@
  *
  * Column layout:
  *   Col 1  Label   display  0..17   (4-space indent + label + ":" + pad)
- *   Col 2  Stmt    display 18..59   (C statement body)
+ *   Col 2  STMT_t    display 18..59   (C statement body)
  *   Col 3  Goto    display 60+      (goto target)
  *
  * Usage:
@@ -74,7 +74,7 @@ static inline void pretty_line(FILE *fp, const char *label, const char *stmt, co
         cur += sw;
         if (has_goto) {
             if (sw > COL_STMT_W) {
-                /* Stmt overflows col 2 — wrap goto to next line */
+                /* STMT_t overflows col 2 — wrap goto to next line */
                 fputc('\n', fp);
                 cur = 0;
                 pretty_pad_to(fp, cur, COL_GOTO_COL);

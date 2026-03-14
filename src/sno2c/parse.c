@@ -40,12 +40,12 @@
 
 /* ── helpers ──────────────────────────────────────────────────────────────── */
 
-static Expr *binop(EKind k, Expr *l, Expr *r) {
-    Expr *e = expr_new(k); e->left=l; e->right=r; return e;
+static EXPR_t *binop(EKind k, EXPR_t *l, EXPR_t *r) {
+    EXPR_t *e = expr_new(k); e->left=l; e->right=r; return e;
 }
 
-static Expr *unop(EKind k, Expr *operand) {
-    Expr *e = expr_new(k); e->left=operand; return e;
+static EXPR_t *unop(EKind k, EXPR_t *operand) {
+    EXPR_t *e = expr_new(k); e->left=operand; return e;
 }
 
 /* Consume T_WS tokens (optional gray whitespace inside parens etc.). */
@@ -61,22 +61,22 @@ static int eat_ws(Lex *lx) {
 
 /* ── forward declarations ─────────────────────────────────────────────────── */
 
-static Expr *parse_expr0(Lex *lx);
-static Expr *parse_expr2(Lex *lx);
-static Expr *parse_expr3(Lex *lx);
-static Expr *parse_expr4(Lex *lx);
-static Expr *parse_expr5(Lex *lx);
-static Expr *parse_expr6(Lex *lx);
-static Expr *parse_expr7(Lex *lx);
-static Expr *parse_expr8(Lex *lx);
-static Expr *parse_expr9(Lex *lx);
-static Expr *parse_expr10(Lex *lx);
-static Expr *parse_expr11(Lex *lx);
-static Expr *parse_expr12(Lex *lx);
-static Expr *parse_expr13(Lex *lx);
-static Expr *parse_expr14(Lex *lx);
-static Expr *parse_expr15(Lex *lx);
-static Expr *parse_expr17(Lex *lx);
+static EXPR_t *parse_expr0(Lex *lx);
+static EXPR_t *parse_expr2(Lex *lx);
+static EXPR_t *parse_expr3(Lex *lx);
+static EXPR_t *parse_expr4(Lex *lx);
+static EXPR_t *parse_expr5(Lex *lx);
+static EXPR_t *parse_expr6(Lex *lx);
+static EXPR_t *parse_expr7(Lex *lx);
+static EXPR_t *parse_expr8(Lex *lx);
+static EXPR_t *parse_expr9(Lex *lx);
+static EXPR_t *parse_expr10(Lex *lx);
+static EXPR_t *parse_expr11(Lex *lx);
+static EXPR_t *parse_expr12(Lex *lx);
+static EXPR_t *parse_expr13(Lex *lx);
+static EXPR_t *parse_expr14(Lex *lx);
+static EXPR_t *parse_expr15(Lex *lx);
+static EXPR_t *parse_expr17(Lex *lx);
 
 /* ── expr17 — atom ────────────────────────────────────────────────────────── */
 /*
@@ -89,11 +89,11 @@ static Expr *parse_expr17(Lex *lx);
  * )
  */
 
-/* Parse comma-separated expression list into args/nargs on an Expr node. */
-static void parse_arglist(Lex *lx, Expr ***args_out, int *nargs_out) {
+/* Parse comma-separated expression list into args/nargs on an EXPR_t node. */
+static void parse_arglist(Lex *lx, EXPR_t ***args_out, int *nargs_out) {
     /* Dynamic array */
     int cap=4, n=0;
-    Expr **args = malloc(cap * sizeof *args);
+    EXPR_t **args = malloc(cap * sizeof *args);
 
     skip_ws(lx);
     if (lex_peek(lx).kind != T_RPAREN &&
@@ -101,23 +101,23 @@ static void parse_arglist(Lex *lx, Expr ***args_out, int *nargs_out) {
         lex_peek(lx).kind != T_RANGLE &&
         lex_peek(lx).kind != T_EOF) {
         /* parse first arg (may be empty — SNOBOL4 allows omitted args) */
-        Expr *e = parse_expr0(lx);
+        EXPR_t *e = parse_expr0(lx);
         if (n >= cap) { cap*=2; args=realloc(args,cap*sizeof*args); }
-        args[n++] = e ? e : expr_new(E_NULL);
+        args[n++] = e ? e : expr_new(E_NULV);
 
         while (lex_peek(lx).kind == T_COMMA) {
             lex_next(lx); /* consume , */
             skip_ws(lx);
             TokKind k = lex_peek(lx).kind;
             if (k==T_RPAREN||k==T_RBRACKET||k==T_RANGLE||k==T_EOF) {
-                /* trailing comma — push null arg */
+                /* trailing comma — PUSH_fn null arg */
                 if (n>=cap){cap*=2;args=realloc(args,cap*sizeof*args);}
-                args[n++] = expr_new(E_NULL);
+                args[n++] = expr_new(E_NULV);
                 break;
             }
-            Expr *a = parse_expr0(lx);
+            EXPR_t *a = parse_expr0(lx);
             if (n>=cap){cap*=2;args=realloc(args,cap*sizeof*args);}
-            args[n++] = a ? a : expr_new(E_NULL);
+            args[n++] = a ? a : expr_new(E_NULV);
         }
     }
     skip_ws(lx);
@@ -125,21 +125,21 @@ static void parse_arglist(Lex *lx, Expr ***args_out, int *nargs_out) {
     *nargs_out = n;
 }
 
-static Expr *parse_expr17(Lex *lx) {
+static EXPR_t *parse_expr17(Lex *lx) {
     Token t = lex_peek(lx);
 
     /* Grouped expression or alternation-group: ( expr , ... ) */
     if (t.kind == T_LPAREN) {
         lex_next(lx); skip_ws(lx);
-        Expr *inner = parse_expr0(lx);
+        EXPR_t *inner = parse_expr0(lx);
         skip_ws(lx);
         if (lex_peek(lx).kind == T_COMMA) {
             /* (expr, expr, ...) — alternation group */
-            Expr *alt = inner;
+            EXPR_t *alt = inner;
             while (lex_peek(lx).kind == T_COMMA) {
                 lex_next(lx); skip_ws(lx);
-                Expr *r = parse_expr0(lx);
-                alt = binop(E_ALT, alt, r);
+                EXPR_t *r = parse_expr0(lx);
+                alt = binop(E_OR, alt, r);
                 skip_ws(lx);
             }
             if (lex_peek(lx).kind==T_RPAREN) lex_next(lx);
@@ -153,25 +153,25 @@ static Expr *parse_expr17(Lex *lx) {
     /* String literal */
     if (t.kind == T_STR) {
         lex_next(lx);
-        Expr *e = expr_new(E_STR); e->sval = t.sval; return e;
+        EXPR_t *e = expr_new(E_QLIT); e->sval = t.sval; return e;
     }
 
     /* Real literal */
     if (t.kind == T_REAL) {
         lex_next(lx);
-        Expr *e = expr_new(E_REAL); e->dval = t.dval; return e;
+        EXPR_t *e = expr_new(E_FLIT); e->dval = t.dval; return e;
     }
 
     /* Integer literal */
     if (t.kind == T_INT) {
         lex_next(lx);
-        Expr *e = expr_new(E_INT); e->ival = t.ival; return e;
+        EXPR_t *e = expr_new(E_ILIT); e->ival = t.ival; return e;
     }
 
     /* Keyword variable &NAME */
     if (t.kind == T_KEYWORD) {
         lex_next(lx);
-        Expr *e = expr_new(E_KEYWORD); e->sval = t.sval; return e;
+        EXPR_t *e = expr_new(E_KW); e->sval = t.sval; return e;
     }
 
     /* Identifier: bare name, or function call NAME(...) */
@@ -179,14 +179,14 @@ static Expr *parse_expr17(Lex *lx) {
         lex_next(lx);
         if (lex_peek(lx).kind == T_LPAREN) {
             lex_next(lx); /* consume '(' */
-            Expr **args; int nargs;
+            EXPR_t **args; int nargs;
             parse_arglist(lx, &args, &nargs);
             if (lex_peek(lx).kind==T_RPAREN) lex_next(lx);
-            Expr *e = expr_new(E_CALL);
+            EXPR_t *e = expr_new(E_FNC);
             e->sval=t.sval; e->args=args; e->nargs=nargs;
             return e;
         }
-        Expr *e = expr_new(E_VAR); e->sval = t.sval; return e;
+        EXPR_t *e = expr_new(E_VART); e->sval = t.sval; return e;
     }
 
     /* Nothing matched */
@@ -197,8 +197,8 @@ static Expr *parse_expr17(Lex *lx) {
 /*
  * snoExpr15 = snoExpr17 FENCE( '[' snoExprList ']' | '<' snoExprList '>' )*
  */
-static Expr *parse_expr15(Lex *lx) {
-    Expr *e = parse_expr17(lx);
+static EXPR_t *parse_expr15(Lex *lx) {
+    EXPR_t *e = parse_expr17(lx);
     if (!e) return NULL;
 
     for (;;) {
@@ -209,11 +209,11 @@ static Expr *parse_expr15(Lex *lx) {
         else break;
 
         lex_next(lx); /* consume open bracket */
-        Expr **args; int nargs;
+        EXPR_t **args; int nargs;
         parse_arglist(lx, &args, &nargs);
         if (lex_peek(lx).kind==close) lex_next(lx);
 
-        Expr *idx = expr_new(E_INDEX);
+        EXPR_t *idx = expr_new(E_IDX);
         idx->left=e; idx->args=args; idx->nargs=nargs;
         e = idx;
     }
@@ -228,40 +228,40 @@ static Expr *parse_expr15(Lex *lx) {
  * No leading whitespace — if there's whitespace before this call, the
  * binary-operator level already handled it.
  */
-static Expr *parse_expr14(Lex *lx) {
+static EXPR_t *parse_expr14(Lex *lx) {
     Token t = lex_peek(lx);
     EKind uk;
     switch (t.kind) {
-        case T_AT:     uk=E_AT;    break;
-        case T_TILDE:  uk=E_DEREF; break;  /* ~ is NOT in sno2c.h so map to DEREF for now */
-        case T_QMARK:  uk=E_COND;  break;  /* unary ? = interrogation */
-        case T_AMP:    uk=E_REDUCE;break;
+        case T_AT:     uk=E_ATP;    break;
+        case T_TILDE:  uk=E_INDR; break;  /* ~ is NOT in sno2c.h so map to DEREF for now */
+        case T_QMARK:  uk=E_NAM;  break;  /* unary ? = interrogation */
+        case T_AMP:    uk=E_OPSYN;break;
         case T_PLUS:   lex_next(lx); return parse_expr14(lx); /* unary + is identity */
-        case T_MINUS:  uk=E_NEG;   break;
-        case T_STAR:   uk=E_DEREF; break;  /* *X = unevaluated expression */
-        case T_DOLLAR: uk=E_DEREF; break;  /* $X = indirect reference */
-        case T_DOT:    uk=E_COND;  break;  /* .X = name */
-        case T_BANG:   uk=E_POW;   break;  /* !X = definable unary */
+        case T_MINUS:  uk=E_MNS;   break;
+        case T_STAR:   uk=E_INDR; break;  /* *X = unevaluated expression */
+        case T_DOLLAR: uk=E_INDR; break;  /* $X = indirect reference */
+        case T_DOT:    uk=E_NAM;  break;  /* .X = name */
+        case T_BANG:   uk=E_EXPOP;   break;  /* !X = definable unary */
         case T_PCT:    uk=E_DIV;   break;  /* %X = definable unary */
         case T_SLASH:  uk=E_DIV;   break;  /* /X = definable unary */
-        case T_HASH:   uk=E_MUL;   break;  /* #X = definable unary */
-        case T_EQ:     uk=E_ASSIGN;break;  /* =X = definable unary */
-        case T_PIPE:   uk=E_ALT;   break;  /* |X = definable unary */
+        case T_HASH:   uk=E_MPY;   break;  /* #X = definable unary */
+        case T_EQ:     uk=E_ASGN;break;  /* =X = definable unary */
+        case T_PIPE:   uk=E_OR;   break;  /* |X = definable unary */
         default:       return parse_expr15(lx);
     }
     TokKind op_tok = t.kind;
     lex_next(lx);
-    Expr *operand = parse_expr14(lx);
+    EXPR_t *operand = parse_expr14(lx);
     if (!operand) {
         snoc_error(lx->lineno, "expected operand after unary operator");
-        return expr_new(E_NULL);
+        return expr_new(E_NULV);
     }
-    /* emit.c contract for E_DEREF:
+    /* emit.c contract for E_INDR:
      *   *X  (deferred ref):  e->left = operand, e->right = NULL
      *   $X  (indirect):      e->left = NULL,    e->right = operand
      * All other unary ops use e->left (via unop). */
-    if (uk == E_DEREF && op_tok == T_DOLLAR) {
-        Expr *e = expr_new(E_DEREF);
+    if (uk == E_INDR && op_tok == T_DOLLAR) {
+        EXPR_t *e = expr_new(E_INDR);
         e->right = operand;   /* $X — indirect: right holds operand */
         return e;
     }
@@ -270,8 +270,8 @@ static Expr *parse_expr14(Lex *lx) {
 
 /* ── expr13 — ~ binary ───────────────────────────────────────────────────── */
 /* snoExpr13 = snoExpr14 FENCE($'~' snoExpr13 | ε) */
-static Expr *parse_expr13(Lex *lx) {
-    Expr *l = parse_expr14(lx);
+static EXPR_t *parse_expr13(Lex *lx) {
+    EXPR_t *l = parse_expr14(lx);
     if (!l) return NULL;
     for (;;) {
         /* binary ~ requires WS ~ WS */
@@ -284,17 +284,17 @@ static Expr *parse_expr13(Lex *lx) {
         }
         lex_next(lx); /* consume ~ */
         skip_ws(lx);  /* consume trailing WS of binary ~ */
-        Expr *r = parse_expr13(lx);
-        /* ~ 'tag': emit E_COND(child=l, tag=r) so emit_byrd generates Shift(tag, matched) */
-        l = binop(E_COND, l, r);
+        EXPR_t *r = parse_expr13(lx);
+        /* ~ 'tag': emit E_NAM(child=l, tag=r) so emit_byrd generates Shift(tag, matched) */
+        l = binop(E_NAM, l, r);
     }
     return l;
 }
 
 /* ── expr12 — $ . binary ─────────────────────────────────────────────────── */
 /* snoExpr12 = snoExpr13 FENCE(($'$' | $'.') snoExpr12 | ε) — right-assoc */
-static Expr *parse_expr12(Lex *lx) {
-    Expr *l = parse_expr13(lx);
+static EXPR_t *parse_expr12(Lex *lx) {
+    EXPR_t *l = parse_expr13(lx);
     if (!l) return NULL;
     LexMark m12 = lex_mark(lx);
     if (lex_peek(lx).kind != T_WS) return l;
@@ -302,8 +302,8 @@ static Expr *parse_expr12(Lex *lx) {
     TokKind op = lex_peek(lx).kind;
     if (op == T_DOLLAR || op == T_DOT) {
         lex_next(lx); skip_ws(lx);
-        Expr *r = parse_expr12(lx); /* right-associative */
-        EKind k = (op==T_DOLLAR) ? E_IMM : E_COND;
+        EXPR_t *r = parse_expr12(lx); /* right-associative */
+        EKind k = (op==T_DOLLAR) ? E_DOL : E_NAM;
         return binop(k, l, r);
     }
     lex_restore(lx, m12);
@@ -318,11 +318,11 @@ static Expr *parse_expr12(Lex *lx) {
  * ekinds:  corresponding EKind values
  * nops:    length of ops/ekinds arrays
  */
-typedef Expr *(*ParseFn)(Lex *);
+typedef EXPR_t *(*ParseFn)(Lex *);
 
-static Expr *parse_lbin(Lex *lx, ParseFn next_fn,
+static EXPR_t *parse_lbin(Lex *lx, ParseFn next_fn,
                          const TokKind *ops, const EKind *ekinds, int nops) {
-    Expr *l = next_fn(lx);
+    EXPR_t *l = next_fn(lx);
     if (!l) return NULL;
     for (;;) {
         LexMark m = lex_mark(lx);
@@ -349,16 +349,16 @@ static Expr *parse_lbin(Lex *lx, ParseFn next_fn,
         }
         lex_next(lx); /* consume operator */
         skip_ws(lx);  /* consume trailing WS of binary op */
-        Expr *r = next_fn(lx);
+        EXPR_t *r = next_fn(lx);
         l = binop(ekinds[found], l, r);
     }
     return l;
 }
 
 /* ── Right-associative binary level helper ───────────────────────────────── */
-static Expr *parse_rbin(Lex *lx, ParseFn next_fn,
+static EXPR_t *parse_rbin(Lex *lx, ParseFn next_fn,
                          const TokKind *ops, const EKind *ekinds, int nops) {
-    Expr *l = next_fn(lx);
+    EXPR_t *l = next_fn(lx);
     if (!l) return NULL;
     LexMark m = lex_mark(lx);
     if (lex_peek(lx).kind != T_WS) return l;
@@ -371,57 +371,57 @@ static Expr *parse_rbin(Lex *lx, ParseFn next_fn,
         return l;
     }
     lex_next(lx); skip_ws(lx);
-    Expr *r = parse_rbin(lx, next_fn, ops, ekinds, nops); /* recurse right */
+    EXPR_t *r = parse_rbin(lx, next_fn, ops, ekinds, nops); /* recurse right */
     return binop(ekinds[found], l, r);
 }
 
 /* ── expr11 — ^ ! ** (right-assoc) ──────────────────────────────────────── */
-static Expr *parse_expr11(Lex *lx) {
+static EXPR_t *parse_expr11(Lex *lx) {
     static const TokKind ops[]   = { T_CARET, T_BANG, T_STARSTAR };
-    static const EKind   kinds[] = { E_POW,   E_POW,  E_POW      };
+    static const EKind   kinds[] = { E_EXPOP,   E_EXPOP,  E_EXPOP      };
     /* ** must be checked before * — handled in lexer (T_STARSTAR) */
     return parse_rbin(lx, parse_expr12, ops, kinds, 3);
 }
 
 /* ── expr10 — % ──────────────────────────────────────────────────────────── */
-static Expr *parse_expr10(Lex *lx) {
+static EXPR_t *parse_expr10(Lex *lx) {
     static const TokKind ops[]   = { T_PCT  };
     static const EKind   kinds[] = { E_DIV  };   /* % maps to DIV slot (user-definable) */
     return parse_lbin(lx, parse_expr11, ops, kinds, 1);
 }
 
 /* ── expr9 — * ───────────────────────────────────────────────────────────── */
-static Expr *parse_expr9(Lex *lx) {
+static EXPR_t *parse_expr9(Lex *lx) {
     static const TokKind ops[]   = { T_STAR };
-    static const EKind   kinds[] = { E_MUL  };
+    static const EKind   kinds[] = { E_MPY  };
     return parse_lbin(lx, parse_expr10, ops, kinds, 1);
 }
 
 /* ── expr8 — / ───────────────────────────────────────────────────────────── */
-static Expr *parse_expr8(Lex *lx) {
+static EXPR_t *parse_expr8(Lex *lx) {
     static const TokKind ops[]   = { T_SLASH };
     static const EKind   kinds[] = { E_DIV   };
     return parse_lbin(lx, parse_expr9, ops, kinds, 1);
 }
 
 /* ── expr7 — # ───────────────────────────────────────────────────────────── */
-static Expr *parse_expr7(Lex *lx) {
+static EXPR_t *parse_expr7(Lex *lx) {
     static const TokKind ops[]   = { T_HASH };
-    static const EKind   kinds[] = { E_MUL  };   /* # = user-definable binary, map to MUL slot */
+    static const EKind   kinds[] = { E_MPY  };   /* # = user-definable binary, map to MUL slot */
     return parse_lbin(lx, parse_expr8, ops, kinds, 1);
 }
 
 /* ── expr6 — + - ─────────────────────────────────────────────────────────── */
-static Expr *parse_expr6(Lex *lx) {
+static EXPR_t *parse_expr6(Lex *lx) {
     static const TokKind ops[]   = { T_PLUS, T_MINUS };
     static const EKind   kinds[] = { E_ADD,  E_SUB   };
     return parse_lbin(lx, parse_expr7, ops, kinds, 2);
 }
 
 /* ── expr5 — @ ───────────────────────────────────────────────────────────── */
-static Expr *parse_expr5(Lex *lx) {
+static EXPR_t *parse_expr5(Lex *lx) {
     static const TokKind ops[]   = { T_AT };
-    static const EKind   kinds[] = { E_AT };
+    static const EKind   kinds[] = { E_ATP };
     return parse_lbin(lx, parse_expr6, ops, kinds, 1);
 }
 
@@ -460,13 +460,13 @@ static int is_concat_start(TokKind k) {
     }
 }
 
-static Expr *parse_expr4(Lex *lx) {
-    Expr *first = parse_expr5(lx);
+static EXPR_t *parse_expr4(Lex *lx) {
+    EXPR_t *first = parse_expr5(lx);
     if (!first) return NULL;
 
     /* Collect ccat items */
     int cap=4, n=1;
-    Expr **items = malloc(cap * sizeof *items);
+    EXPR_t **items = malloc(cap * sizeof *items);
     items[0] = first;
 
     for (;;) {
@@ -478,7 +478,7 @@ static Expr *parse_expr4(Lex *lx) {
             lex_restore(lx, mc); /* restore before WS — belongs to higher level */
             break;
         }
-        Expr *next = parse_expr5(lx);
+        EXPR_t *next = parse_expr5(lx);
         if (!next) {
             lex_restore(lx, mc);
             break;
@@ -489,17 +489,17 @@ static Expr *parse_expr4(Lex *lx) {
 
     if (n == 1) { free(items); return first; }
 
-    /* Build left-associative chain of E_CONCAT */
-    Expr *e = items[0];
-    for (int i=1; i<n; i++) e = binop(E_CONCAT, e, items[i]);
+    /* Build left-associative chain of E_CONC */
+    EXPR_t *e = items[0];
+    for (int i=1; i<n; i++) e = binop(E_CONC, e, items[i]);
     free(items);
     return e;
 }
 
 /* ── expr3 — | (alternation, n-ary) ─────────────────────────────────────── */
 /* snoX3 = nInc() snoExpr4 FENCE($'|' snoX3 | ε) */
-static Expr *parse_expr3(Lex *lx) {
-    Expr *l = parse_expr4(lx);
+static EXPR_t *parse_expr3(Lex *lx) {
+    EXPR_t *l = parse_expr4(lx);
     if (!l) return NULL;
     for (;;) {
         LexMark m3 = lex_mark(lx);
@@ -510,17 +510,17 @@ static Expr *parse_expr3(Lex *lx) {
             break;
         }
         lex_next(lx); skip_ws(lx);
-        Expr *r = parse_expr4(lx);
-        l = binop(E_ALT, l, r);
+        EXPR_t *r = parse_expr4(lx);
+        l = binop(E_OR, l, r);
     }
     return l;
 }
 
 /* ── expr2 — & ───────────────────────────────────────────────────────────── */
 /* snoExpr2 = snoExpr3 FENCE($'&' snoExpr2 | ε) */
-static Expr *parse_expr2(Lex *lx) {
+static EXPR_t *parse_expr2(Lex *lx) {
     static const TokKind ops[]   = { T_AMP    };
-    static const EKind   kinds[] = { E_REDUCE };
+    static const EKind   kinds[] = { E_OPSYN };
     return parse_lbin(lx, parse_expr3, ops, kinds, 1);
 }
 
@@ -532,8 +532,8 @@ static Expr *parse_expr2(Lex *lx) {
  * Folded together: expr0 → expr2, then loop on '=' or '?'
  * Both are right-associative.
  */
-static Expr *parse_expr0(Lex *lx) {
-    Expr *l = parse_expr2(lx);
+static EXPR_t *parse_expr0(Lex *lx) {
+    EXPR_t *l = parse_expr2(lx);
     if (!l) return NULL;
     LexMark m0 = lex_mark(lx);
     if (lex_peek(lx).kind != T_WS) return l;
@@ -541,20 +541,20 @@ static Expr *parse_expr0(Lex *lx) {
     TokKind k = lex_peek(lx).kind;
     if (k == T_EQ) {
         lex_next(lx); skip_ws(lx);
-        Expr *r = parse_expr0(lx);
-        return binop(E_ASSIGN, l, r);
+        EXPR_t *r = parse_expr0(lx);
+        return binop(E_ASGN, l, r);
     }
     if (k == T_QMARK) {
         lex_next(lx); skip_ws(lx);
-        Expr *r = parse_expr0(lx);
-        return binop(E_COND, l, r);
+        EXPR_t *r = parse_expr0(lx);
+        return binop(E_NAM, l, r);
     }
     lex_restore(lx, m0);
     return l;
 }
 
 /* Public expression entry point */
-static Expr *parse_expr(Lex *lx) {
+static EXPR_t *parse_expr(Lex *lx) {
     skip_ws(lx);
     return parse_expr0(lx);
 }
@@ -577,10 +577,10 @@ static Expr *parse_expr(Lex *lx) {
  *   &KEYWORD         — keyword goto         :(&RETURN)
  *   END              — goto END             :(END)
  *
- * For $(expr) we parse the full expression and store it as E_DEREF on a
+ * For $(expr) we parse the full expression and store it as E_INDR on a
  * special "$COMPUTED" label name — the emitter already handles this.
  * We return the label as a string for simple cases, or "$COMPUTED" for
- * computed cases (the Stmt.go field carries the expr separately — but since
+ * computed cases (the STMT_t.go field carries the expr separately — but since
  * SnoGoto only stores char* we encode it as the string "$(...)" for now
  * and let the emitter handle it via the existing computed-goto path).
  */
@@ -622,6 +622,16 @@ static char *parse_goto_label(Lex *lx) {
             memcpy(buf, "$COMPUTED:", 10);
             memcpy(buf + 10, lx->src + start, elen);
             buf[10 + elen] = '\0';
+            label = buf;
+        } else if (lex_peek(lx).kind == T_STR) {
+            /* $'literal' — e.g. :F($'pp_,1') — treat as computed goto
+             * with a constant string expression.  Wrap as $COMPUTED:'literal'
+             * so the emitter calls sno_computed_goto at runtime. */
+            Token n2 = lex_next(lx);
+            const char *lit = n2.sval ? n2.sval : "";
+            /* Store as $COMPUTED:'lit' */
+            char *buf = malloc(12 + strlen(lit) + 4);
+            sprintf(buf, "$COMPUTED:'%s'", lit);
             label = buf;
         } else {
             /* $IDENT — simple indirect */
@@ -685,7 +695,7 @@ static SnoGoto *parse_goto_field(const char *goto_str, int lineno) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * Statement parser — one SnoLine → one Stmt
+ * Statement parser — one SnoLine → one STMT_t
  * ═══════════════════════════════════════════════════════════════════════════
  *
  * body field format (from snoStmt in beauty.sno):
@@ -701,14 +711,14 @@ static SnoGoto *parse_goto_field(const char *goto_str, int lineno) {
  * logic as a simple lookahead sequence.
  */
 
-static Stmt *parse_body_field(const char *body, int lineno) {
+static STMT_t *parse_body_field(const char *body, int lineno) {
     if (!body || !*body) return NULL;
 
     Lex lx_obj = {0}, *lx = &lx_obj;
     lex_open_str(lx, body, (int)strlen(body), lineno);
     skip_ws(lx);
 
-    Stmt *s = stmt_new();
+    STMT_t *s = stmt_new();
     s->lineno = lineno;
 
     /* Subject — parsed at unary level (snoExpr14) */
@@ -760,7 +770,7 @@ Program *parse_program(LineArray *lines) {
 
     for (int i=0; i<lines->n; i++) {
         SnoLine *sl = &lines->a[i];
-        Stmt *s;
+        STMT_t *s;
 
         if (sl->is_end) {
             s = stmt_new();
@@ -786,7 +796,7 @@ Program *parse_program(LineArray *lines) {
 
 /* Public wrapper: parse a SNOBOL4 expression from a string.
  * Used by the emitter for computed gotos ($COMPUTED:expr_text). */
-Expr *parse_expr_from_str(const char *src) {
+EXPR_t *parse_expr_from_str(const char *src) {
     if (!src || !*src) return NULL;
     Lex lx = {0};
     lex_open_str(&lx, src, (int)strlen(src), 0);

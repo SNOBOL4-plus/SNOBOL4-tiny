@@ -1,4 +1,4 @@
-/* emit_cnode.c — CNode IR build + measure + print phases */
+/* emit_cnode.c — CNODE_t IR build + measure + print phases */
 
 #include "sno2c.h"
 #include "emit_cnode.h"
@@ -47,11 +47,11 @@ void cn_arena_free(CArena *a) {
 }
 
 /* =====================================================================
- * CNode constructors
+ * CNODE_t constructors
  * ===================================================================== */
 
-CNode *cn_raw(CArena *a, const char *text) {
-    CNode *n = cn_arena_alloc(a, sizeof(CNode));
+CNODE_t *cn_raw(CArena *a, const char *text) {
+    CNODE_t *n = cn_arena_alloc(a, sizeof(CNODE_t));
     n->kind  = CN_RAW;
     n->text  = cn_arena_strdup(a, text);
     n->args  = NULL; n->nargs = 0;
@@ -59,14 +59,14 @@ CNode *cn_raw(CArena *a, const char *text) {
     return n;
 }
 
-CNode *cn_call(CArena *a, const char *fn, CNode **args, int nargs) {
-    CNode *n = cn_arena_alloc(a, sizeof(CNode));
+CNODE_t *cn_call(CArena *a, const char *fn, CNODE_t **args, int nargs) {
+    CNODE_t *n = cn_arena_alloc(a, sizeof(CNODE_t));
     n->kind  = CN_CALL;
     n->text  = cn_arena_strdup(a, fn);
     n->nargs = nargs;
     if (nargs > 0) {
-        n->args = cn_arena_alloc(a, nargs * sizeof(CNode*));
-        memcpy(n->args, args, nargs * sizeof(CNode*));
+        n->args = cn_arena_alloc(a, nargs * sizeof(CNODE_t*));
+        memcpy(n->args, args, nargs * sizeof(CNODE_t*));
     } else {
         n->args = NULL;
     }
@@ -74,10 +74,10 @@ CNode *cn_call(CArena *a, const char *fn, CNode **args, int nargs) {
     return n;
 }
 
-CNode *cn_seq(CArena *a, CNode *left, CNode *right) {
+CNODE_t *cn_seq(CArena *a, CNODE_t *left, CNODE_t *right) {
     if (!left)  return right;
     if (!right) return left;
-    CNode *n = cn_arena_alloc(a, sizeof(CNode));
+    CNODE_t *n = cn_arena_alloc(a, sizeof(CNODE_t));
     n->kind  = CN_SEQ;
     n->text  = NULL;
     n->args  = NULL; n->nargs = 0;
@@ -85,19 +85,19 @@ CNode *cn_seq(CArena *a, CNode *left, CNode *right) {
     return n;
 }
 
-CNode *cn_call0(CArena *a, const char *fn) {
+CNODE_t *cn_call0(CArena *a, const char *fn) {
     return cn_call(a, fn, NULL, 0);
 }
-CNode *cn_call1(CArena *a, const char *fn, CNode *a0) {
-    CNode *args[1] = {a0};
+CNODE_t *cn_call1(CArena *a, const char *fn, CNODE_t *a0) {
+    CNODE_t *args[1] = {a0};
     return cn_call(a, fn, args, 1);
 }
-CNode *cn_call2(CArena *a, const char *fn, CNode *a0, CNode *a1) {
-    CNode *args[2] = {a0, a1};
+CNODE_t *cn_call2(CArena *a, const char *fn, CNODE_t *a0, CNODE_t *a1) {
+    CNODE_t *args[2] = {a0, a1};
     return cn_call(a, fn, args, 2);
 }
-CNode *cn_call3(CArena *a, const char *fn, CNode *a0, CNode *a1, CNode *a2) {
-    CNode *args[3] = {a0, a1, a2};
+CNODE_t *cn_call3(CArena *a, const char *fn, CNODE_t *a0, CNODE_t *a1, CNODE_t *a2) {
+    CNODE_t *args[3] = {a0, a1, a2};
     return cn_call(a, fn, args, 3);
 }
 
@@ -106,7 +106,7 @@ CNode *cn_call3(CArena *a, const char *fn, CNode *a0, CNode *a1, CNode *a2) {
  * ===================================================================== */
 
 /* Build a quoted C string literal node: "text" */
-static CNode *cn_cstr(CArena *a, const char *s) {
+static CNODE_t *cn_cstr(CArena *a, const char *s) {
     /* Reproduce the escaped C string that emit_cstr() would produce */
     char buf[4096]; int j = 0;
     buf[j++] = '"';
@@ -122,7 +122,7 @@ static CNode *cn_cstr(CArena *a, const char *s) {
 }
 
 /* Build a snprintf'd raw atom */
-static CNode *cn_rawf(CArena *a, const char *fmt, ...) {
+static CNODE_t *cn_rawf(CArena *a, const char *fmt, ...) {
     char buf[512];
     va_list ap; va_start(ap, fmt); vsnprintf(buf, sizeof buf, fmt, ap); va_end(ap);
     return cn_raw(a, buf);
@@ -144,11 +144,11 @@ static const char *cs_cn(const char *s) {
 static int is_io_name_cn(const char *name);
 /* is_defined_function and expr_contains_pattern are exported from emit.c */
 int is_defined_function(const char *name);
-int expr_contains_pattern(Expr *e);
+int expr_contains_pattern(EXPR_t *e);
 static int is_defined_function_cn(const char *name) {
     return is_defined_function(name);
-}CNode *build_expr(CArena *a, Expr *e);
-CNode *build_pat (CArena *a, Expr *e);
+}CNODE_t *build_expr(CArena *a, EXPR_t *e);
+CNODE_t *build_pat (CArena *a, EXPR_t *e);
 
 static int is_io_name_cn(const char *name) {
     return (strcasecmp(name,"INPUT")==0 || strcasecmp(name,"OUTPUT")==0
@@ -156,40 +156,40 @@ static int is_io_name_cn(const char *name) {
 }
 
 /* =====================================================================
- * build_expr — mirrors emit_expr() exactly, returns CNode* instead
+ * build_expr — mirrors emit_expr() exactly, returns CNODE_t* instead
  * ===================================================================== */
-CNode *build_expr(CArena *a, Expr *e) {
-    if (!e) return cn_raw(a, "NULL_VAL");
+CNODE_t *build_expr(CArena *a, EXPR_t *e) {
+    if (!e) return cn_raw(a, "NULVCL");
 
     switch (e->kind) {
-    case E_NULL:  return cn_raw(a, "NULL_VAL");
+    case E_NULV:  return cn_raw(a, "NULVCL");
 
-    case E_STR:   return cn_call1(a, "strv", cn_cstr(a, e->sval));
+    case E_QLIT:   return cn_call1(a, "strv", cn_cstr(a, e->sval));
 
-    case E_INT:   return cn_rawf(a, "vint(%ld)", e->ival);
+    case E_ILIT:   return cn_rawf(a, "vint(%ld)", e->ival);
 
-    case E_REAL:  return cn_rawf(a, "real(%g)", e->dval);
+    case E_FLIT:  return cn_rawf(a, "real(%g)", e->dval);
 
-    case E_VAR:
+    case E_VART:
         if (is_io_name_cn(e->sval))
-            return cn_rawf(a, "var_get(\"%s\")", e->sval);
+            return cn_rawf(a, "NV_GET_fn(\"%s\")", e->sval);
         return cn_rawf(a, "get(%s)", cs_cn(e->sval));
 
-    case E_KEYWORD:
+    case E_KW:
         return cn_rawf(a, "kw(\"%s\")", e->sval);
 
-    case E_DEREF:
+    case E_INDR:
         if (!e->left) {
             /* $expr — indirect lookup: operand is in e->right */
             return cn_call1(a, "deref", build_expr(a, e->right));
-        } else if (e->left->kind == E_VAR) {
+        } else if (e->left->kind == E_VART) {
             /* *varname — deferred pattern reference */
             return cn_rawf(a, "var_as_pattern(pat_ref(\"%s\"))", e->left->sval);
-        } else if (e->left->kind == E_CALL && e->left->nargs >= 1
+        } else if (e->left->kind == E_FNC && e->left->nargs >= 1
                    && !is_defined_function_cn(e->left->sval)) {
             /* *varname(arg...) — continuation-line misparse: deref-ref cat arg */
             char buf[256];
-            snprintf(buf, sizeof buf, "concat_sv(var_as_pattern(pat_ref(\"%s\")),", e->left->sval);
+            snprintf(buf, sizeof buf, "CONC_fn(var_as_pattern(pat_ref(\"%s\")),", e->left->sval);
             return cn_seq(a,
                 cn_raw(a, buf),
                 cn_seq(a, build_expr(a, e->left->args[0]), cn_raw(a, ")")));
@@ -197,22 +197,22 @@ CNode *build_expr(CArena *a, Expr *e) {
         /* *(expr) — deref of compound expression */
         return cn_call1(a, "deref", build_expr(a, e->left));
 
-    case E_NEG:
+    case E_MNS:
         return cn_call1(a, "neg", build_expr(a, e->right));
 
-    case E_CONCAT:
-        return cn_call2(a, "concat_sv", build_expr(a, e->left), build_expr(a, e->right));
+    case E_CONC:
+        return cn_call2(a, "CONC_fn", build_expr(a, e->left), build_expr(a, e->right));
 
-    case E_ALT: {
+    case E_OR: {
         /* If either side is pattern-valued, route to pat_alt */
         if (expr_contains_pattern(e->left) || expr_contains_pattern(e->right))
             return cn_call2(a, "pat_alt", build_pat(a, e->left), build_pat(a, e->right));
         return cn_call2(a, "alt", build_expr(a, e->left), build_expr(a, e->right));
     }
 
-    case E_REDUCE:
+    case E_OPSYN:
         return cn_seq(a,
-            cn_raw(a, "aply(\"reduce\",(SnoVal[]){"),
+            cn_raw(a, "APLY_fn(\"reduce\",(DESCR_t[]){"),
             cn_seq(a, build_expr(a, e->left),
             cn_seq(a, cn_raw(a, ","),
             cn_seq(a, build_expr(a, e->right),
@@ -220,77 +220,77 @@ CNode *build_expr(CArena *a, Expr *e) {
 
     case E_ADD: return cn_call2(a, "add",    build_expr(a,e->left), build_expr(a,e->right));
     case E_SUB: return cn_call2(a, "sub",    build_expr(a,e->left), build_expr(a,e->right));
-    case E_MUL: return cn_call2(a, "mul",    build_expr(a,e->left), build_expr(a,e->right));
+    case E_MPY: return cn_call2(a, "mul",    build_expr(a,e->left), build_expr(a,e->right));
     case E_DIV: return cn_call2(a, "divyde", build_expr(a,e->left), build_expr(a,e->right));
-    case E_POW: return cn_call2(a, "powr",   build_expr(a,e->left), build_expr(a,e->right));
+    case E_EXPOP: return cn_call2(a, "powr",   build_expr(a,e->left), build_expr(a,e->right));
 
-    case E_CALL: {
+    case E_FNC: {
         if (e->nargs == 0)
-            return cn_rawf(a, "aply(\"%s\",NULL,0)", e->sval);
-        /* Build args array: (SnoVal[]){arg0, arg1, ...} */
-        CNode *arr_open = cn_rawf(a, "aply(\"%s\",(SnoVal[]){", e->sval);
-        CNode *inner = build_expr(a, e->args[0]);
+            return cn_rawf(a, "APLY_fn(\"%s\",NULL,0)", e->sval);
+        /* Build args array: (DESCR_t[]){arg0, arg1, ...} */
+        CNODE_t *arr_open = cn_rawf(a, "APLY_fn(\"%s\",(DESCR_t[]){", e->sval);
+        CNODE_t *inner = build_expr(a, e->args[0]);
         for (int i = 1; i < e->nargs; i++)
             inner = cn_seq(a, inner, cn_seq(a, cn_raw(a,","), build_expr(a, e->args[i])));
         char close[32]; snprintf(close, sizeof close, "},%d)", e->nargs);
         return cn_seq(a, arr_open, cn_seq(a, inner, cn_raw(a, close)));
     }
 
-    case E_ARRAY: {
-        CNode *head = cn_rawf(a, "aref(%s,(SnoVal[]){", cs_cn(e->sval));
-        CNode *inner = build_expr(a, e->args[0]);
+    case E_ARY: {
+        CNODE_t *head = cn_rawf(a, "aref(%s,(DESCR_t[]){", cs_cn(e->sval));
+        CNODE_t *inner = build_expr(a, e->args[0]);
         for (int i = 1; i < e->nargs; i++)
             inner = cn_seq(a, inner, cn_seq(a, cn_raw(a,","), build_expr(a, e->args[i])));
         char close[32]; snprintf(close, sizeof close, "},%d)", e->nargs);
         return cn_seq(a, head, cn_seq(a, inner, cn_raw(a, close)));
     }
 
-    case E_COND:
-    case E_IMM:
+    case E_NAM:
+    case E_DOL:
         /* In value context, evaluate child */
         return build_expr(a, e->left);
 
-    case E_INDEX: {
-        CNode *head = cn_raw(a, "indx(");
-        CNode *obj  = build_expr(a, e->left);
-        CNode *idx  = build_expr(a, e->args[0]);
+    case E_IDX: {
+        CNODE_t *head = cn_raw(a, "indx(");
+        CNODE_t *obj  = build_expr(a, e->left);
+        CNODE_t *idx  = build_expr(a, e->args[0]);
         for (int i = 1; i < e->nargs; i++)
             idx = cn_seq(a, idx, cn_seq(a, cn_raw(a,","), build_expr(a, e->args[i])));
         char close[32]; snprintf(close, sizeof close, "},%d)", e->nargs);
         return cn_seq(a, head,
                cn_seq(a, obj,
-               cn_seq(a, cn_raw(a, ",(SnoVal[]){"),
+               cn_seq(a, cn_raw(a, ",(DESCR_t[]){"),
                cn_seq(a, idx,
                       cn_raw(a, close)))));
     }
 
-    case E_AT:
+    case E_ATP:
         return cn_rawf(a, "cursor_get(\"%s\")", e->sval);
 
-    case E_ASSIGN:
+    case E_ASGN:
         return cn_seq(a,
             cn_rawf(a, "assign_expr(%s,", cs_cn(e->left->sval)),
             cn_seq(a, build_expr(a, e->right), cn_raw(a, ")")));
 
     default:
-        return cn_rawf(a, "/*unknown-expr-%d*/NULL_VAL", e->kind);
+        return cn_rawf(a, "/*unknown-expr-%d*/NULVCL", e->kind);
     }
 }
 
 /* =====================================================================
  * build_pat — mirrors emit_pat() exactly
  * ===================================================================== */
-CNode *build_pat(CArena *a, Expr *e) {
+CNODE_t *build_pat(CArena *a, EXPR_t *e) {
     if (!e) return cn_raw(a, "pat_epsilon()");
 
     switch (e->kind) {
-    case E_STR:  return cn_call1(a, "pat_lit", cn_cstr(a, e->sval));
-    case E_VAR:  return cn_rawf(a, "pat_var(\"%s\")", e->sval);
+    case E_QLIT:  return cn_call1(a, "pat_lit", cn_cstr(a, e->sval));
+    case E_VART:  return cn_rawf(a, "pat_var(\"%s\")", e->sval);
 
-    case E_DEREF:
-        if (e->left && e->left->kind == E_VAR)
+    case E_INDR:
+        if (e->left && e->left->kind == E_VART)
             return cn_rawf(a, "pat_ref(\"%s\")", e->left->sval);
-        if (e->left && e->left->kind == E_CALL && e->left->nargs >= 1
+        if (e->left && e->left->kind == E_FNC && e->left->nargs >= 1
                 && !is_defined_function_cn(e->left->sval)) {
             return cn_seq(a,
                 cn_rawf(a, "pat_cat(pat_ref(\"%s\"),", e->left->sval),
@@ -299,11 +299,11 @@ CNode *build_pat(CArena *a, Expr *e) {
         return cn_call1(a, "pat_deref",
             build_expr(a, e->right ? e->right : e->left));
 
-    case E_CONCAT:
+    case E_CONC:
         return cn_call2(a, "pat_cat", build_pat(a, e->left), build_pat(a, e->right));
 
-    case E_MUL:
-        if (e->right && e->right->kind == E_VAR)
+    case E_MPY:
+        if (e->right && e->right->kind == E_VART)
             return cn_seq(a,
                 cn_raw(a, "pat_cat("),
                 cn_seq(a, build_pat(a, e->left),
@@ -316,17 +316,17 @@ CNode *build_pat(CArena *a, Expr *e) {
             cn_seq(a, build_expr(a, e->right),
                    cn_raw(a, "))")))));
 
-    case E_ALT:
+    case E_OR:
         return cn_call2(a, "pat_alt", build_pat(a, e->left), build_pat(a, e->right));
 
-    case E_CALL: {
+    case E_FNC: {
         /* Pattern builtins */
         const char *n = e->sval;
         char buf[256];
         /* Zero-arg builtins */
         if (strcasecmp(n,"ARB")==0)   return cn_raw(a, "pat_arb()");
         if (strcasecmp(n,"REM")==0)   return cn_raw(a, "pat_rem()");
-        if (strcasecmp(n,"FAIL")==0)  return cn_raw(a, "pat_fail()");
+        if (strcasecmp(n,"DT_FAIL")==0)  return cn_raw(a, "pat_fail()");
         if (strcasecmp(n,"ABORT")==0) return cn_raw(a, "pat_abort()");
         if (strcasecmp(n,"FENCE")==0 && e->nargs==0) return cn_raw(a,"pat_fence()");
         if (strcasecmp(n,"FENCE")==0 && e->nargs>=1)
@@ -336,8 +336,8 @@ CNode *build_pat(CArena *a, Expr *e) {
             snprintf(buf, sizeof buf, "pat_user_call(\"%s\",NULL,0)", n);
             return cn_raw(a, buf);
         }
-        CNode *head = cn_rawf(a, "pat_user_call(\"%s\",(SnoVal[]){", n);
-        CNode *inner = build_expr(a, e->args[0]);
+        CNODE_t *head = cn_rawf(a, "pat_user_call(\"%s\",(DESCR_t[]){", n);
+        CNODE_t *inner = build_expr(a, e->args[0]);
         for (int i = 1; i < e->nargs; i++)
             inner = cn_seq(a, inner, cn_seq(a, cn_raw(a,","), build_expr(a, e->args[i])));
         snprintf(buf, sizeof buf, "},%d)", e->nargs);
@@ -354,7 +354,7 @@ CNode *build_pat(CArena *a, Expr *e) {
  * cn_flat_print — flat printer for sprint 1 validation
  * Produces exactly the same output as the old emit_expr/emit_pat.
  * ===================================================================== */
-void cn_flat_print(CNode *n, FILE *fp) {
+void cn_flat_print(CNODE_t *n, FILE *fp) {
     if (!n) return;
     switch (n->kind) {
     case CN_RAW:
@@ -379,7 +379,7 @@ void cn_flat_print(CNode *n, FILE *fp) {
  * cn_flat_width — "qq" lookahead
  * Returns flat char width, or INT_MAX if > limit (early exit).
  * ===================================================================== */
-int cn_flat_width(CNode *n, int limit) {
+int cn_flat_width(CNODE_t *n, int limit) {
     if (!n) return 0;
     if (limit <= 0) return INT_MAX;
     switch (n->kind) {
@@ -418,7 +418,7 @@ int cn_flat_width(CNode *n, int limit) {
  * maxcol: line width budget (120)
  * Returns: column after last character written.
  * ===================================================================== */
-int pp_cnode(CNode *n, FILE *fp, int col, int indent, int maxcol) {
+int pp_cnode(CNODE_t *n, FILE *fp, int col, int indent, int maxcol) {
     if (!n) return col;
     switch (n->kind) {
     case CN_RAW: {

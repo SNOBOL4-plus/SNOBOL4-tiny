@@ -16,7 +16,7 @@
 #include <stdint.h>
 
 /*======================================================================================
- * Psi — realloc'd array.  Plain push/pop stack.  Deep-copied into omega snapshots.
+ * Psi — realloc'd array.  Plain PUSH_fn/POP_fn stack.  Deep-copied into omega snapshots.
  *======================================================================================*/
 typedef struct {
     Pattern *   PI;
@@ -454,7 +454,7 @@ MatchResult engine_match_ex(Pattern *root, const char *subject, int subject_len,
                 a = SUCCEED; z_up(&Z, &psi);
             } else {
                 if (getenv("PAT_DEBUG") && Z.OMEGA <= 6 && Z.PI->s_len <= 4)
-                    fprintf(stderr, "  LIT '%.*s' FAIL at delta=%d\n", Z.PI->s_len, Z.PI->s, Z.delta);
+                    fprintf(stderr, "  LIT '%.*s' DT_FAIL at delta=%d\n", Z.PI->s_len, Z.PI->s, Z.delta);
                 a = CONCEDE; z_up_fail(&Z, &psi);
             }
             break;
@@ -472,7 +472,7 @@ MatchResult engine_match_ex(Pattern *root, const char *subject, int subject_len,
                 a = SUCCEED; z_up(&Z, &psi);
             } else {
                 if (getenv("PAT_DEBUG") && Z.OMEGA <= 6)
-                    fprintf(stderr, "  BREAK FAIL at delta=%d chars='%.8s'\n", Z.delta, Z.PI->chars);
+                    fprintf(stderr, "  BREAK DT_FAIL at delta=%d chars='%.8s'\n", Z.delta, Z.PI->chars);
                 a = CONCEDE; z_up_fail(&Z, &psi);
             }
             break;
@@ -501,7 +501,7 @@ MatchResult engine_match_ex(Pattern *root, const char *subject, int subject_len,
             else                   { a = CONCEDE;                                z_up_fail(&Z, &psi); break; }
 /*--- T_CAPTURE (capture the span matched by child) ---------------------------------*/
         case T_CAPTURE<<2|PROCEED: {
-            /* Record start, push omega for potential backtrack, descend into child */
+            /* Record start, PUSH_fn omega for potential backtrack, descend into child */
             int _cap_slot = Z.PI->n;
             Z.cap_start = Z.DELTA;
             if (getenv("PAT_DEBUG"))

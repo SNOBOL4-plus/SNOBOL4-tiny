@@ -2,7 +2,7 @@
  * snobol4_inc.c — C implementations of SNOBOL4 .inc library functions
  *
  * Implements the library used by beauty.sno:
- *   global, is, io, case, assign, mtch, Gen, Qize, ShiftReduce, Tree, Stack
+ *   global, is, io, case, assign, mtch, Gen, Qize, ShiftReduce, TREEBLK_t, Stack
  */
 
 #include <stdio.h>
@@ -39,7 +39,7 @@ static char *g_mark   = NULL;   /* $'$X' — marks cont position */
 static long long g_level = 0;   /* $'#L' — indentation level */
 
 /* Stack globals — $'@S' link head */
-/* (already managed through var_get/set with key "@S") */
+/* (already managed through NV_GET_fn/set with key "@S") */
 
 /* =========================================================================
  * Helper: safe strdup via GC
@@ -67,26 +67,26 @@ static char *concat_gc(const char *a, const char *b) {
  * case.inc: lwr(s), upr(s)
  * ===================================================================== */
 
-SnoVal lwr(SnoVal s) {
-    const char *src = to_str(s);
-    if (!src || !*src) return STR_VAL("");
+DESCR_t lwr(DESCR_t s) {
+    const char *src = VARVAL_fn(s);
+    if (!src || !*src) return STRVAL("");
     size_t n = strlen(src);
     char *out = (char*)GC_MALLOC(n+1);
     for (size_t i = 0; i < n; i++)
         out[i] = (char)tolower((unsigned char)src[i]);
     out[n] = '\0';
-    return STR_VAL(out);
+    return STRVAL(out);
 }
 
-SnoVal upr(SnoVal s) {
-    const char *src = to_str(s);
-    if (!src || !*src) return STR_VAL("");
+DESCR_t upr(DESCR_t s) {
+    const char *src = VARVAL_fn(s);
+    if (!src || !*src) return STRVAL("");
     size_t n = strlen(src);
     char *out = (char*)GC_MALLOC(n+1);
     for (size_t i = 0; i < n; i++)
         out[i] = (char)toupper((unsigned char)src[i]);
     out[n] = '\0';
-    return STR_VAL(out);
+    return STRVAL(out);
 }
 
 /* =========================================================================
@@ -95,36 +95,36 @@ SnoVal upr(SnoVal s) {
  * else $name = expression. Always succeeds (returns .dummy).
  * ===================================================================== */
 
-SnoVal assign_fn(SnoVal name, SnoVal expression) {
-    const char *nm = to_str(name);
+DESCR_t assign_fn(DESCR_t name, DESCR_t expression) {
+    const char *nm = VARVAL_fn(name);
     /* If expression is an unevaluated expression, evl it */
-    SnoVal val = expression;
-    if (STYPE(expression) == SSTR) {
+    DESCR_t val = expression;
+    if (STYPE(expression) == DT_S) {
         /* Try to evaluate as SNOBOL4 — for now just use it as-is */
         val = expression;
     }
-    var_set(nm, val);
-    return NULL_VAL;
+    NV_SET_fn(nm, val);
+    return NULVCL;
 }
 
 /* =========================================================================
  * mtch.inc: mtch(subject, pattern) → NRETURN on mtch, FRETURN on fail
- * In C: return non-null on mtch, FAIL_VAL on fail
+ * In C: return non-null on mtch, FAILDESCR on fail
  * ===================================================================== */
 
 /* Forward declaration — pattern matching from snobol4.c */
-extern int match_pattern(SnoVal pat, const char *subject);
+extern int match_pattern(DESCR_t pat, const char *subject);
 
-SnoVal match_fn(SnoVal subject, SnoVal pattern) {
-    const char *subj = to_str(subject);
+DESCR_t match_fn(DESCR_t subject, DESCR_t pattern) {
+    const char *subj = VARVAL_fn(subject);
     int ok = match_pattern(pattern, subj);
-    return ok ? STR_VAL("") : NULL_VAL;
+    return ok ? STRVAL("") : NULVCL;
 }
 
-SnoVal notmatch_fn(SnoVal subject, SnoVal pattern) {
-    const char *subj = to_str(subject);
+DESCR_t notmatch_fn(DESCR_t subject, DESCR_t pattern) {
+    const char *subj = VARVAL_fn(subject);
     int ok = match_pattern(pattern, subj);
-    return ok ? NULL_VAL : STR_VAL("");
+    return ok ? NULVCL : STRVAL("");
 }
 
 /* =========================================================================
@@ -132,9 +132,9 @@ SnoVal notmatch_fn(SnoVal subject, SnoVal pattern) {
  * We use stdin/stdout as channels 5/6 per SNOBOL4 convention.
  * ===================================================================== */
 
-SnoVal io_fn(SnoVal name, SnoVal mode) {
+DESCR_t io_fn(DESCR_t name, DESCR_t mode) {
     /* No-op for our purposes — we use stdin/stdout */
-    return NULL_VAL;
+    return NULVCL;
 }
 
 /* =========================================================================
@@ -147,26 +147,26 @@ SnoVal io_fn(SnoVal name, SnoVal mode) {
  *   g_level = current indentation level ($'#L')
  * ===================================================================== */
 
-SnoVal IncLevel(SnoVal delta) {
-    long long d = (STYPE(delta) == SNULL) ? 2 : to_int(delta);
+DESCR_t IncLevel(DESCR_t delta) {
+    long long d = (STYPE(delta) == DT_SNUL) ? 2 : to_int(delta);
     g_level += d;
-    return NULL_VAL;
+    return NULVCL;
 }
 
-SnoVal DecLevel(SnoVal delta) {
-    long long d = (STYPE(delta) == SNULL) ? 2 : to_int(delta);
+DESCR_t DecLevel(DESCR_t delta) {
+    long long d = (STYPE(delta) == DT_SNUL) ? 2 : to_int(delta);
     g_level -= d;
     if (g_level < 0) g_level = 0;
-    return NULL_VAL;
+    return NULVCL;
 }
 
-SnoVal SetLevel(SnoVal level) {
+DESCR_t SetLevel(DESCR_t level) {
     g_level = to_int(level);
-    return NULL_VAL;
+    return NULVCL;
 }
 
-SnoVal GetLevel(void) {
-    return INT_VAL(g_level);
+DESCR_t GetLevel(void) {
+    return INTVAL(g_level);
 }
 
 /* Flush one line from g_buf to output, replacing $'$X' with g_cont */
@@ -175,8 +175,8 @@ static void gen_flush_line(const char *line) {
     printf("%s\n", line);
 }
 
-SnoVal Gen(SnoVal strv, SnoVal outNm) {
-    const char *s = to_str(strv);
+DESCR_t Gen(DESCR_t strv, DESCR_t outNm) {
+    const char *s = VARVAL_fn(strv);
     if (!s) s = "";
 
     if (!g_buf) g_buf = strdup_gc("");
@@ -218,11 +218,11 @@ SnoVal Gen(SnoVal strv, SnoVal outNm) {
         p = nl + 1;
     }
     g_buf = strdup_gc(p);
-    return NULL_VAL;
+    return NULVCL;
 }
 
-SnoVal GenTab(SnoVal pos) {
-    long long target = (STYPE(pos) == SNULL) ? g_level : to_int(pos);
+DESCR_t GenTab(DESCR_t pos) {
+    long long target = (STYPE(pos) == DT_SNUL) ? g_level : to_int(pos);
     if (!g_buf) g_buf = strdup_gc("");
 
     long long cur = (long long)strlen(g_buf);
@@ -234,19 +234,19 @@ SnoVal GenTab(SnoVal pos) {
         pad[spaces] = '\0';
         g_buf = concat_gc(g_buf, pad);
     }
-    return NULL_VAL;
+    return NULVCL;
 }
 
-SnoVal GenSetCont(SnoVal cont) {
+DESCR_t GenSetCont(DESCR_t cont) {
     /* Flush any pending buffer, set continuation char, reset mark */
     if (g_buf && *g_buf) {
         /* Don't flush partial line — just reset */
     }
     g_buf  = strdup_gc("");
-    const char *c = to_str(cont);
+    const char *c = VARVAL_fn(cont);
     g_cont = strdup_gc((c && *c) ? c : "");
     g_mark = strdup_gc("");
-    return NULL_VAL;
+    return NULVCL;
 }
 
 /* =========================================================================
@@ -254,21 +254,21 @@ SnoVal GenSetCont(SnoVal cont) {
  * Returns a SNOBOL4 string literal representation of s.
  * ===================================================================== */
 
-SnoVal Qize(SnoVal s) {
-    const char *src = to_str(s);
-    if (!src || !*src) return STR_VAL("''");
+DESCR_t Qize(DESCR_t s) {
+    const char *src = VARVAL_fn(s);
+    if (!src || !*src) return STRVAL("''");
 
     /* Simple version: if no single quotes, wrap in single quotes */
     if (!strchr(src, '\'')) {
         char *out = (char*)GC_MALLOC(strlen(src) + 3);
         sprintf(out, "'%s'", src);
-        return STR_VAL(out);
+        return STRVAL(out);
     }
     /* Has single quotes — use double quotes if no double quotes */
     if (!strchr(src, '"')) {
         char *out = (char*)GC_MALLOC(strlen(src) + 3);
         sprintf(out, "\"%s\"", src);
-        return STR_VAL(out);
+        return STRVAL(out);
     }
     /* Both quote types present — split around single quotes */
     /* For now: escape by concatenation of quoted parts */
@@ -288,86 +288,86 @@ SnoVal Qize(SnoVal s) {
     }
     *p++ = '\'';
     *p = '\0';
-    return STR_VAL(out);
+    return STRVAL(out);
 }
 
 /* =========================================================================
  * ShiftReduce.inc: Shift(t, v), Reduce(t, n)
- * These use the Push/Pop stack from snobol4.c and the tree() DATA type.
+ * These use the Push/Pop stack from snobol4.c and the tree() DT_DATA type.
  * ===================================================================== */
 
 /* Forward declarations from snobol4.c */
-extern SnoVal field_get(SnoVal obj, const char *field);
+extern DESCR_t FIELD_GET_fn(DESCR_t obj, const char *field);
 
-SnoVal Shift(SnoVal t_arg) {
+DESCR_t Shift(DESCR_t t_arg) {
     /* Shift(t, v) — but in beauty.sno it's called as Shift('tag', value) */
     /* For now t_arg is the tree type tag, value is empty */
-    SnoVal s = make_tree(t_arg, STR_VAL(""), INT_VAL(0), NULL_VAL);
+    DESCR_t s = MAKE_TREE_fn(t_arg, STRVAL(""), INTVAL(0), NULVCL);
     push_val(s);
-    return NULL_VAL;
+    return NULVCL;
 }
 
-SnoVal Reduce(SnoVal t_arg, SnoVal n_arg) {
+DESCR_t Reduce(DESCR_t t_arg, DESCR_t n_arg) {
     /* Evaluate t if it's an unevaluated expression */
-    SnoVal t = t_arg;
-    SnoVal n = n_arg;
+    DESCR_t t = t_arg;
+    DESCR_t n = n_arg;
     long long count = to_int(n);
 
     /* Build array of n children from stack */
     if (count < 1) count = 0;
-    SnoVal children = array_create(STR_VAL("1:256"));
+    DESCR_t children = array_create(STRVAL("1:256"));
 
     for (long long i = count; i >= 1; i--) {
-        SnoVal child = pop_val();
-        subscript_set(children, INT_VAL(i), child);
+        DESCR_t child = pop_val();
+        subscript_set(children, INTVAL(i), child);
     }
 
-    SnoVal r = make_tree(t, STR_VAL(""), INT_VAL(count), children);
+    DESCR_t r = MAKE_TREE_fn(t, STRVAL(""), INTVAL(count), children);
     push_val(r);
-    return NULL_VAL;
+    return NULVCL;
 }
 
 /* =========================================================================
  * TDump / XDump — debug dumps (no-op when doDebug == 0)
  * ===================================================================== */
 
-SnoVal TDump(SnoVal x) { (void)x; return NULL_VAL; }
-SnoVal XDump(SnoVal x) { (void)x; return NULL_VAL; }
+DESCR_t TDump(DESCR_t x) { (void)x; return NULVCL; }
+DESCR_t XDump(DESCR_t x) { (void)x; return NULVCL; }
 
 /* =========================================================================
  * omega.inc / trace.inc: TV, TW, TX, TY, TZ, T8Trace, T8Pos
  * All are no-ops when doDebug == 0 (beauty.sno sets doDebug = 0).
  * ===================================================================== */
 
-SnoVal TV(SnoVal lvl, SnoVal pat, SnoVal name) { return pat; }
-SnoVal TW(SnoVal lvl, SnoVal pat, SnoVal name) { return pat; }
-SnoVal TX(SnoVal lvl, SnoVal pat, SnoVal name) { return pat; }
-SnoVal TY(SnoVal lvl, SnoVal name, SnoVal pat) { return pat; }
-SnoVal TZ(SnoVal lvl, SnoVal name, SnoVal pat) { return pat; }
-SnoVal T8Trace(SnoVal lvl, SnoVal strv, SnoVal ofs) { return NULL_VAL; }
-SnoVal T8Pos(SnoVal ofs, SnoVal map) { return STR_VAL(""); }
+DESCR_t TV(DESCR_t lvl, DESCR_t pat, DESCR_t name) { return pat; }
+DESCR_t TW(DESCR_t lvl, DESCR_t pat, DESCR_t name) { return pat; }
+DESCR_t TX(DESCR_t lvl, DESCR_t pat, DESCR_t name) { return pat; }
+DESCR_t TY(DESCR_t lvl, DESCR_t name, DESCR_t pat) { return pat; }
+DESCR_t TZ(DESCR_t lvl, DESCR_t name, DESCR_t pat) { return pat; }
+DESCR_t T8Trace(DESCR_t lvl, DESCR_t strv, DESCR_t ofs) { return NULVCL; }
+DESCR_t T8Pos(DESCR_t ofs, DESCR_t map) { return STRVAL(""); }
 
 /* =========================================================================
  * Lexicographic comparison functions
  * ===================================================================== */
 
-SnoVal LEQ(SnoVal a, SnoVal b) {
-    return strcmp(to_str(a), to_str(b)) <= 0 ? a : NULL_VAL;
+DESCR_t LEQ(DESCR_t a, DESCR_t b) {
+    return strcmp(VARVAL_fn(a), VARVAL_fn(b)) <= 0 ? a : NULVCL;
 }
-SnoVal LGT(SnoVal a, SnoVal b) {
-    return strcmp(to_str(a), to_str(b)) >  0 ? a : NULL_VAL;
+DESCR_t LGT(DESCR_t a, DESCR_t b) {
+    return strcmp(VARVAL_fn(a), VARVAL_fn(b)) >  0 ? a : NULVCL;
 }
-SnoVal LGE(SnoVal a, SnoVal b) {
-    return strcmp(to_str(a), to_str(b)) >= 0 ? a : NULL_VAL;
+DESCR_t LGE(DESCR_t a, DESCR_t b) {
+    return strcmp(VARVAL_fn(a), VARVAL_fn(b)) >= 0 ? a : NULVCL;
 }
-SnoVal LLT(SnoVal a, SnoVal b) {
-    return strcmp(to_str(a), to_str(b)) <  0 ? a : NULL_VAL;
+DESCR_t LLT(DESCR_t a, DESCR_t b) {
+    return strcmp(VARVAL_fn(a), VARVAL_fn(b)) <  0 ? a : NULVCL;
 }
-SnoVal LLE(SnoVal a, SnoVal b) {
-    return strcmp(to_str(a), to_str(b)) <= 0 ? a : NULL_VAL;
+DESCR_t LLE(DESCR_t a, DESCR_t b) {
+    return strcmp(VARVAL_fn(a), VARVAL_fn(b)) <= 0 ? a : NULVCL;
 }
-SnoVal LNE(SnoVal a, SnoVal b) {
-    return strcmp(to_str(a), to_str(b)) != 0 ? a : NULL_VAL;
+DESCR_t LNE(DESCR_t a, DESCR_t b) {
+    return strcmp(VARVAL_fn(a), VARVAL_fn(b)) != 0 ? a : NULVCL;
 }
 
 /* =========================================================================
@@ -376,115 +376,115 @@ SnoVal LNE(SnoVal a, SnoVal b) {
  * ===================================================================== */
 
 /* Forward: register a C function in the snobol4 function table */
-extern void register_fn(const char *name, SnoVal (*fn)(SnoVal*, int), int min_args, int max_args);
+extern void register_fn(const char *name, DESCR_t (*fn)(DESCR_t*, int), int min_args, int max_args);
 
 /* Wrapper shims — adapt variadic calling convention */
-static SnoVal _w_lwr(SnoVal *a, int n) {
-    return lwr(n>0 ? a[0] : NULL_VAL);
+static DESCR_t _w_lwr(DESCR_t *a, int n) {
+    return lwr(n>0 ? a[0] : NULVCL);
 }
-static SnoVal _w_upr(SnoVal *a, int n) {
-    return upr(n>0 ? a[0] : NULL_VAL);
+static DESCR_t _w_upr(DESCR_t *a, int n) {
+    return upr(n>0 ? a[0] : NULVCL);
 }
-static SnoVal _w_assign(SnoVal *a, int n) {
-    return assign_fn(n>0?a[0]:NULL_VAL, n>1?a[1]:NULL_VAL);
+static DESCR_t _w_assign(DESCR_t *a, int n) {
+    return assign_fn(n>0?a[0]:NULVCL, n>1?a[1]:NULVCL);
 }
-static SnoVal _w_match(SnoVal *a, int n) {
-    return match_fn(n>0?a[0]:NULL_VAL, n>1?a[1]:NULL_VAL);
+static DESCR_t _w_match(DESCR_t *a, int n) {
+    return match_fn(n>0?a[0]:NULVCL, n>1?a[1]:NULVCL);
 }
-static SnoVal _w_notmatch(SnoVal *a, int n) {
-    return notmatch_fn(n>0?a[0]:NULL_VAL, n>1?a[1]:NULL_VAL);
+static DESCR_t _w_notmatch(DESCR_t *a, int n) {
+    return notmatch_fn(n>0?a[0]:NULVCL, n>1?a[1]:NULVCL);
 }
-static SnoVal _w_Gen(SnoVal *a, int n) {
-    return Gen(n>0?a[0]:NULL_VAL, n>1?a[1]:NULL_VAL);
+static DESCR_t _w_Gen(DESCR_t *a, int n) {
+    return Gen(n>0?a[0]:NULVCL, n>1?a[1]:NULVCL);
 }
-static SnoVal _w_GenTab(SnoVal *a, int n) {
-    return GenTab(n>0?a[0]:NULL_VAL);
+static DESCR_t _w_GenTab(DESCR_t *a, int n) {
+    return GenTab(n>0?a[0]:NULVCL);
 }
-static SnoVal _w_GenSetCont(SnoVal *a, int n) {
-    return GenSetCont(n>0?a[0]:NULL_VAL);
+static DESCR_t _w_GenSetCont(DESCR_t *a, int n) {
+    return GenSetCont(n>0?a[0]:NULVCL);
 }
-static SnoVal _w_IncLevel(SnoVal *a, int n) {
-    return IncLevel(n>0?a[0]:NULL_VAL);
+static DESCR_t _w_IncLevel(DESCR_t *a, int n) {
+    return IncLevel(n>0?a[0]:NULVCL);
 }
-static SnoVal _w_DecLevel(SnoVal *a, int n) {
-    return DecLevel(n>0?a[0]:NULL_VAL);
+static DESCR_t _w_DecLevel(DESCR_t *a, int n) {
+    return DecLevel(n>0?a[0]:NULVCL);
 }
-static SnoVal _w_SetLevel(SnoVal *a, int n) {
-    return SetLevel(n>0?a[0]:NULL_VAL);
+static DESCR_t _w_SetLevel(DESCR_t *a, int n) {
+    return SetLevel(n>0?a[0]:NULVCL);
 }
-static SnoVal _w_GetLevel(SnoVal *a, int n) {
+static DESCR_t _w_GetLevel(DESCR_t *a, int n) {
     (void)a; (void)n; return GetLevel();
 }
-static SnoVal _w_Qize(SnoVal *a, int n) {
-    return Qize(n>0?a[0]:NULL_VAL);
+static DESCR_t _w_Qize(DESCR_t *a, int n) {
+    return Qize(n>0?a[0]:NULVCL);
 }
-static SnoVal _w_Shift(SnoVal *a, int n) {
-    return Shift(n>0?a[0]:NULL_VAL);
+static DESCR_t _w_Shift(DESCR_t *a, int n) {
+    return Shift(n>0?a[0]:NULVCL);
 }
-static SnoVal _w_Reduce(SnoVal *a, int n) {
-    return Reduce(n>0?a[0]:NULL_VAL, n>1?a[1]:NULL_VAL);
+static DESCR_t _w_Reduce(DESCR_t *a, int n) {
+    return Reduce(n>0?a[0]:NULVCL, n>1?a[1]:NULVCL);
 }
-static SnoVal _w_TDump(SnoVal *a, int n) {
-    return TDump(n>0?a[0]:NULL_VAL);
+static DESCR_t _w_TDump(DESCR_t *a, int n) {
+    return TDump(n>0?a[0]:NULVCL);
 }
-static SnoVal _w_XDump(SnoVal *a, int n) {
-    return XDump(n>0?a[0]:NULL_VAL);
+static DESCR_t _w_XDump(DESCR_t *a, int n) {
+    return XDump(n>0?a[0]:NULVCL);
 }
-static SnoVal _w_TV(SnoVal *a, int n) {
-    return TV(n>0?a[0]:NULL_VAL,n>1?a[1]:NULL_VAL,n>2?a[2]:NULL_VAL);
+static DESCR_t _w_TV(DESCR_t *a, int n) {
+    return TV(n>0?a[0]:NULVCL,n>1?a[1]:NULVCL,n>2?a[2]:NULVCL);
 }
-static SnoVal _w_TW(SnoVal *a, int n) {
-    return TW(n>0?a[0]:NULL_VAL,n>1?a[1]:NULL_VAL,n>2?a[2]:NULL_VAL);
+static DESCR_t _w_TW(DESCR_t *a, int n) {
+    return TW(n>0?a[0]:NULVCL,n>1?a[1]:NULVCL,n>2?a[2]:NULVCL);
 }
-static SnoVal _w_TX(SnoVal *a, int n) {
-    return TX(n>0?a[0]:NULL_VAL,n>1?a[1]:NULL_VAL,n>2?a[2]:NULL_VAL);
+static DESCR_t _w_TX(DESCR_t *a, int n) {
+    return TX(n>0?a[0]:NULVCL,n>1?a[1]:NULVCL,n>2?a[2]:NULVCL);
 }
-static SnoVal _w_TY(SnoVal *a, int n) {
-    return TY(n>0?a[0]:NULL_VAL,n>1?a[1]:NULL_VAL,n>2?a[2]:NULL_VAL);
+static DESCR_t _w_TY(DESCR_t *a, int n) {
+    return TY(n>0?a[0]:NULVCL,n>1?a[1]:NULVCL,n>2?a[2]:NULVCL);
 }
-static SnoVal _w_TZ(SnoVal *a, int n) {
-    return TZ(n>0?a[0]:NULL_VAL,n>1?a[1]:NULL_VAL,n>2?a[2]:NULL_VAL);
+static DESCR_t _w_TZ(DESCR_t *a, int n) {
+    return TZ(n>0?a[0]:NULVCL,n>1?a[1]:NULVCL,n>2?a[2]:NULVCL);
 }
-static SnoVal _w_T8Trace(SnoVal *a, int n) {
-    return T8Trace(n>0?a[0]:NULL_VAL,n>1?a[1]:NULL_VAL,n>2?a[2]:NULL_VAL);
+static DESCR_t _w_T8Trace(DESCR_t *a, int n) {
+    return T8Trace(n>0?a[0]:NULVCL,n>1?a[1]:NULVCL,n>2?a[2]:NULVCL);
 }
-static SnoVal _w_T8Pos(SnoVal *a, int n) {
-    return T8Pos(n>0?a[0]:NULL_VAL,n>1?a[1]:NULL_VAL);
+static DESCR_t _w_T8Pos(DESCR_t *a, int n) {
+    return T8Pos(n>0?a[0]:NULVCL,n>1?a[1]:NULVCL);
 }
-static SnoVal _w_LEQ(SnoVal *a, int n) {
-    return LEQ(n>0?a[0]:NULL_VAL,n>1?a[1]:NULL_VAL);
+static DESCR_t _w_LEQ(DESCR_t *a, int n) {
+    return LEQ(n>0?a[0]:NULVCL,n>1?a[1]:NULVCL);
 }
-static SnoVal _w_LGT(SnoVal *a, int n) {
-    return LGT(n>0?a[0]:NULL_VAL,n>1?a[1]:NULL_VAL);
+static DESCR_t _w_LGT(DESCR_t *a, int n) {
+    return LGT(n>0?a[0]:NULVCL,n>1?a[1]:NULVCL);
 }
-static SnoVal _w_LGE(SnoVal *a, int n) {
-    return LGE(n>0?a[0]:NULL_VAL,n>1?a[1]:NULL_VAL);
+static DESCR_t _w_LGE(DESCR_t *a, int n) {
+    return LGE(n>0?a[0]:NULVCL,n>1?a[1]:NULVCL);
 }
-static SnoVal _w_LLT(SnoVal *a, int n) {
-    return LLT(n>0?a[0]:NULL_VAL,n>1?a[1]:NULL_VAL);
+static DESCR_t _w_LLT(DESCR_t *a, int n) {
+    return LLT(n>0?a[0]:NULVCL,n>1?a[1]:NULVCL);
 }
-static SnoVal _w_LLE(SnoVal *a, int n) {
-    return LLE(n>0?a[0]:NULL_VAL,n>1?a[1]:NULL_VAL);
+static DESCR_t _w_LLE(DESCR_t *a, int n) {
+    return LLE(n>0?a[0]:NULVCL,n>1?a[1]:NULVCL);
 }
-static SnoVal _w_LNE(SnoVal *a, int n) {
-    return LNE(n>0?a[0]:NULL_VAL,n>1?a[1]:NULL_VAL);
+static DESCR_t _w_LNE(DESCR_t *a, int n) {
+    return LNE(n>0?a[0]:NULVCL,n>1?a[1]:NULVCL);
 }
 
 void inc_init(void) {
     /* Set up global character constants */
-    var_set("digits",   STR_VAL(digits_str));
-    var_set("tab",      STR_VAL(tab_str));
-    var_set("nl",       STR_VAL(nl_str));
-    var_set("cr",       STR_VAL(cr_str));
-    var_set("ff",       STR_VAL(ff_str));
-    var_set("bs",       STR_VAL(bs_str));
-    var_set("bSlash",   STR_VAL(bSlash_str));
-    var_set("lf",       STR_VAL(nl_str));
-    var_set("whitespace", STR_VAL(" \t\n\r"));
-    var_set("doDebug",  INT_VAL(g_doDebug));
-    var_set("xTrace",   INT_VAL(g_xTrace));
-    var_set("doParseTree", INT_VAL(g_doParseTree));
-    var_set("level",    STR_VAL(""));
+    NV_SET_fn("digits",   STRVAL(digits_str));
+    NV_SET_fn("tab",      STRVAL(tab_str));
+    NV_SET_fn("nl",       STRVAL(nl_str));
+    NV_SET_fn("cr",       STRVAL(cr_str));
+    NV_SET_fn("ff",       STRVAL(ff_str));
+    NV_SET_fn("bs",       STRVAL(bs_str));
+    NV_SET_fn("bSlash",   STRVAL(bSlash_str));
+    NV_SET_fn("lf",       STRVAL(nl_str));
+    NV_SET_fn("whitespace", STRVAL(" \t\n\r"));
+    NV_SET_fn("doDebug",  INTVAL(g_doDebug));
+    NV_SET_fn("xTrace",   INTVAL(g_xTrace));
+    NV_SET_fn("doParseTree", INTVAL(g_doParseTree));
+    NV_SET_fn("level",    STRVAL(""));
 
     /* Gen.inc globals */
     g_buf  = (char*)GC_MALLOC(1); g_buf[0]  = '\0';
@@ -534,15 +534,15 @@ void inc_init(void) {
 /* icase(strv) — case.inc: build case-insensitive pattern from string
  * Returns a pattern that matches strv case-insensitively.
  * Each alpha char → (upper | lower) alternation; non-alpha → literal. */
-static SnoVal _w_icase(SnoVal *a, int n) {
-    const char *s = to_str(n > 0 ? a[0] : NULL_VAL);
+static DESCR_t _w_icase(DESCR_t *a, int n) {
+    const char *s = VARVAL_fn(n > 0 ? a[0] : NULVCL);
     if (!s || !*s) return pat_epsilon();
     /* Build cat of per-char patterns */
-    SnoVal pat = pat_epsilon();
+    DESCR_t pat = pat_epsilon();
     int len = (int)strlen(s);
     for (int i = len - 1; i >= 0; i--) {
         char c = s[i];
-        SnoVal cp;
+        DESCR_t cp;
         if (isalpha((unsigned char)c)) {
             char lo[2] = { (char)tolower((unsigned char)c), 0 };
             char hi[2] = { (char)toupper((unsigned char)c), 0 };
@@ -557,43 +557,43 @@ static SnoVal _w_icase(SnoVal *a, int n) {
 }
 
 /* IsSnobol4() — is.inc: we ARE SNOBOL4-tiny, so always RETURN (succeed) */
-static SnoVal _w_IsSnobol4(SnoVal *a, int n) {
+static DESCR_t _w_IsSnobol4(DESCR_t *a, int n) {
     (void)a; (void)n;
-    return STR_VAL("");   /* non-null = success */
+    return STRVAL("");   /* non-null = success */
 }
 
-/* Push(x) — stack.inc: push x onto value stack */
-static SnoVal _w_Push(SnoVal *a, int n) {
-    SnoVal x = n > 0 ? a[0] : NULL_VAL;
-    push(x);
+/* Push(x) — stack.inc: PUSH_fn x onto value stack */
+static DESCR_t _w_Push(DESCR_t *a, int n) {
+    DESCR_t x = n > 0 ? a[0] : NULVCL;
+    PUSH_fn(x);
     /* Push returns .dummy (NRETURN) — return null marker */
-    return NULL_VAL;
+    return NULVCL;
 }
 
-/* Pop() / Pop(var) — stack.inc: pop from value stack */
-static SnoVal _w_Pop(SnoVal *a, int n) {
-    if (stack_depth() == 0) return NULL_VAL;
-    SnoVal v = pop();
-    if (n > 0 && a[0].type == SSTR) {
+/* Pop() / Pop(var) — stack.inc: POP_fn from value stack */
+static DESCR_t _w_Pop(DESCR_t *a, int n) {
+    if (STACK_DEPTH_fn() == 0) return NULVCL;
+    DESCR_t v = POP_fn();
+    if (n > 0 && a[0].v == DT_S) {
         /* Pop(var) — store into named variable */
-        var_set(a[0].s, v);
-        return NULL_VAL;
+        NV_SET_fn(a[0].s, v);
+        return NULVCL;
     }
     return v;
 }
 
 /* TopCounter() — counter.inc: return current counter value */
-static SnoVal _w_TopCounter(SnoVal *a, int n) {
+static DESCR_t _w_TopCounter(DESCR_t *a, int n) {
     (void)a; (void)n;
     int64_t v = ntop();
-    if (v < 0) return NULL_VAL;   /* FRETURN if stack empty */
-    return INT_VAL(v);
+    if (v < 0) return NULVCL;   /* FRETURN if stack empty */
+    return INTVAL(v);
 }
 
 /* SqlSQize(strv) — Qize.inc: SQL single-quote escape ('' for each ') */
-static SnoVal _w_SqlSQize(SnoVal *a, int n) {
-    const char *s = to_str(n > 0 ? a[0] : NULL_VAL);
-    if (!s || !*s) return STR_VAL("");
+static DESCR_t _w_SqlSQize(DESCR_t *a, int n) {
+    const char *s = VARVAL_fn(n > 0 ? a[0] : NULVCL);
+    if (!s || !*s) return STRVAL("");
     size_t len = strlen(s);
     /* Count single quotes */
     int sq = 0;
@@ -605,152 +605,152 @@ static SnoVal _w_SqlSQize(SnoVal *a, int n) {
         else               *p++ = s[i];
     }
     *p = '\0';
-    return STR_VAL(out);
+    return STRVAL(out);
 }
 
 /* TLump(x, len) — TDump.inc: tree-to-string up to len chars (stub) */
-static SnoVal _w_TLump(SnoVal *a, int n) {
+static DESCR_t _w_TLump(DESCR_t *a, int n) {
     /* Stub: return tree tag as string */
-    if (n < 1 || a[0].type == SNULL) return STR_VAL("()");
-    if (a[0].type == UDEF) {
-        SnoVal t = field_get(a[0], "t");
-        SnoVal v = field_get(a[0], "v");
-        const char *ts = to_str(t);
-        const char *vs = to_str(v);
+    if (n < 1 || a[0].v == DT_SNUL) return STRVAL("()");
+    if (a[0].v == DT_DATA) {
+        DESCR_t t = FIELD_GET_fn(a[0], "t");
+        DESCR_t v = FIELD_GET_fn(a[0], "v");
+        const char *ts = VARVAL_fn(t);
+        const char *vs = VARVAL_fn(v);
         size_t tl = strlen(ts), vl = strlen(vs);
         char *out = (char *)GC_MALLOC(tl + vl + 4);
         if (vl > 0) sprintf(out, "(%s %s)", ts, vs);
         else        sprintf(out, "(%s)", ts);
-        return STR_VAL(out);
+        return STRVAL(out);
     }
-    return STR_VAL(to_str(a[0]));
+    return STRVAL(VARVAL_fn(a[0]));
 }
 
 /* TValue(x) — TDump.inc: extract printable value from tree node */
-static SnoVal _w_TValue(SnoVal *a, int n) {
-    if (n < 1) return STR_VAL(".");
-    SnoVal x = a[0];
-    if (x.type == SNULL) return STR_VAL(".");
-    if (x.type == UDEF) {
-        SnoVal v = field_get(x, "v");
-        if (is_null(v)) return STR_VAL(".");
-        return STR_VAL(to_str(v));
+static DESCR_t _w_TValue(DESCR_t *a, int n) {
+    if (n < 1) return STRVAL(".");
+    DESCR_t x = a[0];
+    if (x.v == DT_SNUL) return STRVAL(".");
+    if (x.v == DT_DATA) {
+        DESCR_t v = FIELD_GET_fn(x, "v");
+        if (IS_NULL_fn(v)) return STRVAL(".");
+        return STRVAL(VARVAL_fn(v));
     }
-    return STR_VAL(to_str(x));
+    return STRVAL(VARVAL_fn(x));
 }
 
-/* Visit(x, fnc) — tree.inc: pre-order traversal, aply fnc at each node */
-static SnoVal _w_Visit(SnoVal *a, int n) {
-    if (n < 2) return NULL_VAL;
-    SnoVal x   = a[0];
-    SnoVal fnc = a[1];
-    const char *fname = to_str(fnc);
+/* Visit(x, fnc) — tree.inc: pre-order traversal, APLY_fn fnc at each node */
+static DESCR_t _w_Visit(DESCR_t *a, int n) {
+    if (n < 2) return NULVCL;
+    DESCR_t x   = a[0];
+    DESCR_t fnc = a[1];
+    const char *fname = VARVAL_fn(fnc);
     /* Apply fnc to x */
-    aply(fname, &x, 1);
+    APLY_fn(fname, &x, 1);
     /* Recurse into children */
-    if (x.type == UDEF) {
-        SnoVal nc  = field_get(x, "n");
-        SnoVal ca  = field_get(x, "c");
+    if (x.v == DT_DATA) {
+        DESCR_t nc  = FIELD_GET_fn(x, "n");
+        DESCR_t ca  = FIELD_GET_fn(x, "c");
         int    cnt = (int)to_int(nc);
         for (int i = 1; i <= cnt; i++) {
-            SnoVal child = subscript_get(ca, INT_VAL(i));
-            SnoVal visit_args[2] = { child, fnc };
+            DESCR_t child = subscript_get(ca, INTVAL(i));
+            DESCR_t visit_args[2] = { child, fnc };
             _w_Visit(visit_args, 2);
         }
     }
-    return NULL_VAL;
+    return NULVCL;
 }
 
 /* bVisit — same as Visit for beautiful.sno purposes */
-static SnoVal _w_bVisit(SnoVal *a, int n) {
+static DESCR_t _w_bVisit(DESCR_t *a, int n) {
     return _w_Visit(a, n);
 }
 
 /* Equal(x, y) — tree.inc: structural equality */
-static SnoVal _w_Equal(SnoVal *a, int n) {
-    if (n < 2) return NULL_VAL;
-    SnoVal x = a[0], y = a[1];
+static DESCR_t _w_Equal(DESCR_t *a, int n) {
+    if (n < 2) return NULVCL;
+    DESCR_t x = a[0], y = a[1];
     /* Both null → equal */
-    if (x.type == SNULL && y.type == SNULL) return STR_VAL("");
-    if (x.type == SNULL || y.type == SNULL) return NULL_VAL;
-    if (x.type != UDEF || y.type != UDEF) {
-        return strcmp(to_str(x), to_str(y)) == 0 ? STR_VAL("") : NULL_VAL;
+    if (x.v == DT_SNUL && y.v == DT_SNUL) return STRVAL("");
+    if (x.v == DT_SNUL || y.v == DT_SNUL) return NULVCL;
+    if (x.v != DT_DATA || y.v != DT_DATA) {
+        return strcmp(VARVAL_fn(x), VARVAL_fn(y)) == 0 ? STRVAL("") : NULVCL;
     }
     /* Compare t, v, n */
-    if (!ident(field_get(x,"t"), field_get(y,"t"))) return NULL_VAL;
-    if (!ident(field_get(x,"v"), field_get(y,"v"))) return NULL_VAL;
-    SnoVal nx = field_get(x,"n"), ny = field_get(y,"n");
-    if (!ident(nx, ny)) return NULL_VAL;
+    if (!ident(FIELD_GET_fn(x,"t"), FIELD_GET_fn(y,"t"))) return NULVCL;
+    if (!ident(FIELD_GET_fn(x,"v"), FIELD_GET_fn(y,"v"))) return NULVCL;
+    DESCR_t nx = FIELD_GET_fn(x,"n"), ny = FIELD_GET_fn(y,"n");
+    if (!ident(nx, ny)) return NULVCL;
     int cnt = (int)to_int(nx);
-    SnoVal cx = field_get(x,"c"), cy = field_get(y,"c");
+    DESCR_t cx = FIELD_GET_fn(x,"c"), cy = FIELD_GET_fn(y,"c");
     for (int i = 1; i <= cnt; i++) {
-        SnoVal ci_x = subscript_get(cx, INT_VAL(i));
-        SnoVal ci_y = subscript_get(cy, INT_VAL(i));
-        SnoVal eq_args[2] = { ci_x, ci_y };
-        if (is_null(_w_Equal(eq_args, 2))) return NULL_VAL;
+        DESCR_t ci_x = subscript_get(cx, INTVAL(i));
+        DESCR_t ci_y = subscript_get(cy, INTVAL(i));
+        DESCR_t eq_args[2] = { ci_x, ci_y };
+        if (IS_NULL_fn(_w_Equal(eq_args, 2))) return NULVCL;
     }
-    return STR_VAL("");
+    return STRVAL("");
 }
 
 /* Equiv(x, y) — tree.inc: structural equivalence (like Equal but looser) */
-static SnoVal _w_Equiv(SnoVal *a, int n) {
+static DESCR_t _w_Equiv(DESCR_t *a, int n) {
     return _w_Equal(a, n);   /* same semantics for our purposes */
 }
 
-/* Find(xn, y, f) — tree.inc: search tree *xn for node equiv to y, aply f */
-static SnoVal _w_Find(SnoVal *a, int n) {
-    if (n < 3) return NULL_VAL;
+/* Find(xn, y, f) — tree.inc: search tree *xn for node equiv to y, APLY_fn f */
+static DESCR_t _w_Find(DESCR_t *a, int n) {
+    if (n < 3) return NULVCL;
     /* xn is a variable name (indirect ref), y is search target, f is function */
-    SnoVal xn  = a[0];
-    SnoVal y   = a[1];
-    SnoVal f   = a[2];
-    const char *xname  = to_str(xn);
-    const char *fname  = to_str(f);
-    SnoVal root = var_get(xname);
-    if (is_null(root)) return NULL_VAL;
+    DESCR_t xn  = a[0];
+    DESCR_t y   = a[1];
+    DESCR_t f   = a[2];
+    const char *xname  = VARVAL_fn(xn);
+    const char *fname  = VARVAL_fn(f);
+    DESCR_t root = NV_GET_fn(xname);
+    if (IS_NULL_fn(root)) return NULVCL;
     /* Check if root equiv to y */
-    SnoVal eq_args[2] = { root, y };
-    if (!is_null(_w_Equiv(eq_args, 2))) {
-        aply(fname, &xn, 1);
-        return STR_VAL("");
+    DESCR_t eq_args[2] = { root, y };
+    if (!IS_NULL_fn(_w_Equiv(eq_args, 2))) {
+        APLY_fn(fname, &xn, 1);
+        return STRVAL("");
     }
     /* Recurse into children */
-    if (root.type == UDEF) {
-        SnoVal nc = field_get(root, "n");
-        SnoVal ca = field_get(root, "c");
+    if (root.v == DT_DATA) {
+        DESCR_t nc = FIELD_GET_fn(root, "n");
+        DESCR_t ca = FIELD_GET_fn(root, "c");
         int cnt = (int)to_int(nc);
         for (int i = 1; i <= cnt; i++) {
-            SnoVal child = subscript_get(ca, INT_VAL(i));
+            DESCR_t child = subscript_get(ca, INTVAL(i));
             /* For child, we'd need a temp var — skip deep recursion for now */
             (void)child;
         }
     }
-    return NULL_VAL;
+    return NULVCL;
 }
 
 /* Insert(x, y, place) — tree.inc: insert y into tree x at position place */
-static SnoVal _w_Insert(SnoVal *a, int n) {
-    if (n < 3) return n > 0 ? a[0] : NULL_VAL;
-    SnoVal x     = a[0];
-    SnoVal y     = a[1];
+static DESCR_t _w_Insert(DESCR_t *a, int n) {
+    if (n < 3) return n > 0 ? a[0] : NULVCL;
+    DESCR_t x     = a[0];
+    DESCR_t y     = a[1];
     int    place = (int)to_int(a[2]);
-    if (x.type != UDEF) return x;
+    if (x.v != DT_DATA) return x;
 
-    SnoVal nc  = field_get(x, "n");
-    SnoVal ca  = field_get(x, "c");
+    DESCR_t nc  = FIELD_GET_fn(x, "n");
+    DESCR_t ca  = FIELD_GET_fn(x, "c");
     int    cnt = (int)to_int(nc);
 
     /* Build new children array with y inserted at place */
     int new_cnt = cnt + 1;
-    SnoVal new_c = array_create(STR_VAL("1:256"));
+    DESCR_t new_c = array_create(STRVAL("1:256"));
     for (int i = 1; i < place && i <= cnt; i++)
-        subscript_set(new_c, INT_VAL(i), subscript_get(ca, INT_VAL(i)));
-    subscript_set(new_c, INT_VAL(place), y);
+        subscript_set(new_c, INTVAL(i), subscript_get(ca, INTVAL(i)));
+    subscript_set(new_c, INTVAL(place), y);
     for (int i = place; i <= cnt; i++)
-        subscript_set(new_c, INT_VAL(i+1), subscript_get(ca, INT_VAL(i)));
+        subscript_set(new_c, INTVAL(i+1), subscript_get(ca, INTVAL(i)));
 
-    field_set(x, "n", INT_VAL(new_cnt));
-    field_set(x, "c", new_c);
+    FIELD_SET_fn(x, "n", INTVAL(new_cnt));
+    FIELD_SET_fn(x, "c", new_c);
     return x;
 }
 

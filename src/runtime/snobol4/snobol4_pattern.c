@@ -5,8 +5,8 @@
  * Byrd Box engine in engine.c.
  *
  * Architecture:
- *   - SnoVal with type SPATTERN holds a SnoPattern* (GC-managed)
- *   - SnoPattern wraps a lazy tree of pattern constructors
+ *   - DESCR_t with type P holds a PATND_t* (GC-managed)
+ *   - PATND_t wraps a lazy tree of pattern constructors
  *   - At mtch time, match_pattern() materialises the pattern into
  *     engine Pattern* nodes and calls engine_match()
  *   - Deferred refs (*name) are resolved from the variable table at mtch time
@@ -21,267 +21,267 @@
 #include "../engine.h"
 
 /* =========================================================================
- * SnoPattern — lazy pattern node
+ * PATND_t — lazy pattern node
  * ===================================================================== */
 
 typedef enum {
-    SPAT_LIT,          /* literal string */
-    SPAT_SPAN,         /* SPAN(chars) */
-    SPAT_BREAK,        /* BREAK(chars) */
-    SPAT_ANY,          /* ANY(chars) */
-    SPAT_NOTANY,       /* NOTANY(chars) */
-    SPAT_LEN,          /* LEN(n) */
-    SPAT_POS,          /* POS(n) */
-    SPAT_RPOS,         /* RPOS(n) */
-    SPAT_TAB,          /* TAB(n) */
-    SPAT_RTAB,         /* RTAB(n) */
-    SPAT_ARB,          /* ARB */
-    SPAT_ARBNO,        /* ARBNO(p) */
-    SPAT_REM,          /* REM */
-    SPAT_FENCE,        /* FENCE or FENCE(p) */
-    SPAT_FAIL,         /* FAIL */
-    SPAT_ABORT,        /* ABORT */
-    SPAT_SUCCEED,      /* SUCCEED */
-    SPAT_BAL,          /* BAL */
-    SPAT_EPSILON,      /* epsilon (always succeeds, no chars consumed) */
-    SPAT_CAT,          /* concatenation: left right */
-    SPAT_ALT,          /* alternation:   left | right */
-    SPAT_REF,          /* deferred var ref: *name */
-    SPAT_ASSIGN_IMM,   /* immediate capture: pat $ var */
-    SPAT_ASSIGN_COND,  /* conditional capture: pat . var */
-    SPAT_VAR,          /* variable holding a pattern */
-    SPAT_USER_CALL,    /* user-defined pattern function call */
-} SnoPatKind;
+    XCHR,          /* literal string */
+    XSPNC,         /* SPAN(chars) */
+    XBRKC,        /* BREAK(chars) */
+    XANYC,          /* ANY(chars) */
+    XNNYC,       /* NOTANY(chars) */
+    XLNTH,          /* LEN(n) */
+    XPOSI,          /* POS(n) */
+    XRPSI,         /* RPOS(n) */
+    XTB,          /* TAB(n) */
+    XRTB,         /* RTAB(n) */
+    XFARB,          /* ARB */
+    XARBN,        /* ARBNO(p) */
+    XSTAR,          /* REM */
+    XFNCE,        /* FENCE or FENCE(p) */
+    XFAIL,         /* DT_FAIL */
+    XABRT,        /* ABORT */
+    XSUCF,      /* SUCCEED */
+    XBAL,          /* BAL */
+    XEPS,      /* epsilon (always succeeds, no chars consumed) */
+    XCAT,          /* concatenation: left right */
+    XOR,          /* alternation:   left | right */
+    XDSAR,          /* deferred var ref: *name */
+    XFNME,   /* immediate capture: pat $ var */
+    XNME,  /* conditional capture: pat . var */
+    XVAR,          /* variable holding a pattern */
+    XATP,    /* user-defined pattern function call */
+} XKIND_t;
 
 /* Forward decl */
-struct _SnoPattern;
-typedef struct _SnoPattern SnoPattern;
+struct _PATND_t;
+typedef struct _PATND_t PATND_t;
 
-struct _SnoPattern {
-    SnoPatKind  kind;
+struct _PATND_t {
+    XKIND_t  kind;
     int         materialising; /* cycle detection flag */
-    const char *strv;       /* SPAT_LIT / SPAT_SPAN / SPAT_BREAK / SPAT_ANY / SPAT_NOTANY / SPAT_REF / SPAT_USER_CALL */
-    int64_t     num;       /* SPAT_LEN / SPAT_POS / SPAT_RPOS / SPAT_TAB / SPAT_RTAB */
-    SnoPattern *left;      /* SPAT_CAT / SPAT_ALT / SPAT_ARBNO / SPAT_FENCE / SPAT_ASSIGN_IMM / SPAT_ASSIGN_COND */
-    SnoPattern *right;     /* SPAT_CAT / SPAT_ALT */
-    SnoVal      var;       /* SPAT_ASSIGN_IMM / SPAT_ASSIGN_COND / SPAT_VAR capture target or value */
-    SnoVal     *args;      /* SPAT_USER_CALL args */
-    int         nargs;     /* SPAT_USER_CALL nargs */
+    const char *strv;       /* XCHR / XSPNC / XBRKC / XANYC / XNNYC / XDSAR / XATP */
+    int64_t     num;       /* XLNTH / XPOSI / XRPSI / XTB / XRTB */
+    PATND_t *left;      /* XCAT / XOR / XARBN / XFNCE / XFNME / XNME */
+    PATND_t *right;     /* XCAT / XOR */
+    DESCR_t      var;       /* XFNME / XNME / XVAR capture target or value */
+    DESCR_t     *args;      /* XATP args */
+    int         nargs;     /* XATP nargs */
 };
 
-/* GC-allocate a SnoPattern */
-static SnoPattern *spat_new(SnoPatKind kind) {
-    SnoPattern *p = (SnoPattern *)GC_MALLOC(sizeof(SnoPattern));
-    memset(p, 0, sizeof(SnoPattern));
+/* GC-allocate a PATND_t */
+static PATND_t *spat_new(XKIND_t kind) {
+    PATND_t *p = (PATND_t *)GC_MALLOC(sizeof(PATND_t));
+    memset(p, 0, sizeof(PATND_t));
     p->kind = kind;
     return p;
 }
 
-/* Wrap a SnoPattern in a SnoVal */
-static inline SnoVal spat_val(SnoPattern *p) {
-    SnoVal v;
-    v.type = SPATTERN;
-    v.p    = (struct _Pattern *)p;
+/* Wrap a PATND_t in a DESCR_t */
+static inline DESCR_t spat_val(PATND_t *p) {
+    DESCR_t v;
+    v.v = DT_P;
+    v.p    = (struct _PATND_t *)p;
     return v;
 }
 
-/* Extract SnoPattern from SnoVal */
-static inline SnoPattern *spat_of(SnoVal v) {
-    if (v.type != SPATTERN) return NULL;
-    return (SnoPattern *)v.p;
+/* Extract PATND_t from DESCR_t */
+static inline PATND_t *spat_of(DESCR_t v) {
+    if (v.v != DT_P) return NULL;
+    return (PATND_t *)v.p;
 }
 
 /* =========================================================================
  * Pattern constructors
  * ===================================================================== */
 
-SnoVal pat_lit(const char *s) {
-    SnoPattern *p = spat_new(SPAT_LIT);
+DESCR_t pat_lit(const char *s) {
+    PATND_t *p = spat_new(XCHR);
     p->strv = s ? GC_strdup(s) : "";
     return spat_val(p);
 }
 
-SnoVal pat_span(const char *chars) {
-    SnoPattern *p = spat_new(SPAT_SPAN);
+DESCR_t pat_span(const char *chars) {
+    PATND_t *p = spat_new(XSPNC);
     p->strv = chars ? GC_strdup(chars) : "";
     return spat_val(p);
 }
 
-SnoVal pat_break_(const char *chars) {
-    SnoPattern *p = spat_new(SPAT_BREAK);
+DESCR_t pat_break_(const char *chars) {
+    PATND_t *p = spat_new(XBRKC);
     p->strv = chars ? GC_strdup(chars) : "";
     return spat_val(p);
 }
 
-SnoVal pat_any_cs(const char *chars) {
-    SnoPattern *p = spat_new(SPAT_ANY);
+DESCR_t pat_any_cs(const char *chars) {
+    PATND_t *p = spat_new(XANYC);
     p->strv = chars ? GC_strdup(chars) : "";
     return spat_val(p);
 }
 
-SnoVal pat_notany(const char *chars) {
-    SnoPattern *p = spat_new(SPAT_NOTANY);
+DESCR_t pat_notany(const char *chars) {
+    PATND_t *p = spat_new(XNNYC);
     p->strv = chars ? GC_strdup(chars) : "";
     return spat_val(p);
 }
 
-SnoVal pat_len(int64_t n) {
-    SnoPattern *p = spat_new(SPAT_LEN);
+DESCR_t pat_len(int64_t n) {
+    PATND_t *p = spat_new(XLNTH);
     p->num = n;
     return spat_val(p);
 }
 
-SnoVal pat_pos(int64_t n) {
-    SnoPattern *p = spat_new(SPAT_POS);
+DESCR_t pat_pos(int64_t n) {
+    PATND_t *p = spat_new(XPOSI);
     p->num = n;
     return spat_val(p);
 }
 
-SnoVal pat_rpos(int64_t n) {
-    SnoPattern *p = spat_new(SPAT_RPOS);
+DESCR_t pat_rpos(int64_t n) {
+    PATND_t *p = spat_new(XRPSI);
     p->num = n;
     return spat_val(p);
 }
 
-SnoVal pat_tab(int64_t n) {
-    SnoPattern *p = spat_new(SPAT_TAB);
+DESCR_t pat_tab(int64_t n) {
+    PATND_t *p = spat_new(XTB);
     p->num = n;
     return spat_val(p);
 }
 
-SnoVal pat_rtab(int64_t n) {
-    SnoPattern *p = spat_new(SPAT_RTAB);
+DESCR_t pat_rtab(int64_t n) {
+    PATND_t *p = spat_new(XRTB);
     p->num = n;
     return spat_val(p);
 }
 
-SnoVal pat_arb(void) {
-    return spat_val(spat_new(SPAT_ARB));
+DESCR_t pat_arb(void) {
+    return spat_val(spat_new(XFARB));
 }
 
-SnoVal pat_arbno(SnoVal inner) {
-    SnoPattern *p = spat_new(SPAT_ARBNO);
+DESCR_t pat_arbno(DESCR_t inner) {
+    PATND_t *p = spat_new(XARBN);
     p->left = spat_of(inner);
     /* If inner is not a pattern (e.g. a string), wrap it */
-    if (!p->left && inner.type == SSTR) {
+    if (!p->left && inner.v == DT_S) {
         p->left = spat_of(pat_lit(inner.s));
     }
     return spat_val(p);
 }
 
-SnoVal pat_rem(void) {
-    return spat_val(spat_new(SPAT_REM));
+DESCR_t pat_rem(void) {
+    return spat_val(spat_new(XSTAR));
 }
 
-SnoVal pat_fence_p(SnoVal inner) {
-    SnoPattern *p = spat_new(SPAT_FENCE);
+DESCR_t pat_fence_p(DESCR_t inner) {
+    PATND_t *p = spat_new(XFNCE);
     p->left = spat_of(inner);
     return spat_val(p);
 }
 
-SnoVal pat_fence(void) {
-    return spat_val(spat_new(SPAT_FENCE));
+DESCR_t pat_fence(void) {
+    return spat_val(spat_new(XFNCE));
 }
 
-SnoVal pat_fail(void) {
-    return spat_val(spat_new(SPAT_FAIL));
+DESCR_t pat_fail(void) {
+    return spat_val(spat_new(XFAIL));
 }
 
-SnoVal pat_abort(void) {
-    return spat_val(spat_new(SPAT_ABORT));
+DESCR_t pat_abort(void) {
+    return spat_val(spat_new(XABRT));
 }
 
-SnoVal pat_succeed(void) {
-    return spat_val(spat_new(SPAT_SUCCEED));
+DESCR_t pat_succeed(void) {
+    return spat_val(spat_new(XSUCF));
 }
 
-SnoVal pat_bal(void) {
-    return spat_val(spat_new(SPAT_BAL));
+DESCR_t pat_bal(void) {
+    return spat_val(spat_new(XBAL));
 }
 
-SnoVal pat_epsilon(void) {
-    return spat_val(spat_new(SPAT_EPSILON));
+DESCR_t pat_epsilon(void) {
+    return spat_val(spat_new(XEPS));
 }
 
-SnoVal pat_cat(SnoVal left, SnoVal right) {
-    SnoPattern *p = spat_new(SPAT_CAT);
+DESCR_t pat_cat(DESCR_t left, DESCR_t right) {
+    PATND_t *p = spat_new(XCAT);
     p->left  = spat_of(left);
     p->right = spat_of(right);
     /* Handle string literals on either side */
-    if (!p->left  && left.type  == SSTR) p->left  = spat_of(pat_lit(left.s));
-    if (!p->right && right.type == SSTR) p->right = spat_of(pat_lit(right.s));
+    if (!p->left  && left.v  == DT_S) p->left  = spat_of(pat_lit(left.s));
+    if (!p->right && right.v == DT_S) p->right = spat_of(pat_lit(right.s));
     if (!p->left)  return right;   /* degenerate */
     if (!p->right) return left;
     return spat_val(p);
 }
 
-SnoVal pat_alt(SnoVal left, SnoVal right) {
-    SnoPattern *p = spat_new(SPAT_ALT);
+DESCR_t pat_alt(DESCR_t left, DESCR_t right) {
+    PATND_t *p = spat_new(XOR);
     p->left  = spat_of(left);
     p->right = spat_of(right);
-    if (!p->left  && left.type  == SSTR)  p->left  = spat_of(pat_lit(left.s));
-    if (!p->right && right.type == SSTR)  p->right = spat_of(pat_lit(right.s));
-    /* SNULL (uninitialized var) in ALT = epsilon: always succeeds.
+    if (!p->left  && left.v  == DT_S)  p->left  = spat_of(pat_lit(left.s));
+    if (!p->right && right.v == DT_S)  p->right = spat_of(pat_lit(right.s));
+    /* DT_SNUL (uninitialized var) in ALT = epsilon: always succeeds.
      * e.g. (nl | ';') where nl is uninitialized => ("" | ';') => epsilon. */
-    if (!p->left  && left.type  == SNULL) p->left  = spat_of(pat_epsilon());
-    if (!p->right && right.type == SNULL) p->right = spat_of(pat_epsilon());
+    if (!p->left  && left.v  == DT_SNUL) p->left  = spat_of(pat_epsilon());
+    if (!p->right && right.v == DT_SNUL) p->right = spat_of(pat_epsilon());
     if (!p->left)  return right;
     if (!p->right) return left;
     return spat_val(p);
 }
 
-SnoVal pat_ref(const char *name) {
-    SnoPattern *p = spat_new(SPAT_REF);
+DESCR_t pat_ref(const char *name) {
+    PATND_t *p = spat_new(XDSAR);
     p->strv = name ? GC_strdup(name) : "";
     return spat_val(p);
 }
 
-SnoVal pat_ref_val(SnoVal nameVal) {
-    return pat_ref(to_str(nameVal));
+DESCR_t pat_ref_val(DESCR_t nameVal) {
+    return pat_ref(VARVAL_fn(nameVal));
 }
 
-SnoVal pat_assign_imm(SnoVal child, SnoVal var) {
-    SnoPattern *p = spat_new(SPAT_ASSIGN_IMM);
+DESCR_t pat_assign_imm(DESCR_t child, DESCR_t var) {
+    PATND_t *p = spat_new(XFNME);
     p->left = spat_of(child);
-    if (!p->left && child.type == SSTR) p->left = spat_of(pat_lit(child.s));
+    if (!p->left && child.v == DT_S) p->left = spat_of(pat_lit(child.s));
     p->var  = var;
     return spat_val(p);
 }
 
-SnoVal pat_assign_cond(SnoVal child, SnoVal var) {
-    SnoPattern *p = spat_new(SPAT_ASSIGN_COND);
+DESCR_t pat_assign_cond(DESCR_t child, DESCR_t var) {
+    PATND_t *p = spat_new(XNME);
     p->left = spat_of(child);
-    if (!p->left && child.type == SSTR) p->left = spat_of(pat_lit(child.s));
+    if (!p->left && child.v == DT_S) p->left = spat_of(pat_lit(child.s));
     p->var  = var;
     return spat_val(p);
 }
 
-SnoVal var_as_pattern(SnoVal v) {
+DESCR_t var_as_pattern(DESCR_t v) {
     /* If v is already a pattern, return it */
-    if (v.type == SPATTERN) return v;
+    if (v.v == DT_P) return v;
     /* If v is a string, treat as a literal pattern */
-    if (v.type == SSTR || v.type == SNULL) {
-        return pat_lit(to_str(v));
+    if (v.v == DT_S || v.v == DT_SNUL) {
+        return pat_lit(VARVAL_fn(v));
     }
     /* Otherwise wrap as a variable lookup */
-    SnoPattern *p = spat_new(SPAT_VAR);
+    PATND_t *p = spat_new(XVAR);
     p->var = v;
     return spat_val(p);
 }
 
-SnoVal pat_user_call(const char *name, SnoVal *args, int nargs) {
-    SnoPattern *p = spat_new(SPAT_USER_CALL);
+DESCR_t pat_user_call(const char *name, DESCR_t *args, int nargs) {
+    PATND_t *p = spat_new(XATP);
     p->strv   = name ? GC_strdup(name) : "";
     p->nargs = nargs;
     if (nargs > 0) {
-        p->args = (SnoVal *)GC_MALLOC(nargs * sizeof(SnoVal));
-        memcpy(p->args, args, nargs * sizeof(SnoVal));
+        p->args = (DESCR_t *)GC_MALLOC(nargs * sizeof(DESCR_t));
+        memcpy(p->args, args, nargs * sizeof(DESCR_t));
     }
     return spat_val(p);
 }
 
 /* =========================================================================
- * Pattern materialisation — convert SnoPattern tree to engine Pattern* tree
+ * Pattern materialisation — convert PATND_t tree to engine Pattern* tree
  *
  * The engine uses malloc'd Pattern nodes that are freed after each mtch.
  * We materialise lazily: deferred refs are resolved from the var table NOW.
@@ -290,8 +290,8 @@ SnoVal pat_user_call(const char *name, SnoVal *args, int nargs) {
 
 typedef struct {
     char   *var_name;   /* variable name to assign to (static, or NULL if deferred) */
-    /* Deferred var name: when var is *FuncCall(), evaluate at aply time */
-    char *(*var_fn)(void *data); /* if set, call this at aply time to get var name */
+    /* Deferred var name: when var is *FuncCall(), evaluate at APLY_fn time */
+    char *(*var_fn)(void *data); /* if set, call this at APLY_fn time to get var name */
     void   *var_data;   /* userdata for var_fn */
     int     start;      /* mtch start cursor */
     int     end;        /* mtch end cursor */
@@ -300,13 +300,13 @@ typedef struct {
 
 #define MAX_CAPTURES 64
 
-/* Cache of already-materialised patterns keyed by SnoPattern* identity.
+/* Cache of already-materialised patterns keyed by PATND_t* identity.
  * Prevents var_resolve_callback from re-materialising the same variable
  * (e.g. snoCommand) on every ARBNO iteration.  nInc/nPush/nPop fire ONCE
  * at materialise time (correct — they set up capture wrappers), not N times. */
 #define VAR_CACHE_MAX 32
 typedef struct {
-    SnoPattern *sp;    /* original SnoPattern* (identity key) */
+    PATND_t *sp;    /* original PATND_t* (identity key) */
     Pattern    *root;  /* materialised Pattern* tree (owned by pl) */
 } VarCacheEntry;
 
@@ -322,32 +322,32 @@ typedef struct {
 
 /* Forward decl */
 
-/* T_FUNC callback for SPAT_USER_CALL deferred functions.
+/* T_FUNC callback for XATP deferred functions.
  *
  * Used for functions that must fire at MATCH TIME not materialise time:
- *   nInc, nPush, nPop — return SPATTERN (a capture-wrapper/epsilon); also have
- *                        stack side-effects (increment counter, push/pop frame).
- *   Reduce            — returns SNULL; pops parse stack and builds tree node.
+ *   nInc, nPush, nPop — return P (a capture-wrapper/epsilon); also have
+ *                        stack side-effects (increment counter, PUSH_fn/POP_fn frame).
+ *   Reduce            — returns DT_SNUL; pops parse stack and builds tree node.
  *
- * If the function returns SPATTERN, we run it as a zero-width sub-mtch
+ * If the function returns P, we run it as a zero-width sub-mtch
  * against the current subject string so its captures fire correctly.
- * SFAIL (FRETURN) => -1 => engine CONCEDE.
+ * DT_FAIL (FRETURN) => -1 => engine CONCEDE.
  * All other returns => succeed zero-width. */
 typedef struct {
     const char  *name;
-    SnoVal      *args;
+    DESCR_t      *args;
     int          nargs;
     /* Set at mtch time by the engine dispatcher in match_pattern.
-     * Points to the current subject being matched — used for SPATTERN sub-mtch. */
+     * Points to the current subject being matched — used for P sub-mtch. */
     const char  *subject;
 } UCData;
 
 static void *user_call_fn(void *userdata) {
     UCData *d = (UCData *)userdata;
     if (getenv("PAT_DEBUG")) fprintf(stderr, "  user_call_fn: %s\n", d->name);
-    SnoVal r = aply(d->name, d->args, d->nargs);
-    if (r.type == SFAIL) return (void *)(intptr_t)-1;
-    if (r.type == SPATTERN && r.p) {
+    DESCR_t r = APLY_fn(d->name, d->args, d->nargs);
+    if (r.v == DT_FAIL) return (void *)(intptr_t)-1;
+    if (r.v == DT_P && r.p) {
         /* Run the returned pattern as a zero-width sub-mtch.
          * nInc/nPush/nPop return epsilon . *Fn() wrappers — matching against ""
          * fires the capture which records the counter/frame. */
@@ -374,13 +374,13 @@ static int is_sideeffect_fn(const char *name) {
  * the function's return value names the target variable. */
 static char *deferred_var_fn(void *data) {
     UCData *d = (UCData *)data;
-    SnoVal r = aply(d->name, d->args, d->nargs);
-    if (r.type == SSTR && r.s && r.s[0]) return (char *)r.s;
-    if (r.type == SNULL) return NULL; /* NRETURN — no assignment */
+    DESCR_t r = APLY_fn(d->name, d->args, d->nargs);
+    if (r.v == DT_S && r.s && r.s[0]) return (char *)r.s;
+    if (r.v == DT_SNUL) return NULL; /* NRETURN — no assignment */
     return NULL;
 }
 
-static Pattern *materialise(SnoPattern *sp, MatchCtx *ctx);
+static Pattern *materialise(PATND_t *sp, MatchCtx *ctx);
 
 /* Build a Σ (sequence/concatenation) node */
 static Pattern *make_seq(PatternList *pl, Pattern *a, Pattern *b) {
@@ -416,7 +416,7 @@ static Pattern *make_epsilon(PatternList *pl) {
 /* Deferred USER_CALL: data passed to T_FUNC callback at mtch time */
 typedef struct {
     const char *name;
-    SnoVal     *args;
+    DESCR_t     *args;
     int         nargs;
 } DeferredCall;
 
@@ -425,10 +425,10 @@ static void *deferred_call_fn(void *userdata) {
     DeferredCall *d = (DeferredCall *)userdata;
     /* Special handling for reduce/Reduce: evaluate string args at mtch time */
     if (d->nargs >= 2 && strcasecmp(d->name, "reduce") == 0) {
-        SnoVal t_arg = d->args[0];
-        SnoVal n_arg = d->args[1];
+        DESCR_t t_arg = d->args[0];
+        DESCR_t n_arg = d->args[1];
         /* Strip outer quotes from type string */
-        if (t_arg.type == SSTR && t_arg.s) {
+        if (t_arg.v == DT_S && t_arg.s) {
             const char *ts = t_arg.s;
             int tlen = (int)strlen(ts);
             if (tlen >= 2 &&
@@ -437,22 +437,22 @@ static void *deferred_call_fn(void *userdata) {
                 char *stripped = GC_malloc(tlen - 1);
                 memcpy(stripped, ts + 1, tlen - 2);
                 stripped[tlen-2] = '\0';
-                t_arg = STR_VAL(stripped);
+                t_arg = STRVAL(stripped);
             }
         }
         /* Evaluate count expression at mtch time */
-        if (n_arg.type == SSTR)
+        if (n_arg.v == DT_S)
             n_arg = evl(n_arg);
-        SnoVal reduce_args[2] = { t_arg, n_arg };
-        aply("Reduce", reduce_args, 2);
+        DESCR_t reduce_args[2] = { t_arg, n_arg };
+        APLY_fn("Reduce", reduce_args, 2);
         return (void *)1; /* succeed */
     }
     /* All other calls: fire and succeed (side-effect only) */
-    aply(d->name, d->args, d->nargs);
+    APLY_fn(d->name, d->args, d->nargs);
     return (void *)1;
 }
 
-static Pattern *make_func(PatternList *pl, const char *name, SnoVal *args, int nargs) {
+static Pattern *make_func(PatternList *pl, const char *name, DESCR_t *args, int nargs) {
     Pattern *p = pattern_alloc(pl);
     p->type = T_FUNC;
     DeferredCall *d = GC_malloc(sizeof(DeferredCall));
@@ -464,45 +464,45 @@ static Pattern *make_func(PatternList *pl, const char *name, SnoVal *args, int n
     return p;
 }
 
-static Pattern *materialise(SnoPattern *sp, MatchCtx *ctx) {
+static Pattern *materialise(PATND_t *sp, MatchCtx *ctx) {
     if (!sp) return make_epsilon(&ctx->pl);
 
     Pattern *p = pattern_alloc(&ctx->pl);
 
     switch (sp->kind) {
 
-    case SPAT_LIT:
+    case XCHR:
         p->type  = T_LITERAL;
         p->s     = sp->strv ? sp->strv : "";
         p->s_len = (int)strlen(p->s);
         return p;
 
-    case SPAT_SPAN:
+    case XSPNC:
         p->type  = T_SPAN;
         p->chars = sp->strv ? sp->strv : "";
         return p;
 
-    case SPAT_BREAK:
+    case XBRKC:
         p->type  = T_BREAK;
         p->chars = sp->strv ? sp->strv : "";
         return p;
 
-    case SPAT_ANY:
+    case XANYC:
         p->type  = T_ANY;
         p->chars = sp->strv ? sp->strv : "";
         return p;
 
-    case SPAT_NOTANY:
+    case XNNYC:
         p->type  = T_NOTANY;
         p->chars = sp->strv ? sp->strv : "";
         return p;
 
-    case SPAT_LEN:
+    case XLNTH:
         p->type = T_LEN;
         p->n    = (int)sp->num;
         return p;
 
-    case SPAT_POS:
+    case XPOSI:
         p->type = T_POS;
         /* Adjust for scan offset: POS(n) in original = POS(n - scan_start) in sub-string.
          * If n < scan_start, this can never mtch from this offset. */
@@ -510,7 +510,7 @@ static Pattern *materialise(SnoPattern *sp, MatchCtx *ctx) {
         if (p->n < 0) { p->type = T_FAIL; p->n = 0; }
         return p;
 
-    case SPAT_RPOS:
+    case XRPSI:
         /* RPOS(n) is from end — not affected by scan offset, but we need full subject len.
          * Engine uses OMEGA - DELTA, so RPOS works correctly relative to sub-string end.
          * However the sub-string end = original end, so this is correct as-is. */
@@ -518,45 +518,45 @@ static Pattern *materialise(SnoPattern *sp, MatchCtx *ctx) {
         p->n    = (int)sp->num;
         return p;
 
-    case SPAT_TAB:
+    case XTB:
         p->type = T_TAB;
         p->n    = (int)sp->num;
         return p;
 
-    case SPAT_RTAB:
+    case XRTB:
         p->type = T_RTAB;
         p->n    = (int)sp->num;
         return p;
 
-    case SPAT_ARB:
+    case XFARB:
         p->type = T_ARB;
         return p;
 
-    case SPAT_REM:
+    case XSTAR:
         p->type = T_REM;
         return p;
 
-    case SPAT_EPSILON:
+    case XEPS:
         p->type = T_EPSILON;
         return p;
 
-    case SPAT_FAIL:
+    case XFAIL:
         p->type = T_FAIL;
         return p;
 
-    case SPAT_ABORT:
+    case XABRT:
         p->type = T_ABORT;
         return p;
 
-    case SPAT_SUCCEED:
+    case XSUCF:
         p->type = T_SUCCEED;
         return p;
 
-    case SPAT_BAL:
+    case XBAL:
         p->type = T_BAL;
         return p;
 
-    case SPAT_FENCE:
+    case XFNCE:
         p->type = T_FENCE;
         p->n    = 0;
         if (sp->left) {
@@ -566,31 +566,31 @@ static Pattern *materialise(SnoPattern *sp, MatchCtx *ctx) {
         }
         return p;
 
-    case SPAT_ARBNO:
+    case XARBN:
         p->type = T_ARBNO;
         p->n    = 1;
         p->children[0] = sp->left ? materialise(sp->left, ctx) : make_epsilon(&ctx->pl);
         return p;
 
-    case SPAT_CAT: {
+    case XCAT: {
         Pattern *l = materialise(sp->left,  ctx);
         Pattern *r = materialise(sp->right, ctx);
         return make_seq(&ctx->pl, l, r);
     }
 
-    case SPAT_ALT: {
+    case XOR: {
         Pattern *l = materialise(sp->left,  ctx);
         Pattern *r = materialise(sp->right, ctx);
         return make_alt(&ctx->pl, l, r);
     }
 
-    case SPAT_REF: {
+    case XDSAR: {
         if (getenv("PAT_DEBUG") && sp->strv)
-            fprintf(stderr, "  SPAT_REF '%s' -> type=%d\n", sp->strv,
-                var_get(sp->strv).type);
+            fprintf(stderr, "  XDSAR '%s' -> type=%d\n", sp->strv,
+                NV_GET_fn(sp->strv).v);
         /* Resolve *name from variable table NOW */
-        SnoVal v = var_get(sp->strv);
-        if (v.type == SPATTERN) {
+        DESCR_t v = NV_GET_fn(sp->strv);
+        if (v.v == DT_P) {
             /* Cycle detection: track variable names being materialised.
              * Recursive patterns (e.g. snoExpr14 = '|' *snoExpr14 rest)
              * must not expand infinitely. Return epsilon on a cycle. */
@@ -603,15 +603,15 @@ static Pattern *materialise(SnoPattern *sp, MatchCtx *ctx) {
                 }
             }
             if (_mat_top < MAT_MAX_DEPTH) _mat_stack[_mat_top++] = sp->strv;
-            SnoPattern *sp2 = spat_of(v);
+            PATND_t *sp2 = spat_of(v);
             Pattern *result = materialise(sp2, ctx);
             if (_mat_top > 0) _mat_top--;
             return result;
         }
         /* Variable holds a string — treat as literal */
-        if (v.type == SSTR || v.type == SNULL) {
+        if (v.v == DT_S || v.v == DT_SNUL) {
             p->type  = T_LITERAL;
-            p->s     = to_str(v);
+            p->s     = VARVAL_fn(v);
             p->s_len = (int)strlen(p->s);
             return p;
         }
@@ -619,23 +619,23 @@ static Pattern *materialise(SnoPattern *sp, MatchCtx *ctx) {
         return make_epsilon(&ctx->pl);
     }
 
-    case SPAT_VAR: {
+    case XVAR: {
         /* Variable holding a pattern value */
-        SnoVal v = sp->var;
-        if (v.type == SPATTERN) {
+        DESCR_t v = sp->var;
+        if (v.v == DT_P) {
             return materialise(spat_of(v), ctx);
         }
-        if (v.type == SSTR || v.type == SNULL) {
+        if (v.v == DT_S || v.v == DT_SNUL) {
             p->type  = T_LITERAL;
-            p->s     = to_str(v);
+            p->s     = VARVAL_fn(v);
             p->s_len = (int)strlen(p->s);
             return p;
         }
         return make_epsilon(&ctx->pl);
     }
 
-    case SPAT_ASSIGN_IMM:
-    case SPAT_ASSIGN_COND: {
+    case XFNME:
+    case XNME: {
         /*
          * Capture assignment: PAT . var  (conditional) or  PAT $ var  (immediate).
          *
@@ -644,7 +644,7 @@ static Pattern *materialise(SnoPattern *sp, MatchCtx *ctx) {
          * is the indx into ctx->captures[] where we stored the variable name.
          *
          * The callback (capture_callback below) is called by engine_match_ex, reads
-         * ctx->captures[cap_slot].var_name, and calls var_set with the matched span.
+         * ctx->captures[cap_slot].var_name, and calls NV_SET_fn with the matched span.
          */
         if (ctx->ncaptures >= MAX_CAPTURES) {
             /* Too many captures — degrade to no-capture (child only) */
@@ -653,31 +653,31 @@ static Pattern *materialise(SnoPattern *sp, MatchCtx *ctx) {
 
         /* Record capture metadata */
         const char *vname = NULL;
-        SnoVal vv = sp->var;
+        DESCR_t vv = sp->var;
         int slot = ctx->ncaptures;
         ctx->captures[slot].var_name = NULL;
         ctx->captures[slot].var_fn   = NULL;
         ctx->captures[slot].var_data = NULL;
-        if (vv.type == SSTR) {
+        if (vv.v == DT_S) {
             vname = vv.s;
             ctx->captures[slot].var_name = vname ? GC_strdup(vname) : NULL;
-        } else if (vv.type == SPATTERN) {
+        } else if (vv.v == DT_P) {
             /* Deferred: var is *FuncCall() — evaluate at apply_captures time */
-            SnoPattern *vsp = spat_of(vv);
-            if (vsp && vsp->kind == SPAT_USER_CALL) {
+            PATND_t *vsp = spat_of(vv);
+            if (vsp && vsp->kind == XATP) {
                 UCData *d = (UCData *)GC_MALLOC(sizeof(UCData));
                 d->name  = vsp->strv;
                 d->nargs = vsp->nargs;
                 d->args  = NULL;
                 if (vsp->nargs > 0) {
-                    d->args = (SnoVal *)GC_MALLOC(vsp->nargs * sizeof(SnoVal));
-                    memcpy(d->args, vsp->args, vsp->nargs * sizeof(SnoVal));
+                    d->args = (DESCR_t *)GC_MALLOC(vsp->nargs * sizeof(DESCR_t));
+                    memcpy(d->args, vsp->args, vsp->nargs * sizeof(DESCR_t));
                 }
                 ctx->captures[slot].var_fn   = deferred_var_fn;
                 ctx->captures[slot].var_data = d;
             }
         }
-        ctx->captures[slot].is_imm   = (sp->kind == SPAT_ASSIGN_IMM);
+        ctx->captures[slot].is_imm   = (sp->kind == XFNME);
         ctx->captures[slot].start    = -1;
         ctx->captures[slot].end      = -1;
         ctx->ncaptures++;
@@ -693,9 +693,9 @@ static Pattern *materialise(SnoPattern *sp, MatchCtx *ctx) {
         return cap;
     }
 
-    case SPAT_USER_CALL: {
+    case XATP: {
         if (getenv("PAT_DEBUG"))
-            fprintf(stderr, "SPAT_USER_CALL %s\n", sp->strv);
+            fprintf(stderr, "XATP %s\n", sp->strv);
 
         /* Primitive pattern builtins: evaluate args now and build proper T_* node.
          * These are NOT side-effect functions — they return a pattern value.
@@ -709,8 +709,8 @@ static Pattern *materialise(SnoPattern *sp, MatchCtx *ctx) {
              strcasecmp(nm, "BREAK")  == 0 ||
              strcasecmp(nm, "NOTANY") == 0) && sp->nargs >= 1) {
             /* Evaluate charset arg at materialise time */
-            SnoVal cv = sp->args[0];
-            const char *chars = (cv.type == SSTR && cv.s) ? cv.s : "";
+            DESCR_t cv = sp->args[0];
+            const char *chars = (cv.v == DT_S && cv.s) ? cv.s : "";
             p->chars = GC_strdup(chars);
             if      (strcasecmp(nm, "ANY")    == 0) p->type = T_ANY;
             else if (strcasecmp(nm, "SPAN")   == 0) p->type = T_SPAN;
@@ -726,8 +726,8 @@ static Pattern *materialise(SnoPattern *sp, MatchCtx *ctx) {
              strcasecmp(nm, "RPOS")  == 0 ||
              strcasecmp(nm, "TAB")   == 0 ||
              strcasecmp(nm, "RTAB")  == 0) && sp->nargs >= 1) {
-            SnoVal nv = sp->args[0];
-            int n = (nv.type == SINT) ? (int)nv.i : (int)to_int(nv);
+            DESCR_t nv = sp->args[0];
+            int n = (nv.v == DT_I) ? (int)nv.i : (int)to_int(nv);
             p->n = n;
             if      (strcasecmp(nm, "LEN")  == 0) { p->type = T_LEN;  }
             else if (strcasecmp(nm, "POS")  == 0) {
@@ -769,7 +769,7 @@ static void capture_callback(int cap_slot, int start, int end, void *userdata) {
             cap_slot, cap->var_name ? cap->var_name : "(null)", cap->start, cap->end);
 }
 
-/* Apply captures: call var_set for each fired capture */
+/* Apply captures: call NV_SET_fn for each fired capture */
 static void apply_captures(MatchCtx *ctx) {
     for (int i = 0; i < ctx->ncaptures; i++) {
         Capture *cap = &ctx->captures[i];
@@ -788,36 +788,36 @@ static void apply_captures(MatchCtx *ctx) {
         if (ctx->subject)
             memcpy(text, ctx->subject + cap->start, len);
         text[len] = '\0';
-        var_set(vname, STR_VAL(text));
+        NV_SET_fn(vname, STRVAL(text));
         if (getenv("PAT_DEBUG"))
             fprintf(stderr, "CAPTURE: %s = \"%.*s\"\n", vname, len, text);
     }
 }
 
 /* =========================================================================
- * match_pattern — top-level mtch entry point
+ * match_pattern — TOP_fn-level mtch entry point
  * ===================================================================== */
 
 /* Callback for T_VARREF resolution: look up variable by name and materialise.
  * userdata is MatchCtx*. Returns epsilon if variable not set or not a pattern. */
 static Pattern *var_resolve_callback(const char *name, void *userdata) {
     MatchCtx *ctx = (MatchCtx *)userdata;
-    SnoVal v = var_get(name);
-    if (v.type != SPATTERN) {
+    DESCR_t v = NV_GET_fn(name);
+    if (v.v != DT_P) {
         /* not a pattern — return epsilon */
         Pattern *ep = pattern_alloc(&ctx->pl);
         ep->type = T_EPSILON;
         return ep;
     }
-    SnoPattern *sp = spat_of(v);
+    PATND_t *sp = spat_of(v);
     if (!sp) {
         Pattern *ep = pattern_alloc(&ctx->pl);
         ep->type = T_EPSILON;
         return ep;
     }
-    /* Cache lookup: if we've already materialised this SnoPattern* during this
+    /* Cache lookup: if we've already materialised this PATND_t* during this
      * mtch, return the cached Pattern* tree.  This prevents nInc/nPush/nPop
-     * (and any other SPAT_USER_CALL nodes) from firing on every ARBNO iteration
+     * (and any other XATP nodes) from firing on every ARBNO iteration
      * that re-resolves the same variable (e.g. snoCommand).
      * The tree is identical every time — only the first materialise call is needed. */
     for (int i = 0; i < ctx->var_cache_n; i++)
@@ -855,7 +855,7 @@ static int try_match_at_root(Pattern *root, const char *subject, int slen, int s
 
 /* Internal: materialise then try mtch at a single starting offset.
  * Used for match_and_replace and other single-shot callers. */
-static int try_match_at(SnoPattern *sp, const char *subject, int slen, int start, MatchCtx *ctx) {
+static int try_match_at(PATND_t *sp, const char *subject, int slen, int start, MatchCtx *ctx) {
     ctx->scan_start = start;
     Pattern *root = materialise(sp, ctx);
     EngineOpts opts;
@@ -875,15 +875,15 @@ static int try_match_at(SnoPattern *sp, const char *subject, int slen, int start
     return -1;
 }
 
-int match_pattern(SnoVal pat, const char *subject) {
+int match_pattern(DESCR_t pat, const char *subject) {
     if (!subject) subject = "";
     int _dbg = getenv("PAT_DEBUG") && strlen(subject) < 20;
-    if (_dbg) fprintf(stderr, "match_pattern: subj=(%zu) pat.type=%d\n",
-        strlen(subject), pat.type);
+    if (_dbg) fprintf(stderr, "match_pattern: subj=(%zu) pat.v=%d\n",
+        strlen(subject), pat.v);
 
-    SnoPattern *sp = spat_of(pat);
+    PATND_t *sp = spat_of(pat);
     if (!sp) {
-        if (pat.type == SSTR) {
+        if (pat.v == DT_S) {
             const char *lit = pat.s ? pat.s : "";
             return strstr(subject, lit) != NULL;
         }
@@ -893,7 +893,7 @@ int match_pattern(SnoVal pat, const char *subject) {
     int slen = (int)strlen(subject);
 
     /* Materialise the pattern ONCE (scan_start=0 for absolute POS/TAB values).
-     * This prevents side-effect functions (Reduce, nInc, etc.) inside SPAT_USER_CALL
+     * This prevents side-effect functions (Reduce, nInc, etc.) inside XATP
      * from being called N times (once per scan position). The engine receives
      * opts.scan_start per position so T_POS/T_TAB compute correctly. */
     MatchCtx mat_ctx; memset(&mat_ctx, 0, sizeof(mat_ctx)); mat_ctx.subject = subject;
@@ -930,21 +930,21 @@ int match_pattern(SnoVal pat, const char *subject) {
  * ===================================================================== */
 
 /* =========================================================================
- * match_pattern_at — cursor-aware anchored mtch for E_DEREF / *varname
+ * match_pattern_at — cursor-aware anchored mtch for E_INDR / *varname
  *
  * Matches pat against subject starting at position cursor (anchored — no
  * scan loop).  Returns the new cursor position (>= cursor) on success, or
  * -1 on failure.  Used by compiled Byrd boxes for indirect pattern refs.
  * ========================================================================= */
 
-int match_pattern_at(SnoVal pat, const char *subject, int subj_len, int cursor) {
+int match_pattern_at(DESCR_t pat, const char *subject, int subj_len, int cursor) {
     if (!subject) subject = "";
     if (cursor < 0 || cursor > subj_len) return -1;
 
-    SnoPattern *sp = spat_of(pat);
+    PATND_t *sp = spat_of(pat);
     if (!sp) {
         /* Plain string literal pattern: anchored memcmp */
-        if (pat.type == SSTR) {
+        if (pat.v == DT_S) {
             const char *lit = pat.s ? pat.s : "";
             int n = (int)strlen(lit);
             if (cursor + n > subj_len) return -1;
@@ -961,19 +961,19 @@ int match_pattern_at(SnoVal pat, const char *subject, int subj_len, int cursor) 
     return r;
 }
 
-int match_and_replace(SnoVal *subject, SnoVal pat, SnoVal replacement) {
+int match_and_replace(DESCR_t *subject, DESCR_t pat, DESCR_t replacement) {
     if (!subject) return 0;
     /* P002: if replacement value signals failure, propagate it as F-branch */
-    if (is_fail(replacement)) return 0;
+    if (IS_FAIL_fn(replacement)) return 0;
 
-    /* P002: out-of-bounds subscript returns FAIL_VAL — fail the statement */
-    if (is_fail(*subject) || is_fail(replacement)) return 0;
+    /* P002: out-of-bounds subscript returns FAILDESCR — fail the statement */
+    if (IS_FAIL_fn(*subject) || IS_FAIL_fn(replacement)) return 0;
 
-    const char *s = to_str(*subject);
+    const char *s = VARVAL_fn(*subject);
     if (!s) s = "";
     int slen = (int)strlen(s);
 
-    SnoPattern *sp = spat_of(pat);
+    PATND_t *sp = spat_of(pat);
     if (!sp) return 0;
 
     /* Materialise once to prevent side-effect functions firing per scan position */
@@ -1004,7 +1004,7 @@ int match_and_replace(SnoVal *subject, SnoVal pat, SnoVal replacement) {
     if (match_start < 0) pattern_free_all(&mat_ctx.pl);
     if (match_start < 0) return 0;
 
-    const char *repl = to_str(replacement);
+    const char *repl = VARVAL_fn(replacement);
     if (!repl) repl = "";
     size_t rlen  = strlen(repl);
     size_t total = (size_t)match_start + rlen + (size_t)(slen - match_end);
@@ -1015,7 +1015,7 @@ int match_and_replace(SnoVal *subject, SnoVal pat, SnoVal replacement) {
     memcpy(result + match_start + rlen,     s + match_end, (size_t)(slen - match_end));
     result[total] = '\0';
 
-    *subject = STR_VAL(result);
+    *subject = STRVAL(result);
     return 1;
 }
 
@@ -1024,8 +1024,8 @@ int match_and_replace(SnoVal *subject, SnoVal pat, SnoVal replacement) {
  * ===================================================================== */
 
 /* array_create("lo:hi" or "n") — create array from spec string */
-SnoVal array_create(SnoVal spec) {
-    const char *s = to_str(spec);
+DESCR_t array_create(DESCR_t spec) {
+    const char *s = VARVAL_fn(spec);
     int lo = 1, hi = 1;
     const char *colon = strchr(s, ':');
     if (colon) {
@@ -1035,92 +1035,93 @@ SnoVal array_create(SnoVal spec) {
         hi = atoi(s);
     }
     if (hi < lo) hi = lo;
-    SnoArray *a = array_new(lo, hi);
-    SnoVal v;
-    v.type = ARRAY;
-    v.a    = a;
+    ARBLK_t *a = array_new(lo, hi);
+    DESCR_t v;
+    v.v = DT_A;
+    v.arr    = a;
     return v;
 }
 
 /* subscript_get — get arr[idx] */
-SnoVal subscript_get(SnoVal arr, SnoVal idx) {
-    if (arr.type == ARRAY) {
-        return array_get(arr.a, (int)to_int(idx));  /* returns FAIL if OOB */
+DESCR_t subscript_get(DESCR_t arr, DESCR_t idx) {
+    if (arr.v == DT_A) {
+        return array_get(arr.arr, (int)to_int(idx));  /* returns DT_FAIL if OOB */
     }
-    if (arr.type == STABLE) {
-        return table_get(arr.tbl, to_str(idx));
+    if (arr.v == DT_T) {
+        return table_get(arr.tbl, VARVAL_fn(idx));
     }
-    /* Tree child access: c(x)[i] */
-    if (arr.type == STREE) {
+    /* DATA instance child access: c(x)[i] — tree children via DATINST_t */
+    if (arr.v == DT_DATA) {
         int i = (int)to_int(idx);
-        Tree *child = c_i(arr.t, i);
-        return child ? TREE_VAL(child) : FAIL_VAL;  /* P002: no child = fail */
+        DESCR_t children = FIELD_GET_fn(arr, "c");
+        if (children.v == DT_A && children.arr)
+            return array_get(children.arr, i);
+        return FAILDESCR;
     }
-    return FAIL_VAL;  /* P002: unknown container type = fail */
+    return FAILDESCR;  /* P002: unknown container type = fail */
 }
 
 /* subscript_set — arr[idx] = val */
-void subscript_set(SnoVal arr, SnoVal idx, SnoVal val) {
-    if (arr.type == ARRAY) {
-        array_set(arr.a, (int)to_int(idx), val);
+void subscript_set(DESCR_t arr, DESCR_t idx, DESCR_t val) {
+    if (arr.v == DT_A) {
+        array_set(arr.arr, (int)to_int(idx), val);
         return;
     }
-    if (arr.type == STABLE) {
-        table_set(arr.tbl, to_str(idx), val);
+    if (arr.v == DT_T) {
+        table_set(arr.tbl, VARVAL_fn(idx), val);
         return;
     }
 }
 
 /* subscript_get2 / subscript_set2 — 2D */
-SnoVal subscript_get2(SnoVal arr, SnoVal i, SnoVal j) {
-    if (arr.type == ARRAY)
-        return array_get2(arr.a, (int)to_int(i), (int)to_int(j));
-    return FAIL_VAL;  /* P002: not an array — fail the statement */
+DESCR_t subscript_get2(DESCR_t arr, DESCR_t i, DESCR_t j) {
+    if (arr.v == DT_A)
+        return array_get2(arr.arr, (int)to_int(i), (int)to_int(j));
+    return FAILDESCR;  /* P002: not an array — fail the statement */
 }
 
-void subscript_set2(SnoVal arr, SnoVal i, SnoVal j, SnoVal val) {
-    if (arr.type == ARRAY)
-        array_set2(arr.a, (int)to_int(i), (int)to_int(j), val);
+void subscript_set2(DESCR_t arr, DESCR_t i, DESCR_t j, DESCR_t val) {
+    if (arr.v == DT_A)
+        array_set2(arr.arr, (int)to_int(i), (int)to_int(j), val);
 }
 
-/* tree_new — 4-arg version: creates a DATA('tree(t,v,n,c)') instance */
-SnoVal make_tree(SnoVal tag, SnoVal val, SnoVal n_children, SnoVal children) {
-    /* Ensure the tree type is registered */
-    if (!func_exists("t")) {
-        data_define("tree(t,v,n,c)");
-    }
-    return udef_new("tree", tag, val, n_children, children, (SnoVal){0});
+/* tree_new — 4-arg version: creates a DT_DATA('tree(t,v,n,c)') instance */
+DESCR_t MAKE_TREE_fn(DESCR_t tag, DESCR_t val, DESCR_t n_children, DESCR_t children) {
+    /* tree type registered in SNO_INIT_fn — DEFDAT_fn + _b_tree_* override done there */
+    fprintf(stderr, "DEBUG MAKE_TREE_fn: tag=%s children.v=%d\n",
+            tag.s ? tag.s : "?", children.v);
+    return DATCON_fn("tree", tag, val, n_children, children, (DESCR_t){0});
 }
 
-/* push_val / pop_val / top_val — aliases for push/pop/top */
-SnoVal push_val(SnoVal x) {
-    push(x);
-    return NULL_VAL;
+/* push_val / pop_val / top_val — aliases for PUSH_fn/POP_fn/TOP_fn */
+DESCR_t push_val(DESCR_t x) {
+    PUSH_fn(x);
+    return NULVCL;
 }
 
-SnoVal pop_val(void) {
-    return pop();
+DESCR_t pop_val(void) {
+    return POP_fn();
 }
 
-SnoVal top_val(void) {
-    return top();
+DESCR_t top_val(void) {
+    return TOP_fn();
 }
 
 /* register_fn — register a C function in the global function table */
-void register_fn(const char *name, SnoVal (*fn)(SnoVal*, int), int min_args, int max_args) {
+void register_fn(const char *name, DESCR_t (*fn)(DESCR_t*, int), int min_args, int max_args) {
     (void)min_args; (void)max_args;
-    define(name, fn);
+    DEFINE_fn(name, fn);
 }
 
-/* define_spec — DEFINE('name(args)locals') */
-void define_spec(SnoVal spec) {
-    define(to_str(spec), NULL);
+/* define_spec — DEFINE_fn('name(args)locals') */
+void define_spec(DESCR_t spec) {
+    DEFINE_fn(VARVAL_fn(spec), NULL);
 }
 
 /* apply_val — APPLY(fnval, args...) */
-SnoVal apply_val(SnoVal fnval, SnoVal *args, int nargs) {
-    const char *name = to_str(fnval);
-    return aply(name, args, nargs);
+DESCR_t apply_val(DESCR_t fnval, DESCR_t *args, int nargs) {
+    const char *name = VARVAL_fn(fnval);
+    return APLY_fn(name, args, nargs);
 }
 
 /* =========================================================================
@@ -1133,17 +1134,17 @@ SnoVal apply_val(SnoVal fnval, SnoVal *args, int nargs) {
  *   term : '*' ident ['(' args ')']   deferred ref / user_call node
  *        | ident '(' args ')'          function call — evaluate now
  *        | '\'' strv '\''               string literal → pat_lit
- *        | ident                       plain name → SSTR sentinel
+ *        | ident                       plain name → S sentinel
  *   args : val (',' val)*
  *   val  : ident '(' args ')'          function call → value
  *        | '\'' strv '\''               string value
  *        | ident                       var lookup
  *        | integer
  *
- * Key semantic: plain IDENT in term position returns STR_VAL(name).
+ * Key semantic: plain IDENT in term position returns STRVAL(name).
  * Dot handler checks right operand type:
- *   SSTR     → assign_cond(left, right)   capture into named var
- *   SPATTERN → pat_cat(left, right)        pattern ccat
+ *   S     → assign_cond(left, right)   capture into named var
+ *   P → pat_cat(left, right)        pattern ccat
  * ========================================================================= */
 
 typedef struct { const char *s; int pos; } SnoEvalCtx;
@@ -1175,11 +1176,11 @@ static char *_ev_strlit(SnoEvalCtx *e) {
     return lit;
 }
 
-static SnoVal _ev_val(SnoEvalCtx *e);
-static SnoVal _ev_term(SnoEvalCtx *e);
-static SnoVal _ev_expr(SnoEvalCtx *e);
+static DESCR_t _ev_val(SnoEvalCtx *e);
+static DESCR_t _ev_term(SnoEvalCtx *e);
+static DESCR_t _ev_expr(SnoEvalCtx *e);
 
-static int _ev_args(SnoEvalCtx *e, SnoVal *args, int maxargs) {
+static int _ev_args(SnoEvalCtx *e, DESCR_t *args, int maxargs) {
     int na = 0;
     _ev_skip(e);
     while (e->s[e->pos] && e->s[e->pos] != ')') {
@@ -1194,30 +1195,30 @@ static int _ev_args(SnoEvalCtx *e, SnoVal *args, int maxargs) {
     return na;
 }
 
-static SnoVal _ev_val(SnoEvalCtx *e) {
+static DESCR_t _ev_val(SnoEvalCtx *e) {
     _ev_skip(e);
     char c = e->s[e->pos];
-    if (c == '\'' || c == '"') return STR_VAL(_ev_strlit(e));
+    if (c == '\'' || c == '"') return STRVAL(_ev_strlit(e));
     if (isalpha((unsigned char)c) || c == '_') {
         char *nm = _ev_ident(e);
         _ev_skip(e);
         if (e->s[e->pos] == '(') {
             e->pos++;
-            SnoVal args[8]; int na = _ev_args(e, args, 8);
-            return aply(nm, args, na);
+            DESCR_t args[8]; int na = _ev_args(e, args, 8);
+            return APLY_fn(nm, args, na);
         }
-        return var_get(nm);
+        return NV_GET_fn(nm);
     }
     if (isdigit((unsigned char)c) || c == '-') {
         char *end;
         long long iv = strtoll(e->s + e->pos, &end, 10);
         e->pos = (int)(end - e->s);
-        return INT_VAL(iv);
+        return INTVAL(iv);
     }
-    return NULL_VAL;
+    return NULVCL;
 }
 
-static SnoVal _ev_term(SnoEvalCtx *e) {
+static DESCR_t _ev_term(SnoEvalCtx *e) {
     _ev_skip(e);
     char c = e->s[e->pos];
     if (c == '*') {
@@ -1228,9 +1229,9 @@ static SnoVal _ev_term(SnoEvalCtx *e) {
         _ev_skip(e);
         if (e->s[e->pos] == '(') {
             e->pos++;
-            SnoVal args[8]; int na = _ev_args(e, args, 8);
-            SnoVal *ac = na ? GC_malloc(na * sizeof(SnoVal)) : NULL;
-            if (ac) memcpy(ac, args, na * sizeof(SnoVal));
+            DESCR_t args[8]; int na = _ev_args(e, args, 8);
+            DESCR_t *ac = na ? GC_malloc(na * sizeof(DESCR_t)) : NULL;
+            if (ac) memcpy(ac, args, na * sizeof(DESCR_t));
             return pat_user_call(nm, ac, na);
         }
         return pat_ref(nm);
@@ -1241,67 +1242,67 @@ static SnoVal _ev_term(SnoEvalCtx *e) {
         _ev_skip(e);
         if (e->s[e->pos] == '(') {
             e->pos++;
-            SnoVal args[8]; int na = _ev_args(e, args, 8);
-            return aply(nm, args, na);
+            DESCR_t args[8]; int na = _ev_args(e, args, 8);
+            return APLY_fn(nm, args, na);
         }
-        return STR_VAL(GC_strdup(nm));
+        return STRVAL(GC_strdup(nm));
     }
     return pat_epsilon();
 }
 
-static SnoVal _ev_expr(SnoEvalCtx *e) {
-    SnoVal left = _ev_term(e);
-    if (left.type == SSTR) {
-        SnoVal v = var_get(left.s);
-        if (v.type == SPATTERN) left = v;
-        else if (v.type == SSTR && v.s && v.s[0]) left = pat_lit(v.s);
+static DESCR_t _ev_expr(SnoEvalCtx *e) {
+    DESCR_t left = _ev_term(e);
+    if (left.v == DT_S) {
+        DESCR_t v = NV_GET_fn(left.s);
+        if (v.v == DT_P) left = v;
+        else if (v.v == DT_S && v.s && v.s[0]) left = pat_lit(v.s);
         else left = pat_epsilon();
-    } else if (left.type == SNULL) {
+    } else if (left.v == DT_SNUL) {
         left = pat_epsilon();
     }
     _ev_skip(e);
     while (e->s[e->pos] == '.') {
         e->pos++;
         _ev_skip(e);
-        SnoVal right = _ev_term(e);
+        DESCR_t right = _ev_term(e);
         _ev_skip(e);
-        if (right.type == SSTR) {
+        if (right.v == DT_S) {
             left = pat_assign_cond(left, right);
         } else {
-            if (right.type == SNULL) right = pat_epsilon();
+            if (right.v == DT_SNUL) right = pat_epsilon();
             left = pat_cat(left, right);
         }
     }
     return left;
 }
 
-SnoVal evl(SnoVal expr) {
-    if (expr.type != SSTR && expr.type != SNULL) return expr;
-    const char *s = to_str(expr);
+DESCR_t evl(DESCR_t expr) {
+    if (expr.v != DT_S && expr.v != DT_SNUL) return expr;
+    const char *s = VARVAL_fn(expr);
     if (!s || !*s) return pat_epsilon();
     /* If the expression is a quoted string literal ('...' or "..."),
      * EVAL returns the string value — not a pattern.
-     * SNOBOL4: EVAL("'Stmt'") => "Stmt" */
+     * SNOBOL4: EVAL("'STMT_t'") => "STMT_t" */
     size_t sl = strlen(s);
     if (sl >= 2 && (s[0] == '\'' || s[0] == '"') && s[sl-1] == s[0]) {
         char *inner = GC_malloc(sl - 1);
         memcpy(inner, s + 1, sl - 2);
         inner[sl - 2] = '\0';
-        return STR_VAL(inner);
+        return STRVAL(inner);
     }
     SnoEvalCtx ctx = { s, 0 };
     return _ev_expr(&ctx);
 }
 
 /* opsyn — OPSYN(new, old, type) */
-SnoVal opsyn(SnoVal newname, SnoVal oldname, SnoVal type) {
+DESCR_t opsyn(DESCR_t newname, DESCR_t oldname, DESCR_t type) {
     (void)type;
     /* Register new as an alias for old */
-    const char *nm = to_str(newname);
-    const char *old = to_str(oldname);
+    const char *nm = VARVAL_fn(newname);
+    const char *old = VARVAL_fn(oldname);
     /* For now just a no-op — full OPSYN is complex */
     (void)nm; (void)old;
-    return NULL_VAL;
+    return NULVCL;
 }
 
 /* sort_fn — SORT(table_or_array) -> 2D array[1..n,1..2] */
@@ -1311,23 +1312,23 @@ static int _sort_cmp(const void *a, const void *b) {
     const char **sb = (const char **)b;
     return strcmp(sa[0], sb[0]);
 }
-SnoVal sort_fn(SnoVal arr) {
-    if (arr.type != STABLE) return arr;  /* pass-through for non-table */
-    SnoTable *tbl = arr.tbl;
-    if (!tbl) return FAIL_VAL;
+DESCR_t sort_fn(DESCR_t arr) {
+    if (arr.v != DT_T) return arr;  /* pass-through for non-table */
+    TBBLK_t *tbl = arr.tbl;
+    if (!tbl) return FAILDESCR;
 
     /* Count entries */
     int n = 0;
     for (int h = 0; h < TABLE_BUCKETS; h++)
-        for (SnoTableEntry *e = tbl->buckets[h]; e; e = e->next) n++;
-    if (n == 0) return FAIL_VAL;
+        for (TBPAIR_t *e = tbl->buckets[h]; e; e = e->next) n++;
+    if (n == 0) return FAILDESCR;
 
     /* Collect all (key, value) pairs */
     const char **keys = GC_malloc(n * sizeof(char *));
-    SnoVal *vals = GC_malloc(n * sizeof(SnoVal));
+    DESCR_t *vals = GC_malloc(n * sizeof(DESCR_t));
     int idx = 0;
     for (int h = 0; h < TABLE_BUCKETS; h++)
-        for (SnoTableEntry *e = tbl->buckets[h]; e; e = e->next) {
+        for (TBPAIR_t *e = tbl->buckets[h]; e; e = e->next) {
             keys[idx] = e->key;
             vals[idx] = e->val;
             idx++;
@@ -1348,27 +1349,27 @@ SnoVal sort_fn(SnoVal arr) {
     }
 
     /* Build 2D array[1..n, 1..2] */
-    SnoArray *a = GC_malloc(sizeof(SnoArray));
+    ARBLK_t *a = GC_malloc(sizeof(ARBLK_t));
     a->lo   = 1;
     a->hi   = n;
     a->ndim = 2;   /* 2 columns */
-    a->data = GC_malloc(n * 2 * sizeof(SnoVal));
+    a->data = GC_malloc(n * 2 * sizeof(DESCR_t));
     for (int i = 0; i < n; i++) {
-        a->data[i * 2 + 0] = STR_VAL(GC_strdup(keys[order[i]]));
+        a->data[i * 2 + 0] = STRVAL(GC_strdup(keys[order[i]]));
         a->data[i * 2 + 1] = vals[order[i]];
     }
-    SnoVal result = {0};
-    result.type = ARRAY;
-    result.a    = a;
+    DESCR_t result = {0};
+    result.v = DT_A;
+    result.arr    = a;
     return result;
 }
 
 /* pat_call — call a user-defined function with one arg and use result as pattern value.
  * Used when a pattern expression contains a user-defined function call, e.g. *t(y) in pattern. */
-SnoVal pat_call(const char *name, SnoVal arg) {
-    SnoVal args[1] = { arg };
-    SnoVal result = aply(name, args, 1);
-    if (is_fail(result)) return pat_fail();
+DESCR_t pat_call(const char *name, DESCR_t arg) {
+    DESCR_t args[1] = { arg };
+    DESCR_t result = APLY_fn(name, args, 1);
+    if (IS_FAIL_fn(result)) return pat_fail();
     /* Wrap result as a pattern: if it's already a pattern, return it;
      * otherwise treat it as a literal string pattern. */
     return var_as_pattern(result);

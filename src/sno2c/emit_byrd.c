@@ -9,7 +9,7 @@
  * pat_* / engine.c interpreter is NOT used here.
  *
  * API (called from emit.c):
- *   void byrd_emit_pattern(Expr *pat, FILE *out,
+ *   void byrd_emit_pattern(EXPR_t *pat, FILE *out,
  *                          const char *root_name,
  *                          const char *subject_var,
  *                          const char *subject_len_var,
@@ -37,7 +37,7 @@
  *   test/sprint1/lit_hello.c     — LIT
  *   test/sprint2/cat_pos_lit_rpos.c — SEQ (CAT)
  *   test/sprint3/alt_first.c     — ALT
- *   test/sprint4/assign_lit.c    — E_IMM ($ capture)
+ *   test/sprint4/assign_lit.c    — E_DOL ($ capture)
  *   test/sprint5/arbno_match.c   — ARBNO
  *   src/codegen/emit_c_byrd.py   — Python ground truth
  *   src/ir/lower.py              — lowering ground truth
@@ -105,7 +105,7 @@ static void label_fmt(Label out_l, const char *role, int uid, const char *port) 
  * Forward declaration — byrd_emit is mutually recursive
  * ----------------------------------------------------------------------- */
 
-static void byrd_emit(Expr *pat,
+static void byrd_emit(EXPR_t *pat,
                       const char *alpha, const char *beta,
                       const char *gamma, const char *omega,
                       const char *subj, const char *subj_len,
@@ -116,7 +116,7 @@ static void byrd_emit(Expr *pat,
  * Named pattern registry
  *
  * Tracks which pattern variable names have been compiled to C functions
- * by byrd_emit_named_pattern().  E_DEREF (*varname) checks here: if the
+ * by byrd_emit_named_pattern().  E_INDR (*varname) checks here: if the
  * name is registered, emit a direct function call instead of going through
  * match_pattern_at().
  *
@@ -191,7 +191,7 @@ void byrd_emit_named_typedecls(FILE *out_file) {
 void byrd_emit_named_fwdecls(FILE *out_file) {
     for (int i = 0; i < named_pat_count; i++) {
         fprintf(out_file,
-            "static SnoVal %s(const char *, int64_t, int64_t *, %s **, int);\n",
+            "static DESCR_t %s(const char *, int64_t, int64_t *, %s **, int);\n",
             named_pat_registry[i].fnname,
             named_pat_registry[i].typename);
     }
@@ -213,7 +213,7 @@ static const NamedPat *named_pat_lookup(const char *varname) {
  *   Struct  (in_named_pat == 1): collect into a struct typedef, emit
  *     `#define name z->name` aliases so the code body is unchanged.
  *
- * Child frame pointers for E_DEREF calls inside a named pattern are
+ * Child frame pointers for E_INDR calls inside a named pattern are
  * collected in child_decl_buf (separate buffer, same lifetime).
  * ----------------------------------------------------------------------- */
 
@@ -377,19 +377,19 @@ static void emit_cstr(const char *s) {
 
 /* -----------------------------------------------------------------------
  * emit_charset_cexpr — build a C expression (written into buf) that evaluates
- * at runtime to a `const char *` charset string, given an Expr* AST node.
+ * at runtime to a `const char *` charset string, given an EXPR_t* AST node.
  *
- * E_STR  → "literal"          (compile-time constant)
- * E_VAR  → to_str(var_get("name"))
- * E_CONCAT → ccat(lhs, rhs)   (both sides recursed)
+ * E_QLIT  → "literal"          (compile-time constant)
+ * E_VART  → VARVAL_fn(NV_GET_fn("name"))
+ * E_CONC → ccat(lhs, rhs)   (both sides recursed)
  * fallback → ""
  * ----------------------------------------------------------------------- */
-static void emit_charset_cexpr(Expr *arg, char *buf, int bufsz);
+static void emit_charset_cexpr(EXPR_t *arg, char *buf, int bufsz);
 
-static void emit_charset_cexpr(Expr *arg, char *buf, int bufsz) {
+static void emit_charset_cexpr(EXPR_t *arg, char *buf, int bufsz) {
     if (!arg) { snprintf(buf, bufsz, "\"\""); return; }
     switch (arg->kind) {
-    case E_STR: {
+    case E_QLIT: {
         /* Build a quoted C literal via emit_cstr logic, inline into buf */
         const char *s = arg->sval ? arg->sval : "";
         int pos = 0;
@@ -404,30 +404,30 @@ static void emit_charset_cexpr(Expr *arg, char *buf, int bufsz) {
         buf[pos]   = '\0';
         return;
     }
-    case E_VAR:
-        snprintf(buf, bufsz, "to_str(var_get(\"%s\"))",
+    case E_VART:
+        snprintf(buf, bufsz, "VARVAL_fn(NV_GET_fn(\"%s\"))",
                  arg->sval ? arg->sval : "");
         return;
-    case E_CONCAT: {
+    case E_CONC: {
         char lbuf[512], rbuf[512];
         emit_charset_cexpr(arg->left,  lbuf, (int)sizeof lbuf);
         emit_charset_cexpr(arg->right, rbuf, (int)sizeof rbuf);
-        /* ccat is #define'd as concat_sv(SnoVal,SnoVal) in snoc_runtime.h,
-         * so we must wrap char* sides in STR_VAL and extract result with to_str. */
+        /* ccat is #define'd as CONC_fn(DESCR_t,DESCR_t) in snoc_runtime.h,
+         * so we must wrap char* sides in STRVAL and extract result with VARVAL_fn. */
         snprintf(buf, bufsz,
-                 "to_str(concat_sv(STR_VAL(%s), STR_VAL(%s)))",
+                 "VARVAL_fn(CONC_fn(STRVAL(%s), STRVAL(%s)))",
                  lbuf, rbuf);
         return;
     }
-    case E_KEYWORD:
-        /* &UCASE, &LCASE etc — kw(name) = var_get(name) → SnoVal */
-        snprintf(buf, bufsz, "to_str(var_get(\"%s\"))",
+    case E_KW:
+        /* &UCASE, &LCASE etc — kw(name) = NV_GET_fn(name) → DESCR_t */
+        snprintf(buf, bufsz, "VARVAL_fn(NV_GET_fn(\"%s\"))",
                  arg->sval ? arg->sval : "");
         return;
-    case E_DEREF:
+    case E_INDR:
         /* $varname — indirect: left child holds the var name node */
         if (arg->left && arg->left->sval)
-            snprintf(buf, bufsz, "to_str(var_get(\"%s\"))", arg->left->sval);
+            snprintf(buf, bufsz, "VARVAL_fn(NV_GET_fn(\"%s\"))", arg->left->sval);
         else
             snprintf(buf, bufsz, "\"\"");
         return;
@@ -496,27 +496,27 @@ static void emit_abort_node(const char *alpha, const char *beta,
                             const char *omega);
 
 
-static void emit_seq(Expr *left, Expr *right,
+static void emit_seq(EXPR_t *left, EXPR_t *right,
                      const char *alpha, const char *beta,
                      const char *gamma, const char *omega,
                      const char *subj, const char *subj_len,
                      const char *cursor, int depth);
-static void emit_alt(Expr *left, Expr *right,
+static void emit_alt(EXPR_t *left, EXPR_t *right,
                      const char *alpha, const char *beta,
                      const char *gamma, const char *omega,
                      const char *subj, const char *subj_len,
                      const char *cursor, int depth);
-static void emit_arbno(Expr *child,
+static void emit_arbno(EXPR_t *child,
                        const char *alpha, const char *beta,
                        const char *gamma, const char *omega,
                        const char *subj, const char *subj_len,
                        const char *cursor, int depth);
-static void emit_imm(Expr *child, const char *varname,
+static void emit_imm(EXPR_t *child, const char *varname,
                      const char *alpha, const char *beta,
                      const char *gamma, const char *omega,
                      const char *subj, const char *subj_len,
                      const char *cursor, int depth, int do_shift);
-static void emit_cond(Expr *child, const char *varname,
+static void emit_cond(EXPR_t *child, const char *varname,
                       const char *alpha, const char *beta,
                       const char *gamma, const char *omega,
                       const char *subj, const char *subj_len,
@@ -825,7 +825,7 @@ static void emit_rem(const char *alpha, const char *beta,
  *   cat_r2_omega: goto cat_l1_beta;
  * ----------------------------------------------------------------------- */
 
-static void emit_seq(Expr *left, Expr *right,
+static void emit_seq(EXPR_t *left, EXPR_t *right,
                      const char *alpha, const char *beta,
                      const char *gamma, const char *omega,
                      const char *subj, const char *subj_len,
@@ -875,7 +875,7 @@ static void emit_seq(Expr *left, Expr *right,
  *   cat_l3_beta:    goto alt_r6_beta;
  * ----------------------------------------------------------------------- */
 
-static void emit_alt(Expr *left, Expr *right,
+static void emit_alt(EXPR_t *left, EXPR_t *right,
                      const char *alpha, const char *beta,
                      const char *gamma, const char *omega,
                      const char *subj, const char *subj_len,
@@ -930,7 +930,7 @@ static void emit_alt(Expr *left, Expr *right,
  *   - child_fail → restore cursor, depth--, omega (ARBNO gives up)
  * ----------------------------------------------------------------------- */
 
-static void emit_arbno(Expr *child,
+static void emit_arbno(EXPR_t *child,
                        const char *alpha, const char *beta,
                        const char *gamma, const char *omega,
                        const char *subj, const char *subj_len,
@@ -952,27 +952,27 @@ static void emit_arbno(Expr *child,
     /* Save/restore $'@S' (tree stack) across ARBNO iterations.
      * The zero-match alpha path fires Reduce immediately, pushing a tree
      * onto @S.  When ARBNO extends via beta that stray tree must be undone
-     * before the next Reduce fires, or Reduce(Stmt,7) consumes it as a child. */
-    decl_add("SnoVal %s",      stk_save);
+     * before the next Reduce fires, or Reduce(STMT_t,7) consumes it as a child. */
+    decl_add("DESCR_t %s",      stk_save);
 
     /* α: snapshot @S, zero matches → succeed immediately */
-    PL(alpha, gamma, "%s = var_get(\"@S\"); %s = -1;", stk_save, depth_var);
+    PL(alpha, gamma, "%s = NV_GET_fn(\"@S\"); %s = -1;", stk_save, depth_var);
 
     /* β: restore @S to pre-alpha snapshot, then extend by one */
     PLG(beta, NULL);
     /* Undo any Reduce side-effects from the previous shorter match */
-    PS(NULL, "var_set(\"@S\", %s);", stk_save);
+    PS(NULL, "NV_SET_fn(\"@S\", %s);", stk_save);
     /* Re-establish counter frame if nPop fired on the alpha-path success */
-    PS(NULL, "if (!nhas_frame()) npush();");
+    PS(NULL, "if (!NHAS_FRAME_fn()) NPUSH_fn();");
     PS(omega,    "if (++%s >= 64)", depth_var);
     PS(child_α,  "%s[%s] = %s;", stack_var, depth_var, cursor);
 
     /* child_ok: child matched → update @S snapshot, ARBNO offers another match */
     PLG(child_ok, NULL);
     /* Snapshot @S after successful child so next beta restores to this point */
-    PS(gamma, "%s = var_get(\"@S\");", stk_save);
+    PS(gamma, "%s = NV_GET_fn(\"@S\");", stk_save);
 
-    /* child_fail: child failed → restore cursor, pop, ARBNO fails */
+    /* child_fail: child failed → restore cursor, POP_fn, ARBNO fails */
     PLG(child_fail, NULL);
     PS(omega,   "%s = %s[%s]; %s--;", cursor, stack_var, depth_var, depth_var);
 
@@ -983,12 +983,12 @@ static void emit_arbno(Expr *child,
 }
 
 /* -----------------------------------------------------------------------
- * is_sideeffect_call — returns 1 if e is an E_CALL to a counter side-effect
+ * is_sideeffect_call — returns 1 if e is an E_FNC to a counter side-effect
  * (nPush/nInc/nPop/nDec/nTop) that has no pattern-matching semantics.
  * ----------------------------------------------------------------------- */
 
-static int is_sideeffect_call(Expr *e) {
-    if (!e || e->kind != E_CALL || !e->sval) return 0;
+static int is_sideeffect_call(EXPR_t *e) {
+    if (!e || e->kind != E_FNC || !e->sval) return 0;
     return (strcasecmp(e->sval, "nPush") == 0 ||
             strcasecmp(e->sval, "nInc")  == 0 ||
             strcasecmp(e->sval, "nPop")  == 0 ||
@@ -997,18 +997,18 @@ static int is_sideeffect_call(Expr *e) {
 }
 
 /* emit_sideeffect_call_inline — emit a single C statement for a side-effect call */
-static void emit_sideeffect_call_inline(Expr *e) {
-    if (!e || e->kind != E_CALL || !e->sval) return;
-    if (strcasecmp(e->sval, "nPush") == 0) B("npush();");
-    else if (strcasecmp(e->sval, "nInc") == 0) B("ninc();");
-    else if (strcasecmp(e->sval, "nPop") == 0) B("npop();");
-    else if (strcasecmp(e->sval, "nDec") == 0) B("ndec();");
+static void emit_sideeffect_call_inline(EXPR_t *e) {
+    if (!e || e->kind != E_FNC || !e->sval) return;
+    if (strcasecmp(e->sval, "nPush") == 0) B("NPUSH_fn();");
+    else if (strcasecmp(e->sval, "nInc") == 0) B("NINC_fn();");
+    else if (strcasecmp(e->sval, "nPop") == 0) B("NPOP_fn();");
+    else if (strcasecmp(e->sval, "nDec") == 0) B("NDEC_fn();");
     else if (strcasecmp(e->sval, "nTop") == 0) B("(void)ntop();");
     else B("/* unknown sideeffect %s */", e->sval);
 }
 
 /* -----------------------------------------------------------------------
- * E_IMM ($ capture) node
+ * E_DOL ($ capture) node
  *
  * Pattern node:  <child> $ var
  * On child success: record span [start..cursor] into var, goto gamma.
@@ -1028,13 +1028,13 @@ static void emit_sideeffect_call_inline(Expr *e) {
  *       goto assign_c7_beta;
  *
  * Special case — Gimpel SNOBOL4 side-effect pattern: nPush() $'('
- *   The grammar parses this as E_IMM(left=nPush(), right=E_STR("(")).
+ *   The grammar parses this as E_DOL(left=nPush(), right=E_QLIT("(")).
  *   left is NOT a pattern child — it's a side-effect call with no cursor advance.
  *   right is NOT a variable name — it's a literal to match and capture to OUTPUT.
  *   Fix: emit the side-effect call inline, then match+capture the literal.
  * ----------------------------------------------------------------------- */
 
-static void emit_imm(Expr *child, const char *varname,
+static void emit_imm(EXPR_t *child, const char *varname,
                      const char *alpha, const char *beta,
                      const char *gamma, const char *omega,
                      const char *subj, const char *subj_len,
@@ -1044,7 +1044,7 @@ static void emit_imm(Expr *child, const char *varname,
     /* -------------------------------------------------------------------
      * Special case: nPush() $'(' — side-effect call + literal capture.
      *
-     * Grammar parses `nPush() $'('` as E_IMM(left=nPush(), right=E_STR("(")).
+     * Grammar parses `nPush() $'('` as E_DOL(left=nPush(), right=E_QLIT("(")).
      * child (left) = nPush() — no cursor advance, just a side-effect.
      * varname (from right) = "(" — not a valid variable; it IS the literal.
      *
@@ -1093,7 +1093,7 @@ static void emit_imm(Expr *child, const char *varname,
     }
 
     /* -------------------------------------------------------------------
-     * Normal E_IMM path: child is a real pattern, varname is a variable.
+     * Normal E_DOL path: child is a real pattern, varname is a variable.
      * ------------------------------------------------------------------- */
 
     /* Sanitize varname: non-alnum/underscore chars → '_' */
@@ -1139,15 +1139,15 @@ static void emit_imm(Expr *child, const char *varname,
         PS(NULL,  "  char *_os = (char*)GC_malloc(_len + 1);");
         PS(NULL,  "  memcpy(_os, %s + %s, _len); _os[_len] = 0;", subj, start_var);
         if (skip_cstatic) {
-            PS(NULL,  "  var_set(\"%s\", STR_VAL(_os));", varname);
+            PS(NULL,  "  NV_SET_fn(\"%s\", STRVAL(_os));", varname);
         } else {
-            PS(NULL,  "  var_set(\"%s\", STR_VAL(_os));", varname);
-            PS(NULL,  "  %s = STR_VAL(_os);", byrd_cs(varname));
+            PS(NULL,  "  NV_SET_fn(\"%s\", STRVAL(_os));", varname);
+            PS(NULL,  "  %s = STRVAL(_os);", byrd_cs(varname));
         }
         if (do_shift) {
-            /* ~ operator: push tree node onto shift-reduce stack via Shift(type, value) */
-            PS(NULL, "  { SnoVal _shift_args[2] = {STR_VAL(\"%s\"), STR_VAL(_os)};", varname);
-            PS(NULL, "    aply(\"Shift\", _shift_args, 2); }");
+            /* ~ operator: PUSH_fn tree node onto shift-reduce stack via Shift(type, value) */
+            PS(NULL, "  { DESCR_t _shift_args[2] = {STRVAL(\"%s\"), STRVAL(_os)};", varname);
+            PS(NULL, "    APLY_fn(\"Shift\", _shift_args, 2); }");
         }
         PS(gamma, "}");
     }
@@ -1157,19 +1157,19 @@ static void emit_imm(Expr *child, const char *varname,
 }
 
 /* -----------------------------------------------------------------------
- * E_COND (. capture) node
+ * E_NAM (. capture) node
  *
- * Like E_IMM but the assignment is CONDITIONAL — it fires when we reach
+ * Like E_DOL but the assignment is CONDITIONAL — it fires when we reach
  * the gamma of the enclosing mtch.  For the static compiled path we treat
- * it identically to E_IMM (assign on child success, readable by outer code).
+ * it identically to E_DOL (assign on child success, readable by outer code).
  * ----------------------------------------------------------------------- */
 
-static void emit_cond(Expr *child, const char *varname,
+static void emit_cond(EXPR_t *child, const char *varname,
                       const char *alpha, const char *beta,
                       const char *gamma, const char *omega,
                       const char *subj, const char *subj_len,
                       const char *cursor, int depth) {
-    /* ~ operator: same as IMM but calls Shift() to push tree node */
+    /* ~ operator: same as IMM but calls Shift() to PUSH_fn tree node */
     emit_imm(child, varname, alpha, beta, gamma, omega,
              subj, subj_len, cursor, depth, 1);
 }
@@ -1197,12 +1197,12 @@ static void emit_succeed(const char *alpha, const char *beta,
 }
 
 /* -----------------------------------------------------------------------
- * FAIL node — always fails
+ * DT_FAIL node — always fails
  * ----------------------------------------------------------------------- */
 
 static void emit_fail_node(const char *alpha, const char *beta,
                            const char *omega) {
-    PLG(alpha, omega);   /* FAIL: α and β both → ω */
+    PLG(alpha, omega);   /* DT_FAIL: α and β both → ω */
     PLG(beta,  omega);
 }
 
@@ -1217,51 +1217,51 @@ static void emit_abort_node(const char *alpha, const char *beta,
 }
 
 /* -----------------------------------------------------------------------
- * emit_simple_val — emit a SnoVal C expression for a simple Expr node.
- * Used by E_REDUCE to pass left/right as runtime values.
- * Handles: E_STR, E_INT, E_VAR, E_CALL(nTop), E_NULL/NULL.
- * Falls back to NULL_VAL for anything complex.
+ * emit_simple_val — emit a DESCR_t C expression for a simple EXPR_t node.
+ * Used by E_OPSYN to pass left/right as runtime values.
+ * Handles: E_QLIT, E_ILIT, E_VART, E_FNC(nTop), E_NULV/NULL.
+ * Falls back to NULVCL for anything complex.
  * ----------------------------------------------------------------------- */
 
-static void emit_simple_val(Expr *e) {
-    if (!e) { B("NULL_VAL"); return; }
+static void emit_simple_val(EXPR_t *e) {
+    if (!e) { B("NULVCL"); return; }
     switch (e->kind) {
-    case E_STR: {
+    case E_QLIT: {
         /* 'nTop()' as a quoted string in & context: wire directly to C-level ntop()
-         * so compiled byrd box counter (npush/ninc/npop) and Reduce agree. */
+         * so compiled byrd box counter (NPUSH_fn/NINC_fn/NPOP_fn) and Reduce agree. */
         if (e->sval && strcasecmp(e->sval, "nTop()") == 0)
-            { B("INT_VAL(ntop())"); return; }
-        /* Strip outer single-quote pair: sval "'Stmt'" -> emit STR_VAL("Stmt").
-         * The SNOBOL4 source writes "'Stmt'" (double-quoted with inner single quotes).
-         * The lexer strips outer double-quotes, storing "'Stmt'" as sval — but the
+            { B("INTVAL(ntop())"); return; }
+        /* Strip outer single-quote pair: sval "'STMT_t'" -> emit STRVAL("STMT_t").
+         * The SNOBOL4 source writes "'STMT_t'" (double-quoted with inner single quotes).
+         * The lexer strips outer double-quotes, storing "'STMT_t'" as sval — but the
          * inner single quotes are SNOBOL4 string delimiters that must also be stripped
-         * so the C string value is bare: Stmt, not 'Stmt'. */
+         * so the C string value is bare: STMT_t, not 'STMT_t'. */
         const char *sv = e->sval ? e->sval : "";
         size_t sl = strlen(sv);
         if (sl >= 2 && sv[0] == '\'' && sv[sl-1] == '\'')
-            B("STR_VAL(\"%.*s\")", (int)(sl-2), sv+1);
+            B("STRVAL(\"%.*s\")", (int)(sl-2), sv+1);
         else
-            B("STR_VAL(\"%s\")", sv);
+            B("STRVAL(\"%s\")", sv);
         return;
     }
-    case E_INT:
-        B("INT_VAL(%ld)", e->ival);
+    case E_ILIT:
+        B("INTVAL(%ld)", e->ival);
         return;
-    case E_VAR:
-        B("var_get(\"%s\")", e->sval ? e->sval : "");
+    case E_VART:
+        B("NV_GET_fn(\"%s\")", e->sval ? e->sval : "");
         return;
-    case E_CALL:
+    case E_FNC:
         if (e->sval && strcasecmp(e->sval, "nTop") == 0)
-            { B("INT_VAL(ntop())"); return; }
+            { B("INTVAL(ntop())"); return; }
         if (e->sval && strcasecmp(e->sval, "nInc") == 0)
-            { B("INT_VAL((ninc(), ntop()))"); return; }
+            { B("INTVAL((NINC_fn(), ntop()))"); return; }
         if (e->sval && strcasecmp(e->sval, "nPop") == 0)
-            { B("INT_VAL((npop(), 0))"); return; }
-        /* generic: fall through to aply */
-        B("aply(\"%s\", NULL, 0)", e->sval ? e->sval : "");
+            { B("INTVAL((NPOP_fn(), 0))"); return; }
+        /* generic: fall through to APLY_fn */
+        B("APLY_fn(\"%s\", NULL, 0)", e->sval ? e->sval : "");
         return;
     default:
-        B("NULL_VAL /* unhandled emit_simple_val kind %d */", (int)e->kind);
+        B("NULVCL /* unhandled emit_simple_val kind %d */", (int)e->kind);
         return;
     }
 }
@@ -1273,7 +1273,7 @@ static void emit_simple_val(Expr *e) {
  * depth is used for recursion guard only.
  * ----------------------------------------------------------------------- */
 
-static void byrd_emit(Expr *pat,
+static void byrd_emit(EXPR_t *pat,
                       const char *alpha, const char *beta,
                       const char *gamma, const char *omega,
                       const char *subj, const char *subj_len,
@@ -1295,43 +1295,43 @@ static void byrd_emit(Expr *pat,
 
     switch (pat->kind) {
 
-    /* ---------------------------------------------------------------- E_STR */
-    case E_STR:
+    /* ---------------------------------------------------------------- E_QLIT */
+    case E_QLIT:
         emit_lit(pat->sval, alpha, beta, gamma, omega,
                  subj, subj_len, cursor);
         return;
 
-    /* ---------------------------------------------------------------- E_CALL — builtins */
-    case E_CALL: {
+    /* ---------------------------------------------------------------- E_FNC — builtins */
+    case E_FNC: {
         const char *n = pat->sval;
 
         /* LEN(n) */
         if (strcasecmp(n, "LEN") == 0 && pat->nargs >= 1) {
-            long v = (pat->args[0]->kind == E_INT) ? pat->args[0]->ival : 1;
+            long v = (pat->args[0]->kind == E_ILIT) ? pat->args[0]->ival : 1;
             emit_len(v, alpha, beta, gamma, omega, subj_len, cursor);
             return;
         }
         /* POS(n) */
         if (strcasecmp(n, "POS") == 0 && pat->nargs >= 1) {
-            long v = (pat->args[0]->kind == E_INT) ? pat->args[0]->ival : 0;
+            long v = (pat->args[0]->kind == E_ILIT) ? pat->args[0]->ival : 0;
             emit_pos(v, alpha, beta, gamma, omega, cursor);
             return;
         }
         /* RPOS(n) */
         if (strcasecmp(n, "RPOS") == 0 && pat->nargs >= 1) {
-            long v = (pat->args[0]->kind == E_INT) ? pat->args[0]->ival : 0;
+            long v = (pat->args[0]->kind == E_ILIT) ? pat->args[0]->ival : 0;
             emit_rpos(v, alpha, beta, gamma, omega, subj_len, cursor);
             return;
         }
         /* TAB(n) */
         if (strcasecmp(n, "TAB") == 0 && pat->nargs >= 1) {
-            long v = (pat->args[0]->kind == E_INT) ? pat->args[0]->ival : 0;
+            long v = (pat->args[0]->kind == E_ILIT) ? pat->args[0]->ival : 0;
             emit_tab(v, alpha, beta, gamma, omega, cursor);
             return;
         }
         /* RTAB(n) */
         if (strcasecmp(n, "RTAB") == 0 && pat->nargs >= 1) {
-            long v = (pat->args[0]->kind == E_INT) ? pat->args[0]->ival : 0;
+            long v = (pat->args[0]->kind == E_ILIT) ? pat->args[0]->ival : 0;
             emit_rtab(v, alpha, beta, gamma, omega, subj_len, cursor);
             return;
         }
@@ -1403,8 +1403,8 @@ static void byrd_emit(Expr *pat,
             emit_succeed(alpha, beta, gamma);
             return;
         }
-        /* FAIL */
-        if (strcasecmp(n, "FAIL") == 0) {
+        /* DT_FAIL */
+        if (strcasecmp(n, "DT_FAIL") == 0) {
             emit_fail_node(alpha, beta, omega);
             return;
         }
@@ -1416,7 +1416,7 @@ static void byrd_emit(Expr *pat,
 
         /* nPush() */
         if (strcasecmp(n, "nPush") == 0) {
-            PL(alpha, gamma, "npush();");
+            PL(alpha, gamma, "NPUSH_fn();");
             /* beta: nPush has no alternatives — fail so the containing CAT
              * routes backtrack to ARBNO's own beta (cat_l_847_β → cat_r_847_β).
              * Re-pushing here was wrong: it reset ARBNO depth=-1 each time,
@@ -1426,19 +1426,19 @@ static void byrd_emit(Expr *pat,
         }
         /* nInc() */
         if (strcasecmp(n, "nInc") == 0) {
-            PL(alpha, gamma, "ninc();");
+            PL(alpha, gamma, "NINC_fn();");
             PLG(beta, omega);
             return;
         }
         /* nDec() */
         if (strcasecmp(n, "nDec") == 0) {
-            PL(alpha, gamma, "ndec();");
+            PL(alpha, gamma, "NDEC_fn();");
             PLG(beta, omega);
             return;
         }
         /* nPop() */
         if (strcasecmp(n, "nPop") == 0) {
-            PL(alpha, gamma, "npop();");
+            PL(alpha, gamma, "NPOP_fn();");
             PLG(beta, omega);
             return;
         }
@@ -1455,24 +1455,24 @@ static void byrd_emit(Expr *pat,
         return;
     }
 
-    /* ----------------------------------------------------------- E_CONCAT (CAT / SEQ) */
-    case E_CONCAT:
+    /* ----------------------------------------------------------- E_CONC (CAT / SEQ) */
+    case E_CONC:
         emit_seq(pat->left, pat->right,
                  alpha, beta, gamma, omega,
                  subj, subj_len, cursor, depth);
         return;
 
-    /* ---------------------------------------------------------------- E_ALT */
-    case E_ALT:
+    /* ---------------------------------------------------------------- E_OR */
+    case E_OR:
         emit_alt(pat->left, pat->right,
                  alpha, beta, gamma, omega,
                  subj, subj_len, cursor, depth);
         return;
 
-    /* ---------------------------------------------------------------- E_IMM ($ assign) */
-    case E_IMM: {
+    /* ---------------------------------------------------------------- E_DOL ($ assign) */
+    case E_DOL: {
         const char *varname = "OUTPUT";
-        if (pat->right && (pat->right->kind == E_VAR || pat->right->kind == E_STR))
+        if (pat->right && (pat->right->kind == E_VART || pat->right->kind == E_QLIT))
             varname = pat->right->sval;
         emit_imm(pat->left, varname,
                  alpha, beta, gamma, omega,
@@ -1480,10 +1480,10 @@ static void byrd_emit(Expr *pat,
         return;
     }
 
-    /* --------------------------------------------------------------- E_COND (. assign) */
-    case E_COND: {
+    /* --------------------------------------------------------------- E_NAM (. assign) */
+    case E_NAM: {
         const char *varname = "OUTPUT";
-        if (pat->right && (pat->right->kind == E_VAR || pat->right->kind == E_STR))
+        if (pat->right && (pat->right->kind == E_VART || pat->right->kind == E_QLIT))
             varname = pat->right->sval;
         emit_cond(pat->left, varname,
                   alpha, beta, gamma, omega,
@@ -1491,11 +1491,11 @@ static void byrd_emit(Expr *pat,
         return;
     }
 
-    /* ---------------------------------------------------------------- E_VAR (pattern var)
+    /* ---------------------------------------------------------------- E_VART (pattern var)
      * A bare variable name in pattern context means implicit deref — same as *X.
-     * Fall through to E_DEREF with varname = pat->sval.
+     * Fall through to E_INDR with varname = pat->sval.
      * (Previously emitted epsilon — wrong: `nl` in Command would silently match nothing.) */
-    case E_VAR: {
+    case E_VART: {
         const char *varname = pat->sval ? pat->sval : "";
         const NamedPat *np_v = named_pat_lookup(varname);
         if (np_v) {
@@ -1516,17 +1516,17 @@ static void byrd_emit(Expr *pat,
             }
             B("%s: {\n", alpha);
             B("    %s = %s;\n", saved_cur, cursor);
-            B("    SnoVal _r_%d = %s(%s, %s, &%s, &%s, 0);\n",
+            B("    DESCR_t _r_%d = %s(%s, %s, &%s, &%s, 0);\n",
               uid, np_v->fnname, subj, subj_len, cursor, child_field);
-            B("    if (is_fail(_r_%d)) { %s = %s; goto %s; }\n",
+            B("    if (IS_FAIL_fn(_r_%d)) { %s = %s; goto %s; }\n",
               uid, cursor, saved_cur, omega);
             B("    goto %s;\n", gamma);
             B("}\n");
             B("%s: {\n", beta);
             B("    %s = %s;\n", cursor, saved_cur);
-            B("    SnoVal _r_%d_b = %s(%s, %s, &%s, &%s, 1);\n",
+            B("    DESCR_t _r_%d_b = %s(%s, %s, &%s, &%s, 1);\n",
               uid, np_v->fnname, subj, subj_len, cursor, child_field);
-            B("    if (is_fail(_r_%d_b)) { %s = %s; goto %s; }\n",
+            B("    if (IS_FAIL_fn(_r_%d_b)) { %s = %s; goto %s; }\n",
               uid, cursor, saved_cur, omega);
             B("    goto %s;\n", gamma);
             B("}\n");
@@ -1536,7 +1536,7 @@ static void byrd_emit(Expr *pat,
             snprintf(saved, LBUF, "deref_%d_saved_cursor", byrd_uid());
             decl_add("int64_t %s", saved);
             B("%s: {\n", alpha);
-            B("    SnoVal _deref_pat = var_get(\"%s\");\n", varname);
+            B("    DESCR_t _deref_pat = NV_GET_fn(\"%s\");\n", varname);
             B("    int _deref_new_cur = match_pattern_at(_deref_pat, %s, (int)%s, (int)%s);\n",
               subj, subj_len, cursor);
             B("    if (_deref_new_cur < 0) goto %s;\n", omega);
@@ -1551,26 +1551,26 @@ static void byrd_emit(Expr *pat,
         return;
     }
 
-    /* ---------------------------------------------------------------- E_DEREF (deferred ref) */
-    case E_DEREF: {
+    /* ---------------------------------------------------------------- E_INDR (deferred ref) */
+    case E_INDR: {
         const char *varname = NULL;
-        /* Grammar: unary *X  → E_DEREF(left=NULL, right=E_VAR("X"))
-         * Also seen: left=E_VAR in some paths — check both.
-         * Also: left=E_CALL("name") — *name() where name is a named pattern fn.
-         * Also: left=NULL, right=E_STR("x") — unary $'x' output capture. */
-        if (pat->right && pat->right->kind == E_VAR)
+        /* Grammar: unary *X  → E_INDR(left=NULL, right=E_VART("X"))
+         * Also seen: left=E_VART in some paths — check both.
+         * Also: left=E_FNC("name") — *name() where name is a named pattern fn.
+         * Also: left=NULL, right=E_QLIT("x") — unary $'x' output capture. */
+        if (pat->right && pat->right->kind == E_VART)
             varname = pat->right->sval;
-        else if (pat->left && pat->left->kind == E_VAR)
+        else if (pat->left && pat->left->kind == E_VART)
             varname = pat->left->sval;
-        else if (pat->left && pat->left->kind == E_CALL && pat->left->sval)
+        else if (pat->left && pat->left->kind == E_FNC && pat->left->sval)
             varname = pat->left->sval;
         if (!varname) varname = "";
 
         /* -------------------------------------------------------------------
-         * Category: unary $'literal' — E_DEREF(left=NULL, right=E_STR("x"))
+         * Category: unary $'literal' — E_INDR(left=NULL, right=E_QLIT("x"))
          * Semantics: match the literal, capture matched span to OUTPUT.
          * ------------------------------------------------------------------- */
-        if (!pat->left && pat->right && pat->right->kind == E_STR && pat->right->sval) {
+        if (!pat->left && pat->right && pat->right->kind == E_QLIT && pat->right->sval) {
             const char *lit = pat->right->sval;
             int uid2 = byrd_uid();
             Label lit_α, lit_β;
@@ -1623,9 +1623,9 @@ static void byrd_emit(Expr *pat,
             /* α: first call — entry 0 */
             B("%s: {\n", alpha);
             B("    %s = %s;\n", saved_cur, cursor);
-            B("    SnoVal _r_%d = %s(%s, %s, &%s, &%s, 0);\n",
+            B("    DESCR_t _r_%d = %s(%s, %s, &%s, &%s, 0);\n",
               uid, np->fnname, subj, subj_len, cursor, child_field);
-            B("    if (is_fail(_r_%d)) { %s = %s; goto %s; }\n",
+            B("    if (IS_FAIL_fn(_r_%d)) { %s = %s; goto %s; }\n",
               uid, cursor, saved_cur, omega);
             B("    goto %s;\n", gamma);
             B("}\n");
@@ -1633,9 +1633,9 @@ static void byrd_emit(Expr *pat,
             /* β: backtrack — entry 1 */
             B("%s: {\n", beta);
             B("    %s = %s;\n", cursor, saved_cur);
-            B("    SnoVal _r_%d_b = %s(%s, %s, &%s, &%s, 1);\n",
+            B("    DESCR_t _r_%d_b = %s(%s, %s, &%s, &%s, 1);\n",
               uid, np->fnname, subj, subj_len, cursor, child_field);
-            B("    if (is_fail(_r_%d_b)) { %s = %s; goto %s; }\n",
+            B("    if (IS_FAIL_fn(_r_%d_b)) { %s = %s; goto %s; }\n",
               uid, cursor, saved_cur, omega);
             B("    goto %s;\n", gamma);
             B("}\n");
@@ -1648,7 +1648,7 @@ static void byrd_emit(Expr *pat,
         decl_add("int64_t %s", saved);
 
         B("%s: {\n", alpha);
-        B("    SnoVal _deref_pat = var_get(\"%s\");\n", varname);
+        B("    DESCR_t _deref_pat = NV_GET_fn(\"%s\");\n", varname);
         B("    int _deref_new_cur = match_pattern_at(_deref_pat, %s, (int)%s, (int)%s);\n",
           subj, subj_len, cursor);
         B("    if (_deref_new_cur < 0) goto %s;\n", omega);
@@ -1662,15 +1662,15 @@ static void byrd_emit(Expr *pat,
         return;
     }
 
-    /* --------------------------------------------------------------- E_REDUCE (& operator) */
-    case E_REDUCE: {
-        B("%s: /* E_REDUCE & */\n", alpha);
-        B("    { SnoVal _reduce_args[2] = {");
+    /* --------------------------------------------------------------- E_OPSYN (& operator) */
+    case E_OPSYN: {
+        B("%s: /* E_OPSYN & */\n", alpha);
+        B("    { DESCR_t _reduce_args[2] = {");
         emit_simple_val(pat->left);
         B(", ");
         emit_simple_val(pat->right);
         B("};\n");
-        B("      aply(\"Reduce\", _reduce_args, 2); }\n");
+        B("      APLY_fn(\"Reduce\", _reduce_args, 2); }\n");
         B("    goto %s;\n", gamma);
         B("%s: goto %s;\n", beta, omega);
         return;
@@ -1698,7 +1698,7 @@ static void byrd_emit(Expr *pat,
  * Called from emit.c in the pattern-mtch statement case.
  *
  * Parameters:
- *   pat          — the pattern Expr* (subject pattern field)
+ *   pat          — the pattern EXPR_t* (subject pattern field)
  *   out          — output FILE*
  *   root_name    — prefix for root labels (e.g. "root_1")
  *   subject_var  — C expression for the subject string pointer
@@ -1708,7 +1708,7 @@ static void byrd_emit(Expr *pat,
  *   omega_label  — C label to jump to on mtch failure
  * ======================================================================= */
 
-void byrd_emit_pattern(Expr *pat, FILE *out_file,
+void byrd_emit_pattern(EXPR_t *pat, FILE *out_file,
                        const char *root_name,
                        const char *subject_var,
                        const char *subj_len_var,
@@ -1783,16 +1783,16 @@ void byrd_emit_pattern(Expr *pat, FILE *out_file,
  * byrd_emit_named_pattern — emit a named pattern as a compiled C function.
  *
  * Emits a forward decl + C function:
- *   static SnoVal pat_X(const char *_subj_np, int64_t _slen_np,
+ *   static DESCR_t pat_X(const char *_subj_np, int64_t _slen_np,
  *                       int64_t *_cur_ptr_np, int _entry_np);
  * entry 0 = alpha (fresh), entry 1 = beta (resume).
  * On success updates *_cur_ptr_np and returns SNO_EMPTY.
- * On failure returns FAIL_VAL.
+ * On failure returns FAILDESCR.
  *
- * Registers the name so E_DEREF (*varname) emits a direct call.
+ * Registers the name so E_INDR (*varname) emits a direct call.
  * ======================================================================= */
 
-void byrd_emit_named_pattern(const char *varname, Expr *pat, FILE *out_file) {
+void byrd_emit_named_pattern(const char *varname, EXPR_t *pat, FILE *out_file) {
     /* C-safe name */
     char safe[NAMED_PAT_NAMELEN];
     {
@@ -1873,7 +1873,7 @@ void byrd_emit_named_pattern(const char *varname, Expr *pat, FILE *out_file) {
 
     /* 2. Emit the function with new signature: pat_X(subj, slen, cur_ptr, **zz, entry) */
     fprintf(out_file,
-        "static SnoVal %s(const char *_subj_np, int64_t _slen_np,\n"
+        "static DESCR_t %s(const char *_subj_np, int64_t _slen_np,\n"
         "                  int64_t *_cur_ptr_np, %s **_zz_np, int _entry_np) {\n"
         "    if (_entry_np == 0) { *_zz_np = calloc(1, sizeof(%s)); }\n"
         "    %s *z = *_zz_np;\n"
@@ -1899,9 +1899,9 @@ void byrd_emit_named_pattern(const char *varname, Expr *pat, FILE *out_file) {
     fprintf(out_file,
         "    %s:;\n"
         "        *_cur_ptr_np = _cur_np;\n"
-        "        return STR_VAL(\"\");\n"
+        "        return STRVAL(\"\");\n"
         "    %s:;\n"
-        "        return FAIL_VAL;\n",
+        "        return FAILDESCR;\n",
         γ_lbl, ω_lbl);
 
     /* 7. Emit #undefs and close function */
@@ -1915,7 +1915,7 @@ void byrd_emit_named_pattern(const char *varname, Expr *pat, FILE *out_file) {
  * a .sno file with sno2c in byrd mode and want a standalone executable.
  * ======================================================================= */
 
-void byrd_emit_standalone(Expr *pat, FILE *out_file,
+void byrd_emit_standalone(EXPR_t *pat, FILE *out_file,
                           const char *subject,
                           const char *root_name) {
     fprintf(out_file,

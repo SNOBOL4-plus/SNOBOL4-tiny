@@ -2,12 +2,12 @@
  *
  * Architecture decisions (recorded PLAN.md 2026-03-10):
  *   D1: Memory model = Boehm GC  (no ref-counting, no free() anywhere)
- *   D2: Tree children = realloc'd dynamic array (unbounded arity)
+ *   D2: TREEBLK_t children = realloc'd dynamic array (unbounded arity)
  *   D3: cstack = thread-local MatchState* (matches SNOBOL4-csharp [ThreadStatic])
  *
  * This header defines the full SNOBOL4 value universe:
- *   SNULL, SSTR, SINT, SREAL, STREE,
- *   SPATTERN, ARRAY, STABLE, CODE
+ *   DT_SNUL, S, I, R, DT_DATA,
+ *   P, DT_A, T, DT_C
  */
 
 #ifndef SNOBOL4_H
@@ -25,49 +25,49 @@
  * ============================================================ */
 
 typedef enum {
-    SNULL    = 0,   /* unset / empty string / NULL */
-    SSTR     = 1,   /* char * (GC-managed) */
-    SINT     = 2,   /* int64_t */
-    SREAL    = 3,   /* double */
-    STREE    = 4,   /* Tree* (GC-managed) */
-    SPATTERN = 5,   /* Pattern* (GC-managed) */
-    ARRAY   = 6,   /* SnoArray* (GC-managed) */
-    STABLE   = 7,   /* SnoTable* (GC-managed) */
-    CODE    = 8,   /* compiled code block */
-    UDEF    = 9,   /* user-defined datatype instance */
-    SFAIL    = 10,  /* P002/P003: failure sentinel — propagates :F branch */
-} SnoType;
+    DT_SNUL =  0,   /* our null sentinel — empty/unset                    */
+    DT_S    =  1,   /* STRING  — char* (GC-managed)                       */
+    DT_P    =  3,   /* PATTERN — PATND_t* (GC-managed)                      */
+    DT_A    =  4,   /* DT_A   — ARBLK_t* (GC-managed)                      */
+    DT_T    =  5,   /* TABLE   — TBBLK_t* (GC-managed)                      */
+    DT_I    =  6,   /* INTEGER — int64_t                                   */
+    DT_R    =  7,   /* REAL    — double                                    */
+    DT_C    =  8,   /* CODE    — compiled code block                       */
+    DT_N    =  9,   /* NAME    — l-value reference                         */
+    DT_K    = 10,   /* KEYWORD — protected variable                        */
+    DT_E    = 11,   /* EXPRESSION — unevaluated                            */
+    DT_FAIL = 99,   /* failure sentinel — drives :F branch (our invention) */
+    DT_DATA = 100,  /* first user-defined DT_DATA type — v >= DT_DATA            */
+} DTYPE_t;
 
-struct _Tree;
-struct _Pattern;
-struct _SnoArray;
-struct _SnoTable;
-struct _UDef;
+struct _TREEBLK_t;
+struct _PATND_t;
+struct _ARBLK_t;
+struct _TBBLK_t;
+struct _DATINST_t;
 
-typedef struct SnoVal {
-    SnoType type;
-    union {
-        char             *s;   /* SSTR, SNULL (empty string = "") */
-        int64_t           i;   /* SINT  */
-        double            r;   /* SREAL */
-        struct _Tree     *t;   /* STREE */
-        struct _Pattern  *p;   /* SPATTERN */
-        struct _SnoArray *a;   /* ARRAY */
-        struct _SnoTable *tbl; /* STABLE */
-        struct _UDef     *u;   /* UDEF */
-        void             *ptr; /* generic GC pointer */
+typedef struct DESCR_t {
+    DTYPE_t v;             /* type tag — SIL v field (DTYPE_t enum) */
+    union {              /* value   — SIL a field               */
+        char             *s;   /* S    — string pointer (GC)    */
+        int64_t           i;   /* I    — integer                */
+        double            r;   /* R    — real                   */
+        struct _PATND_t    *p;   /* P    — pattern node           */
+        struct _ARBLK_t    *arr; /* A    — array block            */
+        struct _TBBLK_t    *tbl; /* T    — table block            */
+        struct _DATINST_t  *u;   /* DT_DATA — user DT_DATA instance     */
+        void             *ptr; /* generic GC pointer            */
     };
-} SnoVal;
+} DESCR_t;
 
-#define NULL_VAL    ((SnoVal){ .type = SNULL, .s = "" })
-#define STR_VAL(s_) ((SnoVal){ .type = SSTR,  .s = (s_) })
-#define INT_VAL(i_) ((SnoVal){ .type = SINT,  .i = (i_) })
-#define REAL_VAL(r_)((SnoVal){ .type = SREAL, .r = (r_) })
-#define TREE_VAL(t_)((SnoVal){ .type = STREE, .t = (t_) })
-#define FAIL_VAL    ((SnoVal){ .type = SFAIL, .i = 0 })   /* P002/P003 */
-#define STYPE(v_)    ((v_).type)
+#define NULVCL    ((DESCR_t){ .v = DT_SNUL, .s = "" })
+#define STRVAL(s_) ((DESCR_t){ .v = DT_S,  .s = (s_) })
+#define INTVAL(i_) ((DESCR_t){ .v = DT_I,  .i = (i_) })
+#define REALVAL(r_)((DESCR_t){ .v = DT_R, .r = (r_) })
+#define FAILDESCR    ((DESCR_t){ .v = DT_FAIL, .i = 0 })   /* P002/P003 */
+#define STYPE(v_)    ((v_).v)
 
-static inline int is_fail(SnoVal v) { return v.type == SFAIL; }
+static inline int IS_FAIL_fn(DESCR_t v) { return v.v == DT_FAIL; }
 
 /* ============================================================
  * String operations
@@ -76,25 +76,24 @@ static inline int is_fail(SnoVal v) { return v.type == SFAIL; }
 /* All strings are GC-managed, null-terminated char*.
  * "" is the canonical NULL/empty value.  */
 
-static inline int is_null(SnoVal v)  { return v.type == SNULL || (v.type == SSTR && (!v.s || !*v.s)); }
-static inline int is_str(SnoVal v)   { return v.type == SSTR || v.type == SNULL; }
-static inline int is_int(SnoVal v)   { return v.type == SINT; }
-static inline int is_real(SnoVal v)  { return v.type == SREAL; }
-static inline int is_tree(SnoVal v)  { return v.type == STREE; }
-static inline int is_udef(SnoVal v)  { return v.type == UDEF; }
+static inline int IS_NULL_fn(DESCR_t v)  { return v.v == DT_SNUL || (v.v == DT_S && (!v.s || !*v.s)); }
+static inline int IS_STR_fn(DESCR_t v)   { return v.v == DT_S || v.v == DT_SNUL; }
+static inline int IS_INT_fn(DESCR_t v)   { return v.v == DT_I; }
+static inline int IS_REAL_fn(DESCR_t v)  { return v.v == DT_R; }
+static inline int IS_DATA_fn(DESCR_t v)  { return v.v == DT_DATA; }
 
 /* Convert any value to string (GC-managed) */
-char *to_str(SnoVal v);
+char *VARVAL_fn(DESCR_t v);
 
 /* Convert any value to integer (0 on failure) */
-int64_t to_int(SnoVal v);
+int64_t to_int(DESCR_t v);
 
 /* Convert any value to real (0.0 on failure) */
-double to_real(SnoVal v);
+double to_real(DESCR_t v);
 
 /* String concatenation — GC-managed result */
 char *ccat(const char *a, const char *b);
-SnoVal concat_sv(SnoVal a, SnoVal b);  /* P003: FAIL-propagating ccat */
+DESCR_t CONC_fn(DESCR_t a, DESCR_t b);  /* P003: DT_FAIL-propagating ccat */
 
 /* String duplication */
 char *dupl(const char *s);
@@ -103,36 +102,36 @@ char *dupl(const char *s);
 int64_t size(const char *s);
 
 /* DATATYPE function */
-const char *datatype(SnoVal v);
+const char *datatype(DESCR_t v);
 
 /* ============================================================
- * Tree (Beautiful.sno's core data structure)
+ * TREEBLK_t (Beautiful.sno's core data structure)
  * ============================================================
  *
- * DATA('tree(t,v,n,c)') — tag, value, child count, children array
+ * DT_DATA('tree(t,v,n,c)') — tag, value, child count, children array
  * Children: realloc'd dynamic array (D2 — unbounded arity)
  */
 
-typedef struct _Tree {
+typedef struct _TREEBLK_t {
     char   *tag;        /* type tag string   — t(x) */
-    SnoVal  val;        /* leaf value        — v(x) */
+    DESCR_t  val;        /* leaf value        — v(x) */
     int     n;          /* child count       — n(x) */
     int     cap;        /* children capacity */
-    struct _Tree **c;   /* children array    — c(x) */
-} Tree;
+    struct _TREEBLK_t **c;   /* children array    — c(x) */
+} TREEBLK_t;
 
-Tree *tree_new(const char *tag, SnoVal val);
-Tree *tree_new0(const char *tag);     /* tag only, null val, no children */
-void  tree_append(Tree *x, Tree *y);  /* Append(x,y)  */
-void  tree_prepend(Tree *x, Tree *y); /* Prepend(x,y) */
-void  tree_insert(Tree *x, Tree *y, int place); /* Insert(x,y,place) 1-based */
-Tree *tree_remove(Tree *x, int place);           /* Remove(x,place)   1-based */
+TREEBLK_t *tree_new(const char *tag, DESCR_t val);
+TREEBLK_t *tree_new0(const char *tag);     /* tag only, null val, no children */
+void  tree_append(TREEBLK_t *x, TREEBLK_t *y);  /* Append(x,y)  */
+void  tree_prepend(TREEBLK_t *x, TREEBLK_t *y); /* Prepend(x,y) */
+void  tree_insert(TREEBLK_t *x, TREEBLK_t *y, int place); /* Insert(x,y,place) 1-based */
+TREEBLK_t *tree_remove(TREEBLK_t *x, int place);           /* Remove(x,place)   1-based */
 
-/* Accessors (SNOBOL4 field functions for DATA('tree')) */
-static inline const char *t(Tree *x) { return x ? x->tag : ""; }
-static inline SnoVal      v(Tree *x) { return x ? x->val  : NULL_VAL; }
-static inline int         n(Tree *x) { return x ? x->n    : 0; }
-static inline Tree       *c_i(Tree *x, int i) {  /* c(x)[i], 1-based */
+/* Accessors (SNOBOL4 field functions for DT_DATA('tree')) */
+static inline const char *t(TREEBLK_t *x) { return x ? x->tag : ""; }
+static inline DESCR_t      v(TREEBLK_t *x) { return x ? x->val  : NULVCL; }
+static inline int         n(TREEBLK_t *x) { return x ? x->n    : 0; }
+static inline TREEBLK_t       *c_i(TREEBLK_t *x, int i) {  /* c(x)[i], 1-based */
     if (!x || i < 1 || i > x->n) return NULL;
     return x->c[i-1];
 }
@@ -141,107 +140,107 @@ static inline Tree       *c_i(Tree *x, int i) {  /* c(x)[i], 1-based */
  * Array
  * ============================================================ */
 
-typedef struct _SnoArray {
+typedef struct _ARBLK_t {
     int     lo, hi;      /* ARRAY('lo:hi') bounds */
     int     ndim;        /* number of dimensions */
-    SnoVal *data;        /* lo..hi, 0-based offset by lo */
-} SnoArray;
+    DESCR_t *data;        /* lo..hi, 0-based offset by lo */
+} ARBLK_t;
 
-SnoArray *array_new(int lo, int hi);
-SnoArray *array_new2d(int lo1, int hi1, int lo2, int hi2);
-SnoVal    array_get(SnoArray *a, int i);       /* 1-based */
-void      array_set(SnoArray *a, int i, SnoVal v);
-SnoVal    array_get2(SnoArray *a, int i, int j);
-void      array_set2(SnoArray *a, int i, int j, SnoVal v);
+ARBLK_t *array_new(int lo, int hi);
+ARBLK_t *array_new2d(int lo1, int hi1, int lo2, int hi2);
+DESCR_t    array_get(ARBLK_t *a, int i);       /* 1-based */
+void      array_set(ARBLK_t *a, int i, DESCR_t v);
+DESCR_t    array_get2(ARBLK_t *a, int i, int j);
+void      array_set2(ARBLK_t *a, int i, int j, DESCR_t v);
 
 /* ============================================================
  * Table (hash map)
  * ============================================================ */
 
-typedef struct _SnoTableEntry {
+typedef struct _TBBLK_tEntry {
     char   *key;
-    SnoVal  val;
-    struct _SnoTableEntry *next;
-} SnoTableEntry;
+    DESCR_t  val;
+    struct _TBBLK_tEntry *next;
+} TBPAIR_t;
 
 #define TABLE_BUCKETS 256
 
-typedef struct _SnoTable {
-    SnoTableEntry *buckets[TABLE_BUCKETS];
+typedef struct _TBBLK_t {
+    TBPAIR_t *buckets[TABLE_BUCKETS];
     int            size;
-} SnoTable;
+} TBBLK_t;
 
-SnoTable *table_new(void);
-SnoVal    table_get(SnoTable *tbl, const char *key);
-void      table_set(SnoTable *tbl, const char *key, SnoVal val);
-int       table_has(SnoTable *tbl, const char *key);
+TBBLK_t *table_new(void);
+DESCR_t    table_get(TBBLK_t *tbl, const char *key);
+void      table_set(TBBLK_t *tbl, const char *key, DESCR_t val);
+int       table_has(TBBLK_t *tbl, const char *key);
 
 /* ============================================================
- * User-defined datatypes (DATA() mechanism)
+ * User-defined datatypes (DT_DATA() mechanism)
  * ============================================================ */
 
-typedef struct _UDefType {
+typedef struct _DATINST_tType {
     char   *name;
     int     nfields;
     char  **fields;
-    struct _UDefType *next;
-} UDefType;
+    struct _DATINST_tType *next;
+} DATBLK_t;
 
-typedef struct _UDef {
-    UDefType *type;
-    SnoVal   *fields;  /* GC-managed array of nfields values */
-} UDef;
+typedef struct _DATINST_t {
+    DATBLK_t *type;
+    DESCR_t   *fields;  /* GC-managed array of nfields values */
+} DATINST_t;
 
-/* Register a DATA() definition: DATA('tree(t,v,n,c)') */
-void data_define(const char *spec);
+/* Register a DT_DATA() definition: DT_DATA('tree(t,v,n,c)') */
+void DEFDAT_fn(const char *spec);
 
 /* Allocate a new instance of a user-defined type */
-SnoVal udef_new(const char *typename, ...);  /* varargs: field values */
+DESCR_t DATCON_fn(const char *typename, ...);  /* varargs: field values */
 
 /* Get/set field by name */
-SnoVal field_get(SnoVal obj, const char *field);
-void   field_set(SnoVal obj, const char *field, SnoVal val);
+DESCR_t FIELD_GET_fn(DESCR_t obj, const char *field);
+void   FIELD_SET_fn(DESCR_t obj, const char *field, DESCR_t val);
 
 /* ============================================================
  * Variable table (global variables, $name indirect access)
  * ============================================================ */
 
-SnoVal  var_get(const char *name);
-void    var_set(const char *name, SnoVal val);
-void    var_register(const char *name, SnoVal *ptr);
-void    var_sync_registered(void);
-SnoVal  indirect_get(const char *name);  /* $name */
-void    indirect_set(const char *name, SnoVal val);
+DESCR_t  NV_GET_fn(const char *name);
+void    NV_SET_fn(const char *name, DESCR_t val);
+void    NV_REG_fn(const char *name, DESCR_t *ptr);
+void    NV_SYNC_fn(void);
+DESCR_t  INDR_GET_fn(const char *name);  /* $name */
+void    INDR_SET_fn(const char *name, DESCR_t val);
 
 /* ============================================================
  * Counter stack (nPush/nInc/nDec/nTop/nPop)
  * ============================================================ */
 
-void    npush(void);
-int     nhas_frame(void);  /* 1 if counter stack is non-empty */
-void    ninc(void);
-void    ndec(void);
+void    NPUSH_fn(void);
+int     NHAS_FRAME_fn(void);  /* 1 if counter stack is non-empty */
+void    NINC_fn(void);
+void    NDEC_fn(void);
 int64_t ntop(void);
-void    npop(void);
+void    NPOP_fn(void);
 
 /* ============================================================
  * Value stack (Push/Pop/Top for Shift/Reduce)
  * ============================================================ */
 
-void   push(SnoVal v);
-SnoVal pop(void);
-SnoVal top(void);
-int    stack_depth(void);
+void   PUSH_fn(DESCR_t v);
+DESCR_t POP_fn(void);
+DESCR_t TOP_fn(void);
+int    STACK_DEPTH_fn(void);
 
 /* ============================================================
- * Function table (DEFINE/APPLY)
+ * Function table (DEFINE_fn/APPLY)
  * ============================================================ */
 
-typedef SnoVal (*SnoFunc)(SnoVal *args, int nargs);
+typedef DESCR_t (*FNCPTR_t)(DESCR_t *args, int nargs);
 
-void    define(const char *spec, SnoFunc fn);  /* DEFINE('name(a,b)local1,local2') */
-SnoVal  aply(const char *name, SnoVal *args, int nargs);  /* APPLY(name,...) */
-int     func_exists(const char *name);
+void    DEFINE_fn(const char *spec, FNCPTR_t fn);  /* DEFINE_fn('name(a,b)local1,local2') */
+DESCR_t  APLY_fn(const char *name, DESCR_t *args, int nargs);  /* APPLY(name,...) */
+int     FNCEX_fn(const char *name);
 
 /* ============================================================
  * GOTO / label runtime
@@ -260,52 +259,52 @@ int     func_exists(const char *name);
  * Builtin functions (string operations)
  * ============================================================ */
 
-SnoVal size_fn(SnoVal s);                        /* SIZE(s) */
-SnoVal dupl_fn(SnoVal s, SnoVal n);              /* DUPL(s,n) */
-SnoVal replace_fn(SnoVal s, SnoVal from, SnoVal to); /* REPLACE(s,f,t) */
-SnoVal substr_fn(SnoVal s, SnoVal i, SnoVal n);  /* SUBSTR(s,i,n) */
-SnoVal trim_fn(SnoVal s);                        /* TRIM(s) */
-SnoVal lpad_fn(SnoVal s, SnoVal n, SnoVal pad);  /* LPAD(s,n,pad) */
-SnoVal rpad_fn(SnoVal s, SnoVal n, SnoVal pad);  /* RPAD(s,n,pad) */
-SnoVal reverse_fn(SnoVal s);                     /* REVERSE(s) */
-SnoVal char_fn(SnoVal n);                        /* CHAR(n) */
-SnoVal integer_fn(SnoVal v);                     /* INTEGER(v) */
-SnoVal real_fn(SnoVal v);                        /* REAL(v) */
-SnoVal string_fn(SnoVal v);                      /* STRING(v) */
+DESCR_t SIZE_fn(DESCR_t s);                        /* SIZE_fn(s) */
+DESCR_t DUPL_fn(DESCR_t s, DESCR_t n);              /* DUPL_fn(s,n) */
+DESCR_t RPLACE_fn(DESCR_t s, DESCR_t from, DESCR_t to); /* REPLACE(s,f,t) */
+DESCR_t SUBSTR_fn(DESCR_t s, DESCR_t i, DESCR_t n);  /* SUBSTR_fn(s,i,n) */
+DESCR_t TRIM_fn(DESCR_t s);                        /* TRIM_fn(s) */
+DESCR_t lpad_fn(DESCR_t s, DESCR_t n, DESCR_t pad);  /* LPAD(s,n,pad) */
+DESCR_t rpad_fn(DESCR_t s, DESCR_t n, DESCR_t pad);  /* RPAD(s,n,pad) */
+DESCR_t REVERS_fn(DESCR_t s);                     /* REVERSE(s) */
+DESCR_t BCHAR_fn(DESCR_t n);                        /* CHAR(n) */
+DESCR_t INTGER_fn(DESCR_t v);                     /* INTEGER(v) */
+DESCR_t real_fn(DESCR_t v);                        /* REAL(v) */
+DESCR_t string_fn(DESCR_t v);                      /* STRING(v) */
 
 /* ============================================================
  * Arithmetic / comparison predicates
  * ============================================================ */
 
-int eq(SnoVal a, SnoVal b);   /* EQ: numeric equal — succeeds or fails */
-int ne(SnoVal a, SnoVal b);
-int lt(SnoVal a, SnoVal b);
-int le(SnoVal a, SnoVal b);
-int gt(SnoVal a, SnoVal b);
-int ge(SnoVal a, SnoVal b);
+int eq(DESCR_t a, DESCR_t b);   /* EQ: numeric equal — succeeds or fails */
+int ne(DESCR_t a, DESCR_t b);
+int lt(DESCR_t a, DESCR_t b);
+int le(DESCR_t a, DESCR_t b);
+int gt(DESCR_t a, DESCR_t b);
+int ge(DESCR_t a, DESCR_t b);
 
-int ident(SnoVal a, SnoVal b); /* IDENT: string/value identical */
-int differ(SnoVal a, SnoVal b);/* DIFFER: string/value different */
+int ident(DESCR_t a, DESCR_t b); /* IDENT: string/value identical */
+int differ(DESCR_t a, DESCR_t b);/* DIFFER: string/value different */
 
-SnoVal add(SnoVal a, SnoVal b);
-SnoVal sub(SnoVal a, SnoVal b);
-SnoVal mul(SnoVal a, SnoVal b);
-SnoVal divyde(SnoVal a, SnoVal b);
-SnoVal powr(SnoVal a, SnoVal b);
-SnoVal neg(SnoVal a);
+DESCR_t add(DESCR_t a, DESCR_t b);
+DESCR_t sub(DESCR_t a, DESCR_t b);
+DESCR_t mul(DESCR_t a, DESCR_t b);
+DESCR_t divyde(DESCR_t a, DESCR_t b);
+DESCR_t powr(DESCR_t a, DESCR_t b);
+DESCR_t neg(DESCR_t a);
 
 /* ============================================================
  * I/O
  * ============================================================ */
 
-void   output_val(SnoVal v);        /* OUTPUT = v */
-SnoVal input_read(void);            /* v = INPUT */
+void   output_val(DESCR_t v);        /* OUTPUT = v */
+DESCR_t input_read(void);            /* v = INPUT */
 void   output_str(const char *s);   /* OUTPUT = 'string' */
 
 /* COMM — monitor telemetry */
 extern int monitor_fd;
 void comm_stno(int n);
-void comm_var(const char *name, SnoVal val);
+void comm_var(const char *name, DESCR_t val);
 
 /* ============================================================
  * SNOBOL4 keywords (&KEYWORD)
@@ -328,76 +327,76 @@ extern char digits[11];  /* digits constant from global.inc */
  * Runtime initialization
  * ============================================================ */
 
-void runtime_init(void);  /* call once at program start */
+void SNO_INIT_fn(void);  /* call once at program start */
 
 /* ============================================================
  * Pattern constructors (snobol4_pattern.c)
  * ============================================================ */
 
-SnoVal pat_lit(const char *s);
-SnoVal pat_span(const char *chars);
-SnoVal pat_break_(const char *chars);
-SnoVal pat_any_cs(const char *chars);
-SnoVal pat_notany(const char *chars);
-SnoVal pat_len(int64_t n);
-SnoVal pat_pos(int64_t n);
-SnoVal pat_rpos(int64_t n);
-SnoVal pat_tab(int64_t n);
-SnoVal pat_rtab(int64_t n);
-SnoVal pat_arb(void);
-SnoVal pat_arbno(SnoVal inner);
-SnoVal pat_rem(void);
-SnoVal pat_fence(void);
-SnoVal pat_fence_p(SnoVal inner);
-SnoVal pat_fail(void);
-SnoVal pat_abort(void);
-SnoVal pat_succeed(void);
-SnoVal pat_bal(void);
-SnoVal pat_epsilon(void);
-SnoVal pat_cat(SnoVal left, SnoVal right);
-SnoVal pat_alt(SnoVal left, SnoVal right);
-SnoVal pat_ref(const char *name);
-SnoVal pat_ref_val(SnoVal nameVal);
-SnoVal pat_assign_imm(SnoVal child, SnoVal var);
-SnoVal pat_assign_cond(SnoVal child, SnoVal var);
-SnoVal var_as_pattern(SnoVal v);
-SnoVal pat_user_call(const char *name, SnoVal *args, int nargs);
+DESCR_t pat_lit(const char *s);
+DESCR_t pat_span(const char *chars);
+DESCR_t pat_break_(const char *chars);
+DESCR_t pat_any_cs(const char *chars);
+DESCR_t pat_notany(const char *chars);
+DESCR_t pat_len(int64_t n);
+DESCR_t pat_pos(int64_t n);
+DESCR_t pat_rpos(int64_t n);
+DESCR_t pat_tab(int64_t n);
+DESCR_t pat_rtab(int64_t n);
+DESCR_t pat_arb(void);
+DESCR_t pat_arbno(DESCR_t inner);
+DESCR_t pat_rem(void);
+DESCR_t pat_fence(void);
+DESCR_t pat_fence_p(DESCR_t inner);
+DESCR_t pat_fail(void);
+DESCR_t pat_abort(void);
+DESCR_t pat_succeed(void);
+DESCR_t pat_bal(void);
+DESCR_t pat_epsilon(void);
+DESCR_t pat_cat(DESCR_t left, DESCR_t right);
+DESCR_t pat_alt(DESCR_t left, DESCR_t right);
+DESCR_t pat_ref(const char *name);
+DESCR_t pat_ref_val(DESCR_t nameVal);
+DESCR_t pat_assign_imm(DESCR_t child, DESCR_t var);
+DESCR_t pat_assign_cond(DESCR_t child, DESCR_t var);
+DESCR_t var_as_pattern(DESCR_t v);
+DESCR_t pat_user_call(const char *name, DESCR_t *args, int nargs);
 
 /* Pattern matching */
-int  match_pattern(SnoVal pat, const char *subject);
-int  match_pattern_at(SnoVal pat, const char *subject, int subj_len, int cursor);
-int  match_and_replace(SnoVal *subject, SnoVal pat, SnoVal replacement);
+int  match_pattern(DESCR_t pat, const char *subject);
+int  match_pattern_at(DESCR_t pat, const char *subject, int subj_len, int cursor);
+int  match_and_replace(DESCR_t *subject, DESCR_t pat, DESCR_t replacement);
 
 /* ============================================================
- * Array/Table/Tree SnoVal-level API (snobol4_pattern.c)
+ * Array/Table/TREEBLK_t DESCR_t-level API (snobol4_pattern.c)
  * ============================================================ */
 
-SnoVal array_create(SnoVal spec);            /* ARRAY('lo:hi') */
-SnoVal subscript_get(SnoVal arr, SnoVal idx);
-void   subscript_set(SnoVal arr, SnoVal idx, SnoVal val);
-SnoVal subscript_get2(SnoVal arr, SnoVal i, SnoVal j);
-void   subscript_set2(SnoVal arr, SnoVal i, SnoVal j, SnoVal val);
-SnoVal make_tree(SnoVal tag, SnoVal val, SnoVal n, SnoVal children);
+DESCR_t array_create(DESCR_t spec);            /* ARRAY('lo:hi') */
+DESCR_t subscript_get(DESCR_t arr, DESCR_t idx);
+void   subscript_set(DESCR_t arr, DESCR_t idx, DESCR_t val);
+DESCR_t subscript_get2(DESCR_t arr, DESCR_t i, DESCR_t j);
+void   subscript_set2(DESCR_t arr, DESCR_t i, DESCR_t j, DESCR_t val);
+DESCR_t MAKE_TREE_fn(DESCR_t tag, DESCR_t val, DESCR_t n, DESCR_t children);
 
 /* Value stack aliases */
-SnoVal push_val(SnoVal x);
-SnoVal pop_val(void);
-SnoVal top_val(void);
+DESCR_t push_val(DESCR_t x);
+DESCR_t pop_val(void);
+DESCR_t top_val(void);
 int    val_stack_depth(void);
 
 /* Function registration */
-void   register_fn(const char *name, SnoVal (*fn)(SnoVal*, int), int min_args, int max_args);
-void   define_spec(SnoVal spec);
-SnoVal apply_val(SnoVal fnval, SnoVal *args, int nargs);
-SnoVal evl(SnoVal expr);
-SnoVal opsyn(SnoVal newname, SnoVal oldname, SnoVal type);
-/* 2-arg convenience — type defaults to NULL_VAL */
-static inline SnoVal opsyn2(SnoVal a, SnoVal b) { return opsyn(a, b, NULL_VAL); }
-SnoVal sort_fn(SnoVal arr);
+void   register_fn(const char *name, DESCR_t (*fn)(DESCR_t*, int), int min_args, int max_args);
+void   define_spec(DESCR_t spec);
+DESCR_t apply_val(DESCR_t fnval, DESCR_t *args, int nargs);
+DESCR_t evl(DESCR_t expr);
+DESCR_t opsyn(DESCR_t newname, DESCR_t oldname, DESCR_t type);
+/* 2-arg convenience — type defaults to NULVCL */
+static inline DESCR_t opsyn2(DESCR_t a, DESCR_t b) { return opsyn(a, b, NULVCL); }
+DESCR_t sort_fn(DESCR_t arr);
 
 /* TABLE_VAL macro */
-#define TABLE_VAL(tbl_) ((SnoVal){ .type = STABLE, .tbl = (tbl_) })
-#define ARRAY_VAL(a_)   ((SnoVal){ .type = ARRAY, .a   = (a_)   })
+#define TABLE_VAL(tbl_) ((DESCR_t){ .v = DT_T, .tbl = (tbl_) })
+#define ARRAY_VAL(a_)   ((DESCR_t){ .v = DT_A, .a   = (a_)   })
 
 /* ============================================================
  * Pattern matching interface (matches existing runtime.h)
@@ -407,4 +406,4 @@ SnoVal sort_fn(SnoVal arr);
 
 #endif /* SNOBOL4_H */
 void indirect_goto(const char *varname);
-SnoVal pat_call(const char *name, SnoVal arg);
+DESCR_t pat_call(const char *name, DESCR_t arg);

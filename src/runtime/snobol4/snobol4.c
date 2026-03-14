@@ -45,12 +45,12 @@ void comm_stno(int n) {
     dprintf(monitor_fd, "STNO %d\n", n);
 }
 
-void comm_var(const char *name, SnoVal val) {
+void comm_var(const char *name, DESCR_t val) {
     if (monitor_fd < 0) return;
     /* skip noisy internal variables */
     if (!name) return;
     if (name[0] == '_') return;          /* internal scratch vars */
-    const char *s = to_str(val);
+    const char *s = VARVAL_fn(val);
     dprintf(monitor_fd, "VAR %s \"%s\"\n", name, s ? s : "<null>");
 }
 
@@ -58,7 +58,7 @@ void comm_var(const char *name, SnoVal val) {
  * Runtime initialization
  * ============================================================ */
 
-/* Global character constants (set by runtime_init) */
+/* Global character constants (set by SNO_INIT_fn) */
 int64_t kw_fullscan = 0;
 int64_t kw_maxlngth = 524288;
 int64_t kw_anchor   = 0;
@@ -72,228 +72,231 @@ char alphabet[257];  /* all 256 ASCII chars */
 
 /* ============================================================
  * Numeric comparison builtins: GT LT GE LE EQ NE
- * SNOBOL4 semantics: succeed (return first arg) or fail (FAIL_VAL).
- * Also INTEGER, SIZE, REAL type/conversion builtins.
+ * SNOBOL4 semantics: succeed (return first arg) or fail (FAILDESCR).
+ * Also INTEGER, SIZE_fn, REAL type/conversion builtins.
  * ============================================================ */
 
-static SnoVal _b_GT(SnoVal *a, int n) {
-    if (n < 2) return FAIL_VAL;
-    return gt(a[0], a[1]) ? NULL_VAL : FAIL_VAL;
+static DESCR_t _b_GT(DESCR_t *a, int n) {
+    if (n < 2) return FAILDESCR;
+    return gt(a[0], a[1]) ? NULVCL : FAILDESCR;
 }
-static SnoVal _b_LT(SnoVal *a, int n) {
-    if (n < 2) return FAIL_VAL;
-    return lt(a[0], a[1]) ? NULL_VAL : FAIL_VAL;
+static DESCR_t _b_LT(DESCR_t *a, int n) {
+    if (n < 2) return FAILDESCR;
+    return lt(a[0], a[1]) ? NULVCL : FAILDESCR;
 }
-static SnoVal _b_GE(SnoVal *a, int n) {
-    if (n < 2) return FAIL_VAL;
-    return ge(a[0], a[1]) ? NULL_VAL : FAIL_VAL;
+static DESCR_t _b_GE(DESCR_t *a, int n) {
+    if (n < 2) return FAILDESCR;
+    return ge(a[0], a[1]) ? NULVCL : FAILDESCR;
 }
-static SnoVal _b_LE(SnoVal *a, int n) {
-    if (n < 2) return FAIL_VAL;
-    return le(a[0], a[1]) ? NULL_VAL : FAIL_VAL;
+static DESCR_t _b_LE(DESCR_t *a, int n) {
+    if (n < 2) return FAILDESCR;
+    return le(a[0], a[1]) ? NULVCL : FAILDESCR;
 }
-static SnoVal _b_EQ(SnoVal *a, int n) {
-    if (n < 2) return FAIL_VAL;
+static DESCR_t _b_EQ(DESCR_t *a, int n) {
+    if (n < 2) return FAILDESCR;
     /* Numeric equality: equal returns first arg, else fail */
-    if (a[0].type == SINT && a[1].type == SINT)
-        return (a[0].i == a[1].i) ? NULL_VAL : FAIL_VAL;
-    return (to_real(a[0]) == to_real(a[1])) ? NULL_VAL : FAIL_VAL;
+    if (a[0].v == DT_I && a[1].v == DT_I)
+        return (a[0].i == a[1].i) ? NULVCL : FAILDESCR;
+    return (to_real(a[0]) == to_real(a[1])) ? NULVCL : FAILDESCR;
 }
-static SnoVal _b_NE(SnoVal *a, int n) {
-    if (n < 2) return FAIL_VAL;
-    if (a[0].type == SINT && a[1].type == SINT)
-        return (a[0].i != a[1].i) ? NULL_VAL : FAIL_VAL;
-    return (to_real(a[0]) != to_real(a[1])) ? NULL_VAL : FAIL_VAL;
+static DESCR_t _b_NE(DESCR_t *a, int n) {
+    if (n < 2) return FAILDESCR;
+    if (a[0].v == DT_I && a[1].v == DT_I)
+        return (a[0].i != a[1].i) ? NULVCL : FAILDESCR;
+    return (to_real(a[0]) != to_real(a[1])) ? NULVCL : FAILDESCR;
 }
-static SnoVal _b_INTEGER(SnoVal *a, int n) {
-    if (n < 1) return FAIL_VAL;
+static DESCR_t _b_INTEGER(DESCR_t *a, int n) {
+    if (n < 1) return FAILDESCR;
     /* Succeed (returning int value) if arg is or converts to integer */
-    if (a[0].type == SINT) return a[0];
-    if (a[0].type == SSTR && a[0].s) {
+    if (a[0].v == DT_I) return a[0];
+    if (a[0].v == DT_S && a[0].s) {
         char *end;
         long long v = strtoll(a[0].s, &end, 10);
-        if (end != a[0].s && *end == '\0') return INT_VAL(v);
+        if (end != a[0].s && *end == '\0') return INTVAL(v);
     }
-    return FAIL_VAL;
+    return FAILDESCR;
 }
-static SnoVal _b_REAL(SnoVal *a, int n) {
-    if (n < 1) return FAIL_VAL;
-    if (a[0].type == SREAL) return a[0];
-    if (a[0].type == SINT)  return (SnoVal){ .type = SREAL, .r = (double)a[0].i };
-    if (a[0].type == SSTR && a[0].s) {
+static DESCR_t _b_REAL(DESCR_t *a, int n) {
+    if (n < 1) return FAILDESCR;
+    if (a[0].v == DT_R) return a[0];
+    if (a[0].v == DT_I)  return (DESCR_t){ .v = DT_R, .r = (double)a[0].i };
+    if (a[0].v == DT_S && a[0].s) {
         char *end;
         double v = strtod(a[0].s, &end);
-        if (end != a[0].s && *end == '\0') return (SnoVal){ .type = SREAL, .r = v };
+        if (end != a[0].s && *end == '\0') return (DESCR_t){ .v = DT_R, .r = v };
     }
-    return FAIL_VAL;
+    return FAILDESCR;
 }
-static SnoVal _b_SIZE(SnoVal *a, int n) {
-    if (n < 1) return INT_VAL(0);
-    const char *s = to_str(a[0]);
-    return INT_VAL((int64_t)(s ? strlen(s) : 0));
+static DESCR_t _b_SIZE(DESCR_t *a, int n) {
+    if (n < 1) return INTVAL(0);
+    const char *s = VARVAL_fn(a[0]);
+    return INTVAL((int64_t)(s ? strlen(s) : 0));
 }
 
 /* Sprint 23: IDENT, DIFFER, HOST, ENDFILE, APPLY + string builtins as callable */
-static SnoVal _b_IDENT(SnoVal *a, int n) {
-    SnoVal x = (n > 0) ? a[0] : NULL_VAL;
-    SnoVal y = (n > 1) ? a[1] : NULL_VAL;
-    return ident(x, y) ? NULL_VAL : FAIL_VAL;
+static DESCR_t _b_IDENT(DESCR_t *a, int n) {
+    DESCR_t x = (n > 0) ? a[0] : NULVCL;
+    DESCR_t y = (n > 1) ? a[1] : NULVCL;
+    return ident(x, y) ? NULVCL : FAILDESCR;
 }
-static SnoVal _b_DIFFER(SnoVal *a, int n) {
-    SnoVal x = (n > 0) ? a[0] : NULL_VAL;
-    SnoVal y = (n > 1) ? a[1] : NULL_VAL;
-    return differ(x, y) ? x : FAIL_VAL;
+static DESCR_t _b_DIFFER(DESCR_t *a, int n) {
+    DESCR_t x = (n > 0) ? a[0] : NULVCL;
+    DESCR_t y = (n > 1) ? a[1] : NULVCL;
+    return differ(x, y) ? x : FAILDESCR;
 }
-static SnoVal _b_HOST(SnoVal *a, int n) {
+static DESCR_t _b_HOST(DESCR_t *a, int n) {
     /* HOST(0) = command args string, HOST(1) = PID, HOST(3) = argc */
-    if (n < 1) return NULL_VAL;
+    if (n < 1) return NULVCL;
     int64_t selector = to_int(a[0]);
-    if (selector == 0) return STR_VAL(GC_strdup(""));
+    if (selector == 0) return STRVAL(GC_strdup(""));
     if (selector == 1) {
         char buf[32]; snprintf(buf, sizeof(buf), "%d", (int)getpid());
-        return STR_VAL(GC_strdup(buf));
+        return STRVAL(GC_strdup(buf));
     }
-    if (selector == 3) return INT_VAL(0);
-    return NULL_VAL;
+    if (selector == 3) return INTVAL(0);
+    return NULVCL;
 }
-static SnoVal _b_ENDFILE(SnoVal *a, int n) {
+static DESCR_t _b_ENDFILE(DESCR_t *a, int n) {
     (void)a; (void)n;
-    return FAIL_VAL;  /* not at EOF on any channel */
+    return FAILDESCR;  /* not at EOF on any channel */
 }
-static SnoVal _b_APPLY(SnoVal *a, int n) {
-    if (n < 1) return NULL_VAL;
-    const char *fname = to_str(a[0]);
-    return aply(fname, a + 1, n - 1);
+static DESCR_t _b_APPLY(DESCR_t *a, int n) {
+    if (n < 1) return NULVCL;
+    const char *fname = VARVAL_fn(a[0]);
+    return APLY_fn(fname, a + 1, n - 1);
 }
-static SnoVal _b_LPAD(SnoVal *a, int n) {
-    if (n < 2) return n > 0 ? a[0] : NULL_VAL;
-    return lpad_fn(a[0], a[1], n > 2 ? a[2] : STR_VAL(" "));
+static DESCR_t _b_LPAD(DESCR_t *a, int n) {
+    if (n < 2) return n > 0 ? a[0] : NULVCL;
+    return lpad_fn(a[0], a[1], n > 2 ? a[2] : STRVAL(" "));
 }
-static SnoVal _b_RPAD(SnoVal *a, int n) {
-    if (n < 2) return n > 0 ? a[0] : NULL_VAL;
-    return rpad_fn(a[0], a[1], n > 2 ? a[2] : STR_VAL(" "));
+static DESCR_t _b_RPAD(DESCR_t *a, int n) {
+    if (n < 2) return n > 0 ? a[0] : NULVCL;
+    return rpad_fn(a[0], a[1], n > 2 ? a[2] : STRVAL(" "));
 }
-static SnoVal _b_CHAR(SnoVal *a, int n) {
-    if (n < 1) return NULL_VAL;
-    return char_fn(a[0]);
+static DESCR_t _b_CHAR(DESCR_t *a, int n) {
+    if (n < 1) return NULVCL;
+    return BCHAR_fn(a[0]);
 }
-static SnoVal _b_DUPL(SnoVal *a, int n) {
-    if (n < 2) return NULL_VAL;
-    return dupl_fn(a[0], a[1]);
+static DESCR_t _b_DUPL(DESCR_t *a, int n) {
+    if (n < 2) return NULVCL;
+    return DUPL_fn(a[0], a[1]);
 }
-static SnoVal _b_REPLACE(SnoVal *a, int n) {
-    if (n < 3) return NULL_VAL;
-    return replace_fn(a[0], a[1], a[2]);
+static DESCR_t _b_REPLACE(DESCR_t *a, int n) {
+    if (n < 3) return NULVCL;
+    return RPLACE_fn(a[0], a[1], a[2]);
 }
-static SnoVal _b_TRIM(SnoVal *a, int n) {
-    if (n < 1) return NULL_VAL;
-    return trim_fn(a[0]);
+static DESCR_t _b_TRIM(DESCR_t *a, int n) {
+    if (n < 1) return NULVCL;
+    return TRIM_fn(a[0]);
 }
-static SnoVal _b_SUBSTR(SnoVal *a, int n) {
-    if (n < 3) return NULL_VAL;
-    return substr_fn(a[0], a[1], a[2]);
+static DESCR_t _b_SUBSTR(DESCR_t *a, int n) {
+    if (n < 3) return NULVCL;
+    return SUBSTR_fn(a[0], a[1], a[2]);
 }
-static SnoVal _b_REVERSE(SnoVal *a, int n) {
-    if (n < 1) return NULL_VAL;
-    return reverse_fn(a[0]);
+static DESCR_t _b_REVERSE(DESCR_t *a, int n) {
+    if (n < 1) return NULVCL;
+    return REVERS_fn(a[0]);
 }
-static SnoVal _b_DATATYPE(SnoVal *a, int n) {
-    if (n < 1) return STR_VAL("STRING");
-    return STR_VAL((char*)datatype(a[0]));
+static DESCR_t _b_DATATYPE(DESCR_t *a, int n) {
+    if (n < 1) return STRVAL("STRING");
+    return STRVAL((char*)datatype(a[0]));
 }
 
 /* EVAL / OPSYN / SORT wrappers — file scope required */
-extern SnoVal evl(SnoVal);
-extern SnoVal opsyn(SnoVal, SnoVal, SnoVal);
-extern SnoVal sort_fn(SnoVal);
-static SnoVal _b_EVAL(SnoVal *a, int n)  { return evl(n>0?a[0]:NULL_VAL); }
-static SnoVal _b_OPSYN(SnoVal *a, int n) {
-    return opsyn(n>0?a[0]:NULL_VAL,n>1?a[1]:NULL_VAL,n>2?a[2]:NULL_VAL); }
-static SnoVal _b_SORT(SnoVal *a, int n)  { return sort_fn(n>0?a[0]:NULL_VAL); }
-static SnoVal _b_INPUT(SnoVal *a, int n);  /* defined near input_read below */
+extern DESCR_t evl(DESCR_t);
+extern DESCR_t opsyn(DESCR_t, DESCR_t, DESCR_t);
+extern DESCR_t sort_fn(DESCR_t);
+static DESCR_t _b_EVAL(DESCR_t *a, int n)  { return evl(n>0?a[0]:NULVCL); }
+static DESCR_t _b_OPSYN(DESCR_t *a, int n) {
+    return opsyn(n>0?a[0]:NULVCL,n>1?a[1]:NULVCL,n>2?a[2]:NULVCL); }
+static DESCR_t _b_SORT(DESCR_t *a, int n)  { return sort_fn(n>0?a[0]:NULVCL); }
+static DESCR_t _b_INPUT(DESCR_t *a, int n);  /* defined near input_read below */
 
-/* Sprint 23: counter stack and tree field accessors as callable SnoVal functions */
-static SnoVal _b_nPush(SnoVal *a, int n) {
+/* Sprint 23: counter stack and tree field accessors as callable DESCR_t functions */
+static DESCR_t _b_nPush(DESCR_t *a, int n) {
     (void)a; (void)n;
-    npush();
-    return NULL_VAL;
+    NPUSH_fn();
+    return NULVCL;
 }
-static SnoVal _b_nInc(SnoVal *a, int n) {
+static DESCR_t _b_nInc(DESCR_t *a, int n) {
     (void)a; (void)n;
-    ninc();
-    return INT_VAL(ntop());
+    NINC_fn();
+    return INTVAL(ntop());
 }
-static SnoVal _b_nDec(SnoVal *a, int n) {
+static DESCR_t _b_nDec(DESCR_t *a, int n) {
     (void)a; (void)n;
-    ndec();
-    return INT_VAL(ntop());
+    NDEC_fn();
+    return INTVAL(ntop());
 }
-static SnoVal _b_nTop(SnoVal *a, int n) {
+static DESCR_t _b_nTop(DESCR_t *a, int n) {
     (void)a; (void)n;
-    return INT_VAL(ntop());
+    return INTVAL(ntop());
 }
-static SnoVal _b_nPop(SnoVal *a, int n) {
+static DESCR_t _b_nPop(DESCR_t *a, int n) {
     (void)a; (void)n;
     int64_t val = ntop();
-    npop();
-    return INT_VAL(val);
+    NPOP_fn();
+    return INTVAL(val);
 }
-/* Tree field accessors: n(x), t(x), v(x), c(x) */
-static SnoVal _b_tree_n(SnoVal *a, int n) {
-    if (n < 1) return INT_VAL(0);
-    return field_get(a[0], "n");
+/* TREEBLK_t field accessors: n(x), t(x), v(x), c(x) */
+static DESCR_t _b_tree_n(DESCR_t *a, int n) {
+    if (n < 1) return INTVAL(0);
+    return FIELD_GET_fn(a[0], "n");
 }
-static SnoVal _b_tree_t(SnoVal *a, int n) {
-    if (n < 1) return NULL_VAL;
-    return field_get(a[0], "t");
+static DESCR_t _b_tree_t(DESCR_t *a, int n) {
+    if (n < 1) return NULVCL;
+    return FIELD_GET_fn(a[0], "t");
 }
-static SnoVal _b_tree_v(SnoVal *a, int n) {
-    if (n < 1) return NULL_VAL;
-    return field_get(a[0], "v");
+static DESCR_t _b_tree_v(DESCR_t *a, int n) {
+    if (n < 1) return NULVCL;
+    return FIELD_GET_fn(a[0], "v");
 }
-static SnoVal _b_tree_c(SnoVal *a, int n) {
-    if (n < 1) return NULL_VAL;
-    return field_get(a[0], "c");
+static DESCR_t _b_tree_c(DESCR_t *a, int n) {
+    if (n < 1) return NULVCL;
+    fprintf(stderr, "DEBUG _b_tree_c: a[0].v=%d\n", a[0].v);
+    DESCR_t _r = FIELD_GET_fn(a[0], "c");
+    fprintf(stderr, "DEBUG _b_tree_c: returns type=%d\n", _r.v);
+    return _r;
 }
 /* link_counter / link_tag field accessors: value(x), next(x) */
-static SnoVal _b_field_value(SnoVal *a, int n) {
-    if (n < 1) return NULL_VAL;
-    return field_get(a[0], "value");
+static DESCR_t _b_field_value(DESCR_t *a, int n) {
+    if (n < 1) return NULVCL;
+    return FIELD_GET_fn(a[0], "value");
 }
-static SnoVal _b_field_next(SnoVal *a, int n) {
-    if (n < 1) return NULL_VAL;
-    return field_get(a[0], "next");
+static DESCR_t _b_field_next(DESCR_t *a, int n) {
+    if (n < 1) return NULVCL;
+    return FIELD_GET_fn(a[0], "next");
 }
 
 /* DUMP builtin — dump all variables to stderr (implementation after var table) */
 static void var_dump(void);
-static SnoVal _b_DUMP(SnoVal *a, int n) {
+static DESCR_t _b_DUMP(DESCR_t *a, int n) {
     (void)a; (void)n;
     var_dump();
-    return NULL_VAL;
+    return NULVCL;
 }
 
 /* Forward declarations needed by _b_DATA trampolines */
-static UDefType *_udef_lookup(const char *name);
+static DATBLK_t *_udef_lookup(const char *name);
 
-/* ---- DATA() builtin ----
- * DATA('typename(field1,field2,...)') — define a user-defined datatype.
+/* ---- DT_DATA() builtin ----
+ * DT_DATA('typename(field1,field2,...)') — define a user-defined datatype.
  * Registers: constructor typename(f1,f2,...) and field accessors f1(obj),f2(obj),...
  * Uses GC-allocated closure structs so each registered fn knows its type/field name.
  */
 typedef struct { char *typename; int nfields; char **fields; } DataClosure;
 typedef struct { char *typename; char *fieldname; } FieldClosure;
 
-/* Dynamic constructor: typename(v1, v2, ...) -> UDEF */
-static SnoVal _data_ctor_fn(SnoVal *args, int nargs) {
-    /* Called as a registered SnoFunc; the closure is stored in a parallel table.
+/* Dynamic constructor: typename(v1, v2, ...) -> DT_DATA */
+static DESCR_t _data_ctor_fn(DESCR_t *args, int nargs) {
+    /* Called as a registered FNCPTR_t; the closure is stored in a parallel table.
      * We use apply_closure which is not available, so we look up via type name. */
     /* NOTE: This fn is never called directly — see _b_DATA registration below */
     (void)args; (void)nargs;
-    return NULL_VAL;
+    return NULVCL;
 }
 
-/* We need closures per-type. Use a static array of up to 64 DATA types. */
+/* We need closures per-type. Use a static array of up to 64 DT_DATA types. */
 #define DATA_MAX_TYPES 64
 #define DATA_MAX_FIELDS 16
 static struct {
@@ -304,22 +307,22 @@ static struct {
 static int _data_ntypes = 0;
 
 /* Generic constructor: looks up typename by position in _data_types,
- * builds a UDef with the provided args. */
-static SnoVal _make_ctor(int tidx, SnoVal *args, int nargs) {
-    if (tidx < 0 || tidx >= _data_ntypes) return NULL_VAL;
-    UDefType *t = _udef_lookup(_data_types[tidx].typename);
-    if (!t) return NULL_VAL;
-    UDef *u = GC_malloc(sizeof(UDef));
+ * builds a DATINST_t with the provided args. */
+static DESCR_t _make_ctor(int tidx, DESCR_t *args, int nargs) {
+    if (tidx < 0 || tidx >= _data_ntypes) return NULVCL;
+    DATBLK_t *t = _udef_lookup(_data_types[tidx].typename);
+    if (!t) return NULVCL;
+    DATINST_t *u = GC_malloc(sizeof(DATINST_t));
     u->type   = t;
-    u->fields = GC_malloc(t->nfields * sizeof(SnoVal));
+    u->fields = GC_malloc(t->nfields * sizeof(DESCR_t));
     for (int i = 0; i < t->nfields; i++)
-        u->fields[i] = (i < nargs) ? args[i] : NULL_VAL;
-    return (SnoVal){ .type = UDEF, .u = u };
+        u->fields[i] = (i < nargs) ? args[i] : NULVCL;
+    return (DESCR_t){ .v = DT_DATA, .u = u };
 }
 
 /* One constructor trampoline per slot (up to DATA_MAX_TYPES) */
 #define CTOR_FN(idx) \
-static SnoVal _ctor_##idx(SnoVal *a, int n) { return _make_ctor(idx, a, n); }
+static DESCR_t _ctor_##idx(DESCR_t *a, int n) { return _make_ctor(idx, a, n); }
 
 CTOR_FN(0)  CTOR_FN(1)  CTOR_FN(2)  CTOR_FN(3)
 CTOR_FN(4)  CTOR_FN(5)  CTOR_FN(6)  CTOR_FN(7)
@@ -338,7 +341,7 @@ CTOR_FN(52) CTOR_FN(53) CTOR_FN(54) CTOR_FN(55)
 CTOR_FN(56) CTOR_FN(57) CTOR_FN(58) CTOR_FN(59)
 CTOR_FN(60) CTOR_FN(61) CTOR_FN(62) CTOR_FN(63)
 
-static SnoVal (*_ctor_fns[DATA_MAX_TYPES])(SnoVal *, int) = {
+static DESCR_t (*_ctor_fns[DATA_MAX_TYPES])(DESCR_t *, int) = {
     _ctor_0,  _ctor_1,  _ctor_2,  _ctor_3,
     _ctor_4,  _ctor_5,  _ctor_6,  _ctor_7,
     _ctor_8,  _ctor_9,  _ctor_10, _ctor_11,
@@ -362,25 +365,25 @@ static SnoVal (*_ctor_fns[DATA_MAX_TYPES])(SnoVal *, int) = {
 static struct { int tidx; int fidx; } _facc_slots[FIELD_ACCESSOR_MAX];
 static int _facc_n = 0;
 
-static SnoVal _make_fget(int slot, SnoVal obj) {
-    if (slot < 0 || slot >= _facc_n) return NULL_VAL;
+static DESCR_t _make_fget(int slot, DESCR_t obj) {
+    if (slot < 0 || slot >= _facc_n) return NULVCL;
     int tidx = _facc_slots[slot].tidx;
     int fidx = _facc_slots[slot].fidx;
-    if (obj.type != UDEF || !obj.u) return NULL_VAL;
-    if (fidx < 0 || fidx >= obj.u->type->nfields) return NULL_VAL;
+    if (obj.v != DT_DATA || !obj.u) return NULVCL;
+    if (fidx < 0 || fidx >= obj.u->type->nfields) return NULVCL;
     return obj.u->fields[fidx];
 }
-static void _make_fset(int slot, SnoVal obj, SnoVal val) {
+static void _make_fset(int slot, DESCR_t obj, DESCR_t val) {
     if (slot < 0 || slot >= _facc_n) return;
     int fidx = _facc_slots[slot].fidx;
-    if (obj.type != UDEF || !obj.u) return;
+    if (obj.v != DT_DATA || !obj.u) return;
     if (fidx < 0 || fidx >= obj.u->type->nfields) return;
     obj.u->fields[fidx] = val;
 }
 
 #define FACC_FN(idx) \
-static SnoVal _facc_get_##idx(SnoVal *a, int n) { \
-    return n>=1 ? _make_fget(idx, a[0]) : NULL_VAL; }
+static DESCR_t _facc_get_##idx(DESCR_t *a, int n) { \
+    return n>=1 ? _make_fget(idx, a[0]) : NULVCL; }
 
 FACC_FN(0)   FACC_FN(1)   FACC_FN(2)   FACC_FN(3)
 FACC_FN(4)   FACC_FN(5)   FACC_FN(6)   FACC_FN(7)
@@ -415,7 +418,7 @@ FACC_FN(116) FACC_FN(117) FACC_FN(118) FACC_FN(119)
 FACC_FN(120) FACC_FN(121) FACC_FN(122) FACC_FN(123)
 FACC_FN(124) FACC_FN(125) FACC_FN(126) FACC_FN(127)
 
-static SnoVal (*_facc_fns[FIELD_ACCESSOR_MAX])(SnoVal *, int) = {
+static DESCR_t (*_facc_fns[FIELD_ACCESSOR_MAX])(DESCR_t *, int) = {
     _facc_get_0,   _facc_get_1,   _facc_get_2,   _facc_get_3,
     _facc_get_4,   _facc_get_5,   _facc_get_6,   _facc_get_7,
     _facc_get_8,   _facc_get_9,   _facc_get_10,  _facc_get_11,
@@ -450,25 +453,25 @@ static SnoVal (*_facc_fns[FIELD_ACCESSOR_MAX])(SnoVal *, int) = {
     _facc_get_124, _facc_get_125, _facc_get_126, _facc_get_127,
 };
 
-static SnoVal _b_DATA(SnoVal *a, int n) {
-    if (n < 1) return NULL_VAL;
-    const char *spec = to_str(a[0]);
-    if (!spec || !*spec) return NULL_VAL;
+static DESCR_t _b_DATA(DESCR_t *a, int n) {
+    if (n < 1) return NULVCL;
+    const char *spec = VARVAL_fn(a[0]);
+    if (!spec || !*spec) return NULVCL;
 
-    /* Register the type in snobol4's UDefType list */
-    data_define(spec);
+    /* Register the type in snobol4's DATBLK_t list */
+    DEFDAT_fn(spec);
 
     /* Parse spec to get typename and fields */
     char *s = GC_strdup(spec);
     char *paren = strchr(s, '(');
-    if (!paren) return NULL_VAL;
+    if (!paren) return NULVCL;
     *paren = '\0';
     char *tname = s;
     char *fstr = paren + 1;
     char *close = strchr(fstr, ')');
     if (close) *close = '\0';
 
-    if (_data_ntypes >= DATA_MAX_TYPES) return NULL_VAL;
+    if (_data_ntypes >= DATA_MAX_TYPES) return NULVCL;
     int tidx = _data_ntypes++;
     _data_types[tidx].typename = GC_strdup(tname);
 
@@ -487,7 +490,7 @@ static SnoVal _b_DATA(SnoVal *a, int n) {
     _data_types[tidx].nfields = nf;
 
     /* Register constructor: typename(f1,f2,...) */
-    extern void register_fn(const char *, SnoVal (*)(SnoVal*, int), int, int);
+    extern void register_fn(const char *, DESCR_t (*)(DESCR_t*, int), int, int);
     register_fn(tname, _ctor_fns[tidx], 0, nf);
 
     /* Register field accessors: each field name as a 1-arg function */
@@ -501,49 +504,49 @@ static SnoVal _b_DATA(SnoVal *a, int n) {
         register_fn(fname, _facc_fns[slot], 1, 1);
     }
 
-    return NULL_VAL;
+    return NULVCL;
 }
 
-/* Pattern builtins callable via aply() — used when SPAN/BREAK/etc appear
+/* Pattern builtins callable via APLY_fn() — used when SPAN/BREAK/etc appear
  * inside argument lists and are tokenised as IDENT rather than PAT_BUILTIN. */
-extern SnoVal pat_span(const char *);
-extern SnoVal pat_break_(const char *);
-extern SnoVal pat_any_cs(const char *);
-extern SnoVal pat_notany(const char *);
-extern SnoVal pat_len(int64_t);
-extern SnoVal pat_pos(int64_t);
-extern SnoVal pat_rpos(int64_t);
-extern SnoVal pat_tab(int64_t);
-extern SnoVal pat_rtab(int64_t);
-extern SnoVal pat_arb(void);
-extern SnoVal pat_rem(void);
-extern SnoVal pat_fail(void);
-extern SnoVal pat_abort(void);
-extern SnoVal pat_succeed(void);
-extern SnoVal pat_bal(void);
-extern SnoVal pat_arbno(SnoVal);
-extern SnoVal pat_fence(void);
-extern SnoVal pat_fence_p(SnoVal);
+extern DESCR_t pat_span(const char *);
+extern DESCR_t pat_break_(const char *);
+extern DESCR_t pat_any_cs(const char *);
+extern DESCR_t pat_notany(const char *);
+extern DESCR_t pat_len(int64_t);
+extern DESCR_t pat_pos(int64_t);
+extern DESCR_t pat_rpos(int64_t);
+extern DESCR_t pat_tab(int64_t);
+extern DESCR_t pat_rtab(int64_t);
+extern DESCR_t pat_arb(void);
+extern DESCR_t pat_rem(void);
+extern DESCR_t pat_fail(void);
+extern DESCR_t pat_abort(void);
+extern DESCR_t pat_succeed(void);
+extern DESCR_t pat_bal(void);
+extern DESCR_t pat_arbno(DESCR_t);
+extern DESCR_t pat_fence(void);
+extern DESCR_t pat_fence_p(DESCR_t);
 
-static SnoVal _b_PAT_SPAN(SnoVal *a, int n)    { return n>=1 ? pat_span(to_str(a[0]))    : FAIL_VAL; }
-static SnoVal _b_PAT_BREAK(SnoVal *a, int n)   { return n>=1 ? pat_break_(to_str(a[0]))  : FAIL_VAL; }
-static SnoVal _b_PAT_ANY(SnoVal *a, int n)     { return n>=1 ? pat_any_cs(to_str(a[0]))  : FAIL_VAL; }
-static SnoVal _b_PAT_NOTANY(SnoVal *a, int n)  { return n>=1 ? pat_notany(to_str(a[0]))  : FAIL_VAL; }
-static SnoVal _b_PAT_LEN(SnoVal *a, int n)     { return n>=1 ? pat_len(to_int(a[0]))   : FAIL_VAL; }
-static SnoVal _b_PAT_POS(SnoVal *a, int n)     { return n>=1 ? pat_pos(to_int(a[0]))   : FAIL_VAL; }
-static SnoVal _b_PAT_RPOS(SnoVal *a, int n)    { return n>=1 ? pat_rpos(to_int(a[0]))  : FAIL_VAL; }
-static SnoVal _b_PAT_TAB(SnoVal *a, int n)     { return n>=1 ? pat_tab(to_int(a[0]))   : FAIL_VAL; }
-static SnoVal _b_PAT_RTAB(SnoVal *a, int n)    { return n>=1 ? pat_rtab(to_int(a[0]))  : FAIL_VAL; }
-static SnoVal _b_PAT_ARB(SnoVal *a, int n)     { (void)a;(void)n; return pat_arb();     }
-static SnoVal _b_PAT_REM(SnoVal *a, int n)     { (void)a;(void)n; return pat_rem();     }
-static SnoVal _b_PAT_FAIL(SnoVal *a, int n)    { (void)a;(void)n; return pat_fail();    }
-static SnoVal _b_PAT_ABORT(SnoVal *a, int n)   { (void)a;(void)n; return pat_abort();   }
-static SnoVal _b_PAT_SUCCEED(SnoVal *a, int n) { (void)a;(void)n; return pat_succeed(); }
-static SnoVal _b_PAT_BAL(SnoVal *a, int n)     { (void)a;(void)n; return pat_bal();     }
-static SnoVal _b_PAT_ARBNO(SnoVal *a, int n)   { return n>=1 ? pat_arbno(a[0])  : FAIL_VAL; }
-static SnoVal _b_PAT_FENCE(SnoVal *a, int n)   { return n>=1 ? pat_fence_p(a[0]) : pat_fence(); }
+static DESCR_t _b_PAT_SPAN(DESCR_t *a, int n)    { return n>=1 ? pat_span(VARVAL_fn(a[0]))    : FAILDESCR; }
+static DESCR_t _b_PAT_BREAK(DESCR_t *a, int n)   { return n>=1 ? pat_break_(VARVAL_fn(a[0]))  : FAILDESCR; }
+static DESCR_t _b_PAT_ANY(DESCR_t *a, int n)     { return n>=1 ? pat_any_cs(VARVAL_fn(a[0]))  : FAILDESCR; }
+static DESCR_t _b_PAT_NOTANY(DESCR_t *a, int n)  { return n>=1 ? pat_notany(VARVAL_fn(a[0]))  : FAILDESCR; }
+static DESCR_t _b_PAT_LEN(DESCR_t *a, int n)     { return n>=1 ? pat_len(to_int(a[0]))   : FAILDESCR; }
+static DESCR_t _b_PAT_POS(DESCR_t *a, int n)     { return n>=1 ? pat_pos(to_int(a[0]))   : FAILDESCR; }
+static DESCR_t _b_PAT_RPOS(DESCR_t *a, int n)    { return n>=1 ? pat_rpos(to_int(a[0]))  : FAILDESCR; }
+static DESCR_t _b_PAT_TAB(DESCR_t *a, int n)     { return n>=1 ? pat_tab(to_int(a[0]))   : FAILDESCR; }
+static DESCR_t _b_PAT_RTAB(DESCR_t *a, int n)    { return n>=1 ? pat_rtab(to_int(a[0]))  : FAILDESCR; }
+static DESCR_t _b_PAT_ARB(DESCR_t *a, int n)     { (void)a;(void)n; return pat_arb();     }
+static DESCR_t _b_PAT_REM(DESCR_t *a, int n)     { (void)a;(void)n; return pat_rem();     }
+static DESCR_t _b_PAT_FAIL(DESCR_t *a, int n)    { (void)a;(void)n; return pat_fail();    }
+static DESCR_t _b_PAT_ABORT(DESCR_t *a, int n)   { (void)a;(void)n; return pat_abort();   }
+static DESCR_t _b_PAT_SUCCEED(DESCR_t *a, int n) { (void)a;(void)n; return pat_succeed(); }
+static DESCR_t _b_PAT_BAL(DESCR_t *a, int n)     { (void)a;(void)n; return pat_bal();     }
+static DESCR_t _b_PAT_ARBNO(DESCR_t *a, int n)   { return n>=1 ? pat_arbno(a[0])  : FAILDESCR; }
+static DESCR_t _b_PAT_FENCE(DESCR_t *a, int n)   { return n>=1 ? pat_fence_p(a[0]) : pat_fence(); }
 
-void runtime_init(void) {
+void SNO_INIT_fn(void) {
     GC_INIT();
     /* Build &ALPHABET: all 256 chars in order */
     for (int i = 0; i < 256; i++) alphabet[i] = (char)i;
@@ -553,7 +556,7 @@ void runtime_init(void) {
     if (mon && mon[0] == '1') monitor_fd = 2;
 
     /* Register numeric comparison builtins */
-    extern void register_fn(const char *, SnoVal (*)(SnoVal*, int), int, int);
+    extern void register_fn(const char *, DESCR_t (*)(DESCR_t*, int), int, int);
     register_fn("GT",       _b_GT,       2, 2);
     register_fn("LT",       _b_LT,       2, 2);
     register_fn("GE",       _b_GE,       2, 2);
@@ -562,7 +565,7 @@ void runtime_init(void) {
     register_fn("NE",       _b_NE,       2, 2);
     register_fn("INTEGER",  _b_INTEGER,  1, 1);
     register_fn("REAL",     _b_REAL,     1, 1);
-    register_fn("SIZE",     _b_SIZE,     1, 1);
+    register_fn("SIZE_fn",     _b_SIZE,     1, 1);
     /* Sprint 23: string predicates and host interface */
     register_fn("IDENT",    _b_IDENT,    0, 2);
     register_fn("DIFFER",   _b_DIFFER,   0, 2);
@@ -572,13 +575,13 @@ void runtime_init(void) {
     register_fn("LPAD",     _b_LPAD,     2, 3);
     register_fn("RPAD",     _b_RPAD,     2, 3);
     register_fn("CHAR",     _b_CHAR,     1, 1);
-    register_fn("DUPL",     _b_DUPL,     2, 2);
+    register_fn("DUPL_fn",     _b_DUPL,     2, 2);
     register_fn("REPLACE",  _b_REPLACE,  3, 3);
-    register_fn("TRIM",     _b_TRIM,     1, 1);
-    register_fn("SUBSTR",   _b_SUBSTR,   3, 3);
+    register_fn("TRIM_fn",     _b_TRIM,     1, 1);
+    register_fn("SUBSTR_fn",   _b_SUBSTR,   3, 3);
     register_fn("REVERSE",  _b_REVERSE,  1, 1);
     register_fn("DATATYPE", _b_DATATYPE, 1, 1);
-    register_fn("DATA",     _b_DATA,     1, 1);
+    register_fn("DT_DATA",     _b_DATA,     1, 1);
     register_fn("EVAL",  _b_EVAL,  1, 1);
     register_fn("OPSYN", _b_OPSYN, 2, 3);
     register_fn("SORT",  _b_SORT,  1, 1);
@@ -595,7 +598,7 @@ void runtime_init(void) {
     register_fn("value",    _b_field_value, 1, 1);
     register_fn("next",     _b_field_next,  1, 1);
     register_fn("DUMP",     _b_DUMP,        0, 1);
-    /* Pattern builtins callable via aply (when inside arglist parens) */
+    /* Pattern builtins callable via APLY_fn (when inside arglist parens) */
     register_fn("SPAN",    _b_PAT_SPAN,    1, 1);
     register_fn("BREAK",   _b_PAT_BREAK,   1, 1);
     register_fn("ANY",     _b_PAT_ANY,     1, 1);
@@ -607,7 +610,7 @@ void runtime_init(void) {
     register_fn("RTAB",    _b_PAT_RTAB,    1, 1);
     register_fn("ARB",     _b_PAT_ARB,     0, 0);
     register_fn("REM",     _b_PAT_REM,     0, 0);
-    register_fn("FAIL",    _b_PAT_FAIL,    0, 0);
+    register_fn("DT_FAIL",    _b_PAT_FAIL,    0, 0);
     register_fn("ABORT",   _b_PAT_ABORT,   0, 0);
     register_fn("SUCCEED", _b_PAT_SUCCEED, 0, 0);
     register_fn("BAL",     _b_PAT_BAL,     0, 0);
@@ -615,44 +618,54 @@ void runtime_init(void) {
     register_fn("FENCE",   _b_PAT_FENCE,   0, 1);
     /* Sprint 23: pre-ini &ALPHABET-derived constants from global.sno
      * &ALPHABET is a 256-char binary string; POS(n) LEN(1) . var extracts char(n).
-     * Since STR_VAL uses strlen, &ALPHABET[0]=NUL causes all matches to fail.
+     * Since STRVAL uses strlen, &ALPHABET[0]=NUL causes all matches to fail.
      * We pre-initialize the key character constants directly. */
     {
         char *_ch = GC_malloc_atomic(2);
-        _ch[0] = (char)9;  _ch[1] = '\0'; var_set("tab", STR_VAL(_ch));
+        _ch[0] = (char)9;  _ch[1] = '\0'; NV_SET_fn("tab", STRVAL(_ch));
         _ch = GC_malloc_atomic(2);
-        _ch[0] = (char)9;  _ch[1] = '\0'; var_set("ht", STR_VAL(_ch));
+        _ch[0] = (char)9;  _ch[1] = '\0'; NV_SET_fn("ht", STRVAL(_ch));
         _ch = GC_malloc_atomic(2);
-        _ch[0] = (char)10; _ch[1] = '\0'; var_set("nl", STR_VAL(_ch));
+        _ch[0] = (char)10; _ch[1] = '\0'; NV_SET_fn("nl", STRVAL(_ch));
         _ch = GC_malloc_atomic(2);
-        _ch[0] = (char)10; _ch[1] = '\0'; var_set("lf", STR_VAL(_ch));
+        _ch[0] = (char)10; _ch[1] = '\0'; NV_SET_fn("lf", STRVAL(_ch));
         _ch = GC_malloc_atomic(2);
-        _ch[0] = (char)13; _ch[1] = '\0'; var_set("cr", STR_VAL(_ch));
+        _ch[0] = (char)13; _ch[1] = '\0'; NV_SET_fn("cr", STRVAL(_ch));
         _ch = GC_malloc_atomic(2);
-        _ch[0] = (char)12; _ch[1] = '\0'; var_set("ff", STR_VAL(_ch));
+        _ch[0] = (char)12; _ch[1] = '\0'; NV_SET_fn("ff", STRVAL(_ch));
         _ch = GC_malloc_atomic(2);
-        _ch[0] = (char)11; _ch[1] = '\0'; var_set("vt", STR_VAL(_ch));
+        _ch[0] = (char)11; _ch[1] = '\0'; NV_SET_fn("vt", STRVAL(_ch));
         _ch = GC_malloc_atomic(2);
-        _ch[0] = (char)8;  _ch[1] = '\0'; var_set("bs", STR_VAL(_ch));
-        var_set("nul", STR_VAL(""));  /* char(0) = empty in string context */
+        _ch[0] = (char)8;  _ch[1] = '\0'; NV_SET_fn("bs", STRVAL(_ch));
+        NV_SET_fn("nul", STRVAL(""));  /* char(0) = empty in string context */
         /* epsilon = the always-succeeds zero-mtch pattern.
          * USER CONTRACT (Lon, Session 47): epsilon is NEVER assigned by user code.
          * It is the pattern equivalent of NULL (empty string).
          * NULL = empty string sentinel; epsilon = always-succeed pattern sentinel.
          * Pre-initialize here exactly like nl/tab/cr. */
-        var_set("epsilon", pat_epsilon());
+        NV_SET_fn("epsilon", pat_epsilon());
         _ch = GC_malloc_atomic(2);
-        _ch[0] = (char)47; _ch[1] = '\0'; var_set("fSlash", STR_VAL(_ch));
+        _ch[0] = (char)47; _ch[1] = '\0'; NV_SET_fn("fSlash", STRVAL(_ch));
         _ch = GC_malloc_atomic(2);
-        _ch[0] = (char)92; _ch[1] = '\0'; var_set("bSlash", STR_VAL(_ch));
+        _ch[0] = (char)92; _ch[1] = '\0'; NV_SET_fn("bSlash", STRVAL(_ch));
         _ch = GC_malloc_atomic(2);
-        _ch[0] = (char)59; _ch[1] = '\0'; var_set("semicolon", STR_VAL(_ch));
+        _ch[0] = (char)59; _ch[1] = '\0'; NV_SET_fn("semicolon", STRVAL(_ch));
         /* Physical constants — ASCII-defined, never change, pre-init for
          * pattern charset expressions that fire before global.sno line 25 */
-        var_set("UCASE",  STR_VAL(ucase));
-        var_set("LCASE",  STR_VAL(lcase));
-        var_set("digits", STR_VAL("0123456789"));
+        NV_SET_fn("UCASE",  STRVAL(ucase));
+        NV_SET_fn("LCASE",  STRVAL(lcase));
+        NV_SET_fn("digits", STRVAL("0123456789"));
     }
+    /* Register tree DT_DATA type, then override field accessors.
+     * DEFDAT_fn("tree(t,v,n,c)") installs coercing accessors for each
+     * field name, which would overwrite the _b_tree_* registered above.
+     * By calling DEFDAT_fn HERE and re-registering _b_tree_* AFTER,
+     * our raw accessors win — _b_tree_c returns DT_A, not S. */
+    DEFDAT_fn("tree(t,v,n,c)");
+    register_fn("c", _b_tree_c, 1, 1);
+    register_fn("t", _b_tree_t, 1, 1);
+    register_fn("v", _b_tree_v, 1, 1);
+    register_fn("n", _b_tree_n, 1, 1);
 }
 
 /* ============================================================
@@ -675,17 +688,17 @@ char *ccat(const char *a, const char *b) {
     return r;
 }
 
-/* P003: SnoVal ccat — propagates FAIL_VAL if either operand is FAIL.
+/* P003: DESCR_t ccat — propagates FAILDESCR if either operand is DT_FAIL.
  * If either operand is a PATTERN, build a pattern concatenation instead of
  * string concatenation (blank-juxtaposition of patterns = pattern cat). */
-SnoVal concat_sv(SnoVal a, SnoVal b) {
-    if (a.type == SFAIL) return FAIL_VAL;
-    if (b.type == SFAIL) return FAIL_VAL;
-    if (a.type == SPATTERN || b.type == SPATTERN)
+DESCR_t CONC_fn(DESCR_t a, DESCR_t b) {
+    if (a.v == DT_FAIL) return FAILDESCR;
+    if (b.v == DT_FAIL) return FAILDESCR;
+    if (a.v == DT_P || b.v == DT_P)
         return pat_cat(a, b);
-    const char *sa = to_str(a);
-    const char *sb = to_str(b);
-    return STR_VAL(ccat(sa, sb));
+    const char *sa = VARVAL_fn(a);
+    const char *sb = VARVAL_fn(b);
+    return STRVAL(ccat(sa, sb));
 }
 
 int64_t size(const char *s) {
@@ -696,15 +709,15 @@ int64_t size(const char *s) {
  * Type conversions
  * ============================================================ */
 
-char *to_str(SnoVal v) {
+char *VARVAL_fn(DESCR_t v) {
     char buf[64];
-    switch (v.type) {
-        case SNULL:    return GC_strdup("");
-        case SSTR:     return v.s ? v.s : GC_strdup("");
-        case SINT:
+    switch (v.v) {
+        case DT_SNUL:    return GC_strdup("");
+        case DT_S:     return v.s ? v.s : GC_strdup("");
+        case DT_I:
             snprintf(buf, sizeof(buf), "%" PRId64, v.i);
             return GC_strdup(buf);
-        case SREAL: {
+        case DT_R: {
             /* SNOBOL4 real format: no trailing zeros, no .0 for whole numbers */
             snprintf(buf, sizeof(buf), "%.15g", v.r);
             /* If no decimal point and no 'e', add trailing dot (SPITBOL style) */
@@ -712,20 +725,20 @@ char *to_str(SnoVal v) {
                 strncat(buf, ".", sizeof(buf) - strlen(buf) - 1);
             return GC_strdup(buf);
         }
-        case STREE:
+        case DT_DATA:
             /* Trees stringify as their tag */
-            return v.t ? GC_strdup(v.t->tag) : GC_strdup("");
+            return v.u ? GC_strdup(v.u->type->name) : GC_strdup("");
         default:
             return GC_strdup("");
     }
 }
 
-int64_t to_int(SnoVal v) {
-    switch (v.type) {
-        case SINT:  return v.i;
-        case SREAL: return (int64_t)v.r;
-        case SSTR:
-        case SNULL: {
+int64_t to_int(DESCR_t v) {
+    switch (v.v) {
+        case DT_I:  return v.i;
+        case DT_R: return (int64_t)v.r;
+        case DT_S:
+        case DT_SNUL: {
             const char *s = v.s ? v.s : "";
             while (*s == ' ') s++;
             if (!*s) return 0;
@@ -735,12 +748,12 @@ int64_t to_int(SnoVal v) {
     }
 }
 
-double to_real(SnoVal v) {
-    switch (v.type) {
-        case SREAL: return v.r;
-        case SINT:  return (double)v.i;
-        case SSTR:
-        case SNULL: {
+double to_real(DESCR_t v) {
+    switch (v.v) {
+        case DT_R: return v.r;
+        case DT_I:  return (double)v.i;
+        case DT_S:
+        case DT_SNUL: {
             const char *s = v.s ? v.s : "";
             return strtod(s, NULL);
         }
@@ -748,28 +761,27 @@ double to_real(SnoVal v) {
     }
 }
 
-const char *datatype(SnoVal v) {
-    switch (v.type) {
-        case SNULL:    return "STRING";  /* NULL = empty string */
-        case SSTR:     return "STRING";
-        case SINT:     return "INTEGER";
-        case SREAL:    return "REAL";
-        case STREE:    return v.t ? v.t->tag : "TREE";
-        case SPATTERN: return "PATTERN";
-        case ARRAY:   return "ARRAY";
-        case STABLE:   return "TABLE";
-        case CODE:    return "CODE";
-        case UDEF:    return v.u ? v.u->type->name : "UDEF";
+const char *datatype(DESCR_t v) {
+    switch (v.v) {
+        case DT_SNUL:    return "STRING";  /* NULL = empty string */
+        case DT_S:     return "STRING";
+        case DT_I:     return "INTEGER";
+        case DT_R:    return "REAL";
+        case DT_DATA:    return v.u ? v.u->type->name : "DATA";
+        case DT_P:    return "PATTERN";
+        case DT_A:    return "ARRAY";
+        case DT_T:    return "TABLE";
+        case DT_C:    return "CODE";
         default:          return "STRING";
     }
 }
 
 /* ============================================================
- * Tree operations
+ * TREEBLK_t operations
  * ============================================================ */
 
-Tree *tree_new(const char *tag, SnoVal val) {
-    Tree *t = GC_malloc(sizeof(Tree));
+TREEBLK_t *tree_new(const char *tag, DESCR_t val) {
+    TREEBLK_t *t = GC_malloc(sizeof(TREEBLK_t));
     t->tag = GC_strdup(tag ? tag : "");
     t->val = val;
     t->n   = 0;
@@ -778,49 +790,49 @@ Tree *tree_new(const char *tag, SnoVal val) {
     return t;
 }
 
-Tree *tree_new0(const char *tag) {
-    return tree_new(tag, NULL_VAL);
+TREEBLK_t *tree_new0(const char *tag) {
+    return tree_new(tag, NULVCL);
 }
 
-static void _tree_ensure_cap(Tree *x, int needed) {
+static void _tree_ensure_cap(TREEBLK_t *x, int needed) {
     if (x->cap >= needed) return;
     int newcap = x->cap ? x->cap * 2 : 4;
     while (newcap < needed) newcap *= 2;
-    Tree **nc = GC_malloc(newcap * sizeof(Tree *));
-    if (x->c) memcpy(nc, x->c, x->n * sizeof(Tree *));
+    TREEBLK_t **nc = GC_malloc(newcap * sizeof(TREEBLK_t *));
+    if (x->c) memcpy(nc, x->c, x->n * sizeof(TREEBLK_t *));
     x->c   = nc;
     x->cap = newcap;
 }
 
-void tree_append(Tree *x, Tree *y) {
+void tree_append(TREEBLK_t *x, TREEBLK_t *y) {
     _tree_ensure_cap(x, x->n + 1);
     x->c[x->n++] = y;
 }
 
-void tree_prepend(Tree *x, Tree *y) {
+void tree_prepend(TREEBLK_t *x, TREEBLK_t *y) {
     _tree_ensure_cap(x, x->n + 1);
-    memmove(x->c + 1, x->c, x->n * sizeof(Tree *));
+    memmove(x->c + 1, x->c, x->n * sizeof(TREEBLK_t *));
     x->c[0] = y;
     x->n++;
 }
 
-void tree_insert(Tree *x, Tree *y, int place) {
+void tree_insert(TREEBLK_t *x, TREEBLK_t *y, int place) {
     /* place is 1-based */
     if (place < 1) place = 1;
     if (place > x->n + 1) place = x->n + 1;
     _tree_ensure_cap(x, x->n + 1);
     int idx = place - 1;
-    memmove(x->c + idx + 1, x->c + idx, (x->n - idx) * sizeof(Tree *));
+    memmove(x->c + idx + 1, x->c + idx, (x->n - idx) * sizeof(TREEBLK_t *));
     x->c[idx] = y;
     x->n++;
 }
 
-Tree *tree_remove(Tree *x, int place) {
+TREEBLK_t *tree_remove(TREEBLK_t *x, int place) {
     /* place is 1-based */
     if (!x || place < 1 || place > x->n) return NULL;
     int idx = place - 1;
-    Tree *removed = x->c[idx];
-    memmove(x->c + idx, x->c + idx + 1, (x->n - idx - 1) * sizeof(Tree *));
+    TREEBLK_t *removed = x->c[idx];
+    memmove(x->c + idx, x->c + idx + 1, (x->n - idx - 1) * sizeof(TREEBLK_t *));
     x->n--;
     return removed;
 }
@@ -829,21 +841,21 @@ Tree *tree_remove(Tree *x, int place) {
  * Array
  * ============================================================ */
 
-SnoArray *array_new(int lo, int hi) {
-    SnoArray *a = GC_malloc(sizeof(SnoArray));
+ARBLK_t *array_new(int lo, int hi) {
+    ARBLK_t *a = GC_malloc(sizeof(ARBLK_t));
     a->lo   = lo;
     a->hi   = hi;
     a->ndim = 1;
     int sz  = hi - lo + 1;
     if (sz < 1) sz = 1;
-    a->data = GC_malloc(sz * sizeof(SnoVal));
-    for (int i = 0; i < sz; i++) a->data[i] = NULL_VAL;
+    a->data = GC_malloc(sz * sizeof(DESCR_t));
+    for (int i = 0; i < sz; i++) a->data[i] = NULVCL;
     return a;
 }
 
-SnoArray *array_new2d(int lo1, int hi1, int lo2, int hi2) {
+ARBLK_t *array_new2d(int lo1, int hi1, int lo2, int hi2) {
     /* Stored as flat row-major: indx = (i-lo1)*(hi2-lo2+1) + (j-lo2) */
-    SnoArray *a = GC_malloc(sizeof(SnoArray));
+    ARBLK_t *a = GC_malloc(sizeof(ARBLK_t));
     a->lo   = lo1;
     a->hi   = hi1;
     a->ndim = 2;
@@ -851,33 +863,33 @@ SnoArray *array_new2d(int lo1, int hi1, int lo2, int hi2) {
     int cols = hi2 - lo2 + 1;
     if (rows < 1) rows = 1;
     if (cols < 1) cols = 1;
-    a->data = GC_malloc(rows * cols * sizeof(SnoVal));
-    for (int i = 0; i < rows * cols; i++) a->data[i] = NULL_VAL;
+    a->data = GC_malloc(rows * cols * sizeof(DESCR_t));
+    for (int i = 0; i < rows * cols; i++) a->data[i] = NULVCL;
     /* Store hi2/lo2 in spare fields — abuse: hi=hi2 in a second slot.
      * For simplicity, encode cols in a separate field. */
-    /* Use tag trick: store cols count in a SnoVal at position -1.
+    /* Use tag trick: store cols count in a DESCR_t at position -1.
      * Simpler: always allocate +1 and store cols at indx 0. */
     /* Actually: store lo2/hi2 by repurposing ndim as cols */
     a->ndim = cols;  /* repurpose: ndim = cols for 2D arrays */
     return a;
 }
 
-SnoVal array_get(SnoArray *a, int i) {
-    if (!a) return FAIL_VAL;
+DESCR_t array_get(ARBLK_t *a, int i) {
+    if (!a) return FAILDESCR;
     int idx = i - a->lo;
-    if (idx < 0 || idx >= (a->hi - a->lo + 1)) return FAIL_VAL;  /* P002 */
+    if (idx < 0 || idx >= (a->hi - a->lo + 1)) return FAILDESCR;  /* P002 */
     return a->data[idx];
 }
 
-void array_set(SnoArray *a, int i, SnoVal v) {
+void array_set(ARBLK_t *a, int i, DESCR_t v) {
     if (!a) return;
     int idx = i - a->lo;
     if (idx < 0 || idx >= (a->hi - a->lo + 1)) return;
     a->data[idx] = v;
 }
 
-SnoVal array_get2(SnoArray *a, int i, int j) {
-    if (!a) return FAIL_VAL;
+DESCR_t array_get2(ARBLK_t *a, int i, int j) {
+    if (!a) return FAILDESCR;
     int cols = a->ndim;  /* cols stored in ndim for 2D */
     int row  = i - a->lo;
     /* j-origin: assume lo2 = 1 (SNOBOL4 default) */
@@ -885,11 +897,11 @@ SnoVal array_get2(SnoArray *a, int i, int j) {
     int idx  = row * cols + col;
     int total = (a->hi - a->lo + 1) * cols;
     if (row < 0 || row >= (a->hi - a->lo + 1) || col < 0 || col >= cols || idx < 0 || idx >= total)
-        return FAIL_VAL;
+        return FAILDESCR;
     return a->data[idx];
 }
 
-void array_set2(SnoArray *a, int i, int j, SnoVal v) {
+void array_set2(ARBLK_t *a, int i, int j, DESCR_t v) {
     if (!a) return;
     int cols = a->ndim;
     int row  = i - a->lo;
@@ -908,28 +920,28 @@ static unsigned _tbl_hash(const char *key) {
     return h % TABLE_BUCKETS;
 }
 
-SnoTable *table_new(void) {
-    SnoTable *t = GC_malloc(sizeof(SnoTable));
+TBBLK_t *table_new(void) {
+    TBBLK_t *t = GC_malloc(sizeof(TBBLK_t));
     memset(t->buckets, 0, sizeof(t->buckets));
     t->size = 0;
     return t;
 }
 
-SnoVal table_get(SnoTable *tbl, const char *key) {
-    if (!tbl || !key) return NULL_VAL;
+DESCR_t table_get(TBBLK_t *tbl, const char *key) {
+    if (!tbl || !key) return NULVCL;
     unsigned h = _tbl_hash(key);
-    for (SnoTableEntry *e = tbl->buckets[h]; e; e = e->next)
+    for (TBPAIR_t *e = tbl->buckets[h]; e; e = e->next)
         if (strcmp(e->key, key) == 0) return e->val;
-    return NULL_VAL;
+    return NULVCL;
 }
 
-void table_set(SnoTable *tbl, const char *key, SnoVal val) {
+void table_set(TBBLK_t *tbl, const char *key, DESCR_t val) {
     if (!tbl || !key) return;
     unsigned h = _tbl_hash(key);
-    for (SnoTableEntry *e = tbl->buckets[h]; e; e = e->next) {
+    for (TBPAIR_t *e = tbl->buckets[h]; e; e = e->next) {
         if (strcmp(e->key, key) == 0) { e->val = val; return; }
     }
-    SnoTableEntry *e = GC_malloc(sizeof(SnoTableEntry));
+    TBPAIR_t *e = GC_malloc(sizeof(TBPAIR_t));
     e->key  = GC_strdup(key);
     e->val  = val;
     e->next = tbl->buckets[h];
@@ -937,22 +949,22 @@ void table_set(SnoTable *tbl, const char *key, SnoVal val) {
     tbl->size++;
 }
 
-int table_has(SnoTable *tbl, const char *key) {
+int table_has(TBBLK_t *tbl, const char *key) {
     if (!tbl || !key) return 0;
     unsigned h = _tbl_hash(key);
-    for (SnoTableEntry *e = tbl->buckets[h]; e; e = e->next)
+    for (TBPAIR_t *e = tbl->buckets[h]; e; e = e->next)
         if (strcmp(e->key, key) == 0) return 1;
     return 0;
 }
 
 /* ============================================================
- * User-defined datatypes (DATA() mechanism)
+ * User-defined datatypes (DT_DATA() mechanism)
  * ============================================================ */
 
-static UDefType *_udef_types = NULL;
+static DATBLK_t *_udef_types = NULL;
 
-/* Parse DATA spec: "tree(t,v,n,c)" → name="tree", fields=["t","v","n","c"] */
-void data_define(const char *spec) {
+/* Parse DT_DATA spec: "tree(t,v,n,c)" → name="tree", fields=["t","v","n","c"] */
+void DEFDAT_fn(const char *spec) {
     /* Spec format: "typename(field1,field2,...)" */
     char *s = GC_strdup(spec);
     char *paren = strchr(s, '(');
@@ -963,7 +975,7 @@ void data_define(const char *spec) {
     char *close = strchr(fields_str, ')');
     if (close) *close = '\0';
 
-    UDefType *t = GC_malloc(sizeof(UDefType));
+    DATBLK_t *t = GC_malloc(sizeof(DATBLK_t));
     t->name = GC_strdup(name);
 
     /* Count and extract fields */
@@ -990,47 +1002,47 @@ void data_define(const char *spec) {
     _udef_types = t;
 }
 
-static UDefType *_udef_lookup(const char *name) {
-    for (UDefType *t = _udef_types; t; t = t->next)
+static DATBLK_t *_udef_lookup(const char *name) {
+    for (DATBLK_t *t = _udef_types; t; t = t->next)
         if (strcasecmp(t->name, name) == 0) return t;
     return NULL;
 }
 
-SnoVal udef_new(const char *typename, ...) {
-    UDefType *t = _udef_lookup(typename);
-    if (!t) return NULL_VAL;
+DESCR_t DATCON_fn(const char *typename, ...) {
+    DATBLK_t *t = _udef_lookup(typename);
+    if (!t) return NULVCL;
 
-    UDef *u = GC_malloc(sizeof(UDef));
+    DATINST_t *u = GC_malloc(sizeof(DATINST_t));
     u->type   = t;
-    u->fields = GC_malloc(t->nfields * sizeof(SnoVal));
-    for (int i = 0; i < t->nfields; i++) u->fields[i] = NULL_VAL;
+    u->fields = GC_malloc(t->nfields * sizeof(DESCR_t));
+    for (int i = 0; i < t->nfields; i++) u->fields[i] = NULVCL;
 
     /* Assign varargs fields */
     va_list ap;
     va_start(ap, typename);
     for (int i = 0; i < t->nfields; i++) {
-        SnoVal v = va_arg(ap, SnoVal);
-        /* sentinel check: if type == SNULL and s == NULL, stop */
-        if (v.type == SNULL && v.s == NULL) break;
+        DESCR_t v = va_arg(ap, DESCR_t);
+        /* sentinel check: if type == DT_SNUL and s == NULL, stop */
+        if (v.v == DT_SNUL && v.s == NULL) break;
         u->fields[i] = v;
     }
     va_end(ap);
 
-    return (SnoVal){ .type = UDEF, .u = u };
+    return (DESCR_t){ .v = DT_DATA, .u = u };
 }
 
-SnoVal field_get(SnoVal obj, const char *field) {
-    if (obj.type != UDEF || !obj.u) return NULL_VAL;
-    UDefType *t = obj.u->type;
+DESCR_t FIELD_GET_fn(DESCR_t obj, const char *field) {
+    if (obj.v != DT_DATA || !obj.u) return NULVCL;
+    DATBLK_t *t = obj.u->type;
     for (int i = 0; i < t->nfields; i++)
         if (strcasecmp(t->fields[i], field) == 0)
             return obj.u->fields[i];
-    return NULL_VAL;
+    return NULVCL;
 }
 
-void field_set(SnoVal obj, const char *field, SnoVal val) {
-    if (obj.type != UDEF || !obj.u) return;
-    UDefType *t = obj.u->type;
+void FIELD_SET_fn(DESCR_t obj, const char *field, DESCR_t val) {
+    if (obj.v != DT_DATA || !obj.u) return;
+    DATBLK_t *t = obj.u->type;
     for (int i = 0; i < t->nfields; i++)
         if (strcasecmp(t->fields[i], field) == 0) {
             obj.u->fields[i] = val;
@@ -1046,24 +1058,24 @@ void field_set(SnoVal obj, const char *field, SnoVal val) {
 
 typedef struct _VarEntry {
     char   *name;
-    SnoVal  val;
+    DESCR_t  val;
     struct _VarEntry *next;
-} VarEntry;
+} NV_t;
 
-static VarEntry *_var_buckets[VAR_BUCKETS];
+static NV_t *_var_buckets[VAR_BUCKETS];
 static int _var_init_done = 0;
 
-/* Static-pointer registration: when var_set(name,val) fires,
+/* Static-pointer registration: when NV_SET_fn(name,val) fires,
  * also update the C-static pointer if registered. This bridges the
  * two-store gap for vars set via pattern conditional assignment (. var)
- * or pre-ini in runtime_init, whose C statics are never touched
+ * or pre-ini in SNO_INIT_fn, whose C statics are never touched
  * by set() because the assignment comes from the pattern engine. */
 #define VAR_REG_MAX 1024
-typedef struct { const char *name; SnoVal *ptr; } VarReg;
+typedef struct { const char *name; DESCR_t *ptr; } VarReg;
 static VarReg _var_reg[VAR_REG_MAX];
 static int    _var_reg_n = 0;
 
-void var_register(const char *name, SnoVal *ptr) {
+void NV_REG_fn(const char *name, DESCR_t *ptr) {
     if (_var_reg_n < VAR_REG_MAX) {
         _var_reg[_var_reg_n].name = name;
         _var_reg[_var_reg_n].ptr  = ptr;
@@ -1083,25 +1095,25 @@ static unsigned _var_hash(const char *name) {
     return h % VAR_BUCKETS;
 }
 
-SnoVal var_get(const char *name) {
+DESCR_t NV_GET_fn(const char *name) {
     _var_init();
-    if (!name) return NULL_VAL;
+    if (!name) return NULVCL;
     /* Special I/O variables */
     if (strcmp(name, "INPUT") == 0) return input_read();
     unsigned h = _var_hash(name);
-    for (VarEntry *e = _var_buckets[h]; e; e = e->next)
+    for (NV_t *e = _var_buckets[h]; e; e = e->next)
         if (strcmp(e->name, name) == 0) return e->val;
-    return NULL_VAL;
+    return NULVCL;
 }
 
-void var_set(const char *name, SnoVal val) {
+void NV_SET_fn(const char *name, DESCR_t val) {
     _var_init();
     if (!name) return;
     comm_var(name, val);
     /* Special I/O variables */
     if (strcmp(name, "OUTPUT") == 0) { output_val(val); return; }
     unsigned h = _var_hash(name);
-    for (VarEntry *e = _var_buckets[h]; e; e = e->next) {
+    for (NV_t *e = _var_buckets[h]; e; e = e->next) {
         if (strcmp(e->name, name) == 0) {
             e->val = val;
             for (int _ri = 0; _ri < _var_reg_n; _ri++)
@@ -1109,7 +1121,7 @@ void var_set(const char *name, SnoVal val) {
             return;
         }
     }
-    VarEntry *e = GC_malloc(sizeof(VarEntry));
+    NV_t *e = GC_malloc(sizeof(NV_t));
     e->name = GC_strdup(name);
     e->val  = val;
     e->next = _var_buckets[h];
@@ -1120,48 +1132,48 @@ void var_set(const char *name, SnoVal val) {
 }
 
 /* Sync all registered C statics FROM the hash table.
- * Call this after all var_register() calls (in main) so that
- * vars pre-initialized by runtime_init() propagate to their statics. */
-void var_sync_registered(void) {
+ * Call this after all NV_REG_fn() calls (in main) so that
+ * vars pre-initialized by SNO_INIT_fn() propagate to their statics. */
+void NV_SYNC_fn(void) {
     for (int _ri = 0; _ri < _var_reg_n; _ri++) {
-        SnoVal v = var_get(_var_reg[_ri].name);
-        if (v.type != SNULL && v.type != 0)
+        DESCR_t v = NV_GET_fn(_var_reg[_ri].name);
+        if (v.v != DT_SNUL && v.v != 0)
             *_var_reg[_ri].ptr = v;
     }
 }
 
 /* $name — indirect variable: the variable whose name is the value of 'name' */
-SnoVal indirect_get(const char *name) {
-    SnoVal indirect_name = var_get(name);
-    const char *target = to_str(indirect_name);
-    return var_get(target);
+DESCR_t INDR_GET_fn(const char *name) {
+    DESCR_t indirect_name = NV_GET_fn(name);
+    const char *target = VARVAL_fn(indirect_name);
+    return NV_GET_fn(target);
 }
 
-void indirect_set(const char *name, SnoVal val) {
-    SnoVal indirect_name = var_get(name);
-    const char *target = to_str(indirect_name);
-    var_set(target, val);
+void INDR_SET_fn(const char *name, DESCR_t val) {
+    DESCR_t indirect_name = NV_GET_fn(name);
+    const char *target = VARVAL_fn(indirect_name);
+    NV_SET_fn(target, val);
 }
 
 /* DUMP implementation — used by _b_DUMP above */
 static void var_dump(void) {
     fprintf(stderr, "[DUMP start]\n");
     for (int i = 0; i < VAR_BUCKETS; i++) {
-        for (VarEntry *e = _var_buckets[i]; e; e = e->next) {
+        for (NV_t *e = _var_buckets[i]; e; e = e->next) {
             const char *tname;
-            switch(e->val.type) {
+            switch(e->val.v) {
                 case 0: tname="NULL"; break;
                 case 1: tname="STR"; break;
                 case 2: tname="INT"; break;
                 case 3: tname="REAL"; break;
                 case 5: tname="PATTERN"; break;
-                case 6: tname="ARRAY"; break;
+                case 6: tname="DT_A"; break;
                 case 7: tname="TABLE"; break;
-                case 8: tname="UDEF"; break;
-                case 9: tname="FAIL"; break;
+                case 8: tname="DT_DATA"; break;
+                case 9: tname="DT_FAIL"; break;
                 default: tname="OTHER"; break;
             }
-            if (e->val.type == SSTR) {
+            if (e->val.v == DT_S) {
                 const char *s = e->val.s ? e->val.s : "(null)";
                 int len = (int)strlen(s);
                 fprintf(stderr, "  %s = STR(%.*s)\n", e->name, len > 40 ? 40 : len, s);
@@ -1181,16 +1193,16 @@ static void var_dump(void) {
 static int64_t _nstack[NSTACK_MAX];
 static int      _ntop = -1;
 
-void npush(void) {
+void NPUSH_fn(void) {
     if (_ntop < NSTACK_MAX - 1) _nstack[++_ntop] = 0;
 }
-int nhas_frame(void) { return _ntop >= 0; }
+int NHAS_FRAME_fn(void) { return _ntop >= 0; }
 
-void ninc(void) {
+void NINC_fn(void) {
     if (_ntop >= 0) _nstack[_ntop]++;
 }
 
-void ndec(void) {
+void NDEC_fn(void) {
     if (_ntop >= 0) _nstack[_ntop]--;
 }
 
@@ -1198,7 +1210,7 @@ int64_t ntop(void) {
     return (_ntop >= 0) ? _nstack[_ntop] : 0;
 }
 
-void npop(void) {
+void NPOP_fn(void) {
     if (_ntop >= 0) _ntop--;
 }
 
@@ -1207,46 +1219,46 @@ void npop(void) {
  * ============================================================ */
 
 #define VSTACK_MAX 1024
-static SnoVal _vstack[VSTACK_MAX];
+static DESCR_t _vstack[VSTACK_MAX];
 static int    _vstop = -1;
 
-void push(SnoVal v) {
+void PUSH_fn(DESCR_t v) {
     if (_vstop < VSTACK_MAX - 1) _vstack[++_vstop] = v;
 }
 
-SnoVal pop(void) {
+DESCR_t POP_fn(void) {
     if (_vstop >= 0) return _vstack[_vstop--];
-    return NULL_VAL;
+    return NULVCL;
 }
 
-SnoVal top(void) {
+DESCR_t TOP_fn(void) {
     if (_vstop >= 0) return _vstack[_vstop];
-    return NULL_VAL;
+    return NULVCL;
 }
 
-int stack_depth(void) {
+int STACK_DEPTH_fn(void) {
     return _vstop + 1;
 }
 
 /* ============================================================
- * Function table (DEFINE/APPLY)
+ * Function table (DEFINE_fn/APPLY)
  * ============================================================ */
 
 #define FUNC_BUCKETS 128
 
-typedef struct _FuncEntry {
+typedef struct _FNCBLK_t {
     char   *name;
-    char   *spec;       /* full DEFINE spec */
-    SnoFunc fn;
+    char   *spec;       /* full DEFINE_fn spec */
+    FNCPTR_t fn;
     /* Parameter names */
     int     nparams;
     char  **params;
     int     nlocals;
     char  **locals;
     struct _FuncEntry *next;
-} FuncEntry;
+} FNCBLK_t;
 
-static FuncEntry *_func_buckets[FUNC_BUCKETS];
+static FNCBLK_t *_func_buckets[FUNC_BUCKETS];
 static int        _func_init_done = 0;
 
 static void _func_init(void) {
@@ -1261,10 +1273,10 @@ static unsigned _func_hash(const char *name) {
     return h % FUNC_BUCKETS;
 }
 
-/* Parse DEFINE spec: "name(p1,p2)local1,local2"
- * Return allocated FuncEntry with name/params/locals filled */
-static FuncEntry *_parse_define_spec(const char *spec) {
-    FuncEntry *fe = GC_malloc(sizeof(FuncEntry));
+/* Parse DEFINE_fn spec: "name(p1,p2)local1,local2"
+ * Return allocated FNCBLK_t with name/params/locals filled */
+static FNCBLK_t *_parse_define_spec(const char *spec) {
+    FNCBLK_t *fe = GC_malloc(sizeof(FNCBLK_t));
     char *s = GC_strdup(spec);
     fe->spec = GC_strdup(spec);
 
@@ -1350,13 +1362,13 @@ static FuncEntry *_parse_define_spec(const char *spec) {
     return fe;
 }
 
-void define(const char *spec, SnoFunc fn) {
+void DEFINE_fn(const char *spec, FNCPTR_t fn) {
     _func_init();
-    FuncEntry *fe = _parse_define_spec(spec);
+    FNCBLK_t *fe = _parse_define_spec(spec);
     fe->fn = fn;
     unsigned h = _func_hash(fe->name);
     /* Replace existing if same name */
-    for (FuncEntry *e = _func_buckets[h]; e; e = e->next) {
+    for (FNCBLK_t *e = _func_buckets[h]; e; e = e->next) {
         if (strcasecmp(e->name, fe->name) == 0) {
             e->spec    = fe->spec;
             e->fn      = fe->fn;
@@ -1371,24 +1383,32 @@ void define(const char *spec, SnoFunc fn) {
     _func_buckets[h] = fe;
 }
 
-SnoVal aply(const char *name, SnoVal *args, int nargs) {
+DESCR_t APLY_fn(const char *name, DESCR_t *args, int nargs) {
     _func_init();
-    if (!name) return NULL_VAL;
+    if (!name) return NULVCL;
     unsigned h = _func_hash(name);
-    for (FuncEntry *e = _func_buckets[h]; e; e = e->next) {
+    for (FNCBLK_t *e = _func_buckets[h]; e; e = e->next) {
         if (strcasecmp(e->name, name) == 0) {
+            if (strcmp(name, "c") == 0)
+                fprintf(stderr, "DEBUG APLY_fn(c): fn=%p spec=%s\n",
+                        (void*)e->fn, e->spec ? e->spec : "NULL");
             if (e->fn) return e->fn(args, nargs);
+            /* fn==NULL means SNOBOL4-defined function — fall to S sentinel */
+            if (strcmp(name, "c") == 0)
+                fprintf(stderr, "DEBUG APLY_fn(c): fn==NULL, returning S sentinel\n");
             break;
         }
     }
-    return NULL_VAL;
+    if (strcmp(name, "c") == 0)
+        fprintf(stderr, "DEBUG APLY_fn(c): not found, returning NULVCL\n");
+    return NULVCL;
 }
 
-int func_exists(const char *name) {
+int FNCEX_fn(const char *name) {
     _func_init();
     if (!name) return 0;
     unsigned h = _func_hash(name);
-    for (FuncEntry *e = _func_buckets[h]; e; e = e->next)
+    for (FNCBLK_t *e = _func_buckets[h]; e; e = e->next)
         if (strcasecmp(e->name, name) == 0) return 1;
     return 0;
 }
@@ -1397,29 +1417,29 @@ int func_exists(const char *name) {
  * Builtin string functions
  * ============================================================ */
 
-SnoVal size_fn(SnoVal s) {
-    const char *strv = to_str(s);
-    return INT_VAL((int64_t)strlen(strv));
+DESCR_t SIZE_fn(DESCR_t s) {
+    const char *strv = VARVAL_fn(s);
+    return INTVAL((int64_t)strlen(strv));
 }
 
-SnoVal dupl_fn(SnoVal s, SnoVal n) {
-    const char *strv = to_str(s);
+DESCR_t DUPL_fn(DESCR_t s, DESCR_t n) {
+    const char *strv = VARVAL_fn(s);
     int64_t times   = to_int(n);
-    if (times <= 0 || !strv || !*strv) return STR_VAL(GC_strdup(""));
+    if (times <= 0 || !strv || !*strv) return STRVAL(GC_strdup(""));
     size_t slen = strlen(strv);
     char *r = GC_malloc(slen * (size_t)times + 1);
     r[0] = '\0';
     for (int64_t i = 0; i < times; i++) memcpy(r + i * slen, strv, slen);
     r[slen * times] = '\0';
-    return STR_VAL(r);
+    return STRVAL(r);
 }
 
-SnoVal replace_fn(SnoVal s, SnoVal from, SnoVal to) {
+DESCR_t RPLACE_fn(DESCR_t s, DESCR_t from, DESCR_t to) {
     /* REPLACE(s, from, to): for each char in from, replc with corresponding
      * char in to. Like tr command. */
-    const char *strv  = to_str(s);
-    const char *f    = to_str(from);
-    const char *t    = to_str(to);
+    const char *strv  = VARVAL_fn(s);
+    const char *f    = VARVAL_fn(from);
+    const char *t    = VARVAL_fn(to);
     size_t slen = strlen(strv);
     char *r = GC_malloc(slen + 1);
     /* Build translation table */
@@ -1437,116 +1457,116 @@ SnoVal replace_fn(SnoVal s, SnoVal from, SnoVal to) {
         if (c) r[rlen++] = (char)c;
     }
     r[rlen] = '\0';
-    return STR_VAL(r);
+    return STRVAL(r);
 }
 
-SnoVal substr_fn(SnoVal s, SnoVal i, SnoVal n) {
-    const char *strv = to_str(s);
+DESCR_t SUBSTR_fn(DESCR_t s, DESCR_t i, DESCR_t n) {
+    const char *strv = VARVAL_fn(s);
     int64_t start   = to_int(i);  /* 1-based */
     int64_t len_    = to_int(n);
     int64_t slen    = (int64_t)strlen(strv);
     if (start < 1) start = 1;
-    if (start > slen + 1) return STR_VAL(GC_strdup(""));
+    if (start > slen + 1) return STRVAL(GC_strdup(""));
     if (len_ < 0) len_ = 0;
     if (start - 1 + len_ > slen) len_ = slen - start + 1;
     char *r = GC_malloc((size_t)len_ + 1);
     memcpy(r, strv + start - 1, (size_t)len_);
     r[len_] = '\0';
-    return STR_VAL(r);
+    return STRVAL(r);
 }
 
-SnoVal trim_fn(SnoVal s) {
-    const char *strv = to_str(s);
-    /* TRIM: remove trailing blanks */
+DESCR_t TRIM_fn(DESCR_t s) {
+    const char *strv = VARVAL_fn(s);
+    /* TRIM_fn: remove trailing blanks */
     int len = (int)strlen(strv);
     while (len > 0 && strv[len-1] == ' ') len--;
     char *r = GC_malloc((size_t)len + 1);
     memcpy(r, strv, (size_t)len);
     r[len] = '\0';
-    return STR_VAL(r);
+    return STRVAL(r);
 }
 
-SnoVal lpad_fn(SnoVal s, SnoVal n, SnoVal pad) {
-    const char *strv = to_str(s);
+DESCR_t lpad_fn(DESCR_t s, DESCR_t n, DESCR_t pad) {
+    const char *strv = VARVAL_fn(s);
     int64_t width   = to_int(n);
-    const char *p   = to_str(pad);
+    const char *p   = VARVAL_fn(pad);
     char padch      = (p && *p) ? p[0] : ' ';
     int64_t slen    = (int64_t)strlen(strv);
-    if (width <= slen) return STR_VAL(GC_strdup(strv));
+    if (width <= slen) return STRVAL(GC_strdup(strv));
     int64_t npad = width - slen;
     char *r = GC_malloc((size_t)width + 1);
     memset(r, padch, (size_t)npad);
     memcpy(r + npad, strv, (size_t)slen);
     r[width] = '\0';
-    return STR_VAL(r);
+    return STRVAL(r);
 }
 
-SnoVal rpad_fn(SnoVal s, SnoVal n, SnoVal pad) {
-    const char *strv = to_str(s);
+DESCR_t rpad_fn(DESCR_t s, DESCR_t n, DESCR_t pad) {
+    const char *strv = VARVAL_fn(s);
     int64_t width   = to_int(n);
-    const char *p   = to_str(pad);
+    const char *p   = VARVAL_fn(pad);
     char padch      = (p && *p) ? p[0] : ' ';
     int64_t slen    = (int64_t)strlen(strv);
-    if (width <= slen) return STR_VAL(GC_strdup(strv));
+    if (width <= slen) return STRVAL(GC_strdup(strv));
     char *r = GC_malloc((size_t)width + 1);
     memcpy(r, strv, (size_t)slen);
     memset(r + slen, padch, (size_t)(width - slen));
     r[width] = '\0';
-    return STR_VAL(r);
+    return STRVAL(r);
 }
 
-SnoVal reverse_fn(SnoVal s) {
-    const char *strv = to_str(s);
+DESCR_t REVERS_fn(DESCR_t s) {
+    const char *strv = VARVAL_fn(s);
     int len = (int)strlen(strv);
     char *r = GC_malloc((size_t)len + 1);
     for (int i = 0; i < len; i++) r[i] = strv[len - 1 - i];
     r[len] = '\0';
-    return STR_VAL(r);
+    return STRVAL(r);
 }
 
-SnoVal char_fn(SnoVal n) {
+DESCR_t BCHAR_fn(DESCR_t n) {
     int64_t code = to_int(n);
     char buf[2];
     buf[0] = (char)(code & 0xFF);
     buf[1] = '\0';
-    return STR_VAL(GC_strdup(buf));
+    return STRVAL(GC_strdup(buf));
 }
 
-SnoVal integer_fn(SnoVal v) {
+DESCR_t INTGER_fn(DESCR_t v) {
     /* INTEGER(v): convert to integer, fail if not possible */
-    if (v.type == SINT) return v;
-    if (v.type == SREAL) return INT_VAL((int64_t)v.r);
-    if (v.type == SSTR || v.type == SNULL) {
+    if (v.v == DT_I) return v;
+    if (v.v == DT_R) return INTVAL((int64_t)v.r);
+    if (v.v == DT_S || v.v == DT_SNUL) {
         const char *s = v.s ? v.s : "";
         while (*s == ' ') s++;
-        if (!*s) return NULL_VAL;  /* fail */
+        if (!*s) return NULVCL;  /* fail */
         char *end;
         long long iv = strtoll(s, &end, 10);
         while (*end == ' ') end++;
-        if (*end) return NULL_VAL;  /* fail — not a pure integer */
-        return INT_VAL((int64_t)iv);
+        if (*end) return NULVCL;  /* fail — not a pure integer */
+        return INTVAL((int64_t)iv);
     }
-    return NULL_VAL;
+    return NULVCL;
 }
 
-SnoVal real_fn(SnoVal v) {
-    if (v.type == SREAL) return v;
-    if (v.type == SINT)  return REAL_VAL((double)v.i);
-    if (v.type == SSTR || v.type == SNULL) {
+DESCR_t real_fn(DESCR_t v) {
+    if (v.v == DT_R) return v;
+    if (v.v == DT_I)  return REALVAL((double)v.i);
+    if (v.v == DT_S || v.v == DT_SNUL) {
         const char *s = v.s ? v.s : "";
         while (*s == ' ') s++;
-        if (!*s) return NULL_VAL;
+        if (!*s) return NULVCL;
         char *end;
         double rv = strtod(s, &end);
         while (*end == ' ') end++;
-        if (*end) return NULL_VAL;
-        return REAL_VAL(rv);
+        if (*end) return NULVCL;
+        return REALVAL(rv);
     }
-    return NULL_VAL;
+    return NULVCL;
 }
 
-SnoVal string_fn(SnoVal v) {
-    return STR_VAL(to_str(v));
+DESCR_t string_fn(DESCR_t v) {
+    return STRVAL(VARVAL_fn(v));
 }
 
 /* ============================================================
@@ -1554,101 +1574,101 @@ SnoVal string_fn(SnoVal v) {
  * ============================================================ */
 
 /* Arithmetic — promote int+int=int, otherwise real */
-SnoVal add(SnoVal a, SnoVal b) {
-    if (a.type == SFAIL || b.type == SFAIL) return FAIL_VAL;
-    if (a.type == SINT && b.type == SINT)
-        return INT_VAL(a.i + b.i);
-    return REAL_VAL(to_real(a) + to_real(b));
+DESCR_t add(DESCR_t a, DESCR_t b) {
+    if (a.v == DT_FAIL || b.v == DT_FAIL) return FAILDESCR;
+    if (a.v == DT_I && b.v == DT_I)
+        return INTVAL(a.i + b.i);
+    return REALVAL(to_real(a) + to_real(b));
 }
 
-SnoVal sub(SnoVal a, SnoVal b) {
-    if (a.type == SFAIL || b.type == SFAIL) return FAIL_VAL;
-    if (a.type == SINT && b.type == SINT)
-        return INT_VAL(a.i - b.i);
-    return REAL_VAL(to_real(a) - to_real(b));
+DESCR_t sub(DESCR_t a, DESCR_t b) {
+    if (a.v == DT_FAIL || b.v == DT_FAIL) return FAILDESCR;
+    if (a.v == DT_I && b.v == DT_I)
+        return INTVAL(a.i - b.i);
+    return REALVAL(to_real(a) - to_real(b));
 }
 
-SnoVal mul(SnoVal a, SnoVal b) {
-    if (a.type == SFAIL || b.type == SFAIL) return FAIL_VAL;
-    if (a.type == SINT && b.type == SINT)
-        return INT_VAL(a.i * b.i);
-    return REAL_VAL(to_real(a) * to_real(b));
+DESCR_t mul(DESCR_t a, DESCR_t b) {
+    if (a.v == DT_FAIL || b.v == DT_FAIL) return FAILDESCR;
+    if (a.v == DT_I && b.v == DT_I)
+        return INTVAL(a.i * b.i);
+    return REALVAL(to_real(a) * to_real(b));
 }
 
-SnoVal divyde(SnoVal a, SnoVal b) {
-    if (a.type == SFAIL || b.type == SFAIL) return FAIL_VAL;
+DESCR_t divyde(DESCR_t a, DESCR_t b) {
+    if (a.v == DT_FAIL || b.v == DT_FAIL) return FAILDESCR;
     /* SNOBOL4 / is real division; integer / integer = integer in SNOBOL4 */
-    if (a.type == SINT && b.type == SINT) {
-        if (b.i == 0) return NULL_VAL;  /* division error */
-        return INT_VAL(a.i / b.i);
+    if (a.v == DT_I && b.v == DT_I) {
+        if (b.i == 0) return NULVCL;  /* division error */
+        return INTVAL(a.i / b.i);
     }
     double denom = to_real(b);
-    if (denom == 0.0) return NULL_VAL;
-    return REAL_VAL(to_real(a) / denom);
+    if (denom == 0.0) return NULVCL;
+    return REALVAL(to_real(a) / denom);
 }
 
-SnoVal powr(SnoVal a, SnoVal b) {
-    if (a.type == SFAIL || b.type == SFAIL) return FAIL_VAL;
-    return REAL_VAL(pow(to_real(a), to_real(b)));
+DESCR_t powr(DESCR_t a, DESCR_t b) {
+    if (a.v == DT_FAIL || b.v == DT_FAIL) return FAILDESCR;
+    return REALVAL(pow(to_real(a), to_real(b)));
 }
 
-SnoVal neg(SnoVal a) {
-    if (a.type == SFAIL) return FAIL_VAL;
-    if (a.type == SINT)  return INT_VAL(-a.i);
-    if (a.type == SREAL) return REAL_VAL(-a.r);
-    return INT_VAL(-to_int(a));
+DESCR_t neg(DESCR_t a) {
+    if (a.v == DT_FAIL) return FAILDESCR;
+    if (a.v == DT_I)  return INTVAL(-a.i);
+    if (a.v == DT_R) return REALVAL(-a.r);
+    return INTVAL(-to_int(a));
 }
 
 /* Numeric comparisons — return 1=success (true), 0=failure */
-int eq(SnoVal a, SnoVal b) {
-    if (a.type == SINT && b.type == SINT) return a.i == b.i;
+int eq(DESCR_t a, DESCR_t b) {
+    if (a.v == DT_I && b.v == DT_I) return a.i == b.i;
     return to_real(a) == to_real(b);
 }
-int ne(SnoVal a, SnoVal b) { return !eq(a, b); }
-int lt(SnoVal a, SnoVal b) {
-    if (a.type == SINT && b.type == SINT) return a.i < b.i;
+int ne(DESCR_t a, DESCR_t b) { return !eq(a, b); }
+int lt(DESCR_t a, DESCR_t b) {
+    if (a.v == DT_I && b.v == DT_I) return a.i < b.i;
     return to_real(a) < to_real(b);
 }
-int le(SnoVal a, SnoVal b) {
-    if (a.type == SINT && b.type == SINT) return a.i <= b.i;
+int le(DESCR_t a, DESCR_t b) {
+    if (a.v == DT_I && b.v == DT_I) return a.i <= b.i;
     return to_real(a) <= to_real(b);
 }
-int gt(SnoVal a, SnoVal b) {
-    if (a.type == SINT && b.type == SINT) return a.i > b.i;
+int gt(DESCR_t a, DESCR_t b) {
+    if (a.v == DT_I && b.v == DT_I) return a.i > b.i;
     return to_real(a) > to_real(b);
 }
-int ge(SnoVal a, SnoVal b) {
-    if (a.type == SINT && b.type == SINT) return a.i >= b.i;
+int ge(DESCR_t a, DESCR_t b) {
+    if (a.v == DT_I && b.v == DT_I) return a.i >= b.i;
     return to_real(a) >= to_real(b);
 }
 
 /* IDENT: succeed if a and b are identical (same type and value) */
-int ident(SnoVal a, SnoVal b) {
-    if (a.type != b.type) {
+int ident(DESCR_t a, DESCR_t b) {
+    if (a.v != b.v) {
         /* "" and NULL are identical */
-        int a_null = (a.type == SNULL || (a.type == SSTR && (!a.s || !*a.s)));
-        int b_null = (b.type == SNULL || (b.type == SSTR && (!b.s || !*b.s)));
+        int a_null = (a.v == DT_SNUL || (a.v == DT_S && (!a.s || !*a.s)));
+        int b_null = (b.v == DT_SNUL || (b.v == DT_S && (!b.s || !*b.s)));
         if (a_null && b_null) return 1;
         return 0;
     }
-    switch (a.type) {
-        case SNULL: return 1;
-        case SSTR:  return strcmp(a.s ? a.s : "", b.s ? b.s : "") == 0;
-        case SINT:  return a.i == b.i;
-        case SREAL: return a.r == b.r;
-        case STREE: return a.t == b.t;  /* pointer identity */
+    switch (a.v) {
+        case DT_SNUL: return 1;
+        case DT_S:  return strcmp(a.s ? a.s : "", b.s ? b.s : "") == 0;
+        case DT_I:  return a.i == b.i;
+        case DT_R: return a.r == b.r;
+        case DT_DATA: return a.u /* .t->tree gone */ == b.u /* .t->tree gone */;  /* pointer identity */
         default:       return a.ptr == b.ptr;
     }
 }
 
-int differ(SnoVal a, SnoVal b) { return !ident(a, b); }
+int differ(DESCR_t a, DESCR_t b) { return !ident(a, b); }
 
 /* ============================================================
  * I/O
  * ============================================================ */
 
-void output_val(SnoVal v) {
-    char *s = to_str(v);
+void output_val(DESCR_t v) {
+    char *s = VARVAL_fn(v);
     printf("%s\n", s ? s : "");
 }
 
@@ -1661,37 +1681,37 @@ static FILE *_input_fp = NULL;
 static char *_input_buf = NULL;
 static size_t _input_cap = 0;
 
-SnoVal input_read(void) {
+DESCR_t input_read(void) {
     if (!_input_fp) _input_fp = stdin;
     ssize_t nread = getline(&_input_buf, &_input_cap, _input_fp);
-    if (nread < 0) return FAIL_VAL;  /* EOF = INPUT fails */
+    if (nread < 0) return FAILDESCR;  /* EOF = INPUT fails */
     if (nread > 0 && _input_buf[nread-1] == '\n') _input_buf[nread-1] = '\0';
-    return STR_VAL(GC_strdup(_input_buf));
+    return STRVAL(GC_strdup(_input_buf));
 }
 
 /* INPUT(name, channel, options, fileName) — I/O association (SPITBOL-style).
  * io.sno OPSYNs the original INPUT builtin to input__ then calls it with 4 args.
  * We support the essential case: reassign INPUT source to a named file. */
-static SnoVal _b_INPUT(SnoVal *a, int n) {
-    const char *fname = (n >= 4) ? to_str(a[3]) : NULL;
+static DESCR_t _b_INPUT(DESCR_t *a, int n) {
+    const char *fname = (n >= 4) ? VARVAL_fn(a[3]) : NULL;
     if (!fname || !fname[0]) {
         if (_input_fp && _input_fp != stdin) fclose(_input_fp);
         _input_fp = stdin;
-        return NULL_VAL;
+        return NULVCL;
     }
     FILE *f = fopen(fname, "r");
-    if (!f) return FAIL_VAL;
+    if (!f) return FAILDESCR;
     if (_input_fp && _input_fp != stdin) fclose(_input_fp);
     _input_fp = f;
-    return NULL_VAL;
+    return NULVCL;
 }
 
 /* Indirect goto — called when :(var) computed goto is taken.
    Currently a stub: prints a warning and continues.
    Full implementation requires a label dispatch table. */
 void indirect_goto(const char *varname) {
-    SnoVal v = var_get(varname);
-    const char *lbl = (v.type == SSTR) ? v.s : "(nil)";
+    DESCR_t v = NV_GET_fn(varname);
+    const char *lbl = (v.v == DT_S) ? v.s : "(nil)";
     fprintf(stderr, "indirect_goto: var=%s label=%s (not implemented)\n",
             varname, lbl);
 }

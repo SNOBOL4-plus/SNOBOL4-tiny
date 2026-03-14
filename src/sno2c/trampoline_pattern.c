@@ -33,7 +33,7 @@
 abort_frame_t *_sno_abort_top = NULL;
 
 /* SNOBOL4 variables */
-static SnoVal _S;
+static DESCR_t _S;
 static int    _I;
 
 /* ---- Forward declarations ---- */
@@ -50,10 +50,10 @@ static void *block_END(void);
  * =========================================================== */
 
 BLOCK_FN(prog1_block_START) {
-    _S = STR_VAL("hello world");
+    _S = STRVAL("hello world");
     /* S  'world'  :S(FOUND)F(NOTFOUND) */
-    SnoVal pat = pat_lit("world");
-    int ok = match_pattern(pat, to_str(_S));
+    DESCR_t pat = pat_lit("world");
+    int ok = match_pattern(pat, VARVAL_fn(_S));
     return ok ? prog1_block_FOUND : prog1_block_NOTFOUND;
 }
 
@@ -96,7 +96,7 @@ BLOCK_FN(block_END) {
 }
 
 int main(void) {
-    runtime_init();
+    SNO_INIT_fn();
     trampoline_run(prog1_block_START);
     return 0;
 }

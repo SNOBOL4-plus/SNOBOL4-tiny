@@ -42,7 +42,7 @@ void  xit(void **frame_ptr);
 void  arena_reset(void);   /* call between matches — resets arena to empty */
 
 /* ---------- value stack ------------------------------------------- */
-/* Used by evaluate() — patterns push computed integer values.       */
+/* Used by evaluate() — patterns PUSH_fn computed integer values.       */
 /* Max depth 256 covers any expression the worm generates.           */
 
 #define VSTACK_SIZE 256

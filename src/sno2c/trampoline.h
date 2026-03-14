@@ -37,7 +37,7 @@ typedef void *(*block_fn_t)(void);
 
 /* -----------------------------------------------------------------------
  * &STCOUNT / &STLIMIT — declared in snobol4.h; referenced here.
- * trampoline_stno(lineno) called at top of every emitted stmt.
+ * trampoline_stno(lineno) called at TOP_fn of every emitted stmt.
  * kw_stlimit < 0 = unlimited (default).
  * ----------------------------------------------------------------------- */
 #ifndef SNOBOL4_H   /* avoid redeclaration if snobol4.h already included */
@@ -93,3 +93,18 @@ extern abort_frame_t *_sno_abort_top;
     do { if (_sno_abort_top) longjmp(_sno_abort_top->jmp, 1); } while(0)
 
 #endif /* TRAMPOLINE_H */
+
+/* sno_computed_goto — resolve a runtime label string to a block function pointer.
+ * Called by $'literal' and $(expr) goto targets.
+ * The block_label_table is emitted by sno2c at the end of each program. */
+typedef struct { const char *name; void *(*fn)(void); } _BlockEntry_t;
+extern _BlockEntry_t _block_label_table[];
+extern int           _block_label_count;
+
+static inline void *sno_computed_goto(const char *lbl) {
+    if (!lbl) return NULL;
+    for (int i = 0; i < _block_label_count; i++)
+        if (strcasecmp(_block_label_table[i].name, lbl) == 0)
+            return (void*)_block_label_table[i].fn;
+    return NULL;  /* label not found — fall through */
+}
