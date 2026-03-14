@@ -1156,7 +1156,10 @@ void byrd_emit_pattern(Expr *pat, FILE *out_file,
                        const char *gamma_label,
                        const char *omega_label) {
     byrd_out = out_file;
-    byrd_uid_reset();
+    /* Save counter before first (declaration) pass so second (code) pass
+     * uses the same uid sequence — never reset to 0 so multiple patterns
+     * in the same compilation unit never collide. */
+    int byrd_uid_saved = byrd_uid_ctr;
     decl_reset();
 
     /* Root labels */
@@ -1183,7 +1186,7 @@ void byrd_emit_pattern(Expr *pat, FILE *out_file,
     }
 
     byrd_out = code_file;
-    byrd_uid_reset();
+    byrd_uid_ctr = byrd_uid_saved;  /* rewind to same start for code pass */
     decl_reset();
 
     /* Emit root entry */

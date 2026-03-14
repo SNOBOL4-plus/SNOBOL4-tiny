@@ -673,6 +673,18 @@ static int maybe_fix_pattern_stmt(Stmt *s) {
 }
 
 /* ============================================================
+ * pat_is_anchored — returns 1 if the leftmost node of pattern e
+ * is POS(), meaning the pattern anchors at a specific position.
+ * Used to decide whether to wrap in ARB for substring scan.
+ * ============================================================ */
+static int pat_is_anchored(Expr *e) {
+    if (!e) return 0;
+    if (e->kind == E_CALL && e->sval && strcasecmp(e->sval, "POS") == 0) return 1;
+    if (e->kind == E_CONCAT) return pat_is_anchored(e->left);
+    return 0;
+}
+
+/* ============================================================
  * Emit one statement
  * ============================================================ */
 static void emit_stmt(Stmt *s, const char *fn) {
@@ -742,7 +754,19 @@ static void emit_stmt(Stmt *s, const char *fn) {
         E("int _ok%d = 0;\n", u);
         E("_mstart%d = _cur%d;\n", u, u);
 
-        byrd_emit_pattern(s->pattern, out, root_lbl, sv, sl, cv, ok_lbl, fail_lbl);
+        /* SNOBOL4 pattern matching is a substring scan: wrap pattern in ARB
+         * unless the leftmost node is POS() which anchors to a position. */
+        Expr *scan_pat = s->pattern;
+        if (!pat_is_anchored(s->pattern)) {
+            Expr *arb = expr_new(E_CALL);
+            arb->sval = strdup("ARB");
+            arb->nargs = 0;
+            Expr *seq = expr_new(E_CONCAT);
+            seq->left = arb;
+            seq->right = s->pattern;
+            scan_pat = seq;
+        }
+        byrd_emit_pattern(scan_pat, out, root_lbl, sv, sl, cv, ok_lbl, fail_lbl);
 
         /* gamma: match succeeded */
         E("%s:;\n", ok_lbl);
