@@ -2092,7 +2092,7 @@ static SnoVal _sno_fn_InitCounter(SnoVal *_args, int _nargs) {
 /* line 14 */
     _L_InitCounter:
                   trampoline_stno(14);
-SnoVal _v62 = deref(NULL_VAL);
+SnoVal _v62 = deref(strv("#N"));
 int _ok62 = !IS_FAIL(_v62);
                                                             goto _SNO_RETURN_InitCounter;
     _SNO_NEXT_61:
@@ -2128,7 +2128,7 @@ var_set("OUTPUT", _v64);
     _SNO_NEXT_63:
 /* line 16 */
                   trampoline_stno(16);
-SnoVal _v66 = aply("link_counter",(SnoVal[]){deref(NULL_VAL),vint(0)},2);
+SnoVal _v66 = aply("link_counter",(SnoVal[]){deref(strv("#N")),vint(0)},2);
 int _ok66 = !IS_FAIL(_v66);
 if(_ok66) {
 iset(strv("#N"),_v66);
@@ -2168,7 +2168,7 @@ static SnoVal _sno_fn_IncCounter(SnoVal *_args, int _nargs) {
 /* line 18 */
     _L_IncCounter:
                   trampoline_stno(18);
-SnoVal _v70 = add(aply("value",(SnoVal[]){deref(NULL_VAL)},1),vint(1));
+SnoVal _v70 = add(aply("value",(SnoVal[]){deref(strv("#N"))},1),vint(1));
 int _ok70 = !IS_FAIL(_v70);
 if(_ok70) {
 field_set(deref(strv("#N")), "value", _v70);
@@ -2178,7 +2178,7 @@ field_set(deref(strv("#N")), "value", _v70);
 /* line 19 */
                   trampoline_stno(19);
 SnoVal _v72 = concat_sv(
-                  concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),aply("value",(SnoVal[]){deref(NULL_VAL)},1)),
+                  concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),aply("value",(SnoVal[]){deref(strv("#N"))},1)),
                   strv(" = IncCounter()")
               );
 int _ok72 = !IS_FAIL(_v72);
@@ -2220,7 +2220,7 @@ static SnoVal _sno_fn_DecCounter(SnoVal *_args, int _nargs) {
 /* line 21 */
     _L_DecCounter:
                   trampoline_stno(21);
-SnoVal _v76 = sub(aply("value",(SnoVal[]){deref(NULL_VAL)},1),vint(1));
+SnoVal _v76 = sub(aply("value",(SnoVal[]){deref(strv("#N"))},1),vint(1));
 int _ok76 = !IS_FAIL(_v76);
 if(_ok76) {
 field_set(deref(strv("#N")), "value", _v76);
@@ -2230,7 +2230,7 @@ field_set(deref(strv("#N")), "value", _v76);
 /* line 22 */
                   trampoline_stno(22);
 SnoVal _v78 = concat_sv(
-                  concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),aply("value",(SnoVal[]){deref(NULL_VAL)},1)),
+                  concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),aply("value",(SnoVal[]){deref(strv("#N"))},1)),
                   strv(" = DecCounter()")
               );
 int _ok78 = !IS_FAIL(_v78);
@@ -2272,7 +2272,7 @@ static SnoVal _sno_fn_TopCounter(SnoVal *_args, int _nargs) {
 /* line 27 */
     _L_TopCounter:
                   trampoline_stno(27);
-SnoVal _v82 = concat_sv(aply("DIFFER",(SnoVal[]){deref(NULL_VAL)},1),aply("value",(SnoVal[]){deref(NULL_VAL)},1));
+SnoVal _v82 = concat_sv(aply("DIFFER",(SnoVal[]){deref(strv("#N"))},1),aply("value",(SnoVal[]){deref(strv("#N"))},1));
 int _ok82 = !IS_FAIL(_v82);
 if(_ok82) {
 set(_TopCounter, _v82);
@@ -2366,7 +2366,7 @@ var_set("OUTPUT", _v99);
     _SNO_NEXT_98:
 /* line 25 */
                   trampoline_stno(25);
-SnoVal _v101 = concat_sv(aply("DIFFER",(SnoVal[]){deref(NULL_VAL)},1),aply("next",(SnoVal[]){deref(NULL_VAL)},1));
+SnoVal _v101 = concat_sv(aply("DIFFER",(SnoVal[]){deref(strv("#N"))},1),aply("next",(SnoVal[]){deref(strv("#N"))},1));
 int _ok101 = !IS_FAIL(_v101);
 if(_ok101) {
 iset(strv("#N"),_v101);
@@ -2407,7 +2407,7 @@ static SnoVal _sno_fn_InitBegTag(SnoVal *_args, int _nargs) {
 /* line 43 */
     _L_InitBegTag:
                   trampoline_stno(43);
-SnoVal _v105 = deref(NULL_VAL);
+SnoVal _v105 = deref(strv("@B"));
 int _ok105 = !IS_FAIL(_v105);
                                                             goto _SNO_RETURN_InitBegTag;
     _SNO_NEXT_104:
@@ -2452,7 +2452,7 @@ var_set("OUTPUT", _v107);
     _SNO_NEXT_106:
 /* line 45 */
                   trampoline_stno(45);
-SnoVal _v109 = aply("link_tag",(SnoVal[]){deref(NULL_VAL),aply("upr",(SnoVal[]){get(_t)},1)},2);
+SnoVal _v109 = aply("link_tag",(SnoVal[]){deref(strv("@B")),aply("upr",(SnoVal[]){get(_t)},1)},2);
 int _ok109 = !IS_FAIL(_v109);
 if(_ok109) {
 iset(strv("@B"),_v109);
@@ -2511,8 +2511,8 @@ SnoVal _v115 = pat_cat(
                        pat_user_call("GT",(SnoVal[]){get(_xTrace),vint(4)},2),
                        pat_alt(
                            pat_cat(
-                               pat_user_call("DIFFER",(SnoVal[]){deref(NULL_VAL)},1),
-                               pat_user_call("value",(SnoVal[]){deref(NULL_VAL)},1)
+                               pat_user_call("DIFFER",(SnoVal[]){deref(strv("@B"))},1),
+                               pat_user_call("value",(SnoVal[]){deref(strv("@B"))},1)
                            ),
                            pat_lit("FAIL")
                        )
@@ -2527,7 +2527,7 @@ var_set("OUTPUT", _v115);
     _SNO_NEXT_114:
 /* line 49 */
                   trampoline_stno(49);
-SnoVal _v117 = concat_sv(aply("DIFFER",(SnoVal[]){deref(NULL_VAL)},1),aply("next",(SnoVal[]){deref(NULL_VAL)},1));
+SnoVal _v117 = concat_sv(aply("DIFFER",(SnoVal[]){deref(strv("@B"))},1),aply("next",(SnoVal[]){deref(strv("@B"))},1));
 int _ok117 = !IS_FAIL(_v117);
 if(_ok117) {
 iset(strv("@B"),_v117);
@@ -2568,7 +2568,7 @@ static SnoVal _sno_fn_TopBegTag(SnoVal *_args, int _nargs) {
 /* line 51 */
     _L_TopBegTag:
                   trampoline_stno(51);
-SnoVal _v121 = concat_sv(aply("DIFFER",(SnoVal[]){deref(NULL_VAL)},1),aply("value",(SnoVal[]){deref(NULL_VAL)},1));
+SnoVal _v121 = concat_sv(aply("DIFFER",(SnoVal[]){deref(strv("@B"))},1),aply("value",(SnoVal[]){deref(strv("@B"))},1));
 int _ok121 = !IS_FAIL(_v121);
 if(_ok121) {
 set(_TopBegTag, _v121);
@@ -2638,7 +2638,7 @@ int _ok127 = !IS_FAIL(_v127);
     _SNO_NEXT_126:
 /* line 55 */
                   trampoline_stno(55);
-SnoVal _v129 = deref(NULL_VAL);
+SnoVal _v129 = deref(strv("@B"));
 int _ok129 = !IS_FAIL(_v129);
 if(_ok129) {
 set(_b, _v129);
@@ -2726,7 +2726,7 @@ static SnoVal _sno_fn_InitEndTag(SnoVal *_args, int _nargs) {
 /* line 67 */
     _L_InitEndTag:
                   trampoline_stno(67);
-SnoVal _v139 = deref(NULL_VAL);
+SnoVal _v139 = deref(strv("@E"));
 int _ok139 = !IS_FAIL(_v139);
                                                             goto _SNO_RETURN_InitEndTag;
     _SNO_NEXT_138:
@@ -2771,7 +2771,7 @@ var_set("OUTPUT", _v141);
     _SNO_NEXT_140:
 /* line 69 */
                   trampoline_stno(69);
-SnoVal _v143 = aply("link_tag",(SnoVal[]){deref(NULL_VAL),aply("upr",(SnoVal[]){get(_t)},1)},2);
+SnoVal _v143 = aply("link_tag",(SnoVal[]){deref(strv("@E")),aply("upr",(SnoVal[]){get(_t)},1)},2);
 int _ok143 = !IS_FAIL(_v143);
 if(_ok143) {
 iset(strv("@E"),_v143);
@@ -2830,8 +2830,8 @@ SnoVal _v149 = pat_cat(
                        pat_user_call("GT",(SnoVal[]){get(_xTrace),vint(4)},2),
                        pat_alt(
                            pat_cat(
-                               pat_user_call("DIFFER",(SnoVal[]){deref(NULL_VAL)},1),
-                               pat_user_call("value",(SnoVal[]){deref(NULL_VAL)},1)
+                               pat_user_call("DIFFER",(SnoVal[]){deref(strv("@E"))},1),
+                               pat_user_call("value",(SnoVal[]){deref(strv("@E"))},1)
                            ),
                            pat_lit("FAIL")
                        )
@@ -2846,7 +2846,7 @@ var_set("OUTPUT", _v149);
     _SNO_NEXT_148:
 /* line 73 */
                   trampoline_stno(73);
-SnoVal _v151 = concat_sv(aply("DIFFER",(SnoVal[]){deref(NULL_VAL)},1),aply("next",(SnoVal[]){deref(NULL_VAL)},1));
+SnoVal _v151 = concat_sv(aply("DIFFER",(SnoVal[]){deref(strv("@E"))},1),aply("next",(SnoVal[]){deref(strv("@E"))},1));
 int _ok151 = !IS_FAIL(_v151);
 if(_ok151) {
 iset(strv("@E"),_v151);
@@ -2887,7 +2887,7 @@ static SnoVal _sno_fn_TopEndTag(SnoVal *_args, int _nargs) {
 /* line 75 */
     _L_TopEndTag:
                   trampoline_stno(75);
-SnoVal _v155 = concat_sv(aply("DIFFER",(SnoVal[]){deref(NULL_VAL)},1),aply("value",(SnoVal[]){deref(NULL_VAL)},1));
+SnoVal _v155 = concat_sv(aply("DIFFER",(SnoVal[]){deref(strv("@E"))},1),aply("value",(SnoVal[]){deref(strv("@E"))},1));
 int _ok155 = !IS_FAIL(_v155);
 if(_ok155) {
 set(_TopEndTag, _v155);
@@ -2957,7 +2957,7 @@ int _ok161 = !IS_FAIL(_v161);
     _SNO_NEXT_160:
 /* line 79 */
                   trampoline_stno(79);
-SnoVal _v163 = deref(NULL_VAL);
+SnoVal _v163 = deref(strv("@E"));
 int _ok163 = !IS_FAIL(_v163);
 if(_ok163) {
 set(_e, _v163);
@@ -3045,7 +3045,7 @@ static SnoVal _sno_fn_InitStack(SnoVal *_args, int _nargs) {
 /* line 12 */
     _L_InitStack:
                   trampoline_stno(12);
-SnoVal _v173 = deref(NULL_VAL);
+SnoVal _v173 = deref(strv("@S"));
 int _ok173 = !IS_FAIL(_v173);
                                                             goto _SNO_RETURN_InitStack;
     _SNO_NEXT_172:
@@ -3090,7 +3090,7 @@ var_set("OUTPUT", _v175);
     _SNO_NEXT_174:
 /* line 14 */
                   trampoline_stno(14);
-SnoVal _v177 = aply("link",(SnoVal[]){deref(NULL_VAL),get(_x)},2);
+SnoVal _v177 = aply("link",(SnoVal[]){deref(strv("@S")),get(_x)},2);
 int _ok177 = !IS_FAIL(_v177);
 if(_ok177) {
 iset(strv("@S"),_v177);
@@ -3147,7 +3147,7 @@ static SnoVal _sno_fn_Pop(SnoVal *_args, int _nargs) {
 /* line 17 */
     _L_Pop:
                   trampoline_stno(17);
-SnoVal _v183 = aply("DIFFER",(SnoVal[]){deref(NULL_VAL)},1);
+SnoVal _v183 = aply("DIFFER",(SnoVal[]){deref(strv("@S"))},1);
 int _ok183 = !IS_FAIL(_v183);
                   if(!_ok183)                               goto _SNO_FRETURN_Pop;
                                                             goto _SNO_NEXT_182;
@@ -3161,7 +3161,7 @@ int _ok185 = !IS_FAIL(_v185);
     _SNO_NEXT_184:
 /* line 19 */
                   trampoline_stno(19);
-SnoVal _v187 = aply("value",(SnoVal[]){deref(NULL_VAL)},1);
+SnoVal _v187 = aply("value",(SnoVal[]){deref(strv("@S"))},1);
 int _ok187 = !IS_FAIL(_v187);
 if(_ok187) {
 set(_Pop, _v187);
@@ -3183,7 +3183,7 @@ var_set("OUTPUT", _v189);
     _SNO_NEXT_188:
 /* line 21 */
                   trampoline_stno(21);
-SnoVal _v191 = aply("next",(SnoVal[]){deref(NULL_VAL)},1);
+SnoVal _v191 = aply("next",(SnoVal[]){deref(strv("@S"))},1);
 int _ok191 = !IS_FAIL(_v191);
 if(_ok191) {
 iset(strv("@S"),_v191);
@@ -3203,7 +3203,7 @@ var_set("Pop", _Pop);
     _SNO_NEXT_192:
 /* line 23 */
                   trampoline_stno(23);
-SnoVal _v195 = aply("value",(SnoVal[]){deref(NULL_VAL)},1);
+SnoVal _v195 = aply("value",(SnoVal[]){deref(strv("@S"))},1);
 int _ok195 = !IS_FAIL(_v195);
 if(_ok195) {
 iset(get(_var),_v195);
@@ -3214,7 +3214,7 @@ iset(get(_var),_v195);
                   trampoline_stno(24);
 SnoVal _v197 = pat_cat(
                    pat_cat(pat_user_call("GT",(SnoVal[]){get(_xTrace),vint(4)},2),pat_lit("Pop() = ")),
-                   pat_user_call("t",(SnoVal[]){deref(strv("var"))},1)
+                   pat_user_call("t",(SnoVal[]){deref(get(_var))},1)
                );
 int _ok197 = !IS_FAIL(_v197);
 if(_ok197) {
@@ -3224,7 +3224,7 @@ var_set("OUTPUT", _v197);
     _SNO_NEXT_196:
 /* line 25 */
                   trampoline_stno(25);
-SnoVal _v199 = aply("next",(SnoVal[]){deref(NULL_VAL)},1);
+SnoVal _v199 = aply("next",(SnoVal[]){deref(strv("@S"))},1);
 int _ok199 = !IS_FAIL(_v199);
 if(_ok199) {
 iset(strv("@S"),_v199);
@@ -3257,14 +3257,14 @@ static SnoVal _sno_fn_Top(SnoVal *_args, int _nargs) {
 /* line 26 */
     _L_Top:
                   trampoline_stno(26);
-SnoVal _v201 = aply("DIFFER",(SnoVal[]){deref(NULL_VAL)},1);
+SnoVal _v201 = aply("DIFFER",(SnoVal[]){deref(strv("@S"))},1);
 int _ok201 = !IS_FAIL(_v201);
                   if(!_ok201)                               goto _SNO_FRETURN_Top;
                                                             goto _SNO_NEXT_200;
     _SNO_NEXT_200:
 /* line 27 */
                   trampoline_stno(27);
-SnoVal _v203 = pat_val(aply("value",(SnoVal[]){deref(NULL_VAL)},1));
+SnoVal _v203 = pat_val(aply("value",(SnoVal[]){deref(strv("@S"))},1));
 int _ok203 = !IS_FAIL(_v203);
 if(_ok203) {
 set(_Top, _v203);
@@ -3781,7 +3781,10 @@ var_set("nc", _nc);
     _L_Tree1:
                   trampoline_stno(43);
 SnoVal _v264 = concat_sv(
-                   concat_sv(aply("GT",(SnoVal[]){get(_nc),vint(0)},2),aply("IDENT",(SnoVal[]){deref(NULL_VAL)},1)),
+                   concat_sv(
+                       aply("GT",(SnoVal[]){get(_nc),vint(0)},2),
+                       aply("IDENT",(SnoVal[]){deref(concat_sv(strv("c"),get(_nc)))},1)
+                   ),
                    sub(get(_nc),vint(1))
                );
 int _ok264 = !IS_FAIL(_v264);
@@ -3832,7 +3835,7 @@ var_set("i", _i);
     _SNO_NEXT_269:
 /* line 50 */
                   trampoline_stno(50);
-SnoVal _v272 = deref(NULL_VAL);
+SnoVal _v272 = deref(concat_sv(strv("c"),get(_i)));
 int _ok272 = !IS_FAIL(_v272);
 if(_ok272) {
 iset(indx(aply("c",(SnoVal[]){get(_Tree)},1),(SnoVal[]){get(_i)},1),_v272);
@@ -4315,7 +4318,7 @@ static SnoVal _sno_fn_Find(SnoVal *_args, int _nargs) {
 /* line 75 */
     _L_Find:
                   trampoline_stno(75);
-SnoVal _v304 = aply("DIFFER",(SnoVal[]){deref(strv("xn"))},1);
+SnoVal _v304 = aply("DIFFER",(SnoVal[]){deref(get(_xn))},1);
 int _ok304 = !IS_FAIL(_v304);
                   if(!_ok304)                               goto _SNO_RETURN_Find;
                                                             goto _SNO_NEXT_303;
@@ -4323,7 +4326,7 @@ int _ok304 = !IS_FAIL(_v304);
 /* line 76 */
                   trampoline_stno(76);
 SnoVal _v306 = concat_sv(
-                   aply("Equiv",(SnoVal[]){deref(strv("xn")),get(_y)},2),
+                   aply("Equiv",(SnoVal[]){deref(get(_xn)),get(_y)},2),
                    aply("APPLY",(SnoVal[]){get(_f),get(_xn)},2)
                );
 int _ok306 = !IS_FAIL(_v306);
@@ -4344,7 +4347,7 @@ var_set("i", _i);
     _L_Find5:
                   trampoline_stno(78);
 SnoVal _v310 = pat_cat(
-                   pat_user_call("LT",(SnoVal[]){get(_i),aply("n",(SnoVal[]){deref(strv("xn"))},1)},2),
+                   pat_user_call("LT",(SnoVal[]){get(_i),aply("n",(SnoVal[]){deref(get(_xn))},1)},2),
                    pat_val(add(get(_i),vint(1)))
                );
 int _ok310 = !IS_FAIL(_v310);
@@ -4357,7 +4360,7 @@ var_set("i", _i);
     _SNO_NEXT_309:
 /* line 79 */
                   trampoline_stno(79);
-SnoVal _v312 = aply("Find",(SnoVal[]){indx(aply("c",(SnoVal[]){deref(strv("xn"))},1),(SnoVal[]){get(_i)},1),get(_y),get(_f)},3);
+SnoVal _v312 = aply("Find",(SnoVal[]){indx(aply("c",(SnoVal[]){deref(get(_xn))},1),(SnoVal[]){get(_i)},1),get(_y),get(_f)},3);
 int _ok312 = !IS_FAIL(_v312);
                                                             goto _L_Find5;
     _SNO_NEXT_311:
@@ -5603,7 +5606,7 @@ var_set("delta", _delta);
     _SNO_NEXT_444:
 /* line 27 */
                   trampoline_stno(27);
-SnoVal _v447 = add(deref(NULL_VAL),get(_delta));
+SnoVal _v447 = add(deref(strv("#L")),get(_delta));
 int _ok447 = !IS_FAIL(_v447);
 if(_ok447) {
 iset(strv("#L"),_v447);
@@ -5659,7 +5662,7 @@ var_set("delta", _delta);
     _SNO_NEXT_450:
 /* line 30 */
                   trampoline_stno(30);
-SnoVal _v453 = sub(deref(NULL_VAL),get(_delta));
+SnoVal _v453 = sub(deref(strv("#L")),get(_delta));
 int _ok453 = !IS_FAIL(_v453);
 if(_ok453) {
 iset(strv("#L"),_v453);
@@ -5738,7 +5741,7 @@ static SnoVal _sno_fn_GetLevel(SnoVal *_args, int _nargs) {
 /* line 33 */
     _L_GetLevel:
                   trampoline_stno(33);
-SnoVal _v459 = deref(NULL_VAL);
+SnoVal _v459 = deref(strv("#L"));
 int _ok459 = !IS_FAIL(_v459);
 if(_ok459) {
 set(_GetLevel, _v459);
@@ -5855,7 +5858,7 @@ static int64_t assign_c_55_α_saved_cursor;
     _SNO_NEXT_464:
 /* line 43 */
                   trampoline_stno(43);
-SnoVal _v467 = concat_sv(aply("DIFFER",(SnoVal[]){deref(NULL_VAL)},1),get(_str));
+SnoVal _v467 = concat_sv(aply("DIFFER",(SnoVal[]){deref(strv("$B"))},1),get(_str));
 int _ok467 = !IS_FAIL(_v467);
 if(_ok467) {
 iset(strv("$B"),_v467);
@@ -5864,7 +5867,7 @@ iset(strv("$B"),_v467);
     _SNO_NEXT_466:
 /* line 44 */
                   trampoline_stno(44);
-SnoVal _v469 = concat_sv(concat_sv(aply("IDENT",(SnoVal[]){deref(NULL_VAL)},1),get(_ind)),get(_str));
+SnoVal _v469 = concat_sv(concat_sv(aply("IDENT",(SnoVal[]){deref(strv("$B"))},1),get(_ind)),get(_str));
 int _ok469 = !IS_FAIL(_v469);
 if(_ok469) {
 iset(strv("$B"),_v469);
@@ -5874,7 +5877,7 @@ iset(strv("$B"),_v469);
 /* line 45 */
                   trampoline_stno(45);
 /* byrd mtch u471 */
-SnoVal _s471 = deref(NULL_VAL);
+SnoVal _s471 = deref(strv("$B"));
 const char *_subj471 = to_str(_s471);
 int64_t _slen471 = _subj471 ? (int64_t)strlen(_subj471) : 0;
 int64_t _cur471  = 0;
@@ -5961,7 +5964,7 @@ assign_c_61_β:
     _SNO_NEXT_470:
 /* line 46 */
                   trampoline_stno(46);
-SnoVal _v473 = deref(NULL_VAL);
+SnoVal _v473 = deref(strv("$C"));
 int _ok473 = !IS_FAIL(_v473);
 if(_ok473) {
 iset(strv("$X"),_v473);
@@ -5981,7 +5984,7 @@ iset(get(_outNm),_v475);
     _L_Gen10:
                   trampoline_stno(48);
 /* byrd mtch u477 */
-SnoVal _s477 = deref(NULL_VAL);
+SnoVal _s477 = deref(strv("$B"));
 const char *_subj477 = to_str(_s477);
 int64_t _slen477 = _subj477 ? (int64_t)strlen(_subj477) : 0;
 int64_t _cur477  = 0;
@@ -6068,7 +6071,7 @@ assign_c_68_β:
     _SNO_NEXT_476:
 /* line 49 */
                   trampoline_stno(49);
-SnoVal _v479 = concat_sv(concat_sv(deref(NULL_VAL),get(_ind)),get(_outline));
+SnoVal _v479 = concat_sv(concat_sv(deref(strv("$C")),get(_ind)),get(_outline));
 int _ok479 = !IS_FAIL(_v479);
 if(_ok479) {
 iset(get(_outNm),_v479);
@@ -6134,9 +6137,9 @@ var_set("pos", _pos);
 /* line 52 */
                   trampoline_stno(52);
 SnoVal _v485 = concat_sv(
-                   concat_sv(aply("IDENT",(SnoVal[]){deref(NULL_VAL)},1),strv(" ")),
+                   concat_sv(aply("IDENT",(SnoVal[]){deref(strv("$B"))},1),strv(" ")),
                    aply("DUPL",(SnoVal[]){strv(" "),sub(
-                                                        sub(get(_pos),aply("SIZE",(SnoVal[]){deref(NULL_VAL)},1)),
+                                                        sub(get(_pos),aply("SIZE",(SnoVal[]){deref(strv("$X"))},1)),
                                                         vint(1)
                                                     )},2)
                );
@@ -6150,9 +6153,9 @@ iset(strv("$B"),_v485);
 /* line 53 */
                   trampoline_stno(53);
 SnoVal _v487 = concat_sv(
-                   concat_sv(deref(NULL_VAL),strv(" ")),
+                   concat_sv(deref(strv("$B")),strv(" ")),
                    aply("DUPL",(SnoVal[]){strv(" "),sub(
-                                                        sub(get(_pos),aply("SIZE",(SnoVal[]){deref(NULL_VAL)},1)),
+                                                        sub(get(_pos),aply("SIZE",(SnoVal[]){deref(strv("$B"))},1)),
                                                         vint(1)
                                                     )},2)
                );
@@ -6165,7 +6168,7 @@ iset(strv("$B"),_v487);
     _SNO_NEXT_486:
 /* line 54 */
                   trampoline_stno(54);
-SnoVal _v489 = concat_sv(aply("IDENT",(SnoVal[]){deref(NULL_VAL)},1),strv(" "));
+SnoVal _v489 = concat_sv(aply("IDENT",(SnoVal[]){deref(strv("$B"))},1),strv(" "));
 int _ok489 = !IS_FAIL(_v489);
 if(_ok489) {
 iset(strv("$B"),_v489);
@@ -6175,7 +6178,7 @@ iset(strv("$B"),_v489);
     _SNO_NEXT_488:
 /* line 55 */
                   trampoline_stno(55);
-SnoVal _v491 = concat_sv(deref(NULL_VAL),strv(" "));
+SnoVal _v491 = concat_sv(deref(strv("$B")),strv(" "));
 int _ok491 = !IS_FAIL(_v491);
 if(_ok491) {
 iset(strv("$B"),_v491);
@@ -6221,7 +6224,7 @@ var_set("GenSetCont", _GenSetCont);
     _SNO_NEXT_492:
 /* line 57 */
                   trampoline_stno(57);
-SnoVal _v495 = deref(NULL_VAL);
+SnoVal _v495 = deref(strv("$X"));
 int _ok495 = !IS_FAIL(_v495);
                                                             goto _SNO_NEXT_494;
     _SNO_NEXT_494:
@@ -29420,8 +29423,8 @@ static void *stmt_403(void) { /* line 369 */
 /* line 369 */
                   trampoline_stno(369);
 SnoVal _v2165 = pat_alt(
-                    pat_cat(pat_val(deref(NULL_VAL)),pat_val(var_as_pattern(pat_ref("Expr")))),
-                    pat_cat(pat_val(deref(NULL_VAL)),pat_val(var_as_pattern(pat_ref("Expr"))))
+                    pat_cat(pat_val(deref(strv("("))),pat_val(var_as_pattern(pat_ref("Expr")))),
+                    pat_cat(pat_val(deref(strv("<"))),pat_val(var_as_pattern(pat_ref("Expr"))))
                 );
 int _ok2165 = !IS_FAIL(_v2165);
 if(_ok2165) {
