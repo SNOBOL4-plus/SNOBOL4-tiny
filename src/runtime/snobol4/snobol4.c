@@ -253,10 +253,7 @@ static DESCR_t _b_tree_v(DESCR_t *a, int n) {
 }
 static DESCR_t _b_tree_c(DESCR_t *a, int n) {
     if (n < 1) return NULVCL;
-    fprintf(stderr, "DEBUG _b_tree_c: a[0].v=%d\n", a[0].v);
-    DESCR_t _r = FIELD_GET_fn(a[0], "c");
-    fprintf(stderr, "DEBUG _b_tree_c: returns type=%d\n", _r.v);
-    return _r;
+    return FIELD_GET_fn(a[0], "c");
 }
 /* link_counter / link_tag field accessors: value(x), next(x) */
 static DESCR_t _b_field_value(DESCR_t *a, int n) {
@@ -1035,8 +1032,12 @@ DESCR_t FIELD_GET_fn(DESCR_t obj, const char *field) {
     if (obj.v != DT_DATA || !obj.u) return NULVCL;
     DATBLK_t *t = obj.u->type;
     for (int i = 0; i < t->nfields; i++)
-        if (strcasecmp(t->fields[i], field) == 0)
+        if (strcasecmp(t->fields[i], field) == 0) {
+            if (strcmp(field, "c") == 0)
+                fprintf(stderr, "TRACE FIELD_GET_fn(c): obj.v=%d fields[%d].v=%d\n",
+                        obj.v, i, obj.u->fields[i].v);
             return obj.u->fields[i];
+        }
     return NULVCL;
 }
 
@@ -1389,18 +1390,11 @@ DESCR_t APLY_fn(const char *name, DESCR_t *args, int nargs) {
     unsigned h = _func_hash(name);
     for (FNCBLK_t *e = _func_buckets[h]; e; e = e->next) {
         if (strcasecmp(e->name, name) == 0) {
-            if (strcmp(name, "c") == 0)
-                fprintf(stderr, "DEBUG APLY_fn(c): fn=%p spec=%s\n",
-                        (void*)e->fn, e->spec ? e->spec : "NULL");
             if (e->fn) return e->fn(args, nargs);
             /* fn==NULL means SNOBOL4-defined function — fall to S sentinel */
-            if (strcmp(name, "c") == 0)
-                fprintf(stderr, "DEBUG APLY_fn(c): fn==NULL, returning S sentinel\n");
             break;
         }
     }
-    if (strcmp(name, "c") == 0)
-        fprintf(stderr, "DEBUG APLY_fn(c): not found, returning NULVCL\n");
     return NULVCL;
 }
 

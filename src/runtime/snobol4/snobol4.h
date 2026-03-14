@@ -396,7 +396,7 @@ DESCR_t sort_fn(DESCR_t arr);
 
 /* TABLE_VAL macro */
 #define TABLE_VAL(tbl_) ((DESCR_t){ .v = DT_T, .tbl = (tbl_) })
-#define ARRAY_VAL(a_)   ((DESCR_t){ .v = DT_A, .a   = (a_)   })
+#define ARRAY_VAL(a_)   ((DESCR_t){ .v = DT_A, .arr = (a_)   })
 
 /* ============================================================
  * Pattern matching interface (matches existing runtime.h)

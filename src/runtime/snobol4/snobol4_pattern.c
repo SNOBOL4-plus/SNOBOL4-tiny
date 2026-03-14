@@ -1088,8 +1088,6 @@ void subscript_set2(DESCR_t arr, DESCR_t i, DESCR_t j, DESCR_t val) {
 /* tree_new — 4-arg version: creates a DT_DATA('tree(t,v,n,c)') instance */
 DESCR_t MAKE_TREE_fn(DESCR_t tag, DESCR_t val, DESCR_t n_children, DESCR_t children) {
     /* tree type registered in SNO_INIT_fn — DEFDAT_fn + _b_tree_* override done there */
-    fprintf(stderr, "DEBUG MAKE_TREE_fn: tag=%s children.v=%d\n",
-            tag.s ? tag.s : "?", children.v);
     return DATCON_fn("tree", tag, val, n_children, children, (DESCR_t){0});
 }
 
