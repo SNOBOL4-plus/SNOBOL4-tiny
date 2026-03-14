@@ -83,7 +83,7 @@ int main(void) {
     CHECK("10+3=13",  add(a,b).i == 13);
     CHECK("10-3=7",   sub(a,b).i == 7);
     CHECK("10*3=30",  mul(a,b).i == 30);
-    CHECK("10/3=3",   dyvide(a,b).i == 3);   /* integer division */
+    CHECK("10/3=3",   divyde(a,b).i == 3);   /* integer division */
     CHECK("10 EQ 10", eq(a, INT_VAL(10)));
     CHECK("10 NE 3",  ne(a, b));
     CHECK("3 LT 10",  lt(b, a));

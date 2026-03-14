@@ -161,7 +161,7 @@ static void emit_expr(Expr *e) {
     case E_ADD:    E("add(");    emit_expr(e->left); E(","); emit_expr(e->right); E(")"); break;
     case E_SUB:    E("sub(");    emit_expr(e->left); E(","); emit_expr(e->right); E(")"); break;
     case E_MUL:    E("mul(");    emit_expr(e->left); E(","); emit_expr(e->right); E(")"); break;
-    case E_DIV:    E("dyvide(");    emit_expr(e->left); E(","); emit_expr(e->right); E(")"); break;
+    case E_DIV:    E("divyde(");    emit_expr(e->left); E(","); emit_expr(e->right); E(")"); break;
     case E_POW:    E("powr(");    emit_expr(e->left); E(","); emit_expr(e->right); E(")"); break;
     case E_ALT:
         /* Same: if either side is pattern-valued, use pat_alt */

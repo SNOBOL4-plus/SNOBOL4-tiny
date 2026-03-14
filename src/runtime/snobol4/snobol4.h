@@ -289,7 +289,7 @@ int differ(SnoVal a, SnoVal b);/* DIFFER: string/value different */
 SnoVal add(SnoVal a, SnoVal b);
 SnoVal sub(SnoVal a, SnoVal b);
 SnoVal mul(SnoVal a, SnoVal b);
-SnoVal dyvide(SnoVal a, SnoVal b);
+SnoVal divyde(SnoVal a, SnoVal b);
 SnoVal powr(SnoVal a, SnoVal b);
 SnoVal neg(SnoVal a);
 

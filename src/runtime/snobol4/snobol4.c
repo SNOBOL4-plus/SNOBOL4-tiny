@@ -1569,7 +1569,7 @@ SnoVal mul(SnoVal a, SnoVal b) {
     return REAL_VAL(to_real(a) * to_real(b));
 }
 
-SnoVal dyvide(SnoVal a, SnoVal b) {
+SnoVal divyde(SnoVal a, SnoVal b) {
     if (a.type == SFAIL || b.type == SFAIL) return FAIL_VAL;
     /* SNOBOL4 / is real division; integer / integer = integer in SNOBOL4 */
     if (a.type == SINT && b.type == SINT) {
