@@ -950,6 +950,7 @@ static SnoVal _sno_fn_IsSpitbol(SnoVal *_args, int _nargs) {
 
 /* line 6 */
 _L_IsSpitbol:;
+trampoline_stno(6);
 SnoVal _v2 = aply("DIFFER",(SnoVal[]){get(_NAME),strv("NAME")},2);
 int _ok2 = !IS_FAIL(_v2);
     if(_ok2) goto _SNO_RETURN_IsSpitbol;
@@ -978,6 +979,7 @@ static SnoVal _sno_fn_IsSnobol4(SnoVal *_args, int _nargs) {
 
 /* line 10 */
 _L_IsSnobol4:;
+trampoline_stno(10);
 SnoVal _v4 = aply("IDENT",(SnoVal[]){get(_NAME),strv("NAME")},2);
 int _ok4 = !IS_FAIL(_v4);
     if(_ok4) goto _SNO_RETURN_IsSnobol4;
@@ -1015,6 +1017,7 @@ static SnoVal _sno_fn_IsType(SnoVal *_args, int _nargs) {
 
 /* line 14 */
 _L_IsType:;
+trampoline_stno(14);
 /* byrd mtch u6 */
 SnoVal _s6 = get(_types);
 const char *_subj6 = to_str(_s6);
@@ -1081,12 +1084,14 @@ _byrd_6_done:;
     goto _SNO_NEXT_5;
 _SNO_NEXT_5:;
 /* line 15 */
+trampoline_stno(15);
 SnoVal _v8 = concat_sv(aply("IDENT",(SnoVal[]){aply("upr",(SnoVal[]){get(_type)},1),strv("NULL")},2),aply("IDENT",(SnoVal[]){get(_it)},1));
 int _ok8 = !IS_FAIL(_v8);
     if(_ok8) goto _SNO_RETURN_IsType;
     goto _SNO_NEXT_7;
 _SNO_NEXT_7:;
 /* line 16 */
+trampoline_stno(16);
 SnoVal _v10 = aply("IDENT",(SnoVal[]){aply("DATATYPE",(SnoVal[]){get(_it)},1),aply("upr",(SnoVal[]){get(_type)},1)},2);
 int _ok10 = !IS_FAIL(_v10);
     if(_ok10) goto _SNO_RETURN_IsType;
@@ -1126,6 +1131,7 @@ static SnoVal _sno_fn_FENCE(SnoVal *_args, int _nargs) {
 
 /* line 6 */
 _L_FENCE:;
+trampoline_stno(6);
     goto _SNO_RETURN_FENCE;
 _SNO_NEXT_11:;
     goto _SNO_RETURN_FENCE;
@@ -1177,6 +1183,7 @@ static SnoVal _sno_fn_input_(SnoVal *_args, int _nargs) {
 
 /* line 25 */
 _L_input_:;
+trampoline_stno(25);
 SnoVal _v13 = pat_cond(pat_var("input__"),"?");
 int _ok13 = !IS_FAIL(_v13);
 if(_ok13) {
@@ -1255,6 +1262,7 @@ static SnoVal _sno_fn_output_(SnoVal *_args, int _nargs) {
 
 /* line 26 */
 _L_output_:;
+trampoline_stno(26);
 SnoVal _v15 = pat_cond(pat_var("output__"),"?");
 int _ok15 = !IS_FAIL(_v15);
 if(_ok15) {
@@ -1265,6 +1273,7 @@ var_set("io", _io);
 _SNO_NEXT_14:;
 /* line 27 */
 _L_io:;
+trampoline_stno(27);
 /* byrd mtch u17 */
 SnoVal _s17 = get(_fileName);
 const char *_subj17 = to_str(_s17);
@@ -1348,6 +1357,7 @@ _byrd_17_done:;
     goto _SNO_NEXT_16;
 _SNO_NEXT_16:;
 /* line 28 */
+trampoline_stno(28);
 /* byrd mtch u19 */
 SnoVal _s19 = get(_fileName);
 const char *_subj19 = to_str(_s19);
@@ -1415,6 +1425,7 @@ _byrd_19_done:;
     goto _SNO_NEXT_18;
 _SNO_NEXT_18:;
 /* line 29 */
+trampoline_stno(29);
 /* byrd mtch u21 */
 SnoVal _s21 = get(_fileName);
 const char *_subj21 = to_str(_s21);
@@ -1461,6 +1472,7 @@ _byrd_21_done:;
 _SNO_NEXT_20:;
 /* line 30 */
 _L_io1:;
+trampoline_stno(30);
 SnoVal _v23 = concat_sv(concat_sv(aply("IDENT",(SnoVal[]){get(_maxreclen)},1),get(_options)),vint(1024));
 int _ok23 = !IS_FAIL(_v23);
 if(_ok23) {
@@ -1470,6 +1482,7 @@ var_set("options", _options);
     goto _SNO_NEXT_22;
 _SNO_NEXT_22:;
 /* line 31 */
+trampoline_stno(31);
 SnoVal _v25 = aply("APPLY",(SnoVal[]){get(_io),get(_name),get(_channel),get(_options),get(_fileName)},5);
 int _ok25 = !IS_FAIL(_v25);
     if(_ok25) goto _SNO_RETURN_output_;
@@ -1478,9 +1491,11 @@ int _ok25 = !IS_FAIL(_v25);
 _SNO_NEXT_24:;
 /* line 32 */
 _L_io_end:;
+trampoline_stno(32);
     goto _SNO_NEXT_26;
 _SNO_NEXT_26:;
 /* line 3 */
+trampoline_stno(3);
 SnoVal _v28 = aply("DEFINE",(SnoVal[]){strv("lwr(lwr)")},1);
 int _ok28 = !IS_FAIL(_v28);
     goto _SNO_NEXT_27;
@@ -1533,6 +1548,7 @@ static SnoVal _sno_fn_lwr(SnoVal *_args, int _nargs) {
 
 /* line 4 */
 _L_lwr:;
+trampoline_stno(4);
 SnoVal _v30 = aply("REPLACE",(SnoVal[]){get(_lwr),kw("UCASE"),kw("LCASE")},3);
 int _ok30 = !IS_FAIL(_v30);
 if(_ok30) {
@@ -1568,6 +1584,7 @@ static SnoVal _sno_fn_upr(SnoVal *_args, int _nargs) {
 
 /* line 9 */
 _L_upr:;
+trampoline_stno(9);
 SnoVal _v32 = aply("REPLACE",(SnoVal[]){get(_upr),kw("LCASE"),kw("UCASE")},3);
 int _ok32 = !IS_FAIL(_v32);
 if(_ok32) {
@@ -1603,6 +1620,7 @@ static SnoVal _sno_fn_cap(SnoVal *_args, int _nargs) {
 
 /* line 14 */
 _L_cap:;
+trampoline_stno(14);
 SnoVal _v34 = concat_sv(aply("REPLACE",(SnoVal[]){aply("SUBSTR",(SnoVal[]){get(_cap),vint(1),vint(1)},3),kw("LCASE"),kw("UCASE")},3),aply("REPLACE",(SnoVal[]){aply("SUBSTR",(SnoVal[]){get(_cap),vint(2)},2),kw("UCASE"),kw("LCASE")},3));
 int _ok34 = !IS_FAIL(_v34);
 if(_ok34) {
@@ -1647,12 +1665,14 @@ static SnoVal _sno_fn_icase(SnoVal *_args, int _nargs) {
 
 /* line 21 */
 _L_icase:;
+trampoline_stno(21);
 SnoVal _v36 = aply("IDENT",(SnoVal[]){get(_str)},1);
 int _ok36 = !IS_FAIL(_v36);
     if(_ok36) goto _SNO_RETURN_icase;
     goto _SNO_NEXT_35;
 _SNO_NEXT_35:;
 /* line 22 */
+trampoline_stno(22);
 /* byrd mtch u38 */
 SnoVal _s38 = get(_str);
 const char *_subj38 = to_str(_s38);
@@ -1701,6 +1721,7 @@ _byrd_38_done:;
     goto _SNO_NEXT_37;
 _SNO_NEXT_37:;
 /* line 23 */
+trampoline_stno(23);
 SnoVal _v40 = pat_cat(pat_var("icase"),pat_alt(pat_user_call("upr",(SnoVal[]){get(_letter)},1),pat_user_call("lwr",(SnoVal[]){get(_letter)},1)));
 int _ok40 = !IS_FAIL(_v40);
 if(_ok40) {
@@ -1711,6 +1732,7 @@ var_set("icase", _icase);
 _SNO_NEXT_39:;
 /* line 24 */
 _L_icase1:;
+trampoline_stno(24);
 /* byrd mtch u42 */
 SnoVal _s42 = get(_str);
 const char *_subj42 = to_str(_s42);
@@ -1756,6 +1778,7 @@ _byrd_42_done:;
     goto _SNO_NEXT_41;
 _SNO_NEXT_41:;
 /* line 25 */
+trampoline_stno(25);
 SnoVal _v44 = concat_sv(get(_icase),get(_character));
 int _ok44 = !IS_FAIL(_v44);
 if(_ok44) {
@@ -1801,6 +1824,7 @@ static SnoVal _sno_fn_assign(SnoVal *_args, int _nargs) {
 
 /* line 9 */
 _L_assign:;
+trampoline_stno(9);
 SnoVal _v46 = pat_cond(pat_var("dummy"),"?");
 int _ok46 = !IS_FAIL(_v46);
 if(_ok46) {
@@ -1810,12 +1834,14 @@ var_set("assign", _assign);
     goto _SNO_NEXT_45;
 _SNO_NEXT_45:;
 /* line 10 */
+trampoline_stno(10);
 SnoVal _v48 = aply("IDENT",(SnoVal[]){aply("DATATYPE",(SnoVal[]){get(_expression)},1),strv("EXPRESSION")},2);
 int _ok48 = !IS_FAIL(_v48);
     if(!_ok48) goto _L_assign1;
     goto _SNO_NEXT_47;
 _SNO_NEXT_47:;
 /* line 11 */
+trampoline_stno(11);
 SnoVal _v50 = aply("EVAL",(SnoVal[]){get(_expression)},1);
 int _ok50 = !IS_FAIL(_v50);
 if(_ok50) {
@@ -1825,6 +1851,7 @@ iset(get(_name),_v50);
 _SNO_NEXT_49:;
 /* line 12 */
 _L_assign1:;
+trampoline_stno(12);
 SnoVal _v52 = get(_expression);
 int _ok52 = !IS_FAIL(_v52);
 if(_ok52) {
@@ -1866,6 +1893,7 @@ static SnoVal _sno_fn_match(SnoVal *_args, int _nargs) {
 
 /* line 7 */
 _L_match:;
+trampoline_stno(7);
 SnoVal _v54 = pat_cond(pat_var("dummy"),"?");
 int _ok54 = !IS_FAIL(_v54);
 if(_ok54) {
@@ -1875,6 +1903,7 @@ var_set("match", _match);
     goto _SNO_NEXT_53;
 _SNO_NEXT_53:;
 /* line 8 */
+trampoline_stno(8);
 /* byrd mtch u56 */
 SnoVal _s56 = get(_subject);
 const char *_subj56 = to_str(_s56);
@@ -1952,6 +1981,7 @@ static SnoVal _sno_fn_notmatch(SnoVal *_args, int _nargs) {
 
 /* line 12 */
 _L_notmatch:;
+trampoline_stno(12);
 SnoVal _v58 = pat_cond(pat_var("dummy"),"?");
 int _ok58 = !IS_FAIL(_v58);
 if(_ok58) {
@@ -1961,6 +1991,7 @@ var_set("notmatch", _notmatch);
     goto _SNO_NEXT_57;
 _SNO_NEXT_57:;
 /* line 13 */
+trampoline_stno(13);
 /* byrd mtch u60 */
 SnoVal _s60 = get(_subject);
 const char *_subj60 = to_str(_s60);
@@ -2032,6 +2063,7 @@ static SnoVal _sno_fn_InitCounter(SnoVal *_args, int _nargs) {
 
 /* line 14 */
 _L_InitCounter:;
+trampoline_stno(14);
 SnoVal _v62 = deref(strv("#N"));
 int _ok62 = !IS_FAIL(_v62);
     goto _SNO_RETURN_InitCounter;
@@ -2058,6 +2090,7 @@ static SnoVal _sno_fn_PushCounter(SnoVal *_args, int _nargs) {
 
 /* line 15 */
 _L_PushCounter:;
+trampoline_stno(15);
 SnoVal _v64 = concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),strv("PushCounter()"));
 int _ok64 = !IS_FAIL(_v64);
 if(_ok64) {
@@ -2066,6 +2099,7 @@ var_set("OUTPUT", _v64);
     goto _SNO_NEXT_63;
 _SNO_NEXT_63:;
 /* line 16 */
+trampoline_stno(16);
 SnoVal _v66 = aply("link_counter",(SnoVal[]){deref(strv("#N")),vint(0)},2);
 int _ok66 = !IS_FAIL(_v66);
 if(_ok66) {
@@ -2074,6 +2108,7 @@ iset(strv("#N"),_v66);
     goto _SNO_NEXT_65;
 _SNO_NEXT_65:;
 /* line 17 */
+trampoline_stno(17);
 SnoVal _v68 = pat_cond(pat_var("dummy"),"?");
 int _ok68 = !IS_FAIL(_v68);
 if(_ok68) {
@@ -2104,6 +2139,7 @@ static SnoVal _sno_fn_IncCounter(SnoVal *_args, int _nargs) {
 
 /* line 18 */
 _L_IncCounter:;
+trampoline_stno(18);
 SnoVal _v70 = add(aply("value",(SnoVal[]){deref(strv("#N"))},1),vint(1));
 int _ok70 = !IS_FAIL(_v70);
 if(_ok70) {
@@ -2112,6 +2148,7 @@ field_set(deref(strv("#N")), "value", _v70);
     goto _SNO_NEXT_69;
 _SNO_NEXT_69:;
 /* line 19 */
+trampoline_stno(19);
 SnoVal _v72 = concat_sv(concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),aply("value",(SnoVal[]){deref(strv("#N"))},1)),strv(" = IncCounter()"));
 int _ok72 = !IS_FAIL(_v72);
 if(_ok72) {
@@ -2120,6 +2157,7 @@ var_set("OUTPUT", _v72);
     goto _SNO_NEXT_71;
 _SNO_NEXT_71:;
 /* line 20 */
+trampoline_stno(20);
 SnoVal _v74 = pat_cond(pat_var("dummy"),"?");
 int _ok74 = !IS_FAIL(_v74);
 if(_ok74) {
@@ -2150,6 +2188,7 @@ static SnoVal _sno_fn_DecCounter(SnoVal *_args, int _nargs) {
 
 /* line 21 */
 _L_DecCounter:;
+trampoline_stno(21);
 SnoVal _v76 = sub(aply("value",(SnoVal[]){deref(strv("#N"))},1),vint(1));
 int _ok76 = !IS_FAIL(_v76);
 if(_ok76) {
@@ -2158,6 +2197,7 @@ field_set(deref(strv("#N")), "value", _v76);
     goto _SNO_NEXT_75;
 _SNO_NEXT_75:;
 /* line 22 */
+trampoline_stno(22);
 SnoVal _v78 = concat_sv(concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),aply("value",(SnoVal[]){deref(strv("#N"))},1)),strv(" = DecCounter()"));
 int _ok78 = !IS_FAIL(_v78);
 if(_ok78) {
@@ -2166,6 +2206,7 @@ var_set("OUTPUT", _v78);
     goto _SNO_NEXT_77;
 _SNO_NEXT_77:;
 /* line 23 */
+trampoline_stno(23);
 SnoVal _v80 = pat_cond(pat_var("dummy"),"?");
 int _ok80 = !IS_FAIL(_v80);
 if(_ok80) {
@@ -2196,6 +2237,7 @@ static SnoVal _sno_fn_TopCounter(SnoVal *_args, int _nargs) {
 
 /* line 27 */
 _L_TopCounter:;
+trampoline_stno(27);
 SnoVal _v82 = concat_sv(aply("DIFFER",(SnoVal[]){deref(strv("#N"))},1),aply("value",(SnoVal[]){deref(strv("#N"))},1));
 int _ok82 = !IS_FAIL(_v82);
 if(_ok82) {
@@ -2206,6 +2248,7 @@ var_set("TopCounter", _TopCounter);
     goto _SNO_NEXT_81;
 _SNO_NEXT_81:;
 /* line 28 */
+trampoline_stno(28);
 SnoVal _v84 = concat_sv(concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),get(_TopCounter)),strv(" = TopCounter()"));
 int _ok84 = !IS_FAIL(_v84);
 if(_ok84) {
@@ -2215,34 +2258,41 @@ var_set("OUTPUT", _v84);
 _SNO_NEXT_83:;
 /* line 29 */
 _L_CounterEnd:;
+trampoline_stno(29);
     goto _SNO_NEXT_85;
 _SNO_NEXT_85:;
 /* line 36 */
+trampoline_stno(36);
 SnoVal _v87 = aply("DATA",(SnoVal[]){strv("link_tag(next,value)")},1);
 int _ok87 = !IS_FAIL(_v87);
     goto _SNO_NEXT_86;
 _SNO_NEXT_86:;
 /* line 38 */
+trampoline_stno(38);
 SnoVal _v89 = aply("DEFINE",(SnoVal[]){strv("InitBegTag()")},1);
 int _ok89 = !IS_FAIL(_v89);
     goto _SNO_NEXT_88;
 _SNO_NEXT_88:;
 /* line 39 */
+trampoline_stno(39);
 SnoVal _v91 = aply("DEFINE",(SnoVal[]){strv("PushBegTag(t)")},1);
 int _ok91 = !IS_FAIL(_v91);
     goto _SNO_NEXT_90;
 _SNO_NEXT_90:;
 /* line 40 */
+trampoline_stno(40);
 SnoVal _v93 = aply("DEFINE",(SnoVal[]){strv("PopBegTag()")},1);
 int _ok93 = !IS_FAIL(_v93);
     goto _SNO_NEXT_92;
 _SNO_NEXT_92:;
 /* line 41 */
+trampoline_stno(41);
 SnoVal _v95 = aply("DEFINE",(SnoVal[]){strv("TopBegTag()")},1);
 int _ok95 = !IS_FAIL(_v95);
     goto _SNO_NEXT_94;
 _SNO_NEXT_94:;
 /* line 42 */
+trampoline_stno(42);
 SnoVal _v97 = aply("DEFINE",(SnoVal[]){strv("DumpBegTag()b,list,v")},1);
 int _ok97 = !IS_FAIL(_v97);
     goto _SNO_NEXT_96;
@@ -2269,6 +2319,7 @@ static SnoVal _sno_fn_PopCounter(SnoVal *_args, int _nargs) {
 
 /* line 24 */
 _L_PopCounter:;
+trampoline_stno(24);
 SnoVal _v99 = concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),strv("PopCounter()"));
 int _ok99 = !IS_FAIL(_v99);
 if(_ok99) {
@@ -2277,6 +2328,7 @@ var_set("OUTPUT", _v99);
     goto _SNO_NEXT_98;
 _SNO_NEXT_98:;
 /* line 25 */
+trampoline_stno(25);
 SnoVal _v101 = concat_sv(aply("DIFFER",(SnoVal[]){deref(strv("#N"))},1),aply("next",(SnoVal[]){deref(strv("#N"))},1));
 int _ok101 = !IS_FAIL(_v101);
 if(_ok101) {
@@ -2286,6 +2338,7 @@ iset(strv("#N"),_v101);
     goto _SNO_NEXT_100;
 _SNO_NEXT_100:;
 /* line 26 */
+trampoline_stno(26);
 SnoVal _v103 = pat_cond(pat_var("dummy"),"?");
 int _ok103 = !IS_FAIL(_v103);
 if(_ok103) {
@@ -2316,6 +2369,7 @@ static SnoVal _sno_fn_InitBegTag(SnoVal *_args, int _nargs) {
 
 /* line 43 */
 _L_InitBegTag:;
+trampoline_stno(43);
 SnoVal _v105 = deref(strv("@B"));
 int _ok105 = !IS_FAIL(_v105);
     goto _SNO_RETURN_InitBegTag;
@@ -2345,6 +2399,7 @@ static SnoVal _sno_fn_PushBegTag(SnoVal *_args, int _nargs) {
 
 /* line 44 */
 _L_PushBegTag:;
+trampoline_stno(44);
 SnoVal _v107 = concat_sv(concat_sv(concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),strv("PushBegTag(")),aply("upr",(SnoVal[]){get(_t)},1)),strv(")"));
 int _ok107 = !IS_FAIL(_v107);
 if(_ok107) {
@@ -2353,6 +2408,7 @@ var_set("OUTPUT", _v107);
     goto _SNO_NEXT_106;
 _SNO_NEXT_106:;
 /* line 45 */
+trampoline_stno(45);
 SnoVal _v109 = aply("link_tag",(SnoVal[]){deref(strv("@B")),aply("upr",(SnoVal[]){get(_t)},1)},2);
 int _ok109 = !IS_FAIL(_v109);
 if(_ok109) {
@@ -2361,6 +2417,7 @@ iset(strv("@B"),_v109);
     goto _SNO_NEXT_108;
 _SNO_NEXT_108:;
 /* line 46 */
+trampoline_stno(46);
 SnoVal _v111 = pat_cond(pat_user_call("IDENT",(SnoVal[]){get(_t)},1),"?");
 int _ok111 = !IS_FAIL(_v111);
 if(_ok111) {
@@ -2371,6 +2428,7 @@ var_set("PushBegTag", _PushBegTag);
     goto _SNO_NEXT_110;
 _SNO_NEXT_110:;
 /* line 47 */
+trampoline_stno(47);
 SnoVal _v113 = pat_cond(pat_user_call("DIFFER",(SnoVal[]){get(_t)},1),"dummy");
 int _ok113 = !IS_FAIL(_v113);
 if(_ok113) {
@@ -2404,6 +2462,7 @@ static SnoVal _sno_fn_PopBegTag(SnoVal *_args, int _nargs) {
 
 /* line 48 */
 _L_PopBegTag:;
+trampoline_stno(48);
 SnoVal _v115 = pat_cat(pat_cat(pat_user_call("GT",(SnoVal[]){get(_xTrace),vint(4)},2),pat_alt(pat_cat(pat_user_call("DIFFER",(SnoVal[]){deref(strv("@B"))},1),pat_cat(pat_var("value"),pat_deref(strv("@B")))),pat_lit("FAIL"))),pat_lit(" = PopBegTag()"));
 int _ok115 = !IS_FAIL(_v115);
 if(_ok115) {
@@ -2412,6 +2471,7 @@ var_set("OUTPUT", _v115);
     goto _SNO_NEXT_114;
 _SNO_NEXT_114:;
 /* line 49 */
+trampoline_stno(49);
 SnoVal _v117 = concat_sv(aply("DIFFER",(SnoVal[]){deref(strv("@B"))},1),aply("next",(SnoVal[]){deref(strv("@B"))},1));
 int _ok117 = !IS_FAIL(_v117);
 if(_ok117) {
@@ -2421,6 +2481,7 @@ iset(strv("@B"),_v117);
     goto _SNO_NEXT_116;
 _SNO_NEXT_116:;
 /* line 50 */
+trampoline_stno(50);
 SnoVal _v119 = pat_cond(pat_var("dummy"),"?");
 int _ok119 = !IS_FAIL(_v119);
 if(_ok119) {
@@ -2451,6 +2512,7 @@ static SnoVal _sno_fn_TopBegTag(SnoVal *_args, int _nargs) {
 
 /* line 51 */
 _L_TopBegTag:;
+trampoline_stno(51);
 SnoVal _v121 = concat_sv(aply("DIFFER",(SnoVal[]){deref(strv("@B"))},1),aply("value",(SnoVal[]){deref(strv("@B"))},1));
 int _ok121 = !IS_FAIL(_v121);
 if(_ok121) {
@@ -2461,6 +2523,7 @@ var_set("TopBegTag", _TopBegTag);
     goto _SNO_NEXT_120;
 _SNO_NEXT_120:;
 /* line 52 */
+trampoline_stno(52);
 SnoVal _v123 = concat_sv(concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),get(_TopBegTag)),strv(" = TopBegTag()"));
 int _ok123 = !IS_FAIL(_v123);
 if(_ok123) {
@@ -2499,6 +2562,7 @@ static SnoVal _sno_fn_DumpBegTag(SnoVal *_args, int _nargs) {
 
 /* line 53 */
 _L_DumpBegTag:;
+trampoline_stno(53);
 SnoVal _v125 = pat_cond(pat_var("dummy"),"?");
 int _ok125 = !IS_FAIL(_v125);
 if(_ok125) {
@@ -2508,12 +2572,14 @@ var_set("DumpBegTag", _DumpBegTag);
     goto _SNO_NEXT_124;
 _SNO_NEXT_124:;
 /* line 54 */
+trampoline_stno(54);
 SnoVal _v127 = aply("GT",(SnoVal[]){get(_xTrace),vint(5)},2);
 int _ok127 = !IS_FAIL(_v127);
     if(!_ok127) goto _SNO_RETURN_DumpBegTag;
     goto _SNO_NEXT_126;
 _SNO_NEXT_126:;
 /* line 55 */
+trampoline_stno(55);
 SnoVal _v129 = deref(strv("@B"));
 int _ok129 = !IS_FAIL(_v129);
 if(_ok129) {
@@ -2524,6 +2590,7 @@ var_set("b", _b);
 _SNO_NEXT_128:;
 /* line 56 */
 _L_DumpBegTag3:;
+trampoline_stno(56);
 SnoVal _v131 = concat_sv(aply("DIFFER",(SnoVal[]){get(_b)},1),aply("value",(SnoVal[]){get(_b)},1));
 int _ok131 = !IS_FAIL(_v131);
 if(_ok131) {
@@ -2534,6 +2601,7 @@ var_set("v", _v);
     goto _SNO_NEXT_130;
 _SNO_NEXT_130:;
 /* line 57 */
+trampoline_stno(57);
 SnoVal _v133 = pat_cat(pat_cat(pat_var("list"),pat_alt(pat_cat(pat_user_call("DIFFER",(SnoVal[]){get(_list)},1),pat_lit(", ")),pat_lit(""))),pat_var("v"));
 int _ok133 = !IS_FAIL(_v133);
 if(_ok133) {
@@ -2543,6 +2611,7 @@ var_set("list", _list);
     goto _SNO_NEXT_132;
 _SNO_NEXT_132:;
 /* line 58 */
+trampoline_stno(58);
 SnoVal _v135 = aply("next",(SnoVal[]){get(_b)},1);
 int _ok135 = !IS_FAIL(_v135);
 if(_ok135) {
@@ -2553,6 +2622,7 @@ var_set("b", _b);
 _SNO_NEXT_134:;
 /* line 59 */
 _L_DumpBegTag9:;
+trampoline_stno(59);
 SnoVal _v137 = concat_sv(concat_sv(strv("@B = ("),get(_list)),strv(")"));
 int _ok137 = !IS_FAIL(_v137);
 if(_ok137) {
@@ -2591,6 +2661,7 @@ static SnoVal _sno_fn_InitEndTag(SnoVal *_args, int _nargs) {
 
 /* line 67 */
 _L_InitEndTag:;
+trampoline_stno(67);
 SnoVal _v139 = deref(strv("@E"));
 int _ok139 = !IS_FAIL(_v139);
     goto _SNO_RETURN_InitEndTag;
@@ -2620,6 +2691,7 @@ static SnoVal _sno_fn_PushEndTag(SnoVal *_args, int _nargs) {
 
 /* line 68 */
 _L_PushEndTag:;
+trampoline_stno(68);
 SnoVal _v141 = concat_sv(concat_sv(concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),strv("PushEndTag(")),aply("upr",(SnoVal[]){get(_t)},1)),strv(")"));
 int _ok141 = !IS_FAIL(_v141);
 if(_ok141) {
@@ -2628,6 +2700,7 @@ var_set("OUTPUT", _v141);
     goto _SNO_NEXT_140;
 _SNO_NEXT_140:;
 /* line 69 */
+trampoline_stno(69);
 SnoVal _v143 = aply("link_tag",(SnoVal[]){deref(strv("@E")),aply("upr",(SnoVal[]){get(_t)},1)},2);
 int _ok143 = !IS_FAIL(_v143);
 if(_ok143) {
@@ -2636,6 +2709,7 @@ iset(strv("@E"),_v143);
     goto _SNO_NEXT_142;
 _SNO_NEXT_142:;
 /* line 70 */
+trampoline_stno(70);
 SnoVal _v145 = pat_cond(pat_user_call("IDENT",(SnoVal[]){get(_t)},1),"?");
 int _ok145 = !IS_FAIL(_v145);
 if(_ok145) {
@@ -2646,6 +2720,7 @@ var_set("PushEndTag", _PushEndTag);
     goto _SNO_NEXT_144;
 _SNO_NEXT_144:;
 /* line 71 */
+trampoline_stno(71);
 SnoVal _v147 = pat_cond(pat_user_call("DIFFER",(SnoVal[]){get(_t)},1),"dummy");
 int _ok147 = !IS_FAIL(_v147);
 if(_ok147) {
@@ -2679,6 +2754,7 @@ static SnoVal _sno_fn_PopEndTag(SnoVal *_args, int _nargs) {
 
 /* line 72 */
 _L_PopEndTag:;
+trampoline_stno(72);
 SnoVal _v149 = pat_cat(pat_cat(pat_user_call("GT",(SnoVal[]){get(_xTrace),vint(4)},2),pat_alt(pat_cat(pat_user_call("DIFFER",(SnoVal[]){deref(strv("@E"))},1),pat_cat(pat_var("value"),pat_deref(strv("@E")))),pat_lit("FAIL"))),pat_lit(" = PopEndTag()"));
 int _ok149 = !IS_FAIL(_v149);
 if(_ok149) {
@@ -2687,6 +2763,7 @@ var_set("OUTPUT", _v149);
     goto _SNO_NEXT_148;
 _SNO_NEXT_148:;
 /* line 73 */
+trampoline_stno(73);
 SnoVal _v151 = concat_sv(aply("DIFFER",(SnoVal[]){deref(strv("@E"))},1),aply("next",(SnoVal[]){deref(strv("@E"))},1));
 int _ok151 = !IS_FAIL(_v151);
 if(_ok151) {
@@ -2696,6 +2773,7 @@ iset(strv("@E"),_v151);
     goto _SNO_NEXT_150;
 _SNO_NEXT_150:;
 /* line 74 */
+trampoline_stno(74);
 SnoVal _v153 = pat_cond(pat_var("dummy"),"?");
 int _ok153 = !IS_FAIL(_v153);
 if(_ok153) {
@@ -2726,6 +2804,7 @@ static SnoVal _sno_fn_TopEndTag(SnoVal *_args, int _nargs) {
 
 /* line 75 */
 _L_TopEndTag:;
+trampoline_stno(75);
 SnoVal _v155 = concat_sv(aply("DIFFER",(SnoVal[]){deref(strv("@E"))},1),aply("value",(SnoVal[]){deref(strv("@E"))},1));
 int _ok155 = !IS_FAIL(_v155);
 if(_ok155) {
@@ -2736,6 +2815,7 @@ var_set("TopEndTag", _TopEndTag);
     goto _SNO_NEXT_154;
 _SNO_NEXT_154:;
 /* line 76 */
+trampoline_stno(76);
 SnoVal _v157 = concat_sv(concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),get(_TopEndTag)),strv(" = TopEndTag()"));
 int _ok157 = !IS_FAIL(_v157);
 if(_ok157) {
@@ -2774,6 +2854,7 @@ static SnoVal _sno_fn_DumpEndTag(SnoVal *_args, int _nargs) {
 
 /* line 77 */
 _L_DumpEndTag:;
+trampoline_stno(77);
 SnoVal _v159 = pat_cond(pat_var("dummy"),"?");
 int _ok159 = !IS_FAIL(_v159);
 if(_ok159) {
@@ -2783,12 +2864,14 @@ var_set("DumpEndTag", _DumpEndTag);
     goto _SNO_NEXT_158;
 _SNO_NEXT_158:;
 /* line 78 */
+trampoline_stno(78);
 SnoVal _v161 = aply("GT",(SnoVal[]){get(_xTrace),vint(5)},2);
 int _ok161 = !IS_FAIL(_v161);
     if(!_ok161) goto _SNO_RETURN_DumpEndTag;
     goto _SNO_NEXT_160;
 _SNO_NEXT_160:;
 /* line 79 */
+trampoline_stno(79);
 SnoVal _v163 = deref(strv("@E"));
 int _ok163 = !IS_FAIL(_v163);
 if(_ok163) {
@@ -2799,6 +2882,7 @@ var_set("e", _e);
 _SNO_NEXT_162:;
 /* line 80 */
 _L_DumpEndTag3:;
+trampoline_stno(80);
 SnoVal _v165 = concat_sv(aply("DIFFER",(SnoVal[]){get(_e)},1),aply("value",(SnoVal[]){get(_e)},1));
 int _ok165 = !IS_FAIL(_v165);
 if(_ok165) {
@@ -2809,6 +2893,7 @@ var_set("v", _v);
     goto _SNO_NEXT_164;
 _SNO_NEXT_164:;
 /* line 81 */
+trampoline_stno(81);
 SnoVal _v167 = pat_cat(pat_cat(pat_var("list"),pat_alt(pat_cat(pat_user_call("DIFFER",(SnoVal[]){get(_list)},1),pat_lit(", ")),pat_lit(""))),pat_var("v"));
 int _ok167 = !IS_FAIL(_v167);
 if(_ok167) {
@@ -2818,6 +2903,7 @@ var_set("list", _list);
     goto _SNO_NEXT_166;
 _SNO_NEXT_166:;
 /* line 82 */
+trampoline_stno(82);
 SnoVal _v169 = aply("next",(SnoVal[]){get(_e)},1);
 int _ok169 = !IS_FAIL(_v169);
 if(_ok169) {
@@ -2828,6 +2914,7 @@ var_set("e", _e);
 _SNO_NEXT_168:;
 /* line 83 */
 _L_DumpEndTag9:;
+trampoline_stno(83);
 SnoVal _v171 = concat_sv(concat_sv(strv("@E = ("),get(_list)),strv(")"));
 int _ok171 = !IS_FAIL(_v171);
 if(_ok171) {
@@ -2866,6 +2953,7 @@ static SnoVal _sno_fn_InitStack(SnoVal *_args, int _nargs) {
 
 /* line 12 */
 _L_InitStack:;
+trampoline_stno(12);
 SnoVal _v173 = deref(strv("@S"));
 int _ok173 = !IS_FAIL(_v173);
     goto _SNO_RETURN_InitStack;
@@ -2895,6 +2983,7 @@ static SnoVal _sno_fn_Push(SnoVal *_args, int _nargs) {
 
 /* line 13 */
 _L_Push:;
+trampoline_stno(13);
 SnoVal _v175 = concat_sv(concat_sv(concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),strv("Push(")),aply("t",(SnoVal[]){get(_x)},1)),strv(")"));
 int _ok175 = !IS_FAIL(_v175);
 if(_ok175) {
@@ -2903,6 +2992,7 @@ var_set("OUTPUT", _v175);
     goto _SNO_NEXT_174;
 _SNO_NEXT_174:;
 /* line 14 */
+trampoline_stno(14);
 SnoVal _v177 = aply("link",(SnoVal[]){deref(strv("@S")),get(_x)},2);
 int _ok177 = !IS_FAIL(_v177);
 if(_ok177) {
@@ -2911,6 +3001,7 @@ iset(strv("@S"),_v177);
     goto _SNO_NEXT_176;
 _SNO_NEXT_176:;
 /* line 15 */
+trampoline_stno(15);
 SnoVal _v179 = pat_cond(pat_user_call("IDENT",(SnoVal[]){get(_x)},1),"?");
 int _ok179 = !IS_FAIL(_v179);
 if(_ok179) {
@@ -2921,6 +3012,7 @@ var_set("Push", _Push);
     goto _SNO_NEXT_178;
 _SNO_NEXT_178:;
 /* line 16 */
+trampoline_stno(16);
 SnoVal _v181 = pat_cond(pat_user_call("DIFFER",(SnoVal[]){get(_x)},1),"dummy");
 int _ok181 = !IS_FAIL(_v181);
 if(_ok181) {
@@ -2957,18 +3049,21 @@ static SnoVal _sno_fn_Pop(SnoVal *_args, int _nargs) {
 
 /* line 17 */
 _L_Pop:;
+trampoline_stno(17);
 SnoVal _v183 = aply("DIFFER",(SnoVal[]){deref(strv("@S"))},1);
 int _ok183 = !IS_FAIL(_v183);
     if(!_ok183) goto _SNO_FRETURN_Pop;
     goto _SNO_NEXT_182;
 _SNO_NEXT_182:;
 /* line 18 */
+trampoline_stno(18);
 SnoVal _v185 = aply("IDENT",(SnoVal[]){get(_var)},1);
 int _ok185 = !IS_FAIL(_v185);
     if(!_ok185) goto _L_Pop1;
     goto _SNO_NEXT_184;
 _SNO_NEXT_184:;
 /* line 19 */
+trampoline_stno(19);
 SnoVal _v187 = aply("value",(SnoVal[]){deref(strv("@S"))},1);
 int _ok187 = !IS_FAIL(_v187);
 if(_ok187) {
@@ -2978,6 +3073,7 @@ var_set("Pop", _Pop);
     goto _SNO_NEXT_186;
 _SNO_NEXT_186:;
 /* line 20 */
+trampoline_stno(20);
 SnoVal _v189 = concat_sv(concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),strv("Pop() = ")),aply("t",(SnoVal[]){get(_Pop)},1));
 int _ok189 = !IS_FAIL(_v189);
 if(_ok189) {
@@ -2986,6 +3082,7 @@ var_set("OUTPUT", _v189);
     goto _SNO_NEXT_188;
 _SNO_NEXT_188:;
 /* line 21 */
+trampoline_stno(21);
 SnoVal _v191 = aply("next",(SnoVal[]){deref(strv("@S"))},1);
 int _ok191 = !IS_FAIL(_v191);
 if(_ok191) {
@@ -2995,6 +3092,7 @@ iset(strv("@S"),_v191);
 _SNO_NEXT_190:;
 /* line 22 */
 _L_Pop1:;
+trampoline_stno(22);
 SnoVal _v193 = pat_cond(pat_var("dummy"),"?");
 int _ok193 = !IS_FAIL(_v193);
 if(_ok193) {
@@ -3004,6 +3102,7 @@ var_set("Pop", _Pop);
     goto _SNO_NEXT_192;
 _SNO_NEXT_192:;
 /* line 23 */
+trampoline_stno(23);
 SnoVal _v195 = aply("value",(SnoVal[]){deref(strv("@S"))},1);
 int _ok195 = !IS_FAIL(_v195);
 if(_ok195) {
@@ -3012,6 +3111,7 @@ iset(get(_var),_v195);
     goto _SNO_NEXT_194;
 _SNO_NEXT_194:;
 /* line 24 */
+trampoline_stno(24);
 SnoVal _v197 = pat_cat(pat_cat(pat_user_call("GT",(SnoVal[]){get(_xTrace),vint(4)},2),pat_lit("Pop() = ")),pat_cat(pat_var("t"),pat_deref(get(_var))));
 int _ok197 = !IS_FAIL(_v197);
 if(_ok197) {
@@ -3020,6 +3120,7 @@ var_set("OUTPUT", _v197);
     goto _SNO_NEXT_196;
 _SNO_NEXT_196:;
 /* line 25 */
+trampoline_stno(25);
 SnoVal _v199 = aply("next",(SnoVal[]){deref(strv("@S"))},1);
 int _ok199 = !IS_FAIL(_v199);
 if(_ok199) {
@@ -3052,12 +3153,14 @@ static SnoVal _sno_fn_Top(SnoVal *_args, int _nargs) {
 
 /* line 26 */
 _L_Top:;
+trampoline_stno(26);
 SnoVal _v201 = aply("DIFFER",(SnoVal[]){deref(strv("@S"))},1);
 int _ok201 = !IS_FAIL(_v201);
     if(!_ok201) goto _SNO_FRETURN_Top;
     goto _SNO_NEXT_200;
 _SNO_NEXT_200:;
 /* line 27 */
+trampoline_stno(27);
 SnoVal _v203 = pat_cond(pat_cat(pat_var("value"),pat_deref(strv("@S"))),"?");
 int _ok203 = !IS_FAIL(_v203);
 if(_ok203) {
@@ -3067,6 +3170,7 @@ var_set("Top", _Top);
     goto _SNO_NEXT_202;
 _SNO_NEXT_202:;
 /* line 28 */
+trampoline_stno(28);
 SnoVal _v205 = concat_sv(concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(4)},2),strv("Top() = ")),aply("t",(SnoVal[]){get(_Top)},1));
 int _ok205 = !IS_FAIL(_v205);
 if(_ok205) {
@@ -3076,29 +3180,35 @@ var_set("OUTPUT", _v205);
 _SNO_NEXT_204:;
 /* line 29 */
 _L_StackEnd:;
+trampoline_stno(29);
     goto _SNO_NEXT_206;
 _SNO_NEXT_206:;
 /* line 12 */
+trampoline_stno(12);
 SnoVal _v208 = aply("DATA",(SnoVal[]){strv("tree(t,v,n,c)")},1);
 int _ok208 = !IS_FAIL(_v208);
     goto _SNO_NEXT_207;
 _SNO_NEXT_207:;
 /* line 13 */
+trampoline_stno(13);
 SnoVal _v210 = aply("DEFINE",(SnoVal[]){strv("Append(x,y)")},1);
 int _ok210 = !IS_FAIL(_v210);
     goto _SNO_NEXT_209;
 _SNO_NEXT_209:;
 /* line 14 */
+trampoline_stno(14);
 SnoVal _v212 = aply("DEFINE",(SnoVal[]){strv("Prepend(x,y)")},1);
 int _ok212 = !IS_FAIL(_v212);
     goto _SNO_NEXT_211;
 _SNO_NEXT_211:;
 /* line 15 */
+trampoline_stno(15);
 SnoVal _v214 = aply("DEFINE",(SnoVal[]){strv("Insert(x,y,place)c,i")},1);
 int _ok214 = !IS_FAIL(_v214);
     goto _SNO_NEXT_213;
 _SNO_NEXT_213:;
 /* line 16 */
+trampoline_stno(16);
 SnoVal _v216 = aply("DEFINE",(SnoVal[]){strv("Remove(x,place)c,i")},1);
 int _ok216 = !IS_FAIL(_v216);
     goto _SNO_NEXT_215;
@@ -3131,6 +3241,7 @@ static SnoVal _sno_fn_Append(SnoVal *_args, int _nargs) {
 
 /* line 17 */
 _L_Append:;
+trampoline_stno(17);
 SnoVal _v218 = aply("Insert",(SnoVal[]){get(_x),get(_y),add(aply("n",(SnoVal[]){get(_x)},1),vint(1))},3);
 int _ok218 = !IS_FAIL(_v218);
 if(_ok218) {
@@ -3173,6 +3284,7 @@ static SnoVal _sno_fn_Prepend(SnoVal *_args, int _nargs) {
 
 /* line 18 */
 _L_Prepend:;
+trampoline_stno(18);
 SnoVal _v220 = aply("Insert",(SnoVal[]){get(_x),get(_y),vint(1)},3);
 int _ok220 = !IS_FAIL(_v220);
 if(_ok220) {
@@ -3224,6 +3336,7 @@ static SnoVal _sno_fn_Insert(SnoVal *_args, int _nargs) {
 
 /* line 19 */
 _L_Insert:;
+trampoline_stno(19);
 SnoVal _v222 = get(_x);
 int _ok222 = !IS_FAIL(_v222);
 if(_ok222) {
@@ -3233,6 +3346,7 @@ var_set("Insert", _Insert);
     goto _SNO_NEXT_221;
 _SNO_NEXT_221:;
 /* line 20 */
+trampoline_stno(20);
 SnoVal _v224 = aply("ARRAY",(SnoVal[]){concat_sv(strv("1:"),add(aply("n",(SnoVal[]){get(_x)},1),vint(1)))},1);
 int _ok224 = !IS_FAIL(_v224);
 if(_ok224) {
@@ -3242,6 +3356,7 @@ var_set("c", _c);
     goto _SNO_NEXT_223;
 _SNO_NEXT_223:;
 /* line 21 */
+trampoline_stno(21);
 SnoVal _v226 = vint(0);
 int _ok226 = !IS_FAIL(_v226);
 if(_ok226) {
@@ -3252,6 +3367,7 @@ var_set("i", _i);
 _SNO_NEXT_225:;
 /* line 22 */
 _L_Insert1:;
+trampoline_stno(22);
 SnoVal _v228 = concat_sv(aply("LT",(SnoVal[]){get(_i),sub(get(_place),vint(1))},2),add(get(_i),vint(1)));
 int _ok228 = !IS_FAIL(_v228);
 if(_ok228) {
@@ -3262,6 +3378,7 @@ var_set("i", _i);
     goto _SNO_NEXT_227;
 _SNO_NEXT_227:;
 /* line 23 */
+trampoline_stno(23);
 SnoVal _v230 = indx(aply("c",(SnoVal[]){get(_x)},1),(SnoVal[]){get(_i)},1);
 int _ok230 = !IS_FAIL(_v230);
 if(_ok230) {
@@ -3271,6 +3388,7 @@ iset(indx(get(_c),(SnoVal[]){get(_i)},1),_v230);
 _SNO_NEXT_229:;
 /* line 24 */
 _L_Insert2:;
+trampoline_stno(24);
 SnoVal _v232 = get(_y);
 int _ok232 = !IS_FAIL(_v232);
 if(_ok232) {
@@ -3280,6 +3398,7 @@ iset(indx(get(_c),(SnoVal[]){add(get(_i),vint(1))},1),_v232);
 _SNO_NEXT_231:;
 /* line 25 */
 _L_Insert3:;
+trampoline_stno(25);
 SnoVal _v234 = concat_sv(aply("LT",(SnoVal[]){get(_i),aply("n",(SnoVal[]){get(_x)},1)},2),add(get(_i),vint(1)));
 int _ok234 = !IS_FAIL(_v234);
 if(_ok234) {
@@ -3290,6 +3409,7 @@ var_set("i", _i);
     goto _SNO_NEXT_233;
 _SNO_NEXT_233:;
 /* line 26 */
+trampoline_stno(26);
 SnoVal _v236 = indx(aply("c",(SnoVal[]){get(_x)},1),(SnoVal[]){get(_i)},1);
 int _ok236 = !IS_FAIL(_v236);
 if(_ok236) {
@@ -3299,6 +3419,7 @@ iset(indx(get(_c),(SnoVal[]){add(get(_i),vint(1))},1),_v236);
 _SNO_NEXT_235:;
 /* line 27 */
 _L_Insert4:;
+trampoline_stno(27);
 SnoVal _v238 = add(aply("n",(SnoVal[]){get(_x)},1),vint(1));
 int _ok238 = !IS_FAIL(_v238);
 if(_ok238) {
@@ -3307,6 +3428,7 @@ field_set(get(_x), "n", _v238);
     goto _SNO_NEXT_237;
 _SNO_NEXT_237:;
 /* line 28 */
+trampoline_stno(28);
 SnoVal _v240 = get(_c);
 int _ok240 = !IS_FAIL(_v240);
 if(_ok240) {
@@ -3363,6 +3485,7 @@ static SnoVal _sno_fn_Remove(SnoVal *_args, int _nargs) {
 
 /* line 29 */
 _L_Remove:;
+trampoline_stno(29);
 SnoVal _v242 = get(_x);
 int _ok242 = !IS_FAIL(_v242);
 if(_ok242) {
@@ -3372,6 +3495,7 @@ var_set("Remove", _Remove);
     goto _SNO_NEXT_241;
 _SNO_NEXT_241:;
 /* line 30 */
+trampoline_stno(30);
 SnoVal _v244 = concat_sv(aply("GT",(SnoVal[]){sub(aply("n",(SnoVal[]){get(_x)},1),vint(1)),vint(0)},2),aply("ARRAY",(SnoVal[]){concat_sv(strv("1:"),sub(aply("n",(SnoVal[]){get(_x)},1),vint(1)))},1));
 int _ok244 = !IS_FAIL(_v244);
 if(_ok244) {
@@ -3381,6 +3505,7 @@ var_set("c", _c);
     goto _SNO_NEXT_243;
 _SNO_NEXT_243:;
 /* line 31 */
+trampoline_stno(31);
 SnoVal _v246 = vint(0);
 int _ok246 = !IS_FAIL(_v246);
 if(_ok246) {
@@ -3391,6 +3516,7 @@ var_set("i", _i);
 _SNO_NEXT_245:;
 /* line 32 */
 _L_Remove1:;
+trampoline_stno(32);
 SnoVal _v248 = concat_sv(aply("LT",(SnoVal[]){get(_i),sub(get(_place),vint(1))},2),add(get(_i),vint(1)));
 int _ok248 = !IS_FAIL(_v248);
 if(_ok248) {
@@ -3401,6 +3527,7 @@ var_set("i", _i);
     goto _SNO_NEXT_247;
 _SNO_NEXT_247:;
 /* line 33 */
+trampoline_stno(33);
 SnoVal _v250 = indx(aply("c",(SnoVal[]){get(_x)},1),(SnoVal[]){get(_i)},1);
 int _ok250 = !IS_FAIL(_v250);
 if(_ok250) {
@@ -3410,6 +3537,7 @@ iset(indx(get(_c),(SnoVal[]){get(_i)},1),_v250);
 _SNO_NEXT_249:;
 /* line 34 */
 _L_Remove2:;
+trampoline_stno(34);
 SnoVal _v252 = add(get(_i),vint(1));
 int _ok252 = !IS_FAIL(_v252);
 if(_ok252) {
@@ -3420,6 +3548,7 @@ var_set("i", _i);
 _SNO_NEXT_251:;
 /* line 35 */
 _L_Remove3:;
+trampoline_stno(35);
 SnoVal _v254 = concat_sv(aply("LT",(SnoVal[]){get(_i),aply("n",(SnoVal[]){get(_x)},1)},2),add(get(_i),vint(1)));
 int _ok254 = !IS_FAIL(_v254);
 if(_ok254) {
@@ -3430,6 +3559,7 @@ var_set("i", _i);
     goto _SNO_NEXT_253;
 _SNO_NEXT_253:;
 /* line 36 */
+trampoline_stno(36);
 SnoVal _v256 = indx(aply("c",(SnoVal[]){get(_x)},1),(SnoVal[]){get(_i)},1);
 int _ok256 = !IS_FAIL(_v256);
 if(_ok256) {
@@ -3439,6 +3569,7 @@ iset(indx(get(_c),(SnoVal[]){sub(get(_i),vint(1))},1),_v256);
 _SNO_NEXT_255:;
 /* line 37 */
 _L_Remove4:;
+trampoline_stno(37);
 SnoVal _v258 = sub(aply("n",(SnoVal[]){get(_x)},1),vint(1));
 int _ok258 = !IS_FAIL(_v258);
 if(_ok258) {
@@ -3447,6 +3578,7 @@ field_set(get(_x), "n", _v258);
     goto _SNO_NEXT_257;
 _SNO_NEXT_257:;
 /* line 38 */
+trampoline_stno(38);
 SnoVal _v260 = get(_c);
 int _ok260 = !IS_FAIL(_v260);
 if(_ok260) {
@@ -3527,6 +3659,7 @@ static SnoVal _sno_fn_Tree(SnoVal *_args, int _nargs) {
 
 /* line 42 */
 _L_Tree:;
+trampoline_stno(42);
 SnoVal _v262 = vint(8);
 int _ok262 = !IS_FAIL(_v262);
 if(_ok262) {
@@ -3537,6 +3670,7 @@ var_set("nc", _nc);
 _SNO_NEXT_261:;
 /* line 43 */
 _L_Tree1:;
+trampoline_stno(43);
 SnoVal _v264 = concat_sv(concat_sv(aply("GT",(SnoVal[]){get(_nc),vint(0)},2),aply("IDENT",(SnoVal[]){deref(concat_sv(strv("c"),get(_nc)))},1)),sub(get(_nc),vint(1)));
 int _ok264 = !IS_FAIL(_v264);
 if(_ok264) {
@@ -3547,6 +3681,7 @@ var_set("nc", _nc);
     goto _SNO_NEXT_263;
 _SNO_NEXT_263:;
 /* line 44 */
+trampoline_stno(44);
 SnoVal _v266 = pat_user_call("tree",(SnoVal[]){get(_t),get(_v),alt(concat_sv(aply("GT",(SnoVal[]){get(_nc),vint(0)},2),get(_nc)),get(_NULL))},3);
 int _ok266 = !IS_FAIL(_v266);
 if(_ok266) {
@@ -3556,6 +3691,7 @@ var_set("Tree", _Tree);
     goto _SNO_NEXT_265;
 _SNO_NEXT_265:;
 /* line 48 */
+trampoline_stno(48);
 SnoVal _v268 = vint(0);
 int _ok268 = !IS_FAIL(_v268);
 if(_ok268) {
@@ -3566,6 +3702,7 @@ var_set("i", _i);
 _SNO_NEXT_267:;
 /* line 49 */
 _L_Tree3:;
+trampoline_stno(49);
 SnoVal _v270 = concat_sv(aply("LT",(SnoVal[]){get(_i),get(_nc)},2),add(get(_i),vint(1)));
 int _ok270 = !IS_FAIL(_v270);
 if(_ok270) {
@@ -3576,6 +3713,7 @@ var_set("i", _i);
     goto _SNO_NEXT_269;
 _SNO_NEXT_269:;
 /* line 50 */
+trampoline_stno(50);
 SnoVal _v272 = deref(concat_sv(strv("c"),get(_i)));
 int _ok272 = !IS_FAIL(_v272);
 if(_ok272) {
@@ -3653,6 +3791,7 @@ static SnoVal _sno_fn_Equal(SnoVal *_args, int _nargs) {
 
 /* line 54 */
 _L_Equal:;
+trampoline_stno(54);
 /* byrd mtch u274 */
 SnoVal _s274 = get(_epsilon);
 const char *_subj274 = to_str(_s274);
@@ -3710,6 +3849,7 @@ _byrd_274_done:;
     goto _SNO_NEXT_273;
 _SNO_NEXT_273:;
 /* line 55 */
+trampoline_stno(55);
 /* byrd mtch u276 */
 SnoVal _s276 = get(_epsilon);
 const char *_subj276 = to_str(_s276);
@@ -3767,24 +3907,28 @@ _byrd_276_done:;
     goto _SNO_NEXT_275;
 _SNO_NEXT_275:;
 /* line 56 */
+trampoline_stno(56);
 SnoVal _v278 = aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),aply("t",(SnoVal[]){get(_y)},1)},2);
 int _ok278 = !IS_FAIL(_v278);
     if(!_ok278) goto _SNO_FRETURN_Equal;
     goto _SNO_NEXT_277;
 _SNO_NEXT_277:;
 /* line 57 */
+trampoline_stno(57);
 SnoVal _v280 = aply("IDENT",(SnoVal[]){aply("v",(SnoVal[]){get(_x)},1),aply("v",(SnoVal[]){get(_y)},1)},2);
 int _ok280 = !IS_FAIL(_v280);
     if(!_ok280) goto _SNO_FRETURN_Equal;
     goto _SNO_NEXT_279;
 _SNO_NEXT_279:;
 /* line 58 */
+trampoline_stno(58);
 SnoVal _v282 = aply("IDENT",(SnoVal[]){aply("n",(SnoVal[]){get(_x)},1),aply("n",(SnoVal[]){get(_y)},1)},2);
 int _ok282 = !IS_FAIL(_v282);
     if(!_ok282) goto _SNO_FRETURN_Equal;
     goto _SNO_NEXT_281;
 _SNO_NEXT_281:;
 /* line 59 */
+trampoline_stno(59);
 SnoVal _v284 = vint(0);
 int _ok284 = !IS_FAIL(_v284);
 if(_ok284) {
@@ -3795,6 +3939,7 @@ var_set("i", _i);
 _SNO_NEXT_283:;
 /* line 60 */
 _L_Equal5:;
+trampoline_stno(60);
 SnoVal _v286 = concat_sv(aply("LT",(SnoVal[]){get(_i),aply("n",(SnoVal[]){get(_x)},1)},2),add(get(_i),vint(1)));
 int _ok286 = !IS_FAIL(_v286);
 if(_ok286) {
@@ -3805,6 +3950,7 @@ var_set("i", _i);
     goto _SNO_NEXT_285;
 _SNO_NEXT_285:;
 /* line 61 */
+trampoline_stno(61);
 SnoVal _v288 = aply("Equal",(SnoVal[]){indx(aply("c",(SnoVal[]){get(_x)},1),(SnoVal[]){get(_i)},1),indx(aply("c",(SnoVal[]){get(_y)},1),(SnoVal[]){get(_i)},1)},2);
 int _ok288 = !IS_FAIL(_v288);
     if(_ok288) goto _L_Equal5;
@@ -3851,6 +3997,7 @@ static SnoVal _sno_fn_Equiv(SnoVal *_args, int _nargs) {
 
 /* line 65 */
 _L_Equiv:;
+trampoline_stno(65);
 /* byrd mtch u290 */
 SnoVal _s290 = aply("t",(SnoVal[]){get(_x)},1);
 const char *_subj290 = to_str(_s290);
@@ -3886,6 +4033,7 @@ _byrd_290_done:;
     goto _SNO_NEXT_289;
 _SNO_NEXT_289:;
 /* line 66 */
+trampoline_stno(66);
 /* byrd mtch u292 */
 SnoVal _s292 = aply("v",(SnoVal[]){get(_x)},1);
 const char *_subj292 = to_str(_s292);
@@ -3921,6 +4069,7 @@ _byrd_292_done:;
     goto _SNO_NEXT_291;
 _SNO_NEXT_291:;
 /* line 67 */
+trampoline_stno(67);
 /* byrd mtch u294 */
 SnoVal _s294 = aply("n",(SnoVal[]){get(_x)},1);
 const char *_subj294 = to_str(_s294);
@@ -3956,6 +4105,7 @@ _byrd_294_done:;
     goto _SNO_NEXT_293;
 _SNO_NEXT_293:;
 /* line 68 */
+trampoline_stno(68);
 SnoVal _v296 = vint(0);
 int _ok296 = !IS_FAIL(_v296);
 if(_ok296) {
@@ -3966,6 +4116,7 @@ var_set("i", _i);
 _SNO_NEXT_295:;
 /* line 69 */
 _L_Equiv5:;
+trampoline_stno(69);
 SnoVal _v298 = add(get(_i),vint(1));
 int _ok298 = !IS_FAIL(_v298);
 if(_ok298) {
@@ -3975,12 +4126,14 @@ var_set("i", _i);
     goto _SNO_NEXT_297;
 _SNO_NEXT_297:;
 /* line 70 */
+trampoline_stno(70);
 SnoVal _v300 = concat_sv(aply("DIFFER",(SnoVal[]){aply("c",(SnoVal[]){get(_y)},1)},1),indx(aply("c",(SnoVal[]){get(_y)},1),(SnoVal[]){get(_i)},1));
 int _ok300 = !IS_FAIL(_v300);
     if(!_ok300) goto _SNO_RETURN_Equiv;
     goto _SNO_NEXT_299;
 _SNO_NEXT_299:;
 /* line 71 */
+trampoline_stno(71);
 SnoVal _v302 = aply("Equiv",(SnoVal[]){indx(aply("c",(SnoVal[]){get(_x)},1),(SnoVal[]){get(_i)},1),indx(aply("c",(SnoVal[]){get(_y)},1),(SnoVal[]){get(_i)},1)},2);
 int _ok302 = !IS_FAIL(_v302);
     if(_ok302) goto _L_Equiv5;
@@ -4030,18 +4183,21 @@ static SnoVal _sno_fn_Find(SnoVal *_args, int _nargs) {
 
 /* line 75 */
 _L_Find:;
+trampoline_stno(75);
 SnoVal _v304 = aply("DIFFER",(SnoVal[]){deref(get(_xn))},1);
 int _ok304 = !IS_FAIL(_v304);
     if(!_ok304) goto _SNO_RETURN_Find;
     goto _SNO_NEXT_303;
 _SNO_NEXT_303:;
 /* line 76 */
+trampoline_stno(76);
 SnoVal _v306 = concat_sv(aply("Equiv",(SnoVal[]){deref(get(_xn)),get(_y)},2),aply("APPLY",(SnoVal[]){get(_f),get(_xn)},2));
 int _ok306 = !IS_FAIL(_v306);
     if(_ok306) goto _SNO_RETURN_Find;
     goto _SNO_NEXT_305;
 _SNO_NEXT_305:;
 /* line 77 */
+trampoline_stno(77);
 SnoVal _v308 = vint(0);
 int _ok308 = !IS_FAIL(_v308);
 if(_ok308) {
@@ -4052,6 +4208,7 @@ var_set("i", _i);
 _SNO_NEXT_307:;
 /* line 78 */
 _L_Find5:;
+trampoline_stno(78);
 SnoVal _v310 = pat_cat(pat_user_call("LT",(SnoVal[]){get(_i),aply("n",(SnoVal[]){deref(get(_xn))},1)},2),pat_val(add(get(_i),vint(1))));
 int _ok310 = !IS_FAIL(_v310);
 if(_ok310) {
@@ -4062,6 +4219,7 @@ var_set("i", _i);
     goto _SNO_NEXT_309;
 _SNO_NEXT_309:;
 /* line 79 */
+trampoline_stno(79);
 SnoVal _v312 = aply("Find",(SnoVal[]){indx(aply("c",(SnoVal[]){deref(get(_xn))},1),(SnoVal[]){get(_i)},1),get(_y),get(_f)},3);
 int _ok312 = !IS_FAIL(_v312);
     goto _L_Find5;
@@ -4109,12 +4267,14 @@ static SnoVal _sno_fn_Visit(SnoVal *_args, int _nargs) {
 
 /* line 84 */
 _L_Visit:;
+trampoline_stno(84);
 SnoVal _v314 = aply("APPLY",(SnoVal[]){get(_fnc),get(_x)},2);
 int _ok314 = !IS_FAIL(_v314);
     if(!_ok314) goto _SNO_RETURN_Visit;
     goto _SNO_NEXT_313;
 _SNO_NEXT_313:;
 /* line 85 */
+trampoline_stno(85);
 SnoVal _v316 = vint(0);
 int _ok316 = !IS_FAIL(_v316);
 if(_ok316) {
@@ -4125,6 +4285,7 @@ var_set("i", _i);
 _SNO_NEXT_315:;
 /* line 86 */
 _L_Visit_1:;
+trampoline_stno(86);
 SnoVal _v318 = concat_sv(aply("LT",(SnoVal[]){get(_i),aply("n",(SnoVal[]){get(_x)},1)},2),add(get(_i),vint(1)));
 int _ok318 = !IS_FAIL(_v318);
 if(_ok318) {
@@ -4135,6 +4296,7 @@ var_set("i", _i);
     goto _SNO_NEXT_317;
 _SNO_NEXT_317:;
 /* line 87 */
+trampoline_stno(87);
 SnoVal _v320 = aply("Visit",(SnoVal[]){indx(aply("c",(SnoVal[]){get(_x)},1),(SnoVal[]){get(_i)},1),get(_fnc)},2);
 int _ok320 = !IS_FAIL(_v320);
     goto _L_Visit_1;
@@ -4179,6 +4341,7 @@ static SnoVal _sno_fn_Shift(SnoVal *_args, int _nargs) {
 
 /* line 10 */
 _L_Shift:;
+trampoline_stno(10);
 /* byrd mtch u322 */
 SnoVal _s322 = get(_v);
 const char *_subj322 = to_str(_s322);
@@ -4219,6 +4382,7 @@ _byrd_322_done:;
     goto _SNO_NEXT_321;
 _SNO_NEXT_321:;
 /* line 11 */
+trampoline_stno(11);
 SnoVal _v324 = aply("tree",(SnoVal[]){get(_t),get(_v)},2);
 int _ok324 = !IS_FAIL(_v324);
 if(_ok324) {
@@ -4228,11 +4392,13 @@ var_set("s", _s);
     goto _SNO_NEXT_323;
 _SNO_NEXT_323:;
 /* line 12 */
+trampoline_stno(12);
 SnoVal _v326 = aply("Push",(SnoVal[]){get(_s)},1);
 int _ok326 = !IS_FAIL(_v326);
     goto _SNO_NEXT_325;
 _SNO_NEXT_325:;
 /* line 13 */
+trampoline_stno(13);
 SnoVal _v328 = concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(3)},2),strv("Shift(")),get(_t)),strv(", ")),get(_v)),strv(")"));
 int _ok328 = !IS_FAIL(_v328);
 if(_ok328) {
@@ -4241,6 +4407,7 @@ var_set("OUTPUT", _v328);
     goto _SNO_NEXT_327;
 _SNO_NEXT_327:;
 /* line 15 */
+trampoline_stno(15);
 SnoVal _v330 = pat_cond(pat_user_call("IDENT",(SnoVal[]){get(_v)},1),"?");
 int _ok330 = !IS_FAIL(_v330);
 if(_ok330) {
@@ -4251,6 +4418,7 @@ var_set("Shift", _Shift);
     goto _SNO_NEXT_329;
 _SNO_NEXT_329:;
 /* line 16 */
+trampoline_stno(16);
 SnoVal _v332 = pat_cond(pat_user_call("DIFFER",(SnoVal[]){get(_v)},1),"dummy");
 int _ok332 = !IS_FAIL(_v332);
 if(_ok332) {
@@ -4305,6 +4473,7 @@ static SnoVal _sno_fn_Reduce(SnoVal *_args, int _nargs) {
 
 /* line 20 */
 _L_Reduce:;
+trampoline_stno(20);
 SnoVal _v334 = pat_cond(pat_var("dummy"),"?");
 int _ok334 = !IS_FAIL(_v334);
 if(_ok334) {
@@ -4314,12 +4483,14 @@ var_set("Reduce", _Reduce);
     goto _SNO_NEXT_333;
 _SNO_NEXT_333:;
 /* line 21 */
+trampoline_stno(21);
 SnoVal _v336 = aply("IDENT",(SnoVal[]){aply("DATATYPE",(SnoVal[]){get(_t)},1),strv("EXPRESSION")},2);
 int _ok336 = !IS_FAIL(_v336);
     if(!_ok336) goto _L_Reduce0;
     goto _SNO_NEXT_335;
 _SNO_NEXT_335:;
 /* line 22 */
+trampoline_stno(22);
 SnoVal _v338 = aply("EVAL",(SnoVal[]){get(_t)},1);
 int _ok338 = !IS_FAIL(_v338);
 if(_ok338) {
@@ -4331,12 +4502,14 @@ var_set("t", _t);
 _SNO_NEXT_337:;
 /* line 23 */
 _L_Reduce0:;
+trampoline_stno(23);
 SnoVal _v340 = aply("IDENT",(SnoVal[]){aply("DATATYPE",(SnoVal[]){get(_n)},1),strv("EXPRESSION")},2);
 int _ok340 = !IS_FAIL(_v340);
     if(!_ok340) goto _L_Reduce1;
     goto _SNO_NEXT_339;
 _SNO_NEXT_339:;
 /* line 24 */
+trampoline_stno(24);
 SnoVal _v342 = aply("EVAL",(SnoVal[]){get(_n)},1);
 int _ok342 = !IS_FAIL(_v342);
 if(_ok342) {
@@ -4348,6 +4521,7 @@ var_set("n", _n);
 _SNO_NEXT_341:;
 /* line 25 */
 _L_Reduce1:;
+trampoline_stno(25);
 SnoVal _v344 = concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(aply("GT",(SnoVal[]){get(_xTrace),vint(3)},2),strv("Reduce(")),get(_t)),strv(", ")),get(_n)),strv(")"));
 int _ok344 = !IS_FAIL(_v344);
 if(_ok344) {
@@ -4356,6 +4530,7 @@ var_set("OUTPUT", _v344);
     goto _SNO_NEXT_343;
 _SNO_NEXT_343:;
 /* line 26 */
+trampoline_stno(26);
 SnoVal _v346 = concat_sv(aply("GE",(SnoVal[]){get(_n),vint(1)},2),aply("ARRAY",(SnoVal[]){concat_sv(strv("1:"),get(_n))},1));
 int _ok346 = !IS_FAIL(_v346);
 if(_ok346) {
@@ -4365,6 +4540,7 @@ var_set("c", _c);
     goto _SNO_NEXT_345;
 _SNO_NEXT_345:;
 /* line 27 */
+trampoline_stno(27);
 SnoVal _v348 = add(get(_n),vint(1));
 int _ok348 = !IS_FAIL(_v348);
 if(_ok348) {
@@ -4375,6 +4551,7 @@ var_set("i", _i);
 _SNO_NEXT_347:;
 /* line 28 */
 _L_Reduce2:;
+trampoline_stno(28);
 SnoVal _v350 = concat_sv(aply("GT",(SnoVal[]){get(_i),vint(1)},2),sub(get(_i),vint(1)));
 int _ok350 = !IS_FAIL(_v350);
 if(_ok350) {
@@ -4385,6 +4562,7 @@ var_set("i", _i);
     goto _SNO_NEXT_349;
 _SNO_NEXT_349:;
 /* line 29 */
+trampoline_stno(29);
 SnoVal _v352 = aply("Pop",NULL,0);
 int _ok352 = !IS_FAIL(_v352);
 if(_ok352) {
@@ -4394,6 +4572,7 @@ iset(indx(get(_c),(SnoVal[]){get(_i)},1),_v352);
 _SNO_NEXT_351:;
 /* line 30 */
 _L_Reduce3:;
+trampoline_stno(30);
 SnoVal _v354 = aply("tree",(SnoVal[]){get(_t),NULL_VAL,get(_n),get(_c)},4);
 int _ok354 = !IS_FAIL(_v354);
 if(_ok354) {
@@ -4403,6 +4582,7 @@ var_set("r", _r);
     goto _SNO_NEXT_353;
 _SNO_NEXT_353:;
 /* line 32 */
+trampoline_stno(32);
 SnoVal _v356 = aply("Push",(SnoVal[]){get(_r)},1);
 int _ok356 = !IS_FAIL(_v356);
     goto _SNO_RETURN_Reduce;
@@ -4450,9 +4630,11 @@ static SnoVal _sno_fn_TValue(SnoVal *_args, int _nargs) {
 
 /* line 10 */
 _L_TValue:;
+trampoline_stno(10);
     goto _SNO_NEXT_357;
 _SNO_NEXT_357:;
 /* line 12 */
+trampoline_stno(12);
 SnoVal _v359 = concat_sv(aply("IDENT",(SnoVal[]){aply("v",(SnoVal[]){get(_x)},1)},1),strv("."));
 int _ok359 = !IS_FAIL(_v359);
 if(_ok359) {
@@ -4463,6 +4645,7 @@ var_set("TValue", _TValue);
     goto _SNO_NEXT_358;
 _SNO_NEXT_358:;
 /* line 13 */
+trampoline_stno(13);
 SnoVal _v361 = concat_sv(aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("Name")},2),aply("v",(SnoVal[]){get(_x)},1));
 int _ok361 = !IS_FAIL(_v361);
 if(_ok361) {
@@ -4473,6 +4656,7 @@ var_set("TValue", _TValue);
     goto _SNO_NEXT_360;
 _SNO_NEXT_360:;
 /* line 14 */
+trampoline_stno(14);
 SnoVal _v363 = concat_sv(aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("float")},2),aply("v",(SnoVal[]){get(_x)},1));
 int _ok363 = !IS_FAIL(_v363);
 if(_ok363) {
@@ -4483,6 +4667,7 @@ var_set("TValue", _TValue);
     goto _SNO_NEXT_362;
 _SNO_NEXT_362:;
 /* line 15 */
+trampoline_stno(15);
 SnoVal _v365 = concat_sv(aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("integer")},2),aply("v",(SnoVal[]){get(_x)},1));
 int _ok365 = !IS_FAIL(_v365);
 if(_ok365) {
@@ -4493,6 +4678,7 @@ var_set("TValue", _TValue);
     goto _SNO_NEXT_364;
 _SNO_NEXT_364:;
 /* line 16 */
+trampoline_stno(16);
 SnoVal _v367 = concat_sv(aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("bool")},2),aply("v",(SnoVal[]){get(_x)},1));
 int _ok367 = !IS_FAIL(_v367);
 if(_ok367) {
@@ -4503,6 +4689,7 @@ var_set("TValue", _TValue);
     goto _SNO_NEXT_366;
 _SNO_NEXT_366:;
 /* line 17 */
+trampoline_stno(17);
 SnoVal _v369 = concat_sv(concat_sv(concat_sv(aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("datetime")},2),strv("'")),aply("SqlSQize",(SnoVal[]){aply("v",(SnoVal[]){get(_x)},1)},1)),strv("'"));
 int _ok369 = !IS_FAIL(_v369);
 if(_ok369) {
@@ -4513,6 +4700,7 @@ var_set("TValue", _TValue);
     goto _SNO_NEXT_368;
 _SNO_NEXT_368:;
 /* line 18 */
+trampoline_stno(18);
 SnoVal _v371 = concat_sv(concat_sv(concat_sv(aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("character")},2),strv("'")),aply("SqlSQize",(SnoVal[]){aply("v",(SnoVal[]){get(_x)},1)},1)),strv("'"));
 int _ok371 = !IS_FAIL(_v371);
 if(_ok371) {
@@ -4523,6 +4711,7 @@ var_set("TValue", _TValue);
     goto _SNO_NEXT_370;
 _SNO_NEXT_370:;
 /* line 19 */
+trampoline_stno(19);
 SnoVal _v373 = concat_sv(concat_sv(concat_sv(aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("string")},2),strv("'")),aply("SqlSQize",(SnoVal[]){aply("v",(SnoVal[]){get(_x)},1)},1)),strv("'"));
 int _ok373 = !IS_FAIL(_v373);
 if(_ok373) {
@@ -4533,6 +4722,7 @@ var_set("TValue", _TValue);
     goto _SNO_NEXT_372;
 _SNO_NEXT_372:;
 /* line 20 */
+trampoline_stno(20);
 SnoVal _v375 = concat_sv(aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("identifier")},2),aply("v",(SnoVal[]){get(_x)},1));
 int _ok375 = !IS_FAIL(_v375);
 if(_ok375) {
@@ -4543,6 +4733,7 @@ var_set("TValue", _TValue);
     goto _SNO_NEXT_374;
 _SNO_NEXT_374:;
 /* line 21 */
+trampoline_stno(21);
 SnoVal _v377 = aply("t",(SnoVal[]){get(_x)},1);
 int _ok377 = !IS_FAIL(_v377);
 if(_ok377) {
@@ -4554,6 +4745,7 @@ var_set("TValue", _TValue);
 _SNO_NEXT_376:;
 /* line 22 */
 _L_TValue3:;
+trampoline_stno(22);
 SnoVal _v379 = vint(0);
 int _ok379 = !IS_FAIL(_v379);
 if(_ok379) {
@@ -4564,6 +4756,7 @@ var_set("i", _i);
 _SNO_NEXT_378:;
 /* line 23 */
 _L_TValue5:;
+trampoline_stno(23);
 SnoVal _v381 = concat_sv(aply("LT",(SnoVal[]){get(_i),aply("n",(SnoVal[]){get(_x)},1)},2),add(get(_i),vint(1)));
 int _ok381 = !IS_FAIL(_v381);
 if(_ok381) {
@@ -4574,6 +4767,7 @@ var_set("i", _i);
     goto _SNO_NEXT_380;
 _SNO_NEXT_380:;
 /* line 24 */
+trampoline_stno(24);
 SnoVal _v383 = pat_cat(pat_cat(pat_var("TValue"),pat_alt(pat_cat(pat_user_call("DIFFER",(SnoVal[]){get(_TValue)},1),pat_lit(".")),pat_lit(""))),pat_cat(pat_var("v"),pat_val(indx(aply("c",(SnoVal[]){get(_x)},1),(SnoVal[]){get(_i)},1))));
 int _ok383 = !IS_FAIL(_v383);
 if(_ok383) {
@@ -4622,6 +4816,7 @@ static SnoVal _sno_fn_TDump(SnoVal *_args, int _nargs) {
 
 /* line 28 */
 _L_TDump:;
+trampoline_stno(28);
 SnoVal _v385 = pat_cond(pat_user_call("IDENT",(SnoVal[]){get(_outNm)},1),"OUTPUT");
 int _ok385 = !IS_FAIL(_v385);
 if(_ok385) {
@@ -4631,6 +4826,7 @@ var_set("outNm", _outNm);
     goto _SNO_NEXT_384;
 _SNO_NEXT_384:;
 /* line 29 */
+trampoline_stno(29);
 SnoVal _v387 = aply("IDENT",(SnoVal[]){aply("DATATYPE",(SnoVal[]){get(_x)},1),strv("NAME")},2);
 int _ok387 = !IS_FAIL(_v387);
 if(_ok387) {
@@ -4640,12 +4836,14 @@ var_set("x", _x);
     goto _SNO_NEXT_386;
 _SNO_NEXT_386:;
 /* line 30 */
+trampoline_stno(30);
 SnoVal _v389 = aply("Gen",(SnoVal[]){concat_sv(aply("TLump",(SnoVal[]){get(_x),sub(vint(140),aply("GetLevel",NULL,0))},2),get(_nl)),get(_outNm)},2);
 int _ok389 = !IS_FAIL(_v389);
     if(_ok389) goto _SNO_RETURN_TDump;
     goto _SNO_NEXT_388;
 _SNO_NEXT_388:;
 /* line 31 */
+trampoline_stno(31);
 /* byrd mtch u391 */
 SnoVal _s391 = get(_NULL);
 const char *_subj391 = to_str(_s391);
@@ -4689,12 +4887,14 @@ _byrd_391_done:;
     goto _SNO_NEXT_390;
 _SNO_NEXT_390:;
 /* line 32 */
+trampoline_stno(32);
 SnoVal _v393 = aply("Gen",(SnoVal[]){concat_sv(aply("TValue",(SnoVal[]){get(_x)},1),get(_nl)),get(_outNm)},2);
 int _ok393 = !IS_FAIL(_v393);
     goto _SNO_RETURN_TDump;
 _SNO_NEXT_392:;
 /* line 33 */
 _L_TDump0:;
+trampoline_stno(33);
 /* byrd mtch u395 */
 SnoVal _s395 = aply("t",(SnoVal[]){get(_x)},1);
 const char *_subj395 = to_str(_s395);
@@ -4765,6 +4965,7 @@ _byrd_395_done:;
     goto _SNO_NEXT_394;
 _SNO_NEXT_394:;
 /* line 35 */
+trampoline_stno(35);
 SnoVal _v397 = aply("t",(SnoVal[]){get(_x)},1);
 int _ok397 = !IS_FAIL(_v397);
 if(_ok397) {
@@ -4775,6 +4976,7 @@ var_set("t", _t);
 _SNO_NEXT_396:;
 /* line 36 */
 _L_TDump1:;
+trampoline_stno(36);
 SnoVal _v399 = concat_sv(concat_sv(strv("\""),aply("t",(SnoVal[]){get(_x)},1)),strv("\""));
 int _ok399 = !IS_FAIL(_v399);
 if(_ok399) {
@@ -4785,16 +4987,19 @@ var_set("t", _t);
 _SNO_NEXT_398:;
 /* line 37 */
 _L_TDump2:;
+trampoline_stno(37);
 SnoVal _v401 = aply("Gen",(SnoVal[]){concat_sv(concat_sv(strv("("),get(_t)),get(_nl)),get(_outNm)},2);
 int _ok401 = !IS_FAIL(_v401);
     goto _SNO_NEXT_400;
 _SNO_NEXT_400:;
 /* line 38 */
+trampoline_stno(38);
 SnoVal _v403 = aply("IncLevel",NULL,0);
 int _ok403 = !IS_FAIL(_v403);
     goto _SNO_NEXT_402;
 _SNO_NEXT_402:;
 /* line 39 */
+trampoline_stno(39);
 SnoVal _v405 = vint(0);
 int _ok405 = !IS_FAIL(_v405);
 if(_ok405) {
@@ -4805,6 +5010,7 @@ var_set("i", _i);
 _SNO_NEXT_404:;
 /* line 40 */
 _L_TDump3:;
+trampoline_stno(40);
 SnoVal _v407 = concat_sv(aply("LT",(SnoVal[]){get(_i),aply("n",(SnoVal[]){get(_x)},1)},2),add(get(_i),vint(1)));
 int _ok407 = !IS_FAIL(_v407);
 if(_ok407) {
@@ -4815,17 +5021,20 @@ var_set("i", _i);
     goto _SNO_NEXT_406;
 _SNO_NEXT_406:;
 /* line 41 */
+trampoline_stno(41);
 SnoVal _v409 = aply("TDump",(SnoVal[]){indx(aply("c",(SnoVal[]){get(_x)},1),(SnoVal[]){get(_i)},1),get(_outNm)},2);
 int _ok409 = !IS_FAIL(_v409);
     goto _L_TDump3;
 _SNO_NEXT_408:;
 /* line 42 */
 _L_TDump4:;
+trampoline_stno(42);
 SnoVal _v411 = aply("DecLevel",NULL,0);
 int _ok411 = !IS_FAIL(_v411);
     goto _SNO_NEXT_410;
 _SNO_NEXT_410:;
 /* line 43 */
+trampoline_stno(43);
 SnoVal _v413 = aply("Gen",(SnoVal[]){concat_sv(strv(")"),get(_nl)),get(_outNm)},2);
 int _ok413 = !IS_FAIL(_v413);
     goto _SNO_RETURN_TDump;
@@ -4876,12 +5085,14 @@ static SnoVal _sno_fn_TLump(SnoVal *_args, int _nargs) {
 
 /* line 47 */
 _L_TLump:;
+trampoline_stno(47);
 SnoVal _v415 = aply("GT",(SnoVal[]){get(_len),vint(0)},2);
 int _ok415 = !IS_FAIL(_v415);
     if(!_ok415) goto _SNO_FRETURN_TLump;
     goto _SNO_NEXT_414;
 _SNO_NEXT_414:;
 /* line 48 */
+trampoline_stno(48);
 SnoVal _v417 = concat_sv(aply("IDENT",(SnoVal[]){get(_x)},1),strv("()"));
 int _ok417 = !IS_FAIL(_v417);
 if(_ok417) {
@@ -4892,6 +5103,7 @@ var_set("TLump", _TLump);
     goto _SNO_NEXT_416;
 _SNO_NEXT_416:;
 /* line 49 */
+trampoline_stno(49);
 /* byrd mtch u419 */
 SnoVal _s419 = get(_NULL);
 const char *_subj419 = to_str(_s419);
@@ -4935,6 +5147,7 @@ _byrd_419_done:;
     goto _SNO_NEXT_418;
 _SNO_NEXT_418:;
 /* line 50 */
+trampoline_stno(50);
 SnoVal _v421 = aply("TValue",(SnoVal[]){get(_x)},1);
 int _ok421 = !IS_FAIL(_v421);
 if(_ok421) {
@@ -4944,6 +5157,7 @@ var_set("TLump", _TLump);
     goto _SNO_NEXT_420;
 _SNO_NEXT_420:;
 /* line 51 */
+trampoline_stno(51);
 SnoVal _v423 = aply("LE",(SnoVal[]){aply("SIZE",(SnoVal[]){get(_TLump)},1),get(_len)},2);
 int _ok423 = !IS_FAIL(_v423);
     if(_ok423) goto _SNO_RETURN_TLump;
@@ -4952,6 +5166,7 @@ int _ok423 = !IS_FAIL(_v423);
 _SNO_NEXT_422:;
 /* line 52 */
 _L_TLump0:;
+trampoline_stno(52);
 SnoVal _v425 = strv("(");
 int _ok425 = !IS_FAIL(_v425);
 if(_ok425) {
@@ -4961,6 +5176,7 @@ var_set("TLump", _TLump);
     goto _SNO_NEXT_424;
 _SNO_NEXT_424:;
 /* line 53 */
+trampoline_stno(53);
 /* byrd mtch u427 */
 SnoVal _s427 = aply("t",(SnoVal[]){get(_x)},1);
 const char *_subj427 = to_str(_s427);
@@ -5031,6 +5247,7 @@ _byrd_427_done:;
     goto _SNO_NEXT_426;
 _SNO_NEXT_426:;
 /* line 55 */
+trampoline_stno(55);
 SnoVal _v429 = aply("t",(SnoVal[]){get(_x)},1);
 int _ok429 = !IS_FAIL(_v429);
 if(_ok429) {
@@ -5041,6 +5258,7 @@ var_set("t", _t);
 _SNO_NEXT_428:;
 /* line 56 */
 _L_TLump1:;
+trampoline_stno(56);
 SnoVal _v431 = concat_sv(concat_sv(strv("\""),aply("t",(SnoVal[]){get(_x)},1)),strv("\""));
 int _ok431 = !IS_FAIL(_v431);
 if(_ok431) {
@@ -5051,6 +5269,7 @@ var_set("t", _t);
 _SNO_NEXT_430:;
 /* line 57 */
 _L_TLump2:;
+trampoline_stno(57);
 SnoVal _v433 = concat_sv(get(_TLump),get(_t));
 int _ok433 = !IS_FAIL(_v433);
 if(_ok433) {
@@ -5060,6 +5279,7 @@ var_set("TLump", _TLump);
     goto _SNO_NEXT_432;
 _SNO_NEXT_432:;
 /* line 58 */
+trampoline_stno(58);
 SnoVal _v435 = vint(0);
 int _ok435 = !IS_FAIL(_v435);
 if(_ok435) {
@@ -5070,6 +5290,7 @@ var_set("i", _i);
 _SNO_NEXT_434:;
 /* line 59 */
 _L_TLump3:;
+trampoline_stno(59);
 SnoVal _v437 = concat_sv(aply("LT",(SnoVal[]){get(_i),aply("n",(SnoVal[]){get(_x)},1)},2),add(get(_i),vint(1)));
 int _ok437 = !IS_FAIL(_v437);
 if(_ok437) {
@@ -5080,6 +5301,7 @@ var_set("i", _i);
     goto _SNO_NEXT_436;
 _SNO_NEXT_436:;
 /* line 60 */
+trampoline_stno(60);
 SnoVal _v439 = concat_sv(concat_sv(get(_TLump),strv(" ")),aply("TLump",(SnoVal[]){indx(aply("c",(SnoVal[]){get(_x)},1),(SnoVal[]){get(_i)},1),sub(sub(get(_len),aply("SIZE",(SnoVal[]){get(_TLump)},1)),vint(2))},2));
 int _ok439 = !IS_FAIL(_v439);
 if(_ok439) {
@@ -5092,6 +5314,7 @@ var_set("TLump", _TLump);
 _SNO_NEXT_438:;
 /* line 61 */
 _L_TLump4:;
+trampoline_stno(61);
 SnoVal _v441 = concat_sv(get(_TLump),strv(")"));
 int _ok441 = !IS_FAIL(_v441);
 if(_ok441) {
@@ -5137,6 +5360,7 @@ static SnoVal _sno_fn_IncLevel(SnoVal *_args, int _nargs) {
 
 /* line 25 */
 _L_IncLevel:;
+trampoline_stno(25);
 SnoVal _v443 = pat_cond(pat_var("dummy"),"?");
 int _ok443 = !IS_FAIL(_v443);
 if(_ok443) {
@@ -5146,6 +5370,7 @@ var_set("IncLevel", _IncLevel);
     goto _SNO_NEXT_442;
 _SNO_NEXT_442:;
 /* line 26 */
+trampoline_stno(26);
 SnoVal _v445 = concat_sv(aply("IDENT",(SnoVal[]){get(_delta)},1),vint(2));
 int _ok445 = !IS_FAIL(_v445);
 if(_ok445) {
@@ -5155,6 +5380,7 @@ var_set("delta", _delta);
     goto _SNO_NEXT_444;
 _SNO_NEXT_444:;
 /* line 27 */
+trampoline_stno(27);
 SnoVal _v447 = add(deref(strv("#L")),get(_delta));
 int _ok447 = !IS_FAIL(_v447);
 if(_ok447) {
@@ -5190,6 +5416,7 @@ static SnoVal _sno_fn_DecLevel(SnoVal *_args, int _nargs) {
 
 /* line 28 */
 _L_DecLevel:;
+trampoline_stno(28);
 SnoVal _v449 = pat_cond(pat_var("dummy"),"?");
 int _ok449 = !IS_FAIL(_v449);
 if(_ok449) {
@@ -5199,6 +5426,7 @@ var_set("DecLevel", _DecLevel);
     goto _SNO_NEXT_448;
 _SNO_NEXT_448:;
 /* line 29 */
+trampoline_stno(29);
 SnoVal _v451 = concat_sv(aply("IDENT",(SnoVal[]){get(_delta)},1),vint(2));
 int _ok451 = !IS_FAIL(_v451);
 if(_ok451) {
@@ -5208,6 +5436,7 @@ var_set("delta", _delta);
     goto _SNO_NEXT_450;
 _SNO_NEXT_450:;
 /* line 30 */
+trampoline_stno(30);
 SnoVal _v453 = sub(deref(strv("#L")),get(_delta));
 int _ok453 = !IS_FAIL(_v453);
 if(_ok453) {
@@ -5243,6 +5472,7 @@ static SnoVal _sno_fn_SetLevel(SnoVal *_args, int _nargs) {
 
 /* line 31 */
 _L_SetLevel:;
+trampoline_stno(31);
 SnoVal _v455 = pat_cond(pat_var("dummy"),"?");
 int _ok455 = !IS_FAIL(_v455);
 if(_ok455) {
@@ -5252,6 +5482,7 @@ var_set("SetLevel", _SetLevel);
     goto _SNO_NEXT_454;
 _SNO_NEXT_454:;
 /* line 32 */
+trampoline_stno(32);
 SnoVal _v457 = get(_level);
 int _ok457 = !IS_FAIL(_v457);
 if(_ok457) {
@@ -5284,6 +5515,7 @@ static SnoVal _sno_fn_GetLevel(SnoVal *_args, int _nargs) {
 
 /* line 33 */
 _L_GetLevel:;
+trampoline_stno(33);
 SnoVal _v459 = deref(strv("#L"));
 int _ok459 = !IS_FAIL(_v459);
 if(_ok459) {
@@ -5326,6 +5558,7 @@ static SnoVal _sno_fn_Gen(SnoVal *_args, int _nargs) {
 
 /* line 40 */
 _L_Gen:;
+trampoline_stno(40);
 SnoVal _v461 = pat_cond(pat_var("dummy"),"?");
 int _ok461 = !IS_FAIL(_v461);
 if(_ok461) {
@@ -5335,6 +5568,7 @@ var_set("Gen", _Gen);
     goto _SNO_NEXT_460;
 _SNO_NEXT_460:;
 /* line 41 */
+trampoline_stno(41);
 SnoVal _v463 = pat_cond(pat_user_call("IDENT",(SnoVal[]){get(_outNm)},1),"OUTPUT");
 int _ok463 = !IS_FAIL(_v463);
 if(_ok463) {
@@ -5344,6 +5578,7 @@ var_set("outNm", _outNm);
     goto _SNO_NEXT_462;
 _SNO_NEXT_462:;
 /* line 42 */
+trampoline_stno(42);
 /* byrd mtch u465 */
 SnoVal _s465 = get(_indent);
 const char *_subj465 = to_str(_s465);
@@ -5395,6 +5630,7 @@ _byrd_465_done:;
     goto _SNO_NEXT_464;
 _SNO_NEXT_464:;
 /* line 43 */
+trampoline_stno(43);
 SnoVal _v467 = concat_sv(aply("DIFFER",(SnoVal[]){deref(strv("$B"))},1),get(_str));
 int _ok467 = !IS_FAIL(_v467);
 if(_ok467) {
@@ -5403,6 +5639,7 @@ iset(strv("$B"),_v467);
     goto _SNO_NEXT_466;
 _SNO_NEXT_466:;
 /* line 44 */
+trampoline_stno(44);
 SnoVal _v469 = concat_sv(concat_sv(aply("IDENT",(SnoVal[]){deref(strv("$B"))},1),get(_ind)),get(_str));
 int _ok469 = !IS_FAIL(_v469);
 if(_ok469) {
@@ -5411,6 +5648,7 @@ iset(strv("$B"),_v469);
     goto _SNO_NEXT_468;
 _SNO_NEXT_468:;
 /* line 45 */
+trampoline_stno(45);
 /* byrd mtch u471 */
 SnoVal _s471 = deref(strv("$B"));
 const char *_subj471 = to_str(_s471);
@@ -5496,6 +5734,7 @@ _byrd_471_done:;
     goto _SNO_NEXT_470;
 _SNO_NEXT_470:;
 /* line 46 */
+trampoline_stno(46);
 SnoVal _v473 = deref(strv("$C"));
 int _ok473 = !IS_FAIL(_v473);
 if(_ok473) {
@@ -5504,6 +5743,7 @@ iset(strv("$X"),_v473);
     goto _SNO_NEXT_472;
 _SNO_NEXT_472:;
 /* line 47 */
+trampoline_stno(47);
 SnoVal _v475 = get(_outline);
 int _ok475 = !IS_FAIL(_v475);
 if(_ok475) {
@@ -5513,6 +5753,7 @@ iset(get(_outNm),_v475);
 _SNO_NEXT_474:;
 /* line 48 */
 _L_Gen10:;
+trampoline_stno(48);
 /* byrd mtch u477 */
 SnoVal _s477 = deref(strv("$B"));
 const char *_subj477 = to_str(_s477);
@@ -5598,6 +5839,7 @@ _byrd_477_done:;
     goto _SNO_NEXT_476;
 _SNO_NEXT_476:;
 /* line 49 */
+trampoline_stno(49);
 SnoVal _v479 = concat_sv(concat_sv(deref(strv("$C")),get(_ind)),get(_outline));
 int _ok479 = !IS_FAIL(_v479);
 if(_ok479) {
@@ -5642,6 +5884,7 @@ static SnoVal _sno_fn_GenTab(SnoVal *_args, int _nargs) {
 
 /* line 50 */
 _L_GenTab:;
+trampoline_stno(50);
 SnoVal _v481 = pat_cond(pat_var("dummy"),"?");
 int _ok481 = !IS_FAIL(_v481);
 if(_ok481) {
@@ -5651,6 +5894,7 @@ var_set("GenTab", _GenTab);
     goto _SNO_NEXT_480;
 _SNO_NEXT_480:;
 /* line 51 */
+trampoline_stno(51);
 SnoVal _v483 = aply("IDENT",(SnoVal[]){get(_pos)},1);
 int _ok483 = !IS_FAIL(_v483);
 if(_ok483) {
@@ -5660,6 +5904,7 @@ var_set("pos", _pos);
     goto _SNO_NEXT_482;
 _SNO_NEXT_482:;
 /* line 52 */
+trampoline_stno(52);
 SnoVal _v485 = concat_sv(concat_sv(aply("IDENT",(SnoVal[]){deref(strv("$B"))},1),strv(" ")),aply("DUPL",(SnoVal[]){strv(" "),sub(sub(get(_pos),aply("SIZE",(SnoVal[]){deref(strv("$X"))},1)),vint(1))},2));
 int _ok485 = !IS_FAIL(_v485);
 if(_ok485) {
@@ -5669,6 +5914,7 @@ iset(strv("$B"),_v485);
     goto _SNO_NEXT_484;
 _SNO_NEXT_484:;
 /* line 53 */
+trampoline_stno(53);
 SnoVal _v487 = concat_sv(concat_sv(deref(strv("$B")),strv(" ")),aply("DUPL",(SnoVal[]){strv(" "),sub(sub(get(_pos),aply("SIZE",(SnoVal[]){deref(strv("$B"))},1)),vint(1))},2));
 int _ok487 = !IS_FAIL(_v487);
 if(_ok487) {
@@ -5678,6 +5924,7 @@ iset(strv("$B"),_v487);
     goto _SNO_NEXT_486;
 _SNO_NEXT_486:;
 /* line 54 */
+trampoline_stno(54);
 SnoVal _v489 = concat_sv(aply("IDENT",(SnoVal[]){deref(strv("$B"))},1),strv(" "));
 int _ok489 = !IS_FAIL(_v489);
 if(_ok489) {
@@ -5687,6 +5934,7 @@ iset(strv("$B"),_v489);
     goto _SNO_NEXT_488;
 _SNO_NEXT_488:;
 /* line 55 */
+trampoline_stno(55);
 SnoVal _v491 = concat_sv(deref(strv("$B")),strv(" "));
 int _ok491 = !IS_FAIL(_v491);
 if(_ok491) {
@@ -5722,6 +5970,7 @@ static SnoVal _sno_fn_GenSetCont(SnoVal *_args, int _nargs) {
 
 /* line 56 */
 _L_GenSetCont:;
+trampoline_stno(56);
 SnoVal _v493 = pat_cond(pat_var("dummy"),"?");
 int _ok493 = !IS_FAIL(_v493);
 if(_ok493) {
@@ -5731,11 +5980,13 @@ var_set("GenSetCont", _GenSetCont);
     goto _SNO_NEXT_492;
 _SNO_NEXT_492:;
 /* line 57 */
+trampoline_stno(57);
 SnoVal _v495 = deref(strv("$X"));
 int _ok495 = !IS_FAIL(_v495);
     goto _SNO_NEXT_494;
 _SNO_NEXT_494:;
 /* line 58 */
+trampoline_stno(58);
 SnoVal _v497 = get(_cont);
 int _ok497 = !IS_FAIL(_v497);
 if(_ok497) {
@@ -5745,14 +5996,17 @@ iset(strv("$C"),_v497);
 _SNO_NEXT_496:;
 /* line 59 */
 _L_GenEnd:;
+trampoline_stno(59);
     goto _SNO_NEXT_498;
 _SNO_NEXT_498:;
 /* line 4 */
+trampoline_stno(4);
 SnoVal _v500 = aply("DEFINE",(SnoVal[]){strv("Qize(str)part")},1);
 int _ok500 = !IS_FAIL(_v500);
     goto _SNO_NEXT_499;
 _SNO_NEXT_499:;
 /* line 5 */
+trampoline_stno(5);
 SnoVal _v502 = concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(get(_bSlash),get(_bs)),get(_ff)),get(_nl)),get(_cr)),get(_tab));
 int _ok502 = !IS_FAIL(_v502);
 if(_ok502) {
@@ -5792,6 +6046,7 @@ static SnoVal _sno_fn_Qize(SnoVal *_args, int _nargs) {
 
 /* line 6 */
 _L_Qize:;
+trampoline_stno(6);
 SnoVal _v504 = concat_sv(aply("IDENT",(SnoVal[]){get(_str)},1),strv("''"));
 int _ok504 = !IS_FAIL(_v504);
 if(_ok504) {
@@ -5803,12 +6058,14 @@ var_set("Qize", _Qize);
 _SNO_NEXT_503:;
 /* line 7 */
 _L_Qize0:;
+trampoline_stno(7);
 SnoVal _v506 = aply("IDENT",(SnoVal[]){get(_str)},1);
 int _ok506 = !IS_FAIL(_v506);
     if(_ok506) goto _SNO_RETURN_Qize;
     goto _SNO_NEXT_505;
 _SNO_NEXT_505:;
 /* line 8 */
+trampoline_stno(8);
 SnoVal _v508 = concat_sv(concat_sv(aply("DIFFER",(SnoVal[]){get(_Qize)},1),get(_Qize)),strv(" "));
 int _ok508 = !IS_FAIL(_v508);
 if(_ok508) {
@@ -5818,6 +6075,7 @@ var_set("Qize", _Qize);
     goto _SNO_NEXT_507;
 _SNO_NEXT_507:;
 /* line 9 */
+trampoline_stno(9);
 /* byrd mtch u510 */
 SnoVal _s510 = get(_str);
 const char *_subj510 = to_str(_s510);
@@ -5977,6 +6235,7 @@ _byrd_510_done:;
     goto _SNO_NEXT_509;
 _SNO_NEXT_509:;
 /* line 17 */
+trampoline_stno(17);
 /* byrd mtch u512 */
 SnoVal _s512 = get(_str);
 const char *_subj512 = to_str(_s512);
@@ -6073,6 +6332,7 @@ _byrd_512_done:;
     goto _SNO_NEXT_511;
 _SNO_NEXT_511:;
 /* line 20 */
+trampoline_stno(20);
 /* byrd mtch u514 */
 SnoVal _s514 = get(_str);
 const char *_subj514 = to_str(_s514);
@@ -6169,6 +6429,7 @@ _byrd_514_done:;
     goto _SNO_NEXT_513;
 _SNO_NEXT_513:;
 /* line 23 */
+trampoline_stno(23);
 /* byrd mtch u516 */
 SnoVal _s516 = get(_str);
 const char *_subj516 = to_str(_s516);
@@ -6216,6 +6477,7 @@ _byrd_516_done:;
     goto _SNO_NEXT_515;
 _SNO_NEXT_515:;
 /* line 24 */
+trampoline_stno(24);
 /* byrd mtch u518 */
 SnoVal _s518 = get(_str);
 const char *_subj518 = to_str(_s518);
@@ -6270,6 +6532,7 @@ _byrd_518_done:;
 _SNO_NEXT_517:;
 /* line 25 */
 _L_Qize1:;
+trampoline_stno(25);
 SnoVal _v520 = concat_sv(concat_sv(concat_sv(get(_Qize),strv("'")),get(_part)),strv("'"));
 int _ok520 = !IS_FAIL(_v520);
 if(_ok520) {
@@ -6280,6 +6543,7 @@ var_set("Qize", _Qize);
 _SNO_NEXT_519:;
 /* line 26 */
 _L_Qize2:;
+trampoline_stno(26);
 SnoVal _v522 = concat_sv(concat_sv(concat_sv(get(_Qize),strv("\"")),get(_part)),strv("\""));
 int _ok522 = !IS_FAIL(_v522);
 if(_ok522) {
@@ -6290,6 +6554,7 @@ var_set("Qize", _Qize);
 _SNO_NEXT_521:;
 /* line 27 */
 _L_Qize3:;
+trampoline_stno(27);
 SnoVal _v524 = concat_sv(get(_Qize),get(_part));
 int _ok524 = !IS_FAIL(_v524);
 if(_ok524) {
@@ -6300,9 +6565,11 @@ var_set("Qize", _Qize);
 _SNO_NEXT_523:;
 /* line 28 */
 _L_QizeEnd:;
+trampoline_stno(28);
     goto _SNO_NEXT_525;
 _SNO_NEXT_525:;
 /* line 30 */
+trampoline_stno(30);
 SnoVal _v527 = aply("DEFINE",(SnoVal[]){strv("SQize(str)part")},1);
 int _ok527 = !IS_FAIL(_v527);
     goto _SNO_NEXT_526;
@@ -6341,12 +6608,14 @@ static SnoVal _sno_fn_SQize(SnoVal *_args, int _nargs) {
 
 /* line 31 */
 _L_SQize:;
+trampoline_stno(31);
 SnoVal _v529 = aply("IDENT",(SnoVal[]){get(_str)},1);
 int _ok529 = !IS_FAIL(_v529);
     if(_ok529) goto _SNO_RETURN_SQize;
     goto _SNO_NEXT_528;
 _SNO_NEXT_528:;
 /* line 32 */
+trampoline_stno(32);
 SnoVal _v531 = concat_sv(concat_sv(aply("DIFFER",(SnoVal[]){get(_SQize)},1),get(_SQize)),strv(" "));
 int _ok531 = !IS_FAIL(_v531);
 if(_ok531) {
@@ -6356,6 +6625,7 @@ var_set("SQize", _SQize);
     goto _SNO_NEXT_530;
 _SNO_NEXT_530:;
 /* line 33 */
+trampoline_stno(33);
 /* byrd mtch u533 */
 SnoVal _s533 = get(_str);
 const char *_subj533 = to_str(_s533);
@@ -6412,6 +6682,7 @@ _byrd_533_done:;
     goto _SNO_NEXT_532;
 _SNO_NEXT_532:;
 /* line 34 */
+trampoline_stno(34);
 /* byrd mtch u535 */
 SnoVal _s535 = get(_str);
 const char *_subj535 = to_str(_s535);
@@ -6466,6 +6737,7 @@ _byrd_535_done:;
 _SNO_NEXT_534:;
 /* line 35 */
 _L_SQize1:;
+trampoline_stno(35);
 SnoVal _v537 = concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(get(_SQize),strv("'")),get(_part)),strv("'")),strv(" \"")),strv("'")),strv("\""));
 int _ok537 = !IS_FAIL(_v537);
 if(_ok537) {
@@ -6476,6 +6748,7 @@ var_set("SQize", _SQize);
 _SNO_NEXT_536:;
 /* line 36 */
 _L_SQize2:;
+trampoline_stno(36);
 SnoVal _v539 = concat_sv(concat_sv(concat_sv(get(_SQize),strv("'")),get(_part)),strv("'"));
 int _ok539 = !IS_FAIL(_v539);
 if(_ok539) {
@@ -6518,12 +6791,14 @@ static SnoVal _sno_fn_DQize(SnoVal *_args, int _nargs) {
 
 /* line 40 */
 _L_DQize:;
+trampoline_stno(40);
 SnoVal _v541 = aply("IDENT",(SnoVal[]){get(_str)},1);
 int _ok541 = !IS_FAIL(_v541);
     if(_ok541) goto _SNO_RETURN_DQize;
     goto _SNO_NEXT_540;
 _SNO_NEXT_540:;
 /* line 41 */
+trampoline_stno(41);
 SnoVal _v543 = concat_sv(concat_sv(aply("DIFFER",(SnoVal[]){get(_DQize)},1),get(_DQize)),strv(" "));
 int _ok543 = !IS_FAIL(_v543);
 if(_ok543) {
@@ -6533,6 +6808,7 @@ var_set("DQize", _DQize);
     goto _SNO_NEXT_542;
 _SNO_NEXT_542:;
 /* line 42 */
+trampoline_stno(42);
 /* byrd mtch u545 */
 SnoVal _s545 = get(_str);
 const char *_subj545 = to_str(_s545);
@@ -6589,6 +6865,7 @@ _byrd_545_done:;
     goto _SNO_NEXT_544;
 _SNO_NEXT_544:;
 /* line 43 */
+trampoline_stno(43);
 /* byrd mtch u547 */
 SnoVal _s547 = get(_str);
 const char *_subj547 = to_str(_s547);
@@ -6643,6 +6920,7 @@ _byrd_547_done:;
 _SNO_NEXT_546:;
 /* line 44 */
 _L_DQize1:;
+trampoline_stno(44);
 SnoVal _v549 = concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(get(_DQize),strv("\"")),get(_part)),strv("\"")),strv(" '")),strv("\"")),strv("'"));
 int _ok549 = !IS_FAIL(_v549);
 if(_ok549) {
@@ -6653,6 +6931,7 @@ var_set("DQize", _DQize);
 _SNO_NEXT_548:;
 /* line 45 */
 _L_DQize2:;
+trampoline_stno(45);
 SnoVal _v551 = concat_sv(concat_sv(concat_sv(get(_DQize),strv("\"")),get(_part)),strv("\""));
 int _ok551 = !IS_FAIL(_v551);
 if(_ok551) {
@@ -6695,12 +6974,14 @@ static SnoVal _sno_fn_SqlSQize(SnoVal *_args, int _nargs) {
 
 /* line 49 */
 _L_SqlSQize:;
+trampoline_stno(49);
 SnoVal _v553 = aply("IDENT",(SnoVal[]){get(_str)},1);
 int _ok553 = !IS_FAIL(_v553);
     if(_ok553) goto _SNO_RETURN_SqlSQize;
     goto _SNO_NEXT_552;
 _SNO_NEXT_552:;
 /* line 50 */
+trampoline_stno(50);
 /* byrd mtch u555 */
 SnoVal _s555 = get(_str);
 const char *_subj555 = to_str(_s555);
@@ -6757,6 +7038,7 @@ _byrd_555_done:;
     goto _SNO_NEXT_554;
 _SNO_NEXT_554:;
 /* line 51 */
+trampoline_stno(51);
 /* byrd mtch u557 */
 SnoVal _s557 = get(_str);
 const char *_subj557 = to_str(_s557);
@@ -6811,6 +7093,7 @@ _byrd_557_done:;
 _SNO_NEXT_556:;
 /* line 52 */
 _L_SqlSQize1:;
+trampoline_stno(52);
 SnoVal _v559 = concat_sv(concat_sv(get(_SqlSQize),get(_part)),strv("''"));
 int _ok559 = !IS_FAIL(_v559);
 if(_ok559) {
@@ -6821,6 +7104,7 @@ var_set("SqlSQize", _SqlSQize);
 _SNO_NEXT_558:;
 /* line 53 */
 _L_SqlSQize2:;
+trampoline_stno(53);
 SnoVal _v561 = concat_sv(get(_SqlSQize),get(_part));
 int _ok561 = !IS_FAIL(_v561);
 if(_ok561) {
@@ -6866,6 +7150,7 @@ static SnoVal _sno_fn_Intize(SnoVal *_args, int _nargs) {
 
 /* line 57 */
 _L_Intize:;
+trampoline_stno(57);
 /* byrd mtch u563 */
 SnoVal _s563 = get(_qqstr);
 const char *_subj563 = to_str(_s563);
@@ -7209,6 +7494,7 @@ static SnoVal _sno_fn_Extize(SnoVal *_args, int _nargs) {
 
 /* line 79 */
 _L_Extize:;
+trampoline_stno(79);
     goto _SNO_NEXT_564;
 _SNO_NEXT_564:;
     goto _SNO_RETURN_Extize;
@@ -7260,12 +7546,14 @@ static SnoVal _sno_fn_Read(SnoVal *_args, int _nargs) {
 
 /* line 9 */
 _L_Read:;
+trampoline_stno(9);
 SnoVal _v566 = aply("INPUT",(SnoVal[]){get(_rdInput),vint(8),concat_sv(get(_fileName),strv("[-m10 -l131072]"))},3);
 int _ok566 = !IS_FAIL(_v566);
     if(!_ok566) goto _SNO_FRETURN_Read;
     goto _SNO_NEXT_565;
 _SNO_NEXT_565:;
 /* line 10 */
+trampoline_stno(10);
 SnoVal _v568 = aply("TABLE",NULL,0);
 int _ok568 = !IS_FAIL(_v568);
 if(_ok568) {
@@ -7275,6 +7563,7 @@ var_set("rdMap", _rdMap);
     goto _SNO_NEXT_567;
 _SNO_NEXT_567:;
 /* line 11 */
+trampoline_stno(11);
 SnoVal _v570 = vint(0);
 int _ok570 = !IS_FAIL(_v570);
 if(_ok570) {
@@ -7284,6 +7573,7 @@ var_set("rdOfs", _rdOfs);
     goto _SNO_NEXT_569;
 _SNO_NEXT_569:;
 /* line 12 */
+trampoline_stno(12);
 SnoVal _v572 = vint(1);
 int _ok572 = !IS_FAIL(_v572);
 if(_ok572) {
@@ -7293,12 +7583,14 @@ var_set("rdLineNo", _rdLineNo);
     goto _SNO_NEXT_571;
 _SNO_NEXT_571:;
 /* line 13 */
+trampoline_stno(13);
 SnoVal _v574 = get(_Read);
 int _ok574 = !IS_FAIL(_v574);
     goto _SNO_NEXT_573;
 _SNO_NEXT_573:;
 /* line 14 */
 _L_Read3:;
+trampoline_stno(14);
 SnoVal _v576 = get(_rdLineNo);
 int _ok576 = !IS_FAIL(_v576);
 if(_ok576) {
@@ -7307,12 +7599,14 @@ iset(indx(get(_rdMap),(SnoVal[]){get(_rdOfs)},1),_v576);
     goto _SNO_NEXT_575;
 _SNO_NEXT_575:;
 /* line 15 */
+trampoline_stno(15);
 SnoVal _v578 = get(_rdLine);
 int _ok578 = !IS_FAIL(_v578);
     goto _SNO_NEXT_577;
 _SNO_NEXT_577:;
 /* line 16 */
 _L_Read5:;
+trampoline_stno(16);
 SnoVal _v580 = get(_rdInput);
 int _ok580 = !IS_FAIL(_v580);
 if(_ok580) {
@@ -7323,6 +7617,7 @@ var_set("rdIn", _rdIn);
     goto _SNO_NEXT_579;
 _SNO_NEXT_579:;
 /* line 17 */
+trampoline_stno(17);
 SnoVal _v582 = concat_sv(get(_rdLine),get(_rdIn));
 int _ok582 = !IS_FAIL(_v582);
 if(_ok582) {
@@ -7332,12 +7627,14 @@ var_set("rdLine", _rdLine);
     goto _SNO_NEXT_581;
 _SNO_NEXT_581:;
 /* line 18 */
+trampoline_stno(18);
 SnoVal _v584 = aply("LT",(SnoVal[]){aply("SIZE",(SnoVal[]){get(_rdIn)},1),vint(131072)},2);
 int _ok584 = !IS_FAIL(_v584);
     if(!_ok584) goto _L_Read5;
     goto _SNO_NEXT_583;
 _SNO_NEXT_583:;
 /* line 19 */
+trampoline_stno(19);
 /* byrd mtch u586 */
 SnoVal _s586 = get(_rdLine);
 const char *_subj586 = to_str(_s586);
@@ -7386,6 +7683,7 @@ _byrd_586_done:;
     goto _SNO_NEXT_585;
 _SNO_NEXT_585:;
 /* line 20 */
+trampoline_stno(20);
 SnoVal _v588 = add(add(get(_rdOfs),aply("SIZE",(SnoVal[]){get(_rdLine)},1)),vint(1));
 int _ok588 = !IS_FAIL(_v588);
 if(_ok588) {
@@ -7395,6 +7693,7 @@ var_set("rdOfs", _rdOfs);
     goto _SNO_NEXT_587;
 _SNO_NEXT_587:;
 /* line 21 */
+trampoline_stno(21);
 SnoVal _v590 = add(get(_rdLineNo),vint(1));
 int _ok590 = !IS_FAIL(_v590);
 if(_ok590) {
@@ -7404,6 +7703,7 @@ var_set("rdLineNo", _rdLineNo);
     goto _SNO_NEXT_589;
 _SNO_NEXT_589:;
 /* line 22 */
+trampoline_stno(22);
 SnoVal _v592 = concat_sv(concat_sv(get(_Read),get(_rdLine)),get(_nl));
 int _ok592 = !IS_FAIL(_v592);
 if(_ok592) {
@@ -7414,17 +7714,20 @@ var_set("Read", _Read);
 _SNO_NEXT_591:;
 /* line 23 */
 _L_Read9:;
+trampoline_stno(23);
 SnoVal _v594 = aply("ENDFILE",(SnoVal[]){vint(8)},1);
 int _ok594 = !IS_FAIL(_v594);
     goto _SNO_NEXT_593;
 _SNO_NEXT_593:;
 /* line 24 */
+trampoline_stno(24);
 SnoVal _v596 = aply("DIFFER",(SnoVal[]){get(_rdMapName)},1);
 int _ok596 = !IS_FAIL(_v596);
     if(!_ok596) goto _SNO_RETURN_Read;
     goto _SNO_NEXT_595;
 _SNO_NEXT_595:;
 /* line 25 */
+trampoline_stno(25);
 SnoVal _v598 = get(_rdMap);
 int _ok598 = !IS_FAIL(_v598);
 if(_ok598) {
@@ -7490,6 +7793,7 @@ static SnoVal _sno_fn_Write(SnoVal *_args, int _nargs) {
 
 /* line 29 */
 _L_Write:;
+trampoline_stno(29);
 SnoVal _v600 = aply("OUTPUT",(SnoVal[]){get(_wrOutput),vint(8),get(_fileName)},3);
 int _ok600 = !IS_FAIL(_v600);
     if(!_ok600) goto _SNO_FRETURN_Write;
@@ -7497,6 +7801,7 @@ int _ok600 = !IS_FAIL(_v600);
 _SNO_NEXT_599:;
 /* line 30 */
 _L_Write1:;
+trampoline_stno(30);
 /* byrd mtch u602 */
 SnoVal _s602 = get(_fileStr);
 const char *_subj602 = to_str(_s602);
@@ -7528,6 +7833,7 @@ _byrd_602_done:;
     goto _SNO_NEXT_601;
 _SNO_NEXT_601:;
 /* line 31 */
+trampoline_stno(31);
 /* byrd mtch u604 */
 SnoVal _s604 = get(_fileStr);
 const char *_subj604 = to_str(_s604);
@@ -7589,6 +7895,7 @@ _byrd_604_done:;
     goto _SNO_NEXT_603;
 _SNO_NEXT_603:;
 /* line 32 */
+trampoline_stno(32);
 /* byrd mtch u606 */
 SnoVal _s606 = get(_fileStr);
 const char *_subj606 = to_str(_s606);
@@ -7637,6 +7944,7 @@ _byrd_606_done:;
 _SNO_NEXT_605:;
 /* line 33 */
 _L_Write3:;
+trampoline_stno(33);
 SnoVal _v608 = get(_wrLine);
 int _ok608 = !IS_FAIL(_v608);
 if(_ok608) {
@@ -7647,6 +7955,7 @@ var_set("wrOutput", _wrOutput);
 _SNO_NEXT_607:;
 /* line 34 */
 _L_Write9:;
+trampoline_stno(34);
 SnoVal _v610 = aply("ENDFILE",(SnoVal[]){vint(8)},1);
 int _ok610 = !IS_FAIL(_v610);
     goto _SNO_RETURN_Write;
@@ -7703,6 +8012,7 @@ static SnoVal _sno_fn_LineMap(SnoVal *_args, int _nargs) {
 
 /* line 38 */
 _L_LineMap:;
+trampoline_stno(38);
 SnoVal _v612 = aply("TABLE",NULL,0);
 int _ok612 = !IS_FAIL(_v612);
 if(_ok612) {
@@ -7712,6 +8022,7 @@ var_set("lmMap", _lmMap);
     goto _SNO_NEXT_611;
 _SNO_NEXT_611:;
 /* line 39 */
+trampoline_stno(39);
 SnoVal _v614 = vint(0);
 int _ok614 = !IS_FAIL(_v614);
 if(_ok614) {
@@ -7721,6 +8032,7 @@ var_set("lmOfs", _lmOfs);
     goto _SNO_NEXT_613;
 _SNO_NEXT_613:;
 /* line 40 */
+trampoline_stno(40);
 SnoVal _v616 = vint(1);
 int _ok616 = !IS_FAIL(_v616);
 if(_ok616) {
@@ -7731,6 +8043,7 @@ var_set("lmLineNo", _lmLineNo);
 _SNO_NEXT_615:;
 /* line 41 */
 _L_LineMap3:;
+trampoline_stno(41);
 SnoVal _v618 = get(_lmLineNo);
 int _ok618 = !IS_FAIL(_v618);
 if(_ok618) {
@@ -7739,6 +8052,7 @@ iset(indx(get(_lmMap),(SnoVal[]){get(_lmOfs)},1),_v618);
     goto _SNO_NEXT_617;
 _SNO_NEXT_617:;
 /* line 42 */
+trampoline_stno(42);
 /* byrd mtch u620 */
 SnoVal _s620 = get(_str);
 const char *_subj620 = to_str(_s620);
@@ -7779,6 +8093,7 @@ _byrd_620_done:;
     goto _SNO_NEXT_619;
 _SNO_NEXT_619:;
 /* line 43 */
+trampoline_stno(43);
 SnoVal _v622 = add(get(_lmOfs),get(_xOfs));
 int _ok622 = !IS_FAIL(_v622);
 if(_ok622) {
@@ -7788,6 +8103,7 @@ var_set("lmOfs", _lmOfs);
     goto _SNO_NEXT_621;
 _SNO_NEXT_621:;
 /* line 44 */
+trampoline_stno(44);
 SnoVal _v624 = add(get(_lmLineNo),vint(1));
 int _ok624 = !IS_FAIL(_v624);
 if(_ok624) {
@@ -7798,6 +8114,7 @@ var_set("lmLineNo", _lmLineNo);
 _SNO_NEXT_623:;
 /* line 45 */
 _L_LineMap9:;
+trampoline_stno(45);
 SnoVal _v626 = get(_lmMap);
 int _ok626 = !IS_FAIL(_v626);
 if(_ok626) {
@@ -7878,6 +8195,7 @@ static SnoVal _sno_fn_XDump(SnoVal *_args, int _nargs) {
 
 /* line 9 */
 _L_XDump:;
+trampoline_stno(9);
 SnoVal _v628 = aply("DATATYPE",(SnoVal[]){get(_object)},1);
 int _ok628 = !IS_FAIL(_v628);
 if(_ok628) {
@@ -7887,54 +8205,63 @@ var_set("objType", _objType);
     goto _SNO_NEXT_627;
 _SNO_NEXT_627:;
 /* line 10 */
+trampoline_stno(10);
 SnoVal _v630 = aply("IDENT",(SnoVal[]){get(_objType),strv("CODE")},2);
 int _ok630 = !IS_FAIL(_v630);
     if(_ok630) goto _L_XDump00;
     goto _SNO_NEXT_629;
 _SNO_NEXT_629:;
 /* line 11 */
+trampoline_stno(11);
 SnoVal _v632 = aply("IDENT",(SnoVal[]){get(_objType),strv("EXPRESSION")},2);
 int _ok632 = !IS_FAIL(_v632);
     if(_ok632) goto _L_XDump00;
     goto _SNO_NEXT_631;
 _SNO_NEXT_631:;
 /* line 12 */
+trampoline_stno(12);
 SnoVal _v634 = aply("IDENT",(SnoVal[]){get(_objType),strv("INTEGER")},2);
 int _ok634 = !IS_FAIL(_v634);
     if(_ok634) goto _L_XDump05;
     goto _SNO_NEXT_633;
 _SNO_NEXT_633:;
 /* line 13 */
+trampoline_stno(13);
 SnoVal _v636 = aply("IDENT",(SnoVal[]){get(_objType),strv("NAME")},2);
 int _ok636 = !IS_FAIL(_v636);
     if(_ok636) goto _L_XDump00;
     goto _SNO_NEXT_635;
 _SNO_NEXT_635:;
 /* line 14 */
+trampoline_stno(14);
 SnoVal _v638 = aply("IDENT",(SnoVal[]){get(_objType),strv("PATTERN")},2);
 int _ok638 = !IS_FAIL(_v638);
     if(_ok638) goto _L_XDump00;
     goto _SNO_NEXT_637;
 _SNO_NEXT_637:;
 /* line 15 */
+trampoline_stno(15);
 SnoVal _v640 = aply("IDENT",(SnoVal[]){get(_objType),strv("REAL")},2);
 int _ok640 = !IS_FAIL(_v640);
     if(_ok640) goto _L_XDump05;
     goto _SNO_NEXT_639;
 _SNO_NEXT_639:;
 /* line 16 */
+trampoline_stno(16);
 SnoVal _v642 = aply("IDENT",(SnoVal[]){get(_objType),strv("STRING")},2);
 int _ok642 = !IS_FAIL(_v642);
     if(_ok642) goto _L_XDump10;
     goto _SNO_NEXT_641;
 _SNO_NEXT_641:;
 /* line 17 */
+trampoline_stno(17);
 SnoVal _v644 = aply("IDENT",(SnoVal[]){get(_objType),strv("ARRAY")},2);
 int _ok644 = !IS_FAIL(_v644);
     if(_ok644) goto _L_XDump20;
     goto _SNO_NEXT_643;
 _SNO_NEXT_643:;
 /* line 18 */
+trampoline_stno(18);
 SnoVal _v646 = aply("IDENT",(SnoVal[]){get(_objType),strv("TABLE")},2);
 int _ok646 = !IS_FAIL(_v646);
     if(_ok646) goto _L_XDump30;
@@ -7943,6 +8270,7 @@ int _ok646 = !IS_FAIL(_v646);
 _SNO_NEXT_645:;
 /* line 19 */
 _L_XDump00:;
+trampoline_stno(19);
 SnoVal _v648 = concat_sv(concat_sv(get(_nm),strv(" = ")),get(_objType));
 int _ok648 = !IS_FAIL(_v648);
 if(_ok648) {
@@ -7952,6 +8280,7 @@ var_set("OUTPUT", _v648);
 _SNO_NEXT_647:;
 /* line 20 */
 _L_XDump05:;
+trampoline_stno(20);
 SnoVal _v650 = concat_sv(concat_sv(get(_nm),strv(" = ")),get(_object));
 int _ok650 = !IS_FAIL(_v650);
 if(_ok650) {
@@ -7961,6 +8290,7 @@ var_set("OUTPUT", _v650);
 _SNO_NEXT_649:;
 /* line 21 */
 _L_XDump10:;
+trampoline_stno(21);
 SnoVal _v652 = concat_sv(concat_sv(get(_nm),strv(" = ")),aply("Qize",(SnoVal[]){get(_object)},1));
 int _ok652 = !IS_FAIL(_v652);
 if(_ok652) {
@@ -7970,6 +8300,7 @@ var_set("OUTPUT", _v652);
 _SNO_NEXT_651:;
 /* line 22 */
 _L_XDump20:;
+trampoline_stno(22);
 SnoVal _v654 = aply("PROTOTYPE",(SnoVal[]){get(_object)},1);
 int _ok654 = !IS_FAIL(_v654);
 if(_ok654) {
@@ -7979,6 +8310,7 @@ var_set("objProto", _objProto);
     goto _SNO_NEXT_653;
 _SNO_NEXT_653:;
 /* line 23 */
+trampoline_stno(23);
 /* byrd mtch u656 */
 SnoVal _s656 = get(_objProto);
 const char *_subj656 = to_str(_s656);
@@ -8132,6 +8464,7 @@ _byrd_656_done:;
     goto _SNO_NEXT_655;
 _SNO_NEXT_655:;
 /* line 27 */
+trampoline_stno(27);
 SnoVal _v658 = concat_sv(concat_sv(concat_sv(concat_sv(get(_nm),strv(" = ")),strv("ARRAY['")),get(_objProto)),strv("']"));
 int _ok658 = !IS_FAIL(_v658);
 if(_ok658) {
@@ -8140,6 +8473,7 @@ var_set("OUTPUT", _v658);
     goto _SNO_NEXT_657;
 _SNO_NEXT_657:;
 /* line 28 */
+trampoline_stno(28);
 SnoVal _v660 = sub(get(_iMin),vint(1));
 int _ok660 = !IS_FAIL(_v660);
 if(_ok660) {
@@ -8150,6 +8484,7 @@ var_set("i", _i);
 _SNO_NEXT_659:;
 /* line 29 */
 _L_XDump25:;
+trampoline_stno(29);
 SnoVal _v662 = concat_sv(aply("LT",(SnoVal[]){get(_i),get(_iMax)},2),add(get(_i),vint(1)));
 int _ok662 = !IS_FAIL(_v662);
 if(_ok662) {
@@ -8160,12 +8495,14 @@ var_set("i", _i);
     goto _SNO_NEXT_661;
 _SNO_NEXT_661:;
 /* line 30 */
+trampoline_stno(30);
 SnoVal _v664 = aply("XDump",(SnoVal[]){indx(get(_object),(SnoVal[]){get(_i)},1),concat_sv(concat_sv(concat_sv(get(_nm),strv("[")),get(_i)),strv("]"))},2);
 int _ok664 = !IS_FAIL(_v664);
     goto _L_XDump25;
 _SNO_NEXT_663:;
 /* line 31 */
 _L_XDump30:;
+trampoline_stno(31);
 SnoVal _v666 = concat_sv(concat_sv(get(_nm),strv(" = ")),strv("TABLE"));
 int _ok666 = !IS_FAIL(_v666);
 if(_ok666) {
@@ -8174,6 +8511,7 @@ var_set("OUTPUT", _v666);
     goto _SNO_NEXT_665;
 _SNO_NEXT_665:;
 /* line 33 */
+trampoline_stno(33);
 SnoVal _v668 = aply("SORT",(SnoVal[]){get(_object)},1);
 int _ok668 = !IS_FAIL(_v668);
 if(_ok668) {
@@ -8184,6 +8522,7 @@ var_set("objArr", _objArr);
     goto _SNO_NEXT_667;
 _SNO_NEXT_667:;
 /* line 34 */
+trampoline_stno(34);
 SnoVal _v670 = vint(0);
 int _ok670 = !IS_FAIL(_v670);
 if(_ok670) {
@@ -8194,6 +8533,7 @@ var_set("i", _i);
 _SNO_NEXT_669:;
 /* line 35 */
 _L_XDump35:;
+trampoline_stno(35);
 SnoVal _v672 = add(get(_i),vint(1));
 int _ok672 = !IS_FAIL(_v672);
 if(_ok672) {
@@ -8203,6 +8543,7 @@ var_set("i", _i);
     goto _SNO_NEXT_671;
 _SNO_NEXT_671:;
 /* line 36 */
+trampoline_stno(36);
 SnoVal _v674 = indx(get(_objArr),(SnoVal[]){get(_i),vint(1)},2);
 int _ok674 = !IS_FAIL(_v674);
 if(_ok674) {
@@ -8213,6 +8554,7 @@ var_set("objKey", _objKey);
     goto _SNO_NEXT_673;
 _SNO_NEXT_673:;
 /* line 37 */
+trampoline_stno(37);
 SnoVal _v676 = indx(get(_objArr),(SnoVal[]){get(_i),vint(2)},2);
 int _ok676 = !IS_FAIL(_v676);
 if(_ok676) {
@@ -8222,6 +8564,7 @@ var_set("objVal", _objVal);
     goto _SNO_NEXT_675;
 _SNO_NEXT_675:;
 /* line 38 */
+trampoline_stno(38);
 SnoVal _v678 = concat_sv(aply("IDENT",(SnoVal[]){aply("DATATYPE",(SnoVal[]){get(_objKey)},1),strv("INTEGER")},2),get(_objKey));
 int _ok678 = !IS_FAIL(_v678);
 if(_ok678) {
@@ -8232,6 +8575,7 @@ var_set("objKeyNm", _objKeyNm);
     goto _SNO_NEXT_677;
 _SNO_NEXT_677:;
 /* line 39 */
+trampoline_stno(39);
 SnoVal _v680 = concat_sv(aply("IDENT",(SnoVal[]){aply("DATATYPE",(SnoVal[]){get(_objKey)},1),strv("STRING")},2),aply("Qize",(SnoVal[]){get(_objKey)},1));
 int _ok680 = !IS_FAIL(_v680);
 if(_ok680) {
@@ -8242,6 +8586,7 @@ var_set("objKeyNm", _objKeyNm);
     goto _SNO_NEXT_679;
 _SNO_NEXT_679:;
 /* line 40 */
+trampoline_stno(40);
 SnoVal _v682 = aply("DATATYPE",(SnoVal[]){get(_objKey)},1);
 int _ok682 = !IS_FAIL(_v682);
 if(_ok682) {
@@ -8252,12 +8597,14 @@ var_set("objKeyNm", _objKeyNm);
 _SNO_NEXT_681:;
 /* line 41 */
 _L_XDump37:;
+trampoline_stno(41);
 SnoVal _v684 = aply("XDump",(SnoVal[]){get(_objVal),concat_sv(concat_sv(concat_sv(get(_nm),strv("[")),get(_objKeyNm)),strv("]"))},2);
 int _ok684 = !IS_FAIL(_v684);
     goto _L_XDump35;
 _SNO_NEXT_683:;
 /* line 42 */
 _L_XDump40:;
+trampoline_stno(42);
 SnoVal _v686 = concat_sv(concat_sv(concat_sv(get(_nm),strv(" = ")),get(_objType)),strv("()"));
 int _ok686 = !IS_FAIL(_v686);
 if(_ok686) {
@@ -8266,6 +8613,7 @@ var_set("OUTPUT", _v686);
     goto _SNO_NEXT_685;
 _SNO_NEXT_685:;
 /* line 43 */
+trampoline_stno(43);
 SnoVal _v688 = vint(0);
 int _ok688 = !IS_FAIL(_v688);
 if(_ok688) {
@@ -8276,6 +8624,7 @@ var_set("i", _i);
 _SNO_NEXT_687:;
 /* line 44 */
 _L_XDump45:;
+trampoline_stno(44);
 SnoVal _v690 = add(get(_i),vint(1));
 int _ok690 = !IS_FAIL(_v690);
 if(_ok690) {
@@ -8285,6 +8634,7 @@ var_set("i", _i);
     goto _SNO_NEXT_689;
 _SNO_NEXT_689:;
 /* line 45 */
+trampoline_stno(45);
 SnoVal _v692 = aply("FIELD",(SnoVal[]){get(_objType),get(_i)},2);
 int _ok692 = !IS_FAIL(_v692);
 if(_ok692) {
@@ -8295,6 +8645,7 @@ var_set("objField", _objField);
     goto _SNO_NEXT_691;
 _SNO_NEXT_691:;
 /* line 46 */
+trampoline_stno(46);
 SnoVal _v694 = aply("XDump",(SnoVal[]){aply("APPLY",(SnoVal[]){get(_objField),get(_object)},2),concat_sv(concat_sv(concat_sv(get(_objField),strv("(")),get(_nm)),strv(")"))},2);
 int _ok694 = !IS_FAIL(_v694);
     goto _L_XDump45;
@@ -8360,6 +8711,7 @@ static SnoVal _sno_fn_shift(SnoVal *_args, int _nargs) {
 
 /* line 17 */
 _L_shift_:;
+trampoline_stno(17);
 SnoVal _v696 = aply("EVAL",(SnoVal[]){concat_sv(concat_sv(strv("p . thx . *Shift('"),get(_t)),strv("', thx)"))},1);
 int _ok696 = !IS_FAIL(_v696);
 if(_ok696) {
@@ -8402,6 +8754,7 @@ static SnoVal _sno_fn_reduce(SnoVal *_args, int _nargs) {
 
 /* line 18 */
 _L_reduce_:;
+trampoline_stno(18);
 SnoVal _v698 = aply("EVAL",(SnoVal[]){concat_sv(concat_sv(concat_sv(concat_sv(strv("epsilon . *Reduce("),get(_t)),strv(", ")),get(_n)),strv(")"))},1);
 int _ok698 = !IS_FAIL(_v698);
 if(_ok698) {
@@ -8438,6 +8791,7 @@ static SnoVal _sno_fn_pop(SnoVal *_args, int _nargs) {
 
 /* line 19 */
 _L_pop_:;
+trampoline_stno(19);
 SnoVal _v700 = pat_cond(pat_var("epsilon"),"?");
 int _ok700 = !IS_FAIL(_v700);
 if(_ok700) {
@@ -8468,6 +8822,7 @@ static SnoVal _sno_fn_nPush(SnoVal *_args, int _nargs) {
 
 /* line 21 */
 _L_nPush_:;
+trampoline_stno(21);
 SnoVal _v702 = pat_cond(pat_var("epsilon"),"?");
 int _ok702 = !IS_FAIL(_v702);
 if(_ok702) {
@@ -8498,6 +8853,7 @@ static SnoVal _sno_fn_nInc(SnoVal *_args, int _nargs) {
 
 /* line 22 */
 _L_nInc_:;
+trampoline_stno(22);
 SnoVal _v704 = pat_cond(pat_var("epsilon"),"?");
 int _ok704 = !IS_FAIL(_v704);
 if(_ok704) {
@@ -8528,6 +8884,7 @@ static SnoVal _sno_fn_nDec(SnoVal *_args, int _nargs) {
 
 /* line 23 */
 _L_nDec_:;
+trampoline_stno(23);
 SnoVal _v706 = pat_cond(pat_var("epsilon"),"?");
 int _ok706 = !IS_FAIL(_v706);
 if(_ok706) {
@@ -8558,6 +8915,7 @@ static SnoVal _sno_fn_nTop(SnoVal *_args, int _nargs) {
 
 /* line 24 */
 _L_nTop_:;
+trampoline_stno(24);
 SnoVal _v708 = aply("TopCounter",NULL,0);
 int _ok708 = !IS_FAIL(_v708);
 if(_ok708) {
@@ -8588,6 +8946,7 @@ static SnoVal _sno_fn_nPop(SnoVal *_args, int _nargs) {
 
 /* line 25 */
 _L_nPop_:;
+trampoline_stno(25);
 SnoVal _v710 = pat_cond(pat_var("epsilon"),"?");
 int _ok710 = !IS_FAIL(_v710);
 if(_ok710) {
@@ -8630,6 +8989,7 @@ static SnoVal _sno_fn_TV(SnoVal *_args, int _nargs) {
 
 /* line 3 */
 _L_TV:;
+trampoline_stno(3);
 SnoVal _v712 = concat_sv(aply("EQ",(SnoVal[]){get(_doParseTree),get(_FALSE)},2),strv("pat"));
 int _ok712 = !IS_FAIL(_v712);
 if(_ok712) {
@@ -8639,6 +8999,7 @@ var_set("omega", _omega);
     goto _SNO_NEXT_711;
 _SNO_NEXT_711:;
 /* line 4 */
+trampoline_stno(4);
 SnoVal _v714 = concat_sv(aply("EQ",(SnoVal[]){get(_doParseTree),get(_TRUE)},2),strv("(pat ~ 'identifier')"));
 int _ok714 = !IS_FAIL(_v714);
 if(_ok714) {
@@ -8648,6 +9009,7 @@ var_set("omega", _omega);
     goto _SNO_NEXT_713;
 _SNO_NEXT_713:;
 /* line 5 */
+trampoline_stno(5);
 SnoVal _v716 = concat_sv(concat_sv(concat_sv(get(_omega),strv(" $ tx *LEQ(lwr(tx), \"")),aply("lwr",(SnoVal[]){get(_name)},1)),strv("\")"));
 int _ok716 = !IS_FAIL(_v716);
 if(_ok716) {
@@ -8657,6 +9019,7 @@ var_set("omega", _omega);
     goto _SNO_NEXT_715;
 _SNO_NEXT_715:;
 /* line 6 */
+trampoline_stno(6);
 SnoVal _v718 = aply("TZ",(SnoVal[]){get(_lvl),get(_name),aply("EVAL",(SnoVal[]){get(_omega)},1)},3);
 int _ok718 = !IS_FAIL(_v718);
 if(_ok718) {
@@ -8713,6 +9076,7 @@ static SnoVal _sno_fn_TW(SnoVal *_args, int _nargs) {
 
 /* line 10 */
 _L_TW:;
+trampoline_stno(10);
 SnoVal _v720 = concat_sv(aply("EQ",(SnoVal[]){get(_doParseTree),get(_FALSE)},2),strv("pat"));
 int _ok720 = !IS_FAIL(_v720);
 if(_ok720) {
@@ -8722,6 +9086,7 @@ var_set("omega", _omega);
     goto _SNO_NEXT_719;
 _SNO_NEXT_719:;
 /* line 11 */
+trampoline_stno(11);
 SnoVal _v722 = concat_sv(aply("EQ",(SnoVal[]){get(_doParseTree),get(_TRUE)},2),strv("(pat ~ 'identifier')"));
 int _ok722 = !IS_FAIL(_v722);
 if(_ok722) {
@@ -8731,6 +9096,7 @@ var_set("omega", _omega);
     goto _SNO_NEXT_721;
 _SNO_NEXT_721:;
 /* line 12 */
+trampoline_stno(12);
 SnoVal _v724 = concat_sv(concat_sv(concat_sv(get(_omega),strv(" $ tx *LEQ(upr(tx), '")),aply("upr",(SnoVal[]){get(_name)},1)),strv("')"));
 int _ok724 = !IS_FAIL(_v724);
 if(_ok724) {
@@ -8740,6 +9106,7 @@ var_set("omega", _omega);
     goto _SNO_NEXT_723;
 _SNO_NEXT_723:;
 /* line 13 */
+trampoline_stno(13);
 SnoVal _v726 = aply("TZ",(SnoVal[]){get(_lvl),get(_name),aply("EVAL",(SnoVal[]){get(_omega)},1)},3);
 int _ok726 = !IS_FAIL(_v726);
 if(_ok726) {
@@ -8796,6 +9163,7 @@ static SnoVal _sno_fn_TX(SnoVal *_args, int _nargs) {
 
 /* line 17 */
 _L_TX:;
+trampoline_stno(17);
 SnoVal _v728 = concat_sv(aply("EQ",(SnoVal[]){get(_doParseTree),get(_FALSE)},2),strv("pat"));
 int _ok728 = !IS_FAIL(_v728);
 if(_ok728) {
@@ -8805,6 +9173,7 @@ var_set("omega", _omega);
     goto _SNO_NEXT_727;
 _SNO_NEXT_727:;
 /* line 18 */
+trampoline_stno(18);
 SnoVal _v730 = concat_sv(aply("EQ",(SnoVal[]){get(_doParseTree),get(_TRUE)},2),strv("(pat ~ 'identifier')"));
 int _ok730 = !IS_FAIL(_v730);
 if(_ok730) {
@@ -8814,6 +9183,7 @@ var_set("omega", _omega);
     goto _SNO_NEXT_729;
 _SNO_NEXT_729:;
 /* line 19 */
+trampoline_stno(19);
 SnoVal _v732 = concat_sv(concat_sv(concat_sv(get(_omega),strv(" $ tx *LEQ(tx, '")),get(_name)),strv("')"));
 int _ok732 = !IS_FAIL(_v732);
 if(_ok732) {
@@ -8823,6 +9193,7 @@ var_set("omega", _omega);
     goto _SNO_NEXT_731;
 _SNO_NEXT_731:;
 /* line 20 */
+trampoline_stno(20);
 SnoVal _v734 = aply("TZ",(SnoVal[]){get(_lvl),get(_name),aply("EVAL",(SnoVal[]){get(_omega)},1)},3);
 int _ok734 = !IS_FAIL(_v734);
 if(_ok734) {
@@ -8879,6 +9250,7 @@ static SnoVal _sno_fn_TY(SnoVal *_args, int _nargs) {
 
 /* line 24 */
 _L_TY:;
+trampoline_stno(24);
 SnoVal _v736 = concat_sv(aply("LE",(SnoVal[]){get(_xTrace),vint(0)},2),cursor_get("(null)"));
 int _ok736 = !IS_FAIL(_v736);
 if(_ok736) {
@@ -8889,6 +9261,7 @@ var_set("TY", _TY);
     goto _SNO_NEXT_735;
 _SNO_NEXT_735:;
 /* line 26 */
+trampoline_stno(26);
 SnoVal _v738 = concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(strv("pat $ tz"),strv(" @txOfs")),strv(" $ *T8Trace(")),get(_lvl)),strv(", ")),aply("Qize",(SnoVal[]){concat_sv(get(_name),strv(": "))},1)),strv(" tz, txOfs)"));
 int _ok738 = !IS_FAIL(_v738);
 if(_ok738) {
@@ -8898,6 +9271,7 @@ var_set("omega", _omega);
     goto _SNO_NEXT_737;
 _SNO_NEXT_737:;
 /* line 29 */
+trampoline_stno(29);
 SnoVal _v740 = aply("EVAL",(SnoVal[]){get(_omega)},1);
 int _ok740 = !IS_FAIL(_v740);
 if(_ok740) {
@@ -8954,6 +9328,7 @@ static SnoVal _sno_fn_TZ(SnoVal *_args, int _nargs) {
 
 /* line 35 */
 _L_TZ:;
+trampoline_stno(35);
 SnoVal _v742 = concat_sv(aply("LE",(SnoVal[]){get(_xTrace),vint(0)},2),cursor_get("(null)"));
 int _ok742 = !IS_FAIL(_v742);
 if(_ok742) {
@@ -8964,6 +9339,7 @@ var_set("TZ", _TZ);
     goto _SNO_NEXT_741;
 _SNO_NEXT_741:;
 /* line 37 */
+trampoline_stno(37);
 SnoVal _v744 = concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(strv("@txOfs $ *T8Trace("),get(_lvl)),strv(", '?' ")),aply("Qize",(SnoVal[]){get(_name)},1)),strv(", txOfs)")),strv(" pat $ tz")),strv(" @txOfs")),strv(" $ *T8Trace(")),get(_lvl)),strv(", ")),aply("Qize",(SnoVal[]){concat_sv(get(_name),strv(": "))},1)),strv(" tz, txOfs)"));
 int _ok744 = !IS_FAIL(_v744);
 if(_ok744) {
@@ -8973,6 +9349,7 @@ var_set("omega", _omega);
     goto _SNO_NEXT_743;
 _SNO_NEXT_743:;
 /* line 41 */
+trampoline_stno(41);
 SnoVal _v746 = aply("EVAL",(SnoVal[]){get(_omega)},1);
 int _ok746 = !IS_FAIL(_v746);
 if(_ok746) {
@@ -9029,6 +9406,7 @@ static SnoVal _sno_fn_T8Trace(SnoVal *_args, int _nargs) {
 
 /* line 6 */
 _L_T8Trace:;
+trampoline_stno(6);
 SnoVal _v748 = pat_cond(pat_var("dummy"),"?");
 int _ok748 = !IS_FAIL(_v748);
 if(_ok748) {
@@ -9038,24 +9416,28 @@ var_set("T8Trace", _T8Trace);
     goto _SNO_NEXT_747;
 _SNO_NEXT_747:;
 /* line 7 */
+trampoline_stno(7);
 SnoVal _v750 = aply("GT",(SnoVal[]){get(_doDebug),vint(0)},2);
 int _ok750 = !IS_FAIL(_v750);
     if(!_ok750) goto _SNO_RETURN_T8Trace;
     goto _SNO_NEXT_749;
 _SNO_NEXT_749:;
 /* line 8 */
+trampoline_stno(8);
 SnoVal _v752 = aply("LE",(SnoVal[]){get(_lvl),get(_doDebug)},2);
 int _ok752 = !IS_FAIL(_v752);
     if(!_ok752) goto _SNO_RETURN_T8Trace;
     goto _SNO_NEXT_751;
 _SNO_NEXT_751:;
 /* line 9 */
+trampoline_stno(9);
 SnoVal _v754 = aply("GT",(SnoVal[]){get(_doDebug),vint(1)},2);
 int _ok754 = !IS_FAIL(_v754);
     if(_ok754) goto _L_T8Trace1;
     goto _SNO_NEXT_753;
 _SNO_NEXT_753:;
 /* line 10 */
+trampoline_stno(10);
 /* byrd mtch u756 */
 SnoVal _s756 = get(_str);
 const char *_subj756 = to_str(_s756);
@@ -9093,6 +9475,7 @@ _byrd_756_done:;
 _SNO_NEXT_755:;
 /* line 11 */
 _L_T8Trace1:;
+trampoline_stno(11);
 /* byrd mtch u758 */
 SnoVal _s758 = get(_str);
 const char *_subj758 = to_str(_s758);
@@ -9144,6 +9527,7 @@ _byrd_758_done:;
     goto _SNO_NEXT_757;
 _SNO_NEXT_757:;
 /* line 12 */
+trampoline_stno(12);
 /* byrd mtch u760 */
 SnoVal _s760 = get(_str);
 const char *_subj760 = to_str(_s760);
@@ -9184,6 +9568,7 @@ _byrd_760_done:;
 _SNO_NEXT_759:;
 /* line 13 */
 _L_T8Trace2:;
+trampoline_stno(13);
 SnoVal _v762 = aply("T8Pos",(SnoVal[]){add(get(_strOfs),get(_ofs)),get(_t8Map)},2);
 int _ok762 = !IS_FAIL(_v762);
 if(_ok762) {
@@ -9193,12 +9578,14 @@ var_set("t8p", _t8p);
     goto _SNO_NEXT_761;
 _SNO_NEXT_761:;
 /* line 14 */
+trampoline_stno(14);
 SnoVal _v764 = aply("GE",(SnoVal[]){get(_t8MaxLine),vint(621)},2);
 int _ok764 = !IS_FAIL(_v764);
     if(!_ok764) goto _SNO_RETURN_T8Trace;
     goto _SNO_NEXT_763;
 _SNO_NEXT_763:;
 /* line 15 */
+trampoline_stno(15);
 SnoVal _v766 = concat_sv(aply("GE",(SnoVal[]){get(_t8Max),get(_t8MaxLast)},2),get(_t8Max));
 int _ok766 = !IS_FAIL(_v766);
 if(_ok766) {
@@ -9209,6 +9596,7 @@ var_set("t8MaxLast", _t8MaxLast);
     goto _SNO_NEXT_765;
 _SNO_NEXT_765:;
 /* line 16 */
+trampoline_stno(16);
 SnoVal _v768 = concat_sv(get(_t8p),get(_str));
 int _ok768 = !IS_FAIL(_v768);
 if(_ok768) {
@@ -9218,9 +9606,11 @@ var_set("OUTPUT", _v768);
 _SNO_NEXT_767:;
 /* line 17 */
 _L_T8TraceEnd:;
+trampoline_stno(17);
     goto _SNO_NEXT_769;
 _SNO_NEXT_769:;
 /* line 19 */
+trampoline_stno(19);
 SnoVal _v771 = aply("DEFINE",(SnoVal[]){strv("T8Pos(t8Ofs,t8Map)i")},1);
 int _ok771 = !IS_FAIL(_v771);
     goto _SNO_NEXT_770;
@@ -9268,6 +9658,7 @@ static SnoVal _sno_fn_T8Pos(SnoVal *_args, int _nargs) {
 
 /* line 20 */
 _L_T8Pos:;
+trampoline_stno(20);
 SnoVal _v773 = concat_sv(aply("IDENT",(SnoVal[]){get(_t8Map)},1),aply("LPAD",(SnoVal[]){get(_t8Ofs),vint(8)},2));
 int _ok773 = !IS_FAIL(_v773);
 if(_ok773) {
@@ -9278,6 +9669,7 @@ var_set("T8Pos", _T8Pos);
     goto _SNO_NEXT_772;
 _SNO_NEXT_772:;
 /* line 21 */
+trampoline_stno(21);
 SnoVal _v775 = get(_t8Ofs);
 int _ok775 = !IS_FAIL(_v775);
 if(_ok775) {
@@ -9287,6 +9679,7 @@ var_set("i", _i);
     goto _SNO_NEXT_774;
 _SNO_NEXT_774:;
 /* line 22 */
+trampoline_stno(22);
 SnoVal _v777 = add(aply("GT",(SnoVal[]){get(_t8Ofs),get(_t8Max)},2),get(_t8Ofs));
 int _ok777 = !IS_FAIL(_v777);
 if(_ok777) {
@@ -9297,6 +9690,7 @@ var_set("t8Max", _t8Max);
 _SNO_NEXT_776:;
 /* line 23 */
 _L_T8Pos1:;
+trampoline_stno(23);
 SnoVal _v779 = concat_sv(aply("IDENT",(SnoVal[]){indx(get(_t8Map),(SnoVal[]){get(_i)},1)},1),sub(get(_i),vint(1)));
 int _ok779 = !IS_FAIL(_v779);
 if(_ok779) {
@@ -9307,6 +9701,7 @@ var_set("i", _i);
     goto _SNO_NEXT_778;
 _SNO_NEXT_778:;
 /* line 24 */
+trampoline_stno(24);
 SnoVal _v781 = indx(get(_t8Map),(SnoVal[]){get(_i)},1);
 int _ok781 = !IS_FAIL(_v781);
 if(_ok781) {
@@ -9316,6 +9711,7 @@ var_set("t8Line", _t8Line);
     goto _SNO_NEXT_780;
 _SNO_NEXT_780:;
 /* line 25 */
+trampoline_stno(25);
 SnoVal _v783 = add(sub(get(_t8Ofs),get(_i)),vint(1));
 int _ok783 = !IS_FAIL(_v783);
 if(_ok783) {
@@ -9325,6 +9721,7 @@ var_set("t8Pos", _t8Pos);
     goto _SNO_NEXT_782;
 _SNO_NEXT_782:;
 /* line 26 */
+trampoline_stno(26);
 SnoVal _v785 = get(_t8Max);
 int _ok785 = !IS_FAIL(_v785);
 if(_ok785) {
@@ -9335,6 +9732,7 @@ var_set("i", _i);
 _SNO_NEXT_784:;
 /* line 27 */
 _L_T8Pos2:;
+trampoline_stno(27);
 SnoVal _v787 = concat_sv(aply("IDENT",(SnoVal[]){indx(get(_t8Map),(SnoVal[]){get(_i)},1)},1),sub(get(_i),vint(1)));
 int _ok787 = !IS_FAIL(_v787);
 if(_ok787) {
@@ -9345,6 +9743,7 @@ var_set("i", _i);
     goto _SNO_NEXT_786;
 _SNO_NEXT_786:;
 /* line 28 */
+trampoline_stno(28);
 SnoVal _v789 = indx(get(_t8Map),(SnoVal[]){get(_i)},1);
 int _ok789 = !IS_FAIL(_v789);
 if(_ok789) {
@@ -9354,6 +9753,7 @@ var_set("t8MaxLine", _t8MaxLine);
     goto _SNO_NEXT_788;
 _SNO_NEXT_788:;
 /* line 29 */
+trampoline_stno(29);
 SnoVal _v791 = add(sub(get(_t8Max),get(_i)),vint(1));
 int _ok791 = !IS_FAIL(_v791);
 if(_ok791) {
@@ -9363,6 +9763,7 @@ var_set("t8MaxPos", _t8MaxPos);
     goto _SNO_NEXT_790;
 _SNO_NEXT_790:;
 /* line 30 */
+trampoline_stno(30);
 SnoVal _v793 = concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(strv("("),aply("LPAD",(SnoVal[]){get(_t8MaxLine),vint(5)},2)),strv(", ")),aply("LPAD",(SnoVal[]){get(_t8MaxPos),vint(3)},2)),strv(", ")),aply("LPAD",(SnoVal[]){get(_t8Line),vint(5)},2)),strv(", ")),aply("LPAD",(SnoVal[]){get(_t8Pos),vint(3)},2)),strv(")"));
 int _ok793 = !IS_FAIL(_v793);
 if(_ok793) {
@@ -9423,12 +9824,14 @@ static SnoVal _sno_fn_pp(SnoVal *_args, int _nargs) {
 
 /* line 427 */
 _L_pp:;
+trampoline_stno(427);
 SnoVal _v795 = aply("DIFFER",(SnoVal[]){get(_x)},1);
 int _ok795 = !IS_FAIL(_v795);
     if(!_ok795) goto _SNO_RETURN_pp;
     goto _SNO_NEXT_794;
 _SNO_NEXT_794:;
 /* line 428 */
+trampoline_stno(428);
 SnoVal _v797 = aply("t",(SnoVal[]){get(_x)},1);
 int _ok797 = !IS_FAIL(_v797);
 if(_ok797) {
@@ -9438,6 +9841,7 @@ var_set("t", _t);
     goto _SNO_NEXT_796;
 _SNO_NEXT_796:;
 /* line 429 */
+trampoline_stno(429);
 SnoVal _v799 = aply("v",(SnoVal[]){get(_x)},1);
 int _ok799 = !IS_FAIL(_v799);
 if(_ok799) {
@@ -9447,6 +9851,7 @@ var_set("v", _v);
     goto _SNO_NEXT_798;
 _SNO_NEXT_798:;
 /* line 430 */
+trampoline_stno(430);
 SnoVal _v801 = aply("n",(SnoVal[]){get(_x)},1);
 int _ok801 = !IS_FAIL(_v801);
 if(_ok801) {
@@ -9456,6 +9861,7 @@ var_set("n", _n);
     goto _SNO_NEXT_800;
 _SNO_NEXT_800:;
 /* line 431 */
+trampoline_stno(431);
 SnoVal _v803 = aply("c",(SnoVal[]){get(_x)},1);
 int _ok803 = !IS_FAIL(_v803);
 if(_ok803) {
@@ -9465,6 +9871,7 @@ var_set("c", _c);
     goto _SNO_NEXT_802;
 _SNO_NEXT_802:;
 /* line 432 */
+trampoline_stno(432);
 SnoVal _v805 = concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(aply("GT",(SnoVal[]){get(_doDebug),vint(0)},2),strv("pp(")),get(_t)),strv(")")),strv(", sz = ")),get(_level)),strv("+")),aply("SIZE",(SnoVal[]){get(_v)},1)),strv(", v = ")),get(_v));
 int _ok805 = !IS_FAIL(_v805);
 if(_ok805) {
@@ -9473,6 +9880,7 @@ var_set("OUTPUT", _v805);
     goto _SNO_NEXT_804;
 _SNO_NEXT_804:;
 /* line 433 */
+trampoline_stno(433);
 SnoVal _v807 = aply("DIFFER",(SnoVal[]){get(_t)},1);
 int _ok807 = !IS_FAIL(_v807);
     if(_ok807) goto _SNO_NEXT_806;
@@ -9481,6 +9889,7 @@ int _ok807 = !IS_FAIL(_v807);
 _SNO_NEXT_806:;
 /* line 435 */
 _L_pp_Parse:;
+trampoline_stno(435);
 SnoVal _v809 = indx(get(_ppStop),(SnoVal[]){vint(4)},1);
 int _ok809 = !IS_FAIL(_v809);
 if(_ok809) {
@@ -9491,6 +9900,7 @@ var_set("ppWidth", _ppWidth);
 _SNO_NEXT_808:;
 /* line 436 */
 _L_pp_0:;
+trampoline_stno(436);
 SnoVal _v811 = vint(0);
 int _ok811 = !IS_FAIL(_v811);
 if(_ok811) {
@@ -9501,6 +9911,7 @@ var_set("i", _i);
 _SNO_NEXT_810:;
 /* line 437 */
 _L_pp_1:;
+trampoline_stno(437);
 SnoVal _v813 = concat_sv(aply("LT",(SnoVal[]){get(_i),get(_n)},2),add(get(_i),vint(1)));
 int _ok813 = !IS_FAIL(_v813);
 if(_ok813) {
@@ -9511,12 +9922,14 @@ var_set("i", _i);
     goto _SNO_NEXT_812;
 _SNO_NEXT_812:;
 /* line 438 */
+trampoline_stno(438);
 SnoVal _v815 = aply("pp",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_i)},1)},1);
 int _ok815 = !IS_FAIL(_v815);
     goto _L_pp_1;
 _SNO_NEXT_814:;
 /* line 440 */
 _L_pp_BuiltinVar:;
+trampoline_stno(440);
 SnoVal _v817 = aply("Gen",(SnoVal[]){aply("ss",(SnoVal[]){get(_x)},1)},1);
 int _ok817 = !IS_FAIL(_v817);
     if(_ok817) goto _SNO_RETURN_pp;
@@ -9525,6 +9938,7 @@ int _ok817 = !IS_FAIL(_v817);
 _SNO_NEXT_816:;
 /* line 441 */
 _L_pp_Function:;
+trampoline_stno(441);
 SnoVal _v819 = aply("Gen",(SnoVal[]){aply("ss",(SnoVal[]){get(_x)},1)},1);
 int _ok819 = !IS_FAIL(_v819);
     if(_ok819) goto _SNO_RETURN_pp;
@@ -9533,6 +9947,7 @@ int _ok819 = !IS_FAIL(_v819);
 _SNO_NEXT_818:;
 /* line 442 */
 _L_pp_Id:;
+trampoline_stno(442);
 SnoVal _v821 = aply("Gen",(SnoVal[]){aply("ss",(SnoVal[]){get(_x)},1)},1);
 int _ok821 = !IS_FAIL(_v821);
     if(_ok821) goto _SNO_RETURN_pp;
@@ -9541,6 +9956,7 @@ int _ok821 = !IS_FAIL(_v821);
 _SNO_NEXT_820:;
 /* line 443 */
 _L_pp_Integer:;
+trampoline_stno(443);
 SnoVal _v823 = aply("Gen",(SnoVal[]){aply("ss",(SnoVal[]){get(_x)},1)},1);
 int _ok823 = !IS_FAIL(_v823);
     if(_ok823) goto _SNO_RETURN_pp;
@@ -9549,6 +9965,7 @@ int _ok823 = !IS_FAIL(_v823);
 _SNO_NEXT_822:;
 /* line 444 */
 _L_pp_Label:;
+trampoline_stno(444);
 SnoVal _v825 = aply("Gen",(SnoVal[]){aply("ss",(SnoVal[]){get(_x)},1)},1);
 int _ok825 = !IS_FAIL(_v825);
     if(_ok825) goto _SNO_RETURN_pp;
@@ -9557,6 +9974,7 @@ int _ok825 = !IS_FAIL(_v825);
 _SNO_NEXT_824:;
 /* line 445 */
 _L_pp_ProtKwd:;
+trampoline_stno(445);
 SnoVal _v827 = aply("Gen",(SnoVal[]){aply("ss",(SnoVal[]){get(_x)},1)},1);
 int _ok827 = !IS_FAIL(_v827);
     if(_ok827) goto _SNO_RETURN_pp;
@@ -9565,6 +9983,7 @@ int _ok827 = !IS_FAIL(_v827);
 _SNO_NEXT_826:;
 /* line 446 */
 _L_pp_Real:;
+trampoline_stno(446);
 SnoVal _v829 = aply("Gen",(SnoVal[]){aply("ss",(SnoVal[]){get(_x)},1)},1);
 int _ok829 = !IS_FAIL(_v829);
     if(_ok829) goto _SNO_RETURN_pp;
@@ -9573,6 +9992,7 @@ int _ok829 = !IS_FAIL(_v829);
 _SNO_NEXT_828:;
 /* line 447 */
 _L_pp_SpecialNm:;
+trampoline_stno(447);
 SnoVal _v831 = aply("Gen",(SnoVal[]){aply("ss",(SnoVal[]){get(_x)},1)},1);
 int _ok831 = !IS_FAIL(_v831);
     if(_ok831) goto _SNO_RETURN_pp;
@@ -9581,6 +10001,7 @@ int _ok831 = !IS_FAIL(_v831);
 _SNO_NEXT_830:;
 /* line 448 */
 _L_pp_String:;
+trampoline_stno(448);
 SnoVal _v833 = aply("Gen",(SnoVal[]){aply("ss",(SnoVal[]){get(_x)},1)},1);
 int _ok833 = !IS_FAIL(_v833);
     if(_ok833) goto _SNO_RETURN_pp;
@@ -9589,6 +10010,7 @@ int _ok833 = !IS_FAIL(_v833);
 _SNO_NEXT_832:;
 /* line 449 */
 _L_pp_UnprotKwd:;
+trampoline_stno(449);
 SnoVal _v835 = aply("Gen",(SnoVal[]){aply("ss",(SnoVal[]){get(_x)},1)},1);
 int _ok835 = !IS_FAIL(_v835);
     if(_ok835) goto _SNO_RETURN_pp;
@@ -9597,6 +10019,7 @@ int _ok835 = !IS_FAIL(_v835);
 _SNO_NEXT_834:;
 /* line 451 */
 _L_pp____:;
+trampoline_stno(451);
 SnoVal _v837 = aply("Gen",(SnoVal[]){aply("ss",(SnoVal[]){get(_x)},1)},1);
 int _ok837 = !IS_FAIL(_v837);
     if(_ok837) goto _SNO_RETURN_pp;
@@ -9605,6 +10028,7 @@ int _ok837 = !IS_FAIL(_v837);
 _SNO_NEXT_836:;
 /* line 452 */
 _L_pp_____2:;
+trampoline_stno(452);
 SnoVal _v839 = aply("Gen",(SnoVal[]){aply("ss",(SnoVal[]){get(_x)},1)},1);
 int _ok839 = !IS_FAIL(_v839);
     if(_ok839) goto _SNO_RETURN_pp;
@@ -9613,6 +10037,7 @@ int _ok839 = !IS_FAIL(_v839);
 _SNO_NEXT_838:;
 /* line 453 */
 _L_pp__S__:;
+trampoline_stno(453);
 SnoVal _v841 = aply("Gen",(SnoVal[]){aply("ss",(SnoVal[]){get(_x)},1)},1);
 int _ok841 = !IS_FAIL(_v841);
     if(_ok841) goto _SNO_RETURN_pp;
@@ -9621,6 +10046,7 @@ int _ok841 = !IS_FAIL(_v841);
 _SNO_NEXT_840:;
 /* line 454 */
 _L_pp__S___2:;
+trampoline_stno(454);
 SnoVal _v843 = aply("Gen",(SnoVal[]){aply("ss",(SnoVal[]){get(_x)},1)},1);
 int _ok843 = !IS_FAIL(_v843);
     if(_ok843) goto _SNO_RETURN_pp;
@@ -9629,6 +10055,7 @@ int _ok843 = !IS_FAIL(_v843);
 _SNO_NEXT_842:;
 /* line 455 */
 _L_pp__F__:;
+trampoline_stno(455);
 SnoVal _v845 = aply("Gen",(SnoVal[]){aply("ss",(SnoVal[]){get(_x)},1)},1);
 int _ok845 = !IS_FAIL(_v845);
     if(_ok845) goto _SNO_RETURN_pp;
@@ -9637,6 +10064,7 @@ int _ok845 = !IS_FAIL(_v845);
 _SNO_NEXT_844:;
 /* line 456 */
 _L_pp__F___2:;
+trampoline_stno(456);
 SnoVal _v847 = aply("Gen",(SnoVal[]){aply("ss",(SnoVal[]){get(_x)},1)},1);
 int _ok847 = !IS_FAIL(_v847);
     if(_ok847) goto _SNO_RETURN_pp;
@@ -9645,65 +10073,77 @@ int _ok847 = !IS_FAIL(_v847);
 _SNO_NEXT_846:;
 /* line 458 */
 _L_ppUnOp:;
+trampoline_stno(458);
 SnoVal _v849 = aply("Gen",(SnoVal[]){aply("ss",(SnoVal[]){get(_x),sub(get(_ppWidth),aply("GetLevel",NULL,0))},2)},1);
 int _ok849 = !IS_FAIL(_v849);
     if(_ok849) goto _SNO_RETURN_pp;
     goto _SNO_NEXT_848;
 _SNO_NEXT_848:;
 /* line 459 */
+trampoline_stno(459);
 SnoVal _v851 = aply("Gen",(SnoVal[]){get(_t)},1);
 int _ok851 = !IS_FAIL(_v851);
     goto _SNO_NEXT_850;
 _SNO_NEXT_850:;
 /* line 460 */
+trampoline_stno(460);
 SnoVal _v853 = aply("pp",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1)},1);
 int _ok853 = !IS_FAIL(_v853);
     goto _SNO_RETURN_pp;
 _SNO_NEXT_852:;
 /* line 461 */
 _L_ppBinOp:;
+trampoline_stno(461);
 SnoVal _v855 = aply("Gen",(SnoVal[]){aply("ss",(SnoVal[]){get(_x),sub(get(_ppWidth),aply("GetLevel",NULL,0))},2)},1);
 int _ok855 = !IS_FAIL(_v855);
     if(_ok855) goto _SNO_RETURN_pp;
     goto _SNO_NEXT_854;
 _SNO_NEXT_854:;
 /* line 462 */
+trampoline_stno(462);
 SnoVal _v857 = aply("pp",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1)},1);
 int _ok857 = !IS_FAIL(_v857);
     goto _SNO_NEXT_856;
 _SNO_NEXT_856:;
 /* line 463 */
+trampoline_stno(463);
 SnoVal _v859 = aply("Gen",(SnoVal[]){get(_nl)},1);
 int _ok859 = !IS_FAIL(_v859);
     goto _SNO_NEXT_858;
 _SNO_NEXT_858:;
 /* line 464 */
+trampoline_stno(464);
 SnoVal _v861 = aply("DecLevel",NULL,0);
 int _ok861 = !IS_FAIL(_v861);
     goto _SNO_NEXT_860;
 _SNO_NEXT_860:;
 /* line 465 */
+trampoline_stno(465);
 SnoVal _v863 = aply("Gen",(SnoVal[]){get(_t)},1);
 int _ok863 = !IS_FAIL(_v863);
     goto _SNO_NEXT_862;
 _SNO_NEXT_862:;
 /* line 466 */
+trampoline_stno(466);
 SnoVal _v865 = aply("IncLevel",NULL,0);
 int _ok865 = !IS_FAIL(_v865);
     goto _SNO_NEXT_864;
 _SNO_NEXT_864:;
 /* line 467 */
+trampoline_stno(467);
 SnoVal _v867 = aply("GenTab",NULL,0);
 int _ok867 = !IS_FAIL(_v867);
     goto _SNO_NEXT_866;
 _SNO_NEXT_866:;
 /* line 468 */
+trampoline_stno(468);
 SnoVal _v869 = aply("pp",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(2)},1)},1);
 int _ok869 = !IS_FAIL(_v869);
     goto _SNO_RETURN_pp;
 _SNO_NEXT_868:;
 /* line 470 */
 _L_pp__:;
+trampoline_stno(470);
 SnoVal _v871 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok871 = !IS_FAIL(_v871);
     if(_ok871) goto _L_ppUnOp;
@@ -9711,12 +10151,14 @@ int _ok871 = !IS_FAIL(_v871);
 _SNO_NEXT_870:;
 /* line 471 */
 _L_pp___2:;
+trampoline_stno(471);
 SnoVal _v873 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok873 = !IS_FAIL(_v873);
     if(_ok873) goto _L_ppUnOp;
     goto _SNO_NEXT_872;
 _SNO_NEXT_872:;
 /* line 472 */
+trampoline_stno(472);
 SnoVal _v875 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok875 = !IS_FAIL(_v875);
     if(_ok875) goto _L_ppBinOp;
@@ -9725,12 +10167,14 @@ int _ok875 = !IS_FAIL(_v875);
 _SNO_NEXT_874:;
 /* line 473 */
 _L_pp___3:;
+trampoline_stno(473);
 SnoVal _v877 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok877 = !IS_FAIL(_v877);
     if(_ok877) goto _L_ppUnOp;
     goto _SNO_NEXT_876;
 _SNO_NEXT_876:;
 /* line 474 */
+trampoline_stno(474);
 SnoVal _v879 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok879 = !IS_FAIL(_v879);
     if(_ok879) goto _L_ppBinOp;
@@ -9739,12 +10183,14 @@ int _ok879 = !IS_FAIL(_v879);
 _SNO_NEXT_878:;
 /* line 475 */
 _L_pp___4:;
+trampoline_stno(475);
 SnoVal _v881 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok881 = !IS_FAIL(_v881);
     if(_ok881) goto _L_ppUnOp;
     goto _SNO_NEXT_880;
 _SNO_NEXT_880:;
 /* line 476 */
+trampoline_stno(476);
 SnoVal _v883 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok883 = !IS_FAIL(_v883);
     if(_ok883) goto _L_ppBinOp;
@@ -9753,12 +10199,14 @@ int _ok883 = !IS_FAIL(_v883);
 _SNO_NEXT_882:;
 /* line 477 */
 _L_pp___5:;
+trampoline_stno(477);
 SnoVal _v885 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok885 = !IS_FAIL(_v885);
     if(_ok885) goto _L_ppUnOp;
     goto _SNO_NEXT_884;
 _SNO_NEXT_884:;
 /* line 478 */
+trampoline_stno(478);
 SnoVal _v887 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok887 = !IS_FAIL(_v887);
     if(_ok887) goto _L_ppBinOp;
@@ -9767,12 +10215,14 @@ int _ok887 = !IS_FAIL(_v887);
 _SNO_NEXT_886:;
 /* line 479 */
 _L_pp___6:;
+trampoline_stno(479);
 SnoVal _v889 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok889 = !IS_FAIL(_v889);
     if(_ok889) goto _L_ppUnOp;
     goto _SNO_NEXT_888;
 _SNO_NEXT_888:;
 /* line 480 */
+trampoline_stno(480);
 SnoVal _v891 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok891 = !IS_FAIL(_v891);
     if(_ok891) goto _L_ppBinOp;
@@ -9781,12 +10231,14 @@ int _ok891 = !IS_FAIL(_v891);
 _SNO_NEXT_890:;
 /* line 481 */
 _L_pp___7:;
+trampoline_stno(481);
 SnoVal _v893 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok893 = !IS_FAIL(_v893);
     if(_ok893) goto _L_ppUnOp;
     goto _SNO_NEXT_892;
 _SNO_NEXT_892:;
 /* line 482 */
+trampoline_stno(482);
 SnoVal _v895 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok895 = !IS_FAIL(_v895);
     if(_ok895) goto _L_ppBinOp;
@@ -9795,12 +10247,14 @@ int _ok895 = !IS_FAIL(_v895);
 _SNO_NEXT_894:;
 /* line 483 */
 _L_pp___8:;
+trampoline_stno(483);
 SnoVal _v897 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok897 = !IS_FAIL(_v897);
     if(_ok897) goto _L_ppUnOp;
     goto _SNO_NEXT_896;
 _SNO_NEXT_896:;
 /* line 484 */
+trampoline_stno(484);
 SnoVal _v899 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok899 = !IS_FAIL(_v899);
     if(_ok899) goto _L_ppBinOp;
@@ -9809,12 +10263,14 @@ int _ok899 = !IS_FAIL(_v899);
 _SNO_NEXT_898:;
 /* line 485 */
 _L_pp___9:;
+trampoline_stno(485);
 SnoVal _v901 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok901 = !IS_FAIL(_v901);
     if(_ok901) goto _L_ppUnOp;
     goto _SNO_NEXT_900;
 _SNO_NEXT_900:;
 /* line 486 */
+trampoline_stno(486);
 SnoVal _v903 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok903 = !IS_FAIL(_v903);
     if(_ok903) goto _L_ppBinOp;
@@ -9823,12 +10279,14 @@ int _ok903 = !IS_FAIL(_v903);
 _SNO_NEXT_902:;
 /* line 487 */
 _L_pp___10:;
+trampoline_stno(487);
 SnoVal _v905 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok905 = !IS_FAIL(_v905);
     if(_ok905) goto _L_ppUnOp;
     goto _SNO_NEXT_904;
 _SNO_NEXT_904:;
 /* line 488 */
+trampoline_stno(488);
 SnoVal _v907 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok907 = !IS_FAIL(_v907);
     if(_ok907) goto _L_ppBinOp;
@@ -9837,12 +10295,14 @@ int _ok907 = !IS_FAIL(_v907);
 _SNO_NEXT_906:;
 /* line 489 */
 _L_pp___11:;
+trampoline_stno(489);
 SnoVal _v909 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok909 = !IS_FAIL(_v909);
     if(_ok909) goto _L_ppUnOp;
     goto _SNO_NEXT_908;
 _SNO_NEXT_908:;
 /* line 490 */
+trampoline_stno(490);
 SnoVal _v911 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok911 = !IS_FAIL(_v911);
     if(_ok911) goto _L_ppBinOp;
@@ -9851,12 +10311,14 @@ int _ok911 = !IS_FAIL(_v911);
 _SNO_NEXT_910:;
 /* line 491 */
 _L_pp___12:;
+trampoline_stno(491);
 SnoVal _v913 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok913 = !IS_FAIL(_v913);
     if(_ok913) goto _L_ppUnOp;
     goto _SNO_NEXT_912;
 _SNO_NEXT_912:;
 /* line 492 */
+trampoline_stno(492);
 SnoVal _v915 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok915 = !IS_FAIL(_v915);
     if(_ok915) goto _L_ppBinOp;
@@ -9865,12 +10327,14 @@ int _ok915 = !IS_FAIL(_v915);
 _SNO_NEXT_914:;
 /* line 493 */
 _L_pp___13:;
+trampoline_stno(493);
 SnoVal _v917 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok917 = !IS_FAIL(_v917);
     if(_ok917) goto _L_ppUnOp;
     goto _SNO_NEXT_916;
 _SNO_NEXT_916:;
 /* line 494 */
+trampoline_stno(494);
 SnoVal _v919 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok919 = !IS_FAIL(_v919);
     if(_ok919) goto _L_ppBinOp;
@@ -9879,6 +10343,7 @@ int _ok919 = !IS_FAIL(_v919);
 _SNO_NEXT_918:;
 /* line 495 */
 _L_pp___14:;
+trampoline_stno(495);
 SnoVal _v921 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok921 = !IS_FAIL(_v921);
     if(_ok921) goto _L_ppBinOp;
@@ -9887,12 +10352,14 @@ int _ok921 = !IS_FAIL(_v921);
 _SNO_NEXT_920:;
 /* line 496 */
 _L_pp___15:;
+trampoline_stno(496);
 SnoVal _v923 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok923 = !IS_FAIL(_v923);
     if(_ok923) goto _L_ppUnOp;
     goto _SNO_NEXT_922;
 _SNO_NEXT_922:;
 /* line 497 */
+trampoline_stno(497);
 SnoVal _v925 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok925 = !IS_FAIL(_v925);
     if(_ok925) goto _L_ppBinOp;
@@ -9901,48 +10368,57 @@ int _ok925 = !IS_FAIL(_v925);
 _SNO_NEXT_924:;
 /* line 499 */
 _L_pp_Comment:;
+trampoline_stno(499);
 SnoVal _v927 = aply("SetLevel",(SnoVal[]){vint(0)},1);
 int _ok927 = !IS_FAIL(_v927);
     goto _SNO_NEXT_926;
 _SNO_NEXT_926:;
 /* line 500 */
+trampoline_stno(500);
 SnoVal _v929 = aply("GenSetCont",NULL,0);
 int _ok929 = !IS_FAIL(_v929);
     goto _SNO_NEXT_928;
 _SNO_NEXT_928:;
 /* line 501 */
+trampoline_stno(501);
 SnoVal _v931 = aply("Gen",(SnoVal[]){concat_sv(aply("v",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1)},1),get(_nl))},1);
 int _ok931 = !IS_FAIL(_v931);
     goto _SNO_RETURN_pp;
 _SNO_NEXT_930:;
 /* line 503 */
 _L_pp_Control:;
+trampoline_stno(503);
 SnoVal _v933 = aply("SetLevel",(SnoVal[]){vint(0)},1);
 int _ok933 = !IS_FAIL(_v933);
     goto _SNO_NEXT_932;
 _SNO_NEXT_932:;
 /* line 504 */
+trampoline_stno(504);
 SnoVal _v935 = aply("GenSetCont",NULL,0);
 int _ok935 = !IS_FAIL(_v935);
     goto _SNO_NEXT_934;
 _SNO_NEXT_934:;
 /* line 505 */
+trampoline_stno(505);
 SnoVal _v937 = aply("Gen",(SnoVal[]){concat_sv(aply("v",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1)},1),get(_nl))},1);
 int _ok937 = !IS_FAIL(_v937);
     goto _SNO_RETURN_pp;
 _SNO_NEXT_936:;
 /* line 507 */
 _L_pp_Stmt:;
+trampoline_stno(507);
 SnoVal _v939 = aply("SetLevel",(SnoVal[]){vint(0)},1);
 int _ok939 = !IS_FAIL(_v939);
     goto _SNO_NEXT_938;
 _SNO_NEXT_938:;
 /* line 508 */
+trampoline_stno(508);
 SnoVal _v941 = aply("GenSetCont",(SnoVal[]){strv("+")},1);
 int _ok941 = !IS_FAIL(_v941);
     goto _SNO_NEXT_940;
 _SNO_NEXT_940:;
 /* line 509 */
+trampoline_stno(509);
 SnoVal _v943 = indx(get(_ppStop),(SnoVal[]){vint(4)},1);
 int _ok943 = !IS_FAIL(_v943);
 if(_ok943) {
@@ -9952,6 +10428,7 @@ var_set("ppWidth", _ppWidth);
     goto _SNO_NEXT_942;
 _SNO_NEXT_942:;
 /* line 510 */
+trampoline_stno(510);
 SnoVal _v945 = aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1)},1);
 int _ok945 = !IS_FAIL(_v945);
 if(_ok945) {
@@ -9961,6 +10438,7 @@ var_set("ppLbl", _ppLbl);
     goto _SNO_NEXT_944;
 _SNO_NEXT_944:;
 /* line 511 */
+trampoline_stno(511);
 SnoVal _v947 = indx(get(_c),(SnoVal[]){vint(2)},1);
 int _ok947 = !IS_FAIL(_v947);
 if(_ok947) {
@@ -9970,6 +10448,7 @@ var_set("ppSubj", _ppSubj);
     goto _SNO_NEXT_946;
 _SNO_NEXT_946:;
 /* line 512 */
+trampoline_stno(512);
 SnoVal _v949 = indx(get(_c),(SnoVal[]){vint(3)},1);
 int _ok949 = !IS_FAIL(_v949);
 if(_ok949) {
@@ -9979,6 +10458,7 @@ var_set("ppPatrn", _ppPatrn);
     goto _SNO_NEXT_948;
 _SNO_NEXT_948:;
 /* line 513 */
+trampoline_stno(513);
 SnoVal _v951 = aply("v",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(4)},1)},1);
 int _ok951 = !IS_FAIL(_v951);
 if(_ok951) {
@@ -9988,6 +10468,7 @@ var_set("ppAsgn", _ppAsgn);
     goto _SNO_NEXT_950;
 _SNO_NEXT_950:;
 /* line 514 */
+trampoline_stno(514);
 SnoVal _v953 = indx(get(_c),(SnoVal[]){vint(5)},1);
 int _ok953 = !IS_FAIL(_v953);
 if(_ok953) {
@@ -9997,6 +10478,7 @@ var_set("ppRepl", _ppRepl);
     goto _SNO_NEXT_952;
 _SNO_NEXT_952:;
 /* line 515 */
+trampoline_stno(515);
 SnoVal _v955 = indx(get(_c),(SnoVal[]){vint(6)},1);
 int _ok955 = !IS_FAIL(_v955);
 if(_ok955) {
@@ -10006,6 +10488,7 @@ var_set("ppGo1", _ppGo1);
     goto _SNO_NEXT_954;
 _SNO_NEXT_954:;
 /* line 516 */
+trampoline_stno(516);
 SnoVal _v957 = indx(get(_c),(SnoVal[]){vint(7)},1);
 int _ok957 = !IS_FAIL(_v957);
 if(_ok957) {
@@ -10015,32 +10498,38 @@ var_set("ppGo2", _ppGo2);
     goto _SNO_NEXT_956;
 _SNO_NEXT_956:;
 /* line 517 */
+trampoline_stno(517);
 SnoVal _v959 = aply("Gen",(SnoVal[]){get(_ppLbl)},1);
 int _ok959 = !IS_FAIL(_v959);
     goto _SNO_NEXT_958;
 _SNO_NEXT_958:;
 /* line 518 */
+trampoline_stno(518);
 SnoVal _v961 = aply("DIFFER",(SnoVal[]){aply("t",(SnoVal[]){get(_ppSubj)},1)},1);
 int _ok961 = !IS_FAIL(_v961);
     if(!_ok961) goto _L_pp_Stmt7;
     goto _SNO_NEXT_960;
 _SNO_NEXT_960:;
 /* line 519 */
+trampoline_stno(519);
 SnoVal _v963 = aply("Gen",(SnoVal[]){strv(" ")},1);
 int _ok963 = !IS_FAIL(_v963);
     goto _SNO_NEXT_962;
 _SNO_NEXT_962:;
 /* line 520 */
+trampoline_stno(520);
 SnoVal _v965 = aply("GenTab",(SnoVal[]){indx(get(_ppStop),(SnoVal[]){vint(1)},1)},1);
 int _ok965 = !IS_FAIL(_v965);
     goto _SNO_NEXT_964;
 _SNO_NEXT_964:;
 /* line 521 */
+trampoline_stno(521);
 SnoVal _v967 = aply("SetLevel",(SnoVal[]){indx(get(_ppStop),(SnoVal[]){vint(1)},1)},1);
 int _ok967 = !IS_FAIL(_v967);
     goto _SNO_NEXT_966;
 _SNO_NEXT_966:;
 /* line 522 */
+trampoline_stno(522);
 SnoVal _v969 = concat_sv(concat_sv(concat_sv(aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_ppPatrn)},1)},1),aply("IDENT",(SnoVal[]){get(_ppAsgn)},1)),aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_ppGo1)},1)},1)),add(indx(get(_ppStop),(SnoVal[]){vint(4)},1),get(_ppLgBump)));
 int _ok969 = !IS_FAIL(_v969);
 if(_ok969) {
@@ -10050,32 +10539,38 @@ var_set("ppWidth", _ppWidth);
     goto _SNO_NEXT_968;
 _SNO_NEXT_968:;
 /* line 523 */
+trampoline_stno(523);
 SnoVal _v971 = aply("pp",(SnoVal[]){get(_ppSubj)},1);
 int _ok971 = !IS_FAIL(_v971);
     goto _SNO_NEXT_970;
 _SNO_NEXT_970:;
 /* line 524 */
+trampoline_stno(524);
 SnoVal _v973 = aply("DIFFER",(SnoVal[]){aply("t",(SnoVal[]){get(_ppPatrn)},1)},1);
 int _ok973 = !IS_FAIL(_v973);
     if(!_ok973) goto _L_pp_Stmt5;
     goto _SNO_NEXT_972;
 _SNO_NEXT_972:;
 /* line 525 */
+trampoline_stno(525);
 SnoVal _v975 = aply("Gen",(SnoVal[]){strv(" ")},1);
 int _ok975 = !IS_FAIL(_v975);
     goto _SNO_NEXT_974;
 _SNO_NEXT_974:;
 /* line 526 */
+trampoline_stno(526);
 SnoVal _v977 = aply("GenTab",(SnoVal[]){indx(get(_ppStop),(SnoVal[]){vint(2)},1)},1);
 int _ok977 = !IS_FAIL(_v977);
     goto _SNO_NEXT_976;
 _SNO_NEXT_976:;
 /* line 527 */
+trampoline_stno(527);
 SnoVal _v979 = aply("SetLevel",(SnoVal[]){indx(get(_ppStop),(SnoVal[]){vint(2)},1)},1);
 int _ok979 = !IS_FAIL(_v979);
     goto _SNO_NEXT_978;
 _SNO_NEXT_978:;
 /* line 528 */
+trampoline_stno(528);
 SnoVal _v981 = concat_sv(concat_sv(aply("IDENT",(SnoVal[]){get(_ppAsgn)},1),aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_ppGo1)},1)},1)),add(indx(get(_ppStop),(SnoVal[]){vint(4)},1),get(_ppLgBump)));
 int _ok981 = !IS_FAIL(_v981);
 if(_ok981) {
@@ -10085,86 +10580,102 @@ var_set("ppWidth", _ppWidth);
     goto _SNO_NEXT_980;
 _SNO_NEXT_980:;
 /* line 529 */
+trampoline_stno(529);
 SnoVal _v983 = aply("pp",(SnoVal[]){get(_ppPatrn)},1);
 int _ok983 = !IS_FAIL(_v983);
     goto _SNO_NEXT_982;
 _SNO_NEXT_982:;
 /* line 530 */
+trampoline_stno(530);
 SnoVal _v985 = aply("DIFFER",(SnoVal[]){get(_ppAsgn)},1);
 int _ok985 = !IS_FAIL(_v985);
     if(!_ok985) goto _L_pp_Stmt7;
     goto _SNO_NEXT_984;
 _SNO_NEXT_984:;
 /* line 531 */
+trampoline_stno(531);
 SnoVal _v987 = aply("Gen",(SnoVal[]){strv(" =")},1);
 int _ok987 = !IS_FAIL(_v987);
     goto _SNO_NEXT_986;
 _SNO_NEXT_986:;
 /* line 532 */
+trampoline_stno(532);
 SnoVal _v989 = aply("DIFFER",(SnoVal[]){aply("t",(SnoVal[]){get(_ppRepl)},1)},1);
 int _ok989 = !IS_FAIL(_v989);
     if(!_ok989) goto _L_pp_Stmt7;
     goto _SNO_NEXT_988;
 _SNO_NEXT_988:;
 /* line 533 */
+trampoline_stno(533);
 SnoVal _v991 = aply("Gen",(SnoVal[]){strv(" ")},1);
 int _ok991 = !IS_FAIL(_v991);
     goto _SNO_NEXT_990;
 _SNO_NEXT_990:;
 /* line 534 */
+trampoline_stno(534);
 SnoVal _v993 = aply("pp",(SnoVal[]){get(_ppRepl)},1);
 int _ok993 = !IS_FAIL(_v993);
     goto _L_pp_Stmt7;
 _SNO_NEXT_992:;
 /* line 535 */
 _L_pp_Stmt5:;
+trampoline_stno(535);
 SnoVal _v995 = aply("DIFFER",(SnoVal[]){get(_ppAsgn)},1);
 int _ok995 = !IS_FAIL(_v995);
     if(!_ok995) goto _L_pp_Stmt7;
     goto _SNO_NEXT_994;
 _SNO_NEXT_994:;
 /* line 536 */
+trampoline_stno(536);
 SnoVal _v997 = aply("Gen",(SnoVal[]){strv(" ")},1);
 int _ok997 = !IS_FAIL(_v997);
     goto _SNO_NEXT_996;
 _SNO_NEXT_996:;
 /* line 537 */
+trampoline_stno(537);
 SnoVal _v999 = aply("GenTab",(SnoVal[]){indx(get(_ppStop),(SnoVal[]){vint(2)},1)},1);
 int _ok999 = !IS_FAIL(_v999);
     goto _SNO_NEXT_998;
 _SNO_NEXT_998:;
 /* line 538 */
+trampoline_stno(538);
 SnoVal _v1001 = aply("SetLevel",(SnoVal[]){indx(get(_ppStop),(SnoVal[]){vint(2)},1)},1);
 int _ok1001 = !IS_FAIL(_v1001);
     goto _SNO_NEXT_1000;
 _SNO_NEXT_1000:;
 /* line 539 */
+trampoline_stno(539);
 SnoVal _v1003 = aply("Gen",(SnoVal[]){strv("=")},1);
 int _ok1003 = !IS_FAIL(_v1003);
     goto _SNO_NEXT_1002;
 _SNO_NEXT_1002:;
 /* line 540 */
+trampoline_stno(540);
 SnoVal _v1005 = aply("DIFFER",(SnoVal[]){aply("t",(SnoVal[]){get(_ppRepl)},1)},1);
 int _ok1005 = !IS_FAIL(_v1005);
     if(!_ok1005) goto _L_pp_Stmt7;
     goto _SNO_NEXT_1004;
 _SNO_NEXT_1004:;
 /* line 541 */
+trampoline_stno(541);
 SnoVal _v1007 = aply("Gen",(SnoVal[]){strv(" ")},1);
 int _ok1007 = !IS_FAIL(_v1007);
     goto _SNO_NEXT_1006;
 _SNO_NEXT_1006:;
 /* line 542 */
+trampoline_stno(542);
 SnoVal _v1009 = aply("GenTab",(SnoVal[]){indx(get(_ppStop),(SnoVal[]){vint(3)},1)},1);
 int _ok1009 = !IS_FAIL(_v1009);
     goto _SNO_NEXT_1008;
 _SNO_NEXT_1008:;
 /* line 543 */
+trampoline_stno(543);
 SnoVal _v1011 = aply("SetLevel",(SnoVal[]){indx(get(_ppStop),(SnoVal[]){vint(3)},1)},1);
 int _ok1011 = !IS_FAIL(_v1011);
     goto _SNO_NEXT_1010;
 _SNO_NEXT_1010:;
 /* line 544 */
+trampoline_stno(544);
 SnoVal _v1013 = concat_sv(aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_ppGo1)},1)},1),add(indx(get(_ppStop),(SnoVal[]){vint(4)},1),get(_ppLgBump)));
 int _ok1013 = !IS_FAIL(_v1013);
 if(_ok1013) {
@@ -10174,18 +10685,21 @@ var_set("ppWidth", _ppWidth);
     goto _SNO_NEXT_1012;
 _SNO_NEXT_1012:;
 /* line 545 */
+trampoline_stno(545);
 SnoVal _v1015 = aply("pp",(SnoVal[]){get(_ppRepl)},1);
 int _ok1015 = !IS_FAIL(_v1015);
     goto _L_pp_Stmt7;
 _SNO_NEXT_1014:;
 /* line 546 */
 _L_pp_Stmt7:;
+trampoline_stno(546);
 SnoVal _v1017 = aply("DIFFER",(SnoVal[]){aply("t",(SnoVal[]){get(_ppGo1)},1)},1);
 int _ok1017 = !IS_FAIL(_v1017);
     if(!_ok1017) goto _L_pp_Stmt9;
     goto _SNO_NEXT_1016;
 _SNO_NEXT_1016:;
 /* line 547 */
+trampoline_stno(547);
 SnoVal _v1019 = vint(256);
 int _ok1019 = !IS_FAIL(_v1019);
 if(_ok1019) {
@@ -10195,60 +10709,71 @@ var_set("ppWidth", _ppWidth);
     goto _SNO_NEXT_1018;
 _SNO_NEXT_1018:;
 /* line 548 */
+trampoline_stno(548);
 SnoVal _v1021 = aply("Gen",(SnoVal[]){strv(" ")},1);
 int _ok1021 = !IS_FAIL(_v1021);
     goto _SNO_NEXT_1020;
 _SNO_NEXT_1020:;
 /* line 549 */
+trampoline_stno(549);
 SnoVal _v1023 = aply("GenTab",(SnoVal[]){indx(get(_ppStop),(SnoVal[]){vint(4)},1)},1);
 int _ok1023 = !IS_FAIL(_v1023);
     goto _SNO_NEXT_1022;
 _SNO_NEXT_1022:;
 /* line 550 */
+trampoline_stno(550);
 SnoVal _v1025 = aply("SetLevel",(SnoVal[]){indx(get(_ppStop),(SnoVal[]){vint(4)},1)},1);
 int _ok1025 = !IS_FAIL(_v1025);
     goto _SNO_NEXT_1024;
 _SNO_NEXT_1024:;
 /* line 551 */
+trampoline_stno(551);
 SnoVal _v1027 = aply("Gen",(SnoVal[]){strv(":")},1);
 int _ok1027 = !IS_FAIL(_v1027);
     goto _SNO_NEXT_1026;
 _SNO_NEXT_1026:;
 /* line 552 */
+trampoline_stno(552);
 SnoVal _v1029 = aply("pp",(SnoVal[]){get(_ppGo1)},1);
 int _ok1029 = !IS_FAIL(_v1029);
     goto _SNO_NEXT_1028;
 _SNO_NEXT_1028:;
 /* line 553 */
+trampoline_stno(553);
 SnoVal _v1031 = aply("DIFFER",(SnoVal[]){aply("t",(SnoVal[]){get(_ppGo2)},1)},1);
 int _ok1031 = !IS_FAIL(_v1031);
     if(!_ok1031) goto _L_pp_Stmt9;
     goto _SNO_NEXT_1030;
 _SNO_NEXT_1030:;
 /* line 554 */
+trampoline_stno(554);
 SnoVal _v1033 = aply("pp",(SnoVal[]){get(_ppGo2)},1);
 int _ok1033 = !IS_FAIL(_v1033);
     goto _L_pp_Stmt9;
 _SNO_NEXT_1032:;
 /* line 555 */
 _L_pp_Stmt9:;
+trampoline_stno(555);
 SnoVal _v1035 = aply("Gen",(SnoVal[]){get(_nl)},1);
 int _ok1035 = !IS_FAIL(_v1035);
     goto _SNO_RETURN_pp;
 _SNO_NEXT_1034:;
 /* line 557 */
 _L_pp_ExprList:;
+trampoline_stno(557);
 SnoVal _v1037 = aply("Gen",(SnoVal[]){aply("ss",(SnoVal[]){get(_x),sub(get(_ppWidth),aply("GetLevel",NULL,0))},2)},1);
 int _ok1037 = !IS_FAIL(_v1037);
     if(_ok1037) goto _SNO_RETURN_pp;
     goto _SNO_NEXT_1036;
 _SNO_NEXT_1036:;
 /* line 558 */
+trampoline_stno(558);
 SnoVal _v1039 = aply("pp",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1)},1);
 int _ok1039 = !IS_FAIL(_v1039);
     goto _SNO_NEXT_1038;
 _SNO_NEXT_1038:;
 /* line 559 */
+trampoline_stno(559);
 SnoVal _v1041 = vint(1);
 int _ok1041 = !IS_FAIL(_v1041);
 if(_ok1041) {
@@ -10259,6 +10784,7 @@ var_set("i", _i);
 _SNO_NEXT_1040:;
 /* line 560 */
 _L_pp_ExprList0:;
+trampoline_stno(560);
 SnoVal _v1043 = concat_sv(aply("LT",(SnoVal[]){get(_i),get(_n)},2),add(get(_i),vint(1)));
 int _ok1043 = !IS_FAIL(_v1043);
 if(_ok1043) {
@@ -10269,63 +10795,75 @@ var_set("i", _i);
     goto _SNO_NEXT_1042;
 _SNO_NEXT_1042:;
 /* line 561 */
+trampoline_stno(561);
 SnoVal _v1045 = aply("Gen",(SnoVal[]){get(_nl)},1);
 int _ok1045 = !IS_FAIL(_v1045);
     goto _SNO_NEXT_1044;
 _SNO_NEXT_1044:;
 /* line 562 */
+trampoline_stno(562);
 SnoVal _v1047 = aply("DecLevel",NULL,0);
 int _ok1047 = !IS_FAIL(_v1047);
     goto _SNO_NEXT_1046;
 _SNO_NEXT_1046:;
 /* line 563 */
+trampoline_stno(563);
 SnoVal _v1049 = aply("Gen",(SnoVal[]){strv(",")},1);
 int _ok1049 = !IS_FAIL(_v1049);
     goto _SNO_NEXT_1048;
 _SNO_NEXT_1048:;
 /* line 564 */
+trampoline_stno(564);
 SnoVal _v1051 = aply("IncLevel",NULL,0);
 int _ok1051 = !IS_FAIL(_v1051);
     goto _SNO_NEXT_1050;
 _SNO_NEXT_1050:;
 /* line 565 */
+trampoline_stno(565);
 SnoVal _v1053 = aply("GenTab",NULL,0);
 int _ok1053 = !IS_FAIL(_v1053);
     goto _SNO_NEXT_1052;
 _SNO_NEXT_1052:;
 /* line 566 */
+trampoline_stno(566);
 SnoVal _v1055 = aply("pp",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_i)},1)},1);
 int _ok1055 = !IS_FAIL(_v1055);
     goto _L_pp_ExprList0;
 _SNO_NEXT_1054:;
 /* line 568 */
 _L_pp___16:;
+trampoline_stno(568);
 SnoVal _v1057 = aply("Gen",(SnoVal[]){aply("ss",(SnoVal[]){get(_x),sub(get(_ppWidth),aply("GetLevel",NULL,0))},2)},1);
 int _ok1057 = !IS_FAIL(_v1057);
     if(_ok1057) goto _SNO_RETURN_pp;
     goto _SNO_NEXT_1056;
 _SNO_NEXT_1056:;
 /* line 569 */
+trampoline_stno(569);
 SnoVal _v1059 = aply("Gen",(SnoVal[]){strv("(")},1);
 int _ok1059 = !IS_FAIL(_v1059);
     goto _SNO_NEXT_1058;
 _SNO_NEXT_1058:;
 /* line 570 */
+trampoline_stno(570);
 SnoVal _v1061 = aply("IncLevel",NULL,0);
 int _ok1061 = !IS_FAIL(_v1061);
     goto _SNO_NEXT_1060;
 _SNO_NEXT_1060:;
 /* line 571 */
+trampoline_stno(571);
 SnoVal _v1063 = aply("GenTab",NULL,0);
 int _ok1063 = !IS_FAIL(_v1063);
     goto _SNO_NEXT_1062;
 _SNO_NEXT_1062:;
 /* line 572 */
+trampoline_stno(572);
 SnoVal _v1065 = aply("pp",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1)},1);
 int _ok1065 = !IS_FAIL(_v1065);
     goto _SNO_NEXT_1064;
 _SNO_NEXT_1064:;
 /* line 573 */
+trampoline_stno(573);
 SnoVal _v1067 = vint(1);
 int _ok1067 = !IS_FAIL(_v1067);
 if(_ok1067) {
@@ -10336,6 +10874,7 @@ var_set("i", _i);
 _SNO_NEXT_1066:;
 /* line 574 */
 _L_pp__0:;
+trampoline_stno(574);
 SnoVal _v1069 = concat_sv(aply("LT",(SnoVal[]){get(_i),get(_n)},2),add(get(_i),vint(1)));
 int _ok1069 = !IS_FAIL(_v1069);
 if(_ok1069) {
@@ -10346,70 +10885,83 @@ var_set("i", _i);
     goto _SNO_NEXT_1068;
 _SNO_NEXT_1068:;
 /* line 575 */
+trampoline_stno(575);
 SnoVal _v1071 = aply("Gen",(SnoVal[]){get(_nl)},1);
 int _ok1071 = !IS_FAIL(_v1071);
     goto _SNO_NEXT_1070;
 _SNO_NEXT_1070:;
 /* line 576 */
+trampoline_stno(576);
 SnoVal _v1073 = aply("DecLevel",NULL,0);
 int _ok1073 = !IS_FAIL(_v1073);
     goto _SNO_NEXT_1072;
 _SNO_NEXT_1072:;
 /* line 577 */
+trampoline_stno(577);
 SnoVal _v1075 = aply("Gen",(SnoVal[]){strv(",")},1);
 int _ok1075 = !IS_FAIL(_v1075);
     goto _SNO_NEXT_1074;
 _SNO_NEXT_1074:;
 /* line 578 */
+trampoline_stno(578);
 SnoVal _v1077 = aply("IncLevel",NULL,0);
 int _ok1077 = !IS_FAIL(_v1077);
     goto _SNO_NEXT_1076;
 _SNO_NEXT_1076:;
 /* line 579 */
+trampoline_stno(579);
 SnoVal _v1079 = aply("GenTab",NULL,0);
 int _ok1079 = !IS_FAIL(_v1079);
     goto _SNO_NEXT_1078;
 _SNO_NEXT_1078:;
 /* line 580 */
+trampoline_stno(580);
 SnoVal _v1081 = aply("pp",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_i)},1)},1);
 int _ok1081 = !IS_FAIL(_v1081);
     goto _SNO_NEXT_1080;
 _SNO_NEXT_1080:;
 /* line 581 */
 _L_pp__1:;
+trampoline_stno(581);
 SnoVal _v1083 = aply("Gen",(SnoVal[]){get(_nl)},1);
 int _ok1083 = !IS_FAIL(_v1083);
     goto _SNO_NEXT_1082;
 _SNO_NEXT_1082:;
 /* line 582 */
+trampoline_stno(582);
 SnoVal _v1085 = aply("DecLevel",NULL,0);
 int _ok1085 = !IS_FAIL(_v1085);
     goto _SNO_NEXT_1084;
 _SNO_NEXT_1084:;
 /* line 583 */
+trampoline_stno(583);
 SnoVal _v1087 = aply("Gen",(SnoVal[]){strv(")")},1);
 int _ok1087 = !IS_FAIL(_v1087);
     goto _SNO_RETURN_pp;
 _SNO_NEXT_1086:;
 /* line 585 */
 _L_pp___17:;
+trampoline_stno(585);
 SnoVal _v1089 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok1089 = !IS_FAIL(_v1089);
     if(_ok1089) goto _L_ppUnOp;
     goto _SNO_NEXT_1088;
 _SNO_NEXT_1088:;
 /* line 586 */
+trampoline_stno(586);
 SnoVal _v1091 = aply("Gen",(SnoVal[]){aply("ss",(SnoVal[]){get(_x),sub(get(_ppWidth),aply("GetLevel",NULL,0))},2)},1);
 int _ok1091 = !IS_FAIL(_v1091);
     if(_ok1091) goto _SNO_RETURN_pp;
     goto _SNO_NEXT_1090;
 _SNO_NEXT_1090:;
 /* line 587 */
+trampoline_stno(587);
 SnoVal _v1093 = aply("pp",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1)},1);
 int _ok1093 = !IS_FAIL(_v1093);
     goto _SNO_NEXT_1092;
 _SNO_NEXT_1092:;
 /* line 588 */
+trampoline_stno(588);
 SnoVal _v1095 = vint(1);
 int _ok1095 = !IS_FAIL(_v1095);
 if(_ok1095) {
@@ -10420,6 +10972,7 @@ var_set("i", _i);
 _SNO_NEXT_1094:;
 /* line 589 */
 _L_pp__0_2:;
+trampoline_stno(589);
 SnoVal _v1097 = concat_sv(aply("LT",(SnoVal[]){get(_i),get(_n)},2),add(get(_i),vint(1)));
 int _ok1097 = !IS_FAIL(_v1097);
 if(_ok1097) {
@@ -10430,43 +10983,51 @@ var_set("i", _i);
     goto _SNO_NEXT_1096;
 _SNO_NEXT_1096:;
 /* line 590 */
+trampoline_stno(590);
 SnoVal _v1099 = aply("Gen",(SnoVal[]){get(_nl)},1);
 int _ok1099 = !IS_FAIL(_v1099);
     goto _SNO_NEXT_1098;
 _SNO_NEXT_1098:;
 /* line 591 */
+trampoline_stno(591);
 SnoVal _v1101 = aply("DecLevel",NULL,0);
 int _ok1101 = !IS_FAIL(_v1101);
     goto _SNO_NEXT_1100;
 _SNO_NEXT_1100:;
 /* line 592 */
+trampoline_stno(592);
 SnoVal _v1103 = aply("Gen",(SnoVal[]){strv("|")},1);
 int _ok1103 = !IS_FAIL(_v1103);
     goto _SNO_NEXT_1102;
 _SNO_NEXT_1102:;
 /* line 593 */
+trampoline_stno(593);
 SnoVal _v1105 = aply("IncLevel",NULL,0);
 int _ok1105 = !IS_FAIL(_v1105);
     goto _SNO_NEXT_1104;
 _SNO_NEXT_1104:;
 /* line 594 */
+trampoline_stno(594);
 SnoVal _v1107 = aply("GenTab",NULL,0);
 int _ok1107 = !IS_FAIL(_v1107);
     goto _SNO_NEXT_1106;
 _SNO_NEXT_1106:;
 /* line 595 */
+trampoline_stno(595);
 SnoVal _v1109 = aply("pp",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_i)},1)},1);
 int _ok1109 = !IS_FAIL(_v1109);
     goto _SNO_NEXT_1108;
 _SNO_NEXT_1108:;
 /* line 597 */
 _L_pp___:;
+trampoline_stno(597);
 SnoVal _v1111 = aply("Gen",(SnoVal[]){aply("ss",(SnoVal[]){get(_x),sub(get(_ppWidth),aply("GetLevel",NULL,0))},2)},1);
 int _ok1111 = !IS_FAIL(_v1111);
     if(_ok1111) goto _SNO_RETURN_pp;
     goto _SNO_NEXT_1110;
 _SNO_NEXT_1110:;
 /* line 598 */
+trampoline_stno(598);
 SnoVal _v1113 = vint(0);
 int _ok1113 = !IS_FAIL(_v1113);
 if(_ok1113) {
@@ -10477,6 +11038,7 @@ var_set("i", _i);
 _SNO_NEXT_1112:;
 /* line 599 */
 _L_pp___0:;
+trampoline_stno(599);
 SnoVal _v1115 = concat_sv(aply("LT",(SnoVal[]){get(_i),get(_n)},2),add(get(_i),vint(1)));
 int _ok1115 = !IS_FAIL(_v1115);
 if(_ok1115) {
@@ -10487,28 +11049,33 @@ var_set("i", _i);
     goto _SNO_NEXT_1114;
 _SNO_NEXT_1114:;
 /* line 600 */
+trampoline_stno(600);
 SnoVal _v1117 = aply("pp",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_i)},1)},1);
 int _ok1117 = !IS_FAIL(_v1117);
     goto _SNO_NEXT_1116;
 _SNO_NEXT_1116:;
 /* line 601 */
+trampoline_stno(601);
 SnoVal _v1119 = concat_sv(aply("LT",(SnoVal[]){get(_i),get(_n)},2),aply("Gen",(SnoVal[]){get(_nl)},1));
 int _ok1119 = !IS_FAIL(_v1119);
     goto _SNO_NEXT_1118;
 _SNO_NEXT_1118:;
 /* line 603 */
 _L_pp____2:;
+trampoline_stno(603);
 SnoVal _v1121 = aply("Gen",(SnoVal[]){aply("ss",(SnoVal[]){get(_x),sub(get(_ppWidth),aply("GetLevel",NULL,0))},2)},1);
 int _ok1121 = !IS_FAIL(_v1121);
     if(_ok1121) goto _SNO_RETURN_pp;
     goto _SNO_NEXT_1120;
 _SNO_NEXT_1120:;
 /* line 604 */
+trampoline_stno(604);
 SnoVal _v1123 = aply("pp",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1)},1);
 int _ok1123 = !IS_FAIL(_v1123);
     goto _SNO_NEXT_1122;
 _SNO_NEXT_1122:;
 /* line 605 */
+trampoline_stno(605);
 SnoVal _v1125 = vint(1);
 int _ok1125 = !IS_FAIL(_v1125);
 if(_ok1125) {
@@ -10519,6 +11086,7 @@ var_set("i", _i);
 _SNO_NEXT_1124:;
 /* line 606 */
 _L_pp___0_2:;
+trampoline_stno(606);
 SnoVal _v1127 = concat_sv(aply("LT",(SnoVal[]){get(_i),get(_n)},2),add(get(_i),vint(1)));
 int _ok1127 = !IS_FAIL(_v1127);
 if(_ok1127) {
@@ -10529,130 +11097,155 @@ var_set("i", _i);
     goto _SNO_NEXT_1126;
 _SNO_NEXT_1126:;
 /* line 607 */
+trampoline_stno(607);
 SnoVal _v1129 = aply("Gen",(SnoVal[]){strv("[")},1);
 int _ok1129 = !IS_FAIL(_v1129);
     goto _SNO_NEXT_1128;
 _SNO_NEXT_1128:;
 /* line 608 */
+trampoline_stno(608);
 SnoVal _v1131 = aply("IncLevel",NULL,0);
 int _ok1131 = !IS_FAIL(_v1131);
     goto _SNO_NEXT_1130;
 _SNO_NEXT_1130:;
 /* line 609 */
+trampoline_stno(609);
 SnoVal _v1133 = aply("GenTab",NULL,0);
 int _ok1133 = !IS_FAIL(_v1133);
     goto _SNO_NEXT_1132;
 _SNO_NEXT_1132:;
 /* line 610 */
+trampoline_stno(610);
 SnoVal _v1135 = aply("pp",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_i)},1)},1);
 int _ok1135 = !IS_FAIL(_v1135);
     goto _SNO_NEXT_1134;
 _SNO_NEXT_1134:;
 /* line 611 */
+trampoline_stno(611);
 SnoVal _v1137 = aply("Gen",(SnoVal[]){get(_nl)},1);
 int _ok1137 = !IS_FAIL(_v1137);
     goto _SNO_NEXT_1136;
 _SNO_NEXT_1136:;
 /* line 612 */
+trampoline_stno(612);
 SnoVal _v1139 = aply("DecLevel",NULL,0);
 int _ok1139 = !IS_FAIL(_v1139);
     goto _SNO_NEXT_1138;
 _SNO_NEXT_1138:;
 /* line 613 */
+trampoline_stno(613);
 SnoVal _v1141 = aply("Gen",(SnoVal[]){strv("]")},1);
 int _ok1141 = !IS_FAIL(_v1141);
     goto _SNO_NEXT_1140;
 _SNO_NEXT_1140:;
 /* line 614 */
+trampoline_stno(614);
 SnoVal _v1143 = concat_sv(aply("LT",(SnoVal[]){get(_i),get(_n)},2),aply("Gen",(SnoVal[]){get(_nl)},1));
 int _ok1143 = !IS_FAIL(_v1143);
     goto _SNO_NEXT_1142;
 _SNO_NEXT_1142:;
 /* line 616 */
 _L_pp____3:;
+trampoline_stno(616);
 SnoVal _v1145 = aply("Gen",(SnoVal[]){aply("ss",(SnoVal[]){get(_x),sub(get(_ppWidth),aply("GetLevel",NULL,0))},2)},1);
 int _ok1145 = !IS_FAIL(_v1145);
     if(_ok1145) goto _SNO_RETURN_pp;
     goto _SNO_NEXT_1144;
 _SNO_NEXT_1144:;
 /* line 617 */
+trampoline_stno(617);
 SnoVal _v1147 = aply("Gen",(SnoVal[]){strv("(")},1);
 int _ok1147 = !IS_FAIL(_v1147);
     goto _SNO_NEXT_1146;
 _SNO_NEXT_1146:;
 /* line 618 */
+trampoline_stno(618);
 SnoVal _v1149 = aply("IncLevel",NULL,0);
 int _ok1149 = !IS_FAIL(_v1149);
     goto _SNO_NEXT_1148;
 _SNO_NEXT_1148:;
 /* line 619 */
+trampoline_stno(619);
 SnoVal _v1151 = aply("GenTab",NULL,0);
 int _ok1151 = !IS_FAIL(_v1151);
     goto _SNO_NEXT_1150;
 _SNO_NEXT_1150:;
 /* line 620 */
+trampoline_stno(620);
 SnoVal _v1153 = aply("pp",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1)},1);
 int _ok1153 = !IS_FAIL(_v1153);
     goto _SNO_NEXT_1152;
 _SNO_NEXT_1152:;
 /* line 621 */
+trampoline_stno(621);
 SnoVal _v1155 = aply("Gen",(SnoVal[]){get(_nl)},1);
 int _ok1155 = !IS_FAIL(_v1155);
     goto _SNO_NEXT_1154;
 _SNO_NEXT_1154:;
 /* line 622 */
+trampoline_stno(622);
 SnoVal _v1157 = aply("DecLevel",NULL,0);
 int _ok1157 = !IS_FAIL(_v1157);
     goto _SNO_NEXT_1156;
 _SNO_NEXT_1156:;
 /* line 623 */
+trampoline_stno(623);
 SnoVal _v1159 = aply("Gen",(SnoVal[]){strv(")")},1);
 int _ok1159 = !IS_FAIL(_v1159);
     goto _SNO_RETURN_pp;
 _SNO_NEXT_1158:;
 /* line 625 */
 _L_pp_Call:;
+trampoline_stno(625);
 SnoVal _v1161 = aply("Gen",(SnoVal[]){aply("ss",(SnoVal[]){get(_x),sub(get(_ppWidth),aply("GetLevel",NULL,0))},2)},1);
 int _ok1161 = !IS_FAIL(_v1161);
     if(_ok1161) goto _SNO_RETURN_pp;
     goto _SNO_NEXT_1160;
 _SNO_NEXT_1160:;
 /* line 626 */
+trampoline_stno(626);
 SnoVal _v1163 = aply("pp",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1)},1);
 int _ok1163 = !IS_FAIL(_v1163);
     goto _SNO_NEXT_1162;
 _SNO_NEXT_1162:;
 /* line 627 */
+trampoline_stno(627);
 SnoVal _v1165 = aply("Gen",(SnoVal[]){concat_sv(strv("("),get(_nl))},1);
 int _ok1165 = !IS_FAIL(_v1165);
     goto _SNO_NEXT_1164;
 _SNO_NEXT_1164:;
 /* line 628 */
+trampoline_stno(628);
 SnoVal _v1167 = aply("IncLevel",NULL,0);
 int _ok1167 = !IS_FAIL(_v1167);
     goto _SNO_NEXT_1166;
 _SNO_NEXT_1166:;
 /* line 629 */
+trampoline_stno(629);
 SnoVal _v1169 = aply("GenTab",NULL,0);
 int _ok1169 = !IS_FAIL(_v1169);
     goto _SNO_NEXT_1168;
 _SNO_NEXT_1168:;
 /* line 630 */
+trampoline_stno(630);
 SnoVal _v1171 = aply("pp",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(2)},1)},1);
 int _ok1171 = !IS_FAIL(_v1171);
     goto _SNO_NEXT_1170;
 _SNO_NEXT_1170:;
 /* line 631 */
+trampoline_stno(631);
 SnoVal _v1173 = aply("Gen",(SnoVal[]){get(_nl)},1);
 int _ok1173 = !IS_FAIL(_v1173);
     goto _SNO_NEXT_1172;
 _SNO_NEXT_1172:;
 /* line 632 */
+trampoline_stno(632);
 SnoVal _v1175 = aply("DecLevel",NULL,0);
 int _ok1175 = !IS_FAIL(_v1175);
     goto _SNO_NEXT_1174;
 _SNO_NEXT_1174:;
 /* line 633 */
+trampoline_stno(633);
 SnoVal _v1177 = aply("Gen",(SnoVal[]){strv(")")},1);
 int _ok1177 = !IS_FAIL(_v1177);
     goto _SNO_RETURN_pp;
@@ -10730,12 +11323,14 @@ static SnoVal _sno_fn_ss(SnoVal *_args, int _nargs) {
 
 /* line 641 */
 _L_ss:;
+trampoline_stno(641);
 SnoVal _v1179 = aply("DIFFER",(SnoVal[]){get(_x)},1);
 int _ok1179 = !IS_FAIL(_v1179);
     if(!_ok1179) goto _SNO_RETURN_ss;
     goto _SNO_NEXT_1178;
 _SNO_NEXT_1178:;
 /* line 642 */
+trampoline_stno(642);
 SnoVal _v1181 = concat_sv(aply("IDENT",(SnoVal[]){get(_len)},1),vint(1024));
 int _ok1181 = !IS_FAIL(_v1181);
 if(_ok1181) {
@@ -10745,12 +11340,14 @@ var_set("len", _len);
     goto _SNO_NEXT_1180;
 _SNO_NEXT_1180:;
 /* line 643 */
+trampoline_stno(643);
 SnoVal _v1183 = aply("GT",(SnoVal[]){get(_len),vint(0)},2);
 int _ok1183 = !IS_FAIL(_v1183);
     if(!_ok1183) goto _SNO_FRETURN_ss;
     goto _SNO_NEXT_1182;
 _SNO_NEXT_1182:;
 /* line 644 */
+trampoline_stno(644);
 SnoVal _v1185 = aply("t",(SnoVal[]){get(_x)},1);
 int _ok1185 = !IS_FAIL(_v1185);
 if(_ok1185) {
@@ -10760,6 +11357,7 @@ var_set("t", _t);
     goto _SNO_NEXT_1184;
 _SNO_NEXT_1184:;
 /* line 645 */
+trampoline_stno(645);
 SnoVal _v1187 = aply("v",(SnoVal[]){get(_x)},1);
 int _ok1187 = !IS_FAIL(_v1187);
 if(_ok1187) {
@@ -10769,6 +11367,7 @@ var_set("v", _v);
     goto _SNO_NEXT_1186;
 _SNO_NEXT_1186:;
 /* line 646 */
+trampoline_stno(646);
 SnoVal _v1189 = aply("n",(SnoVal[]){get(_x)},1);
 int _ok1189 = !IS_FAIL(_v1189);
 if(_ok1189) {
@@ -10778,6 +11377,7 @@ var_set("n", _n);
     goto _SNO_NEXT_1188;
 _SNO_NEXT_1188:;
 /* line 647 */
+trampoline_stno(647);
 SnoVal _v1191 = aply("c",(SnoVal[]){get(_x)},1);
 int _ok1191 = !IS_FAIL(_v1191);
 if(_ok1191) {
@@ -10787,6 +11387,7 @@ var_set("c", _c);
     goto _SNO_NEXT_1190;
 _SNO_NEXT_1190:;
 /* line 648 */
+trampoline_stno(648);
 SnoVal _v1193 = concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(aply("GT",(SnoVal[]){get(_doDebug),vint(0)},2),strv("ss(")),get(_t)),strv(")")),strv(", sz = ")),get(_level)),strv("+")),aply("SIZE",(SnoVal[]){get(_v)},1)),strv(", v = ")),get(_v));
 int _ok1193 = !IS_FAIL(_v1193);
 if(_ok1193) {
@@ -10795,6 +11396,7 @@ var_set("OUTPUT", _v1193);
     goto _SNO_NEXT_1192;
 _SNO_NEXT_1192:;
 /* line 649 */
+trampoline_stno(649);
 SnoVal _v1195 = aply("DIFFER",(SnoVal[]){get(_t)},1);
 int _ok1195 = !IS_FAIL(_v1195);
     if(_ok1195) goto _SNO_NEXT_1194;
@@ -10803,6 +11405,7 @@ int _ok1195 = !IS_FAIL(_v1195);
 _SNO_NEXT_1194:;
 /* line 651 */
 _L_ss_BuiltinVar:;
+trampoline_stno(651);
 SnoVal _v1197 = aply("upr",(SnoVal[]){get(_v)},1);
 int _ok1197 = !IS_FAIL(_v1197);
 if(_ok1197) {
@@ -10813,6 +11416,7 @@ var_set("ss", _ss);
 _SNO_NEXT_1196:;
 /* line 652 */
 _L_ss_Function:;
+trampoline_stno(652);
 SnoVal _v1199 = aply("upr",(SnoVal[]){get(_v)},1);
 int _ok1199 = !IS_FAIL(_v1199);
 if(_ok1199) {
@@ -10823,6 +11427,7 @@ var_set("ss", _ss);
 _SNO_NEXT_1198:;
 /* line 653 */
 _L_ss_Id:;
+trampoline_stno(653);
 SnoVal _v1201 = get(_v);
 int _ok1201 = !IS_FAIL(_v1201);
 if(_ok1201) {
@@ -10833,6 +11438,7 @@ var_set("ss", _ss);
 _SNO_NEXT_1200:;
 /* line 654 */
 _L_ss_Integer:;
+trampoline_stno(654);
 SnoVal _v1203 = get(_v);
 int _ok1203 = !IS_FAIL(_v1203);
 if(_ok1203) {
@@ -10843,6 +11449,7 @@ var_set("ss", _ss);
 _SNO_NEXT_1202:;
 /* line 655 */
 _L_ss_Label:;
+trampoline_stno(655);
 /* byrd mtch u1205 */
 SnoVal _s1205 = get(_v);
 const char *_subj1205 = to_str(_s1205);
@@ -10894,6 +11501,7 @@ _byrd_1205_done:;
 _SNO_NEXT_1204:;
 /* line 656 */
 _L_ss_Label0:;
+trampoline_stno(656);
 SnoVal _v1207 = aply("upr",(SnoVal[]){get(_v)},1);
 int _ok1207 = !IS_FAIL(_v1207);
 if(_ok1207) {
@@ -10904,6 +11512,7 @@ var_set("ss", _ss);
 _SNO_NEXT_1206:;
 /* line 657 */
 _L_ss_Label1:;
+trampoline_stno(657);
 SnoVal _v1209 = get(_v);
 int _ok1209 = !IS_FAIL(_v1209);
 if(_ok1209) {
@@ -10914,6 +11523,7 @@ var_set("ss", _ss);
 _SNO_NEXT_1208:;
 /* line 658 */
 _L_ss_ProtKwd:;
+trampoline_stno(658);
 SnoVal _v1211 = aply("upr",(SnoVal[]){get(_v)},1);
 int _ok1211 = !IS_FAIL(_v1211);
 if(_ok1211) {
@@ -10924,6 +11534,7 @@ var_set("ss", _ss);
 _SNO_NEXT_1210:;
 /* line 659 */
 _L_ss_Real:;
+trampoline_stno(659);
 SnoVal _v1213 = get(_v);
 int _ok1213 = !IS_FAIL(_v1213);
 if(_ok1213) {
@@ -10934,6 +11545,7 @@ var_set("ss", _ss);
 _SNO_NEXT_1212:;
 /* line 660 */
 _L_ss_SpecialNm:;
+trampoline_stno(660);
 SnoVal _v1215 = aply("upr",(SnoVal[]){get(_v)},1);
 int _ok1215 = !IS_FAIL(_v1215);
 if(_ok1215) {
@@ -10944,6 +11556,7 @@ var_set("ss", _ss);
 _SNO_NEXT_1214:;
 /* line 661 */
 _L_ss_String:;
+trampoline_stno(661);
 SnoVal _v1217 = get(_v);
 int _ok1217 = !IS_FAIL(_v1217);
 if(_ok1217) {
@@ -10954,6 +11567,7 @@ var_set("ss", _ss);
 _SNO_NEXT_1216:;
 /* line 662 */
 _L_ss_UnprotKwd:;
+trampoline_stno(662);
 SnoVal _v1219 = aply("upr",(SnoVal[]){get(_v)},1);
 int _ok1219 = !IS_FAIL(_v1219);
 if(_ok1219) {
@@ -10964,6 +11578,7 @@ var_set("ss", _ss);
 _SNO_NEXT_1218:;
 /* line 663 */
 _L_ss_atomic:;
+trampoline_stno(663);
 SnoVal _v1221 = aply("LE",(SnoVal[]){aply("SIZE",(SnoVal[]){get(_ss)},1),get(_len)},2);
 int _ok1221 = !IS_FAIL(_v1221);
     if(_ok1221) goto _SNO_RETURN_ss;
@@ -10972,6 +11587,7 @@ int _ok1221 = !IS_FAIL(_v1221);
 _SNO_NEXT_1220:;
 /* line 665 */
 _L_ss____:;
+trampoline_stno(665);
 SnoVal _v1223 = concat_sv(concat_sv(strv("("),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),sub(get(_len),vint(2))},2)),strv(")"));
 int _ok1223 = !IS_FAIL(_v1223);
 if(_ok1223) {
@@ -10984,6 +11600,7 @@ var_set("ss", _ss);
 _SNO_NEXT_1222:;
 /* line 666 */
 _L_ss_____2:;
+trampoline_stno(666);
 SnoVal _v1225 = concat_sv(concat_sv(strv("<"),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),sub(get(_len),vint(2))},2)),strv(">"));
 int _ok1225 = !IS_FAIL(_v1225);
 if(_ok1225) {
@@ -10996,6 +11613,7 @@ var_set("ss", _ss);
 _SNO_NEXT_1224:;
 /* line 667 */
 _L_ss__S__:;
+trampoline_stno(667);
 SnoVal _v1227 = concat_sv(concat_sv(strv("S("),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),sub(get(_len),vint(3))},2)),strv(")"));
 int _ok1227 = !IS_FAIL(_v1227);
 if(_ok1227) {
@@ -11008,6 +11626,7 @@ var_set("ss", _ss);
 _SNO_NEXT_1226:;
 /* line 668 */
 _L_ss__S___2:;
+trampoline_stno(668);
 SnoVal _v1229 = concat_sv(concat_sv(strv("S<"),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),sub(get(_len),vint(3))},2)),strv(">"));
 int _ok1229 = !IS_FAIL(_v1229);
 if(_ok1229) {
@@ -11020,6 +11639,7 @@ var_set("ss", _ss);
 _SNO_NEXT_1228:;
 /* line 669 */
 _L_ss__F__:;
+trampoline_stno(669);
 SnoVal _v1231 = concat_sv(concat_sv(strv("F("),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),sub(get(_len),vint(3))},2)),strv(")"));
 int _ok1231 = !IS_FAIL(_v1231);
 if(_ok1231) {
@@ -11032,6 +11652,7 @@ var_set("ss", _ss);
 _SNO_NEXT_1230:;
 /* line 670 */
 _L_ss__F___2:;
+trampoline_stno(670);
 SnoVal _v1233 = concat_sv(concat_sv(strv("F<"),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),sub(get(_len),vint(3))},2)),strv(">"));
 int _ok1233 = !IS_FAIL(_v1233);
 if(_ok1233) {
@@ -11044,6 +11665,7 @@ var_set("ss", _ss);
 _SNO_NEXT_1232:;
 /* line 672 */
 _L_ssUnOp:;
+trampoline_stno(672);
 SnoVal _v1235 = concat_sv(get(_t),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),sub(get(_len),aply("SIZE",(SnoVal[]){get(_t)},1))},2));
 int _ok1235 = !IS_FAIL(_v1235);
 if(_ok1235) {
@@ -11056,6 +11678,7 @@ var_set("ss", _ss);
 _SNO_NEXT_1234:;
 /* line 673 */
 _L_ssBinOp:;
+trampoline_stno(673);
 SnoVal _v1237 = aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),get(_len)},2);
 int _ok1237 = !IS_FAIL(_v1237);
 if(_ok1237) {
@@ -11066,6 +11689,7 @@ var_set("ss", _ss);
     goto _SNO_NEXT_1236;
 _SNO_NEXT_1236:;
 /* line 674 */
+trampoline_stno(674);
 SnoVal _v1239 = concat_sv(concat_sv(concat_sv(concat_sv(get(_ss),strv(" ")),get(_t)),strv(" ")),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(2)},1),sub(sub(sub(get(_len),aply("SIZE",(SnoVal[]){get(_ss)},1)),aply("SIZE",(SnoVal[]){get(_t)},1)),vint(2))},2));
 int _ok1239 = !IS_FAIL(_v1239);
 if(_ok1239) {
@@ -11078,6 +11702,7 @@ var_set("ss", _ss);
 _SNO_NEXT_1238:;
 /* line 676 */
 _L_ss__:;
+trampoline_stno(676);
 SnoVal _v1241 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok1241 = !IS_FAIL(_v1241);
     if(_ok1241) goto _L_ssUnOp;
@@ -11085,12 +11710,14 @@ int _ok1241 = !IS_FAIL(_v1241);
 _SNO_NEXT_1240:;
 /* line 677 */
 _L_ss___2:;
+trampoline_stno(677);
 SnoVal _v1243 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok1243 = !IS_FAIL(_v1243);
     if(_ok1243) goto _L_ssUnOp;
     goto _SNO_NEXT_1242;
 _SNO_NEXT_1242:;
 /* line 678 */
+trampoline_stno(678);
 SnoVal _v1245 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok1245 = !IS_FAIL(_v1245);
     if(_ok1245) goto _L_ssBinOp;
@@ -11099,12 +11726,14 @@ int _ok1245 = !IS_FAIL(_v1245);
 _SNO_NEXT_1244:;
 /* line 679 */
 _L_ss___3:;
+trampoline_stno(679);
 SnoVal _v1247 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok1247 = !IS_FAIL(_v1247);
     if(_ok1247) goto _L_ssUnOp;
     goto _SNO_NEXT_1246;
 _SNO_NEXT_1246:;
 /* line 680 */
+trampoline_stno(680);
 SnoVal _v1249 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok1249 = !IS_FAIL(_v1249);
     if(_ok1249) goto _L_ssBinOp;
@@ -11113,12 +11742,14 @@ int _ok1249 = !IS_FAIL(_v1249);
 _SNO_NEXT_1248:;
 /* line 681 */
 _L_ss___4:;
+trampoline_stno(681);
 SnoVal _v1251 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok1251 = !IS_FAIL(_v1251);
     if(_ok1251) goto _L_ssUnOp;
     goto _SNO_NEXT_1250;
 _SNO_NEXT_1250:;
 /* line 682 */
+trampoline_stno(682);
 SnoVal _v1253 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok1253 = !IS_FAIL(_v1253);
     if(_ok1253) goto _L_ssBinOp;
@@ -11127,12 +11758,14 @@ int _ok1253 = !IS_FAIL(_v1253);
 _SNO_NEXT_1252:;
 /* line 683 */
 _L_ss___5:;
+trampoline_stno(683);
 SnoVal _v1255 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok1255 = !IS_FAIL(_v1255);
     if(_ok1255) goto _L_ssUnOp;
     goto _SNO_NEXT_1254;
 _SNO_NEXT_1254:;
 /* line 684 */
+trampoline_stno(684);
 SnoVal _v1257 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok1257 = !IS_FAIL(_v1257);
     if(_ok1257) goto _L_ssBinOp;
@@ -11141,12 +11774,14 @@ int _ok1257 = !IS_FAIL(_v1257);
 _SNO_NEXT_1256:;
 /* line 685 */
 _L_ss___6:;
+trampoline_stno(685);
 SnoVal _v1259 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok1259 = !IS_FAIL(_v1259);
     if(_ok1259) goto _L_ssUnOp;
     goto _SNO_NEXT_1258;
 _SNO_NEXT_1258:;
 /* line 686 */
+trampoline_stno(686);
 SnoVal _v1261 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok1261 = !IS_FAIL(_v1261);
     if(_ok1261) goto _L_ssBinOp;
@@ -11155,12 +11790,14 @@ int _ok1261 = !IS_FAIL(_v1261);
 _SNO_NEXT_1260:;
 /* line 687 */
 _L_ss___7:;
+trampoline_stno(687);
 SnoVal _v1263 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok1263 = !IS_FAIL(_v1263);
     if(_ok1263) goto _L_ssUnOp;
     goto _SNO_NEXT_1262;
 _SNO_NEXT_1262:;
 /* line 688 */
+trampoline_stno(688);
 SnoVal _v1265 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok1265 = !IS_FAIL(_v1265);
     if(_ok1265) goto _L_ssBinOp;
@@ -11169,12 +11806,14 @@ int _ok1265 = !IS_FAIL(_v1265);
 _SNO_NEXT_1264:;
 /* line 689 */
 _L_ss___8:;
+trampoline_stno(689);
 SnoVal _v1267 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok1267 = !IS_FAIL(_v1267);
     if(_ok1267) goto _L_ssUnOp;
     goto _SNO_NEXT_1266;
 _SNO_NEXT_1266:;
 /* line 690 */
+trampoline_stno(690);
 SnoVal _v1269 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok1269 = !IS_FAIL(_v1269);
     if(_ok1269) goto _L_ssBinOp;
@@ -11183,12 +11822,14 @@ int _ok1269 = !IS_FAIL(_v1269);
 _SNO_NEXT_1268:;
 /* line 691 */
 _L_ss___9:;
+trampoline_stno(691);
 SnoVal _v1271 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok1271 = !IS_FAIL(_v1271);
     if(_ok1271) goto _L_ssUnOp;
     goto _SNO_NEXT_1270;
 _SNO_NEXT_1270:;
 /* line 692 */
+trampoline_stno(692);
 SnoVal _v1273 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok1273 = !IS_FAIL(_v1273);
     if(_ok1273) goto _L_ssBinOp;
@@ -11197,12 +11838,14 @@ int _ok1273 = !IS_FAIL(_v1273);
 _SNO_NEXT_1272:;
 /* line 693 */
 _L_ss___10:;
+trampoline_stno(693);
 SnoVal _v1275 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok1275 = !IS_FAIL(_v1275);
     if(_ok1275) goto _L_ssUnOp;
     goto _SNO_NEXT_1274;
 _SNO_NEXT_1274:;
 /* line 694 */
+trampoline_stno(694);
 SnoVal _v1277 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok1277 = !IS_FAIL(_v1277);
     if(_ok1277) goto _L_ssBinOp;
@@ -11211,12 +11854,14 @@ int _ok1277 = !IS_FAIL(_v1277);
 _SNO_NEXT_1276:;
 /* line 695 */
 _L_ss___11:;
+trampoline_stno(695);
 SnoVal _v1279 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok1279 = !IS_FAIL(_v1279);
     if(_ok1279) goto _L_ssUnOp;
     goto _SNO_NEXT_1278;
 _SNO_NEXT_1278:;
 /* line 696 */
+trampoline_stno(696);
 SnoVal _v1281 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok1281 = !IS_FAIL(_v1281);
     if(_ok1281) goto _L_ssBinOp;
@@ -11225,12 +11870,14 @@ int _ok1281 = !IS_FAIL(_v1281);
 _SNO_NEXT_1280:;
 /* line 697 */
 _L_ss___12:;
+trampoline_stno(697);
 SnoVal _v1283 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok1283 = !IS_FAIL(_v1283);
     if(_ok1283) goto _L_ssUnOp;
     goto _SNO_NEXT_1282;
 _SNO_NEXT_1282:;
 /* line 698 */
+trampoline_stno(698);
 SnoVal _v1285 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok1285 = !IS_FAIL(_v1285);
     if(_ok1285) goto _L_ssBinOp;
@@ -11239,12 +11886,14 @@ int _ok1285 = !IS_FAIL(_v1285);
 _SNO_NEXT_1284:;
 /* line 699 */
 _L_ss___13:;
+trampoline_stno(699);
 SnoVal _v1287 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok1287 = !IS_FAIL(_v1287);
     if(_ok1287) goto _L_ssUnOp;
     goto _SNO_NEXT_1286;
 _SNO_NEXT_1286:;
 /* line 700 */
+trampoline_stno(700);
 SnoVal _v1289 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok1289 = !IS_FAIL(_v1289);
     if(_ok1289) goto _L_ssBinOp;
@@ -11253,6 +11902,7 @@ int _ok1289 = !IS_FAIL(_v1289);
 _SNO_NEXT_1288:;
 /* line 701 */
 _L_ss___14:;
+trampoline_stno(701);
 SnoVal _v1291 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok1291 = !IS_FAIL(_v1291);
     if(_ok1291) goto _L_ssBinOp;
@@ -11261,12 +11911,14 @@ int _ok1291 = !IS_FAIL(_v1291);
 _SNO_NEXT_1290:;
 /* line 702 */
 _L_ss___15:;
+trampoline_stno(702);
 SnoVal _v1293 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok1293 = !IS_FAIL(_v1293);
     if(_ok1293) goto _L_ssUnOp;
     goto _SNO_NEXT_1292;
 _SNO_NEXT_1292:;
 /* line 703 */
+trampoline_stno(703);
 SnoVal _v1295 = aply("EQ",(SnoVal[]){get(_n),vint(2)},2);
 int _ok1295 = !IS_FAIL(_v1295);
     if(_ok1295) goto _L_ssBinOp;
@@ -11275,6 +11927,7 @@ int _ok1295 = !IS_FAIL(_v1295);
 _SNO_NEXT_1294:;
 /* line 705 */
 _L_ss_ExprList:;
+trampoline_stno(705);
 SnoVal _v1297 = aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),get(_len)},2);
 int _ok1297 = !IS_FAIL(_v1297);
 if(_ok1297) {
@@ -11285,6 +11938,7 @@ var_set("ss", _ss);
     goto _SNO_NEXT_1296;
 _SNO_NEXT_1296:;
 /* line 706 */
+trampoline_stno(706);
 SnoVal _v1299 = vint(1);
 int _ok1299 = !IS_FAIL(_v1299);
 if(_ok1299) {
@@ -11295,6 +11949,7 @@ var_set("i", _i);
 _SNO_NEXT_1298:;
 /* line 707 */
 _L_ss_ExprList0:;
+trampoline_stno(707);
 SnoVal _v1301 = concat_sv(aply("LT",(SnoVal[]){get(_i),get(_n)},2),add(get(_i),vint(1)));
 int _ok1301 = !IS_FAIL(_v1301);
 if(_ok1301) {
@@ -11305,6 +11960,7 @@ var_set("i", _i);
     goto _SNO_NEXT_1300;
 _SNO_NEXT_1300:;
 /* line 708 */
+trampoline_stno(708);
 SnoVal _v1303 = concat_sv(concat_sv(get(_ss),strv(", ")),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_i)},1),sub(sub(get(_len),aply("SIZE",(SnoVal[]){get(_ss)},1)),vint(2))},2));
 int _ok1303 = !IS_FAIL(_v1303);
 if(_ok1303) {
@@ -11317,6 +11973,7 @@ var_set("ss", _ss);
 _SNO_NEXT_1302:;
 /* line 710 */
 _L_ss___16:;
+trampoline_stno(710);
 SnoVal _v1305 = concat_sv(strv("("),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),sub(get(_len),vint(4))},2));
 int _ok1305 = !IS_FAIL(_v1305);
 if(_ok1305) {
@@ -11327,6 +11984,7 @@ var_set("ss", _ss);
     goto _SNO_NEXT_1304;
 _SNO_NEXT_1304:;
 /* line 711 */
+trampoline_stno(711);
 SnoVal _v1307 = vint(1);
 int _ok1307 = !IS_FAIL(_v1307);
 if(_ok1307) {
@@ -11337,6 +11995,7 @@ var_set("i", _i);
 _SNO_NEXT_1306:;
 /* line 712 */
 _L_ss__0:;
+trampoline_stno(712);
 SnoVal _v1309 = concat_sv(aply("LT",(SnoVal[]){get(_i),get(_n)},2),add(get(_i),vint(1)));
 int _ok1309 = !IS_FAIL(_v1309);
 if(_ok1309) {
@@ -11347,6 +12006,7 @@ var_set("i", _i);
     goto _SNO_NEXT_1308;
 _SNO_NEXT_1308:;
 /* line 713 */
+trampoline_stno(713);
 SnoVal _v1311 = concat_sv(concat_sv(get(_ss),strv(", ")),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_i)},1),sub(sub(get(_len),aply("SIZE",(SnoVal[]){get(_ss)},1)),vint(3))},2));
 int _ok1311 = !IS_FAIL(_v1311);
 if(_ok1311) {
@@ -11359,6 +12019,7 @@ var_set("ss", _ss);
 _SNO_NEXT_1310:;
 /* line 714 */
 _L_ss__1:;
+trampoline_stno(714);
 SnoVal _v1313 = concat_sv(get(_ss),strv(")"));
 int _ok1313 = !IS_FAIL(_v1313);
 if(_ok1313) {
@@ -11369,12 +12030,14 @@ var_set("ss", _ss);
 _SNO_NEXT_1312:;
 /* line 716 */
 _L_ss___17:;
+trampoline_stno(716);
 SnoVal _v1315 = aply("EQ",(SnoVal[]){get(_n),vint(1)},2);
 int _ok1315 = !IS_FAIL(_v1315);
     if(_ok1315) goto _L_ssUnOp;
     goto _SNO_NEXT_1314;
 _SNO_NEXT_1314:;
 /* line 717 */
+trampoline_stno(717);
 SnoVal _v1317 = aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),get(_len)},2);
 int _ok1317 = !IS_FAIL(_v1317);
 if(_ok1317) {
@@ -11385,6 +12048,7 @@ var_set("ss", _ss);
     goto _SNO_NEXT_1316;
 _SNO_NEXT_1316:;
 /* line 718 */
+trampoline_stno(718);
 SnoVal _v1319 = vint(1);
 int _ok1319 = !IS_FAIL(_v1319);
 if(_ok1319) {
@@ -11395,6 +12059,7 @@ var_set("i", _i);
 _SNO_NEXT_1318:;
 /* line 719 */
 _L_ss__0_2:;
+trampoline_stno(719);
 SnoVal _v1321 = concat_sv(aply("LT",(SnoVal[]){get(_i),get(_n)},2),add(get(_i),vint(1)));
 int _ok1321 = !IS_FAIL(_v1321);
 if(_ok1321) {
@@ -11405,6 +12070,7 @@ var_set("i", _i);
     goto _SNO_NEXT_1320;
 _SNO_NEXT_1320:;
 /* line 720 */
+trampoline_stno(720);
 SnoVal _v1323 = concat_sv(concat_sv(get(_ss),strv(" | ")),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_i)},1),sub(sub(get(_len),aply("SIZE",(SnoVal[]){get(_ss)},1)),vint(3))},2));
 int _ok1323 = !IS_FAIL(_v1323);
 if(_ok1323) {
@@ -11417,6 +12083,7 @@ var_set("ss", _ss);
 _SNO_NEXT_1322:;
 /* line 722 */
 _L_ss___:;
+trampoline_stno(722);
 SnoVal _v1325 = aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),get(_len)},2);
 int _ok1325 = !IS_FAIL(_v1325);
 if(_ok1325) {
@@ -11427,6 +12094,7 @@ var_set("ss", _ss);
     goto _SNO_NEXT_1324;
 _SNO_NEXT_1324:;
 /* line 723 */
+trampoline_stno(723);
 SnoVal _v1327 = vint(1);
 int _ok1327 = !IS_FAIL(_v1327);
 if(_ok1327) {
@@ -11437,6 +12105,7 @@ var_set("i", _i);
 _SNO_NEXT_1326:;
 /* line 724 */
 _L_ss___0:;
+trampoline_stno(724);
 SnoVal _v1329 = concat_sv(aply("LT",(SnoVal[]){get(_i),get(_n)},2),add(get(_i),vint(1)));
 int _ok1329 = !IS_FAIL(_v1329);
 if(_ok1329) {
@@ -11447,6 +12116,7 @@ var_set("i", _i);
     goto _SNO_NEXT_1328;
 _SNO_NEXT_1328:;
 /* line 725 */
+trampoline_stno(725);
 SnoVal _v1331 = concat_sv(concat_sv(get(_ss),strv(" ")),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_i)},1),sub(sub(get(_len),aply("SIZE",(SnoVal[]){get(_ss)},1)),vint(1))},2));
 int _ok1331 = !IS_FAIL(_v1331);
 if(_ok1331) {
@@ -11459,6 +12129,7 @@ var_set("ss", _ss);
 _SNO_NEXT_1330:;
 /* line 727 */
 _L_ss____2:;
+trampoline_stno(727);
 SnoVal _v1333 = aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),get(_len)},2);
 int _ok1333 = !IS_FAIL(_v1333);
 if(_ok1333) {
@@ -11469,6 +12140,7 @@ var_set("ss", _ss);
     goto _SNO_NEXT_1332;
 _SNO_NEXT_1332:;
 /* line 728 */
+trampoline_stno(728);
 SnoVal _v1335 = vint(1);
 int _ok1335 = !IS_FAIL(_v1335);
 if(_ok1335) {
@@ -11479,6 +12151,7 @@ var_set("i", _i);
 _SNO_NEXT_1334:;
 /* line 729 */
 _L_ss___0_2:;
+trampoline_stno(729);
 SnoVal _v1337 = concat_sv(aply("LT",(SnoVal[]){get(_i),get(_n)},2),add(get(_i),vint(1)));
 int _ok1337 = !IS_FAIL(_v1337);
 if(_ok1337) {
@@ -11489,6 +12162,7 @@ var_set("i", _i);
     goto _SNO_NEXT_1336;
 _SNO_NEXT_1336:;
 /* line 730 */
+trampoline_stno(730);
 SnoVal _v1339 = concat_sv(concat_sv(concat_sv(get(_ss),strv("[")),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_i)},1),sub(sub(get(_len),aply("SIZE",(SnoVal[]){get(_ss)},1)),vint(2))},2)),strv("]"));
 int _ok1339 = !IS_FAIL(_v1339);
 if(_ok1339) {
@@ -11501,6 +12175,7 @@ var_set("ss", _ss);
 _SNO_NEXT_1338:;
 /* line 732 */
 _L_ss____3:;
+trampoline_stno(732);
 SnoVal _v1341 = concat_sv(concat_sv(strv("("),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1),sub(get(_len),vint(2))},2)),strv(")"));
 int _ok1341 = !IS_FAIL(_v1341);
 if(_ok1341) {
@@ -11513,6 +12188,7 @@ var_set("ss", _ss);
 _SNO_NEXT_1340:;
 /* line 734 */
 _L_ss_Call:;
+trampoline_stno(734);
 SnoVal _v1343 = concat_sv(concat_sv(concat_sv(aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(1)},1)},1),strv("(")),aply("ss",(SnoVal[]){indx(get(_c),(SnoVal[]){vint(2)},1),sub(sub(get(_len),aply("SIZE",(SnoVal[]){get(_v)},1)),vint(2))},2)),strv(")"));
 int _ok1343 = !IS_FAIL(_v1343);
 if(_ok1343) {
@@ -11584,12 +12260,14 @@ static SnoVal _sno_fn_bVisit(SnoVal *_args, int _nargs) {
 
 /* line 738 */
 _L_bVisit_:;
+trampoline_stno(738);
 SnoVal _v1345 = aply("APPLY",(SnoVal[]){get(_fnc),get(_x)},2);
 int _ok1345 = !IS_FAIL(_v1345);
     if(!_ok1345) goto _SNO_RETURN_bVisit;
     goto _SNO_NEXT_1344;
 _SNO_NEXT_1344:;
 /* line 739 */
+trampoline_stno(739);
 SnoVal _v1347 = vint(0);
 int _ok1347 = !IS_FAIL(_v1347);
 if(_ok1347) {
@@ -11600,6 +12278,7 @@ var_set("i", _i);
 _SNO_NEXT_1346:;
 /* line 740 */
 _L_bVisit_1:;
+trampoline_stno(740);
 SnoVal _v1349 = concat_sv(aply("LT",(SnoVal[]){get(_i),aply("n",(SnoVal[]){get(_x)},1)},2),add(get(_i),vint(1)));
 int _ok1349 = !IS_FAIL(_v1349);
 if(_ok1349) {
@@ -11610,6 +12289,7 @@ var_set("i", _i);
     goto _SNO_NEXT_1348;
 _SNO_NEXT_1348:;
 /* line 741 */
+trampoline_stno(741);
 SnoVal _v1351 = aply("bVisit",(SnoVal[]){indx(aply("c",(SnoVal[]){get(_x)},1),(SnoVal[]){get(_i)},1),get(_fnc)},2);
 int _ok1351 = !IS_FAIL(_v1351);
     goto _L_bVisit_1;
@@ -11654,18 +12334,21 @@ static SnoVal _sno_fn_findRefs(SnoVal *_args, int _nargs) {
 
 /* line 746 */
 _L_findRefs:;
+trampoline_stno(746);
 SnoVal _v1353 = aply("DIFFER",(SnoVal[]){get(_x)},1);
 int _ok1353 = !IS_FAIL(_v1353);
     if(!_ok1353) goto _SNO_RETURN_findRefs;
     goto _SNO_NEXT_1352;
 _SNO_NEXT_1352:;
 /* line 747 */
+trampoline_stno(747);
 SnoVal _v1355 = aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("Call")},2);
 int _ok1355 = !IS_FAIL(_v1355);
     if(!_ok1355) goto _L_findRefs_1;
     goto _SNO_NEXT_1354;
 _SNO_NEXT_1354:;
 /* line 748 */
+trampoline_stno(748);
 SnoVal _v1357 = vint(1);
 int _ok1357 = !IS_FAIL(_v1357);
 if(_ok1357) {
@@ -11676,6 +12359,7 @@ var_set("n", _n);
 _SNO_NEXT_1356:;
 /* line 749 */
 _L_findRefs_0:;
+trampoline_stno(749);
 SnoVal _v1359 = concat_sv(aply("LT",(SnoVal[]){get(_n),aply("n",(SnoVal[]){get(_x)},1)},2),add(get(_n),vint(1)));
 int _ok1359 = !IS_FAIL(_v1359);
 if(_ok1359) {
@@ -11686,18 +12370,21 @@ var_set("n", _n);
     goto _SNO_NEXT_1358;
 _SNO_NEXT_1358:;
 /* line 750 */
+trampoline_stno(750);
 SnoVal _v1361 = aply("bVisit",(SnoVal[]){indx(aply("c",(SnoVal[]){get(_x)},1),(SnoVal[]){get(_n)},1),get(_findRefs)},2);
 int _ok1361 = !IS_FAIL(_v1361);
     goto _L_findRefs_0;
 _SNO_NEXT_1360:;
 /* line 751 */
 _L_findRefs_1:;
+trampoline_stno(751);
 SnoVal _v1363 = concat_sv(aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("&")},2),aply("EQ",(SnoVal[]){aply("n",(SnoVal[]){get(_x)},1),vint(1)},2));
 int _ok1363 = !IS_FAIL(_v1363);
     if(!_ok1363) goto _L_findRefs_2;
     goto _SNO_NEXT_1362;
 _SNO_NEXT_1362:;
 /* line 752 */
+trampoline_stno(752);
 SnoVal _v1365 = aply("ss",(SnoVal[]){get(_x)},1);
 int _ok1365 = !IS_FAIL(_v1365);
 if(_ok1365) {
@@ -11708,12 +12395,14 @@ var_set("v", _v);
 _SNO_NEXT_1364:;
 /* line 753 */
 _L_findRefs_2:;
+trampoline_stno(753);
 SnoVal _v1367 = aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){get(_x)},1),strv("Id")},2);
 int _ok1367 = !IS_FAIL(_v1367);
     if(!_ok1367) goto _SNO_RETURN_findRefs;
     goto _SNO_NEXT_1366;
 _SNO_NEXT_1366:;
 /* line 754 */
+trampoline_stno(754);
 SnoVal _v1369 = aply("v",(SnoVal[]){get(_x)},1);
 int _ok1369 = !IS_FAIL(_v1369);
 if(_ok1369) {
@@ -11724,6 +12413,7 @@ var_set("v", _v);
 _SNO_NEXT_1368:;
 /* line 755 */
 _L_findRefs_9:;
+trampoline_stno(755);
 /* byrd mtch u1371 */
 SnoVal _s1371 = get(_v);
 const char *_subj1371 = to_str(_s1371);
@@ -11770,6 +12460,7 @@ _byrd_1371_done:;
     goto _SNO_NEXT_1370;
 _SNO_NEXT_1370:;
 /* line 756 */
+trampoline_stno(756);
 SnoVal _v1373 = concat_sv(concat_sv(concat_sv(aply("DIFFER",(SnoVal[]){get(_Refs)},1),get(_Refs)),strv(" ")),get(_v));
 int _ok1373 = !IS_FAIL(_v1373);
 if(_ok1373) {
@@ -11780,6 +12471,7 @@ var_set("Refs", _Refs);
     goto _SNO_NEXT_1372;
 _SNO_NEXT_1372:;
 /* line 757 */
+trampoline_stno(757);
 SnoVal _v1375 = concat_sv(aply("IDENT",(SnoVal[]){get(_Refs)},1),get(_v));
 int _ok1375 = !IS_FAIL(_v1375);
 if(_ok1375) {
@@ -11790,9 +12482,11 @@ var_set("Refs", _Refs);
 _SNO_NEXT_1374:;
 /* line 758 */
 _L_findRefsEnd:;
+trampoline_stno(758);
     goto _SNO_NEXT_1376;
 _SNO_NEXT_1376:;
 /* line 760 */
+trampoline_stno(760);
 SnoVal _v1378 = aply("DEFINE",(SnoVal[]){strv("refs(p)c,n,s,subj")},1);
 int _ok1378 = !IS_FAIL(_v1378);
     goto _SNO_NEXT_1377;
@@ -11843,6 +12537,7 @@ static SnoVal _sno_fn_refs(SnoVal *_args, int _nargs) {
 
 /* line 761 */
 _L_refs:;
+trampoline_stno(761);
 SnoVal _v1380 = aply("c",(SnoVal[]){get(_p)},1);
 int _ok1380 = !IS_FAIL(_v1380);
 if(_ok1380) {
@@ -11852,6 +12547,7 @@ var_set("c", _c);
     goto _SNO_NEXT_1379;
 _SNO_NEXT_1379:;
 /* line 762 */
+trampoline_stno(762);
 SnoVal _v1382 = vint(0);
 int _ok1382 = !IS_FAIL(_v1382);
 if(_ok1382) {
@@ -11862,6 +12558,7 @@ var_set("n", _n);
 _SNO_NEXT_1381:;
 /* line 763 */
 _L_refs_0:;
+trampoline_stno(763);
 SnoVal _v1384 = concat_sv(aply("LT",(SnoVal[]){get(_n),aply("n",(SnoVal[]){get(_p)},1)},2),add(get(_n),vint(1)));
 int _ok1384 = !IS_FAIL(_v1384);
 if(_ok1384) {
@@ -11872,12 +12569,14 @@ var_set("n", _n);
     goto _SNO_NEXT_1383;
 _SNO_NEXT_1383:;
 /* line 764 */
+trampoline_stno(764);
 SnoVal _v1386 = aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_n)},1)},1),strv("Stmt")},2);
 int _ok1386 = !IS_FAIL(_v1386);
     if(!_ok1386) goto _L_refs_0;
     goto _SNO_NEXT_1385;
 _SNO_NEXT_1385:;
 /* line 765 */
+trampoline_stno(765);
 SnoVal _v1388 = add(get(_s),vint(1));
 int _ok1388 = !IS_FAIL(_v1388);
 if(_ok1388) {
@@ -11887,24 +12586,28 @@ var_set("s", _s);
     goto _SNO_NEXT_1387;
 _SNO_NEXT_1387:;
 /* line 766 */
+trampoline_stno(766);
 SnoVal _v1390 = aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){indx(aply("c",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_n)},1)},1),(SnoVal[]){vint(3)},1)},1)},1);
 int _ok1390 = !IS_FAIL(_v1390);
     if(!_ok1390) goto _L_refs_0;
     goto _SNO_NEXT_1389;
 _SNO_NEXT_1389:;
 /* line 767 */
+trampoline_stno(767);
 SnoVal _v1392 = aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){indx(aply("c",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_n)},1)},1),(SnoVal[]){vint(4)},1)},1),strv("=")},2);
 int _ok1392 = !IS_FAIL(_v1392);
     if(!_ok1392) goto _L_refs_0;
     goto _SNO_NEXT_1391;
 _SNO_NEXT_1391:;
 /* line 768 */
+trampoline_stno(768);
 SnoVal _v1394 = aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){indx(aply("c",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_n)},1)},1),(SnoVal[]){vint(2)},1)},1),strv("Id")},2);
 int _ok1394 = !IS_FAIL(_v1394);
     if(_ok1394) goto _L_refs_1;
     goto _SNO_NEXT_1393;
 _SNO_NEXT_1393:;
 /* line 769 */
+trampoline_stno(769);
 SnoVal _v1396 = aply("IDENT",(SnoVal[]){aply("t",(SnoVal[]){indx(aply("c",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_n)},1)},1),(SnoVal[]){vint(2)},1)},1),strv("$")},2);
 int _ok1396 = !IS_FAIL(_v1396);
     if(_ok1396) goto _L_refs_1;
@@ -11913,6 +12616,7 @@ int _ok1396 = !IS_FAIL(_v1396);
 _SNO_NEXT_1395:;
 /* line 770 */
 _L_refs_1:;
+trampoline_stno(770);
 SnoVal _v1398 = aply("ss",(SnoVal[]){indx(aply("c",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_n)},1)},1),(SnoVal[]){vint(2)},1)},1);
 int _ok1398 = !IS_FAIL(_v1398);
 if(_ok1398) {
@@ -11922,16 +12626,19 @@ var_set("subj", _subj);
     goto _SNO_NEXT_1397;
 _SNO_NEXT_1397:;
 /* line 771 */
+trampoline_stno(771);
 SnoVal _v1400 = get(_Refs);
 int _ok1400 = !IS_FAIL(_v1400);
     goto _SNO_NEXT_1399;
 _SNO_NEXT_1399:;
 /* line 772 */
+trampoline_stno(772);
 SnoVal _v1402 = aply("bVisit",(SnoVal[]){indx(aply("c",(SnoVal[]){indx(get(_c),(SnoVal[]){get(_n)},1)},1),(SnoVal[]){vint(5)},1),get(_findRefs)},2);
 int _ok1402 = !IS_FAIL(_v1402);
     goto _SNO_NEXT_1401;
 _SNO_NEXT_1401:;
 /* line 773 */
+trampoline_stno(773);
 SnoVal _v1404 = concat_sv(concat_sv(concat_sv(concat_sv(aply("LPAD",(SnoVal[]){get(_s),vint(3),vint(0)},3),strv(": ")),aply("RPAD",(SnoVal[]){get(_subj),vint(38)},2)),strv(" ")),get(_Refs));
 int _ok1404 = !IS_FAIL(_v1404);
 if(_ok1404) {
@@ -15547,7 +16254,7 @@ static SnoVal pat_ExprList(const char *_subj_np, int64_t _slen_np,
     cat_l_387_α:                                            goto cat_l_388_α;
     cat_l_387_β:                                            goto cat_r_388_β;
     cat_l_388_α:  npush();                                  goto cat_r_388_α;
-    cat_l_388_β:                                            goto _ExprList_ω;
+    cat_l_388_β:  npush();                                  goto cat_r_388_α;
 cat_r_388_α: {
     deref_389_saved_cur = _cur_np;
     SnoVal _r_389 = pat_XList(_subj_np, _slen_np, &_cur_np, &deref_389_z, 0);
@@ -16092,7 +16799,7 @@ static SnoVal pat_Expr3(const char *_subj_np, int64_t _slen_np,
     cat_l_431_α:                                            goto cat_l_432_α;
     cat_l_431_β:                                            goto cat_r_432_β;
     cat_l_432_α:  npush();                                  goto cat_r_432_α;
-    cat_l_432_β:                                            goto _Expr3_ω;
+    cat_l_432_β:  npush();                                  goto cat_r_432_α;
 cat_r_432_α: {
     deref_433_saved_cur = _cur_np;
     SnoVal _r_433 = pat_X3(_subj_np, _slen_np, &_cur_np, &deref_433_z, 0);
@@ -16249,7 +16956,7 @@ static SnoVal pat_Expr4(const char *_subj_np, int64_t _slen_np,
     cat_l_444_α:                                            goto cat_l_445_α;
     cat_l_444_β:                                            goto cat_r_445_β;
     cat_l_445_α:  npush();                                  goto cat_r_445_α;
-    cat_l_445_β:                                            goto _Expr4_ω;
+    cat_l_445_β:  npush();                                  goto cat_r_445_α;
 cat_r_445_α: {
     deref_446_saved_cur = _cur_np;
     SnoVal _r_446 = pat_X4(_subj_np, _slen_np, &_cur_np, &deref_446_z, 0);
@@ -18210,7 +18917,7 @@ cat_l_618_β: {
     cat_l_623_α:                                            goto cat_l_624_α;
     cat_l_623_β:                                            goto cat_r_624_β;
     cat_l_624_α:  npush();                                  goto cat_r_624_α;
-    cat_l_624_β:                                            goto alt_r_621_α;
+    cat_l_624_β:  npush();                                  goto cat_r_624_α;
 cat_r_624_α: {
     deref_625_saved_cur = _cur_np;
     SnoVal _r_625 = pat_Expr16(_subj_np, _slen_np, &_cur_np, &deref_625_z, 0);
@@ -20758,7 +21465,7 @@ static SnoVal pat_Parse(const char *_subj_np, int64_t _slen_np,
     cat_l_846_α:                                            goto cat_l_847_α;
     cat_l_846_β:                                            goto cat_r_847_β;
     cat_l_847_α:  npush();                                  goto cat_r_847_α;
-    cat_l_847_β:                                            goto _Parse_ω;
+    cat_l_847_β:  npush();                                  goto cat_r_847_α;
     cat_r_847_α:  cat_r_847_α_depth = -1;                   goto cat_r_846_α;
     cat_r_847_β:
                   if (++cat_r_847_α_depth >= 64)            goto cat_l_847_β;
@@ -20781,7 +21488,7 @@ arbno_c_848_β: {
     goto cat_r_847_α_child_ok;
 }
 cat_r_846_α: /* E_REDUCE & */
-    { SnoVal _reduce_args[2] = {STR_VAL("'Parse'"), STR_VAL("nTop()")};
+    { SnoVal _reduce_args[2] = {STR_VAL("'Parse'"), INT_VAL(ntop())};
       aply("Reduce", _reduce_args, 2); }
     goto cat_r_845_α;
 cat_r_846_β: goto cat_l_846_β;
@@ -20846,7 +21553,7 @@ static SnoVal pat_Compiland(const char *_subj_np, int64_t _slen_np,
     cat_l_852_α:                                            goto cat_l_853_α;
     cat_l_852_β:                                            goto cat_r_853_β;
     cat_l_853_α:  npush();                                  goto cat_r_853_α;
-    cat_l_853_β:                                            goto _Compiland_ω;
+    cat_l_853_β:  npush();                                  goto cat_r_853_α;
     cat_r_853_α:  cat_r_853_α_depth = -1;                   goto cat_r_852_α;
     cat_r_853_β:
                   if (++cat_r_853_α_depth >= 64)            goto cat_l_853_β;
@@ -20869,7 +21576,7 @@ arbno_c_854_β: {
     goto cat_r_853_α_child_ok;
 }
 cat_r_852_α: /* E_REDUCE & */
-    { SnoVal _reduce_args[2] = {STR_VAL("'Parse'"), STR_VAL("nTop()")};
+    { SnoVal _reduce_args[2] = {STR_VAL("'Parse'"), INT_VAL(ntop())};
       aply("Reduce", _reduce_args, 2); }
     goto cat_r_851_α;
 cat_r_852_β: goto cat_l_852_β;
@@ -21040,6 +21747,7 @@ static char _tramp_sentinel_1405;
 static void *stmt_1(void) { /* line 8 label:START */
 /* line 8 */
 _L_START:;
+trampoline_stno(8);
     return (void*)_tramp_next_1405;
 }
 
@@ -21047,6 +21755,7 @@ static char _tramp_sentinel_1406;
 #define _tramp_next_1406 ((void*)&_tramp_sentinel_1406)
 static void *stmt_2(void) { /* line 2 */
 /* line 2 */
+trampoline_stno(2);
 /* byrd mtch u1407 */
 SnoVal _s1407 = kw("ALPHABET");
 const char *_subj1407 = to_str(_s1407);
@@ -21096,6 +21805,7 @@ static char _tramp_sentinel_1408;
 #define _tramp_next_1408 ((void*)&_tramp_sentinel_1408)
 static void *stmt_3(void) { /* line 3 */
 /* line 3 */
+trampoline_stno(3);
 /* byrd mtch u1409 */
 SnoVal _s1409 = kw("ALPHABET");
 const char *_subj1409 = to_str(_s1409);
@@ -21145,6 +21855,7 @@ static char _tramp_sentinel_1410;
 #define _tramp_next_1410 ((void*)&_tramp_sentinel_1410)
 static void *stmt_4(void) { /* line 4 */
 /* line 4 */
+trampoline_stno(4);
 /* byrd mtch u1411 */
 SnoVal _s1411 = kw("ALPHABET");
 const char *_subj1411 = to_str(_s1411);
@@ -21194,6 +21905,7 @@ static char _tramp_sentinel_1412;
 #define _tramp_next_1412 ((void*)&_tramp_sentinel_1412)
 static void *stmt_5(void) { /* line 5 */
 /* line 5 */
+trampoline_stno(5);
 /* byrd mtch u1413 */
 SnoVal _s1413 = kw("ALPHABET");
 const char *_subj1413 = to_str(_s1413);
@@ -21243,6 +21955,7 @@ static char _tramp_sentinel_1414;
 #define _tramp_next_1414 ((void*)&_tramp_sentinel_1414)
 static void *stmt_6(void) { /* line 6 */
 /* line 6 */
+trampoline_stno(6);
 /* byrd mtch u1415 */
 SnoVal _s1415 = kw("ALPHABET");
 const char *_subj1415 = to_str(_s1415);
@@ -21292,6 +22005,7 @@ static char _tramp_sentinel_1416;
 #define _tramp_next_1416 ((void*)&_tramp_sentinel_1416)
 static void *stmt_7(void) { /* line 7 */
 /* line 7 */
+trampoline_stno(7);
 /* byrd mtch u1417 */
 SnoVal _s1417 = kw("ALPHABET");
 const char *_subj1417 = to_str(_s1417);
@@ -21341,6 +22055,7 @@ static char _tramp_sentinel_1418;
 #define _tramp_next_1418 ((void*)&_tramp_sentinel_1418)
 static void *stmt_8(void) { /* line 8 */
 /* line 8 */
+trampoline_stno(8);
 /* byrd mtch u1419 */
 SnoVal _s1419 = kw("ALPHABET");
 const char *_subj1419 = to_str(_s1419);
@@ -21390,6 +22105,7 @@ static char _tramp_sentinel_1420;
 #define _tramp_next_1420 ((void*)&_tramp_sentinel_1420)
 static void *stmt_9(void) { /* line 9 */
 /* line 9 */
+trampoline_stno(9);
 /* byrd mtch u1421 */
 SnoVal _s1421 = kw("ALPHABET");
 const char *_subj1421 = to_str(_s1421);
@@ -21439,6 +22155,7 @@ static char _tramp_sentinel_1422;
 #define _tramp_next_1422 ((void*)&_tramp_sentinel_1422)
 static void *stmt_10(void) { /* line 10 */
 /* line 10 */
+trampoline_stno(10);
 /* byrd mtch u1423 */
 SnoVal _s1423 = kw("ALPHABET");
 const char *_subj1423 = to_str(_s1423);
@@ -21488,6 +22205,7 @@ static char _tramp_sentinel_1424;
 #define _tramp_next_1424 ((void*)&_tramp_sentinel_1424)
 static void *stmt_11(void) { /* line 11 */
 /* line 11 */
+trampoline_stno(11);
 /* byrd mtch u1425 */
 SnoVal _s1425 = kw("ALPHABET");
 const char *_subj1425 = to_str(_s1425);
@@ -21537,6 +22255,7 @@ static char _tramp_sentinel_1426;
 #define _tramp_next_1426 ((void*)&_tramp_sentinel_1426)
 static void *stmt_12(void) { /* line 12 */
 /* line 12 */
+trampoline_stno(12);
 /* byrd mtch u1427 */
 SnoVal _s1427 = kw("ALPHABET");
 const char *_subj1427 = to_str(_s1427);
@@ -21586,6 +22305,7 @@ static char _tramp_sentinel_1428;
 #define _tramp_next_1428 ((void*)&_tramp_sentinel_1428)
 static void *stmt_13(void) { /* line 13 */
 /* line 13 */
+trampoline_stno(13);
 /* byrd mtch u1429 */
 SnoVal _s1429 = kw("ALPHABET");
 const char *_subj1429 = to_str(_s1429);
@@ -21635,6 +22355,7 @@ static char _tramp_sentinel_1430;
 #define _tramp_next_1430 ((void*)&_tramp_sentinel_1430)
 static void *stmt_14(void) { /* line 15 */
 /* line 15 */
+trampoline_stno(15);
 /* byrd mtch u1431 */
 SnoVal _s1431 = kw("ALPHABET");
 const char *_subj1431 = to_str(_s1431);
@@ -21684,6 +22405,7 @@ static char _tramp_sentinel_1432;
 #define _tramp_next_1432 ((void*)&_tramp_sentinel_1432)
 static void *stmt_15(void) { /* line 16 */
 /* line 16 */
+trampoline_stno(16);
 /* byrd mtch u1433 */
 SnoVal _s1433 = kw("ALPHABET");
 const char *_subj1433 = to_str(_s1433);
@@ -21733,6 +22455,7 @@ static char _tramp_sentinel_1434;
 #define _tramp_next_1434 ((void*)&_tramp_sentinel_1434)
 static void *stmt_16(void) { /* line 17 */
 /* line 17 */
+trampoline_stno(17);
 /* byrd mtch u1435 */
 SnoVal _s1435 = kw("ALPHABET");
 const char *_subj1435 = to_str(_s1435);
@@ -21782,6 +22505,7 @@ static char _tramp_sentinel_1436;
 #define _tramp_next_1436 ((void*)&_tramp_sentinel_1436)
 static void *stmt_17(void) { /* line 18 */
 /* line 18 */
+trampoline_stno(18);
 /* byrd mtch u1437 */
 SnoVal _s1437 = kw("ALPHABET");
 const char *_subj1437 = to_str(_s1437);
@@ -21831,6 +22555,7 @@ static char _tramp_sentinel_1438;
 #define _tramp_next_1438 ((void*)&_tramp_sentinel_1438)
 static void *stmt_18(void) { /* line 19 */
 /* line 19 */
+trampoline_stno(19);
 /* byrd mtch u1439 */
 SnoVal _s1439 = kw("ALPHABET");
 const char *_subj1439 = to_str(_s1439);
@@ -21880,6 +22605,7 @@ static char _tramp_sentinel_1440;
 #define _tramp_next_1440 ((void*)&_tramp_sentinel_1440)
 static void *stmt_19(void) { /* line 20 */
 /* line 20 */
+trampoline_stno(20);
 /* byrd mtch u1441 */
 SnoVal _s1441 = kw("ALPHABET");
 const char *_subj1441 = to_str(_s1441);
@@ -21929,6 +22655,7 @@ static char _tramp_sentinel_1442;
 #define _tramp_next_1442 ((void*)&_tramp_sentinel_1442)
 static void *stmt_20(void) { /* line 21 */
 /* line 21 */
+trampoline_stno(21);
 /* byrd mtch u1443 */
 SnoVal _s1443 = kw("ALPHABET");
 const char *_subj1443 = to_str(_s1443);
@@ -21978,6 +22705,7 @@ static char _tramp_sentinel_1444;
 #define _tramp_next_1444 ((void*)&_tramp_sentinel_1444)
 static void *stmt_21(void) { /* line 23 */
 /* line 23 */
+trampoline_stno(23);
 SnoVal _v1445 = vint(1);
 int _ok1445 = !IS_FAIL(_v1445);
 if(_ok1445) {
@@ -21991,6 +22719,7 @@ static char _tramp_sentinel_1446;
 #define _tramp_next_1446 ((void*)&_tramp_sentinel_1446)
 static void *stmt_22(void) { /* line 24 */
 /* line 24 */
+trampoline_stno(24);
 SnoVal _v1447 = vint(0);
 int _ok1447 = !IS_FAIL(_v1447);
 if(_ok1447) {
@@ -22004,6 +22733,7 @@ static char _tramp_sentinel_1448;
 #define _tramp_next_1448 ((void*)&_tramp_sentinel_1448)
 static void *stmt_23(void) { /* line 25 */
 /* line 25 */
+trampoline_stno(25);
 SnoVal _v1449 = strv("0123456789");
 int _ok1449 = !IS_FAIL(_v1449);
 if(_ok1449) {
@@ -22017,6 +22747,7 @@ static char _tramp_sentinel_1450;
 #define _tramp_next_1450 ((void*)&_tramp_sentinel_1450)
 static void *stmt_24(void) { /* line 27 */
 /* line 27 */
+trampoline_stno(27);
 SnoVal _v1451 = aply("TABLE",NULL,0);
 int _ok1451 = !IS_FAIL(_v1451);
 if(_ok1451) {
@@ -22030,6 +22761,7 @@ static char _tramp_sentinel_1452;
 #define _tramp_next_1452 ((void*)&_tramp_sentinel_1452)
 static void *stmt_25(void) { /* line 29 */
 /* line 29 */
+trampoline_stno(29);
 SnoVal _v1453 = strv("NO_BREAK_SPACE");
 int _ok1453 = !IS_FAIL(_v1453);
 if(_ok1453) {
@@ -22042,6 +22774,7 @@ static char _tramp_sentinel_1454;
 #define _tramp_next_1454 ((void*)&_tramp_sentinel_1454)
 static void *stmt_26(void) { /* line 30 */
 /* line 30 */
+trampoline_stno(30);
 SnoVal _v1455 = strv("CENT_SIGN");
 int _ok1455 = !IS_FAIL(_v1455);
 if(_ok1455) {
@@ -22054,6 +22787,7 @@ static char _tramp_sentinel_1456;
 #define _tramp_next_1456 ((void*)&_tramp_sentinel_1456)
 static void *stmt_27(void) { /* line 31 */
 /* line 31 */
+trampoline_stno(31);
 SnoVal _v1457 = strv("SECTION_SIGN");
 int _ok1457 = !IS_FAIL(_v1457);
 if(_ok1457) {
@@ -22066,6 +22800,7 @@ static char _tramp_sentinel_1458;
 #define _tramp_next_1458 ((void*)&_tramp_sentinel_1458)
 static void *stmt_28(void) { /* line 32 */
 /* line 32 */
+trampoline_stno(32);
 SnoVal _v1459 = strv("COPYRIGHT_SIGN");
 int _ok1459 = !IS_FAIL(_v1459);
 if(_ok1459) {
@@ -22078,6 +22813,7 @@ static char _tramp_sentinel_1460;
 #define _tramp_next_1460 ((void*)&_tramp_sentinel_1460)
 static void *stmt_29(void) { /* line 33 */
 /* line 33 */
+trampoline_stno(33);
 SnoVal _v1461 = strv("FEMININE_ORDINAL_INDICATOR");
 int _ok1461 = !IS_FAIL(_v1461);
 if(_ok1461) {
@@ -22090,6 +22826,7 @@ static char _tramp_sentinel_1462;
 #define _tramp_next_1462 ((void*)&_tramp_sentinel_1462)
 static void *stmt_30(void) { /* line 34 */
 /* line 34 */
+trampoline_stno(34);
 SnoVal _v1463 = strv("SOFT_HYPHEN");
 int _ok1463 = !IS_FAIL(_v1463);
 if(_ok1463) {
@@ -22102,6 +22839,7 @@ static char _tramp_sentinel_1464;
 #define _tramp_next_1464 ((void*)&_tramp_sentinel_1464)
 static void *stmt_31(void) { /* line 35 */
 /* line 35 */
+trampoline_stno(35);
 SnoVal _v1465 = strv("REGISTERED_SIGN");
 int _ok1465 = !IS_FAIL(_v1465);
 if(_ok1465) {
@@ -22114,6 +22852,7 @@ static char _tramp_sentinel_1466;
 #define _tramp_next_1466 ((void*)&_tramp_sentinel_1466)
 static void *stmt_32(void) { /* line 36 */
 /* line 36 */
+trampoline_stno(36);
 SnoVal _v1467 = strv("DEGREE_SIGN");
 int _ok1467 = !IS_FAIL(_v1467);
 if(_ok1467) {
@@ -22126,6 +22865,7 @@ static char _tramp_sentinel_1468;
 #define _tramp_next_1468 ((void*)&_tramp_sentinel_1468)
 static void *stmt_33(void) { /* line 37 */
 /* line 37 */
+trampoline_stno(37);
 SnoVal _v1469 = strv("PLUS_MINUS_SIGN");
 int _ok1469 = !IS_FAIL(_v1469);
 if(_ok1469) {
@@ -22138,6 +22878,7 @@ static char _tramp_sentinel_1470;
 #define _tramp_next_1470 ((void*)&_tramp_sentinel_1470)
 static void *stmt_34(void) { /* line 38 */
 /* line 38 */
+trampoline_stno(38);
 SnoVal _v1471 = strv("PILCROW_SIGN");
 int _ok1471 = !IS_FAIL(_v1471);
 if(_ok1471) {
@@ -22150,6 +22891,7 @@ static char _tramp_sentinel_1472;
 #define _tramp_next_1472 ((void*)&_tramp_sentinel_1472)
 static void *stmt_35(void) { /* line 39 */
 /* line 39 */
+trampoline_stno(39);
 SnoVal _v1473 = strv("VULGAR_FRACTION_ONE_QUARTER");
 int _ok1473 = !IS_FAIL(_v1473);
 if(_ok1473) {
@@ -22162,6 +22904,7 @@ static char _tramp_sentinel_1474;
 #define _tramp_next_1474 ((void*)&_tramp_sentinel_1474)
 static void *stmt_36(void) { /* line 40 */
 /* line 40 */
+trampoline_stno(40);
 SnoVal _v1475 = strv("VULGAR_FRACTION_ONE_HALF");
 int _ok1475 = !IS_FAIL(_v1475);
 if(_ok1475) {
@@ -22174,6 +22917,7 @@ static char _tramp_sentinel_1476;
 #define _tramp_next_1476 ((void*)&_tramp_sentinel_1476)
 static void *stmt_37(void) { /* line 41 */
 /* line 41 */
+trampoline_stno(41);
 SnoVal _v1477 = strv("VULGAR_FRACTION_THREE_QUARTERS");
 int _ok1477 = !IS_FAIL(_v1477);
 if(_ok1477) {
@@ -22186,6 +22930,7 @@ static char _tramp_sentinel_1478;
 #define _tramp_next_1478 ((void*)&_tramp_sentinel_1478)
 static void *stmt_38(void) { /* line 42 */
 /* line 42 */
+trampoline_stno(42);
 SnoVal _v1479 = strv("LATIN_CAPITAL_LETTER_ETH");
 int _ok1479 = !IS_FAIL(_v1479);
 if(_ok1479) {
@@ -22198,6 +22943,7 @@ static char _tramp_sentinel_1480;
 #define _tramp_next_1480 ((void*)&_tramp_sentinel_1480)
 static void *stmt_39(void) { /* line 43 */
 /* line 43 */
+trampoline_stno(43);
 SnoVal _v1481 = strv("MULTIPLICATION_SIGN");
 int _ok1481 = !IS_FAIL(_v1481);
 if(_ok1481) {
@@ -22210,6 +22956,7 @@ static char _tramp_sentinel_1482;
 #define _tramp_next_1482 ((void*)&_tramp_sentinel_1482)
 static void *stmt_40(void) { /* line 44 */
 /* line 44 */
+trampoline_stno(44);
 SnoVal _v1483 = strv("DIVISION_SIGN");
 int _ok1483 = !IS_FAIL(_v1483);
 if(_ok1483) {
@@ -22222,6 +22969,7 @@ static char _tramp_sentinel_1484;
 #define _tramp_next_1484 ((void*)&_tramp_sentinel_1484)
 static void *stmt_41(void) { /* line 45 */
 /* line 45 */
+trampoline_stno(45);
 SnoVal _v1485 = strv("LATIN_SMALL_LETTER_O_WITH_MACRON");
 int _ok1485 = !IS_FAIL(_v1485);
 if(_ok1485) {
@@ -22234,6 +22982,7 @@ static char _tramp_sentinel_1486;
 #define _tramp_next_1486 ((void*)&_tramp_sentinel_1486)
 static void *stmt_42(void) { /* line 46 */
 /* line 46 */
+trampoline_stno(46);
 SnoVal _v1487 = strv("MODIFIER_LETTER_TURNED_COMMA");
 int _ok1487 = !IS_FAIL(_v1487);
 if(_ok1487) {
@@ -22246,6 +22995,7 @@ static char _tramp_sentinel_1488;
 #define _tramp_next_1488 ((void*)&_tramp_sentinel_1488)
 static void *stmt_43(void) { /* line 47 */
 /* line 47 */
+trampoline_stno(47);
 SnoVal _v1489 = strv("COMBINING_GRAVE_ACCENT");
 int _ok1489 = !IS_FAIL(_v1489);
 if(_ok1489) {
@@ -22258,6 +23008,7 @@ static char _tramp_sentinel_1490;
 #define _tramp_next_1490 ((void*)&_tramp_sentinel_1490)
 static void *stmt_44(void) { /* line 48 */
 /* line 48 */
+trampoline_stno(48);
 SnoVal _v1491 = strv("COMBINING_ACUTE_ACCENT");
 int _ok1491 = !IS_FAIL(_v1491);
 if(_ok1491) {
@@ -22270,6 +23021,7 @@ static char _tramp_sentinel_1492;
 #define _tramp_next_1492 ((void*)&_tramp_sentinel_1492)
 static void *stmt_45(void) { /* line 49 */
 /* line 49 */
+trampoline_stno(49);
 SnoVal _v1493 = strv("COMBINING_CIRCUMFLEX_ACCENT");
 int _ok1493 = !IS_FAIL(_v1493);
 if(_ok1493) {
@@ -22282,6 +23034,7 @@ static char _tramp_sentinel_1494;
 #define _tramp_next_1494 ((void*)&_tramp_sentinel_1494)
 static void *stmt_46(void) { /* line 50 */
 /* line 50 */
+trampoline_stno(50);
 SnoVal _v1495 = strv("COMBINING_TILDE");
 int _ok1495 = !IS_FAIL(_v1495);
 if(_ok1495) {
@@ -22294,6 +23047,7 @@ static char _tramp_sentinel_1496;
 #define _tramp_next_1496 ((void*)&_tramp_sentinel_1496)
 static void *stmt_47(void) { /* line 51 */
 /* line 51 */
+trampoline_stno(51);
 SnoVal _v1497 = strv("COMBINING_OVERLINE");
 int _ok1497 = !IS_FAIL(_v1497);
 if(_ok1497) {
@@ -22306,6 +23060,7 @@ static char _tramp_sentinel_1498;
 #define _tramp_next_1498 ((void*)&_tramp_sentinel_1498)
 static void *stmt_48(void) { /* line 52 */
 /* line 52 */
+trampoline_stno(52);
 SnoVal _v1499 = strv("COMBINING_DIAERESIS");
 int _ok1499 = !IS_FAIL(_v1499);
 if(_ok1499) {
@@ -22318,6 +23073,7 @@ static char _tramp_sentinel_1500;
 #define _tramp_next_1500 ((void*)&_tramp_sentinel_1500)
 static void *stmt_49(void) { /* line 53 */
 /* line 53 */
+trampoline_stno(53);
 SnoVal _v1501 = strv("GREEK_CAPITAL_LETTER_PHI");
 int _ok1501 = !IS_FAIL(_v1501);
 if(_ok1501) {
@@ -22330,6 +23086,7 @@ static char _tramp_sentinel_1502;
 #define _tramp_next_1502 ((void*)&_tramp_sentinel_1502)
 static void *stmt_50(void) { /* line 54 */
 /* line 54 */
+trampoline_stno(54);
 SnoVal _v1503 = strv("GREEK_SMALL_LETTER_ALPHA");
 int _ok1503 = !IS_FAIL(_v1503);
 if(_ok1503) {
@@ -22342,6 +23099,7 @@ static char _tramp_sentinel_1504;
 #define _tramp_next_1504 ((void*)&_tramp_sentinel_1504)
 static void *stmt_51(void) { /* line 55 */
 /* line 55 */
+trampoline_stno(55);
 SnoVal _v1505 = strv("GREEK_SMALL_LETTER_BETA");
 int _ok1505 = !IS_FAIL(_v1505);
 if(_ok1505) {
@@ -22354,6 +23112,7 @@ static char _tramp_sentinel_1506;
 #define _tramp_next_1506 ((void*)&_tramp_sentinel_1506)
 static void *stmt_52(void) { /* line 56 */
 /* line 56 */
+trampoline_stno(56);
 SnoVal _v1507 = strv("GREEK_SMALL_LETTER_MU");
 int _ok1507 = !IS_FAIL(_v1507);
 if(_ok1507) {
@@ -22366,6 +23125,7 @@ static char _tramp_sentinel_1508;
 #define _tramp_next_1508 ((void*)&_tramp_sentinel_1508)
 static void *stmt_53(void) { /* line 57 */
 /* line 57 */
+trampoline_stno(57);
 SnoVal _v1509 = strv("GREEK_PHI_SYMBOL");
 int _ok1509 = !IS_FAIL(_v1509);
 if(_ok1509) {
@@ -22378,6 +23138,7 @@ static char _tramp_sentinel_1510;
 #define _tramp_next_1510 ((void*)&_tramp_sentinel_1510)
 static void *stmt_54(void) { /* line 59 */
 /* line 59 */
+trampoline_stno(59);
 SnoVal _v1511 = strv("EN_QUAD");
 int _ok1511 = !IS_FAIL(_v1511);
 if(_ok1511) {
@@ -22390,6 +23151,7 @@ static char _tramp_sentinel_1512;
 #define _tramp_next_1512 ((void*)&_tramp_sentinel_1512)
 static void *stmt_55(void) { /* line 60 */
 /* line 60 */
+trampoline_stno(60);
 SnoVal _v1513 = strv("EM_QUAD");
 int _ok1513 = !IS_FAIL(_v1513);
 if(_ok1513) {
@@ -22402,6 +23164,7 @@ static char _tramp_sentinel_1514;
 #define _tramp_next_1514 ((void*)&_tramp_sentinel_1514)
 static void *stmt_56(void) { /* line 61 */
 /* line 61 */
+trampoline_stno(61);
 SnoVal _v1515 = strv("EN_DASH");
 int _ok1515 = !IS_FAIL(_v1515);
 if(_ok1515) {
@@ -22414,6 +23177,7 @@ static char _tramp_sentinel_1516;
 #define _tramp_next_1516 ((void*)&_tramp_sentinel_1516)
 static void *stmt_57(void) { /* line 62 */
 /* line 62 */
+trampoline_stno(62);
 SnoVal _v1517 = strv("EM_DASH");
 int _ok1517 = !IS_FAIL(_v1517);
 if(_ok1517) {
@@ -22426,6 +23190,7 @@ static char _tramp_sentinel_1518;
 #define _tramp_next_1518 ((void*)&_tramp_sentinel_1518)
 static void *stmt_58(void) { /* line 63 */
 /* line 63 */
+trampoline_stno(63);
 SnoVal _v1519 = strv("LEFT_SINGLE_QUOTATION_MARK");
 int _ok1519 = !IS_FAIL(_v1519);
 if(_ok1519) {
@@ -22438,6 +23203,7 @@ static char _tramp_sentinel_1520;
 #define _tramp_next_1520 ((void*)&_tramp_sentinel_1520)
 static void *stmt_59(void) { /* line 64 */
 /* line 64 */
+trampoline_stno(64);
 SnoVal _v1521 = strv("RIGHT_SINGLE_QUOTATION_MARK");
 int _ok1521 = !IS_FAIL(_v1521);
 if(_ok1521) {
@@ -22450,6 +23216,7 @@ static char _tramp_sentinel_1522;
 #define _tramp_next_1522 ((void*)&_tramp_sentinel_1522)
 static void *stmt_60(void) { /* line 65 */
 /* line 65 */
+trampoline_stno(65);
 SnoVal _v1523 = strv("LEFT_DOUBLE_QUOTATION_MARK");
 int _ok1523 = !IS_FAIL(_v1523);
 if(_ok1523) {
@@ -22462,6 +23229,7 @@ static char _tramp_sentinel_1524;
 #define _tramp_next_1524 ((void*)&_tramp_sentinel_1524)
 static void *stmt_61(void) { /* line 66 */
 /* line 66 */
+trampoline_stno(66);
 SnoVal _v1525 = strv("RIGHT_DOUBLE_QUOTATION_MARK");
 int _ok1525 = !IS_FAIL(_v1525);
 if(_ok1525) {
@@ -22474,6 +23242,7 @@ static char _tramp_sentinel_1526;
 #define _tramp_next_1526 ((void*)&_tramp_sentinel_1526)
 static void *stmt_62(void) { /* line 67 */
 /* line 67 */
+trampoline_stno(67);
 SnoVal _v1527 = strv("BULLET");
 int _ok1527 = !IS_FAIL(_v1527);
 if(_ok1527) {
@@ -22486,6 +23255,7 @@ static char _tramp_sentinel_1528;
 #define _tramp_next_1528 ((void*)&_tramp_sentinel_1528)
 static void *stmt_63(void) { /* line 68 */
 /* line 68 */
+trampoline_stno(68);
 SnoVal _v1529 = strv("HORIZONTAL_ELLIPSIS");
 int _ok1529 = !IS_FAIL(_v1529);
 if(_ok1529) {
@@ -22498,6 +23268,7 @@ static char _tramp_sentinel_1530;
 #define _tramp_next_1530 ((void*)&_tramp_sentinel_1530)
 static void *stmt_64(void) { /* line 69 */
 /* line 69 */
+trampoline_stno(69);
 SnoVal _v1531 = strv("NARROW_NO_BREAK_SPACE");
 int _ok1531 = !IS_FAIL(_v1531);
 if(_ok1531) {
@@ -22510,6 +23281,7 @@ static char _tramp_sentinel_1532;
 #define _tramp_next_1532 ((void*)&_tramp_sentinel_1532)
 static void *stmt_65(void) { /* line 70 */
 /* line 70 */
+trampoline_stno(70);
 SnoVal _v1533 = strv("PRIME");
 int _ok1533 = !IS_FAIL(_v1533);
 if(_ok1533) {
@@ -22522,6 +23294,7 @@ static char _tramp_sentinel_1534;
 #define _tramp_next_1534 ((void*)&_tramp_sentinel_1534)
 static void *stmt_66(void) { /* line 71 */
 /* line 71 */
+trampoline_stno(71);
 SnoVal _v1535 = strv("FRACTION_SLASH");
 int _ok1535 = !IS_FAIL(_v1535);
 if(_ok1535) {
@@ -22534,6 +23307,7 @@ static char _tramp_sentinel_1536;
 #define _tramp_next_1536 ((void*)&_tramp_sentinel_1536)
 static void *stmt_67(void) { /* line 72 */
 /* line 72 */
+trampoline_stno(72);
 SnoVal _v1537 = strv("SOUND_RECORDING_COPYRIGHT");
 int _ok1537 = !IS_FAIL(_v1537);
 if(_ok1537) {
@@ -22546,6 +23320,7 @@ static char _tramp_sentinel_1538;
 #define _tramp_next_1538 ((void*)&_tramp_sentinel_1538)
 static void *stmt_68(void) { /* line 73 */
 /* line 73 */
+trampoline_stno(73);
 SnoVal _v1539 = strv("VULGAR_FRACTION_ONE_SEVENTH");
 int _ok1539 = !IS_FAIL(_v1539);
 if(_ok1539) {
@@ -22558,6 +23333,7 @@ static char _tramp_sentinel_1540;
 #define _tramp_next_1540 ((void*)&_tramp_sentinel_1540)
 static void *stmt_69(void) { /* line 74 */
 /* line 74 */
+trampoline_stno(74);
 SnoVal _v1541 = strv("VULGAR_FRACTION_ONE_NINTH");
 int _ok1541 = !IS_FAIL(_v1541);
 if(_ok1541) {
@@ -22570,6 +23346,7 @@ static char _tramp_sentinel_1542;
 #define _tramp_next_1542 ((void*)&_tramp_sentinel_1542)
 static void *stmt_70(void) { /* line 75 */
 /* line 75 */
+trampoline_stno(75);
 SnoVal _v1543 = strv("VULGAR_FRACTION_ONE_TENTH");
 int _ok1543 = !IS_FAIL(_v1543);
 if(_ok1543) {
@@ -22582,6 +23359,7 @@ static char _tramp_sentinel_1544;
 #define _tramp_next_1544 ((void*)&_tramp_sentinel_1544)
 static void *stmt_71(void) { /* line 76 */
 /* line 76 */
+trampoline_stno(76);
 SnoVal _v1545 = strv("VULGAR_FRACTION_ONE_THIRD");
 int _ok1545 = !IS_FAIL(_v1545);
 if(_ok1545) {
@@ -22594,6 +23372,7 @@ static char _tramp_sentinel_1546;
 #define _tramp_next_1546 ((void*)&_tramp_sentinel_1546)
 static void *stmt_72(void) { /* line 77 */
 /* line 77 */
+trampoline_stno(77);
 SnoVal _v1547 = strv("VULGAR_FRACTION_TWO_THIRDS");
 int _ok1547 = !IS_FAIL(_v1547);
 if(_ok1547) {
@@ -22606,6 +23385,7 @@ static char _tramp_sentinel_1548;
 #define _tramp_next_1548 ((void*)&_tramp_sentinel_1548)
 static void *stmt_73(void) { /* line 78 */
 /* line 78 */
+trampoline_stno(78);
 SnoVal _v1549 = strv("VULGAR_FRACTION_ONE_FIFTH");
 int _ok1549 = !IS_FAIL(_v1549);
 if(_ok1549) {
@@ -22618,6 +23398,7 @@ static char _tramp_sentinel_1550;
 #define _tramp_next_1550 ((void*)&_tramp_sentinel_1550)
 static void *stmt_74(void) { /* line 79 */
 /* line 79 */
+trampoline_stno(79);
 SnoVal _v1551 = strv("VULGAR_FRACTION_TWO_FIFTHS");
 int _ok1551 = !IS_FAIL(_v1551);
 if(_ok1551) {
@@ -22630,6 +23411,7 @@ static char _tramp_sentinel_1552;
 #define _tramp_next_1552 ((void*)&_tramp_sentinel_1552)
 static void *stmt_75(void) { /* line 80 */
 /* line 80 */
+trampoline_stno(80);
 SnoVal _v1553 = strv("VULGAR_FRACTION_THREE_FIFTHS");
 int _ok1553 = !IS_FAIL(_v1553);
 if(_ok1553) {
@@ -22642,6 +23424,7 @@ static char _tramp_sentinel_1554;
 #define _tramp_next_1554 ((void*)&_tramp_sentinel_1554)
 static void *stmt_76(void) { /* line 81 */
 /* line 81 */
+trampoline_stno(81);
 SnoVal _v1555 = strv("VULGAR_FRACTION_FOUR_FIFTHS");
 int _ok1555 = !IS_FAIL(_v1555);
 if(_ok1555) {
@@ -22654,6 +23437,7 @@ static char _tramp_sentinel_1556;
 #define _tramp_next_1556 ((void*)&_tramp_sentinel_1556)
 static void *stmt_77(void) { /* line 82 */
 /* line 82 */
+trampoline_stno(82);
 SnoVal _v1557 = strv("VULGAR_FRACTION_ONE_SIXTH");
 int _ok1557 = !IS_FAIL(_v1557);
 if(_ok1557) {
@@ -22666,6 +23450,7 @@ static char _tramp_sentinel_1558;
 #define _tramp_next_1558 ((void*)&_tramp_sentinel_1558)
 static void *stmt_78(void) { /* line 83 */
 /* line 83 */
+trampoline_stno(83);
 SnoVal _v1559 = strv("VULGAR_FRACTION_FIVE_SIXTHS");
 int _ok1559 = !IS_FAIL(_v1559);
 if(_ok1559) {
@@ -22678,6 +23463,7 @@ static char _tramp_sentinel_1560;
 #define _tramp_next_1560 ((void*)&_tramp_sentinel_1560)
 static void *stmt_79(void) { /* line 84 */
 /* line 84 */
+trampoline_stno(84);
 SnoVal _v1561 = strv("VULGAR_FRACTION_ONE_EIGHTH");
 int _ok1561 = !IS_FAIL(_v1561);
 if(_ok1561) {
@@ -22690,6 +23476,7 @@ static char _tramp_sentinel_1562;
 #define _tramp_next_1562 ((void*)&_tramp_sentinel_1562)
 static void *stmt_80(void) { /* line 85 */
 /* line 85 */
+trampoline_stno(85);
 SnoVal _v1563 = strv("VULGAR_FRACTION_THREE_EIGHTHS");
 int _ok1563 = !IS_FAIL(_v1563);
 if(_ok1563) {
@@ -22702,6 +23489,7 @@ static char _tramp_sentinel_1564;
 #define _tramp_next_1564 ((void*)&_tramp_sentinel_1564)
 static void *stmt_81(void) { /* line 86 */
 /* line 86 */
+trampoline_stno(86);
 SnoVal _v1565 = strv("VULGAR_FRACTION_FIVE_EIGHTHS");
 int _ok1565 = !IS_FAIL(_v1565);
 if(_ok1565) {
@@ -22714,6 +23502,7 @@ static char _tramp_sentinel_1566;
 #define _tramp_next_1566 ((void*)&_tramp_sentinel_1566)
 static void *stmt_82(void) { /* line 87 */
 /* line 87 */
+trampoline_stno(87);
 SnoVal _v1567 = strv("VULGAR_FRACTION_SEVEN_EIGHTHS");
 int _ok1567 = !IS_FAIL(_v1567);
 if(_ok1567) {
@@ -22726,6 +23515,7 @@ static char _tramp_sentinel_1568;
 #define _tramp_next_1568 ((void*)&_tramp_sentinel_1568)
 static void *stmt_83(void) { /* line 88 */
 /* line 88 */
+trampoline_stno(88);
 SnoVal _v1569 = strv("MINUS_SIGN");
 int _ok1569 = !IS_FAIL(_v1569);
 if(_ok1569) {
@@ -22738,6 +23528,7 @@ static char _tramp_sentinel_1570;
 #define _tramp_next_1570 ((void*)&_tramp_sentinel_1570)
 static void *stmt_84(void) { /* line 89 */
 /* line 89 */
+trampoline_stno(89);
 SnoVal _v1571 = strv("LESS_THAN_OR_EQUAL_TO");
 int _ok1571 = !IS_FAIL(_v1571);
 if(_ok1571) {
@@ -22750,6 +23541,7 @@ static char _tramp_sentinel_1572;
 #define _tramp_next_1572 ((void*)&_tramp_sentinel_1572)
 static void *stmt_85(void) { /* line 90 */
 /* line 90 */
+trampoline_stno(90);
 SnoVal _v1573 = strv("CIRCLED_LATIN_CAPITAL_LETTER_M");
 int _ok1573 = !IS_FAIL(_v1573);
 if(_ok1573) {
@@ -22762,6 +23554,7 @@ static char _tramp_sentinel_1574;
 #define _tramp_next_1574 ((void*)&_tramp_sentinel_1574)
 static void *stmt_86(void) { /* line 91 */
 /* line 91 */
+trampoline_stno(91);
 SnoVal _v1575 = strv("WHITE_BULLET");
 int _ok1575 = !IS_FAIL(_v1575);
 if(_ok1575) {
@@ -22774,6 +23567,7 @@ static char _tramp_sentinel_1576;
 #define _tramp_next_1576 ((void*)&_tramp_sentinel_1576)
 static void *stmt_87(void) { /* line 92 */
 /* line 92 */
+trampoline_stno(92);
 SnoVal _v1577 = strv("BALLOT_BOX");
 int _ok1577 = !IS_FAIL(_v1577);
 if(_ok1577) {
@@ -22786,6 +23580,7 @@ static char _tramp_sentinel_1578;
 #define _tramp_next_1578 ((void*)&_tramp_sentinel_1578)
 static void *stmt_88(void) { /* line 93 */
 /* line 93 */
+trampoline_stno(93);
 SnoVal _v1579 = strv("PRIVATE_UNKNOWN_1");
 int _ok1579 = !IS_FAIL(_v1579);
 if(_ok1579) {
@@ -22798,6 +23593,7 @@ static char _tramp_sentinel_1580;
 #define _tramp_next_1580 ((void*)&_tramp_sentinel_1580)
 static void *stmt_89(void) { /* line 94 */
 /* line 94 */
+trampoline_stno(94);
 SnoVal _v1581 = strv("PRIVATE_UNKNOWN_2");
 int _ok1581 = !IS_FAIL(_v1581);
 if(_ok1581) {
@@ -22810,6 +23606,7 @@ static char _tramp_sentinel_1582;
 #define _tramp_next_1582 ((void*)&_tramp_sentinel_1582)
 static void *stmt_90(void) { /* line 96 */
 /* line 96 */
+trampoline_stno(96);
 SnoVal _v1583 = strv("OGHAM_SPACE_MARK");
 int _ok1583 = !IS_FAIL(_v1583);
 if(_ok1583) {
@@ -22822,6 +23619,7 @@ static char _tramp_sentinel_1584;
 #define _tramp_next_1584 ((void*)&_tramp_sentinel_1584)
 static void *stmt_91(void) { /* line 97 */
 /* line 97 */
+trampoline_stno(97);
 SnoVal _v1585 = strv("MONGOLIAN_VOWEL_SEPARATOR");
 int _ok1585 = !IS_FAIL(_v1585);
 if(_ok1585) {
@@ -22834,6 +23632,7 @@ static char _tramp_sentinel_1586;
 #define _tramp_next_1586 ((void*)&_tramp_sentinel_1586)
 static void *stmt_92(void) { /* line 98 */
 /* line 98 */
+trampoline_stno(98);
 SnoVal _v1587 = strv("EN_SPACE");
 int _ok1587 = !IS_FAIL(_v1587);
 if(_ok1587) {
@@ -22846,6 +23645,7 @@ static char _tramp_sentinel_1588;
 #define _tramp_next_1588 ((void*)&_tramp_sentinel_1588)
 static void *stmt_93(void) { /* line 99 */
 /* line 99 */
+trampoline_stno(99);
 SnoVal _v1589 = strv("EM_SPACE");
 int _ok1589 = !IS_FAIL(_v1589);
 if(_ok1589) {
@@ -22858,6 +23658,7 @@ static char _tramp_sentinel_1590;
 #define _tramp_next_1590 ((void*)&_tramp_sentinel_1590)
 static void *stmt_94(void) { /* line 100 */
 /* line 100 */
+trampoline_stno(100);
 SnoVal _v1591 = strv("THREE_PER_EM_SPACE");
 int _ok1591 = !IS_FAIL(_v1591);
 if(_ok1591) {
@@ -22870,6 +23671,7 @@ static char _tramp_sentinel_1592;
 #define _tramp_next_1592 ((void*)&_tramp_sentinel_1592)
 static void *stmt_95(void) { /* line 101 */
 /* line 101 */
+trampoline_stno(101);
 SnoVal _v1593 = strv("FOUR_PER_EM_SPACE");
 int _ok1593 = !IS_FAIL(_v1593);
 if(_ok1593) {
@@ -22882,6 +23684,7 @@ static char _tramp_sentinel_1594;
 #define _tramp_next_1594 ((void*)&_tramp_sentinel_1594)
 static void *stmt_96(void) { /* line 102 */
 /* line 102 */
+trampoline_stno(102);
 SnoVal _v1595 = strv("SIX_PER_EM_SPACE");
 int _ok1595 = !IS_FAIL(_v1595);
 if(_ok1595) {
@@ -22894,6 +23697,7 @@ static char _tramp_sentinel_1596;
 #define _tramp_next_1596 ((void*)&_tramp_sentinel_1596)
 static void *stmt_97(void) { /* line 103 */
 /* line 103 */
+trampoline_stno(103);
 SnoVal _v1597 = strv("FIGURE_SPACE");
 int _ok1597 = !IS_FAIL(_v1597);
 if(_ok1597) {
@@ -22906,6 +23710,7 @@ static char _tramp_sentinel_1598;
 #define _tramp_next_1598 ((void*)&_tramp_sentinel_1598)
 static void *stmt_98(void) { /* line 104 */
 /* line 104 */
+trampoline_stno(104);
 SnoVal _v1599 = strv("PUNCTUATION_SPACE");
 int _ok1599 = !IS_FAIL(_v1599);
 if(_ok1599) {
@@ -22918,6 +23723,7 @@ static char _tramp_sentinel_1600;
 #define _tramp_next_1600 ((void*)&_tramp_sentinel_1600)
 static void *stmt_99(void) { /* line 105 */
 /* line 105 */
+trampoline_stno(105);
 SnoVal _v1601 = strv("THIN_SPACE");
 int _ok1601 = !IS_FAIL(_v1601);
 if(_ok1601) {
@@ -22930,6 +23736,7 @@ static char _tramp_sentinel_1602;
 #define _tramp_next_1602 ((void*)&_tramp_sentinel_1602)
 static void *stmt_100(void) { /* line 106 */
 /* line 106 */
+trampoline_stno(106);
 SnoVal _v1603 = strv("HAIR_SPACE");
 int _ok1603 = !IS_FAIL(_v1603);
 if(_ok1603) {
@@ -22942,6 +23749,7 @@ static char _tramp_sentinel_1604;
 #define _tramp_next_1604 ((void*)&_tramp_sentinel_1604)
 static void *stmt_101(void) { /* line 107 */
 /* line 107 */
+trampoline_stno(107);
 SnoVal _v1605 = strv("LINE_SEPERATOR");
 int _ok1605 = !IS_FAIL(_v1605);
 if(_ok1605) {
@@ -22954,6 +23762,7 @@ static char _tramp_sentinel_1606;
 #define _tramp_next_1606 ((void*)&_tramp_sentinel_1606)
 static void *stmt_102(void) { /* line 108 */
 /* line 108 */
+trampoline_stno(108);
 SnoVal _v1607 = strv("PARAGRAPH_SEPERATOR");
 int _ok1607 = !IS_FAIL(_v1607);
 if(_ok1607) {
@@ -22966,6 +23775,7 @@ static char _tramp_sentinel_1608;
 #define _tramp_next_1608 ((void*)&_tramp_sentinel_1608)
 static void *stmt_103(void) { /* line 109 */
 /* line 109 */
+trampoline_stno(109);
 SnoVal _v1609 = strv("MEDIUM_MATHEMATICAL_SPACE");
 int _ok1609 = !IS_FAIL(_v1609);
 if(_ok1609) {
@@ -22978,6 +23788,7 @@ static char _tramp_sentinel_1610;
 #define _tramp_next_1610 ((void*)&_tramp_sentinel_1610)
 static void *stmt_104(void) { /* line 110 */
 /* line 110 */
+trampoline_stno(110);
 SnoVal _v1611 = strv("IDEOGRAPHIC_SPACE");
 int _ok1611 = !IS_FAIL(_v1611);
 if(_ok1611) {
@@ -22990,6 +23801,7 @@ static char _tramp_sentinel_1612;
 #define _tramp_next_1612 ((void*)&_tramp_sentinel_1612)
 static void *stmt_105(void) { /* line 112 */
 /* line 112 */
+trampoline_stno(112);
 SnoVal _v1613 = strv("VERTICAL_ELLIPSIS");
 int _ok1613 = !IS_FAIL(_v1613);
 if(_ok1613) {
@@ -23002,6 +23814,7 @@ static char _tramp_sentinel_1614;
 #define _tramp_next_1614 ((void*)&_tramp_sentinel_1614)
 static void *stmt_106(void) { /* line 113 */
 /* line 113 */
+trampoline_stno(113);
 SnoVal _v1615 = strv("LEFTWARDS_ARROW");
 int _ok1615 = !IS_FAIL(_v1615);
 if(_ok1615) {
@@ -23014,6 +23827,7 @@ static char _tramp_sentinel_1616;
 #define _tramp_next_1616 ((void*)&_tramp_sentinel_1616)
 static void *stmt_107(void) { /* line 114 */
 /* line 114 */
+trampoline_stno(114);
 SnoVal _v1617 = strv("RIGHTWARDS_ARROW");
 int _ok1617 = !IS_FAIL(_v1617);
 if(_ok1617) {
@@ -23026,6 +23840,7 @@ static char _tramp_sentinel_1618;
 #define _tramp_next_1618 ((void*)&_tramp_sentinel_1618)
 static void *stmt_108(void) { /* line 115 */
 /* line 115 */
+trampoline_stno(115);
 SnoVal _v1619 = strv("LEFTWARDS_DOUBLE_ARROW");
 int _ok1619 = !IS_FAIL(_v1619);
 if(_ok1619) {
@@ -23038,6 +23853,7 @@ static char _tramp_sentinel_1620;
 #define _tramp_next_1620 ((void*)&_tramp_sentinel_1620)
 static void *stmt_109(void) { /* line 116 */
 /* line 116 */
+trampoline_stno(116);
 SnoVal _v1621 = strv("RIGHTWARDS_DOUBLE_ARROW");
 int _ok1621 = !IS_FAIL(_v1621);
 if(_ok1621) {
@@ -23050,6 +23866,7 @@ static char _tramp_sentinel_1622;
 #define _tramp_next_1622 ((void*)&_tramp_sentinel_1622)
 static void *stmt_110(void) { /* line 117 */
 /* line 117 */
+trampoline_stno(117);
 SnoVal _v1623 = strv("LONG_LEFTWARDS_ARROW");
 int _ok1623 = !IS_FAIL(_v1623);
 if(_ok1623) {
@@ -23062,6 +23879,7 @@ static char _tramp_sentinel_1624;
 #define _tramp_next_1624 ((void*)&_tramp_sentinel_1624)
 static void *stmt_111(void) { /* line 118 */
 /* line 118 */
+trampoline_stno(118);
 SnoVal _v1625 = strv("LONG_RIGHTWARDS_ARROW");
 int _ok1625 = !IS_FAIL(_v1625);
 if(_ok1625) {
@@ -23074,6 +23892,7 @@ static char _tramp_sentinel_1626;
 #define _tramp_next_1626 ((void*)&_tramp_sentinel_1626)
 static void *stmt_112(void) { /* line 119 */
 /* line 119 */
+trampoline_stno(119);
 SnoVal _v1627 = strv("LONG_LEFTWARDS_DOUBLE_ARROW");
 int _ok1627 = !IS_FAIL(_v1627);
 if(_ok1627) {
@@ -23086,6 +23905,7 @@ static char _tramp_sentinel_1628;
 #define _tramp_next_1628 ((void*)&_tramp_sentinel_1628)
 static void *stmt_113(void) { /* line 120 */
 /* line 120 */
+trampoline_stno(120);
 SnoVal _v1629 = strv("LONG_RIGHTWARDS_DOUBLE_ARROW");
 int _ok1629 = !IS_FAIL(_v1629);
 if(_ok1629) {
@@ -23098,6 +23918,7 @@ static char _tramp_sentinel_1630;
 #define _tramp_next_1630 ((void*)&_tramp_sentinel_1630)
 static void *stmt_114(void) { /* line 121 */
 /* line 121 */
+trampoline_stno(121);
 SnoVal _v1631 = strv("LEFTWARDS_ARROW_WITH_SMALL_TRIANGLE_ARROWHEAD");
 int _ok1631 = !IS_FAIL(_v1631);
 if(_ok1631) {
@@ -23110,6 +23931,7 @@ static char _tramp_sentinel_1632;
 #define _tramp_next_1632 ((void*)&_tramp_sentinel_1632)
 static void *stmt_115(void) { /* line 122 */
 /* line 122 */
+trampoline_stno(122);
 SnoVal _v1633 = strv("RIGHTWARDS_ARROW_WITH_SMALL_TRIANGLE_ARROWHEAD");
 int _ok1633 = !IS_FAIL(_v1633);
 if(_ok1633) {
@@ -23122,6 +23944,7 @@ static char _tramp_sentinel_1634;
 #define _tramp_next_1634 ((void*)&_tramp_sentinel_1634)
 static void *stmt_116(void) { /* line 123 */
 /* line 123 */
+trampoline_stno(123);
 SnoVal _v1635 = strv("LEFTWARDS_ARROW_WITH_MEDIUM_TRIANGLE_ARROWHEAD");
 int _ok1635 = !IS_FAIL(_v1635);
 if(_ok1635) {
@@ -23134,6 +23957,7 @@ static char _tramp_sentinel_1636;
 #define _tramp_next_1636 ((void*)&_tramp_sentinel_1636)
 static void *stmt_117(void) { /* line 124 */
 /* line 124 */
+trampoline_stno(124);
 SnoVal _v1637 = strv("RIGHTWARDS_ARROW_WITH_MEDIUM_TRIANGLE_ARROWHEAD");
 int _ok1637 = !IS_FAIL(_v1637);
 if(_ok1637) {
@@ -23146,6 +23970,7 @@ static char _tramp_sentinel_1638;
 #define _tramp_next_1638 ((void*)&_tramp_sentinel_1638)
 static void *stmt_118(void) { /* line 125 */
 /* line 125 */
+trampoline_stno(125);
 SnoVal _v1639 = strv("LEFTWARDS_ARROW_WITH_LARGE_TRIANGLE_ARROWHEAD");
 int _ok1639 = !IS_FAIL(_v1639);
 if(_ok1639) {
@@ -23158,6 +23983,7 @@ static char _tramp_sentinel_1640;
 #define _tramp_next_1640 ((void*)&_tramp_sentinel_1640)
 static void *stmt_119(void) { /* line 126 */
 /* line 126 */
+trampoline_stno(126);
 SnoVal _v1641 = strv("RIGHTWARDS_ARROW_WITH_LARGE_TRIANGLE_ARROWHEAD");
 int _ok1641 = !IS_FAIL(_v1641);
 if(_ok1641) {
@@ -23170,6 +23996,7 @@ static char _tramp_sentinel_1642;
 #define _tramp_next_1642 ((void*)&_tramp_sentinel_1642)
 static void *stmt_120(void) { /* line 127 */
 /* line 127 */
+trampoline_stno(127);
 SnoVal _v1643 = strv("LEFTWARDS_ARROW_WITH_SMALL_EQUILATERAL_ARROWHEAD");
 int _ok1643 = !IS_FAIL(_v1643);
 if(_ok1643) {
@@ -23182,6 +24009,7 @@ static char _tramp_sentinel_1644;
 #define _tramp_next_1644 ((void*)&_tramp_sentinel_1644)
 static void *stmt_121(void) { /* line 128 */
 /* line 128 */
+trampoline_stno(128);
 SnoVal _v1645 = strv("RIGHTWARDS_ARROW_WITH_SMALL_EQUILATERAL_ARROWHEAD");
 int _ok1645 = !IS_FAIL(_v1645);
 if(_ok1645) {
@@ -23194,6 +24022,7 @@ static char _tramp_sentinel_1646;
 #define _tramp_next_1646 ((void*)&_tramp_sentinel_1646)
 static void *stmt_122(void) { /* line 129 */
 /* line 129 */
+trampoline_stno(129);
 SnoVal _v1647 = strv("LEFTWARDS_ARROW_WITH_EQUILATERAL_ARROWHEAD");
 int _ok1647 = !IS_FAIL(_v1647);
 if(_ok1647) {
@@ -23206,6 +24035,7 @@ static char _tramp_sentinel_1648;
 #define _tramp_next_1648 ((void*)&_tramp_sentinel_1648)
 static void *stmt_123(void) { /* line 130 */
 /* line 130 */
+trampoline_stno(130);
 SnoVal _v1649 = strv("RIGHTWARDS_ARROW_WITH_EQUILATERAL_ARROWHEAD");
 int _ok1649 = !IS_FAIL(_v1649);
 if(_ok1649) {
@@ -23218,6 +24048,7 @@ static char _tramp_sentinel_1650;
 #define _tramp_next_1650 ((void*)&_tramp_sentinel_1650)
 static void *stmt_124(void) { /* line 131 */
 /* line 131 */
+trampoline_stno(131);
 SnoVal _v1651 = strv("HEAVY_LEFTWARDS_ARROW_WITH_EQUILATERAL_ARROWHEAD");
 int _ok1651 = !IS_FAIL(_v1651);
 if(_ok1651) {
@@ -23230,6 +24061,7 @@ static char _tramp_sentinel_1652;
 #define _tramp_next_1652 ((void*)&_tramp_sentinel_1652)
 static void *stmt_125(void) { /* line 132 */
 /* line 132 */
+trampoline_stno(132);
 SnoVal _v1653 = strv("HEAVY_RIGHTWARDS_ARROW_WITH_EQUILATERAL_ARROWHEAD");
 int _ok1653 = !IS_FAIL(_v1653);
 if(_ok1653) {
@@ -23242,6 +24074,7 @@ static char _tramp_sentinel_1654;
 #define _tramp_next_1654 ((void*)&_tramp_sentinel_1654)
 static void *stmt_126(void) { /* line 133 */
 /* line 133 */
+trampoline_stno(133);
 SnoVal _v1655 = strv("HEAVY_LEFTWARDS_ARROW_WITH_LARGE_EQUILATERAL_ARROWHEAD");
 int _ok1655 = !IS_FAIL(_v1655);
 if(_ok1655) {
@@ -23254,6 +24087,7 @@ static char _tramp_sentinel_1656;
 #define _tramp_next_1656 ((void*)&_tramp_sentinel_1656)
 static void *stmt_127(void) { /* line 134 */
 /* line 134 */
+trampoline_stno(134);
 SnoVal _v1657 = strv("HEAVY_RIGHTWARDS_ARROW_WITH_LARGE_EQUILATERAL_ARROWHEAD");
 int _ok1657 = !IS_FAIL(_v1657);
 if(_ok1657) {
@@ -23266,6 +24100,7 @@ static char _tramp_sentinel_1658;
 #define _tramp_next_1658 ((void*)&_tramp_sentinel_1658)
 static void *stmt_128(void) { /* line 135 */
 /* line 135 */
+trampoline_stno(135);
 SnoVal _v1659 = strv("LEFTWARDS_TRIANGLE_HEADED_ARROW_WITH_NARROW_SHAFT");
 int _ok1659 = !IS_FAIL(_v1659);
 if(_ok1659) {
@@ -23278,6 +24113,7 @@ static char _tramp_sentinel_1660;
 #define _tramp_next_1660 ((void*)&_tramp_sentinel_1660)
 static void *stmt_129(void) { /* line 136 */
 /* line 136 */
+trampoline_stno(136);
 SnoVal _v1661 = strv("RIGHTWARDS_TRIANGLE_HEADED_ARROW_WITH_NARROW_SHAFT");
 int _ok1661 = !IS_FAIL(_v1661);
 if(_ok1661) {
@@ -23290,6 +24126,7 @@ static char _tramp_sentinel_1662;
 #define _tramp_next_1662 ((void*)&_tramp_sentinel_1662)
 static void *stmt_130(void) { /* line 137 */
 /* line 137 */
+trampoline_stno(137);
 SnoVal _v1663 = strv("LEFTWARDS_TRIANGLE_HEADED_ARROW_WITH_MEDIUM_SHAFT");
 int _ok1663 = !IS_FAIL(_v1663);
 if(_ok1663) {
@@ -23302,6 +24139,7 @@ static char _tramp_sentinel_1664;
 #define _tramp_next_1664 ((void*)&_tramp_sentinel_1664)
 static void *stmt_131(void) { /* line 138 */
 /* line 138 */
+trampoline_stno(138);
 SnoVal _v1665 = strv("RIGHTWARDS_TRIANGLE_HEADED_ARROW_WITH_MEDIUM_SHAFT");
 int _ok1665 = !IS_FAIL(_v1665);
 if(_ok1665) {
@@ -23314,6 +24152,7 @@ static char _tramp_sentinel_1666;
 #define _tramp_next_1666 ((void*)&_tramp_sentinel_1666)
 static void *stmt_132(void) { /* line 139 */
 /* line 139 */
+trampoline_stno(139);
 SnoVal _v1667 = strv("LEFTWARDS_TRIANGLE_HEADED_ARROW_WITH_BOLD_SHAFT");
 int _ok1667 = !IS_FAIL(_v1667);
 if(_ok1667) {
@@ -23326,6 +24165,7 @@ static char _tramp_sentinel_1668;
 #define _tramp_next_1668 ((void*)&_tramp_sentinel_1668)
 static void *stmt_133(void) { /* line 140 */
 /* line 140 */
+trampoline_stno(140);
 SnoVal _v1669 = strv("RIGHTWARDS_TRIANGLE_HEADED_ARROW_WITH_BOLD_SHAFT");
 int _ok1669 = !IS_FAIL(_v1669);
 if(_ok1669) {
@@ -23338,6 +24178,7 @@ static char _tramp_sentinel_1670;
 #define _tramp_next_1670 ((void*)&_tramp_sentinel_1670)
 static void *stmt_134(void) { /* line 141 */
 /* line 141 */
+trampoline_stno(141);
 SnoVal _v1671 = strv("LEFTWARDS_TRIANGLE_HEADED_ARROW_WITH_HEAVY_SHAFT");
 int _ok1671 = !IS_FAIL(_v1671);
 if(_ok1671) {
@@ -23350,6 +24191,7 @@ static char _tramp_sentinel_1672;
 #define _tramp_next_1672 ((void*)&_tramp_sentinel_1672)
 static void *stmt_135(void) { /* line 142 */
 /* line 142 */
+trampoline_stno(142);
 SnoVal _v1673 = strv("RIGHTWARDS_TRIANGLE_HEADED_ARROW_WITH_HEAVY_SHAFT");
 int _ok1673 = !IS_FAIL(_v1673);
 if(_ok1673) {
@@ -23362,6 +24204,7 @@ static char _tramp_sentinel_1674;
 #define _tramp_next_1674 ((void*)&_tramp_sentinel_1674)
 static void *stmt_136(void) { /* line 143 */
 /* line 143 */
+trampoline_stno(143);
 SnoVal _v1675 = strv("LEFTWARDS_TRIANGLE_HEADED_ARROW_WITH_VERY_HEAVY_SHAFT");
 int _ok1675 = !IS_FAIL(_v1675);
 if(_ok1675) {
@@ -23374,6 +24217,7 @@ static char _tramp_sentinel_1676;
 #define _tramp_next_1676 ((void*)&_tramp_sentinel_1676)
 static void *stmt_137(void) { /* line 144 */
 /* line 144 */
+trampoline_stno(144);
 SnoVal _v1677 = strv("RIGHTWARDS_TRIANGLE_HEADED_ARROW_WITH_VERY_HEAVY_SHAFT");
 int _ok1677 = !IS_FAIL(_v1677);
 if(_ok1677) {
@@ -23386,6 +24230,7 @@ static char _tramp_sentinel_1678;
 #define _tramp_next_1678 ((void*)&_tramp_sentinel_1678)
 static void *stmt_138(void) { /* line 145 */
 /* line 145 */
+trampoline_stno(145);
 SnoVal _v1679 = strv("LEFTWARDS_SQUARED_ARROW");
 int _ok1679 = !IS_FAIL(_v1679);
 if(_ok1679) {
@@ -23398,6 +24243,7 @@ static char _tramp_sentinel_1680;
 #define _tramp_next_1680 ((void*)&_tramp_sentinel_1680)
 static void *stmt_139(void) { /* line 146 */
 /* line 146 */
+trampoline_stno(146);
 SnoVal _v1681 = strv("RIGHTWARDS_SQUARED_ARROW");
 int _ok1681 = !IS_FAIL(_v1681);
 if(_ok1681) {
@@ -23410,6 +24256,7 @@ static char _tramp_sentinel_1682;
 #define _tramp_next_1682 ((void*)&_tramp_sentinel_1682)
 static void *stmt_140(void) { /* line 147 */
 /* line 147 */
+trampoline_stno(147);
 SnoVal _v1683 = strv("LEFTWARDS_HEAVY_ARROW");
 int _ok1683 = !IS_FAIL(_v1683);
 if(_ok1683) {
@@ -23422,6 +24269,7 @@ static char _tramp_sentinel_1684;
 #define _tramp_next_1684 ((void*)&_tramp_sentinel_1684)
 static void *stmt_141(void) { /* line 148 */
 /* line 148 */
+trampoline_stno(148);
 SnoVal _v1685 = strv("RIGHTWARDS_HEAVY_ARROW");
 int _ok1685 = !IS_FAIL(_v1685);
 if(_ok1685) {
@@ -23434,6 +24282,7 @@ static char _tramp_sentinel_1686;
 #define _tramp_next_1686 ((void*)&_tramp_sentinel_1686)
 static void *stmt_142(void) { /* line 149 */
 /* line 149 */
+trampoline_stno(149);
 SnoVal _v1687 = strv("LEFTWARDS_SANS_SERIF_ARROW");
 int _ok1687 = !IS_FAIL(_v1687);
 if(_ok1687) {
@@ -23446,6 +24295,7 @@ static char _tramp_sentinel_1688;
 #define _tramp_next_1688 ((void*)&_tramp_sentinel_1688)
 static void *stmt_143(void) { /* line 150 */
 /* line 150 */
+trampoline_stno(150);
 SnoVal _v1689 = strv("RIGHTWARDS_SANS_SERIF_ARROW");
 int _ok1689 = !IS_FAIL(_v1689);
 if(_ok1689) {
@@ -23458,6 +24308,7 @@ static char _tramp_sentinel_1690;
 #define _tramp_next_1690 ((void*)&_tramp_sentinel_1690)
 static void *stmt_144(void) { /* line 151 */
 /* line 151 */
+trampoline_stno(151);
 SnoVal _v1691 = strv("WIDE_HEADED_LEFTWARDS_LIGHT_BARB_ARROW");
 int _ok1691 = !IS_FAIL(_v1691);
 if(_ok1691) {
@@ -23470,6 +24321,7 @@ static char _tramp_sentinel_1692;
 #define _tramp_next_1692 ((void*)&_tramp_sentinel_1692)
 static void *stmt_145(void) { /* line 152 */
 /* line 152 */
+trampoline_stno(152);
 SnoVal _v1693 = strv("WIDE_HEADED_RIGHTWARDS_LIGHT_BARB_ARROW");
 int _ok1693 = !IS_FAIL(_v1693);
 if(_ok1693) {
@@ -23482,6 +24334,7 @@ static char _tramp_sentinel_1694;
 #define _tramp_next_1694 ((void*)&_tramp_sentinel_1694)
 static void *stmt_146(void) { /* line 153 */
 /* line 153 */
+trampoline_stno(153);
 SnoVal _v1695 = strv("WIDE_HEADED_LEFTWARDS_BARB_ARROW");
 int _ok1695 = !IS_FAIL(_v1695);
 if(_ok1695) {
@@ -23494,6 +24347,7 @@ static char _tramp_sentinel_1696;
 #define _tramp_next_1696 ((void*)&_tramp_sentinel_1696)
 static void *stmt_147(void) { /* line 154 */
 /* line 154 */
+trampoline_stno(154);
 SnoVal _v1697 = strv("WIDE_HEADED_RIGHTWARDS_BARB_ARROW");
 int _ok1697 = !IS_FAIL(_v1697);
 if(_ok1697) {
@@ -23506,6 +24360,7 @@ static char _tramp_sentinel_1698;
 #define _tramp_next_1698 ((void*)&_tramp_sentinel_1698)
 static void *stmt_148(void) { /* line 155 */
 /* line 155 */
+trampoline_stno(155);
 SnoVal _v1699 = strv("WIDE_HEADED_LEFTWARDS_MEDIUM_BARB_ARROW");
 int _ok1699 = !IS_FAIL(_v1699);
 if(_ok1699) {
@@ -23518,6 +24373,7 @@ static char _tramp_sentinel_1700;
 #define _tramp_next_1700 ((void*)&_tramp_sentinel_1700)
 static void *stmt_149(void) { /* line 156 */
 /* line 156 */
+trampoline_stno(156);
 SnoVal _v1701 = strv("WIDE_HEADED_RIGHTWARDS_MEDIUM_BARB_ARROW");
 int _ok1701 = !IS_FAIL(_v1701);
 if(_ok1701) {
@@ -23530,6 +24386,7 @@ static char _tramp_sentinel_1702;
 #define _tramp_next_1702 ((void*)&_tramp_sentinel_1702)
 static void *stmt_150(void) { /* line 158 */
 /* line 158 */
+trampoline_stno(158);
 SnoVal _v1703 = aply("SORT",(SnoVal[]){get(_UTF)},1);
 int _ok1703 = !IS_FAIL(_v1703);
 if(_ok1703) {
@@ -23543,6 +24400,7 @@ static char _tramp_sentinel_1704;
 #define _tramp_next_1704 ((void*)&_tramp_sentinel_1704)
 static void *stmt_151(void) { /* line 159 */
 /* line 159 */
+trampoline_stno(159);
 SnoVal _v1705 = vint(0);
 int _ok1705 = !IS_FAIL(_v1705);
 if(_ok1705) {
@@ -23557,6 +24415,7 @@ static char _tramp_sentinel_1706;
 static void *stmt_152(void) { /* line 160 label:G1 */
 /* line 160 */
 _L_G1:;
+trampoline_stno(160);
 SnoVal _v1707 = add(get(_i),vint(1));
 int _ok1707 = !IS_FAIL(_v1707);
 if(_ok1707) {
@@ -23570,6 +24429,7 @@ static char _tramp_sentinel_1708;
 #define _tramp_next_1708 ((void*)&_tramp_sentinel_1708)
 static void *stmt_153(void) { /* line 161 */
 /* line 161 */
+trampoline_stno(161);
 SnoVal _v1709 = indx(get(_UTF_Array),(SnoVal[]){get(_i),vint(1)},2);
 int _ok1709 = !IS_FAIL(_v1709);
 if(_ok1709) {
@@ -23583,6 +24443,7 @@ static char _tramp_sentinel_1710;
 #define _tramp_next_1710 ((void*)&_tramp_sentinel_1710)
 static void *stmt_154(void) { /* line 162 */
 /* line 162 */
+trampoline_stno(162);
 SnoVal _v1711 = get(_UTF_Array);
 int _ok1711 = !IS_FAIL(_v1711);
     return (void*)_tramp_next_1710;
@@ -23592,6 +24453,7 @@ static char _tramp_sentinel_1712;
 #define _tramp_next_1712 ((void*)&_tramp_sentinel_1712)
 static void *stmt_155(void) { /* line 163 */
 /* line 163 */
+trampoline_stno(163);
 SnoVal _v1713 = get(_i);
 int _ok1713 = !IS_FAIL(_v1713);
     return (void*)_tramp_next_1712;
@@ -23602,6 +24464,7 @@ static char _tramp_sentinel_1714;
 static void *stmt_156(void) { /* line 7 label:IsSpitbolEnd */
 /* line 7 */
 _L_IsSpitbolEnd:;
+trampoline_stno(7);
     return (void*)_tramp_next_1714;
 }
 
@@ -23610,6 +24473,7 @@ static char _tramp_sentinel_1715;
 static void *stmt_157(void) { /* line 11 label:IsSnobol4End */
 /* line 11 */
 _L_IsSnobol4End:;
+trampoline_stno(11);
     return (void*)_tramp_next_1715;
 }
 
@@ -23618,6 +24482,7 @@ static char _tramp_sentinel_1716;
 static void *stmt_158(void) { /* line 17 label:IsTypeEnd */
 /* line 17 */
 _L_IsTypeEnd:;
+trampoline_stno(17);
     return (void*)_tramp_next_1716;
 }
 
@@ -23625,6 +24490,7 @@ static char _tramp_sentinel_1717;
 #define _tramp_next_1717 ((void*)&_tramp_sentinel_1717)
 static void *stmt_159(void) { /* line 4 */
 /* line 4 */
+trampoline_stno(4);
 SnoVal _v1718 = aply("IsSnobol4",NULL,0);
 int _ok1718 = !IS_FAIL(_v1718);
     if(!_ok1718) return (void*)block__FENCEEnd;
@@ -23636,6 +24502,7 @@ static char _tramp_sentinel_1719;
 static void *stmt_160(void) { /* line 7 label:FENCEEnd */
 /* line 7 */
 _L_FENCEEnd:;
+trampoline_stno(7);
     return (void*)_tramp_next_1719;
 }
 
@@ -23643,6 +24510,7 @@ static char _tramp_sentinel_1720;
 #define _tramp_next_1720 ((void*)&_tramp_sentinel_1720)
 static void *stmt_161(void) { /* line 7 */
 /* line 7 */
+trampoline_stno(7);
 SnoVal _v1721 = aply("IsSnobol4",NULL,0);
 int _ok1721 = !IS_FAIL(_v1721);
     if(!_ok1721) return (void*)_tramp_next_1720;
@@ -23653,6 +24521,7 @@ static char _tramp_sentinel_1722;
 #define _tramp_next_1722 ((void*)&_tramp_sentinel_1722)
 static void *stmt_162(void) { /* line 10 */
 /* line 10 */
+trampoline_stno(10);
 SnoVal _v1723 = aply("OPSYN",(SnoVal[]){strv("input__"),strv("INPUT")},2);
 int _ok1723 = !IS_FAIL(_v1723);
     return (void*)_tramp_next_1722;
@@ -23662,6 +24531,7 @@ static char _tramp_sentinel_1724;
 #define _tramp_next_1724 ((void*)&_tramp_sentinel_1724)
 static void *stmt_163(void) { /* line 11 */
 /* line 11 */
+trampoline_stno(11);
 SnoVal _v1725 = aply("OPSYN",(SnoVal[]){strv("output__"),strv("OUTPUT")},2);
 int _ok1725 = !IS_FAIL(_v1725);
     return (void*)_tramp_next_1724;
@@ -23671,6 +24541,7 @@ static char _tramp_sentinel_1726;
 #define _tramp_next_1726 ((void*)&_tramp_sentinel_1726)
 static void *stmt_164(void) { /* line 12 */
 /* line 12 */
+trampoline_stno(12);
 SnoVal _v1727 = aply("OPSYN",(SnoVal[]){strv("INPUT"),strv("input_")},2);
 int _ok1727 = !IS_FAIL(_v1727);
     return (void*)_tramp_next_1726;
@@ -23680,6 +24551,7 @@ static char _tramp_sentinel_1728;
 #define _tramp_next_1728 ((void*)&_tramp_sentinel_1728)
 static void *stmt_165(void) { /* line 13 */
 /* line 13 */
+trampoline_stno(13);
 SnoVal _v1729 = aply("OPSYN",(SnoVal[]){strv("OUTPUT"),strv("output_")},2);
 int _ok1729 = !IS_FAIL(_v1729);
     return (void*)_tramp_next_1728;
@@ -23689,6 +24561,7 @@ static char _tramp_sentinel_1730;
 #define _tramp_next_1730 ((void*)&_tramp_sentinel_1730)
 static void *stmt_166(void) { /* line 14 */
 /* line 14 */
+trampoline_stno(14);
 SnoVal _v1731 = pat_alt(pat_alt(pat_alt(pat_cat(pat_lit("-l"),pat_cond(pat_span(to_str(get(_digits))),"?")),pat_cat(pat_lit("-m"),pat_span(to_str(get(_digits))))),pat_cond(pat_lit("-a"),"?")),pat_cond(pat_lit("-w"),"?"));
 int _ok1731 = !IS_FAIL(_v1731);
 if(_ok1731) {
@@ -23702,6 +24575,7 @@ static char _tramp_sentinel_1732;
 #define _tramp_next_1732 ((void*)&_tramp_sentinel_1732)
 static void *stmt_167(void) { /* line 20 */
 /* line 20 */
+trampoline_stno(20);
 SnoVal _v1733 = pat_cat(pat_ref("ioFileOptDash"),pat_alt(pat_cat(pat_span(to_str(strv(" ,"))),pat_ref("ioFileOptList")),pat_var("epsilon")));
 int _ok1733 = !IS_FAIL(_v1733);
 if(_ok1733) {
@@ -23715,6 +24589,7 @@ static char _tramp_sentinel_1734;
 #define _tramp_next_1734 ((void*)&_tramp_sentinel_1734)
 static void *stmt_168(void) { /* line 21 */
 /* line 21 */
+trampoline_stno(21);
 SnoVal _v1735 = pat_cat(pat_cat(pat_lit("["),pat_ref("ioFileOptList")),pat_lit("]"));
 int _ok1735 = !IS_FAIL(_v1735);
 if(_ok1735) {
@@ -23728,6 +24603,7 @@ static char _tramp_sentinel_1736;
 #define _tramp_next_1736 ((void*)&_tramp_sentinel_1736)
 static void *stmt_169(void) { /* line 22 */
 /* line 22 */
+trampoline_stno(22);
 SnoVal _v1737 = pat_alt(pat_ref("ioFileOptPat"),pat_var("epsilon"));
 int _ok1737 = !IS_FAIL(_v1737);
 if(_ok1737) {
@@ -23741,6 +24617,7 @@ static char _tramp_sentinel_1738;
 #define _tramp_next_1738 ((void*)&_tramp_sentinel_1738)
 static void *stmt_170(void) { /* line 23 */
 /* line 23 */
+trampoline_stno(23);
 SnoVal _v1739 = pat_cat(pat_cat(pat_imm(pat_len(to_int(vint(1))),"bch"),pat_cond(pat_break(to_str(var_as_pattern(pat_ref("bch")))),"cmd")),pat_ref("bch"));
 int _ok1739 = !IS_FAIL(_v1739);
 if(_ok1739) {
@@ -23754,6 +24631,7 @@ static char _tramp_sentinel_1740;
 #define _tramp_next_1740 ((void*)&_tramp_sentinel_1740)
 static void *stmt_171(void) { /* line 24 */
 /* line 24 */
+trampoline_stno(24);
 SnoVal _v1741 = pat_cat(pat_len(to_int(vint(1))),pat_cond(pat_var("REM"),"cmd"));
 int _ok1741 = !IS_FAIL(_v1741);
 if(_ok1741) {
@@ -23768,6 +24646,7 @@ static char _tramp_sentinel_1742;
 static void *stmt_172(void) { /* line 5 label:lwr_end */
 /* line 5 */
 _L_lwr_end:;
+trampoline_stno(5);
     return (void*)_tramp_next_1742;
 }
 
@@ -23776,6 +24655,7 @@ static char _tramp_sentinel_1743;
 static void *stmt_173(void) { /* line 10 label:upr_end */
 /* line 10 */
 _L_upr_end:;
+trampoline_stno(10);
     return (void*)_tramp_next_1743;
 }
 
@@ -23784,6 +24664,7 @@ static char _tramp_sentinel_1744;
 static void *stmt_174(void) { /* line 16 label:cap_end */
 /* line 16 */
 _L_cap_end:;
+trampoline_stno(16);
     return (void*)_tramp_next_1744;
 }
 
@@ -23792,6 +24673,7 @@ static char _tramp_sentinel_1745;
 static void *stmt_175(void) { /* line 26 label:icase_end */
 /* line 26 */
 _L_icase_end:;
+trampoline_stno(26);
     return (void*)_tramp_next_1745;
 }
 
@@ -23800,6 +24682,7 @@ static char _tramp_sentinel_1746;
 static void *stmt_176(void) { /* line 13 label:assign_end */
 /* line 13 */
 _L_assign_end:;
+trampoline_stno(13);
     return (void*)_tramp_next_1746;
 }
 
@@ -23808,6 +24691,7 @@ static char _tramp_sentinel_1747;
 static void *stmt_177(void) { /* line 9 label:match_end */
 /* line 9 */
 _L_match_end:;
+trampoline_stno(9);
     return (void*)_tramp_next_1747;
 }
 
@@ -23816,6 +24700,7 @@ static char _tramp_sentinel_1748;
 static void *stmt_178(void) { /* line 14 label:notmatch_end */
 /* line 14 */
 _L_notmatch_end:;
+trampoline_stno(14);
     return (void*)_tramp_next_1748;
 }
 
@@ -23823,6 +24708,7 @@ static char _tramp_sentinel_1749;
 #define _tramp_next_1749 ((void*)&_tramp_sentinel_1749)
 static void *stmt_179(void) { /* line 13 */
 /* line 13 */
+trampoline_stno(13);
 SnoVal _v1750 = aply("DATA",(SnoVal[]){strv("link_counter(next,value)")},1);
 int _ok1750 = !IS_FAIL(_v1750);
     return (void*)_tramp_next_1749;
@@ -23833,6 +24719,7 @@ static char _tramp_sentinel_1751;
 static void *stmt_180(void) { /* line 60 label:BegTagEnd */
 /* line 60 */
 _L_BegTagEnd:;
+trampoline_stno(60);
     return (void*)_tramp_next_1751;
 }
 
@@ -23841,6 +24728,7 @@ static char _tramp_sentinel_1752;
 static void *stmt_181(void) { /* line 84 label:EndTagEnd */
 /* line 84 */
 _L_EndTagEnd:;
+trampoline_stno(84);
     return (void*)_tramp_next_1752;
 }
 
@@ -23848,6 +24736,7 @@ static char _tramp_sentinel_1753;
 #define _tramp_next_1753 ((void*)&_tramp_sentinel_1753)
 static void *stmt_182(void) { /* line 11 */
 /* line 11 */
+trampoline_stno(11);
 SnoVal _v1754 = aply("DATA",(SnoVal[]){strv("link(next,value)")},1);
 int _ok1754 = !IS_FAIL(_v1754);
     return (void*)_tramp_next_1753;
@@ -23858,6 +24747,7 @@ static char _tramp_sentinel_1755;
 static void *stmt_183(void) { /* line 39 label:TreeEnd */
 /* line 39 */
 _L_TreeEnd:;
+trampoline_stno(39);
     return (void*)_tramp_next_1755;
 }
 
@@ -23866,6 +24756,7 @@ static char _tramp_sentinel_1756;
 static void *stmt_184(void) { /* line 51 label:Tree_End */
 /* line 51 */
 _L_Tree_End:;
+trampoline_stno(51);
     return (void*)_tramp_next_1756;
 }
 
@@ -23874,6 +24765,7 @@ static char _tramp_sentinel_1757;
 static void *stmt_185(void) { /* line 62 label:EqualEnd */
 /* line 62 */
 _L_EqualEnd:;
+trampoline_stno(62);
     return (void*)_tramp_next_1757;
 }
 
@@ -23882,6 +24774,7 @@ static char _tramp_sentinel_1758;
 static void *stmt_186(void) { /* line 72 label:EquivEnd */
 /* line 72 */
 _L_EquivEnd:;
+trampoline_stno(72);
     return (void*)_tramp_next_1758;
 }
 
@@ -23890,6 +24783,7 @@ static char _tramp_sentinel_1759;
 static void *stmt_187(void) { /* line 80 label:FindEnd */
 /* line 80 */
 _L_FindEnd:;
+trampoline_stno(80);
     return (void*)_tramp_next_1759;
 }
 
@@ -23898,6 +24792,7 @@ static char _tramp_sentinel_1760;
 static void *stmt_188(void) { /* line 88 label:VisitEnd */
 /* line 88 */
 _L_VisitEnd:;
+trampoline_stno(88);
     return (void*)_tramp_next_1760;
 }
 
@@ -23906,6 +24801,7 @@ static char _tramp_sentinel_1761;
 static void *stmt_189(void) { /* line 17 label:ShiftEnd */
 /* line 17 */
 _L_ShiftEnd:;
+trampoline_stno(17);
     return (void*)_tramp_next_1761;
 }
 
@@ -23914,6 +24810,7 @@ static char _tramp_sentinel_1762;
 static void *stmt_190(void) { /* line 33 label:ReduceEnd */
 /* line 33 */
 _L_ReduceEnd:;
+trampoline_stno(33);
     return (void*)_tramp_next_1762;
 }
 
@@ -23922,6 +24819,7 @@ static char _tramp_sentinel_1763;
 static void *stmt_191(void) { /* line 25 label:TValueEnd */
 /* line 25 */
 _L_TValueEnd:;
+trampoline_stno(25);
     return (void*)_tramp_next_1763;
 }
 
@@ -23930,6 +24828,7 @@ static char _tramp_sentinel_1764;
 static void *stmt_192(void) { /* line 44 label:TDumpEnd */
 /* line 44 */
 _L_TDumpEnd:;
+trampoline_stno(44);
     return (void*)_tramp_next_1764;
 }
 
@@ -23938,6 +24837,7 @@ static char _tramp_sentinel_1765;
 static void *stmt_193(void) { /* line 62 label:TLumpEnd */
 /* line 62 */
 _L_TLumpEnd:;
+trampoline_stno(62);
     return (void*)_tramp_next_1765;
 }
 
@@ -23946,6 +24846,7 @@ static char _tramp_sentinel_1766;
 static void *stmt_194(void) { /* line 34 label:LevelEnd */
 /* line 34 */
 _L_LevelEnd:;
+trampoline_stno(34);
     return (void*)_tramp_next_1766;
 }
 
@@ -23953,6 +24854,7 @@ static char _tramp_sentinel_1767;
 #define _tramp_next_1767 ((void*)&_tramp_sentinel_1767)
 static void *stmt_195(void) { /* line 39 */
 /* line 39 */
+trampoline_stno(39);
 SnoVal _v1768 = aply("DUPL",(SnoVal[]){strv(" "),vint(120)},2);
 int _ok1768 = !IS_FAIL(_v1768);
 if(_ok1768) {
@@ -23967,6 +24869,7 @@ static char _tramp_sentinel_1769;
 static void *stmt_196(void) { /* line 37 label:SQizeEnd */
 /* line 37 */
 _L_SQizeEnd:;
+trampoline_stno(37);
     return (void*)_tramp_next_1769;
 }
 
@@ -23975,6 +24878,7 @@ static char _tramp_sentinel_1770;
 static void *stmt_197(void) { /* line 46 label:DQizeEnd */
 /* line 46 */
 _L_DQizeEnd:;
+trampoline_stno(46);
     return (void*)_tramp_next_1770;
 }
 
@@ -23983,6 +24887,7 @@ static char _tramp_sentinel_1771;
 static void *stmt_198(void) { /* line 54 label:SqlSQizeEnd */
 /* line 54 */
 _L_SqlSQizeEnd:;
+trampoline_stno(54);
     return (void*)_tramp_next_1771;
 }
 
@@ -23991,6 +24896,7 @@ static char _tramp_sentinel_1772;
 static void *stmt_199(void) { /* line 76 label:IntizeEnd */
 /* line 76 */
 _L_IntizeEnd:;
+trampoline_stno(76);
     return (void*)_tramp_next_1772;
 }
 
@@ -23999,6 +24905,7 @@ static char _tramp_sentinel_1773;
 static void *stmt_200(void) { /* line 80 label:ExtizeEnd */
 /* line 80 */
 _L_ExtizeEnd:;
+trampoline_stno(80);
     return (void*)_tramp_next_1773;
 }
 
@@ -24007,6 +24914,7 @@ static char _tramp_sentinel_1774;
 static void *stmt_201(void) { /* line 26 label:ReadEnd */
 /* line 26 */
 _L_ReadEnd:;
+trampoline_stno(26);
     return (void*)_tramp_next_1774;
 }
 
@@ -24015,6 +24923,7 @@ static char _tramp_sentinel_1775;
 static void *stmt_202(void) { /* line 35 label:WriteEnd */
 /* line 35 */
 _L_WriteEnd:;
+trampoline_stno(35);
     return (void*)_tramp_next_1775;
 }
 
@@ -24023,6 +24932,7 @@ static char _tramp_sentinel_1776;
 static void *stmt_203(void) { /* line 46 label:LineMapEnd */
 /* line 46 */
 _L_LineMapEnd:;
+trampoline_stno(46);
     return (void*)_tramp_next_1776;
 }
 
@@ -24031,6 +24941,7 @@ static char _tramp_sentinel_1777;
 static void *stmt_204(void) { /* line 47 label:XDumpEnd */
 /* line 47 */
 _L_XDumpEnd:;
+trampoline_stno(47);
     return (void*)_tramp_next_1777;
 }
 
@@ -24038,6 +24949,7 @@ static char _tramp_sentinel_1778;
 #define _tramp_next_1778 ((void*)&_tramp_sentinel_1778)
 static void *stmt_205(void) { /* line 8 */
 /* line 8 */
+trampoline_stno(8);
 SnoVal _v1779 = aply("OPSYN",(SnoVal[]){strv("~"),strv("shift"),vint(2)},3);
 int _ok1779 = !IS_FAIL(_v1779);
     return (void*)_tramp_next_1778;
@@ -24047,6 +24959,7 @@ static char _tramp_sentinel_1780;
 #define _tramp_next_1780 ((void*)&_tramp_sentinel_1780)
 static void *stmt_206(void) { /* line 9 */
 /* line 9 */
+trampoline_stno(9);
 SnoVal _v1781 = aply("OPSYN",(SnoVal[]){strv("&"),strv("reduce"),vint(2)},3);
 int _ok1781 = !IS_FAIL(_v1781);
     return (void*)_tramp_next_1780;
@@ -24057,6 +24970,7 @@ static char _tramp_sentinel_1782;
 static void *stmt_207(void) { /* line 27 label:semanticEnd */
 /* line 27 */
 _L_semanticEnd:;
+trampoline_stno(27);
     return (void*)_tramp_next_1782;
 }
 
@@ -24065,6 +24979,7 @@ static char _tramp_sentinel_1783;
 static void *stmt_208(void) { /* line 7 label:TVEnd */
 /* line 7 */
 _L_TVEnd:;
+trampoline_stno(7);
     return (void*)_tramp_next_1783;
 }
 
@@ -24073,6 +24988,7 @@ static char _tramp_sentinel_1784;
 static void *stmt_209(void) { /* line 14 label:TWEnd */
 /* line 14 */
 _L_TWEnd:;
+trampoline_stno(14);
     return (void*)_tramp_next_1784;
 }
 
@@ -24081,6 +24997,7 @@ static char _tramp_sentinel_1785;
 static void *stmt_210(void) { /* line 21 label:TXEnd */
 /* line 21 */
 _L_TXEnd:;
+trampoline_stno(21);
     return (void*)_tramp_next_1785;
 }
 
@@ -24089,6 +25006,7 @@ static char _tramp_sentinel_1786;
 static void *stmt_211(void) { /* line 30 label:TYEnd */
 /* line 30 */
 _L_TYEnd:;
+trampoline_stno(30);
     return (void*)_tramp_next_1786;
 }
 
@@ -24097,6 +25015,7 @@ static char _tramp_sentinel_1787;
 static void *stmt_212(void) { /* line 42 label:TZEnd */
 /* line 42 */
 _L_TZEnd:;
+trampoline_stno(42);
     return (void*)_tramp_next_1787;
 }
 
@@ -24104,6 +25023,7 @@ static char _tramp_sentinel_1788;
 #define _tramp_next_1788 ((void*)&_tramp_sentinel_1788)
 static void *stmt_213(void) { /* line 5 */
 /* line 5 */
+trampoline_stno(5);
 SnoVal _v1789 = vint(0);
 int _ok1789 = !IS_FAIL(_v1789);
 if(_ok1789) {
@@ -24118,6 +25038,7 @@ static char _tramp_sentinel_1790;
 static void *stmt_214(void) { /* line 35 label:T8PosEnd */
 /* line 35 */
 _L_T8PosEnd:;
+trampoline_stno(35);
     return (void*)_tramp_next_1790;
 }
 
@@ -24125,6 +25046,7 @@ static char _tramp_sentinel_1791;
 #define _tramp_next_1791 ((void*)&_tramp_sentinel_1791)
 static void *stmt_215(void) { /* line 29 */
 /* line 29 */
+trampoline_stno(29);
 SnoVal _v1792 = vint(1);
 int _ok1792 = !IS_FAIL(_v1792);
 if(_ok1792) {
@@ -24137,6 +25059,7 @@ static char _tramp_sentinel_1793;
 #define _tramp_next_1793 ((void*)&_tramp_sentinel_1793)
 static void *stmt_216(void) { /* line 30 */
 /* line 30 */
+trampoline_stno(30);
 SnoVal _v1794 = vint(524288);
 int _ok1794 = !IS_FAIL(_v1794);
 if(_ok1794) {
@@ -24149,6 +25072,7 @@ static char _tramp_sentinel_1795;
 #define _tramp_next_1795 ((void*)&_tramp_sentinel_1795)
 static void *stmt_217(void) { /* line 64 */
 /* line 64 */
+trampoline_stno(64);
 SnoVal _v1796 = aply("ARRAY",(SnoVal[]){strv("1:4")},1);
 int _ok1796 = !IS_FAIL(_v1796);
 if(_ok1796) {
@@ -24162,6 +25086,7 @@ static char _tramp_sentinel_1797;
 #define _tramp_next_1797 ((void*)&_tramp_sentinel_1797)
 static void *stmt_218(void) { /* line 68 */
 /* line 68 */
+trampoline_stno(68);
 SnoVal _v1798 = vint(15);
 int _ok1798 = !IS_FAIL(_v1798);
 if(_ok1798) {
@@ -24174,6 +25099,7 @@ static char _tramp_sentinel_1799;
 #define _tramp_next_1799 ((void*)&_tramp_sentinel_1799)
 static void *stmt_219(void) { /* line 69 */
 /* line 69 */
+trampoline_stno(69);
 SnoVal _v1800 = vint(30);
 int _ok1800 = !IS_FAIL(_v1800);
 if(_ok1800) {
@@ -24186,6 +25112,7 @@ static char _tramp_sentinel_1801;
 #define _tramp_next_1801 ((void*)&_tramp_sentinel_1801)
 static void *stmt_220(void) { /* line 70 */
 /* line 70 */
+trampoline_stno(70);
 SnoVal _v1802 = vint(33);
 int _ok1802 = !IS_FAIL(_v1802);
 if(_ok1802) {
@@ -24198,6 +25125,7 @@ static char _tramp_sentinel_1803;
 #define _tramp_next_1803 ((void*)&_tramp_sentinel_1803)
 static void *stmt_221(void) { /* line 71 */
 /* line 71 */
+trampoline_stno(71);
 SnoVal _v1804 = vint(80);
 int _ok1804 = !IS_FAIL(_v1804);
 if(_ok1804) {
@@ -24210,6 +25138,7 @@ static char _tramp_sentinel_1805;
 #define _tramp_next_1805 ((void*)&_tramp_sentinel_1805)
 static void *stmt_222(void) { /* line 72 */
 /* line 72 */
+trampoline_stno(72);
 SnoVal _v1806 = vint(5);
 int _ok1806 = !IS_FAIL(_v1806);
 if(_ok1806) {
@@ -24223,6 +25152,7 @@ static char _tramp_sentinel_1807;
 #define _tramp_next_1807 ((void*)&_tramp_sentinel_1807)
 static void *stmt_223(void) { /* line 73 */
 /* line 73 */
+trampoline_stno(73);
 SnoVal _v1808 = vint(42);
 int _ok1808 = !IS_FAIL(_v1808);
 if(_ok1808) {
@@ -24236,6 +25166,7 @@ static char _tramp_sentinel_1809;
 #define _tramp_next_1809 ((void*)&_tramp_sentinel_1809)
 static void *stmt_224(void) { /* line 79 */
 /* line 79 */
+trampoline_stno(79);
 SnoVal _v1810 = aply("HOST",(SnoVal[]){vint(0)},1);
 int _ok1810 = !IS_FAIL(_v1810);
 if(_ok1810) {
@@ -24249,6 +25180,7 @@ static char _tramp_sentinel_1811;
 #define _tramp_next_1811 ((void*)&_tramp_sentinel_1811)
 static void *stmt_225(void) { /* line 80 */
 /* line 80 */
+trampoline_stno(80);
 SnoVal _v1812 = pat_cat(pat_cat(pat_lit("--"),pat_cond(pat_alt(pat_break(to_str(strv("= "))),pat_var("REM")),"ppTokName")),pat_alt(pat_cat(pat_lit("="),pat_cond(pat_alt(pat_break(to_str(strv(" "))),pat_var("REM")),"ppTokVal")),pat_cond(pat_lit(""),"ppTokVal")));
 int _ok1812 = !IS_FAIL(_v1812);
 if(_ok1812) {
@@ -24263,6 +25195,7 @@ static char _tramp_sentinel_1813;
 static void *stmt_226(void) { /* line 82 label:ppArgLoop */
 /* line 82 */
 _L_ppArgLoop:;
+trampoline_stno(82);
 /* byrd mtch u1814 */
 SnoVal _s1814 = get(_ppArgs);
 const char *_subj1814 = to_str(_s1814);
@@ -24306,6 +25239,7 @@ static char _tramp_sentinel_1815;
 #define _tramp_next_1815 ((void*)&_tramp_sentinel_1815)
 static void *stmt_227(void) { /* line 83 */
 /* line 83 */
+trampoline_stno(83);
 SnoVal _v1816 = aply("DIFFER",(SnoVal[]){get(_ppArgs)},1);
 int _ok1816 = !IS_FAIL(_v1816);
     if(!_ok1816) return (void*)block__ppArgDone;
@@ -24316,6 +25250,7 @@ static char _tramp_sentinel_1817;
 #define _tramp_next_1817 ((void*)&_tramp_sentinel_1817)
 static void *stmt_228(void) { /* line 84 */
 /* line 84 */
+trampoline_stno(84);
 /* byrd mtch u1818 */
 SnoVal _s1818 = get(_ppArgs);
 const char *_subj1818 = to_str(_s1818);
@@ -24365,6 +25300,7 @@ static char _tramp_sentinel_1819;
 #define _tramp_next_1819 ((void*)&_tramp_sentinel_1819)
 static void *stmt_229(void) { /* line 85 */
 /* line 85 */
+trampoline_stno(85);
 SnoVal _v1820 = aply("IDENT",(SnoVal[]){get(_ppTokName),strv("micro")},2);
 int _ok1820 = !IS_FAIL(_v1820);
     if(!_ok1820) return (void*)block__ppArgP2;
@@ -24375,6 +25311,7 @@ static char _tramp_sentinel_1821;
 #define _tramp_next_1821 ((void*)&_tramp_sentinel_1821)
 static void *stmt_230(void) { /* line 86 */
 /* line 86 */
+trampoline_stno(86);
 SnoVal _v1822 = vint(11);
 int _ok1822 = !IS_FAIL(_v1822);
 if(_ok1822) {
@@ -24387,6 +25324,7 @@ static char _tramp_sentinel_1823;
 #define _tramp_next_1823 ((void*)&_tramp_sentinel_1823)
 static void *stmt_231(void) { /* line 87 */
 /* line 87 */
+trampoline_stno(87);
 SnoVal _v1824 = vint(26);
 int _ok1824 = !IS_FAIL(_v1824);
 if(_ok1824) {
@@ -24399,6 +25337,7 @@ static char _tramp_sentinel_1825;
 #define _tramp_next_1825 ((void*)&_tramp_sentinel_1825)
 static void *stmt_232(void) { /* line 88 */
 /* line 88 */
+trampoline_stno(88);
 SnoVal _v1826 = vint(29);
 int _ok1826 = !IS_FAIL(_v1826);
 if(_ok1826) {
@@ -24411,6 +25350,7 @@ static char _tramp_sentinel_1827;
 #define _tramp_next_1827 ((void*)&_tramp_sentinel_1827)
 static void *stmt_233(void) { /* line 89 */
 /* line 89 */
+trampoline_stno(89);
 SnoVal _v1828 = vint(55);
 int _ok1828 = !IS_FAIL(_v1828);
 if(_ok1828) {
@@ -24423,6 +25363,7 @@ static char _tramp_sentinel_1829;
 #define _tramp_next_1829 ((void*)&_tramp_sentinel_1829)
 static void *stmt_234(void) { /* line 90 */
 /* line 90 */
+trampoline_stno(90);
 SnoVal _v1830 = vint(3);
 int _ok1830 = !IS_FAIL(_v1830);
 if(_ok1830) {
@@ -24436,6 +25377,7 @@ static char _tramp_sentinel_1831;
 #define _tramp_next_1831 ((void*)&_tramp_sentinel_1831)
 static void *stmt_235(void) { /* line 91 */
 /* line 91 */
+trampoline_stno(91);
 SnoVal _v1832 = vint(21);
 int _ok1832 = !IS_FAIL(_v1832);
 if(_ok1832) {
@@ -24450,6 +25392,7 @@ static char _tramp_sentinel_1833;
 static void *stmt_236(void) { /* line 92 label:ppArgP2 */
 /* line 92 */
 _L_ppArgP2:;
+trampoline_stno(92);
 SnoVal _v1834 = aply("IDENT",(SnoVal[]){get(_ppTokName),strv("small")},2);
 int _ok1834 = !IS_FAIL(_v1834);
     if(!_ok1834) return (void*)block__ppArgP3;
@@ -24460,6 +25403,7 @@ static char _tramp_sentinel_1835;
 #define _tramp_next_1835 ((void*)&_tramp_sentinel_1835)
 static void *stmt_237(void) { /* line 93 */
 /* line 93 */
+trampoline_stno(93);
 SnoVal _v1836 = vint(13);
 int _ok1836 = !IS_FAIL(_v1836);
 if(_ok1836) {
@@ -24472,6 +25416,7 @@ static char _tramp_sentinel_1837;
 #define _tramp_next_1837 ((void*)&_tramp_sentinel_1837)
 static void *stmt_238(void) { /* line 94 */
 /* line 94 */
+trampoline_stno(94);
 SnoVal _v1838 = vint(28);
 int _ok1838 = !IS_FAIL(_v1838);
 if(_ok1838) {
@@ -24484,6 +25429,7 @@ static char _tramp_sentinel_1839;
 #define _tramp_next_1839 ((void*)&_tramp_sentinel_1839)
 static void *stmt_239(void) { /* line 95 */
 /* line 95 */
+trampoline_stno(95);
 SnoVal _v1840 = vint(31);
 int _ok1840 = !IS_FAIL(_v1840);
 if(_ok1840) {
@@ -24496,6 +25442,7 @@ static char _tramp_sentinel_1841;
 #define _tramp_next_1841 ((void*)&_tramp_sentinel_1841)
 static void *stmt_240(void) { /* line 96 */
 /* line 96 */
+trampoline_stno(96);
 SnoVal _v1842 = vint(60);
 int _ok1842 = !IS_FAIL(_v1842);
 if(_ok1842) {
@@ -24508,6 +25455,7 @@ static char _tramp_sentinel_1843;
 #define _tramp_next_1843 ((void*)&_tramp_sentinel_1843)
 static void *stmt_241(void) { /* line 97 */
 /* line 97 */
+trampoline_stno(97);
 SnoVal _v1844 = vint(4);
 int _ok1844 = !IS_FAIL(_v1844);
 if(_ok1844) {
@@ -24521,6 +25469,7 @@ static char _tramp_sentinel_1845;
 #define _tramp_next_1845 ((void*)&_tramp_sentinel_1845)
 static void *stmt_242(void) { /* line 98 */
 /* line 98 */
+trampoline_stno(98);
 SnoVal _v1846 = vint(24);
 int _ok1846 = !IS_FAIL(_v1846);
 if(_ok1846) {
@@ -24535,6 +25484,7 @@ static char _tramp_sentinel_1847;
 static void *stmt_243(void) { /* line 99 label:ppArgP3 */
 /* line 99 */
 _L_ppArgP3:;
+trampoline_stno(99);
 SnoVal _v1848 = aply("IDENT",(SnoVal[]){get(_ppTokName),strv("medium")},2);
 int _ok1848 = !IS_FAIL(_v1848);
     if(!_ok1848) return (void*)block__ppArgP4;
@@ -24545,6 +25495,7 @@ static char _tramp_sentinel_1849;
 #define _tramp_next_1849 ((void*)&_tramp_sentinel_1849)
 static void *stmt_244(void) { /* line 100 */
 /* line 100 */
+trampoline_stno(100);
 SnoVal _v1850 = vint(15);
 int _ok1850 = !IS_FAIL(_v1850);
 if(_ok1850) {
@@ -24557,6 +25508,7 @@ static char _tramp_sentinel_1851;
 #define _tramp_next_1851 ((void*)&_tramp_sentinel_1851)
 static void *stmt_245(void) { /* line 101 */
 /* line 101 */
+trampoline_stno(101);
 SnoVal _v1852 = vint(30);
 int _ok1852 = !IS_FAIL(_v1852);
 if(_ok1852) {
@@ -24569,6 +25521,7 @@ static char _tramp_sentinel_1853;
 #define _tramp_next_1853 ((void*)&_tramp_sentinel_1853)
 static void *stmt_246(void) { /* line 102 */
 /* line 102 */
+trampoline_stno(102);
 SnoVal _v1854 = vint(33);
 int _ok1854 = !IS_FAIL(_v1854);
 if(_ok1854) {
@@ -24581,6 +25534,7 @@ static char _tramp_sentinel_1855;
 #define _tramp_next_1855 ((void*)&_tramp_sentinel_1855)
 static void *stmt_247(void) { /* line 103 */
 /* line 103 */
+trampoline_stno(103);
 SnoVal _v1856 = vint(80);
 int _ok1856 = !IS_FAIL(_v1856);
 if(_ok1856) {
@@ -24593,6 +25547,7 @@ static char _tramp_sentinel_1857;
 #define _tramp_next_1857 ((void*)&_tramp_sentinel_1857)
 static void *stmt_248(void) { /* line 104 */
 /* line 104 */
+trampoline_stno(104);
 SnoVal _v1858 = vint(5);
 int _ok1858 = !IS_FAIL(_v1858);
 if(_ok1858) {
@@ -24606,6 +25561,7 @@ static char _tramp_sentinel_1859;
 #define _tramp_next_1859 ((void*)&_tramp_sentinel_1859)
 static void *stmt_249(void) { /* line 105 */
 /* line 105 */
+trampoline_stno(105);
 SnoVal _v1860 = vint(42);
 int _ok1860 = !IS_FAIL(_v1860);
 if(_ok1860) {
@@ -24620,6 +25576,7 @@ static char _tramp_sentinel_1861;
 static void *stmt_250(void) { /* line 106 label:ppArgP4 */
 /* line 106 */
 _L_ppArgP4:;
+trampoline_stno(106);
 SnoVal _v1862 = aply("IDENT",(SnoVal[]){get(_ppTokName),strv("large")},2);
 int _ok1862 = !IS_FAIL(_v1862);
     if(!_ok1862) return (void*)block__ppArgP5;
@@ -24630,6 +25587,7 @@ static char _tramp_sentinel_1863;
 #define _tramp_next_1863 ((void*)&_tramp_sentinel_1863)
 static void *stmt_251(void) { /* line 107 */
 /* line 107 */
+trampoline_stno(107);
 SnoVal _v1864 = vint(17);
 int _ok1864 = !IS_FAIL(_v1864);
 if(_ok1864) {
@@ -24642,6 +25600,7 @@ static char _tramp_sentinel_1865;
 #define _tramp_next_1865 ((void*)&_tramp_sentinel_1865)
 static void *stmt_252(void) { /* line 108 */
 /* line 108 */
+trampoline_stno(108);
 SnoVal _v1866 = vint(32);
 int _ok1866 = !IS_FAIL(_v1866);
 if(_ok1866) {
@@ -24654,6 +25613,7 @@ static char _tramp_sentinel_1867;
 #define _tramp_next_1867 ((void*)&_tramp_sentinel_1867)
 static void *stmt_253(void) { /* line 109 */
 /* line 109 */
+trampoline_stno(109);
 SnoVal _v1868 = vint(35);
 int _ok1868 = !IS_FAIL(_v1868);
 if(_ok1868) {
@@ -24666,6 +25626,7 @@ static char _tramp_sentinel_1869;
 #define _tramp_next_1869 ((void*)&_tramp_sentinel_1869)
 static void *stmt_254(void) { /* line 110 */
 /* line 110 */
+trampoline_stno(110);
 SnoVal _v1870 = vint(96);
 int _ok1870 = !IS_FAIL(_v1870);
 if(_ok1870) {
@@ -24678,6 +25639,7 @@ static char _tramp_sentinel_1871;
 #define _tramp_next_1871 ((void*)&_tramp_sentinel_1871)
 static void *stmt_255(void) { /* line 111 */
 /* line 111 */
+trampoline_stno(111);
 SnoVal _v1872 = vint(6);
 int _ok1872 = !IS_FAIL(_v1872);
 if(_ok1872) {
@@ -24691,6 +25653,7 @@ static char _tramp_sentinel_1873;
 #define _tramp_next_1873 ((void*)&_tramp_sentinel_1873)
 static void *stmt_256(void) { /* line 112 */
 /* line 112 */
+trampoline_stno(112);
 SnoVal _v1874 = vint(54);
 int _ok1874 = !IS_FAIL(_v1874);
 if(_ok1874) {
@@ -24705,6 +25668,7 @@ static char _tramp_sentinel_1875;
 static void *stmt_257(void) { /* line 113 label:ppArgP5 */
 /* line 113 */
 _L_ppArgP5:;
+trampoline_stno(113);
 SnoVal _v1876 = aply("IDENT",(SnoVal[]){get(_ppTokName),strv("wide")},2);
 int _ok1876 = !IS_FAIL(_v1876);
     if(!_ok1876) return (void*)block__ppArgChk1;
@@ -24715,6 +25679,7 @@ static char _tramp_sentinel_1877;
 #define _tramp_next_1877 ((void*)&_tramp_sentinel_1877)
 static void *stmt_258(void) { /* line 114 */
 /* line 114 */
+trampoline_stno(114);
 SnoVal _v1878 = vint(19);
 int _ok1878 = !IS_FAIL(_v1878);
 if(_ok1878) {
@@ -24727,6 +25692,7 @@ static char _tramp_sentinel_1879;
 #define _tramp_next_1879 ((void*)&_tramp_sentinel_1879)
 static void *stmt_259(void) { /* line 115 */
 /* line 115 */
+trampoline_stno(115);
 SnoVal _v1880 = vint(34);
 int _ok1880 = !IS_FAIL(_v1880);
 if(_ok1880) {
@@ -24739,6 +25705,7 @@ static char _tramp_sentinel_1881;
 #define _tramp_next_1881 ((void*)&_tramp_sentinel_1881)
 static void *stmt_260(void) { /* line 116 */
 /* line 116 */
+trampoline_stno(116);
 SnoVal _v1882 = vint(37);
 int _ok1882 = !IS_FAIL(_v1882);
 if(_ok1882) {
@@ -24751,6 +25718,7 @@ static char _tramp_sentinel_1883;
 #define _tramp_next_1883 ((void*)&_tramp_sentinel_1883)
 static void *stmt_261(void) { /* line 117 */
 /* line 117 */
+trampoline_stno(117);
 SnoVal _v1884 = vint(110);
 int _ok1884 = !IS_FAIL(_v1884);
 if(_ok1884) {
@@ -24763,6 +25731,7 @@ static char _tramp_sentinel_1885;
 #define _tramp_next_1885 ((void*)&_tramp_sentinel_1885)
 static void *stmt_262(void) { /* line 118 */
 /* line 118 */
+trampoline_stno(118);
 SnoVal _v1886 = vint(7);
 int _ok1886 = !IS_FAIL(_v1886);
 if(_ok1886) {
@@ -24776,6 +25745,7 @@ static char _tramp_sentinel_1887;
 #define _tramp_next_1887 ((void*)&_tramp_sentinel_1887)
 static void *stmt_263(void) { /* line 119 */
 /* line 119 */
+trampoline_stno(119);
 SnoVal _v1888 = vint(68);
 int _ok1888 = !IS_FAIL(_v1888);
 if(_ok1888) {
@@ -24790,6 +25760,7 @@ static char _tramp_sentinel_1889;
 static void *stmt_264(void) { /* line 120 label:ppArgChk1 */
 /* line 120 */
 _L_ppArgChk1:;
+trampoline_stno(120);
 SnoVal _v1890 = aply("IDENT",(SnoVal[]){get(_ppTokName),strv("s1")},2);
 int _ok1890 = !IS_FAIL(_v1890);
     if(!_ok1890) return (void*)block__ppArgChk2;
@@ -24800,6 +25771,7 @@ static char _tramp_sentinel_1891;
 #define _tramp_next_1891 ((void*)&_tramp_sentinel_1891)
 static void *stmt_265(void) { /* line 121 */
 /* line 121 */
+trampoline_stno(121);
 SnoVal _v1892 = get(_ppTokVal);
 int _ok1892 = !IS_FAIL(_v1892);
 if(_ok1892) {
@@ -24813,6 +25785,7 @@ static char _tramp_sentinel_1893;
 static void *stmt_266(void) { /* line 122 label:ppArgChk2 */
 /* line 122 */
 _L_ppArgChk2:;
+trampoline_stno(122);
 SnoVal _v1894 = aply("IDENT",(SnoVal[]){get(_ppTokName),strv("s2")},2);
 int _ok1894 = !IS_FAIL(_v1894);
     if(!_ok1894) return (void*)block__ppArgChk3;
@@ -24823,6 +25796,7 @@ static char _tramp_sentinel_1895;
 #define _tramp_next_1895 ((void*)&_tramp_sentinel_1895)
 static void *stmt_267(void) { /* line 123 */
 /* line 123 */
+trampoline_stno(123);
 SnoVal _v1896 = get(_ppTokVal);
 int _ok1896 = !IS_FAIL(_v1896);
 if(_ok1896) {
@@ -24836,6 +25810,7 @@ static char _tramp_sentinel_1897;
 static void *stmt_268(void) { /* line 124 label:ppArgChk3 */
 /* line 124 */
 _L_ppArgChk3:;
+trampoline_stno(124);
 SnoVal _v1898 = aply("IDENT",(SnoVal[]){get(_ppTokName),strv("s3")},2);
 int _ok1898 = !IS_FAIL(_v1898);
     if(!_ok1898) return (void*)block__ppArgChk4;
@@ -24846,6 +25821,7 @@ static char _tramp_sentinel_1899;
 #define _tramp_next_1899 ((void*)&_tramp_sentinel_1899)
 static void *stmt_269(void) { /* line 125 */
 /* line 125 */
+trampoline_stno(125);
 SnoVal _v1900 = get(_ppTokVal);
 int _ok1900 = !IS_FAIL(_v1900);
 if(_ok1900) {
@@ -24859,6 +25835,7 @@ static char _tramp_sentinel_1901;
 static void *stmt_270(void) { /* line 126 label:ppArgChk4 */
 /* line 126 */
 _L_ppArgChk4:;
+trampoline_stno(126);
 SnoVal _v1902 = aply("IDENT",(SnoVal[]){get(_ppTokName),strv("s4")},2);
 int _ok1902 = !IS_FAIL(_v1902);
     if(!_ok1902) return (void*)block__ppArgChk5;
@@ -24869,6 +25846,7 @@ static char _tramp_sentinel_1903;
 #define _tramp_next_1903 ((void*)&_tramp_sentinel_1903)
 static void *stmt_271(void) { /* line 127 */
 /* line 127 */
+trampoline_stno(127);
 SnoVal _v1904 = get(_ppTokVal);
 int _ok1904 = !IS_FAIL(_v1904);
 if(_ok1904) {
@@ -24882,6 +25860,7 @@ static char _tramp_sentinel_1905;
 static void *stmt_272(void) { /* line 128 label:ppArgChk5 */
 /* line 128 */
 _L_ppArgChk5:;
+trampoline_stno(128);
 SnoVal _v1906 = aply("IDENT",(SnoVal[]){get(_ppTokName),strv("smbump")},2);
 int _ok1906 = !IS_FAIL(_v1906);
     if(!_ok1906) return (void*)block__ppArgChk6;
@@ -24892,6 +25871,7 @@ static char _tramp_sentinel_1907;
 #define _tramp_next_1907 ((void*)&_tramp_sentinel_1907)
 static void *stmt_273(void) { /* line 129 */
 /* line 129 */
+trampoline_stno(129);
 SnoVal _v1908 = get(_ppTokVal);
 int _ok1908 = !IS_FAIL(_v1908);
 if(_ok1908) {
@@ -24906,6 +25886,7 @@ static char _tramp_sentinel_1909;
 static void *stmt_274(void) { /* line 130 label:ppArgChk6 */
 /* line 130 */
 _L_ppArgChk6:;
+trampoline_stno(130);
 SnoVal _v1910 = aply("IDENT",(SnoVal[]){get(_ppTokName),strv("lgbump")},2);
 int _ok1910 = !IS_FAIL(_v1910);
     if(!_ok1910) return (void*)block__ppArgUnk;
@@ -24916,6 +25897,7 @@ static char _tramp_sentinel_1911;
 #define _tramp_next_1911 ((void*)&_tramp_sentinel_1911)
 static void *stmt_275(void) { /* line 131 */
 /* line 131 */
+trampoline_stno(131);
 SnoVal _v1912 = get(_ppTokVal);
 int _ok1912 = !IS_FAIL(_v1912);
 if(_ok1912) {
@@ -24930,6 +25912,7 @@ static char _tramp_sentinel_1913;
 static void *stmt_276(void) { /* line 132 label:ppArgUnk */
 /* line 132 */
 _L_ppArgUnk:;
+trampoline_stno(132);
 SnoVal _v1914 = aply("IDENT",(SnoVal[]){get(_ppTokName),strv("auto")},2);
 int _ok1914 = !IS_FAIL(_v1914);
     if(!_ok1914) return (void*)block__ppArgWarn;
@@ -24940,6 +25923,7 @@ static char _tramp_sentinel_1915;
 #define _tramp_next_1915 ((void*)&_tramp_sentinel_1915)
 static void *stmt_277(void) { /* line 133 */
 /* line 133 */
+trampoline_stno(133);
 SnoVal _v1916 = vint(1);
 int _ok1916 = !IS_FAIL(_v1916);
 if(_ok1916) {
@@ -24954,6 +25938,7 @@ static char _tramp_sentinel_1917;
 static void *stmt_278(void) { /* line 134 label:ppArgWarn */
 /* line 134 */
 _L_ppArgWarn:;
+trampoline_stno(134);
 SnoVal _v1918 = concat_sv(strv("* Warning: unknown switch --"),get(_ppTokName));
 int _ok1918 = !IS_FAIL(_v1918);
 if(_ok1918) {
@@ -24967,6 +25952,7 @@ static char _tramp_sentinel_1919;
 static void *stmt_279(void) { /* line 135 label:ppArgDone */
 /* line 135 */
 _L_ppArgDone:;
+trampoline_stno(135);
     return (void*)_tramp_next_1919;
 }
 
@@ -24974,6 +25960,7 @@ static char _tramp_sentinel_1920;
 #define _tramp_next_1920 ((void*)&_tramp_sentinel_1920)
 static void *stmt_280(void) { /* line 145 */
 /* line 145 */
+trampoline_stno(145);
 SnoVal _v1921 = aply("DIFFER",(SnoVal[]){get(_ppAutoMode)},1);
 int _ok1921 = !IS_FAIL(_v1921);
     if(!_ok1921) return (void*)block__ppAutoSkip;
@@ -24984,6 +25971,7 @@ static char _tramp_sentinel_1922;
 #define _tramp_next_1922 ((void*)&_tramp_sentinel_1922)
 static void *stmt_281(void) { /* line 149 */
 /* line 149 */
+trampoline_stno(149);
 SnoVal _v1923 = aply("CHAR",(SnoVal[]){vint(9)},1);
 int _ok1923 = !IS_FAIL(_v1923);
 if(_ok1923) {
@@ -24997,6 +25985,7 @@ static char _tramp_sentinel_1924;
 #define _tramp_next_1924 ((void*)&_tramp_sentinel_1924)
 static void *stmt_282(void) { /* line 150 */
 /* line 150 */
+trampoline_stno(150);
 SnoVal _v1925 = pat_cat(pat_cat(pat_cat(pat_cat(pat_alt(pat_span(to_str(concat_sv(strv(" "),get(_ppTab)))),pat_lit("")),pat_lit(":")),pat_alt(pat_any(to_str(strv("SF"))),pat_lit(""))),pat_alt(pat_any(to_str(strv("(<"))),pat_lit(""))),pat_var("REM"));
 int _ok1925 = !IS_FAIL(_v1925);
 if(_ok1925) {
@@ -25010,6 +25999,7 @@ static char _tramp_sentinel_1926;
 #define _tramp_next_1926 ((void*)&_tramp_sentinel_1926)
 static void *stmt_283(void) { /* line 152 */
 /* line 152 */
+trampoline_stno(152);
 SnoVal _v1927 = pat_cat(pat_cond(pat_break(to_str(strv(":"))),"ppGCon"),pat_var("ppGSfx"));
 int _ok1927 = !IS_FAIL(_v1927);
 if(_ok1927) {
@@ -25023,6 +26013,7 @@ static char _tramp_sentinel_1928;
 #define _tramp_next_1928 ((void*)&_tramp_sentinel_1928)
 static void *stmt_284(void) { /* line 153 */
 /* line 153 */
+trampoline_stno(153);
 SnoVal _v1929 = pat_cond(pat_cat(pat_span(to_str(concat_sv(strv(" "),get(_ppTab)))),pat_rpos(to_int(vint(0)))),"ppDrop");
 int _ok1929 = !IS_FAIL(_v1929);
 if(_ok1929) {
@@ -25036,6 +26027,7 @@ static char _tramp_sentinel_1930;
 #define _tramp_next_1930 ((void*)&_tramp_sentinel_1930)
 static void *stmt_285(void) { /* line 155 */
 /* line 155 */
+trampoline_stno(155);
 SnoVal _v1931 = vint(0);
 int _ok1931 = !IS_FAIL(_v1931);
 if(_ok1931) {
@@ -25049,6 +26041,7 @@ static char _tramp_sentinel_1932;
 #define _tramp_next_1932 ((void*)&_tramp_sentinel_1932)
 static void *stmt_286(void) { /* line 156 */
 /* line 156 */
+trampoline_stno(156);
 SnoVal _v1933 = aply("ARRAY",(SnoVal[]){vint(2000)},1);
 int _ok1933 = !IS_FAIL(_v1933);
 if(_ok1933) {
@@ -25062,6 +26055,7 @@ static char _tramp_sentinel_1934;
 #define _tramp_next_1934 ((void*)&_tramp_sentinel_1934)
 static void *stmt_287(void) { /* line 157 */
 /* line 157 */
+trampoline_stno(157);
 SnoVal _v1935 = concat_sv(concat_sv(strv("/tmp/beauty_auto_"),aply("HOST",(SnoVal[]){vint(1)},1)),strv(".sno"));
 int _ok1935 = !IS_FAIL(_v1935);
 if(_ok1935) {
@@ -25075,6 +26069,7 @@ static char _tramp_sentinel_1936;
 #define _tramp_next_1936 ((void*)&_tramp_sentinel_1936)
 static void *stmt_288(void) { /* line 158 */
 /* line 158 */
+trampoline_stno(158);
 SnoVal _v1937 = aply("output__",(SnoVal[]){get(_ppTmp),vint(3),strv(""),get(_ppTmpFile)},4);
 int _ok1937 = !IS_FAIL(_v1937);
     return (void*)_tramp_next_1936;
@@ -25085,6 +26080,7 @@ static char _tramp_sentinel_1938;
 static void *stmt_289(void) { /* line 160 label:ppAutoR */
 /* line 160 */
 _L_ppAutoR:;
+trampoline_stno(160);
 SnoVal _v1939 = var_get("INPUT");
 int _ok1939 = !IS_FAIL(_v1939);
 if(_ok1939) {
@@ -25099,6 +26095,7 @@ static char _tramp_sentinel_1940;
 #define _tramp_next_1940 ((void*)&_tramp_sentinel_1940)
 static void *stmt_290(void) { /* line 161 */
 /* line 161 */
+trampoline_stno(161);
 SnoVal _v1941 = get(_ppLn);
 int _ok1941 = !IS_FAIL(_v1941);
 if(_ok1941) {
@@ -25112,6 +26109,7 @@ static char _tramp_sentinel_1942;
 #define _tramp_next_1942 ((void*)&_tramp_sentinel_1942)
 static void *stmt_291(void) { /* line 162 */
 /* line 162 */
+trampoline_stno(162);
 /* byrd mtch u1943 */
 SnoVal _s1943 = get(_ppLn);
 const char *_subj1943 = to_str(_s1943);
@@ -25152,6 +26150,7 @@ static char _tramp_sentinel_1944;
 #define _tramp_next_1944 ((void*)&_tramp_sentinel_1944)
 static void *stmt_292(void) { /* line 163 */
 /* line 163 */
+trampoline_stno(163);
 /* byrd mtch u1945 */
 SnoVal _s1945 = get(_ppLn);
 const char *_subj1945 = to_str(_s1945);
@@ -25192,6 +26191,7 @@ static char _tramp_sentinel_1946;
 #define _tramp_next_1946 ((void*)&_tramp_sentinel_1946)
 static void *stmt_293(void) { /* line 164 */
 /* line 164 */
+trampoline_stno(164);
 SnoVal _v1947 = aply("DIFFER",(SnoVal[]){get(_ppStmt)},1);
 int _ok1947 = !IS_FAIL(_v1947);
     if(!_ok1947) return (void*)block__ppAutoNew;
@@ -25202,6 +26202,7 @@ static char _tramp_sentinel_1948;
 #define _tramp_next_1948 ((void*)&_tramp_sentinel_1948)
 static void *stmt_294(void) { /* line 165 */
 /* line 165 */
+trampoline_stno(165);
 /* byrd mtch u1949 */
 SnoVal _s1949 = get(_ppStmt);
 const char *_subj1949 = to_str(_s1949);
@@ -25251,6 +26252,7 @@ static char _tramp_sentinel_1950;
 #define _tramp_next_1950 ((void*)&_tramp_sentinel_1950)
 static void *stmt_295(void) { /* line 166 */
 /* line 166 */
+trampoline_stno(166);
 SnoVal _v1951 = get(_ppGCon);
 int _ok1951 = !IS_FAIL(_v1951);
 if(_ok1951) {
@@ -25264,6 +26266,7 @@ static char _tramp_sentinel_1952;
 #define _tramp_next_1952 ((void*)&_tramp_sentinel_1952)
 static void *stmt_296(void) { /* line 167 */
 /* line 167 */
+trampoline_stno(167);
 /* byrd mtch u1953 */
 SnoVal _s1953 = get(_ppGConT);
 const char *_subj1953 = to_str(_s1953);
@@ -25312,6 +26315,7 @@ static char _tramp_sentinel_1954;
 #define _tramp_next_1954 ((void*)&_tramp_sentinel_1954)
 static void *stmt_297(void) { /* line 168 */
 /* line 168 */
+trampoline_stno(168);
 SnoVal _v1955 = aply("SIZE",(SnoVal[]){get(_ppGConT)},1);
 int _ok1955 = !IS_FAIL(_v1955);
 if(_ok1955) {
@@ -25325,6 +26329,7 @@ static char _tramp_sentinel_1956;
 #define _tramp_next_1956 ((void*)&_tramp_sentinel_1956)
 static void *stmt_298(void) { /* line 169 */
 /* line 169 */
+trampoline_stno(169);
 SnoVal _v1957 = aply("DIFFER",(SnoVal[]){get(_ppW),vint(0)},2);
 int _ok1957 = !IS_FAIL(_v1957);
     if(!_ok1957) return (void*)block__ppAutoNew;
@@ -25335,6 +26340,7 @@ static char _tramp_sentinel_1958;
 #define _tramp_next_1958 ((void*)&_tramp_sentinel_1958)
 static void *stmt_299(void) { /* line 170 */
 /* line 170 */
+trampoline_stno(170);
 SnoVal _v1959 = add(get(_ppNg),vint(1));
 int _ok1959 = !IS_FAIL(_v1959);
 if(_ok1959) {
@@ -25348,6 +26354,7 @@ static char _tramp_sentinel_1960;
 #define _tramp_next_1960 ((void*)&_tramp_sentinel_1960)
 static void *stmt_300(void) { /* line 171 */
 /* line 171 */
+trampoline_stno(171);
 SnoVal _v1961 = get(_ppW);
 int _ok1961 = !IS_FAIL(_v1961);
 if(_ok1961) {
@@ -25361,6 +26368,7 @@ static char _tramp_sentinel_1962;
 static void *stmt_301(void) { /* line 172 label:ppAutoNew */
 /* line 172 */
 _L_ppAutoNew:;
+trampoline_stno(172);
 SnoVal _v1963 = get(_ppLn);
 int _ok1963 = !IS_FAIL(_v1963);
 if(_ok1963) {
@@ -25375,6 +26383,7 @@ static char _tramp_sentinel_1964;
 static void *stmt_302(void) { /* line 173 label:ppAutoCont */
 /* line 173 */
 _L_ppAutoCont:;
+trampoline_stno(173);
 SnoVal _v1965 = concat_sv(concat_sv(get(_ppStmt),strv(" ")),get(_ppLn));
 int _ok1965 = !IS_FAIL(_v1965);
 if(_ok1965) {
@@ -25389,6 +26398,7 @@ static char _tramp_sentinel_1966;
 static void *stmt_303(void) { /* line 176 label:ppAutoSort */
 /* line 176 */
 _L_ppAutoSort:;
+trampoline_stno(176);
 SnoVal _v1967 = aply("ENDFILE",(SnoVal[]){vint(3)},1);
 int _ok1967 = !IS_FAIL(_v1967);
     return (void*)_tramp_next_1966;
@@ -25398,6 +26408,7 @@ static char _tramp_sentinel_1968;
 #define _tramp_next_1968 ((void*)&_tramp_sentinel_1968)
 static void *stmt_304(void) { /* line 177 */
 /* line 177 */
+trampoline_stno(177);
 SnoVal _v1969 = vint(1);
 int _ok1969 = !IS_FAIL(_v1969);
 if(_ok1969) {
@@ -25412,6 +26423,7 @@ static char _tramp_sentinel_1970;
 static void *stmt_305(void) { /* line 178 label:ppAS1 */
 /* line 178 */
 _L_ppAS1:;
+trampoline_stno(178);
 SnoVal _v1971 = concat_sv(aply("LT",(SnoVal[]){get(_ppI),get(_ppNg)},2),add(get(_ppI),vint(1)));
 int _ok1971 = !IS_FAIL(_v1971);
 if(_ok1971) {
@@ -25426,6 +26438,7 @@ static char _tramp_sentinel_1972;
 #define _tramp_next_1972 ((void*)&_tramp_sentinel_1972)
 static void *stmt_306(void) { /* line 179 */
 /* line 179 */
+trampoline_stno(179);
 SnoVal _v1973 = get(_ppI);
 int _ok1973 = !IS_FAIL(_v1973);
 if(_ok1973) {
@@ -25439,6 +26452,7 @@ static char _tramp_sentinel_1974;
 #define _tramp_next_1974 ((void*)&_tramp_sentinel_1974)
 static void *stmt_307(void) { /* line 180 */
 /* line 180 */
+trampoline_stno(180);
 SnoVal _v1975 = indx(get(_ppWArr),(SnoVal[]){get(_ppJ)},1);
 int _ok1975 = !IS_FAIL(_v1975);
 if(_ok1975) {
@@ -25453,6 +26467,7 @@ static char _tramp_sentinel_1976;
 static void *stmt_308(void) { /* line 181 label:ppAS2 */
 /* line 181 */
 _L_ppAS2:;
+trampoline_stno(181);
 SnoVal _v1977 = sub(get(_ppJ),vint(1));
 int _ok1977 = !IS_FAIL(_v1977);
 if(_ok1977) {
@@ -25466,6 +26481,7 @@ static char _tramp_sentinel_1978;
 #define _tramp_next_1978 ((void*)&_tramp_sentinel_1978)
 static void *stmt_309(void) { /* line 182 */
 /* line 182 */
+trampoline_stno(182);
 SnoVal _v1979 = aply("LT",(SnoVal[]){get(_ppJ1),vint(1)},2);
 int _ok1979 = !IS_FAIL(_v1979);
     if(_ok1979) return (void*)block__ppASins;
@@ -25476,6 +26492,7 @@ static char _tramp_sentinel_1980;
 #define _tramp_next_1980 ((void*)&_tramp_sentinel_1980)
 static void *stmt_310(void) { /* line 183 */
 /* line 183 */
+trampoline_stno(183);
 SnoVal _v1981 = aply("LT",(SnoVal[]){get(_ppKey),indx(get(_ppWArr),(SnoVal[]){get(_ppJ1)},1)},2);
 int _ok1981 = !IS_FAIL(_v1981);
     if(!_ok1981) return (void*)block__ppASins;
@@ -25486,6 +26503,7 @@ static char _tramp_sentinel_1982;
 #define _tramp_next_1982 ((void*)&_tramp_sentinel_1982)
 static void *stmt_311(void) { /* line 184 */
 /* line 184 */
+trampoline_stno(184);
 SnoVal _v1983 = indx(get(_ppWArr),(SnoVal[]){get(_ppJ1)},1);
 int _ok1983 = !IS_FAIL(_v1983);
 if(_ok1983) {
@@ -25498,6 +26516,7 @@ static char _tramp_sentinel_1984;
 #define _tramp_next_1984 ((void*)&_tramp_sentinel_1984)
 static void *stmt_312(void) { /* line 185 */
 /* line 185 */
+trampoline_stno(185);
 SnoVal _v1985 = get(_ppJ1);
 int _ok1985 = !IS_FAIL(_v1985);
 if(_ok1985) {
@@ -25512,6 +26531,7 @@ static char _tramp_sentinel_1986;
 static void *stmt_313(void) { /* line 186 label:ppASins */
 /* line 186 */
 _L_ppASins:;
+trampoline_stno(186);
 SnoVal _v1987 = get(_ppKey);
 int _ok1987 = !IS_FAIL(_v1987);
 if(_ok1987) {
@@ -25525,6 +26545,7 @@ static char _tramp_sentinel_1988;
 static void *stmt_314(void) { /* line 189 label:ppAutoCalc */
 /* line 189 */
 _L_ppAutoCalc:;
+trampoline_stno(189);
 SnoVal _v1989 = divyde(mul(get(_ppNg),vint(9)),vint(10));
 int _ok1989 = !IS_FAIL(_v1989);
 if(_ok1989) {
@@ -25538,6 +26559,7 @@ static char _tramp_sentinel_1990;
 #define _tramp_next_1990 ((void*)&_tramp_sentinel_1990)
 static void *stmt_315(void) { /* line 190 */
 /* line 190 */
+trampoline_stno(190);
 SnoVal _v1991 = aply("LT",(SnoVal[]){get(_ppP90i),vint(1)},2);
 int _ok1991 = !IS_FAIL(_v1991);
     if(!_ok1991) return (void*)block__ppAP90ok;
@@ -25548,6 +26570,7 @@ static char _tramp_sentinel_1992;
 #define _tramp_next_1992 ((void*)&_tramp_sentinel_1992)
 static void *stmt_316(void) { /* line 191 */
 /* line 191 */
+trampoline_stno(191);
 SnoVal _v1993 = vint(1);
 int _ok1993 = !IS_FAIL(_v1993);
 if(_ok1993) {
@@ -25562,6 +26585,7 @@ static char _tramp_sentinel_1994;
 static void *stmt_317(void) { /* line 192 label:ppAP90ok */
 /* line 192 */
 _L_ppAP90ok:;
+trampoline_stno(192);
 SnoVal _v1995 = indx(get(_ppWArr),(SnoVal[]){get(_ppP90i)},1);
 int _ok1995 = !IS_FAIL(_v1995);
 if(_ok1995) {
@@ -25575,6 +26599,7 @@ static char _tramp_sentinel_1996;
 #define _tramp_next_1996 ((void*)&_tramp_sentinel_1996)
 static void *stmt_318(void) { /* line 193 */
 /* line 193 */
+trampoline_stno(193);
 SnoVal _v1997 = aply("LT",(SnoVal[]){get(_ppP90),vint(20)},2);
 int _ok1997 = !IS_FAIL(_v1997);
     if(!_ok1997) return (void*)block__ppAscale;
@@ -25585,6 +26610,7 @@ static char _tramp_sentinel_1998;
 #define _tramp_next_1998 ((void*)&_tramp_sentinel_1998)
 static void *stmt_319(void) { /* line 194 */
 /* line 194 */
+trampoline_stno(194);
 SnoVal _v1999 = vint(20);
 int _ok1999 = !IS_FAIL(_v1999);
 if(_ok1999) {
@@ -25599,6 +26625,7 @@ static char _tramp_sentinel_2000;
 static void *stmt_320(void) { /* line 195 label:ppAscale */
 /* line 195 */
 _L_ppAscale:;
+trampoline_stno(195);
     return (void*)_tramp_next_2000;
 }
 
@@ -25606,6 +26633,7 @@ static char _tramp_sentinel_2001;
 #define _tramp_next_2001 ((void*)&_tramp_sentinel_2001)
 static void *stmt_321(void) { /* line 197 */
 /* line 197 */
+trampoline_stno(197);
 SnoVal _v2002 = add(get(_ppP90),vint(6));
 int _ok2002 = !IS_FAIL(_v2002);
 if(_ok2002) {
@@ -25618,6 +26646,7 @@ static char _tramp_sentinel_2003;
 #define _tramp_next_2003 ((void*)&_tramp_sentinel_2003)
 static void *stmt_322(void) { /* line 198 */
 /* line 198 */
+trampoline_stno(198);
 SnoVal _v2004 = aply("LT",(SnoVal[]){indx(get(_ppStop),(SnoVal[]){vint(4)},1),vint(40)},2);
 int _ok2004 = !IS_FAIL(_v2004);
     if(!_ok2004) return (void*)block__ppAs1;
@@ -25628,6 +26657,7 @@ static char _tramp_sentinel_2005;
 #define _tramp_next_2005 ((void*)&_tramp_sentinel_2005)
 static void *stmt_323(void) { /* line 199 */
 /* line 199 */
+trampoline_stno(199);
 SnoVal _v2006 = vint(40);
 int _ok2006 = !IS_FAIL(_v2006);
 if(_ok2006) {
@@ -25641,6 +26671,7 @@ static char _tramp_sentinel_2007;
 static void *stmt_324(void) { /* line 201 label:ppAs1 */
 /* line 201 */
 _L_ppAs1:;
+trampoline_stno(201);
 SnoVal _v2008 = add(vint(11),divyde(mul(sub(indx(get(_ppStop),(SnoVal[]){vint(4)},1),vint(40)),vint(8)),vint(70)));
 int _ok2008 = !IS_FAIL(_v2008);
 if(_ok2008) {
@@ -25653,6 +26684,7 @@ static char _tramp_sentinel_2009;
 #define _tramp_next_2009 ((void*)&_tramp_sentinel_2009)
 static void *stmt_325(void) { /* line 203 */
 /* line 203 */
+trampoline_stno(203);
 SnoVal _v2010 = add(indx(get(_ppStop),(SnoVal[]){vint(1)},1),vint(15));
 int _ok2010 = !IS_FAIL(_v2010);
 if(_ok2010) {
@@ -25665,6 +26697,7 @@ static char _tramp_sentinel_2011;
 #define _tramp_next_2011 ((void*)&_tramp_sentinel_2011)
 static void *stmt_326(void) { /* line 204 */
 /* line 204 */
+trampoline_stno(204);
 SnoVal _v2012 = add(indx(get(_ppStop),(SnoVal[]){vint(2)},1),vint(3));
 int _ok2012 = !IS_FAIL(_v2012);
 if(_ok2012) {
@@ -25677,6 +26710,7 @@ static char _tramp_sentinel_2013;
 #define _tramp_next_2013 ((void*)&_tramp_sentinel_2013)
 static void *stmt_327(void) { /* line 206 */
 /* line 206 */
+trampoline_stno(206);
 SnoVal _v2014 = add(vint(3),divyde(mul(sub(indx(get(_ppStop),(SnoVal[]){vint(4)},1),vint(40)),vint(4)),vint(70)));
 int _ok2014 = !IS_FAIL(_v2014);
 if(_ok2014) {
@@ -25690,6 +26724,7 @@ static char _tramp_sentinel_2015;
 #define _tramp_next_2015 ((void*)&_tramp_sentinel_2015)
 static void *stmt_328(void) { /* line 207 */
 /* line 207 */
+trampoline_stno(207);
 SnoVal _v2016 = sub(sub(indx(get(_ppStop),(SnoVal[]){vint(4)},1),indx(get(_ppStop),(SnoVal[]){vint(3)},1)),vint(5));
 int _ok2016 = !IS_FAIL(_v2016);
 if(_ok2016) {
@@ -25703,6 +26738,7 @@ static char _tramp_sentinel_2017;
 #define _tramp_next_2017 ((void*)&_tramp_sentinel_2017)
 static void *stmt_329(void) { /* line 208 */
 /* line 208 */
+trampoline_stno(208);
 SnoVal _v2018 = aply("LT",(SnoVal[]){get(_ppLgBump),vint(10)},2);
 int _ok2018 = !IS_FAIL(_v2018);
     if(!_ok2018) return (void*)block__ppAutoMsg;
@@ -25713,6 +26749,7 @@ static char _tramp_sentinel_2019;
 #define _tramp_next_2019 ((void*)&_tramp_sentinel_2019)
 static void *stmt_330(void) { /* line 209 */
 /* line 209 */
+trampoline_stno(209);
 SnoVal _v2020 = vint(10);
 int _ok2020 = !IS_FAIL(_v2020);
 if(_ok2020) {
@@ -25727,6 +26764,7 @@ static char _tramp_sentinel_2021;
 static void *stmt_331(void) { /* line 210 label:ppAutoMsg */
 /* line 210 */
 _L_ppAutoMsg:;
+trampoline_stno(210);
 SnoVal _v2022 = concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(strv("* --auto: n="),get(_ppNg)),strv(" p90=")),get(_ppP90)),strv(" s1=")),indx(get(_ppStop),(SnoVal[]){vint(1)},1)),strv(" s2=")),indx(get(_ppStop),(SnoVal[]){vint(2)},1)),strv(" s3=")),indx(get(_ppStop),(SnoVal[]){vint(3)},1)),strv(" s4=")),indx(get(_ppStop),(SnoVal[]){vint(4)},1)),strv(" smbump=")),get(_ppSmBump)),strv(" lgbump=")),get(_ppLgBump));
 int _ok2022 = !IS_FAIL(_v2022);
 if(_ok2022) {
@@ -25739,6 +26777,7 @@ static char _tramp_sentinel_2023;
 #define _tramp_next_2023 ((void*)&_tramp_sentinel_2023)
 static void *stmt_332(void) { /* line 216 */
 /* line 216 */
+trampoline_stno(216);
 SnoVal _v2024 = aply("input__",(SnoVal[]){var_get("INPUT"),vint(1),strv(""),get(_ppTmpFile)},4);
 int _ok2024 = !IS_FAIL(_v2024);
     return (void*)_tramp_next_2023;
@@ -25749,6 +26788,7 @@ static char _tramp_sentinel_2025;
 static void *stmt_333(void) { /* line 217 label:ppAutoSkip */
 /* line 217 */
 _L_ppAutoSkip:;
+trampoline_stno(217);
     return (void*)_tramp_next_2025;
 }
 
@@ -25756,6 +26796,7 @@ static char _tramp_sentinel_2026;
 #define _tramp_next_2026 ((void*)&_tramp_sentinel_2026)
 static void *stmt_334(void) { /* line 221 */
 /* line 221 */
+trampoline_stno(221);
 SnoVal _v2027 = pat_span(to_str(get(_digits)));
 int _ok2027 = !IS_FAIL(_v2027);
 if(_ok2027) {
@@ -25769,6 +26810,7 @@ static char _tramp_sentinel_2028;
 #define _tramp_next_2028 ((void*)&_tramp_sentinel_2028)
 static void *stmt_335(void) { /* line 222 */
 /* line 222 */
+trampoline_stno(222);
 SnoVal _v2029 = pat_cat(pat_cat(pat_lit("\""),pat_break(to_str(concat_sv(strv("\""),get(_nl))))),pat_lit("\""));
 int _ok2029 = !IS_FAIL(_v2029);
 if(_ok2029) {
@@ -25782,6 +26824,7 @@ static char _tramp_sentinel_2030;
 #define _tramp_next_2030 ((void*)&_tramp_sentinel_2030)
 static void *stmt_336(void) { /* line 223 */
 /* line 223 */
+trampoline_stno(223);
 SnoVal _v2031 = pat_cat(pat_cat(pat_lit("'"),pat_break(to_str(concat_sv(strv("'"),get(_nl))))),pat_lit("'"));
 int _ok2031 = !IS_FAIL(_v2031);
 if(_ok2031) {
@@ -25795,6 +26838,7 @@ static char _tramp_sentinel_2032;
 #define _tramp_next_2032 ((void*)&_tramp_sentinel_2032)
 static void *stmt_337(void) { /* line 224 */
 /* line 224 */
+trampoline_stno(224);
 SnoVal _v2033 = pat_alt(pat_ref("SQ"),pat_ref("DQ"));
 int _ok2033 = !IS_FAIL(_v2033);
 if(_ok2033) {
@@ -25808,6 +26852,7 @@ static char _tramp_sentinel_2034;
 #define _tramp_next_2034 ((void*)&_tramp_sentinel_2034)
 static void *stmt_338(void) { /* line 225 */
 /* line 225 */
+trampoline_stno(225);
 SnoVal _v2035 = pat_alt(pat_cat(pat_cat(pat_cat(pat_cat(pat_span(to_str(get(_digits))),pat_alt(pat_cat(pat_lit("."),pat_fence_p(pat_alt(pat_span(to_str(get(_digits))),pat_var("epsilon")))),pat_var("epsilon"))),pat_alt(pat_lit("E"),pat_lit("e"))),pat_alt(pat_alt(pat_lit("+"),pat_lit("-")),pat_var("epsilon"))),pat_span(to_str(get(_digits)))),pat_cat(pat_cat(pat_span(to_str(get(_digits))),pat_lit(".")),pat_fence_p(pat_alt(pat_span(to_str(get(_digits))),pat_var("epsilon")))));
 int _ok2035 = !IS_FAIL(_v2035);
 if(_ok2035) {
@@ -25821,6 +26866,7 @@ static char _tramp_sentinel_2036;
 #define _tramp_next_2036 ((void*)&_tramp_sentinel_2036)
 static void *stmt_339(void) { /* line 232 */
 /* line 232 */
+trampoline_stno(232);
 SnoVal _v2037 = pat_cat(pat_any(to_str(concat_sv(kw("UCASE"),kw("LCASE")))),pat_fence_p(pat_alt(pat_span(to_str(concat_sv(concat_sv(concat_sv(concat_sv(strv("."),get(_digits)),kw("UCASE")),strv("_")),kw("LCASE")))),pat_var("epsilon"))));
 int _ok2037 = !IS_FAIL(_v2037);
 if(_ok2037) {
@@ -25834,6 +26880,7 @@ static char _tramp_sentinel_2038;
 #define _tramp_next_2038 ((void*)&_tramp_sentinel_2038)
 static void *stmt_340(void) { /* line 234 */
 /* line 234 */
+trampoline_stno(234);
 SnoVal _v2039 = pat_imm(pat_span(to_str(concat_sv(concat_sv(concat_sv(concat_sv(strv("."),get(_digits)),kw("UCASE")),strv("_")),kw("LCASE")))),"?");
 int _ok2039 = !IS_FAIL(_v2039);
 if(_ok2039) {
@@ -25847,6 +26894,7 @@ static char _tramp_sentinel_2040;
 #define _tramp_next_2040 ((void*)&_tramp_sentinel_2040)
 static void *stmt_341(void) { /* line 236 */
 /* line 236 */
+trampoline_stno(236);
 SnoVal _v2041 = pat_imm(pat_span(to_str(concat_sv(concat_sv(concat_sv(concat_sv(strv("."),get(_digits)),kw("UCASE")),strv("_")),kw("LCASE")))),"?");
 int _ok2041 = !IS_FAIL(_v2041);
 if(_ok2041) {
@@ -25860,6 +26908,7 @@ static char _tramp_sentinel_2042;
 #define _tramp_next_2042 ((void*)&_tramp_sentinel_2042)
 static void *stmt_342(void) { /* line 238 */
 /* line 238 */
+trampoline_stno(238);
 SnoVal _v2043 = pat_imm(pat_span(to_str(concat_sv(concat_sv(concat_sv(concat_sv(strv("."),get(_digits)),kw("UCASE")),strv("_")),kw("LCASE")))),"?");
 int _ok2043 = !IS_FAIL(_v2043);
 if(_ok2043) {
@@ -25873,6 +26922,7 @@ static char _tramp_sentinel_2044;
 #define _tramp_next_2044 ((void*)&_tramp_sentinel_2044)
 static void *stmt_343(void) { /* line 240 */
 /* line 240 */
+trampoline_stno(240);
 SnoVal _v2045 = pat_cat(pat_lit("&"),pat_imm(pat_span(to_str(concat_sv(kw("UCASE"),kw("LCASE")))),"?"));
 int _ok2045 = !IS_FAIL(_v2045);
 if(_ok2045) {
@@ -25886,6 +26936,7 @@ static char _tramp_sentinel_2046;
 #define _tramp_next_2046 ((void*)&_tramp_sentinel_2046)
 static void *stmt_344(void) { /* line 241 */
 /* line 241 */
+trampoline_stno(241);
 SnoVal _v2047 = pat_cat(pat_lit("&"),pat_imm(pat_span(to_str(concat_sv(kw("UCASE"),kw("LCASE")))),"?"));
 int _ok2047 = !IS_FAIL(_v2047);
 if(_ok2047) {
@@ -25899,6 +26950,7 @@ static char _tramp_sentinel_2048;
 #define _tramp_next_2048 ((void*)&_tramp_sentinel_2048)
 static void *stmt_345(void) { /* line 243 */
 /* line 243 */
+trampoline_stno(243);
 SnoVal _v2049 = pat_alt(pat_ref("White"),pat_var("epsilon"));
 int _ok2049 = !IS_FAIL(_v2049);
 if(_ok2049) {
@@ -25912,6 +26964,7 @@ static char _tramp_sentinel_2050;
 #define _tramp_next_2050 ((void*)&_tramp_sentinel_2050)
 static void *stmt_346(void) { /* line 244 */
 /* line 244 */
+trampoline_stno(244);
 SnoVal _v2051 = pat_alt(pat_cat(pat_span(to_str(concat_sv(strv(" "),get(_tab)))),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_var("nl"),pat_alt(pat_lit("+"),pat_lit("."))),pat_fence_p(pat_alt(pat_span(to_str(concat_sv(strv(" "),get(_tab)))),pat_var("epsilon")))),pat_var("epsilon")))),pat_cat(pat_cat(pat_var("nl"),pat_alt(pat_lit("+"),pat_lit("."))),pat_fence_p(pat_alt(pat_span(to_str(concat_sv(strv(" "),get(_tab)))),pat_var("epsilon")))));
 int _ok2051 = !IS_FAIL(_v2051);
 if(_ok2051) {
@@ -25925,6 +26978,7 @@ static char _tramp_sentinel_2052;
 #define _tramp_next_2052 ((void*)&_tramp_sentinel_2052)
 static void *stmt_347(void) { /* line 249 */
 /* line 249 */
+trampoline_stno(249);
 SnoVal _v2053 = pat_cat(pat_cat(pat_alt(pat_pos(to_int(vint(0))),pat_lit(" ")),pat_deref(aply("upr",(SnoVal[]){get(_tx)},1))),pat_alt(pat_lit(" "),pat_rpos(to_int(vint(0)))));
 int _ok2053 = !IS_FAIL(_v2053);
 if(_ok2053) {
@@ -25938,6 +26992,7 @@ static char _tramp_sentinel_2054;
 #define _tramp_next_2054 ((void*)&_tramp_sentinel_2054)
 static void *stmt_348(void) { /* line 250 */
 /* line 250 */
+trampoline_stno(250);
 SnoVal _v2055 = strv("ABORT CONTINUE END FRETURN NRETURN RETURN SCONTINUE START");
 int _ok2055 = !IS_FAIL(_v2055);
 if(_ok2055) {
@@ -25951,6 +27006,7 @@ static char _tramp_sentinel_2056;
 #define _tramp_next_2056 ((void*)&_tramp_sentinel_2056)
 static void *stmt_349(void) { /* line 251 */
 /* line 251 */
+trampoline_stno(251);
 SnoVal _v2057 = strv("ABORT ARB BAL FAIL FENCE INPUT OUTPUT REM TERMINAL");
 int _ok2057 = !IS_FAIL(_v2057);
 if(_ok2057) {
@@ -25964,6 +27020,7 @@ static char _tramp_sentinel_2058;
 #define _tramp_next_2058 ((void*)&_tramp_sentinel_2058)
 static void *stmt_350(void) { /* line 252 */
 /* line 252 */
+trampoline_stno(252);
 SnoVal _v2059 = concat_sv(concat_sv(strv("ABORT ALPHABET ARB BAL FAIL FENCE FILE FNCLEVEL "),strv("LASTFILE LASTLINE LASTNO LCASE LINE REM RTNTYPE ")),strv("STCOUNT STNO SUCCEED UCASE"));
 int _ok2059 = !IS_FAIL(_v2059);
 if(_ok2059) {
@@ -25977,6 +27034,7 @@ static char _tramp_sentinel_2060;
 #define _tramp_next_2060 ((void*)&_tramp_sentinel_2060)
 static void *stmt_351(void) { /* line 255 */
 /* line 255 */
+trampoline_stno(255);
 SnoVal _v2061 = concat_sv(concat_sv(strv("ABEND ANCHOR CASE CODE COMPARE DUMP ERRLIMIT "),strv("ERRTEXT ERRTYPE FTRACE INPUT MAXLNGTH OUTPUT ")),strv("PROFILE STLIMIT TRACE TRIM FULLSCAN"));
 int _ok2061 = !IS_FAIL(_v2061);
 if(_ok2061) {
@@ -25990,6 +27048,7 @@ static char _tramp_sentinel_2062;
 #define _tramp_next_2062 ((void*)&_tramp_sentinel_2062)
 static void *stmt_352(void) { /* line 258 */
 /* line 258 */
+trampoline_stno(258);
 SnoVal _v2063 = concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(concat_sv(strv("ANY APPLY ARBNO ARG ARRAY ATAN BACKSPACE BREAK BREAKX "),strv("CHAR CHOP CLEAR CODE COLLECT CONVERT COPY COS DATA ")),strv("DATATYPE DATE DEFINE DETACH DIFFER DUMP DUPL EJECT ")),strv("ENDFILE EQ EVAL EXIT EXP FENCE FIELD GE GT HOST ")),strv("IDENT INPUT INTEGER ITEM LE LEN LEQ LGE LGT LLE ")),strv("LLT LN LNE LOAD LOCAL LPAD LT NE NOTANY OPSYN OUTPUT ")),strv("POS PROTOTYPE REMDR REPLACE REVERSE REWIND RPAD RPOS ")),strv("RSORT RTAB SET SETEXIT SIN SIZE SORT SPAN SQRT STOPTR ")),strv("SUBSTR TAB TABLE TAN TIME TRACE TRIM UNLOAD"));
 int _ok2063 = !IS_FAIL(_v2063);
 if(_ok2063) {
@@ -26003,6 +27062,7 @@ static char _tramp_sentinel_2064;
 #define _tramp_next_2064 ((void*)&_tramp_sentinel_2064)
 static void *stmt_353(void) { /* line 268 */
 /* line 268 */
+trampoline_stno(268);
 SnoVal _v2065 = pat_cat(pat_cat(pat_ref("White"),pat_lit("=")),pat_ref("White"));
 int _ok2065 = !IS_FAIL(_v2065);
 if(_ok2065) {
@@ -26015,6 +27075,7 @@ static char _tramp_sentinel_2066;
 #define _tramp_next_2066 ((void*)&_tramp_sentinel_2066)
 static void *stmt_354(void) { /* line 269 */
 /* line 269 */
+trampoline_stno(269);
 SnoVal _v2067 = pat_cat(pat_cat(pat_ref("White"),pat_lit("?")),pat_ref("White"));
 int _ok2067 = !IS_FAIL(_v2067);
 if(_ok2067) {
@@ -26027,6 +27088,7 @@ static char _tramp_sentinel_2068;
 #define _tramp_next_2068 ((void*)&_tramp_sentinel_2068)
 static void *stmt_355(void) { /* line 270 */
 /* line 270 */
+trampoline_stno(270);
 SnoVal _v2069 = pat_cat(pat_cat(pat_ref("White"),pat_lit("|")),pat_ref("White"));
 int _ok2069 = !IS_FAIL(_v2069);
 if(_ok2069) {
@@ -26039,6 +27101,7 @@ static char _tramp_sentinel_2070;
 #define _tramp_next_2070 ((void*)&_tramp_sentinel_2070)
 static void *stmt_356(void) { /* line 271 */
 /* line 271 */
+trampoline_stno(271);
 SnoVal _v2071 = pat_cat(pat_cat(pat_ref("White"),pat_lit("+")),pat_ref("White"));
 int _ok2071 = !IS_FAIL(_v2071);
 if(_ok2071) {
@@ -26051,6 +27114,7 @@ static char _tramp_sentinel_2072;
 #define _tramp_next_2072 ((void*)&_tramp_sentinel_2072)
 static void *stmt_357(void) { /* line 272 */
 /* line 272 */
+trampoline_stno(272);
 SnoVal _v2073 = pat_cat(pat_cat(pat_ref("White"),pat_lit("-")),pat_ref("White"));
 int _ok2073 = !IS_FAIL(_v2073);
 if(_ok2073) {
@@ -26063,6 +27127,7 @@ static char _tramp_sentinel_2074;
 #define _tramp_next_2074 ((void*)&_tramp_sentinel_2074)
 static void *stmt_358(void) { /* line 273 */
 /* line 273 */
+trampoline_stno(273);
 SnoVal _v2075 = pat_cat(pat_cat(pat_ref("White"),pat_lit("/")),pat_ref("White"));
 int _ok2075 = !IS_FAIL(_v2075);
 if(_ok2075) {
@@ -26075,6 +27140,7 @@ static char _tramp_sentinel_2076;
 #define _tramp_next_2076 ((void*)&_tramp_sentinel_2076)
 static void *stmt_359(void) { /* line 274 */
 /* line 274 */
+trampoline_stno(274);
 SnoVal _v2077 = pat_cat(pat_cat(pat_ref("White"),pat_lit("*")),pat_ref("White"));
 int _ok2077 = !IS_FAIL(_v2077);
 if(_ok2077) {
@@ -26087,6 +27153,7 @@ static char _tramp_sentinel_2078;
 #define _tramp_next_2078 ((void*)&_tramp_sentinel_2078)
 static void *stmt_360(void) { /* line 275 */
 /* line 275 */
+trampoline_stno(275);
 SnoVal _v2079 = pat_cat(pat_cat(pat_ref("White"),pat_lit("^")),pat_ref("White"));
 int _ok2079 = !IS_FAIL(_v2079);
 if(_ok2079) {
@@ -26099,6 +27166,7 @@ static char _tramp_sentinel_2080;
 #define _tramp_next_2080 ((void*)&_tramp_sentinel_2080)
 static void *stmt_361(void) { /* line 276 */
 /* line 276 */
+trampoline_stno(276);
 SnoVal _v2081 = pat_cat(pat_cat(pat_ref("White"),pat_lit("!")),pat_ref("White"));
 int _ok2081 = !IS_FAIL(_v2081);
 if(_ok2081) {
@@ -26111,6 +27179,7 @@ static char _tramp_sentinel_2082;
 #define _tramp_next_2082 ((void*)&_tramp_sentinel_2082)
 static void *stmt_362(void) { /* line 277 */
 /* line 277 */
+trampoline_stno(277);
 SnoVal _v2083 = pat_cat(pat_cat(pat_ref("White"),pat_lit("**")),pat_ref("White"));
 int _ok2083 = !IS_FAIL(_v2083);
 if(_ok2083) {
@@ -26123,6 +27192,7 @@ static char _tramp_sentinel_2084;
 #define _tramp_next_2084 ((void*)&_tramp_sentinel_2084)
 static void *stmt_363(void) { /* line 278 */
 /* line 278 */
+trampoline_stno(278);
 SnoVal _v2085 = pat_cat(pat_cat(pat_ref("White"),pat_lit("$")),pat_ref("White"));
 int _ok2085 = !IS_FAIL(_v2085);
 if(_ok2085) {
@@ -26135,6 +27205,7 @@ static char _tramp_sentinel_2086;
 #define _tramp_next_2086 ((void*)&_tramp_sentinel_2086)
 static void *stmt_364(void) { /* line 279 */
 /* line 279 */
+trampoline_stno(279);
 SnoVal _v2087 = pat_cat(pat_cat(pat_ref("White"),pat_lit(".")),pat_ref("White"));
 int _ok2087 = !IS_FAIL(_v2087);
 if(_ok2087) {
@@ -26147,6 +27218,7 @@ static char _tramp_sentinel_2088;
 #define _tramp_next_2088 ((void*)&_tramp_sentinel_2088)
 static void *stmt_365(void) { /* line 280 */
 /* line 280 */
+trampoline_stno(280);
 SnoVal _v2089 = pat_cat(pat_cat(pat_ref("White"),pat_lit("&")),pat_ref("White"));
 int _ok2089 = !IS_FAIL(_v2089);
 if(_ok2089) {
@@ -26159,6 +27231,7 @@ static char _tramp_sentinel_2090;
 #define _tramp_next_2090 ((void*)&_tramp_sentinel_2090)
 static void *stmt_366(void) { /* line 281 */
 /* line 281 */
+trampoline_stno(281);
 SnoVal _v2091 = pat_cat(pat_cat(pat_ref("White"),pat_lit("@")),pat_ref("White"));
 int _ok2091 = !IS_FAIL(_v2091);
 if(_ok2091) {
@@ -26171,6 +27244,7 @@ static char _tramp_sentinel_2092;
 #define _tramp_next_2092 ((void*)&_tramp_sentinel_2092)
 static void *stmt_367(void) { /* line 282 */
 /* line 282 */
+trampoline_stno(282);
 SnoVal _v2093 = pat_cat(pat_cat(pat_ref("White"),pat_lit("#")),pat_ref("White"));
 int _ok2093 = !IS_FAIL(_v2093);
 if(_ok2093) {
@@ -26183,6 +27257,7 @@ static char _tramp_sentinel_2094;
 #define _tramp_next_2094 ((void*)&_tramp_sentinel_2094)
 static void *stmt_368(void) { /* line 283 */
 /* line 283 */
+trampoline_stno(283);
 SnoVal _v2095 = pat_cat(pat_cat(pat_ref("White"),pat_lit("%")),pat_ref("White"));
 int _ok2095 = !IS_FAIL(_v2095);
 if(_ok2095) {
@@ -26195,6 +27270,7 @@ static char _tramp_sentinel_2096;
 #define _tramp_next_2096 ((void*)&_tramp_sentinel_2096)
 static void *stmt_369(void) { /* line 284 */
 /* line 284 */
+trampoline_stno(284);
 SnoVal _v2097 = pat_cat(pat_cat(pat_ref("White"),pat_lit("~")),pat_ref("White"));
 int _ok2097 = !IS_FAIL(_v2097);
 if(_ok2097) {
@@ -26207,6 +27283,7 @@ static char _tramp_sentinel_2098;
 #define _tramp_next_2098 ((void*)&_tramp_sentinel_2098)
 static void *stmt_370(void) { /* line 285 */
 /* line 285 */
+trampoline_stno(285);
 SnoVal _v2099 = pat_cat(pat_cat(pat_ref("Gray"),pat_lit(",")),pat_ref("Gray"));
 int _ok2099 = !IS_FAIL(_v2099);
 if(_ok2099) {
@@ -26219,6 +27296,7 @@ static char _tramp_sentinel_2100;
 #define _tramp_next_2100 ((void*)&_tramp_sentinel_2100)
 static void *stmt_371(void) { /* line 286 */
 /* line 286 */
+trampoline_stno(286);
 SnoVal _v2101 = pat_cat(pat_lit("("),pat_ref("Gray"));
 int _ok2101 = !IS_FAIL(_v2101);
 if(_ok2101) {
@@ -26231,6 +27309,7 @@ static char _tramp_sentinel_2102;
 #define _tramp_next_2102 ((void*)&_tramp_sentinel_2102)
 static void *stmt_372(void) { /* line 287 */
 /* line 287 */
+trampoline_stno(287);
 SnoVal _v2103 = pat_cat(pat_lit("["),pat_ref("Gray"));
 int _ok2103 = !IS_FAIL(_v2103);
 if(_ok2103) {
@@ -26243,6 +27322,7 @@ static char _tramp_sentinel_2104;
 #define _tramp_next_2104 ((void*)&_tramp_sentinel_2104)
 static void *stmt_373(void) { /* line 288 */
 /* line 288 */
+trampoline_stno(288);
 SnoVal _v2105 = pat_cat(pat_lit("<"),pat_ref("Gray"));
 int _ok2105 = !IS_FAIL(_v2105);
 if(_ok2105) {
@@ -26255,6 +27335,7 @@ static char _tramp_sentinel_2106;
 #define _tramp_next_2106 ((void*)&_tramp_sentinel_2106)
 static void *stmt_374(void) { /* line 289 */
 /* line 289 */
+trampoline_stno(289);
 SnoVal _v2107 = pat_cat(pat_ref("Gray"),pat_lit(")"));
 int _ok2107 = !IS_FAIL(_v2107);
 if(_ok2107) {
@@ -26267,6 +27348,7 @@ static char _tramp_sentinel_2108;
 #define _tramp_next_2108 ((void*)&_tramp_sentinel_2108)
 static void *stmt_375(void) { /* line 290 */
 /* line 290 */
+trampoline_stno(290);
 SnoVal _v2109 = pat_cat(pat_ref("Gray"),pat_lit("]"));
 int _ok2109 = !IS_FAIL(_v2109);
 if(_ok2109) {
@@ -26279,6 +27361,7 @@ static char _tramp_sentinel_2110;
 #define _tramp_next_2110 ((void*)&_tramp_sentinel_2110)
 static void *stmt_376(void) { /* line 291 */
 /* line 291 */
+trampoline_stno(291);
 SnoVal _v2111 = pat_cat(pat_ref("Gray"),pat_lit(">"));
 int _ok2111 = !IS_FAIL(_v2111);
 if(_ok2111) {
@@ -26291,6 +27374,7 @@ static char _tramp_sentinel_2112;
 #define _tramp_next_2112 ((void*)&_tramp_sentinel_2112)
 static void *stmt_377(void) { /* line 293 */
 /* line 293 */
+trampoline_stno(293);
 SnoVal _v2113 = pat_cat(pat_cat(pat_cat(pat_user_call("nPush",NULL,0),pat_ref("XList")),pat_user_call("reduce",(SnoVal[]){strv("'ExprList'"),strv("*(GT(nTop(), 1) nTop())")},2)),pat_user_call("nPop",NULL,0));
 int _ok2113 = !IS_FAIL(_v2113);
 if(_ok2113) {
@@ -26304,6 +27388,7 @@ static char _tramp_sentinel_2114;
 #define _tramp_next_2114 ((void*)&_tramp_sentinel_2114)
 static void *stmt_378(void) { /* line 297 */
 /* line 297 */
+trampoline_stno(297);
 SnoVal _v2115 = pat_cat(pat_cat(pat_user_call("nInc",NULL,0),pat_alt(pat_ref("Expr"),pat_cond(pat_var("epsilon"),"?"))),pat_fence_p(pat_alt(pat_cat(pat_deref(strv(",")),pat_ref("XList")),pat_var("epsilon"))));
 int _ok2115 = !IS_FAIL(_v2115);
 if(_ok2115) {
@@ -26317,6 +27402,7 @@ static char _tramp_sentinel_2116;
 #define _tramp_next_2116 ((void*)&_tramp_sentinel_2116)
 static void *stmt_379(void) { /* line 298 */
 /* line 298 */
+trampoline_stno(298);
 SnoVal _v2117 = pat_ref("Expr0");
 int _ok2117 = !IS_FAIL(_v2117);
 if(_ok2117) {
@@ -26330,6 +27416,7 @@ static char _tramp_sentinel_2118;
 #define _tramp_next_2118 ((void*)&_tramp_sentinel_2118)
 static void *stmt_380(void) { /* line 299 */
 /* line 299 */
+trampoline_stno(299);
 SnoVal _v2119 = pat_cat(pat_ref("Expr1"),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_deref(strv("=")),pat_ref("Expr0")),pat_user_call("reduce",(SnoVal[]){strv("'='"),vint(2)},2)),pat_var("epsilon"))));
 int _ok2119 = !IS_FAIL(_v2119);
 if(_ok2119) {
@@ -26343,6 +27430,7 @@ static char _tramp_sentinel_2120;
 #define _tramp_next_2120 ((void*)&_tramp_sentinel_2120)
 static void *stmt_381(void) { /* line 300 */
 /* line 300 */
+trampoline_stno(300);
 SnoVal _v2121 = pat_cat(pat_ref("Expr2"),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_deref(strv("?")),pat_ref("Expr1")),pat_user_call("reduce",(SnoVal[]){strv("'?'"),vint(2)},2)),pat_var("epsilon"))));
 int _ok2121 = !IS_FAIL(_v2121);
 if(_ok2121) {
@@ -26356,6 +27444,7 @@ static char _tramp_sentinel_2122;
 #define _tramp_next_2122 ((void*)&_tramp_sentinel_2122)
 static void *stmt_382(void) { /* line 301 */
 /* line 301 */
+trampoline_stno(301);
 SnoVal _v2123 = pat_cat(pat_ref("Expr3"),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_deref(strv("&")),pat_ref("Expr2")),pat_user_call("reduce",(SnoVal[]){strv("'&'"),vint(2)},2)),pat_var("epsilon"))));
 int _ok2123 = !IS_FAIL(_v2123);
 if(_ok2123) {
@@ -26369,6 +27458,7 @@ static char _tramp_sentinel_2124;
 #define _tramp_next_2124 ((void*)&_tramp_sentinel_2124)
 static void *stmt_383(void) { /* line 302 */
 /* line 302 */
+trampoline_stno(302);
 SnoVal _v2125 = pat_cat(pat_cat(pat_cat(pat_user_call("nPush",NULL,0),pat_ref("X3")),pat_user_call("reduce",(SnoVal[]){strv("'|'"),strv("*(GT(nTop(), 1) nTop())")},2)),pat_user_call("nPop",NULL,0));
 int _ok2125 = !IS_FAIL(_v2125);
 if(_ok2125) {
@@ -26382,6 +27472,7 @@ static char _tramp_sentinel_2126;
 #define _tramp_next_2126 ((void*)&_tramp_sentinel_2126)
 static void *stmt_384(void) { /* line 303 */
 /* line 303 */
+trampoline_stno(303);
 SnoVal _v2127 = pat_cat(pat_cat(pat_user_call("nInc",NULL,0),pat_ref("Expr4")),pat_fence_p(pat_alt(pat_cat(pat_deref(strv("|")),pat_ref("X3")),pat_var("epsilon"))));
 int _ok2127 = !IS_FAIL(_v2127);
 if(_ok2127) {
@@ -26395,6 +27486,7 @@ static char _tramp_sentinel_2128;
 #define _tramp_next_2128 ((void*)&_tramp_sentinel_2128)
 static void *stmt_385(void) { /* line 304 */
 /* line 304 */
+trampoline_stno(304);
 SnoVal _v2129 = pat_cat(pat_cat(pat_cat(pat_user_call("nPush",NULL,0),pat_ref("X4")),pat_user_call("reduce",(SnoVal[]){strv("'..'"),strv("*(GT(nTop(), 1) nTop())")},2)),pat_user_call("nPop",NULL,0));
 int _ok2129 = !IS_FAIL(_v2129);
 if(_ok2129) {
@@ -26408,6 +27500,7 @@ static char _tramp_sentinel_2130;
 #define _tramp_next_2130 ((void*)&_tramp_sentinel_2130)
 static void *stmt_386(void) { /* line 305 */
 /* line 305 */
+trampoline_stno(305);
 SnoVal _v2131 = pat_cat(pat_cat(pat_user_call("nInc",NULL,0),pat_ref("Expr5")),pat_fence_p(pat_alt(pat_cat(pat_ref("White"),pat_ref("X4")),pat_var("epsilon"))));
 int _ok2131 = !IS_FAIL(_v2131);
 if(_ok2131) {
@@ -26421,6 +27514,7 @@ static char _tramp_sentinel_2132;
 #define _tramp_next_2132 ((void*)&_tramp_sentinel_2132)
 static void *stmt_387(void) { /* line 306 */
 /* line 306 */
+trampoline_stno(306);
 SnoVal _v2133 = pat_cat(pat_ref("Expr6"),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_deref(strv("@")),pat_ref("Expr5")),pat_user_call("reduce",(SnoVal[]){strv("'@'"),vint(2)},2)),pat_var("epsilon"))));
 int _ok2133 = !IS_FAIL(_v2133);
 if(_ok2133) {
@@ -26434,6 +27528,7 @@ static char _tramp_sentinel_2134;
 #define _tramp_next_2134 ((void*)&_tramp_sentinel_2134)
 static void *stmt_388(void) { /* line 307 */
 /* line 307 */
+trampoline_stno(307);
 SnoVal _v2135 = pat_cat(pat_ref("Expr7"),pat_fence_p(pat_alt(pat_alt(pat_cat(pat_cat(pat_deref(strv("+")),pat_ref("Expr6")),pat_user_call("reduce",(SnoVal[]){strv("'+'"),vint(2)},2)),pat_cat(pat_cat(pat_deref(strv("-")),pat_ref("Expr6")),pat_user_call("reduce",(SnoVal[]){strv("'-'"),vint(2)},2))),pat_var("epsilon"))));
 int _ok2135 = !IS_FAIL(_v2135);
 if(_ok2135) {
@@ -26447,6 +27542,7 @@ static char _tramp_sentinel_2136;
 #define _tramp_next_2136 ((void*)&_tramp_sentinel_2136)
 static void *stmt_389(void) { /* line 311 */
 /* line 311 */
+trampoline_stno(311);
 SnoVal _v2137 = pat_cat(pat_ref("Expr8"),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_deref(strv("#")),pat_ref("Expr7")),pat_user_call("reduce",(SnoVal[]){strv("'#'"),vint(2)},2)),pat_var("epsilon"))));
 int _ok2137 = !IS_FAIL(_v2137);
 if(_ok2137) {
@@ -26460,6 +27556,7 @@ static char _tramp_sentinel_2138;
 #define _tramp_next_2138 ((void*)&_tramp_sentinel_2138)
 static void *stmt_390(void) { /* line 312 */
 /* line 312 */
+trampoline_stno(312);
 SnoVal _v2139 = pat_cat(pat_ref("Expr9"),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_deref(strv("/")),pat_ref("Expr8")),pat_user_call("reduce",(SnoVal[]){strv("'/'"),vint(2)},2)),pat_var("epsilon"))));
 int _ok2139 = !IS_FAIL(_v2139);
 if(_ok2139) {
@@ -26473,6 +27570,7 @@ static char _tramp_sentinel_2140;
 #define _tramp_next_2140 ((void*)&_tramp_sentinel_2140)
 static void *stmt_391(void) { /* line 313 */
 /* line 313 */
+trampoline_stno(313);
 SnoVal _v2141 = pat_cat(pat_ref("Expr10"),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_deref(strv("*")),pat_ref("Expr9")),pat_user_call("reduce",(SnoVal[]){strv("'*'"),vint(2)},2)),pat_var("epsilon"))));
 int _ok2141 = !IS_FAIL(_v2141);
 if(_ok2141) {
@@ -26486,6 +27584,7 @@ static char _tramp_sentinel_2142;
 #define _tramp_next_2142 ((void*)&_tramp_sentinel_2142)
 static void *stmt_392(void) { /* line 314 */
 /* line 314 */
+trampoline_stno(314);
 SnoVal _v2143 = pat_cat(pat_ref("Expr11"),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_deref(strv("%")),pat_ref("Expr10")),pat_user_call("reduce",(SnoVal[]){strv("'%'"),vint(2)},2)),pat_var("epsilon"))));
 int _ok2143 = !IS_FAIL(_v2143);
 if(_ok2143) {
@@ -26499,6 +27598,7 @@ static char _tramp_sentinel_2144;
 #define _tramp_next_2144 ((void*)&_tramp_sentinel_2144)
 static void *stmt_393(void) { /* line 315 */
 /* line 315 */
+trampoline_stno(315);
 SnoVal _v2145 = pat_cat(pat_ref("Expr12"),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_alt(pat_alt(pat_deref(strv("^")),pat_deref(strv("!"))),pat_deref(strv("**"))),pat_ref("Expr11")),pat_user_call("reduce",(SnoVal[]){strv("'^'"),vint(2)},2)),pat_var("epsilon"))));
 int _ok2145 = !IS_FAIL(_v2145);
 if(_ok2145) {
@@ -26512,6 +27612,7 @@ static char _tramp_sentinel_2146;
 #define _tramp_next_2146 ((void*)&_tramp_sentinel_2146)
 static void *stmt_394(void) { /* line 317 */
 /* line 317 */
+trampoline_stno(317);
 SnoVal _v2147 = pat_cat(pat_ref("Expr13"),pat_fence_p(pat_alt(pat_alt(pat_cat(pat_cat(pat_deref(strv("$")),pat_ref("Expr12")),pat_user_call("reduce",(SnoVal[]){strv("'$'"),vint(2)},2)),pat_cat(pat_cat(pat_deref(strv(".")),pat_ref("Expr12")),pat_user_call("reduce",(SnoVal[]){strv("'.'"),vint(2)},2))),pat_var("epsilon"))));
 int _ok2147 = !IS_FAIL(_v2147);
 if(_ok2147) {
@@ -26525,6 +27626,7 @@ static char _tramp_sentinel_2148;
 #define _tramp_next_2148 ((void*)&_tramp_sentinel_2148)
 static void *stmt_395(void) { /* line 323 */
 /* line 323 */
+trampoline_stno(323);
 SnoVal _v2149 = pat_cat(pat_ref("Expr14"),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_deref(strv("~")),pat_ref("Expr13")),pat_user_call("reduce",(SnoVal[]){strv("'~'"),vint(2)},2)),pat_var("epsilon"))));
 int _ok2149 = !IS_FAIL(_v2149);
 if(_ok2149) {
@@ -26538,6 +27640,7 @@ static char _tramp_sentinel_2150;
 #define _tramp_next_2150 ((void*)&_tramp_sentinel_2150)
 static void *stmt_396(void) { /* line 324 */
 /* line 324 */
+trampoline_stno(324);
 SnoVal _v2151 = pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_cat(pat_cat(pat_lit("@"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'@'"),vint(1)},2)),pat_cat(pat_cat(pat_lit("~"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'~'"),vint(1)},2))),pat_cat(pat_cat(pat_lit("?"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'?'"),vint(1)},2))),pat_cond(pat_ref("ProtKwd"),"?")),pat_cond(pat_ref("UnprotKwd"),"?")),pat_cat(pat_cat(pat_lit("&"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'&'"),vint(1)},2))),pat_cat(pat_cat(pat_lit("+"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'+'"),vint(1)},2))),pat_cat(pat_cat(pat_lit("-"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'-'"),vint(1)},2))),pat_cat(pat_cat(pat_lit("*"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'*'"),vint(1)},2))),pat_cat(pat_cat(pat_lit("$"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'$'"),vint(1)},2))),pat_cat(pat_cat(pat_lit("."),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'.'"),vint(1)},2))),pat_cat(pat_cat(pat_lit("!"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'!'"),vint(1)},2))),pat_cat(pat_cat(pat_lit("%"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'%'"),vint(1)},2))),pat_cat(pat_cat(pat_lit("/"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'/'"),vint(1)},2))),pat_cat(pat_cat(pat_lit("#"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'#'"),vint(1)},2))),pat_cat(pat_cat(pat_lit("="),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'='"),vint(1)},2))),pat_cat(pat_cat(pat_lit("|"),pat_ref("Expr14")),pat_user_call("reduce",(SnoVal[]){strv("'|'"),vint(1)},2))),pat_ref("Expr15"));
 int _ok2151 = !IS_FAIL(_v2151);
 if(_ok2151) {
@@ -26551,6 +27654,7 @@ static char _tramp_sentinel_2152;
 #define _tramp_next_2152 ((void*)&_tramp_sentinel_2152)
 static void *stmt_397(void) { /* line 342 */
 /* line 342 */
+trampoline_stno(342);
 SnoVal _v2153 = pat_cat(pat_ref("Expr17"),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_cat(pat_user_call("nPush",NULL,0),pat_ref("Expr16")),pat_user_call("reduce",(SnoVal[]){strv("'[]'"),strv("nTop() + 1")},2)),pat_user_call("nPop",NULL,0)),pat_var("epsilon"))));
 int _ok2153 = !IS_FAIL(_v2153);
 if(_ok2153) {
@@ -26564,6 +27668,7 @@ static char _tramp_sentinel_2154;
 #define _tramp_next_2154 ((void*)&_tramp_sentinel_2154)
 static void *stmt_398(void) { /* line 344 */
 /* line 344 */
+trampoline_stno(344);
 SnoVal _v2155 = pat_cat(pat_cat(pat_user_call("nInc",NULL,0),pat_alt(pat_cat(pat_deref(strv("[")),pat_imm(pat_ref("ExprList"),"?")),pat_cat(pat_deref(strv("<")),pat_imm(pat_ref("ExprList"),"?")))),pat_fence_p(pat_alt(pat_ref("Expr16"),pat_var("epsilon"))));
 int _ok2155 = !IS_FAIL(_v2155);
 if(_ok2155) {
@@ -26577,6 +27682,7 @@ static char _tramp_sentinel_2156;
 #define _tramp_next_2156 ((void*)&_tramp_sentinel_2156)
 static void *stmt_399(void) { /* line 347 */
 /* line 347 */
+trampoline_stno(347);
 SnoVal _v2157 = pat_fence_p(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_alt(pat_cat(pat_cat(pat_cat(pat_imm(pat_user_call("nPush",NULL,0),"?"),pat_ref("Expr")),pat_imm(pat_alt(pat_cat(pat_cat(pat_deref(strv(",")),pat_ref("XList")),pat_user_call("reduce",(SnoVal[]){strv("','"),strv("nTop() + 1")},2)),pat_cat(pat_var("epsilon"),pat_user_call("reduce",(SnoVal[]){strv("'()'"),vint(1)},2))),"?")),pat_user_call("nPop",NULL,0)),pat_cat(pat_cat(pat_imm(pat_cond(pat_ref("Function"),"?"),"?"),pat_imm(pat_ref("ExprList"),"?")),pat_user_call("reduce",(SnoVal[]){strv("'Call'"),vint(2)},2))),pat_cat(pat_cat(pat_imm(pat_cond(pat_ref("Id"),"?"),"?"),pat_imm(pat_ref("ExprList"),"?")),pat_user_call("reduce",(SnoVal[]){strv("'Call'"),vint(2)},2))),pat_cond(pat_ref("BuiltinVar"),"?")),pat_cond(pat_ref("SpecialNm"),"?")),pat_cond(pat_ref("Id"),"?")),pat_cond(pat_ref("String"),"?")),pat_cond(pat_ref("Real"),"?")),pat_cond(pat_ref("Integer"),"?")));
 int _ok2157 = !IS_FAIL(_v2157);
 if(_ok2157) {
@@ -26590,6 +27696,7 @@ static char _tramp_sentinel_2158;
 #define _tramp_next_2158 ((void*)&_tramp_sentinel_2158)
 static void *stmt_400(void) { /* line 366 */
 /* line 366 */
+trampoline_stno(366);
 SnoVal _v2159 = pat_cond(pat_alt(pat_lit("S"),pat_lit("s")),"?");
 int _ok2159 = !IS_FAIL(_v2159);
 if(_ok2159) {
@@ -26603,6 +27710,7 @@ static char _tramp_sentinel_2160;
 #define _tramp_next_2160 ((void*)&_tramp_sentinel_2160)
 static void *stmt_401(void) { /* line 367 */
 /* line 367 */
+trampoline_stno(367);
 SnoVal _v2161 = pat_cond(pat_alt(pat_lit("F"),pat_lit("f")),"?");
 int _ok2161 = !IS_FAIL(_v2161);
 if(_ok2161) {
@@ -26616,6 +27724,7 @@ static char _tramp_sentinel_2162;
 #define _tramp_next_2162 ((void*)&_tramp_sentinel_2162)
 static void *stmt_402(void) { /* line 368 */
 /* line 368 */
+trampoline_stno(368);
 SnoVal _v2163 = pat_alt(pat_ref("SGoto"),pat_ref("FGoto"));
 int _ok2163 = !IS_FAIL(_v2163);
 if(_ok2163) {
@@ -26629,6 +27738,7 @@ static char _tramp_sentinel_2164;
 #define _tramp_next_2164 ((void*)&_tramp_sentinel_2164)
 static void *stmt_403(void) { /* line 369 */
 /* line 369 */
+trampoline_stno(369);
 SnoVal _v2165 = pat_alt(pat_cat(pat_cond(pat_deref(strv("(")),"?"),pat_imm(pat_ref("Expr"),"?")),pat_cat(pat_cond(pat_deref(strv("<")),"?"),pat_imm(pat_ref("Expr"),"?")));
 int _ok2165 = !IS_FAIL(_v2165);
 if(_ok2165) {
@@ -26642,6 +27752,7 @@ static char _tramp_sentinel_2166;
 #define _tramp_next_2166 ((void*)&_tramp_sentinel_2166)
 static void *stmt_404(void) { /* line 371 */
 /* line 371 */
+trampoline_stno(371);
 SnoVal _v2167 = pat_cat(pat_cat(pat_cat(pat_ref("Gray"),pat_lit(":")),pat_ref("Gray")),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_ref("Target"),pat_user_call("reduce",(SnoVal[]){strv("*(':' Brackets)"),vint(1)},2)),pat_cond(pat_var("epsilon"),"?")),pat_cat(pat_cat(pat_cat(pat_ref("SorF"),pat_ref("Target")),pat_user_call("reduce",(SnoVal[]){strv("*(':' SorF Brackets)"),vint(1)},2)),pat_fence_p(pat_alt(pat_cat(pat_cat(pat_cat(pat_ref("Gray"),pat_ref("SorF")),pat_ref("Target")),pat_user_call("reduce",(SnoVal[]){strv("*(':' SorF Brackets)"),vint(1)},2)),pat_cond(pat_var("epsilon"),"?")))))));
 int _ok2167 = !IS_FAIL(_v2167);
 if(_ok2167) {
@@ -26655,6 +27766,7 @@ static char _tramp_sentinel_2168;
 #define _tramp_next_2168 ((void*)&_tramp_sentinel_2168)
 static void *stmt_405(void) { /* line 378 */
 /* line 378 */
+trampoline_stno(378);
 SnoVal _v2169 = pat_cat(pat_lit("-"),pat_break(to_str(concat_sv(get(_nl),strv(";")))));
 int _ok2169 = !IS_FAIL(_v2169);
 if(_ok2169) {
@@ -26668,6 +27780,7 @@ static char _tramp_sentinel_2170;
 #define _tramp_next_2170 ((void*)&_tramp_sentinel_2170)
 static void *stmt_406(void) { /* line 379 */
 /* line 379 */
+trampoline_stno(379);
 SnoVal _v2171 = pat_cat(pat_lit("*"),pat_break(to_str(get(_nl))));
 int _ok2171 = !IS_FAIL(_v2171);
 if(_ok2171) {
@@ -26681,6 +27794,7 @@ static char _tramp_sentinel_2172;
 #define _tramp_next_2172 ((void*)&_tramp_sentinel_2172)
 static void *stmt_407(void) { /* line 380 */
 /* line 380 */
+trampoline_stno(380);
 SnoVal _v2173 = pat_cond(pat_break(to_str(concat_sv(concat_sv(concat_sv(strv(" "),get(_tab)),get(_nl)),strv(";")))),"?");
 int _ok2173 = !IS_FAIL(_v2173);
 if(_ok2173) {
@@ -26694,6 +27808,7 @@ static char _tramp_sentinel_2174;
 #define _tramp_next_2174 ((void*)&_tramp_sentinel_2174)
 static void *stmt_408(void) { /* line 381 */
 /* line 381 */
+trampoline_stno(381);
 SnoVal _v2175 = pat_cat(pat_cat(pat_cat(pat_ref("Label"),pat_alt(pat_cat(pat_cat(pat_ref("White"),pat_ref("Expr14")),pat_fence_p(pat_alt(pat_alt(pat_cat(pat_cat(pat_cond(pat_var("epsilon"),"?"),pat_ref("White")),pat_alt(pat_cat(pat_cat(pat_cond(pat_lit("="),"?"),pat_ref("White")),pat_ref("Expr")),pat_cat(pat_cond(pat_lit("="),"?"),pat_cond(pat_var("epsilon"),"?")))),pat_cat(pat_cat(pat_alt(pat_deref(strv("?")),pat_ref("White")),pat_ref("Expr1")),pat_fence_p(pat_alt(pat_cat(pat_ref("White"),pat_alt(pat_cat(pat_cat(pat_cond(pat_lit("="),"?"),pat_ref("White")),pat_ref("Expr")),pat_cat(pat_cond(pat_lit("="),"?"),pat_cond(pat_var("epsilon"),"?")))),pat_cat(pat_cond(pat_var("epsilon"),"?"),pat_cond(pat_var("epsilon"),"?")))))),pat_cat(pat_cat(pat_cond(pat_var("epsilon"),"?"),pat_cond(pat_var("epsilon"),"?")),pat_cond(pat_var("epsilon"),"?"))))),pat_cat(pat_cat(pat_cat(pat_cond(pat_var("epsilon"),"?"),pat_cond(pat_var("epsilon"),"?")),pat_cond(pat_var("epsilon"),"?")),pat_cond(pat_var("epsilon"),"?")))),pat_fence_p(pat_alt(pat_ref("Goto"),pat_cat(pat_cond(pat_var("epsilon"),"?"),pat_cond(pat_var("epsilon"),"?"))))),pat_ref("Gray"));
 int _ok2175 = !IS_FAIL(_v2175);
 if(_ok2175) {
@@ -26707,6 +27822,7 @@ static char _tramp_sentinel_2176;
 #define _tramp_next_2176 ((void*)&_tramp_sentinel_2176)
 static void *stmt_409(void) { /* line 402 */
 /* line 402 */
+trampoline_stno(402);
 SnoVal _v2177 = pat_cat(pat_ref("Command"),pat_fence_p(pat_alt(pat_ref("Commands"),pat_var("epsilon"))));
 int _ok2177 = !IS_FAIL(_v2177);
 if(_ok2177) {
@@ -26720,6 +27836,7 @@ static char _tramp_sentinel_2178;
 #define _tramp_next_2178 ((void*)&_tramp_sentinel_2178)
 static void *stmt_410(void) { /* line 403 */
 /* line 403 */
+trampoline_stno(403);
 SnoVal _v2179 = pat_cat(pat_user_call("nInc",NULL,0),pat_fence_p(pat_alt(pat_alt(pat_cat(pat_cat(pat_cond(pat_ref("Comment"),"?"),pat_user_call("reduce",(SnoVal[]){strv("'Comment'"),vint(1)},2)),pat_var("nl")),pat_cat(pat_cat(pat_cond(pat_ref("Control"),"?"),pat_user_call("reduce",(SnoVal[]){strv("'Control'"),vint(1)},2)),pat_alt(pat_var("nl"),pat_lit(";")))),pat_cat(pat_cat(pat_ref("Stmt"),pat_user_call("reduce",(SnoVal[]){strv("'Stmt'"),vint(7)},2)),pat_alt(pat_var("nl"),pat_lit(";"))))));
 int _ok2179 = !IS_FAIL(_v2179);
 if(_ok2179) {
@@ -26733,6 +27850,7 @@ static char _tramp_sentinel_2180;
 #define _tramp_next_2180 ((void*)&_tramp_sentinel_2180)
 static void *stmt_411(void) { /* line 410 */
 /* line 410 */
+trampoline_stno(410);
 SnoVal _v2181 = pat_cat(pat_cat(pat_cat(pat_user_call("nPush",NULL,0),pat_arbno(var_as_pattern(pat_ref("Command")))),pat_user_call("reduce",(SnoVal[]){strv("'Parse'"),strv("nTop()")},2)),pat_user_call("nPop",NULL,0));
 int _ok2181 = !IS_FAIL(_v2181);
 if(_ok2181) {
@@ -26746,6 +27864,7 @@ static char _tramp_sentinel_2182;
 #define _tramp_next_2182 ((void*)&_tramp_sentinel_2182)
 static void *stmt_412(void) { /* line 415 */
 /* line 415 */
+trampoline_stno(415);
 SnoVal _v2183 = pat_cat(pat_cat(pat_cat(pat_cat(pat_user_call("nPush",NULL,0),pat_arbno(var_as_pattern(pat_ref("Command")))),pat_user_call("reduce",(SnoVal[]){strv("'Parse'"),strv("nTop()")},2)),pat_alt(pat_cat(pat_cat(pat_user_call("icase",(SnoVal[]){strv("END")},1),pat_alt(pat_cat(pat_cat(pat_lit(" "),pat_break(to_str(get(_nl)))),pat_var("nl")),pat_var("nl"))),pat_arbno(concat_sv(aply("BREAK",(SnoVal[]){get(_nl)},1),get(_nl)))),pat_var("epsilon"))),pat_user_call("nPop",NULL,0));
 int _ok2183 = !IS_FAIL(_v2183);
 if(_ok2183) {
@@ -26760,6 +27879,7 @@ static char _tramp_sentinel_2184;
 static void *stmt_413(void) { /* line 634 label:ppEnd */
 /* line 634 */
 _L_ppEnd:;
+trampoline_stno(634);
     return (void*)_tramp_next_2184;
 }
 
@@ -26768,6 +27888,7 @@ static char _tramp_sentinel_2185;
 static void *stmt_414(void) { /* line 735 label:ssEnd */
 /* line 735 */
 _L_ssEnd:;
+trampoline_stno(735);
     return (void*)_tramp_next_2185;
 }
 
@@ -26776,6 +27897,7 @@ static char _tramp_sentinel_2186;
 static void *stmt_415(void) { /* line 742 label:bVisitEnd */
 /* line 742 */
 _L_bVisitEnd:;
+trampoline_stno(742);
     return (void*)_tramp_next_2186;
 }
 
@@ -26783,6 +27905,7 @@ static char _tramp_sentinel_2187;
 #define _tramp_next_2187 ((void*)&_tramp_sentinel_2187)
 static void *stmt_416(void) { /* line 745 */
 /* line 745 */
+trampoline_stno(745);
 SnoVal _v2188 = get(_Refs);
 int _ok2188 = !IS_FAIL(_v2188);
     return (void*)_tramp_next_2187;
@@ -26793,6 +27916,7 @@ static char _tramp_sentinel_2189;
 static void *stmt_417(void) { /* line 774 label:refsEnd */
 /* line 774 */
 _L_refsEnd:;
+trampoline_stno(774);
     return (void*)_tramp_next_2189;
 }
 
@@ -26800,6 +27924,7 @@ static char _tramp_sentinel_2190;
 #define _tramp_next_2190 ((void*)&_tramp_sentinel_2190)
 static void *stmt_418(void) { /* line 781 */
 /* line 781 */
+trampoline_stno(781);
 SnoVal _v2191 = vint(0);
 int _ok2191 = !IS_FAIL(_v2191);
 if(_ok2191) {
@@ -26813,6 +27938,7 @@ static char _tramp_sentinel_2192;
 #define _tramp_next_2192 ((void*)&_tramp_sentinel_2192)
 static void *stmt_419(void) { /* line 782 */
 /* line 782 */
+trampoline_stno(782);
 SnoVal _v2193 = pat_alt(pat_span(to_str(concat_sv(strv(" "),get(_tab)))),pat_var("epsilon"));
 int _ok2193 = !IS_FAIL(_v2193);
 if(_ok2193) {
@@ -26827,6 +27953,7 @@ static char _tramp_sentinel_2194;
 static void *stmt_420(void) { /* line 783 label:main00 */
 /* line 783 */
 _L_main00:;
+trampoline_stno(783);
 SnoVal _v2195 = var_get("INPUT");
 int _ok2195 = !IS_FAIL(_v2195);
 if(_ok2195) {
@@ -26842,6 +27969,7 @@ static char _tramp_sentinel_2196;
 static void *stmt_421(void) { /* line 784 label:main01 */
 /* line 784 */
 _L_main01:;
+trampoline_stno(784);
 SnoVal _v2197 = get(_Src);
 int _ok2197 = !IS_FAIL(_v2197);
     return (void*)_tramp_next_2196;
@@ -26851,6 +27979,7 @@ static char _tramp_sentinel_2198;
 #define _tramp_next_2198 ((void*)&_tramp_sentinel_2198)
 static void *stmt_422(void) { /* line 785 */
 /* line 785 */
+trampoline_stno(785);
 /* byrd mtch u2199 */
 SnoVal _s2199 = get(_Line);
 const char *_subj2199 = to_str(_s2199);
@@ -26891,6 +28020,7 @@ static char _tramp_sentinel_2200;
 #define _tramp_next_2200 ((void*)&_tramp_sentinel_2200)
 static void *stmt_423(void) { /* line 786 */
 /* line 786 */
+trampoline_stno(786);
 SnoVal _v2201 = get(_Line);
 int _ok2201 = !IS_FAIL(_v2201);
 if(_ok2201) {
@@ -26904,6 +28034,7 @@ static char _tramp_sentinel_2202;
 static void *stmt_424(void) { /* line 787 label:main02 */
 /* line 787 */
 _L_main02:;
+trampoline_stno(787);
 SnoVal _v2203 = concat_sv(concat_sv(get(_Src),get(_Line)),get(_nl));
 int _ok2203 = !IS_FAIL(_v2203);
 if(_ok2203) {
@@ -26917,6 +28048,7 @@ static char _tramp_sentinel_2204;
 #define _tramp_next_2204 ((void*)&_tramp_sentinel_2204)
 static void *stmt_425(void) { /* line 788 */
 /* line 788 */
+trampoline_stno(788);
 SnoVal _v2205 = var_get("INPUT");
 int _ok2205 = !IS_FAIL(_v2205);
 if(_ok2205) {
@@ -26931,6 +28063,7 @@ static char _tramp_sentinel_2206;
 #define _tramp_next_2206 ((void*)&_tramp_sentinel_2206)
 static void *stmt_426(void) { /* line 789 */
 /* line 789 */
+trampoline_stno(789);
 /* byrd mtch u2207 */
 SnoVal _s2207 = get(_Line);
 const char *_subj2207 = to_str(_s2207);
@@ -26971,6 +28104,7 @@ static char _tramp_sentinel_2208;
 #define _tramp_next_2208 ((void*)&_tramp_sentinel_2208)
 static void *stmt_427(void) { /* line 790 */
 /* line 790 */
+trampoline_stno(790);
 /* byrd mtch u2209 */
 SnoVal _s2209 = get(_Src);
 const char *_subj2209 = to_str(_s2209);
@@ -27040,6 +28174,7 @@ static char _tramp_sentinel_2210;
 #define _tramp_next_2210 ((void*)&_tramp_sentinel_2210)
 static void *stmt_428(void) { /* line 791 */
 /* line 791 */
+trampoline_stno(791);
 SnoVal _v2211 = aply("DIFFER",(SnoVal[]){assign_expr(_sno,aply("Pop",NULL,0))},1);
 int _ok2211 = !IS_FAIL(_v2211);
     if(!_ok2211) return (void*)block__mainErr2;
@@ -27050,6 +28185,7 @@ static char _tramp_sentinel_2212;
 #define _tramp_next_2212 ((void*)&_tramp_sentinel_2212)
 static void *stmt_429(void) { /* line 792 */
 /* line 792 */
+trampoline_stno(792);
 SnoVal _v2213 = aply("pp",(SnoVal[]){get(_sno)},1);
 int _ok2213 = !IS_FAIL(_v2213);
     return (void*)block__main01;
@@ -27060,6 +28196,7 @@ static char _tramp_sentinel_2214;
 static void *stmt_430(void) { /* line 793 label:main05 */
 /* line 793 */
 _L_main05:;
+trampoline_stno(793);
 /* byrd mtch u2215 */
 SnoVal _s2215 = get(_Src);
 const char *_subj2215 = to_str(_s2215);
@@ -27129,6 +28266,7 @@ static char _tramp_sentinel_2216;
 #define _tramp_next_2216 ((void*)&_tramp_sentinel_2216)
 static void *stmt_431(void) { /* line 794 */
 /* line 794 */
+trampoline_stno(794);
 SnoVal _v2217 = aply("DIFFER",(SnoVal[]){assign_expr(_sno,aply("Pop",NULL,0))},1);
 int _ok2217 = !IS_FAIL(_v2217);
     if(!_ok2217) return (void*)block__mainErr2;
@@ -27139,6 +28277,7 @@ static char _tramp_sentinel_2218;
 #define _tramp_next_2218 ((void*)&_tramp_sentinel_2218)
 static void *stmt_432(void) { /* line 795 */
 /* line 795 */
+trampoline_stno(795);
 SnoVal _v2219 = aply("pp",(SnoVal[]){get(_sno)},1);
 int _ok2219 = !IS_FAIL(_v2219);
     return NULL;
@@ -27149,6 +28288,7 @@ static char _tramp_sentinel_2220;
 static void *stmt_433(void) { /* line 796 label:mainErr1 */
 /* line 796 */
 _L_mainErr1:;
+trampoline_stno(796);
 SnoVal _v2221 = strv("Parse Error");
 int _ok2221 = !IS_FAIL(_v2221);
 if(_ok2221) {
@@ -27161,6 +28301,7 @@ static char _tramp_sentinel_2222;
 #define _tramp_next_2222 ((void*)&_tramp_sentinel_2222)
 static void *stmt_434(void) { /* line 797 */
 /* line 797 */
+trampoline_stno(797);
 SnoVal _v2223 = get(_Src);
 int _ok2223 = !IS_FAIL(_v2223);
 if(_ok2223) {
@@ -27174,6 +28315,7 @@ static char _tramp_sentinel_2224;
 static void *stmt_435(void) { /* line 798 label:mainErr2 */
 /* line 798 */
 _L_mainErr2:;
+trampoline_stno(798);
 SnoVal _v2225 = strv("Internal Error");
 int _ok2225 = !IS_FAIL(_v2225);
 if(_ok2225) {
@@ -27186,6 +28328,7 @@ static char _tramp_sentinel_2226;
 #define _tramp_next_2226 ((void*)&_tramp_sentinel_2226)
 static void *stmt_436(void) { /* line 799 */
 /* line 799 */
+trampoline_stno(799);
 SnoVal _v2227 = get(_Src);
 int _ok2227 = !IS_FAIL(_v2227);
 if(_ok2227) {
@@ -28770,6 +29913,13 @@ int main(void) {
     define("bVisit(x,fnc)i", _sno_fn_bVisit);
     define("findRefs(x)n,v", _sno_fn_findRefs);
     define("refs(p)c,n,s,subj", _sno_fn_refs);
+
+    /* runtime globals */
+    var_set("nl",  aply("CHAR",(SnoVal[]){INT_VAL(10)},1));
+    var_set("tab", aply("CHAR",(SnoVal[]){INT_VAL(9)},1));
+    /* DATA types from tree.sno/stack.sno (fn-body-walk bug) */
+    aply("DATA",(SnoVal[]){STR_VAL("tree(t,v,n,c)")},1);
+    aply("DATA",(SnoVal[]){STR_VAL("link(next,value)")},1);
 
     trampoline_run(block_START);
     return 0;
