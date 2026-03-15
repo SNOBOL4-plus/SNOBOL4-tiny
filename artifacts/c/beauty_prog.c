@@ -10259,16 +10259,16 @@ typedef struct pat_Compiland_t {
     int64_t cat_r_559_α_cursors[64];
     DESCR_t cat_r_559_α_saved_stk;
     int64_t deref_561_saved_cur;
-    int64_t cat_l_567_α_saved_cursor;
-    int64_t cat_r_567_α_saved_cursor;
-    int64_t deref_568_saved_cursor;
+    int64_t cat_l_568_α_saved_cursor;
+    int64_t cat_r_568_α_saved_cursor;
     int64_t deref_569_saved_cursor;
+    int64_t deref_570_saved_cursor;
     int cat_r_563_α_depth;
     int64_t cat_r_563_α_cursors[64];
     DESCR_t cat_r_563_α_saved_stk;
-    int64_t cat_l_571_α_saved_cursor;
-    int64_t deref_572_saved_cursor;
+    int64_t cat_l_572_α_saved_cursor;
     int64_t deref_573_saved_cursor;
+    int64_t deref_574_saved_cursor;
     pat_Command_t *deref_561_z;
 } pat_Compiland_t;
 
@@ -10281,16 +10281,16 @@ static DESCR_t pat_Compiland(const char *_subj_np, int64_t _slen_np,
 #define cat_r_559_α_cursors z->cat_r_559_α_cursors
 #define cat_r_559_α_saved_stk z->cat_r_559_α_saved_stk
 #define deref_561_saved_cur z->deref_561_saved_cur
-#define cat_l_567_α_saved_cursor z->cat_l_567_α_saved_cursor
-#define cat_r_567_α_saved_cursor z->cat_r_567_α_saved_cursor
-#define deref_568_saved_cursor z->deref_568_saved_cursor
+#define cat_l_568_α_saved_cursor z->cat_l_568_α_saved_cursor
+#define cat_r_568_α_saved_cursor z->cat_r_568_α_saved_cursor
 #define deref_569_saved_cursor z->deref_569_saved_cursor
+#define deref_570_saved_cursor z->deref_570_saved_cursor
 #define cat_r_563_α_depth z->cat_r_563_α_depth
 #define cat_r_563_α_cursors z->cat_r_563_α_cursors
 #define cat_r_563_α_saved_stk z->cat_r_563_α_saved_stk
-#define cat_l_571_α_saved_cursor z->cat_l_571_α_saved_cursor
-#define deref_572_saved_cursor z->deref_572_saved_cursor
+#define cat_l_572_α_saved_cursor z->cat_l_572_α_saved_cursor
 #define deref_573_saved_cursor z->deref_573_saved_cursor
+#define deref_574_saved_cursor z->deref_574_saved_cursor
 #define deref_561_z z->deref_561_z
 
     if (_entry_np == 0) goto _Compiland_α;
@@ -10342,47 +10342,52 @@ cat_r_558_β: goto cat_l_558_β;
     alt_l_562_β:                                            goto cat_r_563_β;
     cat_l_563_α:                                            goto cat_l_564_α;
     cat_l_563_β:                                            goto cat_r_564_β;
-    cat_l_564_α:                                            goto cat_r_564_α;
+    cat_l_564_α:
+                  { DESCR_t _fcall_565_args[1];
+                    _fcall_565_args[0] = STRVAL("END");
+                    DESCR_t _fcall_565_r = APPLY_fn("icase", _fcall_565_args, 1);
+                    if (IS_FAIL_fn(_fcall_565_r)) goto alt_r_562_α; }
+                                                            goto cat_r_564_α;
     cat_l_564_β:                                            goto alt_r_562_α;
-    cat_r_564_α:                                            goto alt_l_565_α;
-    cat_r_564_β:                                            goto alt_r_565_β;
-    alt_l_565_α:                                            goto cat_l_566_α;
-    alt_l_565_β:                                            goto cat_r_566_β;
-    cat_l_566_α:                                            goto cat_l_567_α;
-    cat_l_566_β:                                            goto cat_r_567_β;
-    cat_l_567_α:
-                  if (_cur_np + 1 > _slen_np)               goto alt_r_565_α;
-                  if (_subj_np[_cur_np] != ' ')             goto alt_r_565_α;
-                  cat_l_567_α_saved_cursor = _cur_np; _cur_np += 1;
-                                                            goto cat_r_567_α;
-    cat_l_567_β:  _cur_np = cat_l_567_α_saved_cursor;       goto alt_r_565_α;
-    cat_r_567_α:
-                  cat_r_567_α_saved_cursor = _cur_np;
+    cat_r_564_α:                                            goto alt_l_566_α;
+    cat_r_564_β:                                            goto alt_r_566_β;
+    alt_l_566_α:                                            goto cat_l_567_α;
+    alt_l_566_β:                                            goto cat_r_567_β;
+    cat_l_567_α:                                            goto cat_l_568_α;
+    cat_l_567_β:                                            goto cat_r_568_β;
+    cat_l_568_α:
+                  if (_cur_np + 1 > _slen_np)               goto alt_r_566_α;
+                  if (_subj_np[_cur_np] != ' ')             goto alt_r_566_α;
+                  cat_l_568_α_saved_cursor = _cur_np; _cur_np += 1;
+                                                            goto cat_r_568_α;
+    cat_l_568_β:  _cur_np = cat_l_568_α_saved_cursor;       goto alt_r_566_α;
+    cat_r_568_α:
+                  cat_r_568_α_saved_cursor = _cur_np;
                   while (_cur_np < _slen_np && !strchr(VARVAL_fn(NV_GET_fn("nl")), _subj_np[_cur_np])) _cur_np++;
-                  if (_cur_np >= _slen_np) { _cur_np = cat_r_567_α_saved_cursor; goto cat_l_567_β; }
-                                                            goto cat_r_566_α;
-    cat_r_567_β:  _cur_np = cat_r_567_α_saved_cursor;       goto cat_l_567_β;
-cat_r_566_α: {
+                  if (_cur_np >= _slen_np) { _cur_np = cat_r_568_α_saved_cursor; goto cat_l_568_β; }
+                                                            goto cat_r_567_α;
+    cat_r_568_β:  _cur_np = cat_r_568_α_saved_cursor;       goto cat_l_568_β;
+cat_r_567_α: {
     DESCR_t _deref_pat = NV_GET_fn("nl");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto cat_l_566_β;
-    deref_568_saved_cursor = _cur_np;
-    _cur_np = (int64_t)_deref_new_cur;
-    goto cat_r_563_α;
-}
-cat_r_566_β:
-    _cur_np = deref_568_saved_cursor;
-    goto cat_l_566_β;
-alt_r_565_α: {
-    DESCR_t _deref_pat = NV_GET_fn("nl");
-    int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto cat_l_564_β;
+    if (_deref_new_cur < 0) goto cat_l_567_β;
     deref_569_saved_cursor = _cur_np;
     _cur_np = (int64_t)_deref_new_cur;
     goto cat_r_563_α;
 }
-alt_r_565_β:
+cat_r_567_β:
     _cur_np = deref_569_saved_cursor;
+    goto cat_l_567_β;
+alt_r_566_α: {
+    DESCR_t _deref_pat = NV_GET_fn("nl");
+    int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
+    if (_deref_new_cur < 0) goto cat_l_564_β;
+    deref_570_saved_cursor = _cur_np;
+    _cur_np = (int64_t)_deref_new_cur;
+    goto cat_r_563_α;
+}
+alt_r_566_β:
+    _cur_np = deref_570_saved_cursor;
     goto cat_l_564_β;
     cat_r_563_α:  cat_r_563_α_saved_stk = NV_GET_fn("@S"); cat_r_563_α_depth = -1;
                                                             goto cat_r_556_α;
@@ -10391,41 +10396,41 @@ alt_r_565_β:
                   if (!NHAS_FRAME_fn()) NPUSH_fn();
                   if (++cat_r_563_α_depth >= 64)            goto cat_l_563_β;
                   cat_r_563_α_cursors[cat_r_563_α_depth] = _cur_np;
-                                                            goto arbno_c_570_α;
+                                                            goto arbno_c_571_α;
     cat_r_563_α_child_ok:
                   cat_r_563_α_saved_stk = NV_GET_fn("@S");  goto cat_r_556_α;
     cat_r_563_α_child_fail:
                   _cur_np = cat_r_563_α_cursors[cat_r_563_α_depth]; cat_r_563_α_depth--;
                                                             goto cat_l_563_β;
-    arbno_c_570_α:                                          goto cat_l_571_α;
-    arbno_c_570_β:                                          goto cat_r_571_β;
-    cat_l_571_α:
-                  cat_l_571_α_saved_cursor = _cur_np;
+    arbno_c_571_α:                                          goto cat_l_572_α;
+    arbno_c_571_β:                                          goto cat_r_572_β;
+    cat_l_572_α:
+                  cat_l_572_α_saved_cursor = _cur_np;
                   while (_cur_np < _slen_np && !strchr(VARVAL_fn(NV_GET_fn("nl")), _subj_np[_cur_np])) _cur_np++;
-                  if (_cur_np >= _slen_np) { _cur_np = cat_l_571_α_saved_cursor; goto cat_r_563_α_child_fail; }
-                                                            goto cat_r_571_α;
-    cat_l_571_β:  _cur_np = cat_l_571_α_saved_cursor;       goto cat_r_563_α_child_fail;
-cat_r_571_α: {
+                  if (_cur_np >= _slen_np) { _cur_np = cat_l_572_α_saved_cursor; goto cat_r_563_α_child_fail; }
+                                                            goto cat_r_572_α;
+    cat_l_572_β:  _cur_np = cat_l_572_α_saved_cursor;       goto cat_r_563_α_child_fail;
+cat_r_572_α: {
     DESCR_t _deref_pat = NV_GET_fn("nl");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto cat_l_571_β;
-    deref_572_saved_cursor = _cur_np;
+    if (_deref_new_cur < 0) goto cat_l_572_β;
+    deref_573_saved_cursor = _cur_np;
     _cur_np = (int64_t)_deref_new_cur;
     goto cat_r_563_α_child_ok;
 }
-cat_r_571_β:
-    _cur_np = deref_572_saved_cursor;
-    goto cat_l_571_β;
+cat_r_572_β:
+    _cur_np = deref_573_saved_cursor;
+    goto cat_l_572_β;
 alt_r_562_α: {
     DESCR_t _deref_pat = NV_GET_fn("epsilon");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
     if (_deref_new_cur < 0) goto cat_l_557_β;
-    deref_573_saved_cursor = _cur_np;
+    deref_574_saved_cursor = _cur_np;
     _cur_np = (int64_t)_deref_new_cur;
     goto cat_r_556_α;
 }
 alt_r_562_β:
-    _cur_np = deref_573_saved_cursor;
+    _cur_np = deref_574_saved_cursor;
     goto cat_l_557_β;
     cat_r_556_α:  NPOP_fn();                                goto _Compiland_γ;
     cat_r_556_β:                                            goto cat_l_556_β;
@@ -10438,24 +10443,24 @@ alt_r_562_β:
 #undef cat_r_559_α_cursors
 #undef cat_r_559_α_saved_stk
 #undef deref_561_saved_cur
-#undef cat_l_567_α_saved_cursor
-#undef cat_r_567_α_saved_cursor
-#undef deref_568_saved_cursor
+#undef cat_l_568_α_saved_cursor
+#undef cat_r_568_α_saved_cursor
 #undef deref_569_saved_cursor
+#undef deref_570_saved_cursor
 #undef cat_r_563_α_depth
 #undef cat_r_563_α_cursors
 #undef cat_r_563_α_saved_stk
-#undef cat_l_571_α_saved_cursor
-#undef deref_572_saved_cursor
+#undef cat_l_572_α_saved_cursor
 #undef deref_573_saved_cursor
+#undef deref_574_saved_cursor
 #undef deref_561_z
 
 }
 
 typedef struct pat_Space_t {
-    int64_t alt_l_574_α_delta;
-    int64_t alt_l_574_α_start;
-    int64_t deref_575_saved_cursor;
+    int64_t alt_l_575_α_delta;
+    int64_t alt_l_575_α_start;
+    int64_t deref_576_saved_cursor;
 } pat_Space_t;
 
 static DESCR_t pat_Space(const char *_subj_np, int64_t _slen_np,
@@ -10463,43 +10468,43 @@ static DESCR_t pat_Space(const char *_subj_np, int64_t _slen_np,
     if (_entry_np == 0) { *_zz_np = calloc(1, sizeof(pat_Space_t)); }
     pat_Space_t *z = *_zz_np;
     int64_t _cur_np = *_cur_ptr_np;
-#define alt_l_574_α_delta z->alt_l_574_α_delta
-#define alt_l_574_α_start z->alt_l_574_α_start
-#define deref_575_saved_cursor z->deref_575_saved_cursor
+#define alt_l_575_α_delta z->alt_l_575_α_delta
+#define alt_l_575_α_start z->alt_l_575_α_start
+#define deref_576_saved_cursor z->deref_576_saved_cursor
 
     if (_entry_np == 0) goto _Space_α;
     if (_entry_np == 1) goto _Space_β;
     goto _Space_ω;
-    _Space_α:                                               goto alt_l_574_α;
-    _Space_β:                                               goto alt_r_574_β;
-    alt_l_574_α:
-                  alt_l_574_α_start = _cur_np;
+    _Space_α:                                               goto alt_l_575_α;
+    _Space_β:                                               goto alt_r_575_β;
+    alt_l_575_α:
+                  alt_l_575_α_start = _cur_np;
                   while (_cur_np < _slen_np && strchr(VARVAL_fn(CONCAT_fn(STRVAL(" "), STRVAL(VARVAL_fn(NV_GET_fn("tab"))))), _subj_np[_cur_np])) _cur_np++;
-                  alt_l_574_α_delta = _cur_np - alt_l_574_α_start;
-                  if (alt_l_574_α_delta == 0)               goto alt_r_574_α;
+                  alt_l_575_α_delta = _cur_np - alt_l_575_α_start;
+                  if (alt_l_575_α_delta == 0)               goto alt_r_575_α;
                                                             goto _Space_γ;
-    alt_l_574_β:
-                  if (alt_l_574_α_delta <= 1) { _cur_np = alt_l_574_α_start; goto alt_r_574_α; }
-                  alt_l_574_α_delta--; _cur_np--;           goto _Space_γ;
-alt_r_574_α: {
+    alt_l_575_β:
+                  if (alt_l_575_α_delta <= 1) { _cur_np = alt_l_575_α_start; goto alt_r_575_α; }
+                  alt_l_575_α_delta--; _cur_np--;           goto _Space_γ;
+alt_r_575_α: {
     DESCR_t _deref_pat = NV_GET_fn("epsilon");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
     if (_deref_new_cur < 0) goto _Space_ω;
-    deref_575_saved_cursor = _cur_np;
+    deref_576_saved_cursor = _cur_np;
     _cur_np = (int64_t)_deref_new_cur;
     goto _Space_γ;
 }
-alt_r_574_β:
-    _cur_np = deref_575_saved_cursor;
+alt_r_575_β:
+    _cur_np = deref_576_saved_cursor;
     goto _Space_ω;
     _Space_γ:;
         *_cur_ptr_np = _cur_np;
         return STRVAL("");
     _Space_ω:;
         return FAILDESCR;
-#undef alt_l_574_α_delta
-#undef alt_l_574_α_start
-#undef deref_575_saved_cursor
+#undef alt_l_575_α_delta
+#undef alt_l_575_α_start
+#undef deref_576_saved_cursor
 
 }
 
@@ -10688,27 +10693,27 @@ int64_t _mstart636 = 0;
 int _ok636 = 0;
 DESCR_t _stk_save_636 = NV_GET_fn("@S");
     /* === local storage === */
-int64_t cat_r_576_α_delta;
-int64_t cat_r_576_α_start;
+int64_t cat_r_577_α_delta;
+int64_t cat_r_577_α_start;
 
     goto _byrd_636_α;
 
 /* ===== pattern: _byrd_636 ===== */
-    _byrd_636_α:                                            goto cat_l_576_α;
-    _byrd_636_β:                                            goto cat_r_576_β;
-    cat_l_576_α:
+    _byrd_636_α:                                            goto cat_l_577_α;
+    _byrd_636_β:                                            goto cat_r_577_β;
+    cat_l_577_α:
                   if (_cur636 != 0)                         goto _byrd_636_fail;
-                                                            goto cat_r_576_α;
-    cat_l_576_β:                                            goto _byrd_636_fail;
-    cat_r_576_α:
-                  cat_r_576_α_start = _cur636;
+                                                            goto cat_r_577_α;
+    cat_l_577_β:                                            goto _byrd_636_fail;
+    cat_r_577_α:
+                  cat_r_577_α_start = _cur636;
                   while (_cur636 < _slen636 && strchr(" ", _subj636[_cur636])) _cur636++;
-                  cat_r_576_α_delta = _cur636 - cat_r_576_α_start;
-                  if (cat_r_576_α_delta == 0)               goto cat_l_576_β;
+                  cat_r_577_α_delta = _cur636 - cat_r_577_α_start;
+                  if (cat_r_577_α_delta == 0)               goto cat_l_577_β;
                                                             goto _byrd_636_ok;
-    cat_r_576_β:
-                  if (cat_r_576_α_delta <= 1) { _cur636 = cat_r_576_α_start; goto cat_l_576_β; }
-                  cat_r_576_α_delta--; _cur636--;           goto _byrd_636_ok;
+    cat_r_577_β:
+                  if (cat_r_577_α_delta <= 1) { _cur636 = cat_r_577_α_start; goto cat_l_577_β; }
+                  cat_r_577_α_delta--; _cur636--;           goto _byrd_636_ok;
     _byrd_636_ok:
                   _ok636 = 1;
 {
@@ -10759,35 +10764,35 @@ int64_t _mstart640 = 0;
 int _ok640 = 0;
 DESCR_t _stk_save_640 = NV_GET_fn("@S");
     /* === local storage === */
-int64_t cat_l_578_α_saved_cursor;
-int64_t deref_579_saved_cur;
-pat_ppTokPat_t *deref_579_z;
+int64_t cat_l_579_α_saved_cursor;
+int64_t deref_580_saved_cur;
+pat_ppTokPat_t *deref_580_z;
 
     goto _byrd_640_α;
 
 /* ===== pattern: _byrd_640 ===== */
-    _byrd_640_α:                                            goto cat_l_577_α;
-    _byrd_640_β:                                            goto cat_r_577_β;
-    cat_l_577_α:                                            goto cat_l_578_α;
-    cat_l_577_β:                                            goto cat_r_578_β;
-    cat_l_578_α:  cat_l_578_α_saved_cursor = _cur640;       goto cat_r_578_α;
-    cat_l_578_β:
-                  if (kw_anchor || cat_l_578_α_saved_cursor >= _slen640)
+    _byrd_640_α:                                            goto cat_l_578_α;
+    _byrd_640_β:                                            goto cat_r_578_β;
+    cat_l_578_α:                                            goto cat_l_579_α;
+    cat_l_578_β:                                            goto cat_r_579_β;
+    cat_l_579_α:  cat_l_579_α_saved_cursor = _cur640;       goto cat_r_579_α;
+    cat_l_579_β:
+                  if (kw_anchor || cat_l_579_α_saved_cursor >= _slen640)
                                                             goto _byrd_640_fail;
-                  cat_l_578_α_saved_cursor++; _cur640 = cat_l_578_α_saved_cursor;
-                                                            goto cat_r_578_α;
-    cat_r_578_α:  _mstart640 = _cur640;                     goto cat_r_577_α;
-    cat_r_578_β:                                            goto cat_l_578_β;
-cat_r_577_α: {
-    deref_579_saved_cur = _cur640;
-    DESCR_t _r_579 = pat_ppTokPat(_subj640, _slen640, &_cur640, &deref_579_z, 0);
-    if (IS_FAIL_fn(_r_579)) { _cur640 = deref_579_saved_cur; goto cat_l_577_β; }
+                  cat_l_579_α_saved_cursor++; _cur640 = cat_l_579_α_saved_cursor;
+                                                            goto cat_r_579_α;
+    cat_r_579_α:  _mstart640 = _cur640;                     goto cat_r_578_α;
+    cat_r_579_β:                                            goto cat_l_579_β;
+cat_r_578_α: {
+    deref_580_saved_cur = _cur640;
+    DESCR_t _r_580 = pat_ppTokPat(_subj640, _slen640, &_cur640, &deref_580_z, 0);
+    if (IS_FAIL_fn(_r_580)) { _cur640 = deref_580_saved_cur; goto cat_l_578_β; }
     goto _byrd_640_ok;
 }
-cat_r_577_β: {
-    _cur640 = deref_579_saved_cur;
-    DESCR_t _r_579_b = pat_ppTokPat(_subj640, _slen640, &_cur640, &deref_579_z, 1);
-    if (IS_FAIL_fn(_r_579_b)) { _cur640 = deref_579_saved_cur; goto cat_l_577_β; }
+cat_r_578_β: {
+    _cur640 = deref_580_saved_cur;
+    DESCR_t _r_580_b = pat_ppTokPat(_subj640, _slen640, &_cur640, &deref_580_z, 1);
+    if (IS_FAIL_fn(_r_580_b)) { _cur640 = deref_580_saved_cur; goto cat_l_578_β; }
     goto _byrd_640_ok;
 }
     _byrd_640_ok:
@@ -11662,23 +11667,23 @@ int64_t _mstart765 = 0;
 int _ok765 = 0;
 DESCR_t _stk_save_765 = NV_GET_fn("@S");
     /* === local storage === */
-int64_t cat_r_580_α_saved_cursor;
+int64_t cat_r_581_α_saved_cursor;
 
     goto _byrd_765_α;
 
 /* ===== pattern: _byrd_765 ===== */
-    _byrd_765_α:                                            goto cat_l_580_α;
-    _byrd_765_β:                                            goto cat_r_580_β;
-    cat_l_580_α:
+    _byrd_765_α:                                            goto cat_l_581_α;
+    _byrd_765_β:                                            goto cat_r_581_β;
+    cat_l_581_α:
                   if (_cur765 != 0)                         goto _byrd_765_fail;
-                                                            goto cat_r_580_α;
-    cat_l_580_β:                                            goto _byrd_765_fail;
-    cat_r_580_α:
-                  if (_cur765 >= _slen765)                  goto cat_l_580_β;
-                  if (!strchr("*-", _subj765[_cur765]))     goto cat_l_580_β;
-                  cat_r_580_α_saved_cursor = _cur765; _cur765++;
+                                                            goto cat_r_581_α;
+    cat_l_581_β:                                            goto _byrd_765_fail;
+    cat_r_581_α:
+                  if (_cur765 >= _slen765)                  goto cat_l_581_β;
+                  if (!strchr("*-", _subj765[_cur765]))     goto cat_l_581_β;
+                  cat_r_581_α_saved_cursor = _cur765; _cur765++;
                                                             goto _byrd_765_ok;
-    cat_r_580_β:  _cur765 = cat_r_580_α_saved_cursor;       goto cat_l_580_β;
+    cat_r_581_β:  _cur765 = cat_r_581_α_saved_cursor;       goto cat_l_581_β;
     _byrd_765_ok:
                   _ok765 = 1;
                                                             goto _byrd_765_done;
@@ -11704,23 +11709,23 @@ int64_t _mstart767 = 0;
 int _ok767 = 0;
 DESCR_t _stk_save_767 = NV_GET_fn("@S");
     /* === local storage === */
-int64_t cat_r_581_α_saved_cursor;
+int64_t cat_r_582_α_saved_cursor;
 
     goto _byrd_767_α;
 
 /* ===== pattern: _byrd_767 ===== */
-    _byrd_767_α:                                            goto cat_l_581_α;
-    _byrd_767_β:                                            goto cat_r_581_β;
-    cat_l_581_α:
+    _byrd_767_α:                                            goto cat_l_582_α;
+    _byrd_767_β:                                            goto cat_r_582_β;
+    cat_l_582_α:
                   if (_cur767 != 0)                         goto _byrd_767_fail;
-                                                            goto cat_r_581_α;
-    cat_l_581_β:                                            goto _byrd_767_fail;
-    cat_r_581_α:
-                  if (_cur767 >= _slen767)                  goto cat_l_581_β;
-                  if (!strchr("+.", _subj767[_cur767]))     goto cat_l_581_β;
-                  cat_r_581_α_saved_cursor = _cur767; _cur767++;
+                                                            goto cat_r_582_α;
+    cat_l_582_β:                                            goto _byrd_767_fail;
+    cat_r_582_α:
+                  if (_cur767 >= _slen767)                  goto cat_l_582_β;
+                  if (!strchr("+.", _subj767[_cur767]))     goto cat_l_582_β;
+                  cat_r_582_α_saved_cursor = _cur767; _cur767++;
                                                             goto _byrd_767_ok;
-    cat_r_581_β:  _cur767 = cat_r_581_α_saved_cursor;       goto cat_l_581_β;
+    cat_r_582_β:  _cur767 = cat_r_582_α_saved_cursor;       goto cat_l_582_β;
     _byrd_767_ok:
                   _ok767 = 1;
                                                             goto _byrd_767_done;
@@ -11757,35 +11762,35 @@ int64_t _mstart771 = 0;
 int _ok771 = 0;
 DESCR_t _stk_save_771 = NV_GET_fn("@S");
     /* === local storage === */
-int64_t cat_l_583_α_saved_cursor;
-int64_t deref_584_saved_cur;
-pat_ppGPat_t *deref_584_z;
+int64_t cat_l_584_α_saved_cursor;
+int64_t deref_585_saved_cur;
+pat_ppGPat_t *deref_585_z;
 
     goto _byrd_771_α;
 
 /* ===== pattern: _byrd_771 ===== */
-    _byrd_771_α:                                            goto cat_l_582_α;
-    _byrd_771_β:                                            goto cat_r_582_β;
-    cat_l_582_α:                                            goto cat_l_583_α;
-    cat_l_582_β:                                            goto cat_r_583_β;
-    cat_l_583_α:  cat_l_583_α_saved_cursor = _cur771;       goto cat_r_583_α;
-    cat_l_583_β:
-                  if (kw_anchor || cat_l_583_α_saved_cursor >= _slen771)
+    _byrd_771_α:                                            goto cat_l_583_α;
+    _byrd_771_β:                                            goto cat_r_583_β;
+    cat_l_583_α:                                            goto cat_l_584_α;
+    cat_l_583_β:                                            goto cat_r_584_β;
+    cat_l_584_α:  cat_l_584_α_saved_cursor = _cur771;       goto cat_r_584_α;
+    cat_l_584_β:
+                  if (kw_anchor || cat_l_584_α_saved_cursor >= _slen771)
                                                             goto _byrd_771_fail;
-                  cat_l_583_α_saved_cursor++; _cur771 = cat_l_583_α_saved_cursor;
-                                                            goto cat_r_583_α;
-    cat_r_583_α:  _mstart771 = _cur771;                     goto cat_r_582_α;
-    cat_r_583_β:                                            goto cat_l_583_β;
-cat_r_582_α: {
-    deref_584_saved_cur = _cur771;
-    DESCR_t _r_584 = pat_ppGPat(_subj771, _slen771, &_cur771, &deref_584_z, 0);
-    if (IS_FAIL_fn(_r_584)) { _cur771 = deref_584_saved_cur; goto cat_l_582_β; }
+                  cat_l_584_α_saved_cursor++; _cur771 = cat_l_584_α_saved_cursor;
+                                                            goto cat_r_584_α;
+    cat_r_584_α:  _mstart771 = _cur771;                     goto cat_r_583_α;
+    cat_r_584_β:                                            goto cat_l_584_β;
+cat_r_583_α: {
+    deref_585_saved_cur = _cur771;
+    DESCR_t _r_585 = pat_ppGPat(_subj771, _slen771, &_cur771, &deref_585_z, 0);
+    if (IS_FAIL_fn(_r_585)) { _cur771 = deref_585_saved_cur; goto cat_l_583_β; }
     goto _byrd_771_ok;
 }
-cat_r_582_β: {
-    _cur771 = deref_584_saved_cur;
-    DESCR_t _r_584_b = pat_ppGPat(_subj771, _slen771, &_cur771, &deref_584_z, 1);
-    if (IS_FAIL_fn(_r_584_b)) { _cur771 = deref_584_saved_cur; goto cat_l_582_β; }
+cat_r_583_β: {
+    _cur771 = deref_585_saved_cur;
+    DESCR_t _r_585_b = pat_ppGPat(_subj771, _slen771, &_cur771, &deref_585_z, 1);
+    if (IS_FAIL_fn(_r_585_b)) { _cur771 = deref_585_saved_cur; goto cat_l_583_β; }
     goto _byrd_771_ok;
 }
     _byrd_771_ok:
@@ -11827,35 +11832,35 @@ int64_t _mstart775 = 0;
 int _ok775 = 0;
 DESCR_t _stk_save_775 = NV_GET_fn("@S");
     /* === local storage === */
-int64_t cat_l_586_α_saved_cursor;
-int64_t deref_587_saved_cur;
-pat_ppTrimPat_t *deref_587_z;
+int64_t cat_l_587_α_saved_cursor;
+int64_t deref_588_saved_cur;
+pat_ppTrimPat_t *deref_588_z;
 
     goto _byrd_775_α;
 
 /* ===== pattern: _byrd_775 ===== */
-    _byrd_775_α:                                            goto cat_l_585_α;
-    _byrd_775_β:                                            goto cat_r_585_β;
-    cat_l_585_α:                                            goto cat_l_586_α;
-    cat_l_585_β:                                            goto cat_r_586_β;
-    cat_l_586_α:  cat_l_586_α_saved_cursor = _cur775;       goto cat_r_586_α;
-    cat_l_586_β:
-                  if (kw_anchor || cat_l_586_α_saved_cursor >= _slen775)
+    _byrd_775_α:                                            goto cat_l_586_α;
+    _byrd_775_β:                                            goto cat_r_586_β;
+    cat_l_586_α:                                            goto cat_l_587_α;
+    cat_l_586_β:                                            goto cat_r_587_β;
+    cat_l_587_α:  cat_l_587_α_saved_cursor = _cur775;       goto cat_r_587_α;
+    cat_l_587_β:
+                  if (kw_anchor || cat_l_587_α_saved_cursor >= _slen775)
                                                             goto _byrd_775_fail;
-                  cat_l_586_α_saved_cursor++; _cur775 = cat_l_586_α_saved_cursor;
-                                                            goto cat_r_586_α;
-    cat_r_586_α:  _mstart775 = _cur775;                     goto cat_r_585_α;
-    cat_r_586_β:                                            goto cat_l_586_β;
-cat_r_585_α: {
-    deref_587_saved_cur = _cur775;
-    DESCR_t _r_587 = pat_ppTrimPat(_subj775, _slen775, &_cur775, &deref_587_z, 0);
-    if (IS_FAIL_fn(_r_587)) { _cur775 = deref_587_saved_cur; goto cat_l_585_β; }
+                  cat_l_587_α_saved_cursor++; _cur775 = cat_l_587_α_saved_cursor;
+                                                            goto cat_r_587_α;
+    cat_r_587_α:  _mstart775 = _cur775;                     goto cat_r_586_α;
+    cat_r_587_β:                                            goto cat_l_587_β;
+cat_r_586_α: {
+    deref_588_saved_cur = _cur775;
+    DESCR_t _r_588 = pat_ppTrimPat(_subj775, _slen775, &_cur775, &deref_588_z, 0);
+    if (IS_FAIL_fn(_r_588)) { _cur775 = deref_588_saved_cur; goto cat_l_586_β; }
     goto _byrd_775_ok;
 }
-cat_r_585_β: {
-    _cur775 = deref_587_saved_cur;
-    DESCR_t _r_587_b = pat_ppTrimPat(_subj775, _slen775, &_cur775, &deref_587_z, 1);
-    if (IS_FAIL_fn(_r_587_b)) { _cur775 = deref_587_saved_cur; goto cat_l_585_β; }
+cat_r_586_β: {
+    _cur775 = deref_588_saved_cur;
+    DESCR_t _r_588_b = pat_ppTrimPat(_subj775, _slen775, &_cur775, &deref_588_z, 1);
+    if (IS_FAIL_fn(_r_588_b)) { _cur775 = deref_588_saved_cur; goto cat_l_586_β; }
     goto _byrd_775_ok;
 }
     _byrd_775_ok:
@@ -14352,23 +14357,23 @@ int64_t _mstart1021 = 0;
 int _ok1021 = 0;
 DESCR_t _stk_save_1021 = NV_GET_fn("@S");
     /* === local storage === */
-int64_t cat_r_588_α_saved_cursor;
+int64_t cat_r_589_α_saved_cursor;
 
     goto _byrd_1021_α;
 
 /* ===== pattern: _byrd_1021 ===== */
-    _byrd_1021_α:                                           goto cat_l_588_α;
-    _byrd_1021_β:                                           goto cat_r_588_β;
-    cat_l_588_α:
+    _byrd_1021_α:                                           goto cat_l_589_α;
+    _byrd_1021_β:                                           goto cat_r_589_β;
+    cat_l_589_α:
                   if (_cur1021 != 0)                        goto _byrd_1021_fail;
-                                                            goto cat_r_588_α;
-    cat_l_588_β:                                            goto _byrd_1021_fail;
-    cat_r_588_α:
-                  if (_cur1021 >= _slen1021)                goto cat_l_588_β;
-                  if (!strchr("*-", _subj1021[_cur1021]))   goto cat_l_588_β;
-                  cat_r_588_α_saved_cursor = _cur1021; _cur1021++;
+                                                            goto cat_r_589_α;
+    cat_l_589_β:                                            goto _byrd_1021_fail;
+    cat_r_589_α:
+                  if (_cur1021 >= _slen1021)                goto cat_l_589_β;
+                  if (!strchr("*-", _subj1021[_cur1021]))   goto cat_l_589_β;
+                  cat_r_589_α_saved_cursor = _cur1021; _cur1021++;
                                                             goto _byrd_1021_ok;
-    cat_r_588_β:  _cur1021 = cat_r_588_α_saved_cursor;      goto cat_l_588_β;
+    cat_r_589_β:  _cur1021 = cat_r_589_α_saved_cursor;      goto cat_l_589_β;
     _byrd_1021_ok:
                   _ok1021 = 1;
                                                             goto _byrd_1021_done;
@@ -14437,23 +14442,23 @@ int64_t _mstart1029 = 0;
 int _ok1029 = 0;
 DESCR_t _stk_save_1029 = NV_GET_fn("@S");
     /* === local storage === */
-int64_t cat_r_589_α_saved_cursor;
+int64_t cat_r_590_α_saved_cursor;
 
     goto _byrd_1029_α;
 
 /* ===== pattern: _byrd_1029 ===== */
-    _byrd_1029_α:                                           goto cat_l_589_α;
-    _byrd_1029_β:                                           goto cat_r_589_β;
-    cat_l_589_α:
+    _byrd_1029_α:                                           goto cat_l_590_α;
+    _byrd_1029_β:                                           goto cat_r_590_β;
+    cat_l_590_α:
                   if (_cur1029 != 0)                        goto _byrd_1029_fail;
-                                                            goto cat_r_589_α;
-    cat_l_589_β:                                            goto _byrd_1029_fail;
-    cat_r_589_α:
-                  if (_cur1029 >= _slen1029)                goto cat_l_589_β;
-                  if (!strchr(".+", _subj1029[_cur1029]))   goto cat_l_589_β;
-                  cat_r_589_α_saved_cursor = _cur1029; _cur1029++;
+                                                            goto cat_r_590_α;
+    cat_l_590_β:                                            goto _byrd_1029_fail;
+    cat_r_590_α:
+                  if (_cur1029 >= _slen1029)                goto cat_l_590_β;
+                  if (!strchr(".+", _subj1029[_cur1029]))   goto cat_l_590_β;
+                  cat_r_590_α_saved_cursor = _cur1029; _cur1029++;
                                                             goto _byrd_1029_ok;
-    cat_r_589_β:  _cur1029 = cat_r_589_α_saved_cursor;      goto cat_l_589_β;
+    cat_r_590_β:  _cur1029 = cat_r_590_α_saved_cursor;      goto cat_l_590_β;
     _byrd_1029_ok:
                   _ok1029 = 1;
                                                             goto _byrd_1029_done;
@@ -14479,52 +14484,52 @@ int64_t _mstart1031 = 0;
 int _ok1031 = 0;
 DESCR_t _stk_save_1031 = NV_GET_fn("@S");
     /* === local storage === */
-int64_t deref_593_saved_cur;
-pat_Parse_t *deref_593_z;
 int64_t deref_594_saved_cur;
-pat_Space_t *deref_594_z;
+pat_Parse_t *deref_594_z;
+int64_t deref_595_saved_cur;
+pat_Space_t *deref_595_z;
 
     goto _byrd_1031_α;
 
 /* ===== pattern: _byrd_1031 ===== */
-    _byrd_1031_α:                                           goto cat_l_590_α;
-    _byrd_1031_β:                                           goto cat_r_590_β;
-    cat_l_590_α:                                            goto cat_l_591_α;
-    cat_l_590_β:                                            goto cat_r_591_β;
+    _byrd_1031_α:                                           goto cat_l_591_α;
+    _byrd_1031_β:                                           goto cat_r_591_β;
     cat_l_591_α:                                            goto cat_l_592_α;
     cat_l_591_β:                                            goto cat_r_592_β;
-    cat_l_592_α:
+    cat_l_592_α:                                            goto cat_l_593_α;
+    cat_l_592_β:                                            goto cat_r_593_β;
+    cat_l_593_α:
                   if (_cur1031 != 0)                        goto _byrd_1031_fail;
-                                                            goto cat_r_592_α;
-    cat_l_592_β:                                            goto _byrd_1031_fail;
+                                                            goto cat_r_593_α;
+    cat_l_593_β:                                            goto _byrd_1031_fail;
+cat_r_593_α: {
+    deref_594_saved_cur = _cur1031;
+    DESCR_t _r_594 = pat_Parse(_subj1031, _slen1031, &_cur1031, &deref_594_z, 0);
+    if (IS_FAIL_fn(_r_594)) { _cur1031 = deref_594_saved_cur; goto cat_l_593_β; }
+    goto cat_r_592_α;
+}
+cat_r_593_β: {
+    _cur1031 = deref_594_saved_cur;
+    DESCR_t _r_594_b = pat_Parse(_subj1031, _slen1031, &_cur1031, &deref_594_z, 1);
+    if (IS_FAIL_fn(_r_594_b)) { _cur1031 = deref_594_saved_cur; goto cat_l_593_β; }
+    goto cat_r_592_α;
+}
 cat_r_592_α: {
-    deref_593_saved_cur = _cur1031;
-    DESCR_t _r_593 = pat_Parse(_subj1031, _slen1031, &_cur1031, &deref_593_z, 0);
-    if (IS_FAIL_fn(_r_593)) { _cur1031 = deref_593_saved_cur; goto cat_l_592_β; }
+    deref_595_saved_cur = _cur1031;
+    DESCR_t _r_595 = pat_Space(_subj1031, _slen1031, &_cur1031, &deref_595_z, 0);
+    if (IS_FAIL_fn(_r_595)) { _cur1031 = deref_595_saved_cur; goto cat_l_592_β; }
     goto cat_r_591_α;
 }
 cat_r_592_β: {
-    _cur1031 = deref_593_saved_cur;
-    DESCR_t _r_593_b = pat_Parse(_subj1031, _slen1031, &_cur1031, &deref_593_z, 1);
-    if (IS_FAIL_fn(_r_593_b)) { _cur1031 = deref_593_saved_cur; goto cat_l_592_β; }
+    _cur1031 = deref_595_saved_cur;
+    DESCR_t _r_595_b = pat_Space(_subj1031, _slen1031, &_cur1031, &deref_595_z, 1);
+    if (IS_FAIL_fn(_r_595_b)) { _cur1031 = deref_595_saved_cur; goto cat_l_592_β; }
     goto cat_r_591_α;
 }
-cat_r_591_α: {
-    deref_594_saved_cur = _cur1031;
-    DESCR_t _r_594 = pat_Space(_subj1031, _slen1031, &_cur1031, &deref_594_z, 0);
-    if (IS_FAIL_fn(_r_594)) { _cur1031 = deref_594_saved_cur; goto cat_l_591_β; }
-    goto cat_r_590_α;
-}
-cat_r_591_β: {
-    _cur1031 = deref_594_saved_cur;
-    DESCR_t _r_594_b = pat_Space(_subj1031, _slen1031, &_cur1031, &deref_594_z, 1);
-    if (IS_FAIL_fn(_r_594_b)) { _cur1031 = deref_594_saved_cur; goto cat_l_591_β; }
-    goto cat_r_590_α;
-}
-    cat_r_590_α:
-                  if (_cur1031 != _slen1031 - 0)            goto cat_l_590_β;
+    cat_r_591_α:
+                  if (_cur1031 != _slen1031 - 0)            goto cat_l_591_β;
                                                             goto _byrd_1031_ok;
-    cat_r_590_β:                                            goto cat_l_590_β;
+    cat_r_591_β:                                            goto cat_l_591_β;
     _byrd_1031_ok:
                   _ok1031 = 1;
                                                             goto _byrd_1031_done;
@@ -14572,52 +14577,52 @@ int64_t _mstart1037 = 0;
 int _ok1037 = 0;
 DESCR_t _stk_save_1037 = NV_GET_fn("@S");
     /* === local storage === */
-int64_t deref_598_saved_cur;
-pat_Parse_t *deref_598_z;
 int64_t deref_599_saved_cur;
-pat_Space_t *deref_599_z;
+pat_Parse_t *deref_599_z;
+int64_t deref_600_saved_cur;
+pat_Space_t *deref_600_z;
 
     goto _byrd_1037_α;
 
 /* ===== pattern: _byrd_1037 ===== */
-    _byrd_1037_α:                                           goto cat_l_595_α;
-    _byrd_1037_β:                                           goto cat_r_595_β;
-    cat_l_595_α:                                            goto cat_l_596_α;
-    cat_l_595_β:                                            goto cat_r_596_β;
+    _byrd_1037_α:                                           goto cat_l_596_α;
+    _byrd_1037_β:                                           goto cat_r_596_β;
     cat_l_596_α:                                            goto cat_l_597_α;
     cat_l_596_β:                                            goto cat_r_597_β;
-    cat_l_597_α:
+    cat_l_597_α:                                            goto cat_l_598_α;
+    cat_l_597_β:                                            goto cat_r_598_β;
+    cat_l_598_α:
                   if (_cur1037 != 0)                        goto _byrd_1037_fail;
-                                                            goto cat_r_597_α;
-    cat_l_597_β:                                            goto _byrd_1037_fail;
+                                                            goto cat_r_598_α;
+    cat_l_598_β:                                            goto _byrd_1037_fail;
+cat_r_598_α: {
+    deref_599_saved_cur = _cur1037;
+    DESCR_t _r_599 = pat_Parse(_subj1037, _slen1037, &_cur1037, &deref_599_z, 0);
+    if (IS_FAIL_fn(_r_599)) { _cur1037 = deref_599_saved_cur; goto cat_l_598_β; }
+    goto cat_r_597_α;
+}
+cat_r_598_β: {
+    _cur1037 = deref_599_saved_cur;
+    DESCR_t _r_599_b = pat_Parse(_subj1037, _slen1037, &_cur1037, &deref_599_z, 1);
+    if (IS_FAIL_fn(_r_599_b)) { _cur1037 = deref_599_saved_cur; goto cat_l_598_β; }
+    goto cat_r_597_α;
+}
 cat_r_597_α: {
-    deref_598_saved_cur = _cur1037;
-    DESCR_t _r_598 = pat_Parse(_subj1037, _slen1037, &_cur1037, &deref_598_z, 0);
-    if (IS_FAIL_fn(_r_598)) { _cur1037 = deref_598_saved_cur; goto cat_l_597_β; }
+    deref_600_saved_cur = _cur1037;
+    DESCR_t _r_600 = pat_Space(_subj1037, _slen1037, &_cur1037, &deref_600_z, 0);
+    if (IS_FAIL_fn(_r_600)) { _cur1037 = deref_600_saved_cur; goto cat_l_597_β; }
     goto cat_r_596_α;
 }
 cat_r_597_β: {
-    _cur1037 = deref_598_saved_cur;
-    DESCR_t _r_598_b = pat_Parse(_subj1037, _slen1037, &_cur1037, &deref_598_z, 1);
-    if (IS_FAIL_fn(_r_598_b)) { _cur1037 = deref_598_saved_cur; goto cat_l_597_β; }
+    _cur1037 = deref_600_saved_cur;
+    DESCR_t _r_600_b = pat_Space(_subj1037, _slen1037, &_cur1037, &deref_600_z, 1);
+    if (IS_FAIL_fn(_r_600_b)) { _cur1037 = deref_600_saved_cur; goto cat_l_597_β; }
     goto cat_r_596_α;
 }
-cat_r_596_α: {
-    deref_599_saved_cur = _cur1037;
-    DESCR_t _r_599 = pat_Space(_subj1037, _slen1037, &_cur1037, &deref_599_z, 0);
-    if (IS_FAIL_fn(_r_599)) { _cur1037 = deref_599_saved_cur; goto cat_l_596_β; }
-    goto cat_r_595_α;
-}
-cat_r_596_β: {
-    _cur1037 = deref_599_saved_cur;
-    DESCR_t _r_599_b = pat_Space(_subj1037, _slen1037, &_cur1037, &deref_599_z, 1);
-    if (IS_FAIL_fn(_r_599_b)) { _cur1037 = deref_599_saved_cur; goto cat_l_596_β; }
-    goto cat_r_595_α;
-}
-    cat_r_595_α:
-                  if (_cur1037 != _slen1037 - 0)            goto cat_l_595_β;
+    cat_r_596_α:
+                  if (_cur1037 != _slen1037 - 0)            goto cat_l_596_β;
                                                             goto _byrd_1037_ok;
-    cat_r_595_β:                                            goto cat_l_595_β;
+    cat_r_596_β:                                            goto cat_l_596_β;
     _byrd_1037_ok:
                   _ok1037 = 1;
                                                             goto _byrd_1037_done;
