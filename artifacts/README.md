@@ -50,3 +50,24 @@
 Changes since session78: bare builtin patterns (REM/FAIL/ARB/SUCCEED/FENCE/ABORT) as
 E_VART now route to correct emitters; POS/RPOS/TAB/RTAB with variable args emit
 to_int(NV_GET_fn("var")) dynamically instead of hardcoded 0.
+
+## Session 93 — 2026-03-14
+
+**Artifact:** `beauty_tramp_session93.c`
+**Lines:** 15638
+**md5:** f6938127f2aad8592ba7e7ff8b1255ea
+**Compile:** 2 errors (_comment/_control undeclared — pre-existing)
+**Status:** CHANGED from session79
+
+**Changes since session79:**
+- SNO_MSTART: _mstart set after ARB scan (not before)
+- Null replacement (X pat =) now deletes matched region
+- pat_is_anchored: dynamic POS(N) gets ARB wrap
+- ? operator in statement position (S ? P and S ? P = R)
+- E_NAM conditional capture: deferred via pending-cond list
+- E_ATP position capture: @VAR emitted (bug: @→_ pending fix)
+- coerce_numeric: integer-string args in arithmetic stay DT_I
+- null treated as integer 0 in arithmetic
+
+**Active bug:** E_ATP emits to _ instead of varname (pat->right vs pat->sval)
+**Rung status:** 1-7 clean (64/64), rung 8 15/17
