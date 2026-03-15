@@ -293,7 +293,7 @@ static void emit_expr(EXPR_t *e) {
         }
         break;
 
-    case E_MNS: E("neg("); emit_expr(e->right); E(")"); break;
+    case E_MNS: E("neg("); emit_expr(e->left); E(")"); break;
 
     case E_CONC:
         emit_chain_pretty(e, E_CONC, "CONCAT_fn", emit_expr, 2);
@@ -1011,6 +1011,16 @@ static void emit_stmt(STMT_t *s, const char *fn) {
         E("}\n");
         /* emit goto using _ok%d for conditional :S/:F branches */
         emit_ok_goto(s->go, fn, u);
+        return;
+    }
+
+    /* ---- null assign: subject = (empty RHS) — clears variable to null ---- */
+    if (!s->pattern && !s->replacement && s->has_eq && s->subject) {
+        int u=uid();
+        E("{ /* null assign */\n");
+        emit_assign_target_io(s->subject, "NULVCL");
+        E("}\n");
+        emit_ok_goto(s->go, fn, -1);
         return;
     }
 

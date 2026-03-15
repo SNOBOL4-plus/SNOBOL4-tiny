@@ -735,6 +735,7 @@ static STMT_t *parse_body_field(const char *body, int lineno) {
         if (lex_peek(lx).kind == T_EQ) {
             /* subject = [replacement] */
             lex_next(lx); /* consume '=' */
+            s->has_eq = 1;
             skip_ws(lx);
             if (!lex_at_end(lx))
                 s->replacement = parse_expr(lx);
@@ -748,6 +749,7 @@ static STMT_t *parse_body_field(const char *body, int lineno) {
                 lex_next(lx); skip_ws(lx);
                 if (lex_peek(lx).kind == T_EQ) {
                     lex_next(lx); skip_ws(lx);
+                    s->has_eq = 1;
                     if (!lex_at_end(lx))
                         s->replacement = parse_expr(lx);
                 } else {

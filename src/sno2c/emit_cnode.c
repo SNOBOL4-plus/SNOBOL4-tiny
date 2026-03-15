@@ -198,7 +198,7 @@ CNODE_t *build_expr(CArena *a, EXPR_t *e) {
         return cn_call1(a, "deref", build_expr(a, e->left));
 
     case E_MNS:
-        return cn_call1(a, "neg", build_expr(a, e->right));
+        return cn_call1(a, "neg", build_expr(a, e->left));
 
     case E_CONC:
         return cn_call2(a, "CONCAT_fn", build_expr(a, e->left), build_expr(a, e->right));

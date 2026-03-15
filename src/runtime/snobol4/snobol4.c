@@ -129,6 +129,9 @@ static DESCR_t _b_REAL(DESCR_t *a, int n) {
 }
 static DESCR_t _b_SIZE(DESCR_t *a, int n) {
     if (n < 1) return INTVAL(0);
+    /* Special case: &ALPHABET is a 256-char binary string starting with NUL.
+     * strlen would return 0. Check pointer identity against the alphabet buffer. */
+    if (a[0].v == DT_S && a[0].s == alphabet) return INTVAL(256);
     const char *s = VARVAL_fn(a[0]);
     return INTVAL((int64_t)(s ? strlen(s) : 0));
 }
@@ -180,6 +183,12 @@ static DESCR_t _b_CHAR(DESCR_t *a, int n) {
 static DESCR_t _b_DUPL(DESCR_t *a, int n) {
     if (n < 2) return NULVCL;
     return DUPL_fn(a[0], a[1]);
+}
+static DESCR_t _b_REMDR(DESCR_t *a, int n) {
+    if (n < 2) return FAILDESCR;
+    int64_t x = to_int(a[0]), y = to_int(a[1]);
+    if (y == 0) return FAILDESCR;
+    return INTVAL(x % y);
 }
 static DESCR_t _b_REPLACE(DESCR_t *a, int n) {
     if (n < 3) return NULVCL;
@@ -548,6 +557,8 @@ void SNO_INIT_fn(void) {
     /* Build &ALPHABET: all 256 chars in order */
     for (int i = 0; i < 256; i++) alphabet[i] = (char)i;
     alphabet[256] = '\0';
+    /* Register as NV keyword — pointer identity used by SIZE for correct length */
+    NV_SET_fn("ALPHABET", STRVAL(alphabet));
     /* Enable monitor if MONITOR=1 (writes to stderr) */
     const char *mon = getenv("MONITOR");
     if (mon && mon[0] == '1') monitor_fd = 2;
@@ -574,6 +585,7 @@ void SNO_INIT_fn(void) {
     register_fn("CHAR",     _b_CHAR,     1, 1);
     register_fn("DUPL",        _b_DUPL,     2, 2);
     register_fn("REPLACE",  _b_REPLACE,  3, 3);
+    register_fn("REMDR",    _b_REMDR,    2, 2);
     register_fn("TRIM",        _b_TRIM,     1, 1);
     register_fn("SUBSTR",      _b_SUBSTR,   3, 3);
     register_fn("REVERSE",  _b_REVERSE,  1, 1);
@@ -1606,6 +1618,12 @@ DESCR_t DIVIDE_fn(DESCR_t a, DESCR_t b) {
 
 DESCR_t POWER_fn(DESCR_t a, DESCR_t b) {
     if (a.v == DT_FAIL || b.v == DT_FAIL) return FAILDESCR;
+    /* Integer ** non-negative integer → integer result */
+    if (a.v == DT_I && b.v == DT_I && b.i >= 0) {
+        int64_t base = a.i, exp = b.i, result = 1;
+        while (exp-- > 0) result *= base;
+        return INTVAL(result);
+    }
     return REALVAL(pow(to_real(a), to_real(b)));
 }
 

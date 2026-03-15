@@ -77,6 +77,7 @@ struct STMT_t {
     SnoGoto *go;           /* NULL if no : field */
     int      lineno;
     int      is_end;       /* 1 if this is the END statement */
+    int      has_eq;       /* 1 if = was present (even with empty RHS) */
     STMT_t    *next;
 };
 
