@@ -181,17 +181,9 @@ static void join_file(FILE *fp, const char *fname, LineArray *out) {
             int p = 1;
             while (p<n && (raw[p]==' '||raw[p]=='\t')) p++;
             if (strncasecmp(raw+p, "INCLUDE", 7)==0) {
-                p += 7;
-                while (p<n && (raw[p]==' '||raw[p]=='\t')) p++;
-                char iname[4096]; int fi=0;
-                if (p<n && (raw[p]=='\''||raw[p]=='"')) {
-                    char q=raw[p++];
-                    while (p<n && raw[p]!=q) iname[fi++]=raw[p++];
-                } else {
-                    while (p<n && raw[p]!=' '&&raw[p]!='\t') iname[fi++]=raw[p++];
-                }
-                iname[fi]='\0';
-                open_include(iname, fname, out);
+                /* -INCLUDE is a noop in sno2c — library functions are
+                 * implemented in mock_includes.c on the C side.
+                 * Silently drop the directive; never open the file. */
             }
             /* other control lines silently dropped */
             continue;
