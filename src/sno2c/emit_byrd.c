@@ -1431,7 +1431,7 @@ static void byrd_emit(EXPR_t *pat,
         /* nInc() */
         if (strcasecmp(n, "nInc") == 0) {
             PL(alpha, gamma, "NINC_fn();");
-            PLG(beta, omega);
+            PL(beta, omega, "NDEC_fn();");  /* compensate: nInc fired but Command failed */
             return;
         }
         /* nDec() */
