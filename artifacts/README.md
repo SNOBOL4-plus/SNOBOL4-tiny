@@ -41,3 +41,23 @@
 - Sprint A (`beauty-crosscheck`) begins next session.
 - First action: build beauty_full_bin, write 101_beauty_comment test, run run_beauty.sh.
 - See TESTING.md for full sprint map and rung 12 protocol.
+
+## Session 99 — 2026-03-15
+
+### beauty_tramp_session95.c (no new artifact)
+- **md5:** cc34e62fee07676e12d0824c14fe6e85 — UNCHANGED from session95
+- **lines:** 15639
+- **compile status:** not recompiled this session (no sno2c changes)
+- **crosscheck:** 106/106 (invariant maintained)
+
+### Session 99 work
+- No compiler or sno2c changes this session.
+- HQ restructured into true 3-level pyramid (L1/L2/L3).
+- SESSION.md eliminated — content absorbed into PLAN.md (L1) and TINY.md (L2).
+- PLAN.md: 3.3KB true index. TINY.md: 10.7KB L2 platform doc. ARCH.md: 8.3KB L3 reference.
+- RULES.md updated: hierarchy rule explicit — future Claude writes to L2/L3, never PLAN.md.
+
+### Active bug / next action
+- Sprint A (`beauty-crosscheck`) begins next session.
+- First action: build beauty_full_bin, write 101_comment test, run run_beauty.sh.
+- See TINY.md §"Next action" and TESTING.md for full protocol.
