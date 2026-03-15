@@ -1690,10 +1690,37 @@ static void byrd_emit(EXPR_t *pat,
             return;
         }
 
-        /* Fallback: unknown call — epsilon */
-        PLG(alpha, gamma);
-        PLG(beta,  omega);
-        return;
+        /* Fallback: user-defined or unrecognised function call in pattern context.
+         * Build the argument list at runtime, call APPLY_fn, check for failure.
+         * If APPLY_fn returns FAILDESCR → pattern fails (goto ω).
+         * If it returns any non-fail value → pattern succeeds (goto γ), cursor unchanged.
+         * β → ω: function calls are non-resumable (no backtrack alternative). */
+        {
+            int uid = byrd_uid();
+            PLG(alpha, NULL);
+            /* Build args array */
+            int nargs = pat->nargs;
+            if (nargs > 0) {
+                PS(NULL, "{ DESCR_t _fcall_%d_args[%d];", uid, nargs);
+                for (int ai = 0; ai < nargs; ai++) {
+                    EXPR_t *a = pat->args[ai];
+                    if (a && a->kind == E_VART && a->sval)
+                        PS(NULL, "  _fcall_%d_args[%d] = NV_GET_fn(\"%s\");", uid, ai, a->sval);
+                    else if (a && a->kind == E_QLIT && a->sval)
+                        PS(NULL, "  _fcall_%d_args[%d] = STRVAL(\"%s\");", uid, ai, a->sval);
+                    else
+                        PS(NULL, "  _fcall_%d_args[%d] = NULVCL;", uid, ai);
+                }
+                PS(NULL, "  DESCR_t _fcall_%d_r = APPLY_fn(\"%s\", _fcall_%d_args, %d);",
+                   uid, n, uid, nargs);
+                PS(gamma, "  if (IS_FAIL_fn(_fcall_%d_r)) goto %s; }", uid, omega);
+            } else {
+                PS(NULL, "{ DESCR_t _fcall_%d_r = APPLY_fn(\"%s\", NULL, 0);", uid, n);
+                PS(gamma, "  if (IS_FAIL_fn(_fcall_%d_r)) goto %s; }", uid, omega);
+            }
+            PLG(beta, omega);
+            return;
+        }
     }
 
     /* ----------------------------------------------------------- E_CONC (CAT / SEQ) */

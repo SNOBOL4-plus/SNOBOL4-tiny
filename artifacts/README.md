@@ -130,3 +130,10 @@
 - **Lines:** 15537
 - **Compile status:** OK (beauty_full_bin builds)
 - **Active bug:** E_NAM/~ dispatch fixed (E_QLIT→emit_imm do_shift=1, varname sanitization skipped for tags). Shift("=") now fires. But Function/Id/Integer atoms in pattern context: match() FRETURN not propagating as pattern failure — pat_Function succeeds for any identifier. Subject and replacement shift incorrectly as Call(2) nodes. Next: fix function-call-in-pattern failure propagation in emit_byrd.c.
+
+## Session 104 — 2026-03-15
+- **Artifact:** beauty_tramp_session104.c
+- **md5:** 37ede108d27279ebcd73e09f6796e62c
+- **Lines:** 15542
+- **Compile status:** OK (beauty_full_bin builds)
+- **Active bug:** Named pattern RHS truncation. `Function = SPAN(...) $ tx $ *match(Functions, TxInList)` — compiled pat_Function only contains the SPAN, dropping `$ tx` and `$ *match(...)`. Root: byrd_emit_named_pattern() receives only partial AST. Investigate emit.c:1939 — how replacement expression is extracted and passed. Fix: ensure full concatenation AST reaches Byrd emitter.
