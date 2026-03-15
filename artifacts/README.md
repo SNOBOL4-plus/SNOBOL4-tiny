@@ -123,3 +123,10 @@
 - Remaining HQ discrepancies to fix: FRONTEND-REBUS.md scope, stale FRONTEND-SNO2C.md
   references, BACKEND-NET/JVM missing TINY mention, JVM/DOTNET frontier tables,
   TINY.md missing Tiny-Prolog row, PLAN.md matrix cleanup.
+
+## Session 103 — 2026-03-15
+- **Artifact:** beauty_tramp_session103.c
+- **md5:** b35a3c1b1e2b7e11cf1aaee9adafc19d
+- **Lines:** 15537
+- **Compile status:** OK (beauty_full_bin builds)
+- **Active bug:** E_NAM/~ dispatch fixed (E_QLIT→emit_imm do_shift=1, varname sanitization skipped for tags). Shift("=") now fires. But Function/Id/Integer atoms in pattern context: match() FRETURN not propagating as pattern failure — pat_Function succeeds for any identifier. Subject and replacement shift incorrectly as Call(2) nodes. Next: fix function-call-in-pattern failure propagation in emit_byrd.c.

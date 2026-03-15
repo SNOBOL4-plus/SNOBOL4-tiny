@@ -1248,13 +1248,19 @@ static void emit_imm(EXPR_t *child, const char *varname,
      * Normal E_DOL path: child is a real pattern, varname is a variable.
      * ------------------------------------------------------------------- */
 
-    /* Sanitize varname: non-alnum/underscore chars → '_' */
+    /* Sanitize varname: non-alnum/underscore chars → '_'.
+     * Skip sanitization for do_shift=1 (~ operator): the tag IS the literal
+     * text (e.g. "=", "Label", ":()") and must reach Shift() verbatim.
+     * Only sanitize for C-identifier use (label/static names), not for the
+     * STRVAL tag passed to Shift(). */
     char safe_varname[NAMED_PAT_NAMELEN];
-    { int i = 0; const char *s = varname;
-      for (; *s && i < (int)(sizeof safe_varname)-1; s++, i++)
-          safe_varname[i] = (isalnum((unsigned char)*s) || *s=='_') ? *s : '_';
-      safe_varname[i] = '\0'; }
-    varname = safe_varname;
+    if (!do_shift) {
+        int i = 0; const char *s = varname;
+        for (; *s && i < (int)(sizeof safe_varname)-1; s++, i++)
+            safe_varname[i] = (isalnum((unsigned char)*s) || *s=='_') ? *s : '_';
+        safe_varname[i] = '\0';
+        varname = safe_varname;
+    }
 
     Label child_α, child_β;
     label_fmt(child_α, "assign_c", uid, "α");
@@ -1715,14 +1721,24 @@ static void byrd_emit(EXPR_t *pat,
         return;
     }
 
-    /* --------------------------------------------------------------- E_NAM (. assign) */
+    /* --------------------------------------------------------------- E_NAM (. assign OR ~ shift) */
     case E_NAM: {
         const char *varname = "OUTPUT";
         if (pat->right && (pat->right->kind == E_VART || pat->right->kind == E_QLIT))
             varname = pat->right->sval;
-        emit_cond(pat->left, varname,
-                  alpha, beta, gamma, omega,
-                  subj, subj_len, cursor, depth);
+        /* Distinguish ~ (shift) from . (conditional name capture):
+         * ~ right-hand side is always E_QLIT (a quoted tag like '=', 'Label', etc.)
+         * . right-hand side is always E_VART (a plain variable name)
+         * When tag is E_QLIT, route to emit_imm with do_shift=1 to call Shift(). */
+        if (pat->right && pat->right->kind == E_QLIT) {
+            emit_imm(pat->left, varname,
+                     alpha, beta, gamma, omega,
+                     subj, subj_len, cursor, depth, 1);
+        } else {
+            emit_cond(pat->left, varname,
+                      alpha, beta, gamma, omega,
+                      subj, subj_len, cursor, depth);
+        }
         return;
     }
 
