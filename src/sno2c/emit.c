@@ -927,7 +927,13 @@ static int maybe_fix_pattern_stmt(STMT_t *s) {
  * ============================================================ */
 static int pat_is_anchored(EXPR_t *e) {
     if (!e) return 0;
-    if (e->kind == E_FNC && e->sval && strcasecmp(e->sval, "POS") == 0) return 1;
+    if (e->kind == E_FNC && e->sval && strcasecmp(e->sval, "POS") == 0) {
+        /* Only POS(0) literal anchors at start — no ARB needed.
+         * Dynamic POS(N) needs ARB scan to advance cursor to position N. */
+        if (e->nargs >= 1 && e->args[0]->kind == E_ILIT && e->args[0]->ival == 0)
+            return 1;
+        return 0;
+    }
     if (e->kind == E_CONC) return pat_is_anchored(e->left);
     return 0;
 }
@@ -1048,7 +1054,7 @@ static void emit_stmt(STMT_t *s, const char *fn) {
 
         /* Declare _ok before the Byrd block (C: no jumps over declarations) */
         E("int _ok%d = 0;\n", u);
-        E("_mstart%d = _cur%d;\n", u, u);
+        /* NOTE: _mstart is NOT set here — it is set by SNO_MSTART node after ARB scans */
         /* Checkpoint $'@S' (tree stack) before the pattern match.
          * On match failure, restore to undo any Shift/Reduce side-effects
          * (e.g. a zero-match ARBNO leaves a stray Parse tree on @S). */
@@ -1061,8 +1067,19 @@ static void emit_stmt(STMT_t *s, const char *fn) {
             EXPR_t *arb = expr_new(E_FNC);
             arb->sval = strdup("ARB");
             arb->nargs = 0;
+
+            /* SNO_MSTART: zero-width node that captures cursor into _mstart after ARB scans */
+            EXPR_t *mstart_node = expr_new(E_FNC);
+            mstart_node->sval = strdup("SNO_MSTART");
+            mstart_node->nargs = 0;
+            mstart_node->ival = u;  /* thread the statement uid so emit_byrd can name the var */
+
+            EXPR_t *seq1 = expr_new(E_CONC);
+            seq1->left  = arb;
+            seq1->right = mstart_node;
+
             EXPR_t *seq = expr_new(E_CONC);
-            seq->left = arb;
+            seq->left  = seq1;
             seq->right = s->pattern;
             scan_pat = seq;
         }
@@ -1071,10 +1088,15 @@ static void emit_stmt(STMT_t *s, const char *fn) {
         /* gamma: MATCH_fn succeeded */
         PLG(ok_lbl, "");
         PS("", "_ok%d = 1;", u);
-        if (s->replacement) {
-            /* Replace matched region [_mstart%d .. _cur%d) with replacement */
+        if (s->replacement || s->has_eq) {
+            /* Replace matched region [_mstart%d .. _cur%d) with replacement.
+             * If has_eq but replacement==NULL, that is a null replacement — delete match. */
             E("{\n");
-            E("    DESCR_t _r%d = ", u); PP_EXPR(s->replacement, 4 + 10 + 3); E(";\n");
+            if (s->replacement) {
+                E("    DESCR_t _r%d = ", u); PP_EXPR(s->replacement, 4 + 10 + 3); E(";\n");
+            } else {
+                E("    DESCR_t _r%d = STRVAL_fn(\"\");\n", u);  /* null replacement = empty */
+            }
             E("    const char *_rs%d = VARVAL_fn(_r%d);\n", u, u);
             E("    int64_t _rlen%d = _rs%d ? (int64_t)strlen(_rs%d) : 0;\n", u, u, u);
             E("    int64_t _tail%d = _slen%d - _cur%d;\n", u, u, u);

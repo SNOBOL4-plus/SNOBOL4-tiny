@@ -1373,6 +1373,16 @@ static void byrd_emit(EXPR_t *pat,
     case E_FNC: {
         const char *n = pat->sval;
 
+        /* SNO_MSTART — zero-width: capture current cursor into _mstart after ARB prefix */
+        if (strcmp(n, "SNO_MSTART") == 0) {
+            int stmt_u = (int)pat->ival;
+            char mstart_var[64];
+            snprintf(mstart_var, sizeof mstart_var, "_mstart%d", stmt_u);
+            PL(alpha, gamma, "%s = %s;", mstart_var, cursor);
+            PLG(beta, omega);
+            return;
+        }
+
         /* LEN(n) */
         if (strcasecmp(n, "LEN") == 0 && pat->nargs >= 1) {
             long v = (pat->args[0]->kind == E_ILIT) ? pat->args[0]->ival : 1;
