@@ -4378,7 +4378,7 @@ alt_r_56_β:
 }
 
 typedef struct pat_Function_t {
-    int64_t dolc_58_entry_start;
+    int64_t dolc_58_la_start;
     int64_t assign_c_59_α_delta;
     int64_t assign_c_59_α_start;
     int64_t deref_60_saved_cursor;
@@ -4389,7 +4389,7 @@ static DESCR_t pat_Function(const char *_subj_np, int64_t _slen_np,
     if (_entry_np == 0) { *_zz_np = calloc(1, sizeof(pat_Function_t)); }
     pat_Function_t *z = *_zz_np;
     int64_t _cur_np = *_cur_ptr_np;
-#define dolc_58_entry_start z->dolc_58_entry_start
+#define dolc_58_la_start z->dolc_58_la_start
 #define assign_c_59_α_delta z->assign_c_59_α_delta
 #define assign_c_59_α_start z->assign_c_59_α_start
 #define deref_60_saved_cursor z->deref_60_saved_cursor
@@ -4397,26 +4397,26 @@ static DESCR_t pat_Function(const char *_subj_np, int64_t _slen_np,
     if (_entry_np == 0) goto _Function_α;
     if (_entry_np == 1) goto _Function_β;
     goto _Function_ω;
-    _Function_α:                                            goto dolc_58_entry;
-    _Function_β:                                            goto dolc_58_resume;
-    dolc_58_entry: dolc_58_entry_start = _cur_np;            goto assign_c_59_α;
+    _Function_α:                                            goto dolc_58_la;
+    _Function_β:                                            goto dolc_58_rb;
+    dolc_58_la:   dolc_58_la_start = _cur_np;               goto assign_c_59_α;
     assign_c_59_α:
                   assign_c_59_α_start = _cur_np;
                   while (_cur_np < _slen_np && strchr(VARVAL_fn(CONCAT_fn(STRVAL(VARVAL_fn(CONCAT_fn(STRVAL(VARVAL_fn(CONCAT_fn(STRVAL(VARVAL_fn(CONCAT_fn(STRVAL("."), STRVAL(VARVAL_fn(NV_GET_fn("digits")))))), STRVAL(VARVAL_fn(NV_GET_fn("UCASE")))))), STRVAL("_")))), STRVAL(VARVAL_fn(NV_GET_fn("LCASE"))))), _subj_np[_cur_np])) _cur_np++;
                   assign_c_59_α_delta = _cur_np - assign_c_59_α_start;
                   if (assign_c_59_α_delta == 0)             goto _Function_ω;
-                                                            goto dolc_58_entry_do_assign;
+                                                            goto dolc_58_la_do_assign;
     assign_c_59_β:
                   if (assign_c_59_α_delta <= 1) { _cur_np = assign_c_59_α_start; goto _Function_ω; }
-                  assign_c_59_α_delta--; _cur_np--;         goto dolc_58_entry_do_assign;
-    dolc_58_entry_do_assign:
-                  { int64_t _len = _cur_np - dolc_58_entry_start;
+                  assign_c_59_α_delta--; _cur_np--;         goto dolc_58_la_do_assign;
+    dolc_58_la_do_assign:
+                  { int64_t _len = _cur_np - dolc_58_la_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + dolc_58_entry_start, _len); _os[_len] = 0;
+                    memcpy(_os, _subj_np + dolc_58_la_start, _len); _os[_len] = 0;
                     NV_SET_fn("tx", STRVAL(_os));
                     _tx = STRVAL(_os);
                   }                                         goto dolc_58_mid;
-    dolc_58_resume:                                         goto assign_c_59_β;
+    dolc_58_lb:                                             goto assign_c_59_β;
 dolc_58_mid: {
     DESCR_t _deref_pat = NV_GET_fn("match");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
@@ -4425,7 +4425,7 @@ dolc_58_mid: {
     _cur_np = (int64_t)_deref_new_cur;
     goto _Function_γ;
 }
-dolc_58_resume:
+dolc_58_rb:
     _cur_np = deref_60_saved_cursor;
     goto _Function_ω;
     _Function_γ:;
@@ -4433,7 +4433,7 @@ dolc_58_resume:
         return STRVAL("");
     _Function_ω:;
         return FAILDESCR;
-#undef dolc_58_entry_start
+#undef dolc_58_la_start
 #undef assign_c_59_α_delta
 #undef assign_c_59_α_start
 #undef deref_60_saved_cursor
@@ -4441,7 +4441,7 @@ dolc_58_resume:
 }
 
 typedef struct pat_BuiltinVar_t {
-    int64_t dolc_61_entry_start;
+    int64_t dolc_61_la_start;
     int64_t assign_c_62_α_delta;
     int64_t assign_c_62_α_start;
     int64_t deref_63_saved_cursor;
@@ -4452,7 +4452,7 @@ static DESCR_t pat_BuiltinVar(const char *_subj_np, int64_t _slen_np,
     if (_entry_np == 0) { *_zz_np = calloc(1, sizeof(pat_BuiltinVar_t)); }
     pat_BuiltinVar_t *z = *_zz_np;
     int64_t _cur_np = *_cur_ptr_np;
-#define dolc_61_entry_start z->dolc_61_entry_start
+#define dolc_61_la_start z->dolc_61_la_start
 #define assign_c_62_α_delta z->assign_c_62_α_delta
 #define assign_c_62_α_start z->assign_c_62_α_start
 #define deref_63_saved_cursor z->deref_63_saved_cursor
@@ -4460,26 +4460,26 @@ static DESCR_t pat_BuiltinVar(const char *_subj_np, int64_t _slen_np,
     if (_entry_np == 0) goto _BuiltinVar_α;
     if (_entry_np == 1) goto _BuiltinVar_β;
     goto _BuiltinVar_ω;
-    _BuiltinVar_α:                                          goto dolc_61_entry;
-    _BuiltinVar_β:                                          goto dolc_61_resume;
-    dolc_61_entry: dolc_61_entry_start = _cur_np;            goto assign_c_62_α;
+    _BuiltinVar_α:                                          goto dolc_61_la;
+    _BuiltinVar_β:                                          goto dolc_61_rb;
+    dolc_61_la:   dolc_61_la_start = _cur_np;               goto assign_c_62_α;
     assign_c_62_α:
                   assign_c_62_α_start = _cur_np;
                   while (_cur_np < _slen_np && strchr(VARVAL_fn(CONCAT_fn(STRVAL(VARVAL_fn(CONCAT_fn(STRVAL(VARVAL_fn(CONCAT_fn(STRVAL(VARVAL_fn(CONCAT_fn(STRVAL("."), STRVAL(VARVAL_fn(NV_GET_fn("digits")))))), STRVAL(VARVAL_fn(NV_GET_fn("UCASE")))))), STRVAL("_")))), STRVAL(VARVAL_fn(NV_GET_fn("LCASE"))))), _subj_np[_cur_np])) _cur_np++;
                   assign_c_62_α_delta = _cur_np - assign_c_62_α_start;
                   if (assign_c_62_α_delta == 0)             goto _BuiltinVar_ω;
-                                                            goto dolc_61_entry_do_assign;
+                                                            goto dolc_61_la_do_assign;
     assign_c_62_β:
                   if (assign_c_62_α_delta <= 1) { _cur_np = assign_c_62_α_start; goto _BuiltinVar_ω; }
-                  assign_c_62_α_delta--; _cur_np--;         goto dolc_61_entry_do_assign;
-    dolc_61_entry_do_assign:
-                  { int64_t _len = _cur_np - dolc_61_entry_start;
+                  assign_c_62_α_delta--; _cur_np--;         goto dolc_61_la_do_assign;
+    dolc_61_la_do_assign:
+                  { int64_t _len = _cur_np - dolc_61_la_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + dolc_61_entry_start, _len); _os[_len] = 0;
+                    memcpy(_os, _subj_np + dolc_61_la_start, _len); _os[_len] = 0;
                     NV_SET_fn("tx", STRVAL(_os));
                     _tx = STRVAL(_os);
                   }                                         goto dolc_61_mid;
-    dolc_61_resume:                                         goto assign_c_62_β;
+    dolc_61_lb:                                             goto assign_c_62_β;
 dolc_61_mid: {
     DESCR_t _deref_pat = NV_GET_fn("match");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
@@ -4488,7 +4488,7 @@ dolc_61_mid: {
     _cur_np = (int64_t)_deref_new_cur;
     goto _BuiltinVar_γ;
 }
-dolc_61_resume:
+dolc_61_rb:
     _cur_np = deref_63_saved_cursor;
     goto _BuiltinVar_ω;
     _BuiltinVar_γ:;
@@ -4496,7 +4496,7 @@ dolc_61_resume:
         return STRVAL("");
     _BuiltinVar_ω:;
         return FAILDESCR;
-#undef dolc_61_entry_start
+#undef dolc_61_la_start
 #undef assign_c_62_α_delta
 #undef assign_c_62_α_start
 #undef deref_63_saved_cursor
@@ -4504,7 +4504,7 @@ dolc_61_resume:
 }
 
 typedef struct pat_SpecialNm_t {
-    int64_t dolc_64_entry_start;
+    int64_t dolc_64_la_start;
     int64_t assign_c_65_α_delta;
     int64_t assign_c_65_α_start;
     int64_t deref_66_saved_cursor;
@@ -4515,7 +4515,7 @@ static DESCR_t pat_SpecialNm(const char *_subj_np, int64_t _slen_np,
     if (_entry_np == 0) { *_zz_np = calloc(1, sizeof(pat_SpecialNm_t)); }
     pat_SpecialNm_t *z = *_zz_np;
     int64_t _cur_np = *_cur_ptr_np;
-#define dolc_64_entry_start z->dolc_64_entry_start
+#define dolc_64_la_start z->dolc_64_la_start
 #define assign_c_65_α_delta z->assign_c_65_α_delta
 #define assign_c_65_α_start z->assign_c_65_α_start
 #define deref_66_saved_cursor z->deref_66_saved_cursor
@@ -4523,26 +4523,26 @@ static DESCR_t pat_SpecialNm(const char *_subj_np, int64_t _slen_np,
     if (_entry_np == 0) goto _SpecialNm_α;
     if (_entry_np == 1) goto _SpecialNm_β;
     goto _SpecialNm_ω;
-    _SpecialNm_α:                                           goto dolc_64_entry;
-    _SpecialNm_β:                                           goto dolc_64_resume;
-    dolc_64_entry: dolc_64_entry_start = _cur_np;            goto assign_c_65_α;
+    _SpecialNm_α:                                           goto dolc_64_la;
+    _SpecialNm_β:                                           goto dolc_64_rb;
+    dolc_64_la:   dolc_64_la_start = _cur_np;               goto assign_c_65_α;
     assign_c_65_α:
                   assign_c_65_α_start = _cur_np;
                   while (_cur_np < _slen_np && strchr(VARVAL_fn(CONCAT_fn(STRVAL(VARVAL_fn(CONCAT_fn(STRVAL(VARVAL_fn(CONCAT_fn(STRVAL(VARVAL_fn(CONCAT_fn(STRVAL("."), STRVAL(VARVAL_fn(NV_GET_fn("digits")))))), STRVAL(VARVAL_fn(NV_GET_fn("UCASE")))))), STRVAL("_")))), STRVAL(VARVAL_fn(NV_GET_fn("LCASE"))))), _subj_np[_cur_np])) _cur_np++;
                   assign_c_65_α_delta = _cur_np - assign_c_65_α_start;
                   if (assign_c_65_α_delta == 0)             goto _SpecialNm_ω;
-                                                            goto dolc_64_entry_do_assign;
+                                                            goto dolc_64_la_do_assign;
     assign_c_65_β:
                   if (assign_c_65_α_delta <= 1) { _cur_np = assign_c_65_α_start; goto _SpecialNm_ω; }
-                  assign_c_65_α_delta--; _cur_np--;         goto dolc_64_entry_do_assign;
-    dolc_64_entry_do_assign:
-                  { int64_t _len = _cur_np - dolc_64_entry_start;
+                  assign_c_65_α_delta--; _cur_np--;         goto dolc_64_la_do_assign;
+    dolc_64_la_do_assign:
+                  { int64_t _len = _cur_np - dolc_64_la_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + dolc_64_entry_start, _len); _os[_len] = 0;
+                    memcpy(_os, _subj_np + dolc_64_la_start, _len); _os[_len] = 0;
                     NV_SET_fn("tx", STRVAL(_os));
                     _tx = STRVAL(_os);
                   }                                         goto dolc_64_mid;
-    dolc_64_resume:                                         goto assign_c_65_β;
+    dolc_64_lb:                                             goto assign_c_65_β;
 dolc_64_mid: {
     DESCR_t _deref_pat = NV_GET_fn("match");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
@@ -4551,7 +4551,7 @@ dolc_64_mid: {
     _cur_np = (int64_t)_deref_new_cur;
     goto _SpecialNm_γ;
 }
-dolc_64_resume:
+dolc_64_rb:
     _cur_np = deref_66_saved_cursor;
     goto _SpecialNm_ω;
     _SpecialNm_γ:;
@@ -4559,7 +4559,7 @@ dolc_64_resume:
         return STRVAL("");
     _SpecialNm_ω:;
         return FAILDESCR;
-#undef dolc_64_entry_start
+#undef dolc_64_la_start
 #undef assign_c_65_α_delta
 #undef assign_c_65_α_start
 #undef deref_66_saved_cursor
@@ -4568,7 +4568,7 @@ dolc_64_resume:
 
 typedef struct pat_ProtKwd_t {
     int64_t cat_l_67_α_saved_cursor;
-    int64_t dolc_68_entry_start;
+    int64_t dolc_68_la_start;
     int64_t assign_c_69_α_delta;
     int64_t assign_c_69_α_start;
     int64_t deref_70_saved_cursor;
@@ -4580,7 +4580,7 @@ static DESCR_t pat_ProtKwd(const char *_subj_np, int64_t _slen_np,
     pat_ProtKwd_t *z = *_zz_np;
     int64_t _cur_np = *_cur_ptr_np;
 #define cat_l_67_α_saved_cursor z->cat_l_67_α_saved_cursor
-#define dolc_68_entry_start z->dolc_68_entry_start
+#define dolc_68_la_start z->dolc_68_la_start
 #define assign_c_69_α_delta z->assign_c_69_α_delta
 #define assign_c_69_α_start z->assign_c_69_α_start
 #define deref_70_saved_cursor z->deref_70_saved_cursor
@@ -4596,26 +4596,26 @@ static DESCR_t pat_ProtKwd(const char *_subj_np, int64_t _slen_np,
                   cat_l_67_α_saved_cursor = _cur_np; _cur_np += 1;
                                                             goto cat_r_67_α;
     cat_l_67_β:   _cur_np = cat_l_67_α_saved_cursor;        goto _ProtKwd_ω;
-    cat_r_67_α:                                             goto dolc_68_entry;
-    cat_r_67_β:                                             goto dolc_68_resume;
-    dolc_68_entry: dolc_68_entry_start = _cur_np;            goto assign_c_69_α;
+    cat_r_67_α:                                             goto dolc_68_la;
+    cat_r_67_β:                                             goto dolc_68_rb;
+    dolc_68_la:   dolc_68_la_start = _cur_np;               goto assign_c_69_α;
     assign_c_69_α:
                   assign_c_69_α_start = _cur_np;
                   while (_cur_np < _slen_np && strchr(VARVAL_fn(CONCAT_fn(STRVAL(VARVAL_fn(NV_GET_fn("UCASE"))), STRVAL(VARVAL_fn(NV_GET_fn("LCASE"))))), _subj_np[_cur_np])) _cur_np++;
                   assign_c_69_α_delta = _cur_np - assign_c_69_α_start;
                   if (assign_c_69_α_delta == 0)             goto cat_l_67_β;
-                                                            goto dolc_68_entry_do_assign;
+                                                            goto dolc_68_la_do_assign;
     assign_c_69_β:
                   if (assign_c_69_α_delta <= 1) { _cur_np = assign_c_69_α_start; goto cat_l_67_β; }
-                  assign_c_69_α_delta--; _cur_np--;         goto dolc_68_entry_do_assign;
-    dolc_68_entry_do_assign:
-                  { int64_t _len = _cur_np - dolc_68_entry_start;
+                  assign_c_69_α_delta--; _cur_np--;         goto dolc_68_la_do_assign;
+    dolc_68_la_do_assign:
+                  { int64_t _len = _cur_np - dolc_68_la_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + dolc_68_entry_start, _len); _os[_len] = 0;
+                    memcpy(_os, _subj_np + dolc_68_la_start, _len); _os[_len] = 0;
                     NV_SET_fn("tx", STRVAL(_os));
                     _tx = STRVAL(_os);
                   }                                         goto dolc_68_mid;
-    dolc_68_resume:                                         goto assign_c_69_β;
+    dolc_68_lb:                                             goto assign_c_69_β;
 dolc_68_mid: {
     DESCR_t _deref_pat = NV_GET_fn("match");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
@@ -4624,7 +4624,7 @@ dolc_68_mid: {
     _cur_np = (int64_t)_deref_new_cur;
     goto _ProtKwd_γ;
 }
-dolc_68_resume:
+dolc_68_rb:
     _cur_np = deref_70_saved_cursor;
     goto cat_l_67_β;
     _ProtKwd_γ:;
@@ -4633,7 +4633,7 @@ dolc_68_resume:
     _ProtKwd_ω:;
         return FAILDESCR;
 #undef cat_l_67_α_saved_cursor
-#undef dolc_68_entry_start
+#undef dolc_68_la_start
 #undef assign_c_69_α_delta
 #undef assign_c_69_α_start
 #undef deref_70_saved_cursor
@@ -4642,7 +4642,7 @@ dolc_68_resume:
 
 typedef struct pat_UnprotKwd_t {
     int64_t cat_l_71_α_saved_cursor;
-    int64_t dolc_72_entry_start;
+    int64_t dolc_72_la_start;
     int64_t assign_c_73_α_delta;
     int64_t assign_c_73_α_start;
     int64_t deref_74_saved_cursor;
@@ -4654,7 +4654,7 @@ static DESCR_t pat_UnprotKwd(const char *_subj_np, int64_t _slen_np,
     pat_UnprotKwd_t *z = *_zz_np;
     int64_t _cur_np = *_cur_ptr_np;
 #define cat_l_71_α_saved_cursor z->cat_l_71_α_saved_cursor
-#define dolc_72_entry_start z->dolc_72_entry_start
+#define dolc_72_la_start z->dolc_72_la_start
 #define assign_c_73_α_delta z->assign_c_73_α_delta
 #define assign_c_73_α_start z->assign_c_73_α_start
 #define deref_74_saved_cursor z->deref_74_saved_cursor
@@ -4670,26 +4670,26 @@ static DESCR_t pat_UnprotKwd(const char *_subj_np, int64_t _slen_np,
                   cat_l_71_α_saved_cursor = _cur_np; _cur_np += 1;
                                                             goto cat_r_71_α;
     cat_l_71_β:   _cur_np = cat_l_71_α_saved_cursor;        goto _UnprotKwd_ω;
-    cat_r_71_α:                                             goto dolc_72_entry;
-    cat_r_71_β:                                             goto dolc_72_resume;
-    dolc_72_entry: dolc_72_entry_start = _cur_np;            goto assign_c_73_α;
+    cat_r_71_α:                                             goto dolc_72_la;
+    cat_r_71_β:                                             goto dolc_72_rb;
+    dolc_72_la:   dolc_72_la_start = _cur_np;               goto assign_c_73_α;
     assign_c_73_α:
                   assign_c_73_α_start = _cur_np;
                   while (_cur_np < _slen_np && strchr(VARVAL_fn(CONCAT_fn(STRVAL(VARVAL_fn(NV_GET_fn("UCASE"))), STRVAL(VARVAL_fn(NV_GET_fn("LCASE"))))), _subj_np[_cur_np])) _cur_np++;
                   assign_c_73_α_delta = _cur_np - assign_c_73_α_start;
                   if (assign_c_73_α_delta == 0)             goto cat_l_71_β;
-                                                            goto dolc_72_entry_do_assign;
+                                                            goto dolc_72_la_do_assign;
     assign_c_73_β:
                   if (assign_c_73_α_delta <= 1) { _cur_np = assign_c_73_α_start; goto cat_l_71_β; }
-                  assign_c_73_α_delta--; _cur_np--;         goto dolc_72_entry_do_assign;
-    dolc_72_entry_do_assign:
-                  { int64_t _len = _cur_np - dolc_72_entry_start;
+                  assign_c_73_α_delta--; _cur_np--;         goto dolc_72_la_do_assign;
+    dolc_72_la_do_assign:
+                  { int64_t _len = _cur_np - dolc_72_la_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + dolc_72_entry_start, _len); _os[_len] = 0;
+                    memcpy(_os, _subj_np + dolc_72_la_start, _len); _os[_len] = 0;
                     NV_SET_fn("tx", STRVAL(_os));
                     _tx = STRVAL(_os);
                   }                                         goto dolc_72_mid;
-    dolc_72_resume:                                         goto assign_c_73_β;
+    dolc_72_lb:                                             goto assign_c_73_β;
 dolc_72_mid: {
     DESCR_t _deref_pat = NV_GET_fn("match");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
@@ -4698,7 +4698,7 @@ dolc_72_mid: {
     _cur_np = (int64_t)_deref_new_cur;
     goto _UnprotKwd_γ;
 }
-dolc_72_resume:
+dolc_72_rb:
     _cur_np = deref_74_saved_cursor;
     goto cat_l_71_β;
     _UnprotKwd_γ:;
@@ -4707,7 +4707,7 @@ dolc_72_resume:
     _UnprotKwd_ω:;
         return FAILDESCR;
 #undef cat_l_71_α_saved_cursor
-#undef dolc_72_entry_start
+#undef dolc_72_la_start
 #undef assign_c_73_α_delta
 #undef assign_c_73_α_start
 #undef deref_74_saved_cursor
