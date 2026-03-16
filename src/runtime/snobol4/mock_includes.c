@@ -299,10 +299,9 @@ DESCR_t Qize(DESCR_t s) {
 /* Forward declarations from snobol4.c */
 extern DESCR_t FIELD_GET_fn(DESCR_t obj, const char *field);
 
-DESCR_t Shift(DESCR_t t_arg) {
-    /* Shift(t, v) — but in beauty.sno it's called as Shift('tag', value) */
-    /* For now t_arg is the tree type tag, value is empty */
-    DESCR_t s = MAKE_TREE_fn(t_arg, STRVAL(""), INTVAL(0), NULVCL);
+DESCR_t Shift(DESCR_t t_arg, DESCR_t v_arg) {
+    /* Shift(t, v) — create tree node with type t and value v, push onto stack */
+    DESCR_t s = MAKE_TREE_fn(t_arg, v_arg, INTVAL(0), NULVCL);
     push_val(s);
     return NULVCL;
 }
@@ -419,7 +418,7 @@ static DESCR_t _w_Qize(DESCR_t *a, int n) {
     return Qize(n>0?a[0]:NULVCL);
 }
 static DESCR_t _w_Shift(DESCR_t *a, int n) {
-    return Shift(n>0?a[0]:NULVCL);
+    return Shift(n>0?a[0]:NULVCL, n>1?a[1]:NULVCL);
 }
 static DESCR_t _w_Reduce(DESCR_t *a, int n) {
     return Reduce(n>0?a[0]:NULVCL, n>1?a[1]:NULVCL);

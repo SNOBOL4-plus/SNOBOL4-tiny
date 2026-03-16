@@ -1102,18 +1102,11 @@ DESCR_t DATCON_fn(const char *typename, ...) {
 }
 
 DESCR_t FIELD_GET_fn(DESCR_t obj, const char *field) {
-    if (strcmp(field, "c") == 0)
-        fprintf(stderr, "TRACE FIELD_GET_fn(c): obj.v=%d obj.u=%p\n",
-                obj.v, (void*)obj.u);
     if (obj.v != DT_DATA || !obj.u) return NULVCL;
     DATBLK_t *t = obj.u->type;
     for (int i = 0; i < t->nfields; i++)
-        if (strcasecmp(t->fields[i], field) == 0) {
-            if (strcmp(field, "c") == 0)
-                fprintf(stderr, "TRACE FIELD_GET_fn(c): found fields[%d].v=%d\n",
-                        i, obj.u->fields[i].v);
+        if (strcasecmp(t->fields[i], field) == 0)
             return obj.u->fields[i];
-        }
     return NULVCL;
 }
 

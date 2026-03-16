@@ -78,7 +78,7 @@ DESCR_t Qize(DESCR_t s);
 /* -------------------------------------------------------------------------
  * ShiftReduce.inc: Shift(x), Reduce(tag, n), etc.
  * ---------------------------------------------------------------------- */
-DESCR_t Shift(DESCR_t x);
+DESCR_t Shift(DESCR_t t, DESCR_t v);
 DESCR_t Reduce(DESCR_t tag, DESCR_t n);
 
 /* -------------------------------------------------------------------------
