@@ -1429,15 +1429,14 @@ static void emit_simple_val(EXPR_t *e) {
     if (!e) { B("NULVCL"); return; }
     switch (e->kind) {
     case E_QLIT: {
-        /* 'nTop()' as a quoted string in & context: wire directly to C-level ntop()
-         * so compiled byrd box counter (NPUSH_fn/NINC_fn/NPOP_fn) and Reduce agree. */
-        if (e->sval && strcasecmp(e->sval, "nTop()") == 0)
+        /* Any quoted string containing "nTop()" is a counter expression — wire to
+         * C-level ntop() so the compiled Byrd box counter (NPUSH_fn/NINC_fn/NPOP_fn)
+         * and Reduce agree on the stack depth at match time.
+         * This covers both the simple case 'nTop()' and compound forms like
+         * '*(GT(nTop(), 1) nTop())' which mean "use the current counter as count". */
+        if (e->sval && strcasestr(e->sval, "nTop()"))
             { B("INTVAL(ntop())"); return; }
-        /* Strip outer single-quote pair: sval "'STMT_t'" -> emit STRVAL("STMT_t").
-         * The SNOBOL4 source writes "'STMT_t'" (double-quoted with inner single quotes).
-         * The lexer strips outer double-quotes, storing "'STMT_t'" as sval — but the
-         * inner single quotes are SNOBOL4 string delimiters that must also be stripped
-         * so the C string value is bare: STMT_t, not 'STMT_t'. */
+        /* Strip outer single-quote pair: sval "'tag'" -> emit STRVAL("tag"). */
         const char *sv = e->sval ? e->sval : "";
         size_t sl = strlen(sv);
         if (sl >= 2 && sv[0] == '\'' && sv[sl-1] == '\'')
@@ -2107,12 +2106,23 @@ static void byrd_emit(EXPR_t *pat,
     /* --------------------------------------------------------------- E_OPSYN (& operator) */
     case E_OPSYN: {
         B("%s: /* E_OPSYN & */\n", alpha);
+        /* If the n-argument is a conditional nTop() expression like
+         * '*(GT(nTop(), 1) nTop())', only call Reduce when ntop() > 1.
+         * When ntop()==1 the single item is already on the stack — no wrapping needed.
+         * For plain integer literals or 'nTop()' alone, always call Reduce. */
+        int conditional_ntop = (pat->right && pat->right->kind == E_QLIT
+                                && pat->right->sval
+                                && strcasestr(pat->right->sval, "GT(nTop()"));
+        if (conditional_ntop)
+            B("    if (ntop() > 1) {\n");
         B("    { DESCR_t _reduce_args[2] = {");
         emit_simple_val(pat->left);
         B(", ");
         emit_simple_val(pat->right);
         B("};\n");
         B("      APPLY_fn(\"Reduce\", _reduce_args, 2); }\n");
+        if (conditional_ntop)
+            B("    }\n");
         B("    goto %s;\n", gamma);
         B("%s: goto %s;\n", beta, omega);
         return;

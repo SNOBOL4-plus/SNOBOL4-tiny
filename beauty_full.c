@@ -5080,7 +5080,7 @@ cat_r_104_β: {
     goto cat_r_103_α;
 }
 cat_r_103_α: /* E_OPSYN & */
-    { DESCR_t _reduce_args[2] = {STRVAL("ExprList"), STRVAL("*(GT(nTop(), 1) nTop())")};
+    { DESCR_t _reduce_args[2] = {STRVAL("ExprList"), INTVAL(ntop())};
       APPLY_fn("Reduce", _reduce_args, 2); }
     goto cat_r_102_α;
 cat_r_103_β: goto cat_l_103_β;
@@ -5625,8 +5625,10 @@ cat_r_148_β: {
     goto cat_r_147_α;
 }
 cat_r_147_α: /* E_OPSYN & */
-    { DESCR_t _reduce_args[2] = {STRVAL("|"), STRVAL("*(GT(nTop(), 1) nTop())")};
+    if (ntop() > 1) {
+    { DESCR_t _reduce_args[2] = {STRVAL("|"), INTVAL(ntop())};
       APPLY_fn("Reduce", _reduce_args, 2); }
+    }
     goto cat_r_146_α;
 cat_r_147_β: goto cat_l_147_β;
     cat_r_146_α:  NPOP_fn();                                goto _Expr3_γ;
@@ -5782,8 +5784,10 @@ cat_r_161_β: {
     goto cat_r_160_α;
 }
 cat_r_160_α: /* E_OPSYN & */
-    { DESCR_t _reduce_args[2] = {STRVAL(".."), STRVAL("*(GT(nTop(), 1) nTop())")};
+    if (ntop() > 1) {
+    { DESCR_t _reduce_args[2] = {STRVAL(".."), INTVAL(ntop())};
       APPLY_fn("Reduce", _reduce_args, 2); }
+    }
     goto cat_r_159_α;
 cat_r_160_β: goto cat_l_160_β;
     cat_r_159_α:  NPOP_fn();                                goto _Expr4_γ;
