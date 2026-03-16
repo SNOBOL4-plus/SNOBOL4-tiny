@@ -991,7 +991,19 @@ static void emit_seq(EXPR_t *left, EXPR_t *right,
     label_fmt(right_β, "cat_r", uid, "β");
 
     PLG(alpha, left_α);   /* α  → left_α  (CAT — ENTER_fn left) */
-    PLG(beta,  right_β);  /* β  → right_β (resume right first) */
+    /* β → right_β (resume right first).
+     * Special case: if left is nPush(), the backtrack path enters right_β
+     * without ever having passed through left_α (where NPUSH_fn fires on
+     * the forward path).  Emit NPUSH_fn() here so ntop() is valid when
+     * the right child's Reduce/E_OPSYN fires on the backtrack path.
+     * Without this, ntop()==0 at Reduce time → Reduce pops 0 and inflates
+     * the parse-tree stack instead of collapsing it. */
+    if (left && left->kind == E_FNC && left->sval &&
+        strcasecmp(left->sval, "nPush") == 0) {
+        PL(beta, right_β, "NPUSH_fn();");  /* β: re-push before retrying right */
+    } else {
+        PLG(beta, right_β);
+    }
 
     byrd_emit(left,
               left_α, left_β,
@@ -1248,13 +1260,26 @@ static void emit_imm(EXPR_t *child, const char *varname,
      * Normal E_DOL path: child is a real pattern, varname is a variable.
      * ------------------------------------------------------------------- */
 
+    /* Detect literal-token varname: $'(' where the RHS is a punctuation
+     * literal (all chars non-alnum/non-underscore), e.g. '(', ')', ','.
+     * In beauty.sno this appears as `child $'('` meaning: child matches,
+     * THEN the next token in the subject must be the literal string varname.
+     * This is distinct from a normal capture variable like `child $MyVar`. */
+    int is_literal_tok = 0;
+    if (!do_shift && varname && varname[0] != '\0') {
+        is_literal_tok = 1;
+        for (const char *p = varname; *p; p++) {
+            if (isalnum((unsigned char)*p) || *p == '_') { is_literal_tok = 0; break; }
+        }
+    }
+
     /* Sanitize varname: non-alnum/underscore chars → '_'.
      * Skip sanitization for do_shift=1 (~ operator): the tag IS the literal
      * text (e.g. "=", "Label", ":()") and must reach Shift() verbatim.
      * Only sanitize for C-identifier use (label/static names), not for the
      * STRVAL tag passed to Shift(). */
     char safe_varname[NAMED_PAT_NAMELEN];
-    if (!do_shift) {
+    if (!do_shift && !is_literal_tok) {
         int i = 0; const char *s = varname;
         for (; *s && i < (int)(sizeof safe_varname)-1; s++, i++)
             safe_varname[i] = (isalnum((unsigned char)*s) || *s=='_') ? *s : '_';
@@ -1271,7 +1296,69 @@ static void emit_imm(EXPR_t *child, const char *varname,
     snprintf(do_assign, LBUF, "%s_do_assign", alpha);
     decl_add("int64_t %s", start_var);
 
-    /* α: record start, enter child */
+    /* α: record start, enter child — emitted inside is_literal_tok branches below */
+
+    /* When varname is a literal token (e.g. '('), the child matches first,
+     * then we must match the literal token before proceeding to gamma.
+     * Route child's gamma to a literal-check label, not directly to do_assign. */
+    if (is_literal_tok) {
+        Label lit_check, lit_check_β;
+        label_fmt(lit_check,   "dlit", byrd_uid(), "α");
+        label_fmt(lit_check_β, "dlit", uid,        "β");
+        /* saved cursor for the literal match backtrack */
+        char lit_saved[LBUF];
+        snprintf(lit_saved, LBUF, "%s_α_saved_cursor", lit_check);
+        decl_add("int64_t %s", lit_saved);
+        /* save @S before child runs so we can undo Shift() on literal fail */
+        char stk_depth[LBUF];
+        snprintf(stk_depth, LBUF, "dlit_%d_stk_depth", uid);
+        decl_add("int %s", stk_depth);
+
+        /* α: snapshot stack depth, record cursor start, enter child */
+        PLG(alpha, NULL);
+        PS(NULL,    "%s = STACK_DEPTH_fn();", stk_depth);
+        PS(NULL,    "%s = %s;", start_var, cursor);
+        PS(child_α, "goto %s;", child_α);
+
+        byrd_emit(child,
+                  child_α, child_β,
+                  lit_check, omega,
+                  subj, subj_len, cursor, depth + 1);
+
+        /* literal check for varname token.
+         * On failure: restore cursor to before child ran (start_var) AND
+         * restore @S to undo any Shift() calls the child made, THEN jump
+         * to omega — caller's ALT wiring needs clean cursor+stack state. */
+
+        int litlen = (int)strlen(varname);
+        PLG(lit_check, NULL);
+        PS(NULL, "if (%s + %d > %s)               { %s = %s; while(STACK_DEPTH_fn()>%s) pop_val(); goto %s; }", cursor, litlen, subj_len, cursor, start_var, stk_depth, omega);
+        for (int ci = 0; ci < litlen; ci++)
+            PS(NULL, "if (%s[%s + %d] != '%c')             { %s = %s; while(STACK_DEPTH_fn()>%s) pop_val(); goto %s; }",
+               subj, cursor, ci, varname[ci], cursor, start_var, stk_depth, omega);
+        PS(NULL, "%s = %s; %s += %d;", lit_saved, cursor, cursor, litlen);
+        PS(do_assign, "goto %s;", do_assign);
+
+        label_fmt(lit_check_β, "dlit", uid, "β2");
+        PLG(lit_check_β, NULL);
+        PS(NULL, "%s = %s;", cursor, lit_saved);
+        PS(omega, "goto %s;", omega);
+
+        /* β: backtrack into child */
+        PLG(beta, child_β);
+
+        /* do_assign: capture child-span → discard ('_'), then γ */
+        PLG(do_assign, NULL);
+        PS(NULL,  "{ int64_t _len = %s - %s;", cursor, start_var);
+        PS(NULL,  "  char *_os = (char*)GC_malloc(_len + 1);");
+        PS(NULL,  "  memcpy(_os, %s + %s, _len); _os[_len] = 0;", subj, start_var);
+        PS(NULL,  "  NV_SET_fn(\"_\", STRVAL(_os));");
+        PS(gamma, "}");
+        return;
+    }
+
+    /* do_assign: capture span → variable, then γ */
+    /* α: record start, enter child (non-literal-tok normal path) */
     PL(alpha, child_α, "%s = %s;", start_var, cursor);
 
     byrd_emit(child,
