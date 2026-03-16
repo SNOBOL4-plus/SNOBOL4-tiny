@@ -714,7 +714,6 @@ Proposed test file: `test/smoke/test_snoCommand_match.sh`
 
 Every session that produces a meaningfully different compiler output commits:
 
-1. **`artifacts/beauty_full_sessionNN.c`** — generated C from `snoc beauty.sno -I $INC`
    - Debuggable without rebuilding
    - README entry with line count, md5, active bug status
 
@@ -772,7 +771,6 @@ Retained for historical reference only. See Decision 13 in `doc/DECISIONS.md`.
 
 
 ### Session 50 addendum — artifacts committed
-- `artifacts/beauty_full_session50.c` — 12847 lines, md5 `7fcbb3951a95f3f77de5dfe4afc49e49`
 - `test/smoke/outputs/session50/` — full logs, oracle, compiled output, diff
 - Smoke test convention documented in §17
 - Commits: `375d55c` (findings+tests), `7d3d0b6` (artifact), `05b80c2` (outputs)
