@@ -1758,31 +1758,39 @@ static void byrd_emit(EXPR_t *pat,
          * The inner E_DOL(SPAN,tx) does the real capture.
          * The outer right (*match(...)) is a zero-width filter.
          *
-         * CRITICAL: gate alpha/beta through fresh trampoline labels.
-         * If we pass alpha/beta directly to byrd_emit(left), emit_seq
-         * calls PLG(beta, cat_r_N_b) which registers beta in fn_seen.
-         * Later emit_imm tries PLG(cat_r_N_b, child_b) but fn_seen
-         * suppresses it -- cat_r_N_b is never defined as a label.
-         * Trampolining avoids this by using alpha/beta only as targets.
+         * Label discipline (learned from emit_seq):
+         *   PLG(beta, right_b)  -- define beta BEFORE recursion, points to right_b
+         *   PLG(alpha, left_a)  -- define alpha BEFORE recursion, points to left_a
+         *   byrd_emit(left,  left_a, left_b,  mid_ok, omega)
+         *   byrd_emit(right, mid_ok, right_b, gamma,  omega)
+         *
+         * beta:   defined once here (goto right_b).
+         * left_a, left_b, right_b: each defined exactly once by their recursion.
+         * mid_ok: defined once by the left arm (it is left arm's gamma).
+         * No label is PLG-emitted more than once.
+         *
+         * Semantics:
+         *   On outer backtrack (beta): resume right arm via right_b.
+         *   Right arm fails: goes to omega (no further backtrack).
+         *   Left arm fails: goes to omega.
          */
         int uid = byrd_uid();
-        char l_entry[LBUF], l_resume[LBUF], mid_ok[LBUF];
-        label_fmt(l_entry,  "dolc", uid, "entry");
-        label_fmt(l_resume, "dolc", uid, "resume");
-        label_fmt(mid_ok,   "dolc", uid, "mid");
+        Label left_a, left_b, right_b, mid_ok;
+        label_fmt(left_a,  "dolc", uid, "la");
+        label_fmt(left_b,  "dolc", uid, "lb");
+        label_fmt(right_b, "dolc", uid, "rb");
+        label_fmt(mid_ok,  "dolc", uid, "mid");
 
-        PLG(alpha, l_entry);
-        PLG(beta,  l_resume);
+        PLG(alpha, left_a);
+        PLG(beta,  right_b);
 
         byrd_emit(pat->left,
-                  l_entry, l_resume,
+                  left_a, left_b,
                   mid_ok, omega,
                   subj, subj_len, cursor, depth + 1);
 
-        /* Pass l_resume directly as right's beta so right's β label
-         * IS l_resume — no need for a separate PLG redirect. */
         byrd_emit(pat->right,
-                  mid_ok, l_resume,
+                  mid_ok, right_b,
                   gamma, omega,
                   subj, subj_len, cursor, depth + 1);
 
@@ -1820,7 +1828,6 @@ static void byrd_emit(EXPR_t *pat,
         const char *varname =
             (pat->left  && pat->left->sval)  ? pat->left->sval  :
             (pat->right && pat->right->sval) ? pat->right->sval : "_";
-        int uid = byrd_uid();
         char safe[NAMED_PAT_NAMELEN];
         { int i=0; const char *s=varname;
           for(;*s&&i<(int)sizeof(safe)-1;s++,i++)

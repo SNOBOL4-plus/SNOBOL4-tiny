@@ -146,3 +146,33 @@
 - Active bug: E_DOL computed-right label duplication in byrd_emit
   - dolc_N_resume / dolc_N_rb defined twice
   - l_lb vs l_rb separation fix drafted but not yet applied cleanly
+
+## session106 — 2026-03-15
+- **Artifact:** beauty_tramp_session106.c
+- **md5:** e8cbe7a005bb99507a4a27951cc98565
+- **Lines:** 15632
+- **Compile status:** OK — beauty_full_bin builds clean, zero errors
+- **Crosscheck:** 106/106 pass
+- **Beauty crosscheck:** 101_comment PASS, 102_output FAIL
+
+### Work done this session
+- **Fixed E_DOL computed-right label dup** (the session105 blocking bug).
+  Root cause: any label passed as `beta` to `byrd_emit()` is PLG-emitted as
+  a C label inside that recursion. The old code passed the same label to two
+  recursive calls, producing a duplicate C label definition.
+  Fix: follow the `emit_seq` pattern — PLG(alpha, left_a) and PLG(beta, right_b)
+  BEFORE recursion; each arm receives a unique internal label as its beta.
+  Wiring: left arm beta=left_b, right arm beta=right_b (== outer beta, defined
+  upfront by PLG). No label is PLG-emitted more than once.
+- **Removed unused `uid` in E_ATP case** (warning cleanup).
+- **4× crosscheck speedup**: precompile runtime into static archive once per run.
+  Per-test gcc time: 2100ms → 410ms. Total: 255s → 61s.
+  Change in: test/crosscheck/run_crosscheck.sh.
+
+### Active bug / next action
+- 102_output FAIL: `OUTPUT = 'hello'` → empty line (blank with spaces).
+  Same failure for any assignment (`FOO = 'hello'`).
+  beauty.sno uses -INCLUDE 'assign.sno' (line 14).
+  pp() walk produces blank output — assignment tree node not being pretty-printed.
+  Next: read inc/assign.sno, trace which Shift/Reduce tree node assignment produces,
+  find the pp() case that handles it, diagnose why output is blank.

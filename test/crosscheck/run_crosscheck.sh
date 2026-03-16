@@ -12,6 +12,20 @@ FILTER="${FILTER:-}"
 STOP_ON_FAIL="${STOP_ON_FAIL:-1}"
 TIMEOUT=5
 TMPDIR_RUN=$(mktemp -d); trap "rm -rf $TMPDIR_RUN" EXIT
+
+# Precompile runtime into a static archive once — 5x faster per-test gcc link.
+RTLIB="$TMPDIR_RUN/libsnobol4rt.a"
+_rt_objs=()
+for _src in \
+    "$RT/snobol4/snobol4.c" \
+    "$RT/snobol4/mock_includes.c" \
+    "$RT/snobol4/snobol4_pattern.c" \
+    "$RT/mock_engine.c"; do
+    _o="$TMPDIR_RUN/$(basename "${_src%.c}").o"
+    gcc -O0 -g -c "$_src" -I"$RT/snobol4" -I"$RT" -I"$SNO2C_INC" -w -o "$_o"
+    _rt_objs+=("$_o")
+done
+ar rcs "$RTLIB" "${_rt_objs[@]}"
 GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[0;33m'; RESET='\033[0m'
 PASS=0; FAIL=0; SKIP=0
 
@@ -25,9 +39,7 @@ run_test() {
         echo -e "${RED}FAIL${RESET} $name  [sno2c]"; FAIL=$((FAIL+1))
         [[ "$STOP_ON_FAIL" == "1" ]] && summary && exit 1; return 1
     fi
-    if ! gcc -O0 -g "$c" \
-        "$RT/snobol4/snobol4.c" "$RT/snobol4/mock_includes.c" \
-        "$RT/snobol4/snobol4_pattern.c" "$RT/mock_engine.c" \
+    if ! gcc -O0 -g "$c" "$RTLIB" \
         -I"$RT/snobol4" -I"$RT" -I"$SNO2C_INC" \
         -lgc -lm -w -o "$bin" 2>/dev/null; then
         echo -e "${RED}FAIL${RESET} $name  [gcc]"; FAIL=$((FAIL+1))
