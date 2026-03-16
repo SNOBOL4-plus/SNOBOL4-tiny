@@ -4381,7 +4381,7 @@ typedef struct pat_Function_t {
     int64_t dolc_58_la_start;
     int64_t assign_c_59_α_delta;
     int64_t assign_c_59_α_start;
-    int64_t deref_60_saved_cursor;
+    int64_t deref_fnc_60_saved_cursor;
 } pat_Function_t;
 
 static DESCR_t pat_Function(const char *_subj_np, int64_t _slen_np,
@@ -4392,7 +4392,7 @@ static DESCR_t pat_Function(const char *_subj_np, int64_t _slen_np,
 #define dolc_58_la_start z->dolc_58_la_start
 #define assign_c_59_α_delta z->assign_c_59_α_delta
 #define assign_c_59_α_start z->assign_c_59_α_start
-#define deref_60_saved_cursor z->deref_60_saved_cursor
+#define deref_fnc_60_saved_cursor z->deref_fnc_60_saved_cursor
 
     if (_entry_np == 0) goto _Function_α;
     if (_entry_np == 1) goto _Function_β;
@@ -4418,15 +4418,19 @@ static DESCR_t pat_Function(const char *_subj_np, int64_t _slen_np,
                   }                                         goto dolc_58_mid;
     dolc_58_lb:                                             goto assign_c_59_β;
 dolc_58_mid: {
-    DESCR_t _deref_pat = NV_GET_fn("match");
-    int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto _Function_ω;
-    deref_60_saved_cursor = _cur_np;
-    _cur_np = (int64_t)_deref_new_cur;
+    DESCR_t _fcall_60_args[2];
+    _fcall_60_args[0] = NV_GET_fn("Functions");
+    _fcall_60_args[1] = NV_GET_fn("TxInList");
+    DESCR_t _fcall_60_pat = APPLY_fn("match", _fcall_60_args, 2);
+    if (IS_FAIL_fn(_fcall_60_pat)) goto _Function_ω;
+    int _deref_fnc_60_new_cur = match_pattern_at(_fcall_60_pat, _subj_np, (int)_slen_np, (int)_cur_np);
+    if (_deref_fnc_60_new_cur < 0) goto _Function_ω;
+    deref_fnc_60_saved_cursor = _cur_np;
+    _cur_np = (int64_t)_deref_fnc_60_new_cur;
     goto _Function_γ;
 }
 dolc_58_rb:
-    _cur_np = deref_60_saved_cursor;
+    _cur_np = deref_fnc_60_saved_cursor;
     goto _Function_ω;
     _Function_γ:;
         *_cur_ptr_np = _cur_np;
@@ -4436,7 +4440,7 @@ dolc_58_rb:
 #undef dolc_58_la_start
 #undef assign_c_59_α_delta
 #undef assign_c_59_α_start
-#undef deref_60_saved_cursor
+#undef deref_fnc_60_saved_cursor
 
 }
 
@@ -4444,7 +4448,7 @@ typedef struct pat_BuiltinVar_t {
     int64_t dolc_61_la_start;
     int64_t assign_c_62_α_delta;
     int64_t assign_c_62_α_start;
-    int64_t deref_63_saved_cursor;
+    int64_t deref_fnc_63_saved_cursor;
 } pat_BuiltinVar_t;
 
 static DESCR_t pat_BuiltinVar(const char *_subj_np, int64_t _slen_np,
@@ -4455,7 +4459,7 @@ static DESCR_t pat_BuiltinVar(const char *_subj_np, int64_t _slen_np,
 #define dolc_61_la_start z->dolc_61_la_start
 #define assign_c_62_α_delta z->assign_c_62_α_delta
 #define assign_c_62_α_start z->assign_c_62_α_start
-#define deref_63_saved_cursor z->deref_63_saved_cursor
+#define deref_fnc_63_saved_cursor z->deref_fnc_63_saved_cursor
 
     if (_entry_np == 0) goto _BuiltinVar_α;
     if (_entry_np == 1) goto _BuiltinVar_β;
@@ -4481,15 +4485,19 @@ static DESCR_t pat_BuiltinVar(const char *_subj_np, int64_t _slen_np,
                   }                                         goto dolc_61_mid;
     dolc_61_lb:                                             goto assign_c_62_β;
 dolc_61_mid: {
-    DESCR_t _deref_pat = NV_GET_fn("match");
-    int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto _BuiltinVar_ω;
-    deref_63_saved_cursor = _cur_np;
-    _cur_np = (int64_t)_deref_new_cur;
+    DESCR_t _fcall_63_args[2];
+    _fcall_63_args[0] = NV_GET_fn("BuiltinVars");
+    _fcall_63_args[1] = NV_GET_fn("TxInList");
+    DESCR_t _fcall_63_pat = APPLY_fn("match", _fcall_63_args, 2);
+    if (IS_FAIL_fn(_fcall_63_pat)) goto _BuiltinVar_ω;
+    int _deref_fnc_63_new_cur = match_pattern_at(_fcall_63_pat, _subj_np, (int)_slen_np, (int)_cur_np);
+    if (_deref_fnc_63_new_cur < 0) goto _BuiltinVar_ω;
+    deref_fnc_63_saved_cursor = _cur_np;
+    _cur_np = (int64_t)_deref_fnc_63_new_cur;
     goto _BuiltinVar_γ;
 }
 dolc_61_rb:
-    _cur_np = deref_63_saved_cursor;
+    _cur_np = deref_fnc_63_saved_cursor;
     goto _BuiltinVar_ω;
     _BuiltinVar_γ:;
         *_cur_ptr_np = _cur_np;
@@ -4499,7 +4507,7 @@ dolc_61_rb:
 #undef dolc_61_la_start
 #undef assign_c_62_α_delta
 #undef assign_c_62_α_start
-#undef deref_63_saved_cursor
+#undef deref_fnc_63_saved_cursor
 
 }
 
@@ -4507,7 +4515,7 @@ typedef struct pat_SpecialNm_t {
     int64_t dolc_64_la_start;
     int64_t assign_c_65_α_delta;
     int64_t assign_c_65_α_start;
-    int64_t deref_66_saved_cursor;
+    int64_t deref_fnc_66_saved_cursor;
 } pat_SpecialNm_t;
 
 static DESCR_t pat_SpecialNm(const char *_subj_np, int64_t _slen_np,
@@ -4518,7 +4526,7 @@ static DESCR_t pat_SpecialNm(const char *_subj_np, int64_t _slen_np,
 #define dolc_64_la_start z->dolc_64_la_start
 #define assign_c_65_α_delta z->assign_c_65_α_delta
 #define assign_c_65_α_start z->assign_c_65_α_start
-#define deref_66_saved_cursor z->deref_66_saved_cursor
+#define deref_fnc_66_saved_cursor z->deref_fnc_66_saved_cursor
 
     if (_entry_np == 0) goto _SpecialNm_α;
     if (_entry_np == 1) goto _SpecialNm_β;
@@ -4544,15 +4552,19 @@ static DESCR_t pat_SpecialNm(const char *_subj_np, int64_t _slen_np,
                   }                                         goto dolc_64_mid;
     dolc_64_lb:                                             goto assign_c_65_β;
 dolc_64_mid: {
-    DESCR_t _deref_pat = NV_GET_fn("match");
-    int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto _SpecialNm_ω;
-    deref_66_saved_cursor = _cur_np;
-    _cur_np = (int64_t)_deref_new_cur;
+    DESCR_t _fcall_66_args[2];
+    _fcall_66_args[0] = NV_GET_fn("SpecialNms");
+    _fcall_66_args[1] = NV_GET_fn("TxInList");
+    DESCR_t _fcall_66_pat = APPLY_fn("match", _fcall_66_args, 2);
+    if (IS_FAIL_fn(_fcall_66_pat)) goto _SpecialNm_ω;
+    int _deref_fnc_66_new_cur = match_pattern_at(_fcall_66_pat, _subj_np, (int)_slen_np, (int)_cur_np);
+    if (_deref_fnc_66_new_cur < 0) goto _SpecialNm_ω;
+    deref_fnc_66_saved_cursor = _cur_np;
+    _cur_np = (int64_t)_deref_fnc_66_new_cur;
     goto _SpecialNm_γ;
 }
 dolc_64_rb:
-    _cur_np = deref_66_saved_cursor;
+    _cur_np = deref_fnc_66_saved_cursor;
     goto _SpecialNm_ω;
     _SpecialNm_γ:;
         *_cur_ptr_np = _cur_np;
@@ -4562,7 +4574,7 @@ dolc_64_rb:
 #undef dolc_64_la_start
 #undef assign_c_65_α_delta
 #undef assign_c_65_α_start
-#undef deref_66_saved_cursor
+#undef deref_fnc_66_saved_cursor
 
 }
 
@@ -4571,7 +4583,7 @@ typedef struct pat_ProtKwd_t {
     int64_t dolc_68_la_start;
     int64_t assign_c_69_α_delta;
     int64_t assign_c_69_α_start;
-    int64_t deref_70_saved_cursor;
+    int64_t deref_fnc_70_saved_cursor;
 } pat_ProtKwd_t;
 
 static DESCR_t pat_ProtKwd(const char *_subj_np, int64_t _slen_np,
@@ -4583,7 +4595,7 @@ static DESCR_t pat_ProtKwd(const char *_subj_np, int64_t _slen_np,
 #define dolc_68_la_start z->dolc_68_la_start
 #define assign_c_69_α_delta z->assign_c_69_α_delta
 #define assign_c_69_α_start z->assign_c_69_α_start
-#define deref_70_saved_cursor z->deref_70_saved_cursor
+#define deref_fnc_70_saved_cursor z->deref_fnc_70_saved_cursor
 
     if (_entry_np == 0) goto _ProtKwd_α;
     if (_entry_np == 1) goto _ProtKwd_β;
@@ -4617,15 +4629,19 @@ static DESCR_t pat_ProtKwd(const char *_subj_np, int64_t _slen_np,
                   }                                         goto dolc_68_mid;
     dolc_68_lb:                                             goto assign_c_69_β;
 dolc_68_mid: {
-    DESCR_t _deref_pat = NV_GET_fn("match");
-    int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto cat_l_67_β;
-    deref_70_saved_cursor = _cur_np;
-    _cur_np = (int64_t)_deref_new_cur;
+    DESCR_t _fcall_70_args[2];
+    _fcall_70_args[0] = NV_GET_fn("ProtKwds");
+    _fcall_70_args[1] = NV_GET_fn("TxInList");
+    DESCR_t _fcall_70_pat = APPLY_fn("match", _fcall_70_args, 2);
+    if (IS_FAIL_fn(_fcall_70_pat)) goto cat_l_67_β;
+    int _deref_fnc_70_new_cur = match_pattern_at(_fcall_70_pat, _subj_np, (int)_slen_np, (int)_cur_np);
+    if (_deref_fnc_70_new_cur < 0) goto cat_l_67_β;
+    deref_fnc_70_saved_cursor = _cur_np;
+    _cur_np = (int64_t)_deref_fnc_70_new_cur;
     goto _ProtKwd_γ;
 }
 dolc_68_rb:
-    _cur_np = deref_70_saved_cursor;
+    _cur_np = deref_fnc_70_saved_cursor;
     goto cat_l_67_β;
     _ProtKwd_γ:;
         *_cur_ptr_np = _cur_np;
@@ -4636,7 +4652,7 @@ dolc_68_rb:
 #undef dolc_68_la_start
 #undef assign_c_69_α_delta
 #undef assign_c_69_α_start
-#undef deref_70_saved_cursor
+#undef deref_fnc_70_saved_cursor
 
 }
 
@@ -4645,7 +4661,7 @@ typedef struct pat_UnprotKwd_t {
     int64_t dolc_72_la_start;
     int64_t assign_c_73_α_delta;
     int64_t assign_c_73_α_start;
-    int64_t deref_74_saved_cursor;
+    int64_t deref_fnc_74_saved_cursor;
 } pat_UnprotKwd_t;
 
 static DESCR_t pat_UnprotKwd(const char *_subj_np, int64_t _slen_np,
@@ -4657,7 +4673,7 @@ static DESCR_t pat_UnprotKwd(const char *_subj_np, int64_t _slen_np,
 #define dolc_72_la_start z->dolc_72_la_start
 #define assign_c_73_α_delta z->assign_c_73_α_delta
 #define assign_c_73_α_start z->assign_c_73_α_start
-#define deref_74_saved_cursor z->deref_74_saved_cursor
+#define deref_fnc_74_saved_cursor z->deref_fnc_74_saved_cursor
 
     if (_entry_np == 0) goto _UnprotKwd_α;
     if (_entry_np == 1) goto _UnprotKwd_β;
@@ -4691,15 +4707,19 @@ static DESCR_t pat_UnprotKwd(const char *_subj_np, int64_t _slen_np,
                   }                                         goto dolc_72_mid;
     dolc_72_lb:                                             goto assign_c_73_β;
 dolc_72_mid: {
-    DESCR_t _deref_pat = NV_GET_fn("match");
-    int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto cat_l_71_β;
-    deref_74_saved_cursor = _cur_np;
-    _cur_np = (int64_t)_deref_new_cur;
+    DESCR_t _fcall_74_args[2];
+    _fcall_74_args[0] = NV_GET_fn("UnprotKwds");
+    _fcall_74_args[1] = NV_GET_fn("TxInList");
+    DESCR_t _fcall_74_pat = APPLY_fn("match", _fcall_74_args, 2);
+    if (IS_FAIL_fn(_fcall_74_pat)) goto cat_l_71_β;
+    int _deref_fnc_74_new_cur = match_pattern_at(_fcall_74_pat, _subj_np, (int)_slen_np, (int)_cur_np);
+    if (_deref_fnc_74_new_cur < 0) goto cat_l_71_β;
+    deref_fnc_74_saved_cursor = _cur_np;
+    _cur_np = (int64_t)_deref_fnc_74_new_cur;
     goto _UnprotKwd_γ;
 }
 dolc_72_rb:
-    _cur_np = deref_74_saved_cursor;
+    _cur_np = deref_fnc_74_saved_cursor;
     goto cat_l_71_β;
     _UnprotKwd_γ:;
         *_cur_ptr_np = _cur_np;
@@ -4710,7 +4730,7 @@ dolc_72_rb:
 #undef dolc_72_la_start
 #undef assign_c_73_α_delta
 #undef assign_c_73_α_start
-#undef deref_74_saved_cursor
+#undef deref_fnc_74_saved_cursor
 
 }
 
@@ -4972,7 +4992,7 @@ alt_r_95_β:
 
 typedef struct pat_TxInList_t {
     int64_t alt_r_99_α_saved_cursor;
-    int64_t deref_100_saved_cursor;
+    int64_t deref_fnc_100_saved_cursor;
     int64_t alt_l_101_α_saved_cursor;
 } pat_TxInList_t;
 
@@ -4982,7 +5002,7 @@ static DESCR_t pat_TxInList(const char *_subj_np, int64_t _slen_np,
     pat_TxInList_t *z = *_zz_np;
     int64_t _cur_np = *_cur_ptr_np;
 #define alt_r_99_α_saved_cursor z->alt_r_99_α_saved_cursor
-#define deref_100_saved_cursor z->deref_100_saved_cursor
+#define deref_fnc_100_saved_cursor z->deref_fnc_100_saved_cursor
 #define alt_l_101_α_saved_cursor z->alt_l_101_α_saved_cursor
 
     if (_entry_np == 0) goto _TxInList_α;
@@ -5005,15 +5025,18 @@ static DESCR_t pat_TxInList(const char *_subj_np, int64_t _slen_np,
                                                             goto cat_r_98_α;
     alt_r_99_β:   _cur_np = alt_r_99_α_saved_cursor;        goto _TxInList_ω;
 cat_r_98_α: {
-    DESCR_t _deref_pat = NV_GET_fn("upr");
-    int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto cat_l_98_β;
-    deref_100_saved_cursor = _cur_np;
-    _cur_np = (int64_t)_deref_new_cur;
+    DESCR_t _fcall_100_args[1];
+    _fcall_100_args[0] = NV_GET_fn("tx");
+    DESCR_t _fcall_100_pat = APPLY_fn("upr", _fcall_100_args, 1);
+    if (IS_FAIL_fn(_fcall_100_pat)) goto cat_l_98_β;
+    int _deref_fnc_100_new_cur = match_pattern_at(_fcall_100_pat, _subj_np, (int)_slen_np, (int)_cur_np);
+    if (_deref_fnc_100_new_cur < 0) goto cat_l_98_β;
+    deref_fnc_100_saved_cursor = _cur_np;
+    _cur_np = (int64_t)_deref_fnc_100_new_cur;
     goto cat_r_97_α;
 }
 cat_r_98_β:
-    _cur_np = deref_100_saved_cursor;
+    _cur_np = deref_fnc_100_saved_cursor;
     goto cat_l_98_β;
     cat_r_97_α:                                             goto alt_l_101_α;
     cat_r_97_β:                                             goto alt_r_101_β;
@@ -5033,7 +5056,7 @@ cat_r_98_β:
     _TxInList_ω:;
         return FAILDESCR;
 #undef alt_r_99_α_saved_cursor
-#undef deref_100_saved_cursor
+#undef deref_fnc_100_saved_cursor
 #undef alt_l_101_α_saved_cursor
 
 }
@@ -5059,7 +5082,7 @@ static DESCR_t pat_ExprList(const char *_subj_np, int64_t _slen_np,
     cat_l_102_α:                                            goto cat_l_103_α;
     cat_l_102_β:                                            goto cat_r_103_β;
     cat_l_103_α:                                            goto cat_l_104_α;
-    cat_l_103_β:                                            goto cat_r_104_β;
+    cat_l_103_β:  NPUSH_fn();                               goto cat_r_104_β;
     cat_l_104_α:  NPUSH_fn();                               goto cat_r_104_α;
     cat_l_104_β:                                            goto _ExprList_ω;
 cat_r_104_α: {
@@ -5075,8 +5098,10 @@ cat_r_104_β: {
     goto cat_r_103_α;
 }
 cat_r_103_α: /* E_OPSYN & */
-    { DESCR_t _reduce_args[2] = {STRVAL("ExprList"), STRVAL("*(GT(nTop(), 1) nTop())")};
+    if (ntop() > 1) {
+    { DESCR_t _reduce_args[2] = {STRVAL("ExprList"), INTVAL(ntop())};
       APPLY_fn("Reduce", _reduce_args, 2); }
+    }
     goto cat_r_102_α;
 cat_r_103_β: goto cat_l_103_β;
     cat_r_102_α:  NPOP_fn();                                goto _ExprList_γ;
@@ -5604,7 +5629,7 @@ static DESCR_t pat_Expr3(const char *_subj_np, int64_t _slen_np,
     cat_l_146_α:                                            goto cat_l_147_α;
     cat_l_146_β:                                            goto cat_r_147_β;
     cat_l_147_α:                                            goto cat_l_148_α;
-    cat_l_147_β:                                            goto cat_r_148_β;
+    cat_l_147_β:  NPUSH_fn();                               goto cat_r_148_β;
     cat_l_148_α:  NPUSH_fn();                               goto cat_r_148_α;
     cat_l_148_β:                                            goto _Expr3_ω;
 cat_r_148_α: {
@@ -5620,8 +5645,10 @@ cat_r_148_β: {
     goto cat_r_147_α;
 }
 cat_r_147_α: /* E_OPSYN & */
-    { DESCR_t _reduce_args[2] = {STRVAL("|"), STRVAL("*(GT(nTop(), 1) nTop())")};
+    if (ntop() > 1) {
+    { DESCR_t _reduce_args[2] = {STRVAL("|"), INTVAL(ntop())};
       APPLY_fn("Reduce", _reduce_args, 2); }
+    }
     goto cat_r_146_α;
 cat_r_147_β: goto cat_l_147_β;
     cat_r_146_α:  NPOP_fn();                                goto _Expr3_γ;
@@ -5761,7 +5788,7 @@ static DESCR_t pat_Expr4(const char *_subj_np, int64_t _slen_np,
     cat_l_159_α:                                            goto cat_l_160_α;
     cat_l_159_β:                                            goto cat_r_160_β;
     cat_l_160_α:                                            goto cat_l_161_α;
-    cat_l_160_β:                                            goto cat_r_161_β;
+    cat_l_160_β:  NPUSH_fn();                               goto cat_r_161_β;
     cat_l_161_α:  NPUSH_fn();                               goto cat_r_161_α;
     cat_l_161_β:                                            goto _Expr4_ω;
 cat_r_161_α: {
@@ -5777,8 +5804,10 @@ cat_r_161_β: {
     goto cat_r_160_α;
 }
 cat_r_160_α: /* E_OPSYN & */
-    { DESCR_t _reduce_args[2] = {STRVAL(".."), STRVAL("*(GT(nTop(), 1) nTop())")};
+    if (ntop() > 1) {
+    { DESCR_t _reduce_args[2] = {STRVAL(".."), INTVAL(ntop())};
       APPLY_fn("Reduce", _reduce_args, 2); }
+    }
     goto cat_r_159_α;
 cat_r_160_β: goto cat_l_160_β;
     cat_r_159_α:  NPOP_fn();                                goto _Expr4_γ;
@@ -7722,7 +7751,7 @@ cat_l_334_β: {
     cat_l_338_α:                                            goto cat_l_339_α;
     cat_l_338_β:                                            goto cat_r_339_β;
     cat_l_339_α:                                            goto cat_l_340_α;
-    cat_l_339_β:                                            goto cat_r_340_β;
+    cat_l_339_β:  NPUSH_fn();                               goto cat_r_340_β;
     cat_l_340_α:  NPUSH_fn();                               goto cat_r_340_α;
     cat_l_340_β:                                            goto alt_r_337_α;
 cat_r_340_α: {
@@ -7738,7 +7767,7 @@ cat_r_340_β: {
     goto cat_r_339_α;
 }
 cat_r_339_α: /* E_OPSYN & */
-    { DESCR_t _reduce_args[2] = {STRVAL("[]"), STRVAL("nTop() + 1")};
+    { DESCR_t _reduce_args[2] = {STRVAL("[]"), INTVAL(ntop())};
       APPLY_fn("Reduce", _reduce_args, 2); }
     goto cat_r_338_α;
 cat_r_339_β: goto cat_l_339_β;
@@ -7774,16 +7803,20 @@ typedef struct pat_Expr16_t {
     int64_t dlit_347_start;
     int64_t dlit_347_α_saved_cursor;
     int64_t cat_r_346_α_start;
-    int64_t deref_349_saved_cur;
-    int64_t dlit_351_start;
-    int64_t dlit_351_α_saved_cursor;
-    int64_t cat_r_350_α_start;
-    int64_t deref_353_saved_cur;
-    int64_t deref_356_saved_cur;
-    int64_t deref_357_saved_cursor;
-    pat_ExprList_t *deref_349_z;
-    pat_ExprList_t *deref_353_z;
-    pat_Expr16_t *deref_356_z;
+    int64_t dlit_349_α_α_saved_cursor;
+    int dlit_348_stk_depth;
+    int64_t deref_350_saved_cur;
+    int64_t dlit_352_start;
+    int64_t dlit_352_α_saved_cursor;
+    int64_t cat_r_351_α_start;
+    int64_t dlit_354_α_α_saved_cursor;
+    int dlit_353_stk_depth;
+    int64_t deref_355_saved_cur;
+    int64_t deref_358_saved_cur;
+    int64_t deref_359_saved_cursor;
+    pat_ExprList_t *deref_350_z;
+    pat_ExprList_t *deref_355_z;
+    pat_Expr16_t *deref_358_z;
 } pat_Expr16_t;
 
 static DESCR_t pat_Expr16(const char *_subj_np, int64_t _slen_np,
@@ -7794,16 +7827,20 @@ static DESCR_t pat_Expr16(const char *_subj_np, int64_t _slen_np,
 #define dlit_347_start z->dlit_347_start
 #define dlit_347_α_saved_cursor z->dlit_347_α_saved_cursor
 #define cat_r_346_α_start z->cat_r_346_α_start
-#define deref_349_saved_cur z->deref_349_saved_cur
-#define dlit_351_start z->dlit_351_start
-#define dlit_351_α_saved_cursor z->dlit_351_α_saved_cursor
-#define cat_r_350_α_start z->cat_r_350_α_start
-#define deref_353_saved_cur z->deref_353_saved_cur
-#define deref_356_saved_cur z->deref_356_saved_cur
-#define deref_357_saved_cursor z->deref_357_saved_cursor
-#define deref_349_z z->deref_349_z
-#define deref_353_z z->deref_353_z
-#define deref_356_z z->deref_356_z
+#define dlit_349_α_α_saved_cursor z->dlit_349_α_α_saved_cursor
+#define dlit_348_stk_depth z->dlit_348_stk_depth
+#define deref_350_saved_cur z->deref_350_saved_cur
+#define dlit_352_start z->dlit_352_start
+#define dlit_352_α_saved_cursor z->dlit_352_α_saved_cursor
+#define cat_r_351_α_start z->cat_r_351_α_start
+#define dlit_354_α_α_saved_cursor z->dlit_354_α_α_saved_cursor
+#define dlit_353_stk_depth z->dlit_353_stk_depth
+#define deref_355_saved_cur z->deref_355_saved_cur
+#define deref_358_saved_cur z->deref_358_saved_cur
+#define deref_359_saved_cursor z->deref_359_saved_cursor
+#define deref_350_z z->deref_350_z
+#define deref_355_z z->deref_355_z
+#define deref_358_z z->deref_358_z
 
     if (_entry_np == 0) goto _Expr16_α;
     if (_entry_np == 1) goto _Expr16_β;
@@ -7833,90 +7870,112 @@ static DESCR_t pat_Expr16(const char *_subj_np, int64_t _slen_np,
                     memcpy(_os, _subj_np + dlit_347_start, _len); _os[_len] = 0;
                     output_str(_os); free(_os); }           goto cat_r_346_α;
     cat_l_346_β:                                            goto dlit_347_β;
-    cat_r_346_α:  cat_r_346_α_start = _cur_np;              goto assign_c_348_α;
+    cat_r_346_α:
+                  dlit_348_stk_depth = STACK_DEPTH_fn();
+                  cat_r_346_α_start = _cur_np;
+                  goto assign_c_348_α;                      goto assign_c_348_α;
 assign_c_348_α: {
-    deref_349_saved_cur = _cur_np;
-    DESCR_t _r_349 = pat_ExprList(_subj_np, _slen_np, &_cur_np, &deref_349_z, 0);
-    if (IS_FAIL_fn(_r_349)) { _cur_np = deref_349_saved_cur; goto cat_l_346_β; }
-    goto cat_r_346_α_do_assign;
+    deref_350_saved_cur = _cur_np;
+    DESCR_t _r_350 = pat_ExprList(_subj_np, _slen_np, &_cur_np, &deref_350_z, 0);
+    if (IS_FAIL_fn(_r_350)) { _cur_np = deref_350_saved_cur; goto cat_l_346_β; }
+    goto dlit_349_α;
 }
 assign_c_348_β: {
-    _cur_np = deref_349_saved_cur;
-    DESCR_t _r_349_b = pat_ExprList(_subj_np, _slen_np, &_cur_np, &deref_349_z, 1);
-    if (IS_FAIL_fn(_r_349_b)) { _cur_np = deref_349_saved_cur; goto cat_l_346_β; }
-    goto cat_r_346_α_do_assign;
+    _cur_np = deref_350_saved_cur;
+    DESCR_t _r_350_b = pat_ExprList(_subj_np, _slen_np, &_cur_np, &deref_350_z, 1);
+    if (IS_FAIL_fn(_r_350_b)) { _cur_np = deref_350_saved_cur; goto cat_l_346_β; }
+    goto dlit_349_α;
 }
+    dlit_349_α:
+                  if (_cur_np + 1 > _slen_np)               { _cur_np = cat_r_346_α_start; while(STACK_DEPTH_fn()>dlit_348_stk_depth) pop_val(); goto cat_l_346_β; }
+                  if (_subj_np[_cur_np + 0] != ']')             { _cur_np = cat_r_346_α_start; while(STACK_DEPTH_fn()>dlit_348_stk_depth) pop_val(); goto cat_l_346_β; }
+                  dlit_349_α_α_saved_cursor = _cur_np; _cur_np += 1;
+                  goto cat_r_346_α_do_assign;               goto cat_r_346_α_do_assign;
+    dlit_348_β2:
+                  _cur_np = dlit_349_α_α_saved_cursor;
+                  goto cat_l_346_β;                         goto cat_l_346_β;
+    cat_r_346_β:                                            goto assign_c_348_β;
     cat_r_346_α_do_assign:
                   { int64_t _len = _cur_np - cat_r_346_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
                     memcpy(_os, _subj_np + cat_r_346_α_start, _len); _os[_len] = 0;
                     NV_SET_fn("_", STRVAL(_os));
                   }                                         goto cat_r_343_α;
-    cat_r_346_β:                                            goto assign_c_348_β;
-    alt_r_345_α:                                            goto cat_l_350_α;
-    alt_r_345_β:                                            goto cat_r_350_β;
-    cat_l_350_α:
-                  dlit_351_start = _cur_np;
-                  goto dlit_351_α;                          goto dlit_351_α;
-    dlit_351_α:
+    alt_r_345_α:                                            goto cat_l_351_α;
+    alt_r_345_β:                                            goto cat_r_351_β;
+    cat_l_351_α:
+                  dlit_352_start = _cur_np;
+                  goto dlit_352_α;                          goto dlit_352_α;
+    dlit_352_α:
                   if (_cur_np + 1 > _slen_np)               goto cat_l_344_β;
                   if (_subj_np[_cur_np] != '<')             goto cat_l_344_β;
-                  dlit_351_α_saved_cursor = _cur_np; _cur_np += 1;
-                                                            goto dlit_351_do_assign;
-    dlit_351_β:   _cur_np = dlit_351_α_saved_cursor;        goto cat_l_344_β;
-    dlit_351_do_assign:
-                  { int64_t _len = _cur_np - dlit_351_start;
+                  dlit_352_α_saved_cursor = _cur_np; _cur_np += 1;
+                                                            goto dlit_352_do_assign;
+    dlit_352_β:   _cur_np = dlit_352_α_saved_cursor;        goto cat_l_344_β;
+    dlit_352_do_assign:
+                  { int64_t _len = _cur_np - dlit_352_start;
                     char *_os = malloc(_len + 1);
-                    memcpy(_os, _subj_np + dlit_351_start, _len); _os[_len] = 0;
-                    output_str(_os); free(_os); }           goto cat_r_350_α;
-    cat_l_350_β:                                            goto dlit_351_β;
-    cat_r_350_α:  cat_r_350_α_start = _cur_np;              goto assign_c_352_α;
-assign_c_352_α: {
-    deref_353_saved_cur = _cur_np;
-    DESCR_t _r_353 = pat_ExprList(_subj_np, _slen_np, &_cur_np, &deref_353_z, 0);
-    if (IS_FAIL_fn(_r_353)) { _cur_np = deref_353_saved_cur; goto cat_l_350_β; }
-    goto cat_r_350_α_do_assign;
+                    memcpy(_os, _subj_np + dlit_352_start, _len); _os[_len] = 0;
+                    output_str(_os); free(_os); }           goto cat_r_351_α;
+    cat_l_351_β:                                            goto dlit_352_β;
+    cat_r_351_α:
+                  dlit_353_stk_depth = STACK_DEPTH_fn();
+                  cat_r_351_α_start = _cur_np;
+                  goto assign_c_353_α;                      goto assign_c_353_α;
+assign_c_353_α: {
+    deref_355_saved_cur = _cur_np;
+    DESCR_t _r_355 = pat_ExprList(_subj_np, _slen_np, &_cur_np, &deref_355_z, 0);
+    if (IS_FAIL_fn(_r_355)) { _cur_np = deref_355_saved_cur; goto cat_l_351_β; }
+    goto dlit_354_α;
 }
-assign_c_352_β: {
-    _cur_np = deref_353_saved_cur;
-    DESCR_t _r_353_b = pat_ExprList(_subj_np, _slen_np, &_cur_np, &deref_353_z, 1);
-    if (IS_FAIL_fn(_r_353_b)) { _cur_np = deref_353_saved_cur; goto cat_l_350_β; }
-    goto cat_r_350_α_do_assign;
+assign_c_353_β: {
+    _cur_np = deref_355_saved_cur;
+    DESCR_t _r_355_b = pat_ExprList(_subj_np, _slen_np, &_cur_np, &deref_355_z, 1);
+    if (IS_FAIL_fn(_r_355_b)) { _cur_np = deref_355_saved_cur; goto cat_l_351_β; }
+    goto dlit_354_α;
 }
-    cat_r_350_α_do_assign:
-                  { int64_t _len = _cur_np - cat_r_350_α_start;
+    dlit_354_α:
+                  if (_cur_np + 1 > _slen_np)               { _cur_np = cat_r_351_α_start; while(STACK_DEPTH_fn()>dlit_353_stk_depth) pop_val(); goto cat_l_351_β; }
+                  if (_subj_np[_cur_np + 0] != '>')             { _cur_np = cat_r_351_α_start; while(STACK_DEPTH_fn()>dlit_353_stk_depth) pop_val(); goto cat_l_351_β; }
+                  dlit_354_α_α_saved_cursor = _cur_np; _cur_np += 1;
+                  goto cat_r_351_α_do_assign;               goto cat_r_351_α_do_assign;
+    dlit_353_β2:
+                  _cur_np = dlit_354_α_α_saved_cursor;
+                  goto cat_l_351_β;                         goto cat_l_351_β;
+    cat_r_351_β:                                            goto assign_c_353_β;
+    cat_r_351_α_do_assign:
+                  { int64_t _len = _cur_np - cat_r_351_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_r_350_α_start, _len); _os[_len] = 0;
+                    memcpy(_os, _subj_np + cat_r_351_α_start, _len); _os[_len] = 0;
                     NV_SET_fn("_", STRVAL(_os));
                   }                                         goto cat_r_343_α;
-    cat_r_350_β:                                            goto assign_c_352_β;
-    cat_r_343_α:                                            goto fence_p_354_α;
-    fence_p_354_α:                                          goto alt_l_355_α;
-    fence_p_354_β:                                          goto alt_r_355_β;
-alt_l_355_α: {
-    deref_356_saved_cur = _cur_np;
-    DESCR_t _r_356 = pat_Expr16(_subj_np, _slen_np, &_cur_np, &deref_356_z, 0);
-    if (IS_FAIL_fn(_r_356)) { _cur_np = deref_356_saved_cur; goto alt_r_355_α; }
-    goto fence_after_354;
+    cat_r_343_α:                                            goto fence_p_356_α;
+    fence_p_356_α:                                          goto alt_l_357_α;
+    fence_p_356_β:                                          goto alt_r_357_β;
+alt_l_357_α: {
+    deref_358_saved_cur = _cur_np;
+    DESCR_t _r_358 = pat_Expr16(_subj_np, _slen_np, &_cur_np, &deref_358_z, 0);
+    if (IS_FAIL_fn(_r_358)) { _cur_np = deref_358_saved_cur; goto alt_r_357_α; }
+    goto fence_after_356;
 }
-alt_l_355_β: {
-    _cur_np = deref_356_saved_cur;
-    DESCR_t _r_356_b = pat_Expr16(_subj_np, _slen_np, &_cur_np, &deref_356_z, 1);
-    if (IS_FAIL_fn(_r_356_b)) { _cur_np = deref_356_saved_cur; goto alt_r_355_α; }
-    goto fence_after_354;
+alt_l_357_β: {
+    _cur_np = deref_358_saved_cur;
+    DESCR_t _r_358_b = pat_Expr16(_subj_np, _slen_np, &_cur_np, &deref_358_z, 1);
+    if (IS_FAIL_fn(_r_358_b)) { _cur_np = deref_358_saved_cur; goto alt_r_357_α; }
+    goto fence_after_356;
 }
-alt_r_355_α: {
+alt_r_357_α: {
     DESCR_t _deref_pat = NV_GET_fn("epsilon");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
     if (_deref_new_cur < 0) goto cat_l_343_β;
-    deref_357_saved_cursor = _cur_np;
+    deref_359_saved_cursor = _cur_np;
     _cur_np = (int64_t)_deref_new_cur;
-    goto fence_after_354;
+    goto fence_after_356;
 }
-alt_r_355_β:
-    _cur_np = deref_357_saved_cursor;
+alt_r_357_β:
+    _cur_np = deref_359_saved_cursor;
     goto cat_l_343_β;
-    fence_after_354:                                        goto _Expr16_γ;
+    fence_after_356:                                        goto _Expr16_γ;
     cat_r_343_β:                                            goto cat_l_343_β;
     _Expr16_γ:;
         *_cur_ptr_np = _cur_np;
@@ -7926,62 +7985,76 @@ alt_r_355_β:
 #undef dlit_347_start
 #undef dlit_347_α_saved_cursor
 #undef cat_r_346_α_start
-#undef deref_349_saved_cur
-#undef dlit_351_start
-#undef dlit_351_α_saved_cursor
-#undef cat_r_350_α_start
-#undef deref_353_saved_cur
-#undef deref_356_saved_cur
-#undef deref_357_saved_cursor
-#undef deref_349_z
-#undef deref_353_z
-#undef deref_356_z
+#undef dlit_349_α_α_saved_cursor
+#undef dlit_348_stk_depth
+#undef deref_350_saved_cur
+#undef dlit_352_start
+#undef dlit_352_α_saved_cursor
+#undef cat_r_351_α_start
+#undef dlit_354_α_α_saved_cursor
+#undef dlit_353_stk_depth
+#undef deref_355_saved_cur
+#undef deref_358_saved_cur
+#undef deref_359_saved_cursor
+#undef deref_350_z
+#undef deref_355_z
+#undef deref_358_z
 
 }
 
 typedef struct pat_Expr17_t {
-    int64_t cat_l_369_α_start;
-    int64_t imm_se_lit_371_α_saved_cursor;
-    int64_t deref_372_saved_cur;
-    int64_t cat_r_368_α_start;
-    int64_t dlit_377_start;
-    int64_t dlit_377_α_saved_cursor;
-    int64_t deref_378_saved_cur;
-    int64_t deref_380_saved_cursor;
-    int64_t cat_l_382_α_start;
-    int64_t assign_c_383_α_start;
-    int64_t deref_385_saved_cur;
-    int64_t cat_r_382_α_start;
-    int64_t deref_387_saved_cur;
-    int64_t cat_l_389_α_start;
-    int64_t assign_c_390_α_start;
+    int64_t cat_l_371_α_start;
+    int64_t imm_se_lit_373_α_saved_cursor;
+    int64_t deref_374_saved_cur;
+    int64_t cat_r_370_α_start;
+    int64_t dlit_376_α_α_saved_cursor;
+    int dlit_375_stk_depth;
+    int64_t dlit_380_start;
+    int64_t dlit_380_α_saved_cursor;
+    int64_t deref_381_saved_cur;
+    int64_t deref_383_saved_cursor;
+    int64_t cat_l_385_α_start;
+    int64_t dlit_387_α_α_saved_cursor;
+    int dlit_386_stk_depth;
+    int64_t assign_c_386_α_start;
+    int64_t deref_389_saved_cur;
+    int64_t cat_r_385_α_start;
+    int64_t dlit_391_α_α_saved_cursor;
+    int dlit_390_stk_depth;
     int64_t deref_392_saved_cur;
-    int64_t cat_r_389_α_start;
-    int64_t deref_394_saved_cur;
-    int64_t alt_r_364_α_start;
-    int64_t deref_396_saved_cur;
-    int64_t alt_r_363_α_start;
+    int64_t cat_l_394_α_start;
+    int64_t dlit_396_α_α_saved_cursor;
+    int dlit_395_stk_depth;
+    int64_t assign_c_395_α_start;
     int64_t deref_398_saved_cur;
+    int64_t cat_r_394_α_start;
+    int64_t dlit_400_α_α_saved_cursor;
+    int dlit_399_stk_depth;
+    int64_t deref_401_saved_cur;
+    int64_t alt_r_366_α_start;
+    int64_t deref_403_saved_cur;
+    int64_t alt_r_365_α_start;
+    int64_t deref_405_saved_cur;
+    int64_t alt_r_364_α_start;
+    int64_t deref_407_saved_cur;
+    int64_t alt_r_363_α_start;
+    int64_t deref_409_saved_cur;
     int64_t alt_r_362_α_start;
-    int64_t deref_400_saved_cur;
+    int64_t deref_411_saved_cur;
     int64_t alt_r_361_α_start;
-    int64_t deref_402_saved_cur;
-    int64_t alt_r_360_α_start;
-    int64_t deref_404_saved_cur;
-    int64_t alt_r_359_α_start;
-    int64_t deref_406_saved_cur;
-    pat_Expr_t *deref_372_z;
-    pat_XList_t *deref_378_z;
-    pat_Function_t *deref_385_z;
-    pat_ExprList_t *deref_387_z;
-    pat_Id_t *deref_392_z;
-    pat_ExprList_t *deref_394_z;
-    pat_BuiltinVar_t *deref_396_z;
-    pat_SpecialNm_t *deref_398_z;
-    pat_Id_t *deref_400_z;
-    pat_String_t *deref_402_z;
-    pat_Real_t *deref_404_z;
-    pat_Integer_t *deref_406_z;
+    int64_t deref_413_saved_cur;
+    pat_Expr_t *deref_374_z;
+    pat_XList_t *deref_381_z;
+    pat_Function_t *deref_389_z;
+    pat_ExprList_t *deref_392_z;
+    pat_Id_t *deref_398_z;
+    pat_ExprList_t *deref_401_z;
+    pat_BuiltinVar_t *deref_403_z;
+    pat_SpecialNm_t *deref_405_z;
+    pat_Id_t *deref_407_z;
+    pat_String_t *deref_409_z;
+    pat_Real_t *deref_411_z;
+    pat_Integer_t *deref_413_z;
 } pat_Expr17_t;
 
 static DESCR_t pat_Expr17(const char *_subj_np, int64_t _slen_np,
@@ -7989,59 +8062,65 @@ static DESCR_t pat_Expr17(const char *_subj_np, int64_t _slen_np,
     if (_entry_np == 0) { *_zz_np = calloc(1, sizeof(pat_Expr17_t)); }
     pat_Expr17_t *z = *_zz_np;
     int64_t _cur_np = *_cur_ptr_np;
-#define cat_l_369_α_start z->cat_l_369_α_start
-#define imm_se_lit_371_α_saved_cursor z->imm_se_lit_371_α_saved_cursor
-#define deref_372_saved_cur z->deref_372_saved_cur
-#define cat_r_368_α_start z->cat_r_368_α_start
-#define dlit_377_start z->dlit_377_start
-#define dlit_377_α_saved_cursor z->dlit_377_α_saved_cursor
-#define deref_378_saved_cur z->deref_378_saved_cur
-#define deref_380_saved_cursor z->deref_380_saved_cursor
-#define cat_l_382_α_start z->cat_l_382_α_start
-#define assign_c_383_α_start z->assign_c_383_α_start
-#define deref_385_saved_cur z->deref_385_saved_cur
-#define cat_r_382_α_start z->cat_r_382_α_start
-#define deref_387_saved_cur z->deref_387_saved_cur
-#define cat_l_389_α_start z->cat_l_389_α_start
-#define assign_c_390_α_start z->assign_c_390_α_start
+#define cat_l_371_α_start z->cat_l_371_α_start
+#define imm_se_lit_373_α_saved_cursor z->imm_se_lit_373_α_saved_cursor
+#define deref_374_saved_cur z->deref_374_saved_cur
+#define cat_r_370_α_start z->cat_r_370_α_start
+#define dlit_376_α_α_saved_cursor z->dlit_376_α_α_saved_cursor
+#define dlit_375_stk_depth z->dlit_375_stk_depth
+#define dlit_380_start z->dlit_380_start
+#define dlit_380_α_saved_cursor z->dlit_380_α_saved_cursor
+#define deref_381_saved_cur z->deref_381_saved_cur
+#define deref_383_saved_cursor z->deref_383_saved_cursor
+#define cat_l_385_α_start z->cat_l_385_α_start
+#define dlit_387_α_α_saved_cursor z->dlit_387_α_α_saved_cursor
+#define dlit_386_stk_depth z->dlit_386_stk_depth
+#define assign_c_386_α_start z->assign_c_386_α_start
+#define deref_389_saved_cur z->deref_389_saved_cur
+#define cat_r_385_α_start z->cat_r_385_α_start
+#define dlit_391_α_α_saved_cursor z->dlit_391_α_α_saved_cursor
+#define dlit_390_stk_depth z->dlit_390_stk_depth
 #define deref_392_saved_cur z->deref_392_saved_cur
-#define cat_r_389_α_start z->cat_r_389_α_start
-#define deref_394_saved_cur z->deref_394_saved_cur
-#define alt_r_364_α_start z->alt_r_364_α_start
-#define deref_396_saved_cur z->deref_396_saved_cur
-#define alt_r_363_α_start z->alt_r_363_α_start
+#define cat_l_394_α_start z->cat_l_394_α_start
+#define dlit_396_α_α_saved_cursor z->dlit_396_α_α_saved_cursor
+#define dlit_395_stk_depth z->dlit_395_stk_depth
+#define assign_c_395_α_start z->assign_c_395_α_start
 #define deref_398_saved_cur z->deref_398_saved_cur
+#define cat_r_394_α_start z->cat_r_394_α_start
+#define dlit_400_α_α_saved_cursor z->dlit_400_α_α_saved_cursor
+#define dlit_399_stk_depth z->dlit_399_stk_depth
+#define deref_401_saved_cur z->deref_401_saved_cur
+#define alt_r_366_α_start z->alt_r_366_α_start
+#define deref_403_saved_cur z->deref_403_saved_cur
+#define alt_r_365_α_start z->alt_r_365_α_start
+#define deref_405_saved_cur z->deref_405_saved_cur
+#define alt_r_364_α_start z->alt_r_364_α_start
+#define deref_407_saved_cur z->deref_407_saved_cur
+#define alt_r_363_α_start z->alt_r_363_α_start
+#define deref_409_saved_cur z->deref_409_saved_cur
 #define alt_r_362_α_start z->alt_r_362_α_start
-#define deref_400_saved_cur z->deref_400_saved_cur
+#define deref_411_saved_cur z->deref_411_saved_cur
 #define alt_r_361_α_start z->alt_r_361_α_start
-#define deref_402_saved_cur z->deref_402_saved_cur
-#define alt_r_360_α_start z->alt_r_360_α_start
-#define deref_404_saved_cur z->deref_404_saved_cur
-#define alt_r_359_α_start z->alt_r_359_α_start
-#define deref_406_saved_cur z->deref_406_saved_cur
-#define deref_372_z z->deref_372_z
-#define deref_378_z z->deref_378_z
-#define deref_385_z z->deref_385_z
-#define deref_387_z z->deref_387_z
+#define deref_413_saved_cur z->deref_413_saved_cur
+#define deref_374_z z->deref_374_z
+#define deref_381_z z->deref_381_z
+#define deref_389_z z->deref_389_z
 #define deref_392_z z->deref_392_z
-#define deref_394_z z->deref_394_z
-#define deref_396_z z->deref_396_z
 #define deref_398_z z->deref_398_z
-#define deref_400_z z->deref_400_z
-#define deref_402_z z->deref_402_z
-#define deref_404_z z->deref_404_z
-#define deref_406_z z->deref_406_z
+#define deref_401_z z->deref_401_z
+#define deref_403_z z->deref_403_z
+#define deref_405_z z->deref_405_z
+#define deref_407_z z->deref_407_z
+#define deref_409_z z->deref_409_z
+#define deref_411_z z->deref_411_z
+#define deref_413_z z->deref_413_z
 
     if (_entry_np == 0) goto _Expr17_α;
     if (_entry_np == 1) goto _Expr17_β;
     goto _Expr17_ω;
-    _Expr17_α:                                              goto fence_p_358_α;
-    fence_p_358_α:                                          goto alt_l_359_α;
-    fence_p_358_β:                                          goto alt_r_359_β;
-    alt_l_359_α:                                            goto alt_l_360_α;
-    alt_l_359_β:                                            goto alt_r_360_β;
-    alt_l_360_α:                                            goto alt_l_361_α;
-    alt_l_360_β:                                            goto alt_r_361_β;
+    _Expr17_α:                                              goto fence_p_360_α;
+    fence_p_360_α:                                          goto alt_l_361_α;
+    fence_p_360_β:                                          goto alt_r_361_β;
     alt_l_361_α:                                            goto alt_l_362_α;
     alt_l_361_β:                                            goto alt_r_362_β;
     alt_l_362_α:                                            goto alt_l_363_α;
@@ -8052,413 +8131,482 @@ static DESCR_t pat_Expr17(const char *_subj_np, int64_t _slen_np,
     alt_l_364_β:                                            goto alt_r_365_β;
     alt_l_365_α:                                            goto alt_l_366_α;
     alt_l_365_β:                                            goto alt_r_366_β;
-    alt_l_366_α:                                            goto cat_l_367_α;
-    alt_l_366_β:                                            goto cat_r_367_β;
-    cat_l_367_α:                                            goto cat_l_368_α;
-    cat_l_367_β:                                            goto cat_r_368_β;
-    cat_l_368_α:                                            goto cat_l_369_α;
-    cat_l_368_β:                                            goto cat_r_369_β;
-    cat_l_369_α:
-                  cat_l_369_α_start = _cur_np;
+    alt_l_366_α:                                            goto alt_l_367_α;
+    alt_l_366_β:                                            goto alt_r_367_β;
+    alt_l_367_α:                                            goto alt_l_368_α;
+    alt_l_367_β:                                            goto alt_r_368_β;
+    alt_l_368_α:                                            goto cat_l_369_α;
+    alt_l_368_β:                                            goto cat_r_369_β;
+    cat_l_369_α:                                            goto cat_l_370_α;
+    cat_l_369_β:                                            goto cat_r_370_β;
+    cat_l_370_α:                                            goto cat_l_371_α;
+    cat_l_370_β:                                            goto cat_r_371_β;
+    cat_l_371_α:
+                  cat_l_371_α_start = _cur_np;
 NPUSH_fn();
-                  goto imm_se_lit_371_α;                    goto imm_se_lit_371_α;
-    imm_se_lit_371_α:
-                  if (_cur_np + 1 > _slen_np)               goto alt_r_366_α;
-                  if (_subj_np[_cur_np] != '(')             goto alt_r_366_α;
-                  imm_se_lit_371_α_saved_cursor = _cur_np; _cur_np += 1;
-                                                            goto cat_l_369_α_do_assign;
-    imm_se_lit_371_β: _cur_np = imm_se_lit_371_α_saved_cursor;  goto alt_r_366_α;
-    cat_l_369_α_do_assign:
-                  { int64_t _len = _cur_np - cat_l_369_α_start;
+                  goto imm_se_lit_373_α;                    goto imm_se_lit_373_α;
+    imm_se_lit_373_α:
+                  if (_cur_np + 1 > _slen_np)               goto alt_r_368_α;
+                  if (_subj_np[_cur_np] != '(')             goto alt_r_368_α;
+                  imm_se_lit_373_α_saved_cursor = _cur_np; _cur_np += 1;
+                                                            goto cat_l_371_α_do_assign;
+    imm_se_lit_373_β: _cur_np = imm_se_lit_373_α_saved_cursor;  goto alt_r_368_α;
+    cat_l_371_α_do_assign:
+                  { int64_t _len = _cur_np - cat_l_371_α_start;
                     char *_os = malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_l_369_α_start, _len); _os[_len] = 0;
-                    output_str(_os); free(_os); }           goto cat_r_369_α;
-    cat_l_369_β:                                            goto alt_r_366_α;
-cat_r_369_α: {
-    deref_372_saved_cur = _cur_np;
-    DESCR_t _r_372 = pat_Expr(_subj_np, _slen_np, &_cur_np, &deref_372_z, 0);
-    if (IS_FAIL_fn(_r_372)) { _cur_np = deref_372_saved_cur; goto cat_l_369_β; }
-    goto cat_r_368_α;
+                    memcpy(_os, _subj_np + cat_l_371_α_start, _len); _os[_len] = 0;
+                    output_str(_os); free(_os); }           goto cat_r_371_α;
+    cat_l_371_β:                                            goto alt_r_368_α;
+cat_r_371_α: {
+    deref_374_saved_cur = _cur_np;
+    DESCR_t _r_374 = pat_Expr(_subj_np, _slen_np, &_cur_np, &deref_374_z, 0);
+    if (IS_FAIL_fn(_r_374)) { _cur_np = deref_374_saved_cur; goto cat_l_371_β; }
+    goto cat_r_370_α;
 }
-cat_r_369_β: {
-    _cur_np = deref_372_saved_cur;
-    DESCR_t _r_372_b = pat_Expr(_subj_np, _slen_np, &_cur_np, &deref_372_z, 1);
-    if (IS_FAIL_fn(_r_372_b)) { _cur_np = deref_372_saved_cur; goto cat_l_369_β; }
-    goto cat_r_368_α;
+cat_r_371_β: {
+    _cur_np = deref_374_saved_cur;
+    DESCR_t _r_374_b = pat_Expr(_subj_np, _slen_np, &_cur_np, &deref_374_z, 1);
+    if (IS_FAIL_fn(_r_374_b)) { _cur_np = deref_374_saved_cur; goto cat_l_371_β; }
+    goto cat_r_370_α;
 }
-    cat_r_368_α:  cat_r_368_α_start = _cur_np;              goto assign_c_373_α;
-    assign_c_373_α:                                         goto alt_l_374_α;
-    assign_c_373_β:                                         goto alt_r_374_β;
-    alt_l_374_α:                                            goto cat_l_375_α;
-    alt_l_374_β:                                            goto cat_r_375_β;
-    cat_l_375_α:                                            goto cat_l_376_α;
-    cat_l_375_β:                                            goto cat_r_376_β;
-    cat_l_376_α:
-                  dlit_377_start = _cur_np;
-                  goto dlit_377_α;                          goto dlit_377_α;
-    dlit_377_α:
-                  if (_cur_np + 1 > _slen_np)               goto alt_r_374_α;
-                  if (_subj_np[_cur_np] != ',')             goto alt_r_374_α;
-                  dlit_377_α_saved_cursor = _cur_np; _cur_np += 1;
-                                                            goto dlit_377_do_assign;
-    dlit_377_β:   _cur_np = dlit_377_α_saved_cursor;        goto alt_r_374_α;
-    dlit_377_do_assign:
-                  { int64_t _len = _cur_np - dlit_377_start;
+    cat_r_370_α:
+                  dlit_375_stk_depth = STACK_DEPTH_fn();
+                  cat_r_370_α_start = _cur_np;
+                  goto assign_c_375_α;                      goto assign_c_375_α;
+    assign_c_375_α:                                         goto alt_l_377_α;
+    assign_c_375_β:                                         goto alt_r_377_β;
+    alt_l_377_α:                                            goto cat_l_378_α;
+    alt_l_377_β:                                            goto cat_r_378_β;
+    cat_l_378_α:                                            goto cat_l_379_α;
+    cat_l_378_β:                                            goto cat_r_379_β;
+    cat_l_379_α:
+                  dlit_380_start = _cur_np;
+                  goto dlit_380_α;                          goto dlit_380_α;
+    dlit_380_α:
+                  if (_cur_np + 1 > _slen_np)               goto alt_r_377_α;
+                  if (_subj_np[_cur_np] != ',')             goto alt_r_377_α;
+                  dlit_380_α_saved_cursor = _cur_np; _cur_np += 1;
+                                                            goto dlit_380_do_assign;
+    dlit_380_β:   _cur_np = dlit_380_α_saved_cursor;        goto alt_r_377_α;
+    dlit_380_do_assign:
+                  { int64_t _len = _cur_np - dlit_380_start;
                     char *_os = malloc(_len + 1);
-                    memcpy(_os, _subj_np + dlit_377_start, _len); _os[_len] = 0;
-                    output_str(_os); free(_os); }           goto cat_r_376_α;
-    cat_l_376_β:                                            goto dlit_377_β;
-cat_r_376_α: {
-    deref_378_saved_cur = _cur_np;
-    DESCR_t _r_378 = pat_XList(_subj_np, _slen_np, &_cur_np, &deref_378_z, 0);
-    if (IS_FAIL_fn(_r_378)) { _cur_np = deref_378_saved_cur; goto cat_l_376_β; }
-    goto cat_r_375_α;
+                    memcpy(_os, _subj_np + dlit_380_start, _len); _os[_len] = 0;
+                    output_str(_os); free(_os); }           goto cat_r_379_α;
+    cat_l_379_β:                                            goto dlit_380_β;
+cat_r_379_α: {
+    deref_381_saved_cur = _cur_np;
+    DESCR_t _r_381 = pat_XList(_subj_np, _slen_np, &_cur_np, &deref_381_z, 0);
+    if (IS_FAIL_fn(_r_381)) { _cur_np = deref_381_saved_cur; goto cat_l_379_β; }
+    goto cat_r_378_α;
 }
-cat_r_376_β: {
-    _cur_np = deref_378_saved_cur;
-    DESCR_t _r_378_b = pat_XList(_subj_np, _slen_np, &_cur_np, &deref_378_z, 1);
-    if (IS_FAIL_fn(_r_378_b)) { _cur_np = deref_378_saved_cur; goto cat_l_376_β; }
-    goto cat_r_375_α;
+cat_r_379_β: {
+    _cur_np = deref_381_saved_cur;
+    DESCR_t _r_381_b = pat_XList(_subj_np, _slen_np, &_cur_np, &deref_381_z, 1);
+    if (IS_FAIL_fn(_r_381_b)) { _cur_np = deref_381_saved_cur; goto cat_l_379_β; }
+    goto cat_r_378_α;
 }
-cat_r_375_α: /* E_OPSYN & */
-    { DESCR_t _reduce_args[2] = {STRVAL(","), STRVAL("nTop() + 1")};
+cat_r_378_α: /* E_OPSYN & */
+    { DESCR_t _reduce_args[2] = {STRVAL(","), INTVAL(ntop())};
       APPLY_fn("Reduce", _reduce_args, 2); }
-    goto cat_r_368_α_do_assign;
-cat_r_375_β: goto cat_l_375_β;
-    alt_r_374_α:                                            goto cat_l_379_α;
-    alt_r_374_β:                                            goto cat_r_379_β;
-cat_l_379_α: {
+    goto dlit_376_α;
+cat_r_378_β: goto cat_l_378_β;
+    alt_r_377_α:                                            goto cat_l_382_α;
+    alt_r_377_β:                                            goto cat_r_382_β;
+cat_l_382_α: {
     DESCR_t _deref_pat = NV_GET_fn("epsilon");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto cat_l_368_β;
-    deref_380_saved_cursor = _cur_np;
+    if (_deref_new_cur < 0) goto cat_l_370_β;
+    deref_383_saved_cursor = _cur_np;
     _cur_np = (int64_t)_deref_new_cur;
-    goto cat_r_379_α;
+    goto cat_r_382_α;
 }
-cat_l_379_β:
-    _cur_np = deref_380_saved_cursor;
-    goto cat_l_368_β;
-cat_r_379_α: /* E_OPSYN & */
+cat_l_382_β:
+    _cur_np = deref_383_saved_cursor;
+    goto cat_l_370_β;
+cat_r_382_α: /* E_OPSYN & */
     { DESCR_t _reduce_args[2] = {STRVAL("()"), INTVAL(1)};
       APPLY_fn("Reduce", _reduce_args, 2); }
-    goto cat_r_368_α_do_assign;
-cat_r_379_β: goto cat_l_379_β;
-    cat_r_368_α_do_assign:
-                  { int64_t _len = _cur_np - cat_r_368_α_start;
+    goto dlit_376_α;
+cat_r_382_β: goto cat_l_382_β;
+    dlit_376_α:
+                  if (_cur_np + 1 > _slen_np)               { _cur_np = cat_r_370_α_start; while(STACK_DEPTH_fn()>dlit_375_stk_depth) pop_val(); goto cat_l_370_β; }
+                  if (_subj_np[_cur_np + 0] != ')')             { _cur_np = cat_r_370_α_start; while(STACK_DEPTH_fn()>dlit_375_stk_depth) pop_val(); goto cat_l_370_β; }
+                  dlit_376_α_α_saved_cursor = _cur_np; _cur_np += 1;
+                  goto cat_r_370_α_do_assign;               goto cat_r_370_α_do_assign;
+    dlit_375_β2:
+                  _cur_np = dlit_376_α_α_saved_cursor;
+                  goto cat_l_370_β;                         goto cat_l_370_β;
+    cat_r_370_β:                                            goto assign_c_375_β;
+    cat_r_370_α_do_assign:
+                  { int64_t _len = _cur_np - cat_r_370_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_r_368_α_start, _len); _os[_len] = 0;
+                    memcpy(_os, _subj_np + cat_r_370_α_start, _len); _os[_len] = 0;
                     NV_SET_fn("_", STRVAL(_os));
-                  }                                         goto cat_r_367_α;
-    cat_r_368_β:                                            goto assign_c_373_β;
-    cat_r_367_α:  NPOP_fn();                                goto fence_after_358;
-    cat_r_367_β:                                            goto cat_l_367_β;
-    alt_r_366_α:                                            goto cat_l_381_α;
-    alt_r_366_β:                                            goto cat_r_381_β;
-    cat_l_381_α:                                            goto cat_l_382_α;
-    cat_l_381_β:                                            goto cat_r_382_β;
-    cat_l_382_α:  cat_l_382_α_start = _cur_np;              goto assign_c_383_α;
-    assign_c_383_α: assign_c_383_α_start = _cur_np;           goto assign_c_384_α;
-assign_c_384_α: {
-    deref_385_saved_cur = _cur_np;
-    DESCR_t _r_385 = pat_Function(_subj_np, _slen_np, &_cur_np, &deref_385_z, 0);
-    if (IS_FAIL_fn(_r_385)) { _cur_np = deref_385_saved_cur; goto alt_r_365_α; }
-    goto assign_c_383_α_do_assign;
+                  }                                         goto cat_r_369_α;
+    cat_r_369_α:  NPOP_fn();                                goto fence_after_360;
+    cat_r_369_β:                                            goto cat_l_369_β;
+    alt_r_368_α:                                            goto cat_l_384_α;
+    alt_r_368_β:                                            goto cat_r_384_β;
+    cat_l_384_α:                                            goto cat_l_385_α;
+    cat_l_384_β:                                            goto cat_r_385_β;
+    cat_l_385_α:
+                  dlit_386_stk_depth = STACK_DEPTH_fn();
+                  cat_l_385_α_start = _cur_np;
+                  goto assign_c_386_α;                      goto assign_c_386_α;
+    assign_c_386_α: assign_c_386_α_start = _cur_np;           goto assign_c_388_α;
+assign_c_388_α: {
+    deref_389_saved_cur = _cur_np;
+    DESCR_t _r_389 = pat_Function(_subj_np, _slen_np, &_cur_np, &deref_389_z, 0);
+    if (IS_FAIL_fn(_r_389)) { _cur_np = deref_389_saved_cur; goto alt_r_367_α; }
+    goto assign_c_386_α_do_assign;
 }
-assign_c_384_β: {
-    _cur_np = deref_385_saved_cur;
-    DESCR_t _r_385_b = pat_Function(_subj_np, _slen_np, &_cur_np, &deref_385_z, 1);
-    if (IS_FAIL_fn(_r_385_b)) { _cur_np = deref_385_saved_cur; goto alt_r_365_α; }
-    goto assign_c_383_α_do_assign;
+assign_c_388_β: {
+    _cur_np = deref_389_saved_cur;
+    DESCR_t _r_389_b = pat_Function(_subj_np, _slen_np, &_cur_np, &deref_389_z, 1);
+    if (IS_FAIL_fn(_r_389_b)) { _cur_np = deref_389_saved_cur; goto alt_r_367_α; }
+    goto assign_c_386_α_do_assign;
 }
-    assign_c_383_α_do_assign:
-                  { int64_t _len = _cur_np - assign_c_383_α_start;
+    assign_c_386_α_do_assign:
+                  { int64_t _len = _cur_np - assign_c_386_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + assign_c_383_α_start, _len); _os[_len] = 0;
+                    memcpy(_os, _subj_np + assign_c_386_α_start, _len); _os[_len] = 0;
                     NV_SET_fn("Function", STRVAL(_os));
                     { DESCR_t _shift_args[2] = {STRVAL("Function"), STRVAL(_os)};
                       APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto cat_l_382_α_do_assign;
-    assign_c_383_β:                                         goto assign_c_384_β;
-    cat_l_382_α_do_assign:
-                  { int64_t _len = _cur_np - cat_l_382_α_start;
+                  }                                         goto dlit_387_α;
+    assign_c_386_β:                                         goto assign_c_388_β;
+    dlit_387_α:
+                  if (_cur_np + 1 > _slen_np)               { _cur_np = cat_l_385_α_start; while(STACK_DEPTH_fn()>dlit_386_stk_depth) pop_val(); goto alt_r_367_α; }
+                  if (_subj_np[_cur_np + 0] != '(')             { _cur_np = cat_l_385_α_start; while(STACK_DEPTH_fn()>dlit_386_stk_depth) pop_val(); goto alt_r_367_α; }
+                  dlit_387_α_α_saved_cursor = _cur_np; _cur_np += 1;
+                  goto cat_l_385_α_do_assign;               goto cat_l_385_α_do_assign;
+    dlit_386_β2:
+                  _cur_np = dlit_387_α_α_saved_cursor;
+                  goto alt_r_367_α;                         goto alt_r_367_α;
+    cat_l_385_β:                                            goto assign_c_386_β;
+    cat_l_385_α_do_assign:
+                  { int64_t _len = _cur_np - cat_l_385_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_l_382_α_start, _len); _os[_len] = 0;
+                    memcpy(_os, _subj_np + cat_l_385_α_start, _len); _os[_len] = 0;
                     NV_SET_fn("_", STRVAL(_os));
-                  }                                         goto cat_r_382_α;
-    cat_l_382_β:                                            goto assign_c_383_β;
-    cat_r_382_α:  cat_r_382_α_start = _cur_np;              goto assign_c_386_α;
-assign_c_386_α: {
-    deref_387_saved_cur = _cur_np;
-    DESCR_t _r_387 = pat_ExprList(_subj_np, _slen_np, &_cur_np, &deref_387_z, 0);
-    if (IS_FAIL_fn(_r_387)) { _cur_np = deref_387_saved_cur; goto cat_l_382_β; }
-    goto cat_r_382_α_do_assign;
+                  }                                         goto cat_r_385_α;
+    cat_r_385_α:
+                  dlit_390_stk_depth = STACK_DEPTH_fn();
+                  cat_r_385_α_start = _cur_np;
+                  goto assign_c_390_α;                      goto assign_c_390_α;
+assign_c_390_α: {
+    deref_392_saved_cur = _cur_np;
+    DESCR_t _r_392 = pat_ExprList(_subj_np, _slen_np, &_cur_np, &deref_392_z, 0);
+    if (IS_FAIL_fn(_r_392)) { _cur_np = deref_392_saved_cur; goto cat_l_385_β; }
+    goto dlit_391_α;
 }
-assign_c_386_β: {
-    _cur_np = deref_387_saved_cur;
-    DESCR_t _r_387_b = pat_ExprList(_subj_np, _slen_np, &_cur_np, &deref_387_z, 1);
-    if (IS_FAIL_fn(_r_387_b)) { _cur_np = deref_387_saved_cur; goto cat_l_382_β; }
-    goto cat_r_382_α_do_assign;
+assign_c_390_β: {
+    _cur_np = deref_392_saved_cur;
+    DESCR_t _r_392_b = pat_ExprList(_subj_np, _slen_np, &_cur_np, &deref_392_z, 1);
+    if (IS_FAIL_fn(_r_392_b)) { _cur_np = deref_392_saved_cur; goto cat_l_385_β; }
+    goto dlit_391_α;
 }
-    cat_r_382_α_do_assign:
-                  { int64_t _len = _cur_np - cat_r_382_α_start;
+    dlit_391_α:
+                  if (_cur_np + 1 > _slen_np)               { _cur_np = cat_r_385_α_start; while(STACK_DEPTH_fn()>dlit_390_stk_depth) pop_val(); goto cat_l_385_β; }
+                  if (_subj_np[_cur_np + 0] != ')')             { _cur_np = cat_r_385_α_start; while(STACK_DEPTH_fn()>dlit_390_stk_depth) pop_val(); goto cat_l_385_β; }
+                  dlit_391_α_α_saved_cursor = _cur_np; _cur_np += 1;
+                  goto cat_r_385_α_do_assign;               goto cat_r_385_α_do_assign;
+    dlit_390_β2:
+                  _cur_np = dlit_391_α_α_saved_cursor;
+                  goto cat_l_385_β;                         goto cat_l_385_β;
+    cat_r_385_β:                                            goto assign_c_390_β;
+    cat_r_385_α_do_assign:
+                  { int64_t _len = _cur_np - cat_r_385_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_r_382_α_start, _len); _os[_len] = 0;
+                    memcpy(_os, _subj_np + cat_r_385_α_start, _len); _os[_len] = 0;
                     NV_SET_fn("_", STRVAL(_os));
-                  }                                         goto cat_r_381_α;
-    cat_r_382_β:                                            goto assign_c_386_β;
-cat_r_381_α: /* E_OPSYN & */
+                  }                                         goto cat_r_384_α;
+cat_r_384_α: /* E_OPSYN & */
     { DESCR_t _reduce_args[2] = {STRVAL("Call"), INTVAL(2)};
       APPLY_fn("Reduce", _reduce_args, 2); }
-    goto fence_after_358;
-cat_r_381_β: goto cat_l_381_β;
-    alt_r_365_α:                                            goto cat_l_388_α;
-    alt_r_365_β:                                            goto cat_r_388_β;
-    cat_l_388_α:                                            goto cat_l_389_α;
-    cat_l_388_β:                                            goto cat_r_389_β;
-    cat_l_389_α:  cat_l_389_α_start = _cur_np;              goto assign_c_390_α;
-    assign_c_390_α: assign_c_390_α_start = _cur_np;           goto assign_c_391_α;
-assign_c_391_α: {
-    deref_392_saved_cur = _cur_np;
-    DESCR_t _r_392 = pat_Id(_subj_np, _slen_np, &_cur_np, &deref_392_z, 0);
-    if (IS_FAIL_fn(_r_392)) { _cur_np = deref_392_saved_cur; goto alt_r_364_α; }
-    goto assign_c_390_α_do_assign;
+    goto fence_after_360;
+cat_r_384_β: goto cat_l_384_β;
+    alt_r_367_α:                                            goto cat_l_393_α;
+    alt_r_367_β:                                            goto cat_r_393_β;
+    cat_l_393_α:                                            goto cat_l_394_α;
+    cat_l_393_β:                                            goto cat_r_394_β;
+    cat_l_394_α:
+                  dlit_395_stk_depth = STACK_DEPTH_fn();
+                  cat_l_394_α_start = _cur_np;
+                  goto assign_c_395_α;                      goto assign_c_395_α;
+    assign_c_395_α: assign_c_395_α_start = _cur_np;           goto assign_c_397_α;
+assign_c_397_α: {
+    deref_398_saved_cur = _cur_np;
+    DESCR_t _r_398 = pat_Id(_subj_np, _slen_np, &_cur_np, &deref_398_z, 0);
+    if (IS_FAIL_fn(_r_398)) { _cur_np = deref_398_saved_cur; goto alt_r_366_α; }
+    goto assign_c_395_α_do_assign;
 }
-assign_c_391_β: {
-    _cur_np = deref_392_saved_cur;
-    DESCR_t _r_392_b = pat_Id(_subj_np, _slen_np, &_cur_np, &deref_392_z, 1);
-    if (IS_FAIL_fn(_r_392_b)) { _cur_np = deref_392_saved_cur; goto alt_r_364_α; }
-    goto assign_c_390_α_do_assign;
+assign_c_397_β: {
+    _cur_np = deref_398_saved_cur;
+    DESCR_t _r_398_b = pat_Id(_subj_np, _slen_np, &_cur_np, &deref_398_z, 1);
+    if (IS_FAIL_fn(_r_398_b)) { _cur_np = deref_398_saved_cur; goto alt_r_366_α; }
+    goto assign_c_395_α_do_assign;
 }
-    assign_c_390_α_do_assign:
-                  { int64_t _len = _cur_np - assign_c_390_α_start;
+    assign_c_395_α_do_assign:
+                  { int64_t _len = _cur_np - assign_c_395_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + assign_c_390_α_start, _len); _os[_len] = 0;
+                    memcpy(_os, _subj_np + assign_c_395_α_start, _len); _os[_len] = 0;
                     NV_SET_fn("Id", STRVAL(_os));
                     { DESCR_t _shift_args[2] = {STRVAL("Id"), STRVAL(_os)};
                       APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto cat_l_389_α_do_assign;
-    assign_c_390_β:                                         goto assign_c_391_β;
-    cat_l_389_α_do_assign:
-                  { int64_t _len = _cur_np - cat_l_389_α_start;
+                  }                                         goto dlit_396_α;
+    assign_c_395_β:                                         goto assign_c_397_β;
+    dlit_396_α:
+                  if (_cur_np + 1 > _slen_np)               { _cur_np = cat_l_394_α_start; while(STACK_DEPTH_fn()>dlit_395_stk_depth) pop_val(); goto alt_r_366_α; }
+                  if (_subj_np[_cur_np + 0] != '(')             { _cur_np = cat_l_394_α_start; while(STACK_DEPTH_fn()>dlit_395_stk_depth) pop_val(); goto alt_r_366_α; }
+                  dlit_396_α_α_saved_cursor = _cur_np; _cur_np += 1;
+                  goto cat_l_394_α_do_assign;               goto cat_l_394_α_do_assign;
+    dlit_395_β2:
+                  _cur_np = dlit_396_α_α_saved_cursor;
+                  goto alt_r_366_α;                         goto alt_r_366_α;
+    cat_l_394_β:                                            goto assign_c_395_β;
+    cat_l_394_α_do_assign:
+                  { int64_t _len = _cur_np - cat_l_394_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_l_389_α_start, _len); _os[_len] = 0;
+                    memcpy(_os, _subj_np + cat_l_394_α_start, _len); _os[_len] = 0;
                     NV_SET_fn("_", STRVAL(_os));
-                  }                                         goto cat_r_389_α;
-    cat_l_389_β:                                            goto assign_c_390_β;
-    cat_r_389_α:  cat_r_389_α_start = _cur_np;              goto assign_c_393_α;
-assign_c_393_α: {
-    deref_394_saved_cur = _cur_np;
-    DESCR_t _r_394 = pat_ExprList(_subj_np, _slen_np, &_cur_np, &deref_394_z, 0);
-    if (IS_FAIL_fn(_r_394)) { _cur_np = deref_394_saved_cur; goto cat_l_389_β; }
-    goto cat_r_389_α_do_assign;
+                  }                                         goto cat_r_394_α;
+    cat_r_394_α:
+                  dlit_399_stk_depth = STACK_DEPTH_fn();
+                  cat_r_394_α_start = _cur_np;
+                  goto assign_c_399_α;                      goto assign_c_399_α;
+assign_c_399_α: {
+    deref_401_saved_cur = _cur_np;
+    DESCR_t _r_401 = pat_ExprList(_subj_np, _slen_np, &_cur_np, &deref_401_z, 0);
+    if (IS_FAIL_fn(_r_401)) { _cur_np = deref_401_saved_cur; goto cat_l_394_β; }
+    goto dlit_400_α;
 }
-assign_c_393_β: {
-    _cur_np = deref_394_saved_cur;
-    DESCR_t _r_394_b = pat_ExprList(_subj_np, _slen_np, &_cur_np, &deref_394_z, 1);
-    if (IS_FAIL_fn(_r_394_b)) { _cur_np = deref_394_saved_cur; goto cat_l_389_β; }
-    goto cat_r_389_α_do_assign;
+assign_c_399_β: {
+    _cur_np = deref_401_saved_cur;
+    DESCR_t _r_401_b = pat_ExprList(_subj_np, _slen_np, &_cur_np, &deref_401_z, 1);
+    if (IS_FAIL_fn(_r_401_b)) { _cur_np = deref_401_saved_cur; goto cat_l_394_β; }
+    goto dlit_400_α;
 }
-    cat_r_389_α_do_assign:
-                  { int64_t _len = _cur_np - cat_r_389_α_start;
+    dlit_400_α:
+                  if (_cur_np + 1 > _slen_np)               { _cur_np = cat_r_394_α_start; while(STACK_DEPTH_fn()>dlit_399_stk_depth) pop_val(); goto cat_l_394_β; }
+                  if (_subj_np[_cur_np + 0] != ')')             { _cur_np = cat_r_394_α_start; while(STACK_DEPTH_fn()>dlit_399_stk_depth) pop_val(); goto cat_l_394_β; }
+                  dlit_400_α_α_saved_cursor = _cur_np; _cur_np += 1;
+                  goto cat_r_394_α_do_assign;               goto cat_r_394_α_do_assign;
+    dlit_399_β2:
+                  _cur_np = dlit_400_α_α_saved_cursor;
+                  goto cat_l_394_β;                         goto cat_l_394_β;
+    cat_r_394_β:                                            goto assign_c_399_β;
+    cat_r_394_α_do_assign:
+                  { int64_t _len = _cur_np - cat_r_394_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_r_389_α_start, _len); _os[_len] = 0;
+                    memcpy(_os, _subj_np + cat_r_394_α_start, _len); _os[_len] = 0;
                     NV_SET_fn("_", STRVAL(_os));
-                  }                                         goto cat_r_388_α;
-    cat_r_389_β:                                            goto assign_c_393_β;
-cat_r_388_α: /* E_OPSYN & */
+                  }                                         goto cat_r_393_α;
+cat_r_393_α: /* E_OPSYN & */
     { DESCR_t _reduce_args[2] = {STRVAL("Call"), INTVAL(2)};
       APPLY_fn("Reduce", _reduce_args, 2); }
-    goto fence_after_358;
-cat_r_388_β: goto cat_l_388_β;
-    alt_r_364_α:  alt_r_364_α_start = _cur_np;              goto assign_c_395_α;
-assign_c_395_α: {
-    deref_396_saved_cur = _cur_np;
-    DESCR_t _r_396 = pat_BuiltinVar(_subj_np, _slen_np, &_cur_np, &deref_396_z, 0);
-    if (IS_FAIL_fn(_r_396)) { _cur_np = deref_396_saved_cur; goto alt_r_363_α; }
+    goto fence_after_360;
+cat_r_393_β: goto cat_l_393_β;
+    alt_r_366_α:  alt_r_366_α_start = _cur_np;              goto assign_c_402_α;
+assign_c_402_α: {
+    deref_403_saved_cur = _cur_np;
+    DESCR_t _r_403 = pat_BuiltinVar(_subj_np, _slen_np, &_cur_np, &deref_403_z, 0);
+    if (IS_FAIL_fn(_r_403)) { _cur_np = deref_403_saved_cur; goto alt_r_365_α; }
+    goto alt_r_366_α_do_assign;
+}
+assign_c_402_β: {
+    _cur_np = deref_403_saved_cur;
+    DESCR_t _r_403_b = pat_BuiltinVar(_subj_np, _slen_np, &_cur_np, &deref_403_z, 1);
+    if (IS_FAIL_fn(_r_403_b)) { _cur_np = deref_403_saved_cur; goto alt_r_365_α; }
+    goto alt_r_366_α_do_assign;
+}
+    alt_r_366_α_do_assign:
+                  { int64_t _len = _cur_np - alt_r_366_α_start;
+                    char *_os = (char*)GC_malloc(_len + 1);
+                    memcpy(_os, _subj_np + alt_r_366_α_start, _len); _os[_len] = 0;
+                    NV_SET_fn("BuiltinVar", STRVAL(_os));
+                    { DESCR_t _shift_args[2] = {STRVAL("BuiltinVar"), STRVAL(_os)};
+                      APPLY_fn("Shift", _shift_args, 2); }
+                  }                                         goto fence_after_360;
+    alt_r_366_β:                                            goto assign_c_402_β;
+    alt_r_365_α:  alt_r_365_α_start = _cur_np;              goto assign_c_404_α;
+assign_c_404_α: {
+    deref_405_saved_cur = _cur_np;
+    DESCR_t _r_405 = pat_SpecialNm(_subj_np, _slen_np, &_cur_np, &deref_405_z, 0);
+    if (IS_FAIL_fn(_r_405)) { _cur_np = deref_405_saved_cur; goto alt_r_364_α; }
+    goto alt_r_365_α_do_assign;
+}
+assign_c_404_β: {
+    _cur_np = deref_405_saved_cur;
+    DESCR_t _r_405_b = pat_SpecialNm(_subj_np, _slen_np, &_cur_np, &deref_405_z, 1);
+    if (IS_FAIL_fn(_r_405_b)) { _cur_np = deref_405_saved_cur; goto alt_r_364_α; }
+    goto alt_r_365_α_do_assign;
+}
+    alt_r_365_α_do_assign:
+                  { int64_t _len = _cur_np - alt_r_365_α_start;
+                    char *_os = (char*)GC_malloc(_len + 1);
+                    memcpy(_os, _subj_np + alt_r_365_α_start, _len); _os[_len] = 0;
+                    NV_SET_fn("SpecialNm", STRVAL(_os));
+                    { DESCR_t _shift_args[2] = {STRVAL("SpecialNm"), STRVAL(_os)};
+                      APPLY_fn("Shift", _shift_args, 2); }
+                  }                                         goto fence_after_360;
+    alt_r_365_β:                                            goto assign_c_404_β;
+    alt_r_364_α:  alt_r_364_α_start = _cur_np;              goto assign_c_406_α;
+assign_c_406_α: {
+    deref_407_saved_cur = _cur_np;
+    DESCR_t _r_407 = pat_Id(_subj_np, _slen_np, &_cur_np, &deref_407_z, 0);
+    if (IS_FAIL_fn(_r_407)) { _cur_np = deref_407_saved_cur; goto alt_r_363_α; }
     goto alt_r_364_α_do_assign;
 }
-assign_c_395_β: {
-    _cur_np = deref_396_saved_cur;
-    DESCR_t _r_396_b = pat_BuiltinVar(_subj_np, _slen_np, &_cur_np, &deref_396_z, 1);
-    if (IS_FAIL_fn(_r_396_b)) { _cur_np = deref_396_saved_cur; goto alt_r_363_α; }
+assign_c_406_β: {
+    _cur_np = deref_407_saved_cur;
+    DESCR_t _r_407_b = pat_Id(_subj_np, _slen_np, &_cur_np, &deref_407_z, 1);
+    if (IS_FAIL_fn(_r_407_b)) { _cur_np = deref_407_saved_cur; goto alt_r_363_α; }
     goto alt_r_364_α_do_assign;
 }
     alt_r_364_α_do_assign:
                   { int64_t _len = _cur_np - alt_r_364_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
                     memcpy(_os, _subj_np + alt_r_364_α_start, _len); _os[_len] = 0;
-                    NV_SET_fn("BuiltinVar", STRVAL(_os));
-                    { DESCR_t _shift_args[2] = {STRVAL("BuiltinVar"), STRVAL(_os)};
+                    NV_SET_fn("Id", STRVAL(_os));
+                    { DESCR_t _shift_args[2] = {STRVAL("Id"), STRVAL(_os)};
                       APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto fence_after_358;
-    alt_r_364_β:                                            goto assign_c_395_β;
-    alt_r_363_α:  alt_r_363_α_start = _cur_np;              goto assign_c_397_α;
-assign_c_397_α: {
-    deref_398_saved_cur = _cur_np;
-    DESCR_t _r_398 = pat_SpecialNm(_subj_np, _slen_np, &_cur_np, &deref_398_z, 0);
-    if (IS_FAIL_fn(_r_398)) { _cur_np = deref_398_saved_cur; goto alt_r_362_α; }
+                  }                                         goto fence_after_360;
+    alt_r_364_β:                                            goto assign_c_406_β;
+    alt_r_363_α:  alt_r_363_α_start = _cur_np;              goto assign_c_408_α;
+assign_c_408_α: {
+    deref_409_saved_cur = _cur_np;
+    DESCR_t _r_409 = pat_String(_subj_np, _slen_np, &_cur_np, &deref_409_z, 0);
+    if (IS_FAIL_fn(_r_409)) { _cur_np = deref_409_saved_cur; goto alt_r_362_α; }
     goto alt_r_363_α_do_assign;
 }
-assign_c_397_β: {
-    _cur_np = deref_398_saved_cur;
-    DESCR_t _r_398_b = pat_SpecialNm(_subj_np, _slen_np, &_cur_np, &deref_398_z, 1);
-    if (IS_FAIL_fn(_r_398_b)) { _cur_np = deref_398_saved_cur; goto alt_r_362_α; }
+assign_c_408_β: {
+    _cur_np = deref_409_saved_cur;
+    DESCR_t _r_409_b = pat_String(_subj_np, _slen_np, &_cur_np, &deref_409_z, 1);
+    if (IS_FAIL_fn(_r_409_b)) { _cur_np = deref_409_saved_cur; goto alt_r_362_α; }
     goto alt_r_363_α_do_assign;
 }
     alt_r_363_α_do_assign:
                   { int64_t _len = _cur_np - alt_r_363_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
                     memcpy(_os, _subj_np + alt_r_363_α_start, _len); _os[_len] = 0;
-                    NV_SET_fn("SpecialNm", STRVAL(_os));
-                    { DESCR_t _shift_args[2] = {STRVAL("SpecialNm"), STRVAL(_os)};
+                    NV_SET_fn("String", STRVAL(_os));
+                    { DESCR_t _shift_args[2] = {STRVAL("String"), STRVAL(_os)};
                       APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto fence_after_358;
-    alt_r_363_β:                                            goto assign_c_397_β;
-    alt_r_362_α:  alt_r_362_α_start = _cur_np;              goto assign_c_399_α;
-assign_c_399_α: {
-    deref_400_saved_cur = _cur_np;
-    DESCR_t _r_400 = pat_Id(_subj_np, _slen_np, &_cur_np, &deref_400_z, 0);
-    if (IS_FAIL_fn(_r_400)) { _cur_np = deref_400_saved_cur; goto alt_r_361_α; }
+                  }                                         goto fence_after_360;
+    alt_r_363_β:                                            goto assign_c_408_β;
+    alt_r_362_α:  alt_r_362_α_start = _cur_np;              goto assign_c_410_α;
+assign_c_410_α: {
+    deref_411_saved_cur = _cur_np;
+    DESCR_t _r_411 = pat_Real(_subj_np, _slen_np, &_cur_np, &deref_411_z, 0);
+    if (IS_FAIL_fn(_r_411)) { _cur_np = deref_411_saved_cur; goto alt_r_361_α; }
     goto alt_r_362_α_do_assign;
 }
-assign_c_399_β: {
-    _cur_np = deref_400_saved_cur;
-    DESCR_t _r_400_b = pat_Id(_subj_np, _slen_np, &_cur_np, &deref_400_z, 1);
-    if (IS_FAIL_fn(_r_400_b)) { _cur_np = deref_400_saved_cur; goto alt_r_361_α; }
+assign_c_410_β: {
+    _cur_np = deref_411_saved_cur;
+    DESCR_t _r_411_b = pat_Real(_subj_np, _slen_np, &_cur_np, &deref_411_z, 1);
+    if (IS_FAIL_fn(_r_411_b)) { _cur_np = deref_411_saved_cur; goto alt_r_361_α; }
     goto alt_r_362_α_do_assign;
 }
     alt_r_362_α_do_assign:
                   { int64_t _len = _cur_np - alt_r_362_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
                     memcpy(_os, _subj_np + alt_r_362_α_start, _len); _os[_len] = 0;
-                    NV_SET_fn("Id", STRVAL(_os));
-                    { DESCR_t _shift_args[2] = {STRVAL("Id"), STRVAL(_os)};
+                    NV_SET_fn("Real", STRVAL(_os));
+                    { DESCR_t _shift_args[2] = {STRVAL("Real"), STRVAL(_os)};
                       APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto fence_after_358;
-    alt_r_362_β:                                            goto assign_c_399_β;
-    alt_r_361_α:  alt_r_361_α_start = _cur_np;              goto assign_c_401_α;
-assign_c_401_α: {
-    deref_402_saved_cur = _cur_np;
-    DESCR_t _r_402 = pat_String(_subj_np, _slen_np, &_cur_np, &deref_402_z, 0);
-    if (IS_FAIL_fn(_r_402)) { _cur_np = deref_402_saved_cur; goto alt_r_360_α; }
+                  }                                         goto fence_after_360;
+    alt_r_362_β:                                            goto assign_c_410_β;
+    alt_r_361_α:  alt_r_361_α_start = _cur_np;              goto assign_c_412_α;
+assign_c_412_α: {
+    deref_413_saved_cur = _cur_np;
+    DESCR_t _r_413 = pat_Integer(_subj_np, _slen_np, &_cur_np, &deref_413_z, 0);
+    if (IS_FAIL_fn(_r_413)) { _cur_np = deref_413_saved_cur; goto _Expr17_ω; }
     goto alt_r_361_α_do_assign;
 }
-assign_c_401_β: {
-    _cur_np = deref_402_saved_cur;
-    DESCR_t _r_402_b = pat_String(_subj_np, _slen_np, &_cur_np, &deref_402_z, 1);
-    if (IS_FAIL_fn(_r_402_b)) { _cur_np = deref_402_saved_cur; goto alt_r_360_α; }
+assign_c_412_β: {
+    _cur_np = deref_413_saved_cur;
+    DESCR_t _r_413_b = pat_Integer(_subj_np, _slen_np, &_cur_np, &deref_413_z, 1);
+    if (IS_FAIL_fn(_r_413_b)) { _cur_np = deref_413_saved_cur; goto _Expr17_ω; }
     goto alt_r_361_α_do_assign;
 }
     alt_r_361_α_do_assign:
                   { int64_t _len = _cur_np - alt_r_361_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
                     memcpy(_os, _subj_np + alt_r_361_α_start, _len); _os[_len] = 0;
-                    NV_SET_fn("String", STRVAL(_os));
-                    { DESCR_t _shift_args[2] = {STRVAL("String"), STRVAL(_os)};
-                      APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto fence_after_358;
-    alt_r_361_β:                                            goto assign_c_401_β;
-    alt_r_360_α:  alt_r_360_α_start = _cur_np;              goto assign_c_403_α;
-assign_c_403_α: {
-    deref_404_saved_cur = _cur_np;
-    DESCR_t _r_404 = pat_Real(_subj_np, _slen_np, &_cur_np, &deref_404_z, 0);
-    if (IS_FAIL_fn(_r_404)) { _cur_np = deref_404_saved_cur; goto alt_r_359_α; }
-    goto alt_r_360_α_do_assign;
-}
-assign_c_403_β: {
-    _cur_np = deref_404_saved_cur;
-    DESCR_t _r_404_b = pat_Real(_subj_np, _slen_np, &_cur_np, &deref_404_z, 1);
-    if (IS_FAIL_fn(_r_404_b)) { _cur_np = deref_404_saved_cur; goto alt_r_359_α; }
-    goto alt_r_360_α_do_assign;
-}
-    alt_r_360_α_do_assign:
-                  { int64_t _len = _cur_np - alt_r_360_α_start;
-                    char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + alt_r_360_α_start, _len); _os[_len] = 0;
-                    NV_SET_fn("Real", STRVAL(_os));
-                    { DESCR_t _shift_args[2] = {STRVAL("Real"), STRVAL(_os)};
-                      APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto fence_after_358;
-    alt_r_360_β:                                            goto assign_c_403_β;
-    alt_r_359_α:  alt_r_359_α_start = _cur_np;              goto assign_c_405_α;
-assign_c_405_α: {
-    deref_406_saved_cur = _cur_np;
-    DESCR_t _r_406 = pat_Integer(_subj_np, _slen_np, &_cur_np, &deref_406_z, 0);
-    if (IS_FAIL_fn(_r_406)) { _cur_np = deref_406_saved_cur; goto _Expr17_ω; }
-    goto alt_r_359_α_do_assign;
-}
-assign_c_405_β: {
-    _cur_np = deref_406_saved_cur;
-    DESCR_t _r_406_b = pat_Integer(_subj_np, _slen_np, &_cur_np, &deref_406_z, 1);
-    if (IS_FAIL_fn(_r_406_b)) { _cur_np = deref_406_saved_cur; goto _Expr17_ω; }
-    goto alt_r_359_α_do_assign;
-}
-    alt_r_359_α_do_assign:
-                  { int64_t _len = _cur_np - alt_r_359_α_start;
-                    char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + alt_r_359_α_start, _len); _os[_len] = 0;
                     NV_SET_fn("Integer", STRVAL(_os));
                     { DESCR_t _shift_args[2] = {STRVAL("Integer"), STRVAL(_os)};
                       APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto fence_after_358;
-    alt_r_359_β:                                            goto assign_c_405_β;
-    fence_after_358:                                        goto _Expr17_γ;
+                  }                                         goto fence_after_360;
+    alt_r_361_β:                                            goto assign_c_412_β;
+    fence_after_360:                                        goto _Expr17_γ;
     _Expr17_β:                                              goto _Expr17_ω;
     _Expr17_γ:;
         *_cur_ptr_np = _cur_np;
         return STRVAL("");
     _Expr17_ω:;
         return FAILDESCR;
-#undef cat_l_369_α_start
-#undef imm_se_lit_371_α_saved_cursor
-#undef deref_372_saved_cur
-#undef cat_r_368_α_start
-#undef dlit_377_start
-#undef dlit_377_α_saved_cursor
-#undef deref_378_saved_cur
-#undef deref_380_saved_cursor
-#undef cat_l_382_α_start
-#undef assign_c_383_α_start
-#undef deref_385_saved_cur
-#undef cat_r_382_α_start
-#undef deref_387_saved_cur
-#undef cat_l_389_α_start
-#undef assign_c_390_α_start
+#undef cat_l_371_α_start
+#undef imm_se_lit_373_α_saved_cursor
+#undef deref_374_saved_cur
+#undef cat_r_370_α_start
+#undef dlit_376_α_α_saved_cursor
+#undef dlit_375_stk_depth
+#undef dlit_380_start
+#undef dlit_380_α_saved_cursor
+#undef deref_381_saved_cur
+#undef deref_383_saved_cursor
+#undef cat_l_385_α_start
+#undef dlit_387_α_α_saved_cursor
+#undef dlit_386_stk_depth
+#undef assign_c_386_α_start
+#undef deref_389_saved_cur
+#undef cat_r_385_α_start
+#undef dlit_391_α_α_saved_cursor
+#undef dlit_390_stk_depth
 #undef deref_392_saved_cur
-#undef cat_r_389_α_start
-#undef deref_394_saved_cur
-#undef alt_r_364_α_start
-#undef deref_396_saved_cur
-#undef alt_r_363_α_start
+#undef cat_l_394_α_start
+#undef dlit_396_α_α_saved_cursor
+#undef dlit_395_stk_depth
+#undef assign_c_395_α_start
 #undef deref_398_saved_cur
+#undef cat_r_394_α_start
+#undef dlit_400_α_α_saved_cursor
+#undef dlit_399_stk_depth
+#undef deref_401_saved_cur
+#undef alt_r_366_α_start
+#undef deref_403_saved_cur
+#undef alt_r_365_α_start
+#undef deref_405_saved_cur
+#undef alt_r_364_α_start
+#undef deref_407_saved_cur
+#undef alt_r_363_α_start
+#undef deref_409_saved_cur
 #undef alt_r_362_α_start
-#undef deref_400_saved_cur
+#undef deref_411_saved_cur
 #undef alt_r_361_α_start
-#undef deref_402_saved_cur
-#undef alt_r_360_α_start
-#undef deref_404_saved_cur
-#undef alt_r_359_α_start
-#undef deref_406_saved_cur
-#undef deref_372_z
-#undef deref_378_z
-#undef deref_385_z
-#undef deref_387_z
+#undef deref_413_saved_cur
+#undef deref_374_z
+#undef deref_381_z
+#undef deref_389_z
 #undef deref_392_z
-#undef deref_394_z
-#undef deref_396_z
 #undef deref_398_z
-#undef deref_400_z
-#undef deref_402_z
-#undef deref_404_z
-#undef deref_406_z
+#undef deref_401_z
+#undef deref_403_z
+#undef deref_405_z
+#undef deref_407_z
+#undef deref_409_z
+#undef deref_411_z
+#undef deref_413_z
 
 }
 
 typedef struct pat_SGoto_t {
     int64_t _SGoto_α_cstart;
-    char *cond_OUTPUT_407;
-    int64_t alt_l_408_α_saved_cursor;
-    int64_t alt_r_408_α_saved_cursor;
+    char *cond_OUTPUT_414;
+    int64_t alt_l_415_α_saved_cursor;
+    int64_t alt_r_415_α_saved_cursor;
 } pat_SGoto_t;
 
 static DESCR_t pat_SGoto(const char *_subj_np, int64_t _slen_np,
@@ -8467,54 +8615,54 @@ static DESCR_t pat_SGoto(const char *_subj_np, int64_t _slen_np,
     pat_SGoto_t *z = *_zz_np;
     int64_t _cur_np = *_cur_ptr_np;
 #define _SGoto_α_cstart z->_SGoto_α_cstart
-#define cond_OUTPUT_407 z->cond_OUTPUT_407
-#define alt_l_408_α_saved_cursor z->alt_l_408_α_saved_cursor
-#define alt_r_408_α_saved_cursor z->alt_r_408_α_saved_cursor
+#define cond_OUTPUT_414 z->cond_OUTPUT_414
+#define alt_l_415_α_saved_cursor z->alt_l_415_α_saved_cursor
+#define alt_r_415_α_saved_cursor z->alt_r_415_α_saved_cursor
 
     if (_entry_np == 0) goto _SGoto_α;
     if (_entry_np == 1) goto _SGoto_β;
     goto _SGoto_ω;
     _SGoto_α:
-                  cond_OUTPUT_407 = NULL;
-                  _SGoto_α_cstart = _cur_np;                goto cond_c_407_α;
-    cond_c_407_α:                                           goto alt_l_408_α;
-    cond_c_407_β:                                           goto alt_r_408_β;
-    alt_l_408_α:
-                  if (_cur_np + 1 > _slen_np)               goto alt_r_408_α;
-                  if (_subj_np[_cur_np] != 'S')             goto alt_r_408_α;
-                  alt_l_408_α_saved_cursor = _cur_np; _cur_np += 1;
+                  cond_OUTPUT_414 = NULL;
+                  _SGoto_α_cstart = _cur_np;                goto cond_c_414_α;
+    cond_c_414_α:                                           goto alt_l_415_α;
+    cond_c_414_β:                                           goto alt_r_415_β;
+    alt_l_415_α:
+                  if (_cur_np + 1 > _slen_np)               goto alt_r_415_α;
+                  if (_subj_np[_cur_np] != 'S')             goto alt_r_415_α;
+                  alt_l_415_α_saved_cursor = _cur_np; _cur_np += 1;
                                                             goto _SGoto_α_do_cap;
-    alt_l_408_β:  _cur_np = alt_l_408_α_saved_cursor;       goto alt_r_408_α;
-    alt_r_408_α:
+    alt_l_415_β:  _cur_np = alt_l_415_α_saved_cursor;       goto alt_r_415_α;
+    alt_r_415_α:
                   if (_cur_np + 1 > _slen_np)               goto _SGoto_ω;
                   if (_subj_np[_cur_np] != 's')             goto _SGoto_ω;
-                  alt_r_408_α_saved_cursor = _cur_np; _cur_np += 1;
+                  alt_r_415_α_saved_cursor = _cur_np; _cur_np += 1;
                                                             goto _SGoto_α_do_cap;
-    alt_r_408_β:  _cur_np = alt_r_408_α_saved_cursor;       goto _SGoto_ω;
+    alt_r_415_β:  _cur_np = alt_r_415_α_saved_cursor;       goto _SGoto_ω;
     _SGoto_α_do_cap:
                   { int64_t _len = _cur_np - _SGoto_α_cstart;
-                    cond_OUTPUT_407 = (char*)GC_malloc(_len + 1);
-                    memcpy(cond_OUTPUT_407, _subj_np + _SGoto_α_cstart, _len); cond_OUTPUT_407[_len] = '\0'; }
+                    cond_OUTPUT_414 = (char*)GC_malloc(_len + 1);
+                    memcpy(cond_OUTPUT_414, _subj_np + _SGoto_α_cstart, _len); cond_OUTPUT_414[_len] = '\0'; }
                                                             goto _SGoto_γ;
-    _SGoto_β:                                               goto cond_c_407_β;
+    _SGoto_β:                                               goto cond_c_414_β;
     _SGoto_γ:;
         *_cur_ptr_np = _cur_np;
-if (cond_OUTPUT_407) NV_SET_fn("OUTPUT", STRVAL(cond_OUTPUT_407));
+if (cond_OUTPUT_414) NV_SET_fn("OUTPUT", STRVAL(cond_OUTPUT_414));
         return STRVAL("");
     _SGoto_ω:;
         return FAILDESCR;
 #undef _SGoto_α_cstart
-#undef cond_OUTPUT_407
-#undef alt_l_408_α_saved_cursor
-#undef alt_r_408_α_saved_cursor
+#undef cond_OUTPUT_414
+#undef alt_l_415_α_saved_cursor
+#undef alt_r_415_α_saved_cursor
 
 }
 
 typedef struct pat_FGoto_t {
     int64_t _FGoto_α_cstart;
-    char *cond_OUTPUT_409;
-    int64_t alt_l_410_α_saved_cursor;
-    int64_t alt_r_410_α_saved_cursor;
+    char *cond_OUTPUT_416;
+    int64_t alt_l_417_α_saved_cursor;
+    int64_t alt_r_417_α_saved_cursor;
 } pat_FGoto_t;
 
 static DESCR_t pat_FGoto(const char *_subj_np, int64_t _slen_np,
@@ -8523,54 +8671,54 @@ static DESCR_t pat_FGoto(const char *_subj_np, int64_t _slen_np,
     pat_FGoto_t *z = *_zz_np;
     int64_t _cur_np = *_cur_ptr_np;
 #define _FGoto_α_cstart z->_FGoto_α_cstart
-#define cond_OUTPUT_409 z->cond_OUTPUT_409
-#define alt_l_410_α_saved_cursor z->alt_l_410_α_saved_cursor
-#define alt_r_410_α_saved_cursor z->alt_r_410_α_saved_cursor
+#define cond_OUTPUT_416 z->cond_OUTPUT_416
+#define alt_l_417_α_saved_cursor z->alt_l_417_α_saved_cursor
+#define alt_r_417_α_saved_cursor z->alt_r_417_α_saved_cursor
 
     if (_entry_np == 0) goto _FGoto_α;
     if (_entry_np == 1) goto _FGoto_β;
     goto _FGoto_ω;
     _FGoto_α:
-                  cond_OUTPUT_409 = NULL;
-                  _FGoto_α_cstart = _cur_np;                goto cond_c_409_α;
-    cond_c_409_α:                                           goto alt_l_410_α;
-    cond_c_409_β:                                           goto alt_r_410_β;
-    alt_l_410_α:
-                  if (_cur_np + 1 > _slen_np)               goto alt_r_410_α;
-                  if (_subj_np[_cur_np] != 'F')             goto alt_r_410_α;
-                  alt_l_410_α_saved_cursor = _cur_np; _cur_np += 1;
+                  cond_OUTPUT_416 = NULL;
+                  _FGoto_α_cstart = _cur_np;                goto cond_c_416_α;
+    cond_c_416_α:                                           goto alt_l_417_α;
+    cond_c_416_β:                                           goto alt_r_417_β;
+    alt_l_417_α:
+                  if (_cur_np + 1 > _slen_np)               goto alt_r_417_α;
+                  if (_subj_np[_cur_np] != 'F')             goto alt_r_417_α;
+                  alt_l_417_α_saved_cursor = _cur_np; _cur_np += 1;
                                                             goto _FGoto_α_do_cap;
-    alt_l_410_β:  _cur_np = alt_l_410_α_saved_cursor;       goto alt_r_410_α;
-    alt_r_410_α:
+    alt_l_417_β:  _cur_np = alt_l_417_α_saved_cursor;       goto alt_r_417_α;
+    alt_r_417_α:
                   if (_cur_np + 1 > _slen_np)               goto _FGoto_ω;
                   if (_subj_np[_cur_np] != 'f')             goto _FGoto_ω;
-                  alt_r_410_α_saved_cursor = _cur_np; _cur_np += 1;
+                  alt_r_417_α_saved_cursor = _cur_np; _cur_np += 1;
                                                             goto _FGoto_α_do_cap;
-    alt_r_410_β:  _cur_np = alt_r_410_α_saved_cursor;       goto _FGoto_ω;
+    alt_r_417_β:  _cur_np = alt_r_417_α_saved_cursor;       goto _FGoto_ω;
     _FGoto_α_do_cap:
                   { int64_t _len = _cur_np - _FGoto_α_cstart;
-                    cond_OUTPUT_409 = (char*)GC_malloc(_len + 1);
-                    memcpy(cond_OUTPUT_409, _subj_np + _FGoto_α_cstart, _len); cond_OUTPUT_409[_len] = '\0'; }
+                    cond_OUTPUT_416 = (char*)GC_malloc(_len + 1);
+                    memcpy(cond_OUTPUT_416, _subj_np + _FGoto_α_cstart, _len); cond_OUTPUT_416[_len] = '\0'; }
                                                             goto _FGoto_γ;
-    _FGoto_β:                                               goto cond_c_409_β;
+    _FGoto_β:                                               goto cond_c_416_β;
     _FGoto_γ:;
         *_cur_ptr_np = _cur_np;
-if (cond_OUTPUT_409) NV_SET_fn("OUTPUT", STRVAL(cond_OUTPUT_409));
+if (cond_OUTPUT_416) NV_SET_fn("OUTPUT", STRVAL(cond_OUTPUT_416));
         return STRVAL("");
     _FGoto_ω:;
         return FAILDESCR;
 #undef _FGoto_α_cstart
-#undef cond_OUTPUT_409
-#undef alt_l_410_α_saved_cursor
-#undef alt_r_410_α_saved_cursor
+#undef cond_OUTPUT_416
+#undef alt_l_417_α_saved_cursor
+#undef alt_r_417_α_saved_cursor
 
 }
 
 typedef struct pat_SorF_t {
-    int64_t deref_412_saved_cur;
-    int64_t deref_413_saved_cur;
-    pat_SGoto_t *deref_412_z;
-    pat_FGoto_t *deref_413_z;
+    int64_t deref_419_saved_cur;
+    int64_t deref_420_saved_cur;
+    pat_SGoto_t *deref_419_z;
+    pat_FGoto_t *deref_420_z;
 } pat_SorF_t;
 
 static DESCR_t pat_SorF(const char *_subj_np, int64_t _slen_np,
@@ -8578,38 +8726,38 @@ static DESCR_t pat_SorF(const char *_subj_np, int64_t _slen_np,
     if (_entry_np == 0) { *_zz_np = calloc(1, sizeof(pat_SorF_t)); }
     pat_SorF_t *z = *_zz_np;
     int64_t _cur_np = *_cur_ptr_np;
-#define deref_412_saved_cur z->deref_412_saved_cur
-#define deref_413_saved_cur z->deref_413_saved_cur
-#define deref_412_z z->deref_412_z
-#define deref_413_z z->deref_413_z
+#define deref_419_saved_cur z->deref_419_saved_cur
+#define deref_420_saved_cur z->deref_420_saved_cur
+#define deref_419_z z->deref_419_z
+#define deref_420_z z->deref_420_z
 
     if (_entry_np == 0) goto _SorF_α;
     if (_entry_np == 1) goto _SorF_β;
     goto _SorF_ω;
-    _SorF_α:                                                goto alt_l_411_α;
-    _SorF_β:                                                goto alt_r_411_β;
-alt_l_411_α: {
-    deref_412_saved_cur = _cur_np;
-    DESCR_t _r_412 = pat_SGoto(_subj_np, _slen_np, &_cur_np, &deref_412_z, 0);
-    if (IS_FAIL_fn(_r_412)) { _cur_np = deref_412_saved_cur; goto alt_r_411_α; }
+    _SorF_α:                                                goto alt_l_418_α;
+    _SorF_β:                                                goto alt_r_418_β;
+alt_l_418_α: {
+    deref_419_saved_cur = _cur_np;
+    DESCR_t _r_419 = pat_SGoto(_subj_np, _slen_np, &_cur_np, &deref_419_z, 0);
+    if (IS_FAIL_fn(_r_419)) { _cur_np = deref_419_saved_cur; goto alt_r_418_α; }
     goto _SorF_γ;
 }
-alt_l_411_β: {
-    _cur_np = deref_412_saved_cur;
-    DESCR_t _r_412_b = pat_SGoto(_subj_np, _slen_np, &_cur_np, &deref_412_z, 1);
-    if (IS_FAIL_fn(_r_412_b)) { _cur_np = deref_412_saved_cur; goto alt_r_411_α; }
+alt_l_418_β: {
+    _cur_np = deref_419_saved_cur;
+    DESCR_t _r_419_b = pat_SGoto(_subj_np, _slen_np, &_cur_np, &deref_419_z, 1);
+    if (IS_FAIL_fn(_r_419_b)) { _cur_np = deref_419_saved_cur; goto alt_r_418_α; }
     goto _SorF_γ;
 }
-alt_r_411_α: {
-    deref_413_saved_cur = _cur_np;
-    DESCR_t _r_413 = pat_FGoto(_subj_np, _slen_np, &_cur_np, &deref_413_z, 0);
-    if (IS_FAIL_fn(_r_413)) { _cur_np = deref_413_saved_cur; goto _SorF_ω; }
+alt_r_418_α: {
+    deref_420_saved_cur = _cur_np;
+    DESCR_t _r_420 = pat_FGoto(_subj_np, _slen_np, &_cur_np, &deref_420_z, 0);
+    if (IS_FAIL_fn(_r_420)) { _cur_np = deref_420_saved_cur; goto _SorF_ω; }
     goto _SorF_γ;
 }
-alt_r_411_β: {
-    _cur_np = deref_413_saved_cur;
-    DESCR_t _r_413_b = pat_FGoto(_subj_np, _slen_np, &_cur_np, &deref_413_z, 1);
-    if (IS_FAIL_fn(_r_413_b)) { _cur_np = deref_413_saved_cur; goto _SorF_ω; }
+alt_r_418_β: {
+    _cur_np = deref_420_saved_cur;
+    DESCR_t _r_420_b = pat_FGoto(_subj_np, _slen_np, &_cur_np, &deref_420_z, 1);
+    if (IS_FAIL_fn(_r_420_b)) { _cur_np = deref_420_saved_cur; goto _SorF_ω; }
     goto _SorF_γ;
 }
     _SorF_γ:;
@@ -8617,28 +8765,32 @@ alt_r_411_β: {
         return STRVAL("");
     _SorF_ω:;
         return FAILDESCR;
-#undef deref_412_saved_cur
-#undef deref_413_saved_cur
-#undef deref_412_z
-#undef deref_413_z
+#undef deref_419_saved_cur
+#undef deref_420_saved_cur
+#undef deref_419_z
+#undef deref_420_z
 
 }
 
 typedef struct pat_Target_t {
-    int64_t cat_l_415_α_cstart;
-    char *cond_OUTPUT_416;
-    int64_t dlit_417_start;
-    int64_t dlit_417_α_saved_cursor;
-    int64_t cat_r_415_α_start;
-    int64_t deref_419_saved_cur;
-    int64_t cat_l_420_α_cstart;
-    char *cond_OUTPUT_421;
-    int64_t dlit_422_start;
-    int64_t dlit_422_α_saved_cursor;
-    int64_t cat_r_420_α_start;
-    int64_t deref_424_saved_cur;
-    pat_Expr_t *deref_419_z;
-    pat_Expr_t *deref_424_z;
+    int64_t cat_l_422_α_cstart;
+    char *cond_OUTPUT_423;
+    int64_t dlit_424_start;
+    int64_t dlit_424_α_saved_cursor;
+    int64_t cat_r_422_α_start;
+    int64_t dlit_426_α_α_saved_cursor;
+    int dlit_425_stk_depth;
+    int64_t deref_427_saved_cur;
+    int64_t cat_l_428_α_cstart;
+    char *cond_OUTPUT_429;
+    int64_t dlit_430_start;
+    int64_t dlit_430_α_saved_cursor;
+    int64_t cat_r_428_α_start;
+    int64_t dlit_432_α_α_saved_cursor;
+    int dlit_431_stk_depth;
+    int64_t deref_433_saved_cur;
+    pat_Expr_t *deref_427_z;
+    pat_Expr_t *deref_433_z;
 } pat_Target_t;
 
 static DESCR_t pat_Target(const char *_subj_np, int64_t _slen_np,
@@ -8646,164 +8798,194 @@ static DESCR_t pat_Target(const char *_subj_np, int64_t _slen_np,
     if (_entry_np == 0) { *_zz_np = calloc(1, sizeof(pat_Target_t)); }
     pat_Target_t *z = *_zz_np;
     int64_t _cur_np = *_cur_ptr_np;
-#define cat_l_415_α_cstart z->cat_l_415_α_cstart
-#define cond_OUTPUT_416 z->cond_OUTPUT_416
-#define dlit_417_start z->dlit_417_start
-#define dlit_417_α_saved_cursor z->dlit_417_α_saved_cursor
-#define cat_r_415_α_start z->cat_r_415_α_start
-#define deref_419_saved_cur z->deref_419_saved_cur
-#define cat_l_420_α_cstart z->cat_l_420_α_cstart
-#define cond_OUTPUT_421 z->cond_OUTPUT_421
-#define dlit_422_start z->dlit_422_start
-#define dlit_422_α_saved_cursor z->dlit_422_α_saved_cursor
-#define cat_r_420_α_start z->cat_r_420_α_start
-#define deref_424_saved_cur z->deref_424_saved_cur
-#define deref_419_z z->deref_419_z
-#define deref_424_z z->deref_424_z
+#define cat_l_422_α_cstart z->cat_l_422_α_cstart
+#define cond_OUTPUT_423 z->cond_OUTPUT_423
+#define dlit_424_start z->dlit_424_start
+#define dlit_424_α_saved_cursor z->dlit_424_α_saved_cursor
+#define cat_r_422_α_start z->cat_r_422_α_start
+#define dlit_426_α_α_saved_cursor z->dlit_426_α_α_saved_cursor
+#define dlit_425_stk_depth z->dlit_425_stk_depth
+#define deref_427_saved_cur z->deref_427_saved_cur
+#define cat_l_428_α_cstart z->cat_l_428_α_cstart
+#define cond_OUTPUT_429 z->cond_OUTPUT_429
+#define dlit_430_start z->dlit_430_start
+#define dlit_430_α_saved_cursor z->dlit_430_α_saved_cursor
+#define cat_r_428_α_start z->cat_r_428_α_start
+#define dlit_432_α_α_saved_cursor z->dlit_432_α_α_saved_cursor
+#define dlit_431_stk_depth z->dlit_431_stk_depth
+#define deref_433_saved_cur z->deref_433_saved_cur
+#define deref_427_z z->deref_427_z
+#define deref_433_z z->deref_433_z
 
     if (_entry_np == 0) goto _Target_α;
     if (_entry_np == 1) goto _Target_β;
     goto _Target_ω;
-    _Target_α:                                              goto alt_l_414_α;
-    _Target_β:                                              goto alt_r_414_β;
-    alt_l_414_α:                                            goto cat_l_415_α;
-    alt_l_414_β:                                            goto cat_r_415_β;
-    cat_l_415_α:
-                  cond_OUTPUT_416 = NULL;
-                  cat_l_415_α_cstart = _cur_np;             goto cond_c_416_α;
-    cond_c_416_α:
-                  dlit_417_start = _cur_np;
-                  goto dlit_417_α;                          goto dlit_417_α;
-    dlit_417_α:
-                  if (_cur_np + 1 > _slen_np)               goto alt_r_414_α;
-                  if (_subj_np[_cur_np] != '(')             goto alt_r_414_α;
-                  dlit_417_α_saved_cursor = _cur_np; _cur_np += 1;
-                                                            goto dlit_417_do_assign;
-    dlit_417_β:   _cur_np = dlit_417_α_saved_cursor;        goto alt_r_414_α;
-    dlit_417_do_assign:
-                  { int64_t _len = _cur_np - dlit_417_start;
+    _Target_α:                                              goto alt_l_421_α;
+    _Target_β:                                              goto alt_r_421_β;
+    alt_l_421_α:                                            goto cat_l_422_α;
+    alt_l_421_β:                                            goto cat_r_422_β;
+    cat_l_422_α:
+                  cond_OUTPUT_423 = NULL;
+                  cat_l_422_α_cstart = _cur_np;             goto cond_c_423_α;
+    cond_c_423_α:
+                  dlit_424_start = _cur_np;
+                  goto dlit_424_α;                          goto dlit_424_α;
+    dlit_424_α:
+                  if (_cur_np + 1 > _slen_np)               goto alt_r_421_α;
+                  if (_subj_np[_cur_np] != '(')             goto alt_r_421_α;
+                  dlit_424_α_saved_cursor = _cur_np; _cur_np += 1;
+                                                            goto dlit_424_do_assign;
+    dlit_424_β:   _cur_np = dlit_424_α_saved_cursor;        goto alt_r_421_α;
+    dlit_424_do_assign:
+                  { int64_t _len = _cur_np - dlit_424_start;
                     char *_os = malloc(_len + 1);
-                    memcpy(_os, _subj_np + dlit_417_start, _len); _os[_len] = 0;
-                    output_str(_os); free(_os); }           goto cat_l_415_α_do_cap;
-    cond_c_416_β:                                           goto dlit_417_β;
-    cat_l_415_α_do_cap:
-                  { int64_t _len = _cur_np - cat_l_415_α_cstart;
-                    cond_OUTPUT_416 = (char*)GC_malloc(_len + 1);
-                    memcpy(cond_OUTPUT_416, _subj_np + cat_l_415_α_cstart, _len); cond_OUTPUT_416[_len] = '\0'; }
-                                                            goto cat_r_415_α;
-    cat_l_415_β:                                            goto cond_c_416_β;
-    cat_r_415_α:  cat_r_415_α_start = _cur_np;              goto assign_c_418_α;
-assign_c_418_α: {
-    deref_419_saved_cur = _cur_np;
-    DESCR_t _r_419 = pat_Expr(_subj_np, _slen_np, &_cur_np, &deref_419_z, 0);
-    if (IS_FAIL_fn(_r_419)) { _cur_np = deref_419_saved_cur; goto cat_l_415_β; }
-    goto cat_r_415_α_do_assign;
+                    memcpy(_os, _subj_np + dlit_424_start, _len); _os[_len] = 0;
+                    output_str(_os); free(_os); }           goto cat_l_422_α_do_cap;
+    cond_c_423_β:                                           goto dlit_424_β;
+    cat_l_422_α_do_cap:
+                  { int64_t _len = _cur_np - cat_l_422_α_cstart;
+                    cond_OUTPUT_423 = (char*)GC_malloc(_len + 1);
+                    memcpy(cond_OUTPUT_423, _subj_np + cat_l_422_α_cstart, _len); cond_OUTPUT_423[_len] = '\0'; }
+                                                            goto cat_r_422_α;
+    cat_l_422_β:                                            goto cond_c_423_β;
+    cat_r_422_α:
+                  dlit_425_stk_depth = STACK_DEPTH_fn();
+                  cat_r_422_α_start = _cur_np;
+                  goto assign_c_425_α;                      goto assign_c_425_α;
+assign_c_425_α: {
+    deref_427_saved_cur = _cur_np;
+    DESCR_t _r_427 = pat_Expr(_subj_np, _slen_np, &_cur_np, &deref_427_z, 0);
+    if (IS_FAIL_fn(_r_427)) { _cur_np = deref_427_saved_cur; goto cat_l_422_β; }
+    goto dlit_426_α;
 }
-assign_c_418_β: {
-    _cur_np = deref_419_saved_cur;
-    DESCR_t _r_419_b = pat_Expr(_subj_np, _slen_np, &_cur_np, &deref_419_z, 1);
-    if (IS_FAIL_fn(_r_419_b)) { _cur_np = deref_419_saved_cur; goto cat_l_415_β; }
-    goto cat_r_415_α_do_assign;
+assign_c_425_β: {
+    _cur_np = deref_427_saved_cur;
+    DESCR_t _r_427_b = pat_Expr(_subj_np, _slen_np, &_cur_np, &deref_427_z, 1);
+    if (IS_FAIL_fn(_r_427_b)) { _cur_np = deref_427_saved_cur; goto cat_l_422_β; }
+    goto dlit_426_α;
 }
-    cat_r_415_α_do_assign:
-                  { int64_t _len = _cur_np - cat_r_415_α_start;
+    dlit_426_α:
+                  if (_cur_np + 1 > _slen_np)               { _cur_np = cat_r_422_α_start; while(STACK_DEPTH_fn()>dlit_425_stk_depth) pop_val(); goto cat_l_422_β; }
+                  if (_subj_np[_cur_np + 0] != ')')             { _cur_np = cat_r_422_α_start; while(STACK_DEPTH_fn()>dlit_425_stk_depth) pop_val(); goto cat_l_422_β; }
+                  dlit_426_α_α_saved_cursor = _cur_np; _cur_np += 1;
+                  goto cat_r_422_α_do_assign;               goto cat_r_422_α_do_assign;
+    dlit_425_β2:
+                  _cur_np = dlit_426_α_α_saved_cursor;
+                  goto cat_l_422_β;                         goto cat_l_422_β;
+    cat_r_422_β:                                            goto assign_c_425_β;
+    cat_r_422_α_do_assign:
+                  { int64_t _len = _cur_np - cat_r_422_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_r_415_α_start, _len); _os[_len] = 0;
+                    memcpy(_os, _subj_np + cat_r_422_α_start, _len); _os[_len] = 0;
                     NV_SET_fn("_", STRVAL(_os));
                   }                                         goto _Target_γ;
-    cat_r_415_β:                                            goto assign_c_418_β;
-    alt_r_414_α:                                            goto cat_l_420_α;
-    alt_r_414_β:                                            goto cat_r_420_β;
-    cat_l_420_α:
-                  cond_OUTPUT_421 = NULL;
-                  cat_l_420_α_cstart = _cur_np;             goto cond_c_421_α;
-    cond_c_421_α:
-                  dlit_422_start = _cur_np;
-                  goto dlit_422_α;                          goto dlit_422_α;
-    dlit_422_α:
+    alt_r_421_α:                                            goto cat_l_428_α;
+    alt_r_421_β:                                            goto cat_r_428_β;
+    cat_l_428_α:
+                  cond_OUTPUT_429 = NULL;
+                  cat_l_428_α_cstart = _cur_np;             goto cond_c_429_α;
+    cond_c_429_α:
+                  dlit_430_start = _cur_np;
+                  goto dlit_430_α;                          goto dlit_430_α;
+    dlit_430_α:
                   if (_cur_np + 1 > _slen_np)               goto _Target_ω;
                   if (_subj_np[_cur_np] != '<')             goto _Target_ω;
-                  dlit_422_α_saved_cursor = _cur_np; _cur_np += 1;
-                                                            goto dlit_422_do_assign;
-    dlit_422_β:   _cur_np = dlit_422_α_saved_cursor;        goto _Target_ω;
-    dlit_422_do_assign:
-                  { int64_t _len = _cur_np - dlit_422_start;
+                  dlit_430_α_saved_cursor = _cur_np; _cur_np += 1;
+                                                            goto dlit_430_do_assign;
+    dlit_430_β:   _cur_np = dlit_430_α_saved_cursor;        goto _Target_ω;
+    dlit_430_do_assign:
+                  { int64_t _len = _cur_np - dlit_430_start;
                     char *_os = malloc(_len + 1);
-                    memcpy(_os, _subj_np + dlit_422_start, _len); _os[_len] = 0;
-                    output_str(_os); free(_os); }           goto cat_l_420_α_do_cap;
-    cond_c_421_β:                                           goto dlit_422_β;
-    cat_l_420_α_do_cap:
-                  { int64_t _len = _cur_np - cat_l_420_α_cstart;
-                    cond_OUTPUT_421 = (char*)GC_malloc(_len + 1);
-                    memcpy(cond_OUTPUT_421, _subj_np + cat_l_420_α_cstart, _len); cond_OUTPUT_421[_len] = '\0'; }
-                                                            goto cat_r_420_α;
-    cat_l_420_β:                                            goto cond_c_421_β;
-    cat_r_420_α:  cat_r_420_α_start = _cur_np;              goto assign_c_423_α;
-assign_c_423_α: {
-    deref_424_saved_cur = _cur_np;
-    DESCR_t _r_424 = pat_Expr(_subj_np, _slen_np, &_cur_np, &deref_424_z, 0);
-    if (IS_FAIL_fn(_r_424)) { _cur_np = deref_424_saved_cur; goto cat_l_420_β; }
-    goto cat_r_420_α_do_assign;
+                    memcpy(_os, _subj_np + dlit_430_start, _len); _os[_len] = 0;
+                    output_str(_os); free(_os); }           goto cat_l_428_α_do_cap;
+    cond_c_429_β:                                           goto dlit_430_β;
+    cat_l_428_α_do_cap:
+                  { int64_t _len = _cur_np - cat_l_428_α_cstart;
+                    cond_OUTPUT_429 = (char*)GC_malloc(_len + 1);
+                    memcpy(cond_OUTPUT_429, _subj_np + cat_l_428_α_cstart, _len); cond_OUTPUT_429[_len] = '\0'; }
+                                                            goto cat_r_428_α;
+    cat_l_428_β:                                            goto cond_c_429_β;
+    cat_r_428_α:
+                  dlit_431_stk_depth = STACK_DEPTH_fn();
+                  cat_r_428_α_start = _cur_np;
+                  goto assign_c_431_α;                      goto assign_c_431_α;
+assign_c_431_α: {
+    deref_433_saved_cur = _cur_np;
+    DESCR_t _r_433 = pat_Expr(_subj_np, _slen_np, &_cur_np, &deref_433_z, 0);
+    if (IS_FAIL_fn(_r_433)) { _cur_np = deref_433_saved_cur; goto cat_l_428_β; }
+    goto dlit_432_α;
 }
-assign_c_423_β: {
-    _cur_np = deref_424_saved_cur;
-    DESCR_t _r_424_b = pat_Expr(_subj_np, _slen_np, &_cur_np, &deref_424_z, 1);
-    if (IS_FAIL_fn(_r_424_b)) { _cur_np = deref_424_saved_cur; goto cat_l_420_β; }
-    goto cat_r_420_α_do_assign;
+assign_c_431_β: {
+    _cur_np = deref_433_saved_cur;
+    DESCR_t _r_433_b = pat_Expr(_subj_np, _slen_np, &_cur_np, &deref_433_z, 1);
+    if (IS_FAIL_fn(_r_433_b)) { _cur_np = deref_433_saved_cur; goto cat_l_428_β; }
+    goto dlit_432_α;
 }
-    cat_r_420_α_do_assign:
-                  { int64_t _len = _cur_np - cat_r_420_α_start;
+    dlit_432_α:
+                  if (_cur_np + 1 > _slen_np)               { _cur_np = cat_r_428_α_start; while(STACK_DEPTH_fn()>dlit_431_stk_depth) pop_val(); goto cat_l_428_β; }
+                  if (_subj_np[_cur_np + 0] != '>')             { _cur_np = cat_r_428_α_start; while(STACK_DEPTH_fn()>dlit_431_stk_depth) pop_val(); goto cat_l_428_β; }
+                  dlit_432_α_α_saved_cursor = _cur_np; _cur_np += 1;
+                  goto cat_r_428_α_do_assign;               goto cat_r_428_α_do_assign;
+    dlit_431_β2:
+                  _cur_np = dlit_432_α_α_saved_cursor;
+                  goto cat_l_428_β;                         goto cat_l_428_β;
+    cat_r_428_β:                                            goto assign_c_431_β;
+    cat_r_428_α_do_assign:
+                  { int64_t _len = _cur_np - cat_r_428_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_r_420_α_start, _len); _os[_len] = 0;
+                    memcpy(_os, _subj_np + cat_r_428_α_start, _len); _os[_len] = 0;
                     NV_SET_fn("_", STRVAL(_os));
                   }                                         goto _Target_γ;
-    cat_r_420_β:                                            goto assign_c_423_β;
     _Target_γ:;
         *_cur_ptr_np = _cur_np;
-if (cond_OUTPUT_416) NV_SET_fn("OUTPUT", STRVAL(cond_OUTPUT_416));
-if (cond_OUTPUT_421) NV_SET_fn("OUTPUT", STRVAL(cond_OUTPUT_421));
+if (cond_OUTPUT_423) NV_SET_fn("OUTPUT", STRVAL(cond_OUTPUT_423));
+if (cond_OUTPUT_429) NV_SET_fn("OUTPUT", STRVAL(cond_OUTPUT_429));
         return STRVAL("");
     _Target_ω:;
         return FAILDESCR;
-#undef cat_l_415_α_cstart
-#undef cond_OUTPUT_416
-#undef dlit_417_start
-#undef dlit_417_α_saved_cursor
-#undef cat_r_415_α_start
-#undef deref_419_saved_cur
-#undef cat_l_420_α_cstart
-#undef cond_OUTPUT_421
-#undef dlit_422_start
-#undef dlit_422_α_saved_cursor
-#undef cat_r_420_α_start
-#undef deref_424_saved_cur
-#undef deref_419_z
-#undef deref_424_z
+#undef cat_l_422_α_cstart
+#undef cond_OUTPUT_423
+#undef dlit_424_start
+#undef dlit_424_α_saved_cursor
+#undef cat_r_422_α_start
+#undef dlit_426_α_α_saved_cursor
+#undef dlit_425_stk_depth
+#undef deref_427_saved_cur
+#undef cat_l_428_α_cstart
+#undef cond_OUTPUT_429
+#undef dlit_430_start
+#undef dlit_430_α_saved_cursor
+#undef cat_r_428_α_start
+#undef dlit_432_α_α_saved_cursor
+#undef dlit_431_stk_depth
+#undef deref_433_saved_cur
+#undef deref_427_z
+#undef deref_433_z
 
 }
 
 typedef struct pat_Goto_t {
-    int64_t deref_428_saved_cur;
-    int64_t cat_r_427_α_saved_cursor;
-    int64_t deref_429_saved_cur;
-    int64_t deref_434_saved_cur;
-    int64_t cat_r_432_α_start;
-    int64_t deref_436_saved_cursor;
-    int64_t deref_440_saved_cur;
-    int64_t deref_441_saved_cur;
-    int64_t deref_447_saved_cur;
-    int64_t deref_448_saved_cur;
+    int64_t deref_437_saved_cur;
+    int64_t cat_r_436_α_saved_cursor;
+    int64_t deref_438_saved_cur;
+    int64_t deref_443_saved_cur;
+    int64_t cat_r_441_α_start;
+    int64_t deref_445_saved_cursor;
     int64_t deref_449_saved_cur;
-    int64_t alt_r_443_α_start;
-    int64_t deref_451_saved_cursor;
-    pat_Gray_t *deref_428_z;
-    pat_Gray_t *deref_429_z;
-    pat_Target_t *deref_434_z;
-    pat_SorF_t *deref_440_z;
-    pat_Target_t *deref_441_z;
-    pat_Gray_t *deref_447_z;
-    pat_SorF_t *deref_448_z;
-    pat_Target_t *deref_449_z;
+    int64_t deref_450_saved_cur;
+    int64_t deref_456_saved_cur;
+    int64_t deref_457_saved_cur;
+    int64_t deref_458_saved_cur;
+    int64_t alt_r_452_α_start;
+    int64_t deref_460_saved_cursor;
+    pat_Gray_t *deref_437_z;
+    pat_Gray_t *deref_438_z;
+    pat_Target_t *deref_443_z;
+    pat_SorF_t *deref_449_z;
+    pat_Target_t *deref_450_z;
+    pat_Gray_t *deref_456_z;
+    pat_SorF_t *deref_457_z;
+    pat_Target_t *deref_458_z;
 } pat_Goto_t;
 
 static DESCR_t pat_Goto(const char *_subj_np, int64_t _slen_np,
@@ -8811,254 +8993,254 @@ static DESCR_t pat_Goto(const char *_subj_np, int64_t _slen_np,
     if (_entry_np == 0) { *_zz_np = calloc(1, sizeof(pat_Goto_t)); }
     pat_Goto_t *z = *_zz_np;
     int64_t _cur_np = *_cur_ptr_np;
-#define deref_428_saved_cur z->deref_428_saved_cur
-#define cat_r_427_α_saved_cursor z->cat_r_427_α_saved_cursor
-#define deref_429_saved_cur z->deref_429_saved_cur
-#define deref_434_saved_cur z->deref_434_saved_cur
-#define cat_r_432_α_start z->cat_r_432_α_start
-#define deref_436_saved_cursor z->deref_436_saved_cursor
-#define deref_440_saved_cur z->deref_440_saved_cur
-#define deref_441_saved_cur z->deref_441_saved_cur
-#define deref_447_saved_cur z->deref_447_saved_cur
-#define deref_448_saved_cur z->deref_448_saved_cur
+#define deref_437_saved_cur z->deref_437_saved_cur
+#define cat_r_436_α_saved_cursor z->cat_r_436_α_saved_cursor
+#define deref_438_saved_cur z->deref_438_saved_cur
+#define deref_443_saved_cur z->deref_443_saved_cur
+#define cat_r_441_α_start z->cat_r_441_α_start
+#define deref_445_saved_cursor z->deref_445_saved_cursor
 #define deref_449_saved_cur z->deref_449_saved_cur
-#define alt_r_443_α_start z->alt_r_443_α_start
-#define deref_451_saved_cursor z->deref_451_saved_cursor
-#define deref_428_z z->deref_428_z
-#define deref_429_z z->deref_429_z
-#define deref_434_z z->deref_434_z
-#define deref_440_z z->deref_440_z
-#define deref_441_z z->deref_441_z
-#define deref_447_z z->deref_447_z
-#define deref_448_z z->deref_448_z
+#define deref_450_saved_cur z->deref_450_saved_cur
+#define deref_456_saved_cur z->deref_456_saved_cur
+#define deref_457_saved_cur z->deref_457_saved_cur
+#define deref_458_saved_cur z->deref_458_saved_cur
+#define alt_r_452_α_start z->alt_r_452_α_start
+#define deref_460_saved_cursor z->deref_460_saved_cursor
+#define deref_437_z z->deref_437_z
+#define deref_438_z z->deref_438_z
+#define deref_443_z z->deref_443_z
 #define deref_449_z z->deref_449_z
+#define deref_450_z z->deref_450_z
+#define deref_456_z z->deref_456_z
+#define deref_457_z z->deref_457_z
+#define deref_458_z z->deref_458_z
 
     if (_entry_np == 0) goto _Goto_α;
     if (_entry_np == 1) goto _Goto_β;
     goto _Goto_ω;
-    _Goto_α:                                                goto cat_l_425_α;
-    _Goto_β:                                                goto cat_r_425_β;
-    cat_l_425_α:                                            goto cat_l_426_α;
-    cat_l_425_β:                                            goto cat_r_426_β;
-    cat_l_426_α:                                            goto cat_l_427_α;
-    cat_l_426_β:                                            goto cat_r_427_β;
-cat_l_427_α: {
-    deref_428_saved_cur = _cur_np;
-    DESCR_t _r_428 = pat_Gray(_subj_np, _slen_np, &_cur_np, &deref_428_z, 0);
-    if (IS_FAIL_fn(_r_428)) { _cur_np = deref_428_saved_cur; goto _Goto_ω; }
-    goto cat_r_427_α;
+    _Goto_α:                                                goto cat_l_434_α;
+    _Goto_β:                                                goto cat_r_434_β;
+    cat_l_434_α:                                            goto cat_l_435_α;
+    cat_l_434_β:                                            goto cat_r_435_β;
+    cat_l_435_α:                                            goto cat_l_436_α;
+    cat_l_435_β:                                            goto cat_r_436_β;
+cat_l_436_α: {
+    deref_437_saved_cur = _cur_np;
+    DESCR_t _r_437 = pat_Gray(_subj_np, _slen_np, &_cur_np, &deref_437_z, 0);
+    if (IS_FAIL_fn(_r_437)) { _cur_np = deref_437_saved_cur; goto _Goto_ω; }
+    goto cat_r_436_α;
 }
-cat_l_427_β: {
-    _cur_np = deref_428_saved_cur;
-    DESCR_t _r_428_b = pat_Gray(_subj_np, _slen_np, &_cur_np, &deref_428_z, 1);
-    if (IS_FAIL_fn(_r_428_b)) { _cur_np = deref_428_saved_cur; goto _Goto_ω; }
-    goto cat_r_427_α;
+cat_l_436_β: {
+    _cur_np = deref_437_saved_cur;
+    DESCR_t _r_437_b = pat_Gray(_subj_np, _slen_np, &_cur_np, &deref_437_z, 1);
+    if (IS_FAIL_fn(_r_437_b)) { _cur_np = deref_437_saved_cur; goto _Goto_ω; }
+    goto cat_r_436_α;
 }
-    cat_r_427_α:
-                  if (_cur_np + 1 > _slen_np)               goto cat_l_427_β;
-                  if (_subj_np[_cur_np] != ':')             goto cat_l_427_β;
-                  cat_r_427_α_saved_cursor = _cur_np; _cur_np += 1;
-                                                            goto cat_r_426_α;
-    cat_r_427_β:  _cur_np = cat_r_427_α_saved_cursor;       goto cat_l_427_β;
-cat_r_426_α: {
-    deref_429_saved_cur = _cur_np;
-    DESCR_t _r_429 = pat_Gray(_subj_np, _slen_np, &_cur_np, &deref_429_z, 0);
-    if (IS_FAIL_fn(_r_429)) { _cur_np = deref_429_saved_cur; goto cat_l_426_β; }
-    goto cat_r_425_α;
+    cat_r_436_α:
+                  if (_cur_np + 1 > _slen_np)               goto cat_l_436_β;
+                  if (_subj_np[_cur_np] != ':')             goto cat_l_436_β;
+                  cat_r_436_α_saved_cursor = _cur_np; _cur_np += 1;
+                                                            goto cat_r_435_α;
+    cat_r_436_β:  _cur_np = cat_r_436_α_saved_cursor;       goto cat_l_436_β;
+cat_r_435_α: {
+    deref_438_saved_cur = _cur_np;
+    DESCR_t _r_438 = pat_Gray(_subj_np, _slen_np, &_cur_np, &deref_438_z, 0);
+    if (IS_FAIL_fn(_r_438)) { _cur_np = deref_438_saved_cur; goto cat_l_435_β; }
+    goto cat_r_434_α;
 }
-cat_r_426_β: {
-    _cur_np = deref_429_saved_cur;
-    DESCR_t _r_429_b = pat_Gray(_subj_np, _slen_np, &_cur_np, &deref_429_z, 1);
-    if (IS_FAIL_fn(_r_429_b)) { _cur_np = deref_429_saved_cur; goto cat_l_426_β; }
-    goto cat_r_425_α;
+cat_r_435_β: {
+    _cur_np = deref_438_saved_cur;
+    DESCR_t _r_438_b = pat_Gray(_subj_np, _slen_np, &_cur_np, &deref_438_z, 1);
+    if (IS_FAIL_fn(_r_438_b)) { _cur_np = deref_438_saved_cur; goto cat_l_435_β; }
+    goto cat_r_434_α;
 }
-    cat_r_425_α:                                            goto fence_p_430_α;
-    fence_p_430_α:                                          goto alt_l_431_α;
-    fence_p_430_β:                                          goto alt_r_431_β;
-    alt_l_431_α:                                            goto cat_l_432_α;
-    alt_l_431_β:                                            goto cat_r_432_β;
-    cat_l_432_α:                                            goto cat_l_433_α;
-    cat_l_432_β:                                            goto cat_r_433_β;
-cat_l_433_α: {
-    deref_434_saved_cur = _cur_np;
-    DESCR_t _r_434 = pat_Target(_subj_np, _slen_np, &_cur_np, &deref_434_z, 0);
-    if (IS_FAIL_fn(_r_434)) { _cur_np = deref_434_saved_cur; goto alt_r_431_α; }
-    goto cat_r_433_α;
+    cat_r_434_α:                                            goto fence_p_439_α;
+    fence_p_439_α:                                          goto alt_l_440_α;
+    fence_p_439_β:                                          goto alt_r_440_β;
+    alt_l_440_α:                                            goto cat_l_441_α;
+    alt_l_440_β:                                            goto cat_r_441_β;
+    cat_l_441_α:                                            goto cat_l_442_α;
+    cat_l_441_β:                                            goto cat_r_442_β;
+cat_l_442_α: {
+    deref_443_saved_cur = _cur_np;
+    DESCR_t _r_443 = pat_Target(_subj_np, _slen_np, &_cur_np, &deref_443_z, 0);
+    if (IS_FAIL_fn(_r_443)) { _cur_np = deref_443_saved_cur; goto alt_r_440_α; }
+    goto cat_r_442_α;
 }
-cat_l_433_β: {
-    _cur_np = deref_434_saved_cur;
-    DESCR_t _r_434_b = pat_Target(_subj_np, _slen_np, &_cur_np, &deref_434_z, 1);
-    if (IS_FAIL_fn(_r_434_b)) { _cur_np = deref_434_saved_cur; goto alt_r_431_α; }
-    goto cat_r_433_α;
+cat_l_442_β: {
+    _cur_np = deref_443_saved_cur;
+    DESCR_t _r_443_b = pat_Target(_subj_np, _slen_np, &_cur_np, &deref_443_z, 1);
+    if (IS_FAIL_fn(_r_443_b)) { _cur_np = deref_443_saved_cur; goto alt_r_440_α; }
+    goto cat_r_442_α;
 }
-cat_r_433_α: /* E_OPSYN & */
+cat_r_442_α: /* E_OPSYN & */
     { DESCR_t _reduce_args[2] = {STRVAL("*(':' Brackets)"), INTVAL(1)};
       APPLY_fn("Reduce", _reduce_args, 2); }
-    goto cat_r_432_α;
-cat_r_433_β: goto cat_l_433_β;
-    cat_r_432_α:  cat_r_432_α_start = _cur_np;              goto assign_c_435_α;
-assign_c_435_α: {
+    goto cat_r_441_α;
+cat_r_442_β: goto cat_l_442_β;
+    cat_r_441_α:  cat_r_441_α_start = _cur_np;              goto assign_c_444_α;
+assign_c_444_α: {
     DESCR_t _deref_pat = NV_GET_fn("epsilon");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto cat_l_432_β;
-    deref_436_saved_cursor = _cur_np;
+    if (_deref_new_cur < 0) goto cat_l_441_β;
+    deref_445_saved_cursor = _cur_np;
     _cur_np = (int64_t)_deref_new_cur;
-    goto cat_r_432_α_do_assign;
+    goto cat_r_441_α_do_assign;
 }
-assign_c_435_β:
-    _cur_np = deref_436_saved_cursor;
-    goto cat_l_432_β;
-    cat_r_432_α_do_assign:
-                  { int64_t _len = _cur_np - cat_r_432_α_start;
+assign_c_444_β:
+    _cur_np = deref_445_saved_cursor;
+    goto cat_l_441_β;
+    cat_r_441_α_do_assign:
+                  { int64_t _len = _cur_np - cat_r_441_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_r_432_α_start, _len); _os[_len] = 0;
+                    memcpy(_os, _subj_np + cat_r_441_α_start, _len); _os[_len] = 0;
                     NV_SET_fn("", STRVAL(_os));
                     { DESCR_t _shift_args[2] = {STRVAL(""), STRVAL(_os)};
                       APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto fence_after_430;
-    cat_r_432_β:                                            goto assign_c_435_β;
-    alt_r_431_α:                                            goto cat_l_437_α;
-    alt_r_431_β:                                            goto cat_r_437_β;
-    cat_l_437_α:                                            goto cat_l_438_α;
-    cat_l_437_β:                                            goto cat_r_438_β;
-    cat_l_438_α:                                            goto cat_l_439_α;
-    cat_l_438_β:                                            goto cat_r_439_β;
-cat_l_439_α: {
-    deref_440_saved_cur = _cur_np;
-    DESCR_t _r_440 = pat_SorF(_subj_np, _slen_np, &_cur_np, &deref_440_z, 0);
-    if (IS_FAIL_fn(_r_440)) { _cur_np = deref_440_saved_cur; goto cat_l_425_β; }
-    goto cat_r_439_α;
-}
-cat_l_439_β: {
-    _cur_np = deref_440_saved_cur;
-    DESCR_t _r_440_b = pat_SorF(_subj_np, _slen_np, &_cur_np, &deref_440_z, 1);
-    if (IS_FAIL_fn(_r_440_b)) { _cur_np = deref_440_saved_cur; goto cat_l_425_β; }
-    goto cat_r_439_α;
-}
-cat_r_439_α: {
-    deref_441_saved_cur = _cur_np;
-    DESCR_t _r_441 = pat_Target(_subj_np, _slen_np, &_cur_np, &deref_441_z, 0);
-    if (IS_FAIL_fn(_r_441)) { _cur_np = deref_441_saved_cur; goto cat_l_439_β; }
-    goto cat_r_438_α;
-}
-cat_r_439_β: {
-    _cur_np = deref_441_saved_cur;
-    DESCR_t _r_441_b = pat_Target(_subj_np, _slen_np, &_cur_np, &deref_441_z, 1);
-    if (IS_FAIL_fn(_r_441_b)) { _cur_np = deref_441_saved_cur; goto cat_l_439_β; }
-    goto cat_r_438_α;
-}
-cat_r_438_α: /* E_OPSYN & */
-    { DESCR_t _reduce_args[2] = {STRVAL("*(':' SorF Brackets)"), INTVAL(1)};
-      APPLY_fn("Reduce", _reduce_args, 2); }
-    goto cat_r_437_α;
-cat_r_438_β: goto cat_l_438_β;
-    cat_r_437_α:                                            goto fence_p_442_α;
-    fence_p_442_α:                                          goto alt_l_443_α;
-    fence_p_442_β:                                          goto alt_r_443_β;
-    alt_l_443_α:                                            goto cat_l_444_α;
-    alt_l_443_β:                                            goto cat_r_444_β;
-    cat_l_444_α:                                            goto cat_l_445_α;
-    cat_l_444_β:                                            goto cat_r_445_β;
-    cat_l_445_α:                                            goto cat_l_446_α;
-    cat_l_445_β:                                            goto cat_r_446_β;
-cat_l_446_α: {
-    deref_447_saved_cur = _cur_np;
-    DESCR_t _r_447 = pat_Gray(_subj_np, _slen_np, &_cur_np, &deref_447_z, 0);
-    if (IS_FAIL_fn(_r_447)) { _cur_np = deref_447_saved_cur; goto alt_r_443_α; }
-    goto cat_r_446_α;
-}
-cat_l_446_β: {
-    _cur_np = deref_447_saved_cur;
-    DESCR_t _r_447_b = pat_Gray(_subj_np, _slen_np, &_cur_np, &deref_447_z, 1);
-    if (IS_FAIL_fn(_r_447_b)) { _cur_np = deref_447_saved_cur; goto alt_r_443_α; }
-    goto cat_r_446_α;
-}
-cat_r_446_α: {
-    deref_448_saved_cur = _cur_np;
-    DESCR_t _r_448 = pat_SorF(_subj_np, _slen_np, &_cur_np, &deref_448_z, 0);
-    if (IS_FAIL_fn(_r_448)) { _cur_np = deref_448_saved_cur; goto cat_l_446_β; }
-    goto cat_r_445_α;
-}
-cat_r_446_β: {
-    _cur_np = deref_448_saved_cur;
-    DESCR_t _r_448_b = pat_SorF(_subj_np, _slen_np, &_cur_np, &deref_448_z, 1);
-    if (IS_FAIL_fn(_r_448_b)) { _cur_np = deref_448_saved_cur; goto cat_l_446_β; }
-    goto cat_r_445_α;
-}
-cat_r_445_α: {
+                  }                                         goto fence_after_439;
+    cat_r_441_β:                                            goto assign_c_444_β;
+    alt_r_440_α:                                            goto cat_l_446_α;
+    alt_r_440_β:                                            goto cat_r_446_β;
+    cat_l_446_α:                                            goto cat_l_447_α;
+    cat_l_446_β:                                            goto cat_r_447_β;
+    cat_l_447_α:                                            goto cat_l_448_α;
+    cat_l_447_β:                                            goto cat_r_448_β;
+cat_l_448_α: {
     deref_449_saved_cur = _cur_np;
-    DESCR_t _r_449 = pat_Target(_subj_np, _slen_np, &_cur_np, &deref_449_z, 0);
-    if (IS_FAIL_fn(_r_449)) { _cur_np = deref_449_saved_cur; goto cat_l_445_β; }
-    goto cat_r_444_α;
+    DESCR_t _r_449 = pat_SorF(_subj_np, _slen_np, &_cur_np, &deref_449_z, 0);
+    if (IS_FAIL_fn(_r_449)) { _cur_np = deref_449_saved_cur; goto cat_l_434_β; }
+    goto cat_r_448_α;
 }
-cat_r_445_β: {
+cat_l_448_β: {
     _cur_np = deref_449_saved_cur;
-    DESCR_t _r_449_b = pat_Target(_subj_np, _slen_np, &_cur_np, &deref_449_z, 1);
-    if (IS_FAIL_fn(_r_449_b)) { _cur_np = deref_449_saved_cur; goto cat_l_445_β; }
-    goto cat_r_444_α;
+    DESCR_t _r_449_b = pat_SorF(_subj_np, _slen_np, &_cur_np, &deref_449_z, 1);
+    if (IS_FAIL_fn(_r_449_b)) { _cur_np = deref_449_saved_cur; goto cat_l_434_β; }
+    goto cat_r_448_α;
 }
-cat_r_444_α: /* E_OPSYN & */
+cat_r_448_α: {
+    deref_450_saved_cur = _cur_np;
+    DESCR_t _r_450 = pat_Target(_subj_np, _slen_np, &_cur_np, &deref_450_z, 0);
+    if (IS_FAIL_fn(_r_450)) { _cur_np = deref_450_saved_cur; goto cat_l_448_β; }
+    goto cat_r_447_α;
+}
+cat_r_448_β: {
+    _cur_np = deref_450_saved_cur;
+    DESCR_t _r_450_b = pat_Target(_subj_np, _slen_np, &_cur_np, &deref_450_z, 1);
+    if (IS_FAIL_fn(_r_450_b)) { _cur_np = deref_450_saved_cur; goto cat_l_448_β; }
+    goto cat_r_447_α;
+}
+cat_r_447_α: /* E_OPSYN & */
     { DESCR_t _reduce_args[2] = {STRVAL("*(':' SorF Brackets)"), INTVAL(1)};
       APPLY_fn("Reduce", _reduce_args, 2); }
-    goto fence_after_442;
-cat_r_444_β: goto cat_l_444_β;
-    alt_r_443_α:  alt_r_443_α_start = _cur_np;              goto assign_c_450_α;
-assign_c_450_α: {
+    goto cat_r_446_α;
+cat_r_447_β: goto cat_l_447_β;
+    cat_r_446_α:                                            goto fence_p_451_α;
+    fence_p_451_α:                                          goto alt_l_452_α;
+    fence_p_451_β:                                          goto alt_r_452_β;
+    alt_l_452_α:                                            goto cat_l_453_α;
+    alt_l_452_β:                                            goto cat_r_453_β;
+    cat_l_453_α:                                            goto cat_l_454_α;
+    cat_l_453_β:                                            goto cat_r_454_β;
+    cat_l_454_α:                                            goto cat_l_455_α;
+    cat_l_454_β:                                            goto cat_r_455_β;
+cat_l_455_α: {
+    deref_456_saved_cur = _cur_np;
+    DESCR_t _r_456 = pat_Gray(_subj_np, _slen_np, &_cur_np, &deref_456_z, 0);
+    if (IS_FAIL_fn(_r_456)) { _cur_np = deref_456_saved_cur; goto alt_r_452_α; }
+    goto cat_r_455_α;
+}
+cat_l_455_β: {
+    _cur_np = deref_456_saved_cur;
+    DESCR_t _r_456_b = pat_Gray(_subj_np, _slen_np, &_cur_np, &deref_456_z, 1);
+    if (IS_FAIL_fn(_r_456_b)) { _cur_np = deref_456_saved_cur; goto alt_r_452_α; }
+    goto cat_r_455_α;
+}
+cat_r_455_α: {
+    deref_457_saved_cur = _cur_np;
+    DESCR_t _r_457 = pat_SorF(_subj_np, _slen_np, &_cur_np, &deref_457_z, 0);
+    if (IS_FAIL_fn(_r_457)) { _cur_np = deref_457_saved_cur; goto cat_l_455_β; }
+    goto cat_r_454_α;
+}
+cat_r_455_β: {
+    _cur_np = deref_457_saved_cur;
+    DESCR_t _r_457_b = pat_SorF(_subj_np, _slen_np, &_cur_np, &deref_457_z, 1);
+    if (IS_FAIL_fn(_r_457_b)) { _cur_np = deref_457_saved_cur; goto cat_l_455_β; }
+    goto cat_r_454_α;
+}
+cat_r_454_α: {
+    deref_458_saved_cur = _cur_np;
+    DESCR_t _r_458 = pat_Target(_subj_np, _slen_np, &_cur_np, &deref_458_z, 0);
+    if (IS_FAIL_fn(_r_458)) { _cur_np = deref_458_saved_cur; goto cat_l_454_β; }
+    goto cat_r_453_α;
+}
+cat_r_454_β: {
+    _cur_np = deref_458_saved_cur;
+    DESCR_t _r_458_b = pat_Target(_subj_np, _slen_np, &_cur_np, &deref_458_z, 1);
+    if (IS_FAIL_fn(_r_458_b)) { _cur_np = deref_458_saved_cur; goto cat_l_454_β; }
+    goto cat_r_453_α;
+}
+cat_r_453_α: /* E_OPSYN & */
+    { DESCR_t _reduce_args[2] = {STRVAL("*(':' SorF Brackets)"), INTVAL(1)};
+      APPLY_fn("Reduce", _reduce_args, 2); }
+    goto fence_after_451;
+cat_r_453_β: goto cat_l_453_β;
+    alt_r_452_α:  alt_r_452_α_start = _cur_np;              goto assign_c_459_α;
+assign_c_459_α: {
     DESCR_t _deref_pat = NV_GET_fn("epsilon");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto cat_l_437_β;
-    deref_451_saved_cursor = _cur_np;
+    if (_deref_new_cur < 0) goto cat_l_446_β;
+    deref_460_saved_cursor = _cur_np;
     _cur_np = (int64_t)_deref_new_cur;
-    goto alt_r_443_α_do_assign;
+    goto alt_r_452_α_do_assign;
 }
-assign_c_450_β:
-    _cur_np = deref_451_saved_cursor;
-    goto cat_l_437_β;
-    alt_r_443_α_do_assign:
-                  { int64_t _len = _cur_np - alt_r_443_α_start;
+assign_c_459_β:
+    _cur_np = deref_460_saved_cursor;
+    goto cat_l_446_β;
+    alt_r_452_α_do_assign:
+                  { int64_t _len = _cur_np - alt_r_452_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + alt_r_443_α_start, _len); _os[_len] = 0;
+                    memcpy(_os, _subj_np + alt_r_452_α_start, _len); _os[_len] = 0;
                     NV_SET_fn("", STRVAL(_os));
                     { DESCR_t _shift_args[2] = {STRVAL(""), STRVAL(_os)};
                       APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto fence_after_442;
-    alt_r_443_β:                                            goto assign_c_450_β;
-    fence_after_442:                                        goto fence_after_430;
-    cat_r_437_β:                                            goto cat_l_437_β;
-    fence_after_430:                                        goto _Goto_γ;
-    cat_r_425_β:                                            goto cat_l_425_β;
+                  }                                         goto fence_after_451;
+    alt_r_452_β:                                            goto assign_c_459_β;
+    fence_after_451:                                        goto fence_after_439;
+    cat_r_446_β:                                            goto cat_l_446_β;
+    fence_after_439:                                        goto _Goto_γ;
+    cat_r_434_β:                                            goto cat_l_434_β;
     _Goto_γ:;
         *_cur_ptr_np = _cur_np;
         return STRVAL("");
     _Goto_ω:;
         return FAILDESCR;
-#undef deref_428_saved_cur
-#undef cat_r_427_α_saved_cursor
-#undef deref_429_saved_cur
-#undef deref_434_saved_cur
-#undef cat_r_432_α_start
-#undef deref_436_saved_cursor
-#undef deref_440_saved_cur
-#undef deref_441_saved_cur
-#undef deref_447_saved_cur
-#undef deref_448_saved_cur
+#undef deref_437_saved_cur
+#undef cat_r_436_α_saved_cursor
+#undef deref_438_saved_cur
+#undef deref_443_saved_cur
+#undef cat_r_441_α_start
+#undef deref_445_saved_cursor
 #undef deref_449_saved_cur
-#undef alt_r_443_α_start
-#undef deref_451_saved_cursor
-#undef deref_428_z
-#undef deref_429_z
-#undef deref_434_z
-#undef deref_440_z
-#undef deref_441_z
-#undef deref_447_z
-#undef deref_448_z
+#undef deref_450_saved_cur
+#undef deref_456_saved_cur
+#undef deref_457_saved_cur
+#undef deref_458_saved_cur
+#undef alt_r_452_α_start
+#undef deref_460_saved_cursor
+#undef deref_437_z
+#undef deref_438_z
+#undef deref_443_z
 #undef deref_449_z
+#undef deref_450_z
+#undef deref_456_z
+#undef deref_457_z
+#undef deref_458_z
 
 }
 
 typedef struct pat_Control_t {
-    int64_t cat_l_452_α_saved_cursor;
-    int64_t cat_r_452_α_saved_cursor;
+    int64_t cat_l_461_α_saved_cursor;
+    int64_t cat_r_461_α_saved_cursor;
 } pat_Control_t;
 
 static DESCR_t pat_Control(const char *_subj_np, int64_t _slen_np,
@@ -9066,39 +9248,39 @@ static DESCR_t pat_Control(const char *_subj_np, int64_t _slen_np,
     if (_entry_np == 0) { *_zz_np = calloc(1, sizeof(pat_Control_t)); }
     pat_Control_t *z = *_zz_np;
     int64_t _cur_np = *_cur_ptr_np;
-#define cat_l_452_α_saved_cursor z->cat_l_452_α_saved_cursor
-#define cat_r_452_α_saved_cursor z->cat_r_452_α_saved_cursor
+#define cat_l_461_α_saved_cursor z->cat_l_461_α_saved_cursor
+#define cat_r_461_α_saved_cursor z->cat_r_461_α_saved_cursor
 
     if (_entry_np == 0) goto _Control_α;
     if (_entry_np == 1) goto _Control_β;
     goto _Control_ω;
-    _Control_α:                                             goto cat_l_452_α;
-    _Control_β:                                             goto cat_r_452_β;
-    cat_l_452_α:
+    _Control_α:                                             goto cat_l_461_α;
+    _Control_β:                                             goto cat_r_461_β;
+    cat_l_461_α:
                   if (_cur_np + 1 > _slen_np)               goto _Control_ω;
                   if (_subj_np[_cur_np] != '-')             goto _Control_ω;
-                  cat_l_452_α_saved_cursor = _cur_np; _cur_np += 1;
-                                                            goto cat_r_452_α;
-    cat_l_452_β:  _cur_np = cat_l_452_α_saved_cursor;       goto _Control_ω;
-    cat_r_452_α:
-                  cat_r_452_α_saved_cursor = _cur_np;
+                  cat_l_461_α_saved_cursor = _cur_np; _cur_np += 1;
+                                                            goto cat_r_461_α;
+    cat_l_461_β:  _cur_np = cat_l_461_α_saved_cursor;       goto _Control_ω;
+    cat_r_461_α:
+                  cat_r_461_α_saved_cursor = _cur_np;
                   while (_cur_np < _slen_np && !strchr(VARVAL_fn(CONCAT_fn(STRVAL(VARVAL_fn(NV_GET_fn("nl"))), STRVAL(";"))), _subj_np[_cur_np])) _cur_np++;
-                  if (_cur_np >= _slen_np) { _cur_np = cat_r_452_α_saved_cursor; goto cat_l_452_β; }
+                  if (_cur_np >= _slen_np) { _cur_np = cat_r_461_α_saved_cursor; goto cat_l_461_β; }
                                                             goto _Control_γ;
-    cat_r_452_β:  _cur_np = cat_r_452_α_saved_cursor;       goto cat_l_452_β;
+    cat_r_461_β:  _cur_np = cat_r_461_α_saved_cursor;       goto cat_l_461_β;
     _Control_γ:;
         *_cur_ptr_np = _cur_np;
         return STRVAL("");
     _Control_ω:;
         return FAILDESCR;
-#undef cat_l_452_α_saved_cursor
-#undef cat_r_452_α_saved_cursor
+#undef cat_l_461_α_saved_cursor
+#undef cat_r_461_α_saved_cursor
 
 }
 
 typedef struct pat_Comment_t {
-    int64_t cat_l_453_α_saved_cursor;
-    int64_t cat_r_453_α_saved_cursor;
+    int64_t cat_l_462_α_saved_cursor;
+    int64_t cat_r_462_α_saved_cursor;
 } pat_Comment_t;
 
 static DESCR_t pat_Comment(const char *_subj_np, int64_t _slen_np,
@@ -9106,39 +9288,39 @@ static DESCR_t pat_Comment(const char *_subj_np, int64_t _slen_np,
     if (_entry_np == 0) { *_zz_np = calloc(1, sizeof(pat_Comment_t)); }
     pat_Comment_t *z = *_zz_np;
     int64_t _cur_np = *_cur_ptr_np;
-#define cat_l_453_α_saved_cursor z->cat_l_453_α_saved_cursor
-#define cat_r_453_α_saved_cursor z->cat_r_453_α_saved_cursor
+#define cat_l_462_α_saved_cursor z->cat_l_462_α_saved_cursor
+#define cat_r_462_α_saved_cursor z->cat_r_462_α_saved_cursor
 
     if (_entry_np == 0) goto _Comment_α;
     if (_entry_np == 1) goto _Comment_β;
     goto _Comment_ω;
-    _Comment_α:                                             goto cat_l_453_α;
-    _Comment_β:                                             goto cat_r_453_β;
-    cat_l_453_α:
+    _Comment_α:                                             goto cat_l_462_α;
+    _Comment_β:                                             goto cat_r_462_β;
+    cat_l_462_α:
                   if (_cur_np + 1 > _slen_np)               goto _Comment_ω;
                   if (_subj_np[_cur_np] != '*')             goto _Comment_ω;
-                  cat_l_453_α_saved_cursor = _cur_np; _cur_np += 1;
-                                                            goto cat_r_453_α;
-    cat_l_453_β:  _cur_np = cat_l_453_α_saved_cursor;       goto _Comment_ω;
-    cat_r_453_α:
-                  cat_r_453_α_saved_cursor = _cur_np;
+                  cat_l_462_α_saved_cursor = _cur_np; _cur_np += 1;
+                                                            goto cat_r_462_α;
+    cat_l_462_β:  _cur_np = cat_l_462_α_saved_cursor;       goto _Comment_ω;
+    cat_r_462_α:
+                  cat_r_462_α_saved_cursor = _cur_np;
                   while (_cur_np < _slen_np && !strchr(VARVAL_fn(NV_GET_fn("nl")), _subj_np[_cur_np])) _cur_np++;
-                  if (_cur_np >= _slen_np) { _cur_np = cat_r_453_α_saved_cursor; goto cat_l_453_β; }
+                  if (_cur_np >= _slen_np) { _cur_np = cat_r_462_α_saved_cursor; goto cat_l_462_β; }
                                                             goto _Comment_γ;
-    cat_r_453_β:  _cur_np = cat_r_453_α_saved_cursor;       goto cat_l_453_β;
+    cat_r_462_β:  _cur_np = cat_r_462_α_saved_cursor;       goto cat_l_462_β;
     _Comment_γ:;
         *_cur_ptr_np = _cur_np;
         return STRVAL("");
     _Comment_ω:;
         return FAILDESCR;
-#undef cat_l_453_α_saved_cursor
-#undef cat_r_453_α_saved_cursor
+#undef cat_l_462_α_saved_cursor
+#undef cat_r_462_α_saved_cursor
 
 }
 
 typedef struct pat_Label_t {
     int64_t _Label_α_start;
-    int64_t assign_c_454_α_saved_cursor;
+    int64_t assign_c_463_α_saved_cursor;
 } pat_Label_t;
 
 static DESCR_t pat_Label(const char *_subj_np, int64_t _slen_np,
@@ -9147,18 +9329,18 @@ static DESCR_t pat_Label(const char *_subj_np, int64_t _slen_np,
     pat_Label_t *z = *_zz_np;
     int64_t _cur_np = *_cur_ptr_np;
 #define _Label_α_start z->_Label_α_start
-#define assign_c_454_α_saved_cursor z->assign_c_454_α_saved_cursor
+#define assign_c_463_α_saved_cursor z->assign_c_463_α_saved_cursor
 
     if (_entry_np == 0) goto _Label_α;
     if (_entry_np == 1) goto _Label_β;
     goto _Label_ω;
-    _Label_α:     _Label_α_start = _cur_np;                 goto assign_c_454_α;
-    assign_c_454_α:
-                  assign_c_454_α_saved_cursor = _cur_np;
+    _Label_α:     _Label_α_start = _cur_np;                 goto assign_c_463_α;
+    assign_c_463_α:
+                  assign_c_463_α_saved_cursor = _cur_np;
                   while (_cur_np < _slen_np && !strchr(VARVAL_fn(CONCAT_fn(STRVAL(VARVAL_fn(CONCAT_fn(STRVAL(VARVAL_fn(CONCAT_fn(STRVAL(" "), STRVAL(VARVAL_fn(NV_GET_fn("tab")))))), STRVAL(VARVAL_fn(NV_GET_fn("nl")))))), STRVAL(";"))), _subj_np[_cur_np])) _cur_np++;
-                  if (_cur_np >= _slen_np) { _cur_np = assign_c_454_α_saved_cursor; goto _Label_ω; }
+                  if (_cur_np >= _slen_np) { _cur_np = assign_c_463_α_saved_cursor; goto _Label_ω; }
                                                             goto _Label_α_do_assign;
-    assign_c_454_β: _cur_np = assign_c_454_α_saved_cursor;    goto _Label_ω;
+    assign_c_463_β: _cur_np = assign_c_463_α_saved_cursor;    goto _Label_ω;
     _Label_α_do_assign:
                   { int64_t _len = _cur_np - _Label_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
@@ -9167,82 +9349,82 @@ static DESCR_t pat_Label(const char *_subj_np, int64_t _slen_np,
                     { DESCR_t _shift_args[2] = {STRVAL("Label"), STRVAL(_os)};
                       APPLY_fn("Shift", _shift_args, 2); }
                   }                                         goto _Label_γ;
-    _Label_β:                                               goto assign_c_454_β;
+    _Label_β:                                               goto assign_c_463_β;
     _Label_γ:;
         *_cur_ptr_np = _cur_np;
         return STRVAL("");
     _Label_ω:;
         return FAILDESCR;
 #undef _Label_α_start
-#undef assign_c_454_α_saved_cursor
+#undef assign_c_463_α_saved_cursor
 
 }
 
 typedef struct pat_Stmt_t {
-    int64_t deref_458_saved_cur;
-    int64_t deref_462_saved_cur;
-    int64_t deref_463_saved_cur;
-    int64_t cat_l_468_α_start;
-    int64_t deref_470_saved_cursor;
+    int64_t deref_467_saved_cur;
     int64_t deref_471_saved_cur;
-    int64_t cat_l_474_α_start;
-    int64_t assign_c_475_α_saved_cursor;
-    int64_t deref_476_saved_cur;
-    int64_t deref_477_saved_cur;
-    int64_t cat_l_478_α_start;
-    int64_t assign_c_479_α_saved_cursor;
-    int64_t cat_r_478_α_start;
-    int64_t deref_481_saved_cursor;
-    int64_t dlit_485_start;
-    int64_t dlit_485_α_saved_cursor;
+    int64_t deref_472_saved_cur;
+    int64_t cat_l_477_α_start;
+    int64_t deref_479_saved_cursor;
+    int64_t deref_480_saved_cur;
+    int64_t cat_l_483_α_start;
+    int64_t assign_c_484_α_saved_cursor;
+    int64_t deref_485_saved_cur;
     int64_t deref_486_saved_cur;
-    int64_t deref_487_saved_cur;
-    int64_t deref_491_saved_cur;
-    int64_t cat_l_494_α_start;
-    int64_t assign_c_495_α_saved_cursor;
+    int64_t cat_l_487_α_start;
+    int64_t assign_c_488_α_saved_cursor;
+    int64_t cat_r_487_α_start;
+    int64_t deref_490_saved_cursor;
+    int64_t dlit_494_start;
+    int64_t dlit_494_α_saved_cursor;
+    int64_t deref_495_saved_cur;
     int64_t deref_496_saved_cur;
-    int64_t deref_497_saved_cur;
-    int64_t cat_l_498_α_start;
-    int64_t assign_c_499_α_saved_cursor;
-    int64_t cat_r_498_α_start;
-    int64_t deref_501_saved_cursor;
-    int64_t cat_l_502_α_start;
-    int64_t deref_504_saved_cursor;
-    int64_t cat_r_502_α_start;
-    int64_t deref_506_saved_cursor;
-    int64_t cat_l_508_α_start;
-    int64_t deref_510_saved_cursor;
-    int64_t cat_r_508_α_start;
-    int64_t deref_512_saved_cursor;
+    int64_t deref_500_saved_cur;
+    int64_t cat_l_503_α_start;
+    int64_t assign_c_504_α_saved_cursor;
+    int64_t deref_505_saved_cur;
+    int64_t deref_506_saved_cur;
+    int64_t cat_l_507_α_start;
+    int64_t assign_c_508_α_saved_cursor;
     int64_t cat_r_507_α_start;
-    int64_t deref_514_saved_cursor;
+    int64_t deref_510_saved_cursor;
+    int64_t cat_l_511_α_start;
+    int64_t deref_513_saved_cursor;
+    int64_t cat_r_511_α_start;
+    int64_t deref_515_saved_cursor;
     int64_t cat_l_517_α_start;
     int64_t deref_519_saved_cursor;
     int64_t cat_r_517_α_start;
     int64_t deref_521_saved_cursor;
     int64_t cat_r_516_α_start;
     int64_t deref_523_saved_cursor;
-    int64_t cat_r_515_α_start;
-    int64_t deref_525_saved_cursor;
-    int64_t deref_528_saved_cur;
-    int64_t cat_l_529_α_start;
-    int64_t deref_531_saved_cursor;
-    int64_t cat_r_529_α_start;
-    int64_t deref_533_saved_cursor;
-    int64_t deref_534_saved_cur;
-    pat_Label_t *deref_458_z;
-    pat_White_t *deref_462_z;
-    pat_Expr14_t *deref_463_z;
+    int64_t cat_l_526_α_start;
+    int64_t deref_528_saved_cursor;
+    int64_t cat_r_526_α_start;
+    int64_t deref_530_saved_cursor;
+    int64_t cat_r_525_α_start;
+    int64_t deref_532_saved_cursor;
+    int64_t cat_r_524_α_start;
+    int64_t deref_534_saved_cursor;
+    int64_t deref_537_saved_cur;
+    int64_t cat_l_538_α_start;
+    int64_t deref_540_saved_cursor;
+    int64_t cat_r_538_α_start;
+    int64_t deref_542_saved_cursor;
+    int64_t deref_543_saved_cur;
+    pat_Label_t *deref_467_z;
     pat_White_t *deref_471_z;
-    pat_White_t *deref_476_z;
-    pat_Expr_t *deref_477_z;
-    pat_White_t *deref_486_z;
-    pat_Expr1_t *deref_487_z;
-    pat_White_t *deref_491_z;
-    pat_White_t *deref_496_z;
-    pat_Expr_t *deref_497_z;
-    pat_Goto_t *deref_528_z;
-    pat_Gray_t *deref_534_z;
+    pat_Expr14_t *deref_472_z;
+    pat_White_t *deref_480_z;
+    pat_White_t *deref_485_z;
+    pat_Expr_t *deref_486_z;
+    pat_White_t *deref_495_z;
+    pat_Expr1_t *deref_496_z;
+    pat_White_t *deref_500_z;
+    pat_White_t *deref_505_z;
+    pat_Expr_t *deref_506_z;
+    pat_Goto_t *deref_537_z;
+    pat_Gray_t *deref_543_z;
 } pat_Stmt_t;
 
 static DESCR_t pat_Stmt(const char *_subj_np, int64_t _slen_np,
@@ -9250,499 +9432,386 @@ static DESCR_t pat_Stmt(const char *_subj_np, int64_t _slen_np,
     if (_entry_np == 0) { *_zz_np = calloc(1, sizeof(pat_Stmt_t)); }
     pat_Stmt_t *z = *_zz_np;
     int64_t _cur_np = *_cur_ptr_np;
-#define deref_458_saved_cur z->deref_458_saved_cur
-#define deref_462_saved_cur z->deref_462_saved_cur
-#define deref_463_saved_cur z->deref_463_saved_cur
-#define cat_l_468_α_start z->cat_l_468_α_start
-#define deref_470_saved_cursor z->deref_470_saved_cursor
+#define deref_467_saved_cur z->deref_467_saved_cur
 #define deref_471_saved_cur z->deref_471_saved_cur
-#define cat_l_474_α_start z->cat_l_474_α_start
-#define assign_c_475_α_saved_cursor z->assign_c_475_α_saved_cursor
-#define deref_476_saved_cur z->deref_476_saved_cur
-#define deref_477_saved_cur z->deref_477_saved_cur
-#define cat_l_478_α_start z->cat_l_478_α_start
-#define assign_c_479_α_saved_cursor z->assign_c_479_α_saved_cursor
-#define cat_r_478_α_start z->cat_r_478_α_start
-#define deref_481_saved_cursor z->deref_481_saved_cursor
-#define dlit_485_start z->dlit_485_start
-#define dlit_485_α_saved_cursor z->dlit_485_α_saved_cursor
+#define deref_472_saved_cur z->deref_472_saved_cur
+#define cat_l_477_α_start z->cat_l_477_α_start
+#define deref_479_saved_cursor z->deref_479_saved_cursor
+#define deref_480_saved_cur z->deref_480_saved_cur
+#define cat_l_483_α_start z->cat_l_483_α_start
+#define assign_c_484_α_saved_cursor z->assign_c_484_α_saved_cursor
+#define deref_485_saved_cur z->deref_485_saved_cur
 #define deref_486_saved_cur z->deref_486_saved_cur
-#define deref_487_saved_cur z->deref_487_saved_cur
-#define deref_491_saved_cur z->deref_491_saved_cur
-#define cat_l_494_α_start z->cat_l_494_α_start
-#define assign_c_495_α_saved_cursor z->assign_c_495_α_saved_cursor
+#define cat_l_487_α_start z->cat_l_487_α_start
+#define assign_c_488_α_saved_cursor z->assign_c_488_α_saved_cursor
+#define cat_r_487_α_start z->cat_r_487_α_start
+#define deref_490_saved_cursor z->deref_490_saved_cursor
+#define dlit_494_start z->dlit_494_start
+#define dlit_494_α_saved_cursor z->dlit_494_α_saved_cursor
+#define deref_495_saved_cur z->deref_495_saved_cur
 #define deref_496_saved_cur z->deref_496_saved_cur
-#define deref_497_saved_cur z->deref_497_saved_cur
-#define cat_l_498_α_start z->cat_l_498_α_start
-#define assign_c_499_α_saved_cursor z->assign_c_499_α_saved_cursor
-#define cat_r_498_α_start z->cat_r_498_α_start
-#define deref_501_saved_cursor z->deref_501_saved_cursor
-#define cat_l_502_α_start z->cat_l_502_α_start
-#define deref_504_saved_cursor z->deref_504_saved_cursor
-#define cat_r_502_α_start z->cat_r_502_α_start
-#define deref_506_saved_cursor z->deref_506_saved_cursor
-#define cat_l_508_α_start z->cat_l_508_α_start
-#define deref_510_saved_cursor z->deref_510_saved_cursor
-#define cat_r_508_α_start z->cat_r_508_α_start
-#define deref_512_saved_cursor z->deref_512_saved_cursor
+#define deref_500_saved_cur z->deref_500_saved_cur
+#define cat_l_503_α_start z->cat_l_503_α_start
+#define assign_c_504_α_saved_cursor z->assign_c_504_α_saved_cursor
+#define deref_505_saved_cur z->deref_505_saved_cur
+#define deref_506_saved_cur z->deref_506_saved_cur
+#define cat_l_507_α_start z->cat_l_507_α_start
+#define assign_c_508_α_saved_cursor z->assign_c_508_α_saved_cursor
 #define cat_r_507_α_start z->cat_r_507_α_start
-#define deref_514_saved_cursor z->deref_514_saved_cursor
+#define deref_510_saved_cursor z->deref_510_saved_cursor
+#define cat_l_511_α_start z->cat_l_511_α_start
+#define deref_513_saved_cursor z->deref_513_saved_cursor
+#define cat_r_511_α_start z->cat_r_511_α_start
+#define deref_515_saved_cursor z->deref_515_saved_cursor
 #define cat_l_517_α_start z->cat_l_517_α_start
 #define deref_519_saved_cursor z->deref_519_saved_cursor
 #define cat_r_517_α_start z->cat_r_517_α_start
 #define deref_521_saved_cursor z->deref_521_saved_cursor
 #define cat_r_516_α_start z->cat_r_516_α_start
 #define deref_523_saved_cursor z->deref_523_saved_cursor
-#define cat_r_515_α_start z->cat_r_515_α_start
-#define deref_525_saved_cursor z->deref_525_saved_cursor
-#define deref_528_saved_cur z->deref_528_saved_cur
-#define cat_l_529_α_start z->cat_l_529_α_start
-#define deref_531_saved_cursor z->deref_531_saved_cursor
-#define cat_r_529_α_start z->cat_r_529_α_start
-#define deref_533_saved_cursor z->deref_533_saved_cursor
-#define deref_534_saved_cur z->deref_534_saved_cur
-#define deref_458_z z->deref_458_z
-#define deref_462_z z->deref_462_z
-#define deref_463_z z->deref_463_z
+#define cat_l_526_α_start z->cat_l_526_α_start
+#define deref_528_saved_cursor z->deref_528_saved_cursor
+#define cat_r_526_α_start z->cat_r_526_α_start
+#define deref_530_saved_cursor z->deref_530_saved_cursor
+#define cat_r_525_α_start z->cat_r_525_α_start
+#define deref_532_saved_cursor z->deref_532_saved_cursor
+#define cat_r_524_α_start z->cat_r_524_α_start
+#define deref_534_saved_cursor z->deref_534_saved_cursor
+#define deref_537_saved_cur z->deref_537_saved_cur
+#define cat_l_538_α_start z->cat_l_538_α_start
+#define deref_540_saved_cursor z->deref_540_saved_cursor
+#define cat_r_538_α_start z->cat_r_538_α_start
+#define deref_542_saved_cursor z->deref_542_saved_cursor
+#define deref_543_saved_cur z->deref_543_saved_cur
+#define deref_467_z z->deref_467_z
 #define deref_471_z z->deref_471_z
-#define deref_476_z z->deref_476_z
-#define deref_477_z z->deref_477_z
+#define deref_472_z z->deref_472_z
+#define deref_480_z z->deref_480_z
+#define deref_485_z z->deref_485_z
 #define deref_486_z z->deref_486_z
-#define deref_487_z z->deref_487_z
-#define deref_491_z z->deref_491_z
+#define deref_495_z z->deref_495_z
 #define deref_496_z z->deref_496_z
-#define deref_497_z z->deref_497_z
-#define deref_528_z z->deref_528_z
-#define deref_534_z z->deref_534_z
+#define deref_500_z z->deref_500_z
+#define deref_505_z z->deref_505_z
+#define deref_506_z z->deref_506_z
+#define deref_537_z z->deref_537_z
+#define deref_543_z z->deref_543_z
 
     if (_entry_np == 0) goto _Stmt_α;
     if (_entry_np == 1) goto _Stmt_β;
     goto _Stmt_ω;
-    _Stmt_α:                                                goto cat_l_455_α;
-    _Stmt_β:                                                goto cat_r_455_β;
-    cat_l_455_α:                                            goto cat_l_456_α;
-    cat_l_455_β:                                            goto cat_r_456_β;
-    cat_l_456_α:                                            goto cat_l_457_α;
-    cat_l_456_β:                                            goto cat_r_457_β;
-cat_l_457_α: {
-    deref_458_saved_cur = _cur_np;
-    DESCR_t _r_458 = pat_Label(_subj_np, _slen_np, &_cur_np, &deref_458_z, 0);
-    if (IS_FAIL_fn(_r_458)) { _cur_np = deref_458_saved_cur; goto _Stmt_ω; }
-    goto cat_r_457_α;
+    _Stmt_α:                                                goto cat_l_464_α;
+    _Stmt_β:                                                goto cat_r_464_β;
+    cat_l_464_α:                                            goto cat_l_465_α;
+    cat_l_464_β:                                            goto cat_r_465_β;
+    cat_l_465_α:                                            goto cat_l_466_α;
+    cat_l_465_β:                                            goto cat_r_466_β;
+cat_l_466_α: {
+    deref_467_saved_cur = _cur_np;
+    DESCR_t _r_467 = pat_Label(_subj_np, _slen_np, &_cur_np, &deref_467_z, 0);
+    if (IS_FAIL_fn(_r_467)) { _cur_np = deref_467_saved_cur; goto _Stmt_ω; }
+    goto cat_r_466_α;
 }
-cat_l_457_β: {
-    _cur_np = deref_458_saved_cur;
-    DESCR_t _r_458_b = pat_Label(_subj_np, _slen_np, &_cur_np, &deref_458_z, 1);
-    if (IS_FAIL_fn(_r_458_b)) { _cur_np = deref_458_saved_cur; goto _Stmt_ω; }
-    goto cat_r_457_α;
+cat_l_466_β: {
+    _cur_np = deref_467_saved_cur;
+    DESCR_t _r_467_b = pat_Label(_subj_np, _slen_np, &_cur_np, &deref_467_z, 1);
+    if (IS_FAIL_fn(_r_467_b)) { _cur_np = deref_467_saved_cur; goto _Stmt_ω; }
+    goto cat_r_466_α;
 }
-    cat_r_457_α:                                            goto alt_l_459_α;
-    cat_r_457_β:                                            goto alt_r_459_β;
-    alt_l_459_α:                                            goto cat_l_460_α;
-    alt_l_459_β:                                            goto cat_r_460_β;
-    cat_l_460_α:                                            goto cat_l_461_α;
-    cat_l_460_β:                                            goto cat_r_461_β;
-cat_l_461_α: {
-    deref_462_saved_cur = _cur_np;
-    DESCR_t _r_462 = pat_White(_subj_np, _slen_np, &_cur_np, &deref_462_z, 0);
-    if (IS_FAIL_fn(_r_462)) { _cur_np = deref_462_saved_cur; goto alt_r_459_α; }
-    goto cat_r_461_α;
-}
-cat_l_461_β: {
-    _cur_np = deref_462_saved_cur;
-    DESCR_t _r_462_b = pat_White(_subj_np, _slen_np, &_cur_np, &deref_462_z, 1);
-    if (IS_FAIL_fn(_r_462_b)) { _cur_np = deref_462_saved_cur; goto alt_r_459_α; }
-    goto cat_r_461_α;
-}
-cat_r_461_α: {
-    deref_463_saved_cur = _cur_np;
-    DESCR_t _r_463 = pat_Expr14(_subj_np, _slen_np, &_cur_np, &deref_463_z, 0);
-    if (IS_FAIL_fn(_r_463)) { _cur_np = deref_463_saved_cur; goto cat_l_461_β; }
-    goto cat_r_460_α;
-}
-cat_r_461_β: {
-    _cur_np = deref_463_saved_cur;
-    DESCR_t _r_463_b = pat_Expr14(_subj_np, _slen_np, &_cur_np, &deref_463_z, 1);
-    if (IS_FAIL_fn(_r_463_b)) { _cur_np = deref_463_saved_cur; goto cat_l_461_β; }
-    goto cat_r_460_α;
-}
-    cat_r_460_α:                                            goto fence_p_464_α;
-    fence_p_464_α:                                          goto alt_l_465_α;
-    fence_p_464_β:                                          goto alt_r_465_β;
-    alt_l_465_α:                                            goto alt_l_466_α;
-    alt_l_465_β:                                            goto alt_r_466_β;
-    alt_l_466_α:                                            goto cat_l_467_α;
-    alt_l_466_β:                                            goto cat_r_467_β;
-    cat_l_467_α:                                            goto cat_l_468_α;
-    cat_l_467_β:                                            goto cat_r_468_β;
-    cat_l_468_α:  cat_l_468_α_start = _cur_np;              goto assign_c_469_α;
-assign_c_469_α: {
-    DESCR_t _deref_pat = NV_GET_fn("epsilon");
-    int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto alt_r_466_α;
-    deref_470_saved_cursor = _cur_np;
-    _cur_np = (int64_t)_deref_new_cur;
-    goto cat_l_468_α_do_assign;
-}
-assign_c_469_β:
-    _cur_np = deref_470_saved_cursor;
-    goto alt_r_466_α;
-    cat_l_468_α_do_assign:
-                  { int64_t _len = _cur_np - cat_l_468_α_start;
-                    char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_l_468_α_start, _len); _os[_len] = 0;
-                    NV_SET_fn("", STRVAL(_os));
-                    { DESCR_t _shift_args[2] = {STRVAL(""), STRVAL(_os)};
-                      APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto cat_r_468_α;
-    cat_l_468_β:                                            goto assign_c_469_β;
-cat_r_468_α: {
+    cat_r_466_α:                                            goto alt_l_468_α;
+    cat_r_466_β:                                            goto alt_r_468_β;
+    alt_l_468_α:                                            goto cat_l_469_α;
+    alt_l_468_β:                                            goto cat_r_469_β;
+    cat_l_469_α:                                            goto cat_l_470_α;
+    cat_l_469_β:                                            goto cat_r_470_β;
+cat_l_470_α: {
     deref_471_saved_cur = _cur_np;
     DESCR_t _r_471 = pat_White(_subj_np, _slen_np, &_cur_np, &deref_471_z, 0);
-    if (IS_FAIL_fn(_r_471)) { _cur_np = deref_471_saved_cur; goto cat_l_468_β; }
-    goto cat_r_467_α;
+    if (IS_FAIL_fn(_r_471)) { _cur_np = deref_471_saved_cur; goto alt_r_468_α; }
+    goto cat_r_470_α;
 }
-cat_r_468_β: {
+cat_l_470_β: {
     _cur_np = deref_471_saved_cur;
     DESCR_t _r_471_b = pat_White(_subj_np, _slen_np, &_cur_np, &deref_471_z, 1);
-    if (IS_FAIL_fn(_r_471_b)) { _cur_np = deref_471_saved_cur; goto cat_l_468_β; }
-    goto cat_r_467_α;
+    if (IS_FAIL_fn(_r_471_b)) { _cur_np = deref_471_saved_cur; goto alt_r_468_α; }
+    goto cat_r_470_α;
 }
-    cat_r_467_α:                                            goto alt_l_472_α;
-    cat_r_467_β:                                            goto alt_r_472_β;
-    alt_l_472_α:                                            goto cat_l_473_α;
-    alt_l_472_β:                                            goto cat_r_473_β;
-    cat_l_473_α:                                            goto cat_l_474_α;
-    cat_l_473_β:                                            goto cat_r_474_β;
-    cat_l_474_α:  cat_l_474_α_start = _cur_np;              goto assign_c_475_α;
-    assign_c_475_α:
-                  if (_cur_np + 1 > _slen_np)               goto alt_r_472_α;
-                  if (_subj_np[_cur_np] != '=')             goto alt_r_472_α;
-                  assign_c_475_α_saved_cursor = _cur_np; _cur_np += 1;
-                                                            goto cat_l_474_α_do_assign;
-    assign_c_475_β: _cur_np = assign_c_475_α_saved_cursor;    goto alt_r_472_α;
-    cat_l_474_α_do_assign:
-                  { int64_t _len = _cur_np - cat_l_474_α_start;
-                    char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_l_474_α_start, _len); _os[_len] = 0;
-                    NV_SET_fn("=", STRVAL(_os));
-                    { DESCR_t _shift_args[2] = {STRVAL("="), STRVAL(_os)};
-                      APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto cat_r_474_α;
-    cat_l_474_β:                                            goto assign_c_475_β;
-cat_r_474_α: {
-    deref_476_saved_cur = _cur_np;
-    DESCR_t _r_476 = pat_White(_subj_np, _slen_np, &_cur_np, &deref_476_z, 0);
-    if (IS_FAIL_fn(_r_476)) { _cur_np = deref_476_saved_cur; goto cat_l_474_β; }
-    goto cat_r_473_α;
+cat_r_470_α: {
+    deref_472_saved_cur = _cur_np;
+    DESCR_t _r_472 = pat_Expr14(_subj_np, _slen_np, &_cur_np, &deref_472_z, 0);
+    if (IS_FAIL_fn(_r_472)) { _cur_np = deref_472_saved_cur; goto cat_l_470_β; }
+    goto cat_r_469_α;
 }
-cat_r_474_β: {
-    _cur_np = deref_476_saved_cur;
-    DESCR_t _r_476_b = pat_White(_subj_np, _slen_np, &_cur_np, &deref_476_z, 1);
-    if (IS_FAIL_fn(_r_476_b)) { _cur_np = deref_476_saved_cur; goto cat_l_474_β; }
-    goto cat_r_473_α;
+cat_r_470_β: {
+    _cur_np = deref_472_saved_cur;
+    DESCR_t _r_472_b = pat_Expr14(_subj_np, _slen_np, &_cur_np, &deref_472_z, 1);
+    if (IS_FAIL_fn(_r_472_b)) { _cur_np = deref_472_saved_cur; goto cat_l_470_β; }
+    goto cat_r_469_α;
 }
-cat_r_473_α: {
-    deref_477_saved_cur = _cur_np;
-    DESCR_t _r_477 = pat_Expr(_subj_np, _slen_np, &_cur_np, &deref_477_z, 0);
-    if (IS_FAIL_fn(_r_477)) { _cur_np = deref_477_saved_cur; goto cat_l_473_β; }
-    goto fence_after_464;
-}
-cat_r_473_β: {
-    _cur_np = deref_477_saved_cur;
-    DESCR_t _r_477_b = pat_Expr(_subj_np, _slen_np, &_cur_np, &deref_477_z, 1);
-    if (IS_FAIL_fn(_r_477_b)) { _cur_np = deref_477_saved_cur; goto cat_l_473_β; }
-    goto fence_after_464;
-}
-    alt_r_472_α:                                            goto cat_l_478_α;
-    alt_r_472_β:                                            goto cat_r_478_β;
-    cat_l_478_α:  cat_l_478_α_start = _cur_np;              goto assign_c_479_α;
-    assign_c_479_α:
-                  if (_cur_np + 1 > _slen_np)               goto cat_l_467_β;
-                  if (_subj_np[_cur_np] != '=')             goto cat_l_467_β;
-                  assign_c_479_α_saved_cursor = _cur_np; _cur_np += 1;
-                                                            goto cat_l_478_α_do_assign;
-    assign_c_479_β: _cur_np = assign_c_479_α_saved_cursor;    goto cat_l_467_β;
-    cat_l_478_α_do_assign:
-                  { int64_t _len = _cur_np - cat_l_478_α_start;
-                    char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_l_478_α_start, _len); _os[_len] = 0;
-                    NV_SET_fn("=", STRVAL(_os));
-                    { DESCR_t _shift_args[2] = {STRVAL("="), STRVAL(_os)};
-                      APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto cat_r_478_α;
-    cat_l_478_β:                                            goto assign_c_479_β;
-    cat_r_478_α:  cat_r_478_α_start = _cur_np;              goto assign_c_480_α;
-assign_c_480_α: {
+    cat_r_469_α:                                            goto fence_p_473_α;
+    fence_p_473_α:                                          goto alt_l_474_α;
+    fence_p_473_β:                                          goto alt_r_474_β;
+    alt_l_474_α:                                            goto alt_l_475_α;
+    alt_l_474_β:                                            goto alt_r_475_β;
+    alt_l_475_α:                                            goto cat_l_476_α;
+    alt_l_475_β:                                            goto cat_r_476_β;
+    cat_l_476_α:                                            goto cat_l_477_α;
+    cat_l_476_β:                                            goto cat_r_477_β;
+    cat_l_477_α:  cat_l_477_α_start = _cur_np;              goto assign_c_478_α;
+assign_c_478_α: {
     DESCR_t _deref_pat = NV_GET_fn("epsilon");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto cat_l_478_β;
-    deref_481_saved_cursor = _cur_np;
+    if (_deref_new_cur < 0) goto alt_r_475_α;
+    deref_479_saved_cursor = _cur_np;
     _cur_np = (int64_t)_deref_new_cur;
-    goto cat_r_478_α_do_assign;
+    goto cat_l_477_α_do_assign;
 }
-assign_c_480_β:
-    _cur_np = deref_481_saved_cursor;
-    goto cat_l_478_β;
-    cat_r_478_α_do_assign:
-                  { int64_t _len = _cur_np - cat_r_478_α_start;
+assign_c_478_β:
+    _cur_np = deref_479_saved_cursor;
+    goto alt_r_475_α;
+    cat_l_477_α_do_assign:
+                  { int64_t _len = _cur_np - cat_l_477_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_r_478_α_start, _len); _os[_len] = 0;
+                    memcpy(_os, _subj_np + cat_l_477_α_start, _len); _os[_len] = 0;
                     NV_SET_fn("", STRVAL(_os));
                     { DESCR_t _shift_args[2] = {STRVAL(""), STRVAL(_os)};
                       APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto fence_after_464;
-    cat_r_478_β:                                            goto assign_c_480_β;
-    alt_r_466_α:                                            goto cat_l_482_α;
-    alt_r_466_β:                                            goto cat_r_482_β;
+                  }                                         goto cat_r_477_α;
+    cat_l_477_β:                                            goto assign_c_478_β;
+cat_r_477_α: {
+    deref_480_saved_cur = _cur_np;
+    DESCR_t _r_480 = pat_White(_subj_np, _slen_np, &_cur_np, &deref_480_z, 0);
+    if (IS_FAIL_fn(_r_480)) { _cur_np = deref_480_saved_cur; goto cat_l_477_β; }
+    goto cat_r_476_α;
+}
+cat_r_477_β: {
+    _cur_np = deref_480_saved_cur;
+    DESCR_t _r_480_b = pat_White(_subj_np, _slen_np, &_cur_np, &deref_480_z, 1);
+    if (IS_FAIL_fn(_r_480_b)) { _cur_np = deref_480_saved_cur; goto cat_l_477_β; }
+    goto cat_r_476_α;
+}
+    cat_r_476_α:                                            goto alt_l_481_α;
+    cat_r_476_β:                                            goto alt_r_481_β;
+    alt_l_481_α:                                            goto cat_l_482_α;
+    alt_l_481_β:                                            goto cat_r_482_β;
     cat_l_482_α:                                            goto cat_l_483_α;
     cat_l_482_β:                                            goto cat_r_483_β;
-    cat_l_483_α:                                            goto alt_l_484_α;
-    cat_l_483_β:                                            goto alt_r_484_β;
-    alt_l_484_α:
-                  dlit_485_start = _cur_np;
-                  goto dlit_485_α;                          goto dlit_485_α;
-    dlit_485_α:
-                  if (_cur_np + 1 > _slen_np)               goto alt_r_484_α;
-                  if (_subj_np[_cur_np] != '?')             goto alt_r_484_α;
-                  dlit_485_α_saved_cursor = _cur_np; _cur_np += 1;
-                                                            goto dlit_485_do_assign;
-    dlit_485_β:   _cur_np = dlit_485_α_saved_cursor;        goto alt_r_484_α;
-    dlit_485_do_assign:
-                  { int64_t _len = _cur_np - dlit_485_start;
-                    char *_os = malloc(_len + 1);
-                    memcpy(_os, _subj_np + dlit_485_start, _len); _os[_len] = 0;
-                    output_str(_os); free(_os); }           goto cat_r_483_α;
-    alt_l_484_β:                                            goto dlit_485_β;
-alt_r_484_α: {
-    deref_486_saved_cur = _cur_np;
-    DESCR_t _r_486 = pat_White(_subj_np, _slen_np, &_cur_np, &deref_486_z, 0);
-    if (IS_FAIL_fn(_r_486)) { _cur_np = deref_486_saved_cur; goto alt_r_465_α; }
-    goto cat_r_483_α;
-}
-alt_r_484_β: {
-    _cur_np = deref_486_saved_cur;
-    DESCR_t _r_486_b = pat_White(_subj_np, _slen_np, &_cur_np, &deref_486_z, 1);
-    if (IS_FAIL_fn(_r_486_b)) { _cur_np = deref_486_saved_cur; goto alt_r_465_α; }
-    goto cat_r_483_α;
-}
+    cat_l_483_α:  cat_l_483_α_start = _cur_np;              goto assign_c_484_α;
+    assign_c_484_α:
+                  if (_cur_np + 1 > _slen_np)               goto alt_r_481_α;
+                  if (_subj_np[_cur_np] != '=')             goto alt_r_481_α;
+                  assign_c_484_α_saved_cursor = _cur_np; _cur_np += 1;
+                                                            goto cat_l_483_α_do_assign;
+    assign_c_484_β: _cur_np = assign_c_484_α_saved_cursor;    goto alt_r_481_α;
+    cat_l_483_α_do_assign:
+                  { int64_t _len = _cur_np - cat_l_483_α_start;
+                    char *_os = (char*)GC_malloc(_len + 1);
+                    memcpy(_os, _subj_np + cat_l_483_α_start, _len); _os[_len] = 0;
+                    NV_SET_fn("=", STRVAL(_os));
+                    { DESCR_t _shift_args[2] = {STRVAL("="), STRVAL(_os)};
+                      APPLY_fn("Shift", _shift_args, 2); }
+                  }                                         goto cat_r_483_α;
+    cat_l_483_β:                                            goto assign_c_484_β;
 cat_r_483_α: {
-    deref_487_saved_cur = _cur_np;
-    DESCR_t _r_487 = pat_Expr1(_subj_np, _slen_np, &_cur_np, &deref_487_z, 0);
-    if (IS_FAIL_fn(_r_487)) { _cur_np = deref_487_saved_cur; goto cat_l_483_β; }
+    deref_485_saved_cur = _cur_np;
+    DESCR_t _r_485 = pat_White(_subj_np, _slen_np, &_cur_np, &deref_485_z, 0);
+    if (IS_FAIL_fn(_r_485)) { _cur_np = deref_485_saved_cur; goto cat_l_483_β; }
     goto cat_r_482_α;
 }
 cat_r_483_β: {
-    _cur_np = deref_487_saved_cur;
-    DESCR_t _r_487_b = pat_Expr1(_subj_np, _slen_np, &_cur_np, &deref_487_z, 1);
-    if (IS_FAIL_fn(_r_487_b)) { _cur_np = deref_487_saved_cur; goto cat_l_483_β; }
+    _cur_np = deref_485_saved_cur;
+    DESCR_t _r_485_b = pat_White(_subj_np, _slen_np, &_cur_np, &deref_485_z, 1);
+    if (IS_FAIL_fn(_r_485_b)) { _cur_np = deref_485_saved_cur; goto cat_l_483_β; }
     goto cat_r_482_α;
 }
-    cat_r_482_α:                                            goto fence_p_488_α;
-    fence_p_488_α:                                          goto alt_l_489_α;
-    fence_p_488_β:                                          goto alt_r_489_β;
-    alt_l_489_α:                                            goto cat_l_490_α;
-    alt_l_489_β:                                            goto cat_r_490_β;
-cat_l_490_α: {
-    deref_491_saved_cur = _cur_np;
-    DESCR_t _r_491 = pat_White(_subj_np, _slen_np, &_cur_np, &deref_491_z, 0);
-    if (IS_FAIL_fn(_r_491)) { _cur_np = deref_491_saved_cur; goto alt_r_489_α; }
-    goto cat_r_490_α;
+cat_r_482_α: {
+    deref_486_saved_cur = _cur_np;
+    DESCR_t _r_486 = pat_Expr(_subj_np, _slen_np, &_cur_np, &deref_486_z, 0);
+    if (IS_FAIL_fn(_r_486)) { _cur_np = deref_486_saved_cur; goto cat_l_482_β; }
+    goto fence_after_473;
 }
-cat_l_490_β: {
-    _cur_np = deref_491_saved_cur;
-    DESCR_t _r_491_b = pat_White(_subj_np, _slen_np, &_cur_np, &deref_491_z, 1);
-    if (IS_FAIL_fn(_r_491_b)) { _cur_np = deref_491_saved_cur; goto alt_r_489_α; }
-    goto cat_r_490_α;
+cat_r_482_β: {
+    _cur_np = deref_486_saved_cur;
+    DESCR_t _r_486_b = pat_Expr(_subj_np, _slen_np, &_cur_np, &deref_486_z, 1);
+    if (IS_FAIL_fn(_r_486_b)) { _cur_np = deref_486_saved_cur; goto cat_l_482_β; }
+    goto fence_after_473;
 }
-    cat_r_490_α:                                            goto alt_l_492_α;
-    cat_r_490_β:                                            goto alt_r_492_β;
-    alt_l_492_α:                                            goto cat_l_493_α;
-    alt_l_492_β:                                            goto cat_r_493_β;
-    cat_l_493_α:                                            goto cat_l_494_α;
-    cat_l_493_β:                                            goto cat_r_494_β;
-    cat_l_494_α:  cat_l_494_α_start = _cur_np;              goto assign_c_495_α;
-    assign_c_495_α:
-                  if (_cur_np + 1 > _slen_np)               goto alt_r_492_α;
-                  if (_subj_np[_cur_np] != '=')             goto alt_r_492_α;
-                  assign_c_495_α_saved_cursor = _cur_np; _cur_np += 1;
-                                                            goto cat_l_494_α_do_assign;
-    assign_c_495_β: _cur_np = assign_c_495_α_saved_cursor;    goto alt_r_492_α;
-    cat_l_494_α_do_assign:
-                  { int64_t _len = _cur_np - cat_l_494_α_start;
+    alt_r_481_α:                                            goto cat_l_487_α;
+    alt_r_481_β:                                            goto cat_r_487_β;
+    cat_l_487_α:  cat_l_487_α_start = _cur_np;              goto assign_c_488_α;
+    assign_c_488_α:
+                  if (_cur_np + 1 > _slen_np)               goto cat_l_476_β;
+                  if (_subj_np[_cur_np] != '=')             goto cat_l_476_β;
+                  assign_c_488_α_saved_cursor = _cur_np; _cur_np += 1;
+                                                            goto cat_l_487_α_do_assign;
+    assign_c_488_β: _cur_np = assign_c_488_α_saved_cursor;    goto cat_l_476_β;
+    cat_l_487_α_do_assign:
+                  { int64_t _len = _cur_np - cat_l_487_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_l_494_α_start, _len); _os[_len] = 0;
+                    memcpy(_os, _subj_np + cat_l_487_α_start, _len); _os[_len] = 0;
                     NV_SET_fn("=", STRVAL(_os));
                     { DESCR_t _shift_args[2] = {STRVAL("="), STRVAL(_os)};
                       APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto cat_r_494_α;
-    cat_l_494_β:                                            goto assign_c_495_β;
-cat_r_494_α: {
+                  }                                         goto cat_r_487_α;
+    cat_l_487_β:                                            goto assign_c_488_β;
+    cat_r_487_α:  cat_r_487_α_start = _cur_np;              goto assign_c_489_α;
+assign_c_489_α: {
+    DESCR_t _deref_pat = NV_GET_fn("epsilon");
+    int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
+    if (_deref_new_cur < 0) goto cat_l_487_β;
+    deref_490_saved_cursor = _cur_np;
+    _cur_np = (int64_t)_deref_new_cur;
+    goto cat_r_487_α_do_assign;
+}
+assign_c_489_β:
+    _cur_np = deref_490_saved_cursor;
+    goto cat_l_487_β;
+    cat_r_487_α_do_assign:
+                  { int64_t _len = _cur_np - cat_r_487_α_start;
+                    char *_os = (char*)GC_malloc(_len + 1);
+                    memcpy(_os, _subj_np + cat_r_487_α_start, _len); _os[_len] = 0;
+                    NV_SET_fn("", STRVAL(_os));
+                    { DESCR_t _shift_args[2] = {STRVAL(""), STRVAL(_os)};
+                      APPLY_fn("Shift", _shift_args, 2); }
+                  }                                         goto fence_after_473;
+    cat_r_487_β:                                            goto assign_c_489_β;
+    alt_r_475_α:                                            goto cat_l_491_α;
+    alt_r_475_β:                                            goto cat_r_491_β;
+    cat_l_491_α:                                            goto cat_l_492_α;
+    cat_l_491_β:                                            goto cat_r_492_β;
+    cat_l_492_α:                                            goto alt_l_493_α;
+    cat_l_492_β:                                            goto alt_r_493_β;
+    alt_l_493_α:
+                  dlit_494_start = _cur_np;
+                  goto dlit_494_α;                          goto dlit_494_α;
+    dlit_494_α:
+                  if (_cur_np + 1 > _slen_np)               goto alt_r_493_α;
+                  if (_subj_np[_cur_np] != '?')             goto alt_r_493_α;
+                  dlit_494_α_saved_cursor = _cur_np; _cur_np += 1;
+                                                            goto dlit_494_do_assign;
+    dlit_494_β:   _cur_np = dlit_494_α_saved_cursor;        goto alt_r_493_α;
+    dlit_494_do_assign:
+                  { int64_t _len = _cur_np - dlit_494_start;
+                    char *_os = malloc(_len + 1);
+                    memcpy(_os, _subj_np + dlit_494_start, _len); _os[_len] = 0;
+                    output_str(_os); free(_os); }           goto cat_r_492_α;
+    alt_l_493_β:                                            goto dlit_494_β;
+alt_r_493_α: {
+    deref_495_saved_cur = _cur_np;
+    DESCR_t _r_495 = pat_White(_subj_np, _slen_np, &_cur_np, &deref_495_z, 0);
+    if (IS_FAIL_fn(_r_495)) { _cur_np = deref_495_saved_cur; goto alt_r_474_α; }
+    goto cat_r_492_α;
+}
+alt_r_493_β: {
+    _cur_np = deref_495_saved_cur;
+    DESCR_t _r_495_b = pat_White(_subj_np, _slen_np, &_cur_np, &deref_495_z, 1);
+    if (IS_FAIL_fn(_r_495_b)) { _cur_np = deref_495_saved_cur; goto alt_r_474_α; }
+    goto cat_r_492_α;
+}
+cat_r_492_α: {
     deref_496_saved_cur = _cur_np;
-    DESCR_t _r_496 = pat_White(_subj_np, _slen_np, &_cur_np, &deref_496_z, 0);
-    if (IS_FAIL_fn(_r_496)) { _cur_np = deref_496_saved_cur; goto cat_l_494_β; }
-    goto cat_r_493_α;
+    DESCR_t _r_496 = pat_Expr1(_subj_np, _slen_np, &_cur_np, &deref_496_z, 0);
+    if (IS_FAIL_fn(_r_496)) { _cur_np = deref_496_saved_cur; goto cat_l_492_β; }
+    goto cat_r_491_α;
 }
-cat_r_494_β: {
+cat_r_492_β: {
     _cur_np = deref_496_saved_cur;
-    DESCR_t _r_496_b = pat_White(_subj_np, _slen_np, &_cur_np, &deref_496_z, 1);
-    if (IS_FAIL_fn(_r_496_b)) { _cur_np = deref_496_saved_cur; goto cat_l_494_β; }
-    goto cat_r_493_α;
+    DESCR_t _r_496_b = pat_Expr1(_subj_np, _slen_np, &_cur_np, &deref_496_z, 1);
+    if (IS_FAIL_fn(_r_496_b)) { _cur_np = deref_496_saved_cur; goto cat_l_492_β; }
+    goto cat_r_491_α;
 }
-cat_r_493_α: {
-    deref_497_saved_cur = _cur_np;
-    DESCR_t _r_497 = pat_Expr(_subj_np, _slen_np, &_cur_np, &deref_497_z, 0);
-    if (IS_FAIL_fn(_r_497)) { _cur_np = deref_497_saved_cur; goto cat_l_493_β; }
-    goto fence_after_488;
+    cat_r_491_α:                                            goto fence_p_497_α;
+    fence_p_497_α:                                          goto alt_l_498_α;
+    fence_p_497_β:                                          goto alt_r_498_β;
+    alt_l_498_α:                                            goto cat_l_499_α;
+    alt_l_498_β:                                            goto cat_r_499_β;
+cat_l_499_α: {
+    deref_500_saved_cur = _cur_np;
+    DESCR_t _r_500 = pat_White(_subj_np, _slen_np, &_cur_np, &deref_500_z, 0);
+    if (IS_FAIL_fn(_r_500)) { _cur_np = deref_500_saved_cur; goto alt_r_498_α; }
+    goto cat_r_499_α;
 }
-cat_r_493_β: {
-    _cur_np = deref_497_saved_cur;
-    DESCR_t _r_497_b = pat_Expr(_subj_np, _slen_np, &_cur_np, &deref_497_z, 1);
-    if (IS_FAIL_fn(_r_497_b)) { _cur_np = deref_497_saved_cur; goto cat_l_493_β; }
-    goto fence_after_488;
+cat_l_499_β: {
+    _cur_np = deref_500_saved_cur;
+    DESCR_t _r_500_b = pat_White(_subj_np, _slen_np, &_cur_np, &deref_500_z, 1);
+    if (IS_FAIL_fn(_r_500_b)) { _cur_np = deref_500_saved_cur; goto alt_r_498_α; }
+    goto cat_r_499_α;
 }
-    alt_r_492_α:                                            goto cat_l_498_α;
-    alt_r_492_β:                                            goto cat_r_498_β;
-    cat_l_498_α:  cat_l_498_α_start = _cur_np;              goto assign_c_499_α;
-    assign_c_499_α:
-                  if (_cur_np + 1 > _slen_np)               goto cat_l_490_β;
-                  if (_subj_np[_cur_np] != '=')             goto cat_l_490_β;
-                  assign_c_499_α_saved_cursor = _cur_np; _cur_np += 1;
-                                                            goto cat_l_498_α_do_assign;
-    assign_c_499_β: _cur_np = assign_c_499_α_saved_cursor;    goto cat_l_490_β;
-    cat_l_498_α_do_assign:
-                  { int64_t _len = _cur_np - cat_l_498_α_start;
+    cat_r_499_α:                                            goto alt_l_501_α;
+    cat_r_499_β:                                            goto alt_r_501_β;
+    alt_l_501_α:                                            goto cat_l_502_α;
+    alt_l_501_β:                                            goto cat_r_502_β;
+    cat_l_502_α:                                            goto cat_l_503_α;
+    cat_l_502_β:                                            goto cat_r_503_β;
+    cat_l_503_α:  cat_l_503_α_start = _cur_np;              goto assign_c_504_α;
+    assign_c_504_α:
+                  if (_cur_np + 1 > _slen_np)               goto alt_r_501_α;
+                  if (_subj_np[_cur_np] != '=')             goto alt_r_501_α;
+                  assign_c_504_α_saved_cursor = _cur_np; _cur_np += 1;
+                                                            goto cat_l_503_α_do_assign;
+    assign_c_504_β: _cur_np = assign_c_504_α_saved_cursor;    goto alt_r_501_α;
+    cat_l_503_α_do_assign:
+                  { int64_t _len = _cur_np - cat_l_503_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_l_498_α_start, _len); _os[_len] = 0;
+                    memcpy(_os, _subj_np + cat_l_503_α_start, _len); _os[_len] = 0;
                     NV_SET_fn("=", STRVAL(_os));
                     { DESCR_t _shift_args[2] = {STRVAL("="), STRVAL(_os)};
                       APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto cat_r_498_α;
-    cat_l_498_β:                                            goto assign_c_499_β;
-    cat_r_498_α:  cat_r_498_α_start = _cur_np;              goto assign_c_500_α;
-assign_c_500_α: {
-    DESCR_t _deref_pat = NV_GET_fn("epsilon");
-    int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto cat_l_498_β;
-    deref_501_saved_cursor = _cur_np;
-    _cur_np = (int64_t)_deref_new_cur;
-    goto cat_r_498_α_do_assign;
+                  }                                         goto cat_r_503_α;
+    cat_l_503_β:                                            goto assign_c_504_β;
+cat_r_503_α: {
+    deref_505_saved_cur = _cur_np;
+    DESCR_t _r_505 = pat_White(_subj_np, _slen_np, &_cur_np, &deref_505_z, 0);
+    if (IS_FAIL_fn(_r_505)) { _cur_np = deref_505_saved_cur; goto cat_l_503_β; }
+    goto cat_r_502_α;
 }
-assign_c_500_β:
-    _cur_np = deref_501_saved_cursor;
-    goto cat_l_498_β;
-    cat_r_498_α_do_assign:
-                  { int64_t _len = _cur_np - cat_r_498_α_start;
-                    char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_r_498_α_start, _len); _os[_len] = 0;
-                    NV_SET_fn("", STRVAL(_os));
-                    { DESCR_t _shift_args[2] = {STRVAL(""), STRVAL(_os)};
-                      APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto fence_after_488;
-    cat_r_498_β:                                            goto assign_c_500_β;
-    alt_r_489_α:                                            goto cat_l_502_α;
-    alt_r_489_β:                                            goto cat_r_502_β;
-    cat_l_502_α:  cat_l_502_α_start = _cur_np;              goto assign_c_503_α;
-assign_c_503_α: {
-    DESCR_t _deref_pat = NV_GET_fn("epsilon");
-    int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto cat_l_482_β;
-    deref_504_saved_cursor = _cur_np;
-    _cur_np = (int64_t)_deref_new_cur;
-    goto cat_l_502_α_do_assign;
+cat_r_503_β: {
+    _cur_np = deref_505_saved_cur;
+    DESCR_t _r_505_b = pat_White(_subj_np, _slen_np, &_cur_np, &deref_505_z, 1);
+    if (IS_FAIL_fn(_r_505_b)) { _cur_np = deref_505_saved_cur; goto cat_l_503_β; }
+    goto cat_r_502_α;
 }
-assign_c_503_β:
-    _cur_np = deref_504_saved_cursor;
-    goto cat_l_482_β;
-    cat_l_502_α_do_assign:
-                  { int64_t _len = _cur_np - cat_l_502_α_start;
-                    char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_l_502_α_start, _len); _os[_len] = 0;
-                    NV_SET_fn("", STRVAL(_os));
-                    { DESCR_t _shift_args[2] = {STRVAL(""), STRVAL(_os)};
-                      APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto cat_r_502_α;
-    cat_l_502_β:                                            goto assign_c_503_β;
-    cat_r_502_α:  cat_r_502_α_start = _cur_np;              goto assign_c_505_α;
-assign_c_505_α: {
-    DESCR_t _deref_pat = NV_GET_fn("epsilon");
-    int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto cat_l_502_β;
-    deref_506_saved_cursor = _cur_np;
-    _cur_np = (int64_t)_deref_new_cur;
-    goto cat_r_502_α_do_assign;
+cat_r_502_α: {
+    deref_506_saved_cur = _cur_np;
+    DESCR_t _r_506 = pat_Expr(_subj_np, _slen_np, &_cur_np, &deref_506_z, 0);
+    if (IS_FAIL_fn(_r_506)) { _cur_np = deref_506_saved_cur; goto cat_l_502_β; }
+    goto fence_after_497;
 }
-assign_c_505_β:
-    _cur_np = deref_506_saved_cursor;
-    goto cat_l_502_β;
-    cat_r_502_α_do_assign:
-                  { int64_t _len = _cur_np - cat_r_502_α_start;
+cat_r_502_β: {
+    _cur_np = deref_506_saved_cur;
+    DESCR_t _r_506_b = pat_Expr(_subj_np, _slen_np, &_cur_np, &deref_506_z, 1);
+    if (IS_FAIL_fn(_r_506_b)) { _cur_np = deref_506_saved_cur; goto cat_l_502_β; }
+    goto fence_after_497;
+}
+    alt_r_501_α:                                            goto cat_l_507_α;
+    alt_r_501_β:                                            goto cat_r_507_β;
+    cat_l_507_α:  cat_l_507_α_start = _cur_np;              goto assign_c_508_α;
+    assign_c_508_α:
+                  if (_cur_np + 1 > _slen_np)               goto cat_l_499_β;
+                  if (_subj_np[_cur_np] != '=')             goto cat_l_499_β;
+                  assign_c_508_α_saved_cursor = _cur_np; _cur_np += 1;
+                                                            goto cat_l_507_α_do_assign;
+    assign_c_508_β: _cur_np = assign_c_508_α_saved_cursor;    goto cat_l_499_β;
+    cat_l_507_α_do_assign:
+                  { int64_t _len = _cur_np - cat_l_507_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_r_502_α_start, _len); _os[_len] = 0;
-                    NV_SET_fn("", STRVAL(_os));
-                    { DESCR_t _shift_args[2] = {STRVAL(""), STRVAL(_os)};
+                    memcpy(_os, _subj_np + cat_l_507_α_start, _len); _os[_len] = 0;
+                    NV_SET_fn("=", STRVAL(_os));
+                    { DESCR_t _shift_args[2] = {STRVAL("="), STRVAL(_os)};
                       APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto fence_after_488;
-    cat_r_502_β:                                            goto assign_c_505_β;
-    fence_after_488:                                        goto fence_after_464;
-    cat_r_482_β:                                            goto cat_l_482_β;
-    alt_r_465_α:                                            goto cat_l_507_α;
-    alt_r_465_β:                                            goto cat_r_507_β;
-    cat_l_507_α:                                            goto cat_l_508_α;
-    cat_l_507_β:                                            goto cat_r_508_β;
-    cat_l_508_α:  cat_l_508_α_start = _cur_np;              goto assign_c_509_α;
+                  }                                         goto cat_r_507_α;
+    cat_l_507_β:                                            goto assign_c_508_β;
+    cat_r_507_α:  cat_r_507_α_start = _cur_np;              goto assign_c_509_α;
 assign_c_509_α: {
     DESCR_t _deref_pat = NV_GET_fn("epsilon");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto cat_l_460_β;
-    deref_510_saved_cursor = _cur_np;
-    _cur_np = (int64_t)_deref_new_cur;
-    goto cat_l_508_α_do_assign;
-}
-assign_c_509_β:
-    _cur_np = deref_510_saved_cursor;
-    goto cat_l_460_β;
-    cat_l_508_α_do_assign:
-                  { int64_t _len = _cur_np - cat_l_508_α_start;
-                    char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_l_508_α_start, _len); _os[_len] = 0;
-                    NV_SET_fn("", STRVAL(_os));
-                    { DESCR_t _shift_args[2] = {STRVAL(""), STRVAL(_os)};
-                      APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto cat_r_508_α;
-    cat_l_508_β:                                            goto assign_c_509_β;
-    cat_r_508_α:  cat_r_508_α_start = _cur_np;              goto assign_c_511_α;
-assign_c_511_α: {
-    DESCR_t _deref_pat = NV_GET_fn("epsilon");
-    int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto cat_l_508_β;
-    deref_512_saved_cursor = _cur_np;
-    _cur_np = (int64_t)_deref_new_cur;
-    goto cat_r_508_α_do_assign;
-}
-assign_c_511_β:
-    _cur_np = deref_512_saved_cursor;
-    goto cat_l_508_β;
-    cat_r_508_α_do_assign:
-                  { int64_t _len = _cur_np - cat_r_508_α_start;
-                    char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_r_508_α_start, _len); _os[_len] = 0;
-                    NV_SET_fn("", STRVAL(_os));
-                    { DESCR_t _shift_args[2] = {STRVAL(""), STRVAL(_os)};
-                      APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto cat_r_507_α;
-    cat_r_508_β:                                            goto assign_c_511_β;
-    cat_r_507_α:  cat_r_507_α_start = _cur_np;              goto assign_c_513_α;
-assign_c_513_α: {
-    DESCR_t _deref_pat = NV_GET_fn("epsilon");
-    int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
     if (_deref_new_cur < 0) goto cat_l_507_β;
-    deref_514_saved_cursor = _cur_np;
+    deref_510_saved_cursor = _cur_np;
     _cur_np = (int64_t)_deref_new_cur;
     goto cat_r_507_α_do_assign;
 }
-assign_c_513_β:
-    _cur_np = deref_514_saved_cursor;
+assign_c_509_β:
+    _cur_np = deref_510_saved_cursor;
     goto cat_l_507_β;
     cat_r_507_α_do_assign:
                   { int64_t _len = _cur_np - cat_r_507_α_start;
@@ -9751,28 +9820,70 @@ assign_c_513_β:
                     NV_SET_fn("", STRVAL(_os));
                     { DESCR_t _shift_args[2] = {STRVAL(""), STRVAL(_os)};
                       APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto fence_after_464;
-    cat_r_507_β:                                            goto assign_c_513_β;
-    fence_after_464:                                        goto cat_r_456_α;
-    cat_r_460_β:                                            goto cat_l_460_β;
-    alt_r_459_α:                                            goto cat_l_515_α;
-    alt_r_459_β:                                            goto cat_r_515_β;
-    cat_l_515_α:                                            goto cat_l_516_α;
-    cat_l_515_β:                                            goto cat_r_516_β;
+                  }                                         goto fence_after_497;
+    cat_r_507_β:                                            goto assign_c_509_β;
+    alt_r_498_α:                                            goto cat_l_511_α;
+    alt_r_498_β:                                            goto cat_r_511_β;
+    cat_l_511_α:  cat_l_511_α_start = _cur_np;              goto assign_c_512_α;
+assign_c_512_α: {
+    DESCR_t _deref_pat = NV_GET_fn("epsilon");
+    int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
+    if (_deref_new_cur < 0) goto cat_l_491_β;
+    deref_513_saved_cursor = _cur_np;
+    _cur_np = (int64_t)_deref_new_cur;
+    goto cat_l_511_α_do_assign;
+}
+assign_c_512_β:
+    _cur_np = deref_513_saved_cursor;
+    goto cat_l_491_β;
+    cat_l_511_α_do_assign:
+                  { int64_t _len = _cur_np - cat_l_511_α_start;
+                    char *_os = (char*)GC_malloc(_len + 1);
+                    memcpy(_os, _subj_np + cat_l_511_α_start, _len); _os[_len] = 0;
+                    NV_SET_fn("", STRVAL(_os));
+                    { DESCR_t _shift_args[2] = {STRVAL(""), STRVAL(_os)};
+                      APPLY_fn("Shift", _shift_args, 2); }
+                  }                                         goto cat_r_511_α;
+    cat_l_511_β:                                            goto assign_c_512_β;
+    cat_r_511_α:  cat_r_511_α_start = _cur_np;              goto assign_c_514_α;
+assign_c_514_α: {
+    DESCR_t _deref_pat = NV_GET_fn("epsilon");
+    int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
+    if (_deref_new_cur < 0) goto cat_l_511_β;
+    deref_515_saved_cursor = _cur_np;
+    _cur_np = (int64_t)_deref_new_cur;
+    goto cat_r_511_α_do_assign;
+}
+assign_c_514_β:
+    _cur_np = deref_515_saved_cursor;
+    goto cat_l_511_β;
+    cat_r_511_α_do_assign:
+                  { int64_t _len = _cur_np - cat_r_511_α_start;
+                    char *_os = (char*)GC_malloc(_len + 1);
+                    memcpy(_os, _subj_np + cat_r_511_α_start, _len); _os[_len] = 0;
+                    NV_SET_fn("", STRVAL(_os));
+                    { DESCR_t _shift_args[2] = {STRVAL(""), STRVAL(_os)};
+                      APPLY_fn("Shift", _shift_args, 2); }
+                  }                                         goto fence_after_497;
+    cat_r_511_β:                                            goto assign_c_514_β;
+    fence_after_497:                                        goto fence_after_473;
+    cat_r_491_β:                                            goto cat_l_491_β;
+    alt_r_474_α:                                            goto cat_l_516_α;
+    alt_r_474_β:                                            goto cat_r_516_β;
     cat_l_516_α:                                            goto cat_l_517_α;
     cat_l_516_β:                                            goto cat_r_517_β;
     cat_l_517_α:  cat_l_517_α_start = _cur_np;              goto assign_c_518_α;
 assign_c_518_α: {
     DESCR_t _deref_pat = NV_GET_fn("epsilon");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto cat_l_457_β;
+    if (_deref_new_cur < 0) goto cat_l_469_β;
     deref_519_saved_cursor = _cur_np;
     _cur_np = (int64_t)_deref_new_cur;
     goto cat_l_517_α_do_assign;
 }
 assign_c_518_β:
     _cur_np = deref_519_saved_cursor;
-    goto cat_l_457_β;
+    goto cat_l_469_β;
     cat_l_517_α_do_assign:
                   { int64_t _len = _cur_np - cat_l_517_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
@@ -9822,100 +9933,171 @@ assign_c_522_β:
                     NV_SET_fn("", STRVAL(_os));
                     { DESCR_t _shift_args[2] = {STRVAL(""), STRVAL(_os)};
                       APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto cat_r_515_α;
+                  }                                         goto fence_after_473;
     cat_r_516_β:                                            goto assign_c_522_β;
-    cat_r_515_α:  cat_r_515_α_start = _cur_np;              goto assign_c_524_α;
-assign_c_524_α: {
+    fence_after_473:                                        goto cat_r_465_α;
+    cat_r_469_β:                                            goto cat_l_469_β;
+    alt_r_468_α:                                            goto cat_l_524_α;
+    alt_r_468_β:                                            goto cat_r_524_β;
+    cat_l_524_α:                                            goto cat_l_525_α;
+    cat_l_524_β:                                            goto cat_r_525_β;
+    cat_l_525_α:                                            goto cat_l_526_α;
+    cat_l_525_β:                                            goto cat_r_526_β;
+    cat_l_526_α:  cat_l_526_α_start = _cur_np;              goto assign_c_527_α;
+assign_c_527_α: {
     DESCR_t _deref_pat = NV_GET_fn("epsilon");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto cat_l_515_β;
-    deref_525_saved_cursor = _cur_np;
+    if (_deref_new_cur < 0) goto cat_l_466_β;
+    deref_528_saved_cursor = _cur_np;
     _cur_np = (int64_t)_deref_new_cur;
-    goto cat_r_515_α_do_assign;
+    goto cat_l_526_α_do_assign;
 }
-assign_c_524_β:
-    _cur_np = deref_525_saved_cursor;
-    goto cat_l_515_β;
-    cat_r_515_α_do_assign:
-                  { int64_t _len = _cur_np - cat_r_515_α_start;
+assign_c_527_β:
+    _cur_np = deref_528_saved_cursor;
+    goto cat_l_466_β;
+    cat_l_526_α_do_assign:
+                  { int64_t _len = _cur_np - cat_l_526_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_r_515_α_start, _len); _os[_len] = 0;
+                    memcpy(_os, _subj_np + cat_l_526_α_start, _len); _os[_len] = 0;
                     NV_SET_fn("", STRVAL(_os));
                     { DESCR_t _shift_args[2] = {STRVAL(""), STRVAL(_os)};
                       APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto cat_r_456_α;
-    cat_r_515_β:                                            goto assign_c_524_β;
-    cat_r_456_α:                                            goto fence_p_526_α;
-    fence_p_526_α:                                          goto alt_l_527_α;
-    fence_p_526_β:                                          goto alt_r_527_β;
-alt_l_527_α: {
-    deref_528_saved_cur = _cur_np;
-    DESCR_t _r_528 = pat_Goto(_subj_np, _slen_np, &_cur_np, &deref_528_z, 0);
-    if (IS_FAIL_fn(_r_528)) { _cur_np = deref_528_saved_cur; goto alt_r_527_α; }
-    goto fence_after_526;
-}
-alt_l_527_β: {
-    _cur_np = deref_528_saved_cur;
-    DESCR_t _r_528_b = pat_Goto(_subj_np, _slen_np, &_cur_np, &deref_528_z, 1);
-    if (IS_FAIL_fn(_r_528_b)) { _cur_np = deref_528_saved_cur; goto alt_r_527_α; }
-    goto fence_after_526;
-}
-    alt_r_527_α:                                            goto cat_l_529_α;
-    alt_r_527_β:                                            goto cat_r_529_β;
-    cat_l_529_α:  cat_l_529_α_start = _cur_np;              goto assign_c_530_α;
-assign_c_530_α: {
+                  }                                         goto cat_r_526_α;
+    cat_l_526_β:                                            goto assign_c_527_β;
+    cat_r_526_α:  cat_r_526_α_start = _cur_np;              goto assign_c_529_α;
+assign_c_529_α: {
     DESCR_t _deref_pat = NV_GET_fn("epsilon");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto cat_l_456_β;
-    deref_531_saved_cursor = _cur_np;
+    if (_deref_new_cur < 0) goto cat_l_526_β;
+    deref_530_saved_cursor = _cur_np;
     _cur_np = (int64_t)_deref_new_cur;
-    goto cat_l_529_α_do_assign;
+    goto cat_r_526_α_do_assign;
 }
-assign_c_530_β:
-    _cur_np = deref_531_saved_cursor;
-    goto cat_l_456_β;
-    cat_l_529_α_do_assign:
-                  { int64_t _len = _cur_np - cat_l_529_α_start;
+assign_c_529_β:
+    _cur_np = deref_530_saved_cursor;
+    goto cat_l_526_β;
+    cat_r_526_α_do_assign:
+                  { int64_t _len = _cur_np - cat_r_526_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_l_529_α_start, _len); _os[_len] = 0;
+                    memcpy(_os, _subj_np + cat_r_526_α_start, _len); _os[_len] = 0;
                     NV_SET_fn("", STRVAL(_os));
                     { DESCR_t _shift_args[2] = {STRVAL(""), STRVAL(_os)};
                       APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto cat_r_529_α;
-    cat_l_529_β:                                            goto assign_c_530_β;
-    cat_r_529_α:  cat_r_529_α_start = _cur_np;              goto assign_c_532_α;
-assign_c_532_α: {
+                  }                                         goto cat_r_525_α;
+    cat_r_526_β:                                            goto assign_c_529_β;
+    cat_r_525_α:  cat_r_525_α_start = _cur_np;              goto assign_c_531_α;
+assign_c_531_α: {
     DESCR_t _deref_pat = NV_GET_fn("epsilon");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto cat_l_529_β;
-    deref_533_saved_cursor = _cur_np;
+    if (_deref_new_cur < 0) goto cat_l_525_β;
+    deref_532_saved_cursor = _cur_np;
     _cur_np = (int64_t)_deref_new_cur;
-    goto cat_r_529_α_do_assign;
+    goto cat_r_525_α_do_assign;
 }
-assign_c_532_β:
-    _cur_np = deref_533_saved_cursor;
-    goto cat_l_529_β;
-    cat_r_529_α_do_assign:
-                  { int64_t _len = _cur_np - cat_r_529_α_start;
+assign_c_531_β:
+    _cur_np = deref_532_saved_cursor;
+    goto cat_l_525_β;
+    cat_r_525_α_do_assign:
+                  { int64_t _len = _cur_np - cat_r_525_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_r_529_α_start, _len); _os[_len] = 0;
+                    memcpy(_os, _subj_np + cat_r_525_α_start, _len); _os[_len] = 0;
                     NV_SET_fn("", STRVAL(_os));
                     { DESCR_t _shift_args[2] = {STRVAL(""), STRVAL(_os)};
                       APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto fence_after_526;
-    cat_r_529_β:                                            goto assign_c_532_β;
-    fence_after_526:                                        goto cat_r_455_α;
-    cat_r_456_β:                                            goto cat_l_456_β;
-cat_r_455_α: {
-    deref_534_saved_cur = _cur_np;
-    DESCR_t _r_534 = pat_Gray(_subj_np, _slen_np, &_cur_np, &deref_534_z, 0);
-    if (IS_FAIL_fn(_r_534)) { _cur_np = deref_534_saved_cur; goto cat_l_455_β; }
+                  }                                         goto cat_r_524_α;
+    cat_r_525_β:                                            goto assign_c_531_β;
+    cat_r_524_α:  cat_r_524_α_start = _cur_np;              goto assign_c_533_α;
+assign_c_533_α: {
+    DESCR_t _deref_pat = NV_GET_fn("epsilon");
+    int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
+    if (_deref_new_cur < 0) goto cat_l_524_β;
+    deref_534_saved_cursor = _cur_np;
+    _cur_np = (int64_t)_deref_new_cur;
+    goto cat_r_524_α_do_assign;
+}
+assign_c_533_β:
+    _cur_np = deref_534_saved_cursor;
+    goto cat_l_524_β;
+    cat_r_524_α_do_assign:
+                  { int64_t _len = _cur_np - cat_r_524_α_start;
+                    char *_os = (char*)GC_malloc(_len + 1);
+                    memcpy(_os, _subj_np + cat_r_524_α_start, _len); _os[_len] = 0;
+                    NV_SET_fn("", STRVAL(_os));
+                    { DESCR_t _shift_args[2] = {STRVAL(""), STRVAL(_os)};
+                      APPLY_fn("Shift", _shift_args, 2); }
+                  }                                         goto cat_r_465_α;
+    cat_r_524_β:                                            goto assign_c_533_β;
+    cat_r_465_α:                                            goto fence_p_535_α;
+    fence_p_535_α:                                          goto alt_l_536_α;
+    fence_p_535_β:                                          goto alt_r_536_β;
+alt_l_536_α: {
+    deref_537_saved_cur = _cur_np;
+    DESCR_t _r_537 = pat_Goto(_subj_np, _slen_np, &_cur_np, &deref_537_z, 0);
+    if (IS_FAIL_fn(_r_537)) { _cur_np = deref_537_saved_cur; goto alt_r_536_α; }
+    goto fence_after_535;
+}
+alt_l_536_β: {
+    _cur_np = deref_537_saved_cur;
+    DESCR_t _r_537_b = pat_Goto(_subj_np, _slen_np, &_cur_np, &deref_537_z, 1);
+    if (IS_FAIL_fn(_r_537_b)) { _cur_np = deref_537_saved_cur; goto alt_r_536_α; }
+    goto fence_after_535;
+}
+    alt_r_536_α:                                            goto cat_l_538_α;
+    alt_r_536_β:                                            goto cat_r_538_β;
+    cat_l_538_α:  cat_l_538_α_start = _cur_np;              goto assign_c_539_α;
+assign_c_539_α: {
+    DESCR_t _deref_pat = NV_GET_fn("epsilon");
+    int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
+    if (_deref_new_cur < 0) goto cat_l_465_β;
+    deref_540_saved_cursor = _cur_np;
+    _cur_np = (int64_t)_deref_new_cur;
+    goto cat_l_538_α_do_assign;
+}
+assign_c_539_β:
+    _cur_np = deref_540_saved_cursor;
+    goto cat_l_465_β;
+    cat_l_538_α_do_assign:
+                  { int64_t _len = _cur_np - cat_l_538_α_start;
+                    char *_os = (char*)GC_malloc(_len + 1);
+                    memcpy(_os, _subj_np + cat_l_538_α_start, _len); _os[_len] = 0;
+                    NV_SET_fn("", STRVAL(_os));
+                    { DESCR_t _shift_args[2] = {STRVAL(""), STRVAL(_os)};
+                      APPLY_fn("Shift", _shift_args, 2); }
+                  }                                         goto cat_r_538_α;
+    cat_l_538_β:                                            goto assign_c_539_β;
+    cat_r_538_α:  cat_r_538_α_start = _cur_np;              goto assign_c_541_α;
+assign_c_541_α: {
+    DESCR_t _deref_pat = NV_GET_fn("epsilon");
+    int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
+    if (_deref_new_cur < 0) goto cat_l_538_β;
+    deref_542_saved_cursor = _cur_np;
+    _cur_np = (int64_t)_deref_new_cur;
+    goto cat_r_538_α_do_assign;
+}
+assign_c_541_β:
+    _cur_np = deref_542_saved_cursor;
+    goto cat_l_538_β;
+    cat_r_538_α_do_assign:
+                  { int64_t _len = _cur_np - cat_r_538_α_start;
+                    char *_os = (char*)GC_malloc(_len + 1);
+                    memcpy(_os, _subj_np + cat_r_538_α_start, _len); _os[_len] = 0;
+                    NV_SET_fn("", STRVAL(_os));
+                    { DESCR_t _shift_args[2] = {STRVAL(""), STRVAL(_os)};
+                      APPLY_fn("Shift", _shift_args, 2); }
+                  }                                         goto fence_after_535;
+    cat_r_538_β:                                            goto assign_c_541_β;
+    fence_after_535:                                        goto cat_r_464_α;
+    cat_r_465_β:                                            goto cat_l_465_β;
+cat_r_464_α: {
+    deref_543_saved_cur = _cur_np;
+    DESCR_t _r_543 = pat_Gray(_subj_np, _slen_np, &_cur_np, &deref_543_z, 0);
+    if (IS_FAIL_fn(_r_543)) { _cur_np = deref_543_saved_cur; goto cat_l_464_β; }
     goto _Stmt_γ;
 }
-cat_r_455_β: {
-    _cur_np = deref_534_saved_cur;
-    DESCR_t _r_534_b = pat_Gray(_subj_np, _slen_np, &_cur_np, &deref_534_z, 1);
-    if (IS_FAIL_fn(_r_534_b)) { _cur_np = deref_534_saved_cur; goto cat_l_455_β; }
+cat_r_464_β: {
+    _cur_np = deref_543_saved_cur;
+    DESCR_t _r_543_b = pat_Gray(_subj_np, _slen_np, &_cur_np, &deref_543_z, 1);
+    if (IS_FAIL_fn(_r_543_b)) { _cur_np = deref_543_saved_cur; goto cat_l_464_β; }
     goto _Stmt_γ;
 }
     _Stmt_γ:;
@@ -9923,79 +10105,79 @@ cat_r_455_β: {
         return STRVAL("");
     _Stmt_ω:;
         return FAILDESCR;
-#undef deref_458_saved_cur
-#undef deref_462_saved_cur
-#undef deref_463_saved_cur
-#undef cat_l_468_α_start
-#undef deref_470_saved_cursor
+#undef deref_467_saved_cur
 #undef deref_471_saved_cur
-#undef cat_l_474_α_start
-#undef assign_c_475_α_saved_cursor
-#undef deref_476_saved_cur
-#undef deref_477_saved_cur
-#undef cat_l_478_α_start
-#undef assign_c_479_α_saved_cursor
-#undef cat_r_478_α_start
-#undef deref_481_saved_cursor
-#undef dlit_485_start
-#undef dlit_485_α_saved_cursor
+#undef deref_472_saved_cur
+#undef cat_l_477_α_start
+#undef deref_479_saved_cursor
+#undef deref_480_saved_cur
+#undef cat_l_483_α_start
+#undef assign_c_484_α_saved_cursor
+#undef deref_485_saved_cur
 #undef deref_486_saved_cur
-#undef deref_487_saved_cur
-#undef deref_491_saved_cur
-#undef cat_l_494_α_start
-#undef assign_c_495_α_saved_cursor
+#undef cat_l_487_α_start
+#undef assign_c_488_α_saved_cursor
+#undef cat_r_487_α_start
+#undef deref_490_saved_cursor
+#undef dlit_494_start
+#undef dlit_494_α_saved_cursor
+#undef deref_495_saved_cur
 #undef deref_496_saved_cur
-#undef deref_497_saved_cur
-#undef cat_l_498_α_start
-#undef assign_c_499_α_saved_cursor
-#undef cat_r_498_α_start
-#undef deref_501_saved_cursor
-#undef cat_l_502_α_start
-#undef deref_504_saved_cursor
-#undef cat_r_502_α_start
-#undef deref_506_saved_cursor
-#undef cat_l_508_α_start
-#undef deref_510_saved_cursor
-#undef cat_r_508_α_start
-#undef deref_512_saved_cursor
+#undef deref_500_saved_cur
+#undef cat_l_503_α_start
+#undef assign_c_504_α_saved_cursor
+#undef deref_505_saved_cur
+#undef deref_506_saved_cur
+#undef cat_l_507_α_start
+#undef assign_c_508_α_saved_cursor
 #undef cat_r_507_α_start
-#undef deref_514_saved_cursor
+#undef deref_510_saved_cursor
+#undef cat_l_511_α_start
+#undef deref_513_saved_cursor
+#undef cat_r_511_α_start
+#undef deref_515_saved_cursor
 #undef cat_l_517_α_start
 #undef deref_519_saved_cursor
 #undef cat_r_517_α_start
 #undef deref_521_saved_cursor
 #undef cat_r_516_α_start
 #undef deref_523_saved_cursor
-#undef cat_r_515_α_start
-#undef deref_525_saved_cursor
-#undef deref_528_saved_cur
-#undef cat_l_529_α_start
-#undef deref_531_saved_cursor
-#undef cat_r_529_α_start
-#undef deref_533_saved_cursor
-#undef deref_534_saved_cur
-#undef deref_458_z
-#undef deref_462_z
-#undef deref_463_z
+#undef cat_l_526_α_start
+#undef deref_528_saved_cursor
+#undef cat_r_526_α_start
+#undef deref_530_saved_cursor
+#undef cat_r_525_α_start
+#undef deref_532_saved_cursor
+#undef cat_r_524_α_start
+#undef deref_534_saved_cursor
+#undef deref_537_saved_cur
+#undef cat_l_538_α_start
+#undef deref_540_saved_cursor
+#undef cat_r_538_α_start
+#undef deref_542_saved_cursor
+#undef deref_543_saved_cur
+#undef deref_467_z
 #undef deref_471_z
-#undef deref_476_z
-#undef deref_477_z
+#undef deref_472_z
+#undef deref_480_z
+#undef deref_485_z
 #undef deref_486_z
-#undef deref_487_z
-#undef deref_491_z
+#undef deref_495_z
 #undef deref_496_z
-#undef deref_497_z
-#undef deref_528_z
-#undef deref_534_z
+#undef deref_500_z
+#undef deref_505_z
+#undef deref_506_z
+#undef deref_537_z
+#undef deref_543_z
 
 }
 
 typedef struct pat_Commands_t {
-    int64_t deref_536_saved_cur;
-    int64_t deref_539_saved_cur;
-    int64_t deref_540_saved_cursor;
-    pat_Command_t *deref_536_z;
-    pat_Commands_t *deref_539_z;
+    int64_t deref_545_saved_cur;
+    int64_t deref_548_saved_cur;
+    int64_t deref_549_saved_cursor;
+    pat_Command_t *deref_545_z;
+    pat_Commands_t *deref_548_z;
 } pat_Commands_t;
 
 static DESCR_t pat_Commands(const char *_subj_np, int64_t _slen_np,
@@ -10003,84 +10185,84 @@ static DESCR_t pat_Commands(const char *_subj_np, int64_t _slen_np,
     if (_entry_np == 0) { *_zz_np = calloc(1, sizeof(pat_Commands_t)); }
     pat_Commands_t *z = *_zz_np;
     int64_t _cur_np = *_cur_ptr_np;
-#define deref_536_saved_cur z->deref_536_saved_cur
-#define deref_539_saved_cur z->deref_539_saved_cur
-#define deref_540_saved_cursor z->deref_540_saved_cursor
-#define deref_536_z z->deref_536_z
-#define deref_539_z z->deref_539_z
+#define deref_545_saved_cur z->deref_545_saved_cur
+#define deref_548_saved_cur z->deref_548_saved_cur
+#define deref_549_saved_cursor z->deref_549_saved_cursor
+#define deref_545_z z->deref_545_z
+#define deref_548_z z->deref_548_z
 
     if (_entry_np == 0) goto _Commands_α;
     if (_entry_np == 1) goto _Commands_β;
     goto _Commands_ω;
-    _Commands_α:                                            goto cat_l_535_α;
-    _Commands_β:                                            goto cat_r_535_β;
-cat_l_535_α: {
-    deref_536_saved_cur = _cur_np;
-    DESCR_t _r_536 = pat_Command(_subj_np, _slen_np, &_cur_np, &deref_536_z, 0);
-    if (IS_FAIL_fn(_r_536)) { _cur_np = deref_536_saved_cur; goto _Commands_ω; }
-    goto cat_r_535_α;
+    _Commands_α:                                            goto cat_l_544_α;
+    _Commands_β:                                            goto cat_r_544_β;
+cat_l_544_α: {
+    deref_545_saved_cur = _cur_np;
+    DESCR_t _r_545 = pat_Command(_subj_np, _slen_np, &_cur_np, &deref_545_z, 0);
+    if (IS_FAIL_fn(_r_545)) { _cur_np = deref_545_saved_cur; goto _Commands_ω; }
+    goto cat_r_544_α;
 }
-cat_l_535_β: {
-    _cur_np = deref_536_saved_cur;
-    DESCR_t _r_536_b = pat_Command(_subj_np, _slen_np, &_cur_np, &deref_536_z, 1);
-    if (IS_FAIL_fn(_r_536_b)) { _cur_np = deref_536_saved_cur; goto _Commands_ω; }
-    goto cat_r_535_α;
+cat_l_544_β: {
+    _cur_np = deref_545_saved_cur;
+    DESCR_t _r_545_b = pat_Command(_subj_np, _slen_np, &_cur_np, &deref_545_z, 1);
+    if (IS_FAIL_fn(_r_545_b)) { _cur_np = deref_545_saved_cur; goto _Commands_ω; }
+    goto cat_r_544_α;
 }
-    cat_r_535_α:                                            goto fence_p_537_α;
-    fence_p_537_α:                                          goto alt_l_538_α;
-    fence_p_537_β:                                          goto alt_r_538_β;
-alt_l_538_α: {
-    deref_539_saved_cur = _cur_np;
-    DESCR_t _r_539 = pat_Commands(_subj_np, _slen_np, &_cur_np, &deref_539_z, 0);
-    if (IS_FAIL_fn(_r_539)) { _cur_np = deref_539_saved_cur; goto alt_r_538_α; }
-    goto fence_after_537;
+    cat_r_544_α:                                            goto fence_p_546_α;
+    fence_p_546_α:                                          goto alt_l_547_α;
+    fence_p_546_β:                                          goto alt_r_547_β;
+alt_l_547_α: {
+    deref_548_saved_cur = _cur_np;
+    DESCR_t _r_548 = pat_Commands(_subj_np, _slen_np, &_cur_np, &deref_548_z, 0);
+    if (IS_FAIL_fn(_r_548)) { _cur_np = deref_548_saved_cur; goto alt_r_547_α; }
+    goto fence_after_546;
 }
-alt_l_538_β: {
-    _cur_np = deref_539_saved_cur;
-    DESCR_t _r_539_b = pat_Commands(_subj_np, _slen_np, &_cur_np, &deref_539_z, 1);
-    if (IS_FAIL_fn(_r_539_b)) { _cur_np = deref_539_saved_cur; goto alt_r_538_α; }
-    goto fence_after_537;
+alt_l_547_β: {
+    _cur_np = deref_548_saved_cur;
+    DESCR_t _r_548_b = pat_Commands(_subj_np, _slen_np, &_cur_np, &deref_548_z, 1);
+    if (IS_FAIL_fn(_r_548_b)) { _cur_np = deref_548_saved_cur; goto alt_r_547_α; }
+    goto fence_after_546;
 }
-alt_r_538_α: {
+alt_r_547_α: {
     DESCR_t _deref_pat = NV_GET_fn("epsilon");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto cat_l_535_β;
-    deref_540_saved_cursor = _cur_np;
+    if (_deref_new_cur < 0) goto cat_l_544_β;
+    deref_549_saved_cursor = _cur_np;
     _cur_np = (int64_t)_deref_new_cur;
-    goto fence_after_537;
+    goto fence_after_546;
 }
-alt_r_538_β:
-    _cur_np = deref_540_saved_cursor;
-    goto cat_l_535_β;
-    fence_after_537:                                        goto _Commands_γ;
-    cat_r_535_β:                                            goto cat_l_535_β;
+alt_r_547_β:
+    _cur_np = deref_549_saved_cursor;
+    goto cat_l_544_β;
+    fence_after_546:                                        goto _Commands_γ;
+    cat_r_544_β:                                            goto cat_l_544_β;
     _Commands_γ:;
         *_cur_ptr_np = _cur_np;
         return STRVAL("");
     _Commands_ω:;
         return FAILDESCR;
-#undef deref_536_saved_cur
-#undef deref_539_saved_cur
-#undef deref_540_saved_cursor
-#undef deref_536_z
-#undef deref_539_z
+#undef deref_545_saved_cur
+#undef deref_548_saved_cur
+#undef deref_549_saved_cursor
+#undef deref_545_z
+#undef deref_548_z
 
 }
 
 typedef struct pat_Command_t {
-    int64_t cat_l_546_α_start;
-    int64_t deref_548_saved_cur;
-    int64_t deref_549_saved_cursor;
-    int64_t cat_l_551_α_start;
-    int64_t deref_553_saved_cur;
-    int64_t deref_555_saved_cursor;
-    int64_t alt_r_554_α_saved_cursor;
-    int64_t deref_558_saved_cur;
-    int64_t deref_560_saved_cursor;
-    int64_t alt_r_559_α_saved_cursor;
-    pat_Comment_t *deref_548_z;
-    pat_Control_t *deref_553_z;
-    pat_Stmt_t *deref_558_z;
+    int64_t cat_l_555_α_start;
+    int64_t deref_557_saved_cur;
+    int64_t deref_558_saved_cursor;
+    int64_t cat_l_560_α_start;
+    int64_t deref_562_saved_cur;
+    int64_t deref_564_saved_cursor;
+    int64_t alt_r_563_α_saved_cursor;
+    int64_t deref_567_saved_cur;
+    int64_t deref_569_saved_cursor;
+    int64_t alt_r_568_α_saved_cursor;
+    pat_Comment_t *deref_557_z;
+    pat_Control_t *deref_562_z;
+    pat_Stmt_t *deref_567_z;
 } pat_Command_t;
 
 static DESCR_t pat_Command(const char *_subj_np, int64_t _slen_np,
@@ -10088,193 +10270,193 @@ static DESCR_t pat_Command(const char *_subj_np, int64_t _slen_np,
     if (_entry_np == 0) { *_zz_np = calloc(1, sizeof(pat_Command_t)); }
     pat_Command_t *z = *_zz_np;
     int64_t _cur_np = *_cur_ptr_np;
-#define cat_l_546_α_start z->cat_l_546_α_start
-#define deref_548_saved_cur z->deref_548_saved_cur
-#define deref_549_saved_cursor z->deref_549_saved_cursor
-#define cat_l_551_α_start z->cat_l_551_α_start
-#define deref_553_saved_cur z->deref_553_saved_cur
-#define deref_555_saved_cursor z->deref_555_saved_cursor
-#define alt_r_554_α_saved_cursor z->alt_r_554_α_saved_cursor
-#define deref_558_saved_cur z->deref_558_saved_cur
-#define deref_560_saved_cursor z->deref_560_saved_cursor
-#define alt_r_559_α_saved_cursor z->alt_r_559_α_saved_cursor
-#define deref_548_z z->deref_548_z
-#define deref_553_z z->deref_553_z
-#define deref_558_z z->deref_558_z
+#define cat_l_555_α_start z->cat_l_555_α_start
+#define deref_557_saved_cur z->deref_557_saved_cur
+#define deref_558_saved_cursor z->deref_558_saved_cursor
+#define cat_l_560_α_start z->cat_l_560_α_start
+#define deref_562_saved_cur z->deref_562_saved_cur
+#define deref_564_saved_cursor z->deref_564_saved_cursor
+#define alt_r_563_α_saved_cursor z->alt_r_563_α_saved_cursor
+#define deref_567_saved_cur z->deref_567_saved_cur
+#define deref_569_saved_cursor z->deref_569_saved_cursor
+#define alt_r_568_α_saved_cursor z->alt_r_568_α_saved_cursor
+#define deref_557_z z->deref_557_z
+#define deref_562_z z->deref_562_z
+#define deref_567_z z->deref_567_z
 
     if (_entry_np == 0) goto _Command_α;
     if (_entry_np == 1) goto _Command_β;
     goto _Command_ω;
-    _Command_α:                                             goto cat_l_541_α;
-    _Command_β:                                             goto cat_r_541_β;
-    cat_l_541_α:  NINC_fn();                                goto cat_r_541_α;
-    cat_l_541_β:  NDEC_fn();                                goto _Command_ω;
-    cat_r_541_α:                                            goto fence_p_542_α;
-    fence_p_542_α:                                          goto alt_l_543_α;
-    fence_p_542_β:                                          goto alt_r_543_β;
-    alt_l_543_α:                                            goto alt_l_544_α;
-    alt_l_543_β:                                            goto alt_r_544_β;
-    alt_l_544_α:                                            goto cat_l_545_α;
-    alt_l_544_β:                                            goto cat_r_545_β;
-    cat_l_545_α:                                            goto cat_l_546_α;
-    cat_l_545_β:                                            goto cat_r_546_β;
-    cat_l_546_α:  cat_l_546_α_start = _cur_np;              goto assign_c_547_α;
-assign_c_547_α: {
-    deref_548_saved_cur = _cur_np;
-    DESCR_t _r_548 = pat_Comment(_subj_np, _slen_np, &_cur_np, &deref_548_z, 0);
-    if (IS_FAIL_fn(_r_548)) { _cur_np = deref_548_saved_cur; goto alt_r_544_α; }
-    goto cat_l_546_α_do_assign;
+    _Command_α:                                             goto cat_l_550_α;
+    _Command_β:                                             goto cat_r_550_β;
+    cat_l_550_α:  NINC_fn();                                goto cat_r_550_α;
+    cat_l_550_β:  NDEC_fn();                                goto _Command_ω;
+    cat_r_550_α:                                            goto fence_p_551_α;
+    fence_p_551_α:                                          goto alt_l_552_α;
+    fence_p_551_β:                                          goto alt_r_552_β;
+    alt_l_552_α:                                            goto alt_l_553_α;
+    alt_l_552_β:                                            goto alt_r_553_β;
+    alt_l_553_α:                                            goto cat_l_554_α;
+    alt_l_553_β:                                            goto cat_r_554_β;
+    cat_l_554_α:                                            goto cat_l_555_α;
+    cat_l_554_β:                                            goto cat_r_555_β;
+    cat_l_555_α:  cat_l_555_α_start = _cur_np;              goto assign_c_556_α;
+assign_c_556_α: {
+    deref_557_saved_cur = _cur_np;
+    DESCR_t _r_557 = pat_Comment(_subj_np, _slen_np, &_cur_np, &deref_557_z, 0);
+    if (IS_FAIL_fn(_r_557)) { _cur_np = deref_557_saved_cur; goto alt_r_553_α; }
+    goto cat_l_555_α_do_assign;
 }
-assign_c_547_β: {
-    _cur_np = deref_548_saved_cur;
-    DESCR_t _r_548_b = pat_Comment(_subj_np, _slen_np, &_cur_np, &deref_548_z, 1);
-    if (IS_FAIL_fn(_r_548_b)) { _cur_np = deref_548_saved_cur; goto alt_r_544_α; }
-    goto cat_l_546_α_do_assign;
+assign_c_556_β: {
+    _cur_np = deref_557_saved_cur;
+    DESCR_t _r_557_b = pat_Comment(_subj_np, _slen_np, &_cur_np, &deref_557_z, 1);
+    if (IS_FAIL_fn(_r_557_b)) { _cur_np = deref_557_saved_cur; goto alt_r_553_α; }
+    goto cat_l_555_α_do_assign;
 }
-    cat_l_546_α_do_assign:
-                  { int64_t _len = _cur_np - cat_l_546_α_start;
+    cat_l_555_α_do_assign:
+                  { int64_t _len = _cur_np - cat_l_555_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_l_546_α_start, _len); _os[_len] = 0;
+                    memcpy(_os, _subj_np + cat_l_555_α_start, _len); _os[_len] = 0;
                     NV_SET_fn("Comment", STRVAL(_os));
                     { DESCR_t _shift_args[2] = {STRVAL("Comment"), STRVAL(_os)};
                       APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto cat_r_546_α;
-    cat_l_546_β:                                            goto assign_c_547_β;
-cat_r_546_α: /* E_OPSYN & */
+                  }                                         goto cat_r_555_α;
+    cat_l_555_β:                                            goto assign_c_556_β;
+cat_r_555_α: /* E_OPSYN & */
     { DESCR_t _reduce_args[2] = {STRVAL("Comment"), INTVAL(1)};
       APPLY_fn("Reduce", _reduce_args, 2); }
-    goto cat_r_545_α;
-cat_r_546_β: goto cat_l_546_β;
-cat_r_545_α: {
+    goto cat_r_554_α;
+cat_r_555_β: goto cat_l_555_β;
+cat_r_554_α: {
     DESCR_t _deref_pat = NV_GET_fn("nl");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto cat_l_545_β;
-    deref_549_saved_cursor = _cur_np;
+    if (_deref_new_cur < 0) goto cat_l_554_β;
+    deref_558_saved_cursor = _cur_np;
     _cur_np = (int64_t)_deref_new_cur;
-    goto fence_after_542;
+    goto fence_after_551;
 }
-cat_r_545_β:
-    _cur_np = deref_549_saved_cursor;
-    goto cat_l_545_β;
-    alt_r_544_α:                                            goto cat_l_550_α;
-    alt_r_544_β:                                            goto cat_r_550_β;
-    cat_l_550_α:                                            goto cat_l_551_α;
-    cat_l_550_β:                                            goto cat_r_551_β;
-    cat_l_551_α:  cat_l_551_α_start = _cur_np;              goto assign_c_552_α;
-assign_c_552_α: {
-    deref_553_saved_cur = _cur_np;
-    DESCR_t _r_553 = pat_Control(_subj_np, _slen_np, &_cur_np, &deref_553_z, 0);
-    if (IS_FAIL_fn(_r_553)) { _cur_np = deref_553_saved_cur; goto alt_r_543_α; }
-    goto cat_l_551_α_do_assign;
+cat_r_554_β:
+    _cur_np = deref_558_saved_cursor;
+    goto cat_l_554_β;
+    alt_r_553_α:                                            goto cat_l_559_α;
+    alt_r_553_β:                                            goto cat_r_559_β;
+    cat_l_559_α:                                            goto cat_l_560_α;
+    cat_l_559_β:                                            goto cat_r_560_β;
+    cat_l_560_α:  cat_l_560_α_start = _cur_np;              goto assign_c_561_α;
+assign_c_561_α: {
+    deref_562_saved_cur = _cur_np;
+    DESCR_t _r_562 = pat_Control(_subj_np, _slen_np, &_cur_np, &deref_562_z, 0);
+    if (IS_FAIL_fn(_r_562)) { _cur_np = deref_562_saved_cur; goto alt_r_552_α; }
+    goto cat_l_560_α_do_assign;
 }
-assign_c_552_β: {
-    _cur_np = deref_553_saved_cur;
-    DESCR_t _r_553_b = pat_Control(_subj_np, _slen_np, &_cur_np, &deref_553_z, 1);
-    if (IS_FAIL_fn(_r_553_b)) { _cur_np = deref_553_saved_cur; goto alt_r_543_α; }
-    goto cat_l_551_α_do_assign;
+assign_c_561_β: {
+    _cur_np = deref_562_saved_cur;
+    DESCR_t _r_562_b = pat_Control(_subj_np, _slen_np, &_cur_np, &deref_562_z, 1);
+    if (IS_FAIL_fn(_r_562_b)) { _cur_np = deref_562_saved_cur; goto alt_r_552_α; }
+    goto cat_l_560_α_do_assign;
 }
-    cat_l_551_α_do_assign:
-                  { int64_t _len = _cur_np - cat_l_551_α_start;
+    cat_l_560_α_do_assign:
+                  { int64_t _len = _cur_np - cat_l_560_α_start;
                     char *_os = (char*)GC_malloc(_len + 1);
-                    memcpy(_os, _subj_np + cat_l_551_α_start, _len); _os[_len] = 0;
+                    memcpy(_os, _subj_np + cat_l_560_α_start, _len); _os[_len] = 0;
                     NV_SET_fn("Control", STRVAL(_os));
                     { DESCR_t _shift_args[2] = {STRVAL("Control"), STRVAL(_os)};
                       APPLY_fn("Shift", _shift_args, 2); }
-                  }                                         goto cat_r_551_α;
-    cat_l_551_β:                                            goto assign_c_552_β;
-cat_r_551_α: /* E_OPSYN & */
+                  }                                         goto cat_r_560_α;
+    cat_l_560_β:                                            goto assign_c_561_β;
+cat_r_560_α: /* E_OPSYN & */
     { DESCR_t _reduce_args[2] = {STRVAL("Control"), INTVAL(1)};
       APPLY_fn("Reduce", _reduce_args, 2); }
-    goto cat_r_550_α;
-cat_r_551_β: goto cat_l_551_β;
-    cat_r_550_α:                                            goto alt_l_554_α;
-    cat_r_550_β:                                            goto alt_r_554_β;
-alt_l_554_α: {
+    goto cat_r_559_α;
+cat_r_560_β: goto cat_l_560_β;
+    cat_r_559_α:                                            goto alt_l_563_α;
+    cat_r_559_β:                                            goto alt_r_563_β;
+alt_l_563_α: {
     DESCR_t _deref_pat = NV_GET_fn("nl");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto alt_r_554_α;
-    deref_555_saved_cursor = _cur_np;
+    if (_deref_new_cur < 0) goto alt_r_563_α;
+    deref_564_saved_cursor = _cur_np;
     _cur_np = (int64_t)_deref_new_cur;
-    goto fence_after_542;
+    goto fence_after_551;
 }
-alt_l_554_β:
-    _cur_np = deref_555_saved_cursor;
-    goto alt_r_554_α;
-    alt_r_554_α:
-                  if (_cur_np + 1 > _slen_np)               goto cat_l_550_β;
-                  if (_subj_np[_cur_np] != ';')             goto cat_l_550_β;
-                  alt_r_554_α_saved_cursor = _cur_np; _cur_np += 1;
-                                                            goto fence_after_542;
-    alt_r_554_β:  _cur_np = alt_r_554_α_saved_cursor;       goto cat_l_550_β;
-    alt_r_543_α:                                            goto cat_l_556_α;
-    alt_r_543_β:                                            goto cat_r_556_β;
-    cat_l_556_α:                                            goto cat_l_557_α;
-    cat_l_556_β:                                            goto cat_r_557_β;
-cat_l_557_α: {
-    deref_558_saved_cur = _cur_np;
-    DESCR_t _r_558 = pat_Stmt(_subj_np, _slen_np, &_cur_np, &deref_558_z, 0);
-    if (IS_FAIL_fn(_r_558)) { _cur_np = deref_558_saved_cur; goto cat_l_541_β; }
-    goto cat_r_557_α;
+alt_l_563_β:
+    _cur_np = deref_564_saved_cursor;
+    goto alt_r_563_α;
+    alt_r_563_α:
+                  if (_cur_np + 1 > _slen_np)               goto cat_l_559_β;
+                  if (_subj_np[_cur_np] != ';')             goto cat_l_559_β;
+                  alt_r_563_α_saved_cursor = _cur_np; _cur_np += 1;
+                                                            goto fence_after_551;
+    alt_r_563_β:  _cur_np = alt_r_563_α_saved_cursor;       goto cat_l_559_β;
+    alt_r_552_α:                                            goto cat_l_565_α;
+    alt_r_552_β:                                            goto cat_r_565_β;
+    cat_l_565_α:                                            goto cat_l_566_α;
+    cat_l_565_β:                                            goto cat_r_566_β;
+cat_l_566_α: {
+    deref_567_saved_cur = _cur_np;
+    DESCR_t _r_567 = pat_Stmt(_subj_np, _slen_np, &_cur_np, &deref_567_z, 0);
+    if (IS_FAIL_fn(_r_567)) { _cur_np = deref_567_saved_cur; goto cat_l_550_β; }
+    goto cat_r_566_α;
 }
-cat_l_557_β: {
-    _cur_np = deref_558_saved_cur;
-    DESCR_t _r_558_b = pat_Stmt(_subj_np, _slen_np, &_cur_np, &deref_558_z, 1);
-    if (IS_FAIL_fn(_r_558_b)) { _cur_np = deref_558_saved_cur; goto cat_l_541_β; }
-    goto cat_r_557_α;
+cat_l_566_β: {
+    _cur_np = deref_567_saved_cur;
+    DESCR_t _r_567_b = pat_Stmt(_subj_np, _slen_np, &_cur_np, &deref_567_z, 1);
+    if (IS_FAIL_fn(_r_567_b)) { _cur_np = deref_567_saved_cur; goto cat_l_550_β; }
+    goto cat_r_566_α;
 }
-cat_r_557_α: /* E_OPSYN & */
+cat_r_566_α: /* E_OPSYN & */
     { DESCR_t _reduce_args[2] = {STRVAL("Stmt"), INTVAL(7)};
       APPLY_fn("Reduce", _reduce_args, 2); }
-    goto cat_r_556_α;
-cat_r_557_β: goto cat_l_557_β;
-    cat_r_556_α:                                            goto alt_l_559_α;
-    cat_r_556_β:                                            goto alt_r_559_β;
-alt_l_559_α: {
+    goto cat_r_565_α;
+cat_r_566_β: goto cat_l_566_β;
+    cat_r_565_α:                                            goto alt_l_568_α;
+    cat_r_565_β:                                            goto alt_r_568_β;
+alt_l_568_α: {
     DESCR_t _deref_pat = NV_GET_fn("nl");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto alt_r_559_α;
-    deref_560_saved_cursor = _cur_np;
+    if (_deref_new_cur < 0) goto alt_r_568_α;
+    deref_569_saved_cursor = _cur_np;
     _cur_np = (int64_t)_deref_new_cur;
-    goto fence_after_542;
+    goto fence_after_551;
 }
-alt_l_559_β:
-    _cur_np = deref_560_saved_cursor;
-    goto alt_r_559_α;
-    alt_r_559_α:
-                  if (_cur_np + 1 > _slen_np)               goto cat_l_556_β;
-                  if (_subj_np[_cur_np] != ';')             goto cat_l_556_β;
-                  alt_r_559_α_saved_cursor = _cur_np; _cur_np += 1;
-                                                            goto fence_after_542;
-    alt_r_559_β:  _cur_np = alt_r_559_α_saved_cursor;       goto cat_l_556_β;
-    fence_after_542:                                        goto _Command_γ;
-    cat_r_541_β:                                            goto cat_l_541_β;
+alt_l_568_β:
+    _cur_np = deref_569_saved_cursor;
+    goto alt_r_568_α;
+    alt_r_568_α:
+                  if (_cur_np + 1 > _slen_np)               goto cat_l_565_β;
+                  if (_subj_np[_cur_np] != ';')             goto cat_l_565_β;
+                  alt_r_568_α_saved_cursor = _cur_np; _cur_np += 1;
+                                                            goto fence_after_551;
+    alt_r_568_β:  _cur_np = alt_r_568_α_saved_cursor;       goto cat_l_565_β;
+    fence_after_551:                                        goto _Command_γ;
+    cat_r_550_β:                                            goto cat_l_550_β;
     _Command_γ:;
         *_cur_ptr_np = _cur_np;
         return STRVAL("");
     _Command_ω:;
         return FAILDESCR;
-#undef cat_l_546_α_start
-#undef deref_548_saved_cur
-#undef deref_549_saved_cursor
-#undef cat_l_551_α_start
-#undef deref_553_saved_cur
-#undef deref_555_saved_cursor
-#undef alt_r_554_α_saved_cursor
-#undef deref_558_saved_cur
-#undef deref_560_saved_cursor
-#undef alt_r_559_α_saved_cursor
-#undef deref_548_z
-#undef deref_553_z
-#undef deref_558_z
+#undef cat_l_555_α_start
+#undef deref_557_saved_cur
+#undef deref_558_saved_cursor
+#undef cat_l_560_α_start
+#undef deref_562_saved_cur
+#undef deref_564_saved_cursor
+#undef alt_r_563_α_saved_cursor
+#undef deref_567_saved_cur
+#undef deref_569_saved_cursor
+#undef alt_r_568_α_saved_cursor
+#undef deref_557_z
+#undef deref_562_z
+#undef deref_567_z
 
 }
 
 typedef struct pat_Parse_t {
-    int cat_r_563_α_depth;
-    int64_t cat_r_563_α_cursors[64];
-    DESCR_t cat_r_563_α_saved_stk;
-    int64_t deref_565_saved_cur;
-    pat_Command_t *deref_565_z;
+    int cat_r_572_α_depth;
+    int64_t cat_r_572_α_cursors[64];
+    DESCR_t cat_r_572_α_saved_stk;
+    int64_t deref_574_saved_cur;
+    pat_Command_t *deref_574_z;
 } pat_Parse_t;
 
 static DESCR_t pat_Parse(const char *_subj_np, int64_t _slen_np,
@@ -10282,84 +10464,84 @@ static DESCR_t pat_Parse(const char *_subj_np, int64_t _slen_np,
     if (_entry_np == 0) { *_zz_np = calloc(1, sizeof(pat_Parse_t)); }
     pat_Parse_t *z = *_zz_np;
     int64_t _cur_np = *_cur_ptr_np;
-#define cat_r_563_α_depth z->cat_r_563_α_depth
-#define cat_r_563_α_cursors z->cat_r_563_α_cursors
-#define cat_r_563_α_saved_stk z->cat_r_563_α_saved_stk
-#define deref_565_saved_cur z->deref_565_saved_cur
-#define deref_565_z z->deref_565_z
+#define cat_r_572_α_depth z->cat_r_572_α_depth
+#define cat_r_572_α_cursors z->cat_r_572_α_cursors
+#define cat_r_572_α_saved_stk z->cat_r_572_α_saved_stk
+#define deref_574_saved_cur z->deref_574_saved_cur
+#define deref_574_z z->deref_574_z
 
     if (_entry_np == 0) goto _Parse_α;
     if (_entry_np == 1) goto _Parse_β;
     goto _Parse_ω;
-    _Parse_α:                                               goto cat_l_561_α;
-    _Parse_β:                                               goto cat_r_561_β;
-    cat_l_561_α:                                            goto cat_l_562_α;
-    cat_l_561_β:                                            goto cat_r_562_β;
-    cat_l_562_α:                                            goto cat_l_563_α;
-    cat_l_562_β:                                            goto cat_r_563_β;
-    cat_l_563_α:  NPUSH_fn();                               goto cat_r_563_α;
-    cat_l_563_β:                                            goto _Parse_ω;
-    cat_r_563_α:  cat_r_563_α_saved_stk = NV_GET_fn("@S"); cat_r_563_α_depth = -1;
-                                                            goto cat_r_562_α;
-    cat_r_563_β:
-                  NV_SET_fn("@S", cat_r_563_α_saved_stk);
+    _Parse_α:                                               goto cat_l_570_α;
+    _Parse_β:                                               goto cat_r_570_β;
+    cat_l_570_α:                                            goto cat_l_571_α;
+    cat_l_570_β:                                            goto cat_r_571_β;
+    cat_l_571_α:                                            goto cat_l_572_α;
+    cat_l_571_β:  NPUSH_fn();                               goto cat_r_572_β;
+    cat_l_572_α:  NPUSH_fn();                               goto cat_r_572_α;
+    cat_l_572_β:                                            goto _Parse_ω;
+    cat_r_572_α:  cat_r_572_α_saved_stk = NV_GET_fn("@S"); cat_r_572_α_depth = -1;
+                                                            goto cat_r_571_α;
+    cat_r_572_β:
+                  NV_SET_fn("@S", cat_r_572_α_saved_stk);
                   if (!NHAS_FRAME_fn()) NPUSH_fn();
-                  if (++cat_r_563_α_depth >= 64)            goto cat_l_563_β;
-                  cat_r_563_α_cursors[cat_r_563_α_depth] = _cur_np;
-                                                            goto arbno_c_564_α;
-    cat_r_563_α_child_ok:
-                  cat_r_563_α_saved_stk = NV_GET_fn("@S");  goto cat_r_562_α;
-    cat_r_563_α_child_fail:
-                  _cur_np = cat_r_563_α_cursors[cat_r_563_α_depth]; cat_r_563_α_depth--;
-                                                            goto cat_l_563_β;
-arbno_c_564_α: {
-    deref_565_saved_cur = _cur_np;
-    DESCR_t _r_565 = pat_Command(_subj_np, _slen_np, &_cur_np, &deref_565_z, 0);
-    if (IS_FAIL_fn(_r_565)) { _cur_np = deref_565_saved_cur; goto cat_r_563_α_child_fail; }
-    goto cat_r_563_α_child_ok;
+                  if (++cat_r_572_α_depth >= 64)            goto cat_l_572_β;
+                  cat_r_572_α_cursors[cat_r_572_α_depth] = _cur_np;
+                                                            goto arbno_c_573_α;
+    cat_r_572_α_child_ok:
+                  cat_r_572_α_saved_stk = NV_GET_fn("@S");  goto cat_r_571_α;
+    cat_r_572_α_child_fail:
+                  _cur_np = cat_r_572_α_cursors[cat_r_572_α_depth]; cat_r_572_α_depth--;
+                                                            goto cat_l_572_β;
+arbno_c_573_α: {
+    deref_574_saved_cur = _cur_np;
+    DESCR_t _r_574 = pat_Command(_subj_np, _slen_np, &_cur_np, &deref_574_z, 0);
+    if (IS_FAIL_fn(_r_574)) { _cur_np = deref_574_saved_cur; goto cat_r_572_α_child_fail; }
+    goto cat_r_572_α_child_ok;
 }
-arbno_c_564_β: {
-    _cur_np = deref_565_saved_cur;
-    DESCR_t _r_565_b = pat_Command(_subj_np, _slen_np, &_cur_np, &deref_565_z, 1);
-    if (IS_FAIL_fn(_r_565_b)) { _cur_np = deref_565_saved_cur; goto cat_r_563_α_child_fail; }
-    goto cat_r_563_α_child_ok;
+arbno_c_573_β: {
+    _cur_np = deref_574_saved_cur;
+    DESCR_t _r_574_b = pat_Command(_subj_np, _slen_np, &_cur_np, &deref_574_z, 1);
+    if (IS_FAIL_fn(_r_574_b)) { _cur_np = deref_574_saved_cur; goto cat_r_572_α_child_fail; }
+    goto cat_r_572_α_child_ok;
 }
-cat_r_562_α: /* E_OPSYN & */
+cat_r_571_α: /* E_OPSYN & */
     { DESCR_t _reduce_args[2] = {STRVAL("Parse"), INTVAL(ntop())};
       APPLY_fn("Reduce", _reduce_args, 2); }
-    goto cat_r_561_α;
-cat_r_562_β: goto cat_l_562_β;
-    cat_r_561_α:  NPOP_fn();                                goto _Parse_γ;
-    cat_r_561_β:                                            goto cat_l_561_β;
+    goto cat_r_570_α;
+cat_r_571_β: goto cat_l_571_β;
+    cat_r_570_α:  NPOP_fn();                                goto _Parse_γ;
+    cat_r_570_β:                                            goto cat_l_570_β;
     _Parse_γ:;
         *_cur_ptr_np = _cur_np;
         return STRVAL("");
     _Parse_ω:;
         return FAILDESCR;
-#undef cat_r_563_α_depth
-#undef cat_r_563_α_cursors
-#undef cat_r_563_α_saved_stk
-#undef deref_565_saved_cur
-#undef deref_565_z
+#undef cat_r_572_α_depth
+#undef cat_r_572_α_cursors
+#undef cat_r_572_α_saved_stk
+#undef deref_574_saved_cur
+#undef deref_574_z
 
 }
 
 typedef struct pat_Compiland_t {
-    int cat_r_569_α_depth;
-    int64_t cat_r_569_α_cursors[64];
-    DESCR_t cat_r_569_α_saved_stk;
-    int64_t deref_571_saved_cur;
-    int64_t cat_l_578_α_saved_cursor;
-    int64_t cat_r_578_α_saved_cursor;
-    int64_t deref_579_saved_cursor;
-    int64_t deref_580_saved_cursor;
-    int cat_r_573_α_depth;
-    int64_t cat_r_573_α_cursors[64];
-    DESCR_t cat_r_573_α_saved_stk;
-    int64_t cat_l_582_α_saved_cursor;
-    int64_t deref_583_saved_cursor;
-    int64_t deref_584_saved_cursor;
-    pat_Command_t *deref_571_z;
+    int cat_r_578_α_depth;
+    int64_t cat_r_578_α_cursors[64];
+    DESCR_t cat_r_578_α_saved_stk;
+    int64_t deref_580_saved_cur;
+    int64_t cat_l_587_α_saved_cursor;
+    int64_t cat_r_587_α_saved_cursor;
+    int64_t deref_588_saved_cursor;
+    int64_t deref_589_saved_cursor;
+    int cat_r_582_α_depth;
+    int64_t cat_r_582_α_cursors[64];
+    DESCR_t cat_r_582_α_saved_stk;
+    int64_t cat_l_591_α_saved_cursor;
+    int64_t deref_592_saved_cursor;
+    int64_t deref_593_saved_cursor;
+    pat_Command_t *deref_580_z;
 } pat_Compiland_t;
 
 static DESCR_t pat_Compiland(const char *_subj_np, int64_t _slen_np,
@@ -10367,190 +10549,190 @@ static DESCR_t pat_Compiland(const char *_subj_np, int64_t _slen_np,
     if (_entry_np == 0) { *_zz_np = calloc(1, sizeof(pat_Compiland_t)); }
     pat_Compiland_t *z = *_zz_np;
     int64_t _cur_np = *_cur_ptr_np;
-#define cat_r_569_α_depth z->cat_r_569_α_depth
-#define cat_r_569_α_cursors z->cat_r_569_α_cursors
-#define cat_r_569_α_saved_stk z->cat_r_569_α_saved_stk
-#define deref_571_saved_cur z->deref_571_saved_cur
-#define cat_l_578_α_saved_cursor z->cat_l_578_α_saved_cursor
-#define cat_r_578_α_saved_cursor z->cat_r_578_α_saved_cursor
-#define deref_579_saved_cursor z->deref_579_saved_cursor
-#define deref_580_saved_cursor z->deref_580_saved_cursor
-#define cat_r_573_α_depth z->cat_r_573_α_depth
-#define cat_r_573_α_cursors z->cat_r_573_α_cursors
-#define cat_r_573_α_saved_stk z->cat_r_573_α_saved_stk
-#define cat_l_582_α_saved_cursor z->cat_l_582_α_saved_cursor
-#define deref_583_saved_cursor z->deref_583_saved_cursor
-#define deref_584_saved_cursor z->deref_584_saved_cursor
-#define deref_571_z z->deref_571_z
+#define cat_r_578_α_depth z->cat_r_578_α_depth
+#define cat_r_578_α_cursors z->cat_r_578_α_cursors
+#define cat_r_578_α_saved_stk z->cat_r_578_α_saved_stk
+#define deref_580_saved_cur z->deref_580_saved_cur
+#define cat_l_587_α_saved_cursor z->cat_l_587_α_saved_cursor
+#define cat_r_587_α_saved_cursor z->cat_r_587_α_saved_cursor
+#define deref_588_saved_cursor z->deref_588_saved_cursor
+#define deref_589_saved_cursor z->deref_589_saved_cursor
+#define cat_r_582_α_depth z->cat_r_582_α_depth
+#define cat_r_582_α_cursors z->cat_r_582_α_cursors
+#define cat_r_582_α_saved_stk z->cat_r_582_α_saved_stk
+#define cat_l_591_α_saved_cursor z->cat_l_591_α_saved_cursor
+#define deref_592_saved_cursor z->deref_592_saved_cursor
+#define deref_593_saved_cursor z->deref_593_saved_cursor
+#define deref_580_z z->deref_580_z
 
     if (_entry_np == 0) goto _Compiland_α;
     if (_entry_np == 1) goto _Compiland_β;
     goto _Compiland_ω;
-    _Compiland_α:                                           goto cat_l_566_α;
-    _Compiland_β:                                           goto cat_r_566_β;
-    cat_l_566_α:                                            goto cat_l_567_α;
-    cat_l_566_β:                                            goto cat_r_567_β;
-    cat_l_567_α:                                            goto cat_l_568_α;
-    cat_l_567_β:                                            goto cat_r_568_β;
-    cat_l_568_α:                                            goto cat_l_569_α;
-    cat_l_568_β:                                            goto cat_r_569_β;
-    cat_l_569_α:  NPUSH_fn();                               goto cat_r_569_α;
-    cat_l_569_β:                                            goto _Compiland_ω;
-    cat_r_569_α:  cat_r_569_α_saved_stk = NV_GET_fn("@S"); cat_r_569_α_depth = -1;
-                                                            goto cat_r_568_α;
-    cat_r_569_β:
-                  NV_SET_fn("@S", cat_r_569_α_saved_stk);
+    _Compiland_α:                                           goto cat_l_575_α;
+    _Compiland_β:                                           goto cat_r_575_β;
+    cat_l_575_α:                                            goto cat_l_576_α;
+    cat_l_575_β:                                            goto cat_r_576_β;
+    cat_l_576_α:                                            goto cat_l_577_α;
+    cat_l_576_β:                                            goto cat_r_577_β;
+    cat_l_577_α:                                            goto cat_l_578_α;
+    cat_l_577_β:  NPUSH_fn();                               goto cat_r_578_β;
+    cat_l_578_α:  NPUSH_fn();                               goto cat_r_578_α;
+    cat_l_578_β:                                            goto _Compiland_ω;
+    cat_r_578_α:  cat_r_578_α_saved_stk = NV_GET_fn("@S"); cat_r_578_α_depth = -1;
+                                                            goto cat_r_577_α;
+    cat_r_578_β:
+                  NV_SET_fn("@S", cat_r_578_α_saved_stk);
                   if (!NHAS_FRAME_fn()) NPUSH_fn();
-                  if (++cat_r_569_α_depth >= 64)            goto cat_l_569_β;
-                  cat_r_569_α_cursors[cat_r_569_α_depth] = _cur_np;
-                                                            goto arbno_c_570_α;
-    cat_r_569_α_child_ok:
-                  cat_r_569_α_saved_stk = NV_GET_fn("@S");  goto cat_r_568_α;
-    cat_r_569_α_child_fail:
-                  _cur_np = cat_r_569_α_cursors[cat_r_569_α_depth]; cat_r_569_α_depth--;
-                                                            goto cat_l_569_β;
-arbno_c_570_α: {
-    deref_571_saved_cur = _cur_np;
-    DESCR_t _r_571 = pat_Command(_subj_np, _slen_np, &_cur_np, &deref_571_z, 0);
-    if (IS_FAIL_fn(_r_571)) { _cur_np = deref_571_saved_cur; goto cat_r_569_α_child_fail; }
-    goto cat_r_569_α_child_ok;
+                  if (++cat_r_578_α_depth >= 64)            goto cat_l_578_β;
+                  cat_r_578_α_cursors[cat_r_578_α_depth] = _cur_np;
+                                                            goto arbno_c_579_α;
+    cat_r_578_α_child_ok:
+                  cat_r_578_α_saved_stk = NV_GET_fn("@S");  goto cat_r_577_α;
+    cat_r_578_α_child_fail:
+                  _cur_np = cat_r_578_α_cursors[cat_r_578_α_depth]; cat_r_578_α_depth--;
+                                                            goto cat_l_578_β;
+arbno_c_579_α: {
+    deref_580_saved_cur = _cur_np;
+    DESCR_t _r_580 = pat_Command(_subj_np, _slen_np, &_cur_np, &deref_580_z, 0);
+    if (IS_FAIL_fn(_r_580)) { _cur_np = deref_580_saved_cur; goto cat_r_578_α_child_fail; }
+    goto cat_r_578_α_child_ok;
 }
-arbno_c_570_β: {
-    _cur_np = deref_571_saved_cur;
-    DESCR_t _r_571_b = pat_Command(_subj_np, _slen_np, &_cur_np, &deref_571_z, 1);
-    if (IS_FAIL_fn(_r_571_b)) { _cur_np = deref_571_saved_cur; goto cat_r_569_α_child_fail; }
-    goto cat_r_569_α_child_ok;
+arbno_c_579_β: {
+    _cur_np = deref_580_saved_cur;
+    DESCR_t _r_580_b = pat_Command(_subj_np, _slen_np, &_cur_np, &deref_580_z, 1);
+    if (IS_FAIL_fn(_r_580_b)) { _cur_np = deref_580_saved_cur; goto cat_r_578_α_child_fail; }
+    goto cat_r_578_α_child_ok;
 }
-cat_r_568_α: /* E_OPSYN & */
+cat_r_577_α: /* E_OPSYN & */
     { DESCR_t _reduce_args[2] = {STRVAL("Parse"), INTVAL(ntop())};
       APPLY_fn("Reduce", _reduce_args, 2); }
-    goto cat_r_567_α;
-cat_r_568_β: goto cat_l_568_β;
-    cat_r_567_α:                                            goto alt_l_572_α;
-    cat_r_567_β:                                            goto alt_r_572_β;
-    alt_l_572_α:                                            goto cat_l_573_α;
-    alt_l_572_β:                                            goto cat_r_573_β;
-    cat_l_573_α:                                            goto cat_l_574_α;
-    cat_l_573_β:                                            goto cat_r_574_β;
-    cat_l_574_α:
-                  { DESCR_t _fcall_575_args[1];
-                    _fcall_575_args[0] = STRVAL("END");
-                    DESCR_t _fcall_575_r = APPLY_fn("icase", _fcall_575_args, 1);
-                    if (IS_FAIL_fn(_fcall_575_r)) goto alt_r_572_α; }
-                                                            goto cat_r_574_α;
-    cat_l_574_β:                                            goto alt_r_572_α;
-    cat_r_574_α:                                            goto alt_l_576_α;
-    cat_r_574_β:                                            goto alt_r_576_β;
-    alt_l_576_α:                                            goto cat_l_577_α;
-    alt_l_576_β:                                            goto cat_r_577_β;
-    cat_l_577_α:                                            goto cat_l_578_α;
-    cat_l_577_β:                                            goto cat_r_578_β;
-    cat_l_578_α:
-                  if (_cur_np + 1 > _slen_np)               goto alt_r_576_α;
-                  if (_subj_np[_cur_np] != ' ')             goto alt_r_576_α;
-                  cat_l_578_α_saved_cursor = _cur_np; _cur_np += 1;
-                                                            goto cat_r_578_α;
-    cat_l_578_β:  _cur_np = cat_l_578_α_saved_cursor;       goto alt_r_576_α;
-    cat_r_578_α:
-                  cat_r_578_α_saved_cursor = _cur_np;
+    goto cat_r_576_α;
+cat_r_577_β: goto cat_l_577_β;
+    cat_r_576_α:                                            goto alt_l_581_α;
+    cat_r_576_β:                                            goto alt_r_581_β;
+    alt_l_581_α:                                            goto cat_l_582_α;
+    alt_l_581_β:                                            goto cat_r_582_β;
+    cat_l_582_α:                                            goto cat_l_583_α;
+    cat_l_582_β:                                            goto cat_r_583_β;
+    cat_l_583_α:
+                  { DESCR_t _fcall_584_args[1];
+                    _fcall_584_args[0] = STRVAL("END");
+                    DESCR_t _fcall_584_r = APPLY_fn("icase", _fcall_584_args, 1);
+                    if (IS_FAIL_fn(_fcall_584_r)) goto alt_r_581_α; }
+                                                            goto cat_r_583_α;
+    cat_l_583_β:                                            goto alt_r_581_α;
+    cat_r_583_α:                                            goto alt_l_585_α;
+    cat_r_583_β:                                            goto alt_r_585_β;
+    alt_l_585_α:                                            goto cat_l_586_α;
+    alt_l_585_β:                                            goto cat_r_586_β;
+    cat_l_586_α:                                            goto cat_l_587_α;
+    cat_l_586_β:                                            goto cat_r_587_β;
+    cat_l_587_α:
+                  if (_cur_np + 1 > _slen_np)               goto alt_r_585_α;
+                  if (_subj_np[_cur_np] != ' ')             goto alt_r_585_α;
+                  cat_l_587_α_saved_cursor = _cur_np; _cur_np += 1;
+                                                            goto cat_r_587_α;
+    cat_l_587_β:  _cur_np = cat_l_587_α_saved_cursor;       goto alt_r_585_α;
+    cat_r_587_α:
+                  cat_r_587_α_saved_cursor = _cur_np;
                   while (_cur_np < _slen_np && !strchr(VARVAL_fn(NV_GET_fn("nl")), _subj_np[_cur_np])) _cur_np++;
-                  if (_cur_np >= _slen_np) { _cur_np = cat_r_578_α_saved_cursor; goto cat_l_578_β; }
-                                                            goto cat_r_577_α;
-    cat_r_578_β:  _cur_np = cat_r_578_α_saved_cursor;       goto cat_l_578_β;
-cat_r_577_α: {
+                  if (_cur_np >= _slen_np) { _cur_np = cat_r_587_α_saved_cursor; goto cat_l_587_β; }
+                                                            goto cat_r_586_α;
+    cat_r_587_β:  _cur_np = cat_r_587_α_saved_cursor;       goto cat_l_587_β;
+cat_r_586_α: {
     DESCR_t _deref_pat = NV_GET_fn("nl");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto cat_l_577_β;
-    deref_579_saved_cursor = _cur_np;
+    if (_deref_new_cur < 0) goto cat_l_586_β;
+    deref_588_saved_cursor = _cur_np;
     _cur_np = (int64_t)_deref_new_cur;
-    goto cat_r_573_α;
+    goto cat_r_582_α;
 }
-cat_r_577_β:
-    _cur_np = deref_579_saved_cursor;
-    goto cat_l_577_β;
-alt_r_576_α: {
+cat_r_586_β:
+    _cur_np = deref_588_saved_cursor;
+    goto cat_l_586_β;
+alt_r_585_α: {
     DESCR_t _deref_pat = NV_GET_fn("nl");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto cat_l_574_β;
-    deref_580_saved_cursor = _cur_np;
+    if (_deref_new_cur < 0) goto cat_l_583_β;
+    deref_589_saved_cursor = _cur_np;
     _cur_np = (int64_t)_deref_new_cur;
-    goto cat_r_573_α;
+    goto cat_r_582_α;
 }
-alt_r_576_β:
-    _cur_np = deref_580_saved_cursor;
-    goto cat_l_574_β;
-    cat_r_573_α:  cat_r_573_α_saved_stk = NV_GET_fn("@S"); cat_r_573_α_depth = -1;
-                                                            goto cat_r_566_α;
-    cat_r_573_β:
-                  NV_SET_fn("@S", cat_r_573_α_saved_stk);
+alt_r_585_β:
+    _cur_np = deref_589_saved_cursor;
+    goto cat_l_583_β;
+    cat_r_582_α:  cat_r_582_α_saved_stk = NV_GET_fn("@S"); cat_r_582_α_depth = -1;
+                                                            goto cat_r_575_α;
+    cat_r_582_β:
+                  NV_SET_fn("@S", cat_r_582_α_saved_stk);
                   if (!NHAS_FRAME_fn()) NPUSH_fn();
-                  if (++cat_r_573_α_depth >= 64)            goto cat_l_573_β;
-                  cat_r_573_α_cursors[cat_r_573_α_depth] = _cur_np;
-                                                            goto arbno_c_581_α;
-    cat_r_573_α_child_ok:
-                  cat_r_573_α_saved_stk = NV_GET_fn("@S");  goto cat_r_566_α;
-    cat_r_573_α_child_fail:
-                  _cur_np = cat_r_573_α_cursors[cat_r_573_α_depth]; cat_r_573_α_depth--;
-                                                            goto cat_l_573_β;
-    arbno_c_581_α:                                          goto cat_l_582_α;
-    arbno_c_581_β:                                          goto cat_r_582_β;
-    cat_l_582_α:
-                  cat_l_582_α_saved_cursor = _cur_np;
+                  if (++cat_r_582_α_depth >= 64)            goto cat_l_582_β;
+                  cat_r_582_α_cursors[cat_r_582_α_depth] = _cur_np;
+                                                            goto arbno_c_590_α;
+    cat_r_582_α_child_ok:
+                  cat_r_582_α_saved_stk = NV_GET_fn("@S");  goto cat_r_575_α;
+    cat_r_582_α_child_fail:
+                  _cur_np = cat_r_582_α_cursors[cat_r_582_α_depth]; cat_r_582_α_depth--;
+                                                            goto cat_l_582_β;
+    arbno_c_590_α:                                          goto cat_l_591_α;
+    arbno_c_590_β:                                          goto cat_r_591_β;
+    cat_l_591_α:
+                  cat_l_591_α_saved_cursor = _cur_np;
                   while (_cur_np < _slen_np && !strchr(VARVAL_fn(NV_GET_fn("nl")), _subj_np[_cur_np])) _cur_np++;
-                  if (_cur_np >= _slen_np) { _cur_np = cat_l_582_α_saved_cursor; goto cat_r_573_α_child_fail; }
-                                                            goto cat_r_582_α;
-    cat_l_582_β:  _cur_np = cat_l_582_α_saved_cursor;       goto cat_r_573_α_child_fail;
-cat_r_582_α: {
+                  if (_cur_np >= _slen_np) { _cur_np = cat_l_591_α_saved_cursor; goto cat_r_582_α_child_fail; }
+                                                            goto cat_r_591_α;
+    cat_l_591_β:  _cur_np = cat_l_591_α_saved_cursor;       goto cat_r_582_α_child_fail;
+cat_r_591_α: {
     DESCR_t _deref_pat = NV_GET_fn("nl");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto cat_l_582_β;
-    deref_583_saved_cursor = _cur_np;
+    if (_deref_new_cur < 0) goto cat_l_591_β;
+    deref_592_saved_cursor = _cur_np;
     _cur_np = (int64_t)_deref_new_cur;
-    goto cat_r_573_α_child_ok;
+    goto cat_r_582_α_child_ok;
 }
-cat_r_582_β:
-    _cur_np = deref_583_saved_cursor;
-    goto cat_l_582_β;
-alt_r_572_α: {
+cat_r_591_β:
+    _cur_np = deref_592_saved_cursor;
+    goto cat_l_591_β;
+alt_r_581_α: {
     DESCR_t _deref_pat = NV_GET_fn("epsilon");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
-    if (_deref_new_cur < 0) goto cat_l_567_β;
-    deref_584_saved_cursor = _cur_np;
+    if (_deref_new_cur < 0) goto cat_l_576_β;
+    deref_593_saved_cursor = _cur_np;
     _cur_np = (int64_t)_deref_new_cur;
-    goto cat_r_566_α;
+    goto cat_r_575_α;
 }
-alt_r_572_β:
-    _cur_np = deref_584_saved_cursor;
-    goto cat_l_567_β;
-    cat_r_566_α:  NPOP_fn();                                goto _Compiland_γ;
-    cat_r_566_β:                                            goto cat_l_566_β;
+alt_r_581_β:
+    _cur_np = deref_593_saved_cursor;
+    goto cat_l_576_β;
+    cat_r_575_α:  NPOP_fn();                                goto _Compiland_γ;
+    cat_r_575_β:                                            goto cat_l_575_β;
     _Compiland_γ:;
         *_cur_ptr_np = _cur_np;
         return STRVAL("");
     _Compiland_ω:;
         return FAILDESCR;
-#undef cat_r_569_α_depth
-#undef cat_r_569_α_cursors
-#undef cat_r_569_α_saved_stk
-#undef deref_571_saved_cur
-#undef cat_l_578_α_saved_cursor
-#undef cat_r_578_α_saved_cursor
-#undef deref_579_saved_cursor
-#undef deref_580_saved_cursor
-#undef cat_r_573_α_depth
-#undef cat_r_573_α_cursors
-#undef cat_r_573_α_saved_stk
-#undef cat_l_582_α_saved_cursor
-#undef deref_583_saved_cursor
-#undef deref_584_saved_cursor
-#undef deref_571_z
+#undef cat_r_578_α_depth
+#undef cat_r_578_α_cursors
+#undef cat_r_578_α_saved_stk
+#undef deref_580_saved_cur
+#undef cat_l_587_α_saved_cursor
+#undef cat_r_587_α_saved_cursor
+#undef deref_588_saved_cursor
+#undef deref_589_saved_cursor
+#undef cat_r_582_α_depth
+#undef cat_r_582_α_cursors
+#undef cat_r_582_α_saved_stk
+#undef cat_l_591_α_saved_cursor
+#undef deref_592_saved_cursor
+#undef deref_593_saved_cursor
+#undef deref_580_z
 
 }
 
 typedef struct pat_Space_t {
-    int64_t alt_l_585_α_delta;
-    int64_t alt_l_585_α_start;
-    int64_t deref_586_saved_cursor;
+    int64_t alt_l_594_α_delta;
+    int64_t alt_l_594_α_start;
+    int64_t deref_595_saved_cursor;
 } pat_Space_t;
 
 static DESCR_t pat_Space(const char *_subj_np, int64_t _slen_np,
@@ -10558,43 +10740,43 @@ static DESCR_t pat_Space(const char *_subj_np, int64_t _slen_np,
     if (_entry_np == 0) { *_zz_np = calloc(1, sizeof(pat_Space_t)); }
     pat_Space_t *z = *_zz_np;
     int64_t _cur_np = *_cur_ptr_np;
-#define alt_l_585_α_delta z->alt_l_585_α_delta
-#define alt_l_585_α_start z->alt_l_585_α_start
-#define deref_586_saved_cursor z->deref_586_saved_cursor
+#define alt_l_594_α_delta z->alt_l_594_α_delta
+#define alt_l_594_α_start z->alt_l_594_α_start
+#define deref_595_saved_cursor z->deref_595_saved_cursor
 
     if (_entry_np == 0) goto _Space_α;
     if (_entry_np == 1) goto _Space_β;
     goto _Space_ω;
-    _Space_α:                                               goto alt_l_585_α;
-    _Space_β:                                               goto alt_r_585_β;
-    alt_l_585_α:
-                  alt_l_585_α_start = _cur_np;
+    _Space_α:                                               goto alt_l_594_α;
+    _Space_β:                                               goto alt_r_594_β;
+    alt_l_594_α:
+                  alt_l_594_α_start = _cur_np;
                   while (_cur_np < _slen_np && strchr(VARVAL_fn(CONCAT_fn(STRVAL(" "), STRVAL(VARVAL_fn(NV_GET_fn("tab"))))), _subj_np[_cur_np])) _cur_np++;
-                  alt_l_585_α_delta = _cur_np - alt_l_585_α_start;
-                  if (alt_l_585_α_delta == 0)               goto alt_r_585_α;
+                  alt_l_594_α_delta = _cur_np - alt_l_594_α_start;
+                  if (alt_l_594_α_delta == 0)               goto alt_r_594_α;
                                                             goto _Space_γ;
-    alt_l_585_β:
-                  if (alt_l_585_α_delta <= 1) { _cur_np = alt_l_585_α_start; goto alt_r_585_α; }
-                  alt_l_585_α_delta--; _cur_np--;           goto _Space_γ;
-alt_r_585_α: {
+    alt_l_594_β:
+                  if (alt_l_594_α_delta <= 1) { _cur_np = alt_l_594_α_start; goto alt_r_594_α; }
+                  alt_l_594_α_delta--; _cur_np--;           goto _Space_γ;
+alt_r_594_α: {
     DESCR_t _deref_pat = NV_GET_fn("epsilon");
     int _deref_new_cur = match_pattern_at(_deref_pat, _subj_np, (int)_slen_np, (int)_cur_np);
     if (_deref_new_cur < 0) goto _Space_ω;
-    deref_586_saved_cursor = _cur_np;
+    deref_595_saved_cursor = _cur_np;
     _cur_np = (int64_t)_deref_new_cur;
     goto _Space_γ;
 }
-alt_r_585_β:
-    _cur_np = deref_586_saved_cursor;
+alt_r_594_β:
+    _cur_np = deref_595_saved_cursor;
     goto _Space_ω;
     _Space_γ:;
         *_cur_ptr_np = _cur_np;
         return STRVAL("");
     _Space_ω:;
         return FAILDESCR;
-#undef alt_l_585_α_delta
-#undef alt_l_585_α_start
-#undef deref_586_saved_cursor
+#undef alt_l_594_α_delta
+#undef alt_l_594_α_start
+#undef deref_595_saved_cursor
 
 }
 
@@ -10783,27 +10965,27 @@ int64_t _mstart636 = 0;
 int _ok636 = 0;
 DESCR_t _stk_save_636 = NV_GET_fn("@S");
     /* === local storage === */
-int64_t cat_r_587_α_delta;
-int64_t cat_r_587_α_start;
+int64_t cat_r_596_α_delta;
+int64_t cat_r_596_α_start;
 
     goto _byrd_636_α;
 
 /* ===== pattern: _byrd_636 ===== */
-    _byrd_636_α:                                            goto cat_l_587_α;
-    _byrd_636_β:                                            goto cat_r_587_β;
-    cat_l_587_α:
+    _byrd_636_α:                                            goto cat_l_596_α;
+    _byrd_636_β:                                            goto cat_r_596_β;
+    cat_l_596_α:
                   if (_cur636 != 0)                         goto _byrd_636_fail;
-                                                            goto cat_r_587_α;
-    cat_l_587_β:                                            goto _byrd_636_fail;
-    cat_r_587_α:
-                  cat_r_587_α_start = _cur636;
+                                                            goto cat_r_596_α;
+    cat_l_596_β:                                            goto _byrd_636_fail;
+    cat_r_596_α:
+                  cat_r_596_α_start = _cur636;
                   while (_cur636 < _slen636 && strchr(" ", _subj636[_cur636])) _cur636++;
-                  cat_r_587_α_delta = _cur636 - cat_r_587_α_start;
-                  if (cat_r_587_α_delta == 0)               goto cat_l_587_β;
+                  cat_r_596_α_delta = _cur636 - cat_r_596_α_start;
+                  if (cat_r_596_α_delta == 0)               goto cat_l_596_β;
                                                             goto _byrd_636_ok;
-    cat_r_587_β:
-                  if (cat_r_587_α_delta <= 1) { _cur636 = cat_r_587_α_start; goto cat_l_587_β; }
-                  cat_r_587_α_delta--; _cur636--;           goto _byrd_636_ok;
+    cat_r_596_β:
+                  if (cat_r_596_α_delta <= 1) { _cur636 = cat_r_596_α_start; goto cat_l_596_β; }
+                  cat_r_596_α_delta--; _cur636--;           goto _byrd_636_ok;
     _byrd_636_ok:
                   _ok636 = 1;
 {
@@ -10854,35 +11036,35 @@ int64_t _mstart640 = 0;
 int _ok640 = 0;
 DESCR_t _stk_save_640 = NV_GET_fn("@S");
     /* === local storage === */
-int64_t cat_l_589_α_saved_cursor;
-int64_t deref_590_saved_cur;
-pat_ppTokPat_t *deref_590_z;
+int64_t cat_l_598_α_saved_cursor;
+int64_t deref_599_saved_cur;
+pat_ppTokPat_t *deref_599_z;
 
     goto _byrd_640_α;
 
 /* ===== pattern: _byrd_640 ===== */
-    _byrd_640_α:                                            goto cat_l_588_α;
-    _byrd_640_β:                                            goto cat_r_588_β;
-    cat_l_588_α:                                            goto cat_l_589_α;
-    cat_l_588_β:                                            goto cat_r_589_β;
-    cat_l_589_α:  cat_l_589_α_saved_cursor = _cur640;       goto cat_r_589_α;
-    cat_l_589_β:
-                  if (kw_anchor || cat_l_589_α_saved_cursor >= _slen640)
+    _byrd_640_α:                                            goto cat_l_597_α;
+    _byrd_640_β:                                            goto cat_r_597_β;
+    cat_l_597_α:                                            goto cat_l_598_α;
+    cat_l_597_β:                                            goto cat_r_598_β;
+    cat_l_598_α:  cat_l_598_α_saved_cursor = _cur640;       goto cat_r_598_α;
+    cat_l_598_β:
+                  if (kw_anchor || cat_l_598_α_saved_cursor >= _slen640)
                                                             goto _byrd_640_fail;
-                  cat_l_589_α_saved_cursor++; _cur640 = cat_l_589_α_saved_cursor;
-                                                            goto cat_r_589_α;
-    cat_r_589_α:  _mstart640 = _cur640;                     goto cat_r_588_α;
-    cat_r_589_β:                                            goto cat_l_589_β;
-cat_r_588_α: {
-    deref_590_saved_cur = _cur640;
-    DESCR_t _r_590 = pat_ppTokPat(_subj640, _slen640, &_cur640, &deref_590_z, 0);
-    if (IS_FAIL_fn(_r_590)) { _cur640 = deref_590_saved_cur; goto cat_l_588_β; }
+                  cat_l_598_α_saved_cursor++; _cur640 = cat_l_598_α_saved_cursor;
+                                                            goto cat_r_598_α;
+    cat_r_598_α:  _mstart640 = _cur640;                     goto cat_r_597_α;
+    cat_r_598_β:                                            goto cat_l_598_β;
+cat_r_597_α: {
+    deref_599_saved_cur = _cur640;
+    DESCR_t _r_599 = pat_ppTokPat(_subj640, _slen640, &_cur640, &deref_599_z, 0);
+    if (IS_FAIL_fn(_r_599)) { _cur640 = deref_599_saved_cur; goto cat_l_597_β; }
     goto _byrd_640_ok;
 }
-cat_r_588_β: {
-    _cur640 = deref_590_saved_cur;
-    DESCR_t _r_590_b = pat_ppTokPat(_subj640, _slen640, &_cur640, &deref_590_z, 1);
-    if (IS_FAIL_fn(_r_590_b)) { _cur640 = deref_590_saved_cur; goto cat_l_588_β; }
+cat_r_597_β: {
+    _cur640 = deref_599_saved_cur;
+    DESCR_t _r_599_b = pat_ppTokPat(_subj640, _slen640, &_cur640, &deref_599_z, 1);
+    if (IS_FAIL_fn(_r_599_b)) { _cur640 = deref_599_saved_cur; goto cat_l_597_β; }
     goto _byrd_640_ok;
 }
     _byrd_640_ok:
@@ -11757,23 +11939,23 @@ int64_t _mstart765 = 0;
 int _ok765 = 0;
 DESCR_t _stk_save_765 = NV_GET_fn("@S");
     /* === local storage === */
-int64_t cat_r_591_α_saved_cursor;
+int64_t cat_r_600_α_saved_cursor;
 
     goto _byrd_765_α;
 
 /* ===== pattern: _byrd_765 ===== */
-    _byrd_765_α:                                            goto cat_l_591_α;
-    _byrd_765_β:                                            goto cat_r_591_β;
-    cat_l_591_α:
+    _byrd_765_α:                                            goto cat_l_600_α;
+    _byrd_765_β:                                            goto cat_r_600_β;
+    cat_l_600_α:
                   if (_cur765 != 0)                         goto _byrd_765_fail;
-                                                            goto cat_r_591_α;
-    cat_l_591_β:                                            goto _byrd_765_fail;
-    cat_r_591_α:
-                  if (_cur765 >= _slen765)                  goto cat_l_591_β;
-                  if (!strchr("*-", _subj765[_cur765]))     goto cat_l_591_β;
-                  cat_r_591_α_saved_cursor = _cur765; _cur765++;
+                                                            goto cat_r_600_α;
+    cat_l_600_β:                                            goto _byrd_765_fail;
+    cat_r_600_α:
+                  if (_cur765 >= _slen765)                  goto cat_l_600_β;
+                  if (!strchr("*-", _subj765[_cur765]))     goto cat_l_600_β;
+                  cat_r_600_α_saved_cursor = _cur765; _cur765++;
                                                             goto _byrd_765_ok;
-    cat_r_591_β:  _cur765 = cat_r_591_α_saved_cursor;       goto cat_l_591_β;
+    cat_r_600_β:  _cur765 = cat_r_600_α_saved_cursor;       goto cat_l_600_β;
     _byrd_765_ok:
                   _ok765 = 1;
                                                             goto _byrd_765_done;
@@ -11799,23 +11981,23 @@ int64_t _mstart767 = 0;
 int _ok767 = 0;
 DESCR_t _stk_save_767 = NV_GET_fn("@S");
     /* === local storage === */
-int64_t cat_r_592_α_saved_cursor;
+int64_t cat_r_601_α_saved_cursor;
 
     goto _byrd_767_α;
 
 /* ===== pattern: _byrd_767 ===== */
-    _byrd_767_α:                                            goto cat_l_592_α;
-    _byrd_767_β:                                            goto cat_r_592_β;
-    cat_l_592_α:
+    _byrd_767_α:                                            goto cat_l_601_α;
+    _byrd_767_β:                                            goto cat_r_601_β;
+    cat_l_601_α:
                   if (_cur767 != 0)                         goto _byrd_767_fail;
-                                                            goto cat_r_592_α;
-    cat_l_592_β:                                            goto _byrd_767_fail;
-    cat_r_592_α:
-                  if (_cur767 >= _slen767)                  goto cat_l_592_β;
-                  if (!strchr("+.", _subj767[_cur767]))     goto cat_l_592_β;
-                  cat_r_592_α_saved_cursor = _cur767; _cur767++;
+                                                            goto cat_r_601_α;
+    cat_l_601_β:                                            goto _byrd_767_fail;
+    cat_r_601_α:
+                  if (_cur767 >= _slen767)                  goto cat_l_601_β;
+                  if (!strchr("+.", _subj767[_cur767]))     goto cat_l_601_β;
+                  cat_r_601_α_saved_cursor = _cur767; _cur767++;
                                                             goto _byrd_767_ok;
-    cat_r_592_β:  _cur767 = cat_r_592_α_saved_cursor;       goto cat_l_592_β;
+    cat_r_601_β:  _cur767 = cat_r_601_α_saved_cursor;       goto cat_l_601_β;
     _byrd_767_ok:
                   _ok767 = 1;
                                                             goto _byrd_767_done;
@@ -11852,35 +12034,35 @@ int64_t _mstart771 = 0;
 int _ok771 = 0;
 DESCR_t _stk_save_771 = NV_GET_fn("@S");
     /* === local storage === */
-int64_t cat_l_594_α_saved_cursor;
-int64_t deref_595_saved_cur;
-pat_ppGPat_t *deref_595_z;
+int64_t cat_l_603_α_saved_cursor;
+int64_t deref_604_saved_cur;
+pat_ppGPat_t *deref_604_z;
 
     goto _byrd_771_α;
 
 /* ===== pattern: _byrd_771 ===== */
-    _byrd_771_α:                                            goto cat_l_593_α;
-    _byrd_771_β:                                            goto cat_r_593_β;
-    cat_l_593_α:                                            goto cat_l_594_α;
-    cat_l_593_β:                                            goto cat_r_594_β;
-    cat_l_594_α:  cat_l_594_α_saved_cursor = _cur771;       goto cat_r_594_α;
-    cat_l_594_β:
-                  if (kw_anchor || cat_l_594_α_saved_cursor >= _slen771)
+    _byrd_771_α:                                            goto cat_l_602_α;
+    _byrd_771_β:                                            goto cat_r_602_β;
+    cat_l_602_α:                                            goto cat_l_603_α;
+    cat_l_602_β:                                            goto cat_r_603_β;
+    cat_l_603_α:  cat_l_603_α_saved_cursor = _cur771;       goto cat_r_603_α;
+    cat_l_603_β:
+                  if (kw_anchor || cat_l_603_α_saved_cursor >= _slen771)
                                                             goto _byrd_771_fail;
-                  cat_l_594_α_saved_cursor++; _cur771 = cat_l_594_α_saved_cursor;
-                                                            goto cat_r_594_α;
-    cat_r_594_α:  _mstart771 = _cur771;                     goto cat_r_593_α;
-    cat_r_594_β:                                            goto cat_l_594_β;
-cat_r_593_α: {
-    deref_595_saved_cur = _cur771;
-    DESCR_t _r_595 = pat_ppGPat(_subj771, _slen771, &_cur771, &deref_595_z, 0);
-    if (IS_FAIL_fn(_r_595)) { _cur771 = deref_595_saved_cur; goto cat_l_593_β; }
+                  cat_l_603_α_saved_cursor++; _cur771 = cat_l_603_α_saved_cursor;
+                                                            goto cat_r_603_α;
+    cat_r_603_α:  _mstart771 = _cur771;                     goto cat_r_602_α;
+    cat_r_603_β:                                            goto cat_l_603_β;
+cat_r_602_α: {
+    deref_604_saved_cur = _cur771;
+    DESCR_t _r_604 = pat_ppGPat(_subj771, _slen771, &_cur771, &deref_604_z, 0);
+    if (IS_FAIL_fn(_r_604)) { _cur771 = deref_604_saved_cur; goto cat_l_602_β; }
     goto _byrd_771_ok;
 }
-cat_r_593_β: {
-    _cur771 = deref_595_saved_cur;
-    DESCR_t _r_595_b = pat_ppGPat(_subj771, _slen771, &_cur771, &deref_595_z, 1);
-    if (IS_FAIL_fn(_r_595_b)) { _cur771 = deref_595_saved_cur; goto cat_l_593_β; }
+cat_r_602_β: {
+    _cur771 = deref_604_saved_cur;
+    DESCR_t _r_604_b = pat_ppGPat(_subj771, _slen771, &_cur771, &deref_604_z, 1);
+    if (IS_FAIL_fn(_r_604_b)) { _cur771 = deref_604_saved_cur; goto cat_l_602_β; }
     goto _byrd_771_ok;
 }
     _byrd_771_ok:
@@ -11922,35 +12104,35 @@ int64_t _mstart775 = 0;
 int _ok775 = 0;
 DESCR_t _stk_save_775 = NV_GET_fn("@S");
     /* === local storage === */
-int64_t cat_l_597_α_saved_cursor;
-int64_t deref_598_saved_cur;
-pat_ppTrimPat_t *deref_598_z;
+int64_t cat_l_606_α_saved_cursor;
+int64_t deref_607_saved_cur;
+pat_ppTrimPat_t *deref_607_z;
 
     goto _byrd_775_α;
 
 /* ===== pattern: _byrd_775 ===== */
-    _byrd_775_α:                                            goto cat_l_596_α;
-    _byrd_775_β:                                            goto cat_r_596_β;
-    cat_l_596_α:                                            goto cat_l_597_α;
-    cat_l_596_β:                                            goto cat_r_597_β;
-    cat_l_597_α:  cat_l_597_α_saved_cursor = _cur775;       goto cat_r_597_α;
-    cat_l_597_β:
-                  if (kw_anchor || cat_l_597_α_saved_cursor >= _slen775)
+    _byrd_775_α:                                            goto cat_l_605_α;
+    _byrd_775_β:                                            goto cat_r_605_β;
+    cat_l_605_α:                                            goto cat_l_606_α;
+    cat_l_605_β:                                            goto cat_r_606_β;
+    cat_l_606_α:  cat_l_606_α_saved_cursor = _cur775;       goto cat_r_606_α;
+    cat_l_606_β:
+                  if (kw_anchor || cat_l_606_α_saved_cursor >= _slen775)
                                                             goto _byrd_775_fail;
-                  cat_l_597_α_saved_cursor++; _cur775 = cat_l_597_α_saved_cursor;
-                                                            goto cat_r_597_α;
-    cat_r_597_α:  _mstart775 = _cur775;                     goto cat_r_596_α;
-    cat_r_597_β:                                            goto cat_l_597_β;
-cat_r_596_α: {
-    deref_598_saved_cur = _cur775;
-    DESCR_t _r_598 = pat_ppTrimPat(_subj775, _slen775, &_cur775, &deref_598_z, 0);
-    if (IS_FAIL_fn(_r_598)) { _cur775 = deref_598_saved_cur; goto cat_l_596_β; }
+                  cat_l_606_α_saved_cursor++; _cur775 = cat_l_606_α_saved_cursor;
+                                                            goto cat_r_606_α;
+    cat_r_606_α:  _mstart775 = _cur775;                     goto cat_r_605_α;
+    cat_r_606_β:                                            goto cat_l_606_β;
+cat_r_605_α: {
+    deref_607_saved_cur = _cur775;
+    DESCR_t _r_607 = pat_ppTrimPat(_subj775, _slen775, &_cur775, &deref_607_z, 0);
+    if (IS_FAIL_fn(_r_607)) { _cur775 = deref_607_saved_cur; goto cat_l_605_β; }
     goto _byrd_775_ok;
 }
-cat_r_596_β: {
-    _cur775 = deref_598_saved_cur;
-    DESCR_t _r_598_b = pat_ppTrimPat(_subj775, _slen775, &_cur775, &deref_598_z, 1);
-    if (IS_FAIL_fn(_r_598_b)) { _cur775 = deref_598_saved_cur; goto cat_l_596_β; }
+cat_r_605_β: {
+    _cur775 = deref_607_saved_cur;
+    DESCR_t _r_607_b = pat_ppTrimPat(_subj775, _slen775, &_cur775, &deref_607_z, 1);
+    if (IS_FAIL_fn(_r_607_b)) { _cur775 = deref_607_saved_cur; goto cat_l_605_β; }
     goto _byrd_775_ok;
 }
     _byrd_775_ok:
@@ -14447,23 +14629,23 @@ int64_t _mstart1021 = 0;
 int _ok1021 = 0;
 DESCR_t _stk_save_1021 = NV_GET_fn("@S");
     /* === local storage === */
-int64_t cat_r_599_α_saved_cursor;
+int64_t cat_r_608_α_saved_cursor;
 
     goto _byrd_1021_α;
 
 /* ===== pattern: _byrd_1021 ===== */
-    _byrd_1021_α:                                           goto cat_l_599_α;
-    _byrd_1021_β:                                           goto cat_r_599_β;
-    cat_l_599_α:
+    _byrd_1021_α:                                           goto cat_l_608_α;
+    _byrd_1021_β:                                           goto cat_r_608_β;
+    cat_l_608_α:
                   if (_cur1021 != 0)                        goto _byrd_1021_fail;
-                                                            goto cat_r_599_α;
-    cat_l_599_β:                                            goto _byrd_1021_fail;
-    cat_r_599_α:
-                  if (_cur1021 >= _slen1021)                goto cat_l_599_β;
-                  if (!strchr("*-", _subj1021[_cur1021]))   goto cat_l_599_β;
-                  cat_r_599_α_saved_cursor = _cur1021; _cur1021++;
+                                                            goto cat_r_608_α;
+    cat_l_608_β:                                            goto _byrd_1021_fail;
+    cat_r_608_α:
+                  if (_cur1021 >= _slen1021)                goto cat_l_608_β;
+                  if (!strchr("*-", _subj1021[_cur1021]))   goto cat_l_608_β;
+                  cat_r_608_α_saved_cursor = _cur1021; _cur1021++;
                                                             goto _byrd_1021_ok;
-    cat_r_599_β:  _cur1021 = cat_r_599_α_saved_cursor;      goto cat_l_599_β;
+    cat_r_608_β:  _cur1021 = cat_r_608_α_saved_cursor;      goto cat_l_608_β;
     _byrd_1021_ok:
                   _ok1021 = 1;
                                                             goto _byrd_1021_done;
@@ -14532,23 +14714,23 @@ int64_t _mstart1029 = 0;
 int _ok1029 = 0;
 DESCR_t _stk_save_1029 = NV_GET_fn("@S");
     /* === local storage === */
-int64_t cat_r_600_α_saved_cursor;
+int64_t cat_r_609_α_saved_cursor;
 
     goto _byrd_1029_α;
 
 /* ===== pattern: _byrd_1029 ===== */
-    _byrd_1029_α:                                           goto cat_l_600_α;
-    _byrd_1029_β:                                           goto cat_r_600_β;
-    cat_l_600_α:
+    _byrd_1029_α:                                           goto cat_l_609_α;
+    _byrd_1029_β:                                           goto cat_r_609_β;
+    cat_l_609_α:
                   if (_cur1029 != 0)                        goto _byrd_1029_fail;
-                                                            goto cat_r_600_α;
-    cat_l_600_β:                                            goto _byrd_1029_fail;
-    cat_r_600_α:
-                  if (_cur1029 >= _slen1029)                goto cat_l_600_β;
-                  if (!strchr(".+", _subj1029[_cur1029]))   goto cat_l_600_β;
-                  cat_r_600_α_saved_cursor = _cur1029; _cur1029++;
+                                                            goto cat_r_609_α;
+    cat_l_609_β:                                            goto _byrd_1029_fail;
+    cat_r_609_α:
+                  if (_cur1029 >= _slen1029)                goto cat_l_609_β;
+                  if (!strchr(".+", _subj1029[_cur1029]))   goto cat_l_609_β;
+                  cat_r_609_α_saved_cursor = _cur1029; _cur1029++;
                                                             goto _byrd_1029_ok;
-    cat_r_600_β:  _cur1029 = cat_r_600_α_saved_cursor;      goto cat_l_600_β;
+    cat_r_609_β:  _cur1029 = cat_r_609_α_saved_cursor;      goto cat_l_609_β;
     _byrd_1029_ok:
                   _ok1029 = 1;
                                                             goto _byrd_1029_done;
@@ -14574,52 +14756,52 @@ int64_t _mstart1031 = 0;
 int _ok1031 = 0;
 DESCR_t _stk_save_1031 = NV_GET_fn("@S");
     /* === local storage === */
-int64_t deref_604_saved_cur;
-pat_Parse_t *deref_604_z;
-int64_t deref_605_saved_cur;
-pat_Space_t *deref_605_z;
+int64_t deref_613_saved_cur;
+pat_Parse_t *deref_613_z;
+int64_t deref_614_saved_cur;
+pat_Space_t *deref_614_z;
 
     goto _byrd_1031_α;
 
 /* ===== pattern: _byrd_1031 ===== */
-    _byrd_1031_α:                                           goto cat_l_601_α;
-    _byrd_1031_β:                                           goto cat_r_601_β;
-    cat_l_601_α:                                            goto cat_l_602_α;
-    cat_l_601_β:                                            goto cat_r_602_β;
-    cat_l_602_α:                                            goto cat_l_603_α;
-    cat_l_602_β:                                            goto cat_r_603_β;
-    cat_l_603_α:
+    _byrd_1031_α:                                           goto cat_l_610_α;
+    _byrd_1031_β:                                           goto cat_r_610_β;
+    cat_l_610_α:                                            goto cat_l_611_α;
+    cat_l_610_β:                                            goto cat_r_611_β;
+    cat_l_611_α:                                            goto cat_l_612_α;
+    cat_l_611_β:                                            goto cat_r_612_β;
+    cat_l_612_α:
                   if (_cur1031 != 0)                        goto _byrd_1031_fail;
-                                                            goto cat_r_603_α;
-    cat_l_603_β:                                            goto _byrd_1031_fail;
-cat_r_603_α: {
-    deref_604_saved_cur = _cur1031;
-    DESCR_t _r_604 = pat_Parse(_subj1031, _slen1031, &_cur1031, &deref_604_z, 0);
-    if (IS_FAIL_fn(_r_604)) { _cur1031 = deref_604_saved_cur; goto cat_l_603_β; }
-    goto cat_r_602_α;
+                                                            goto cat_r_612_α;
+    cat_l_612_β:                                            goto _byrd_1031_fail;
+cat_r_612_α: {
+    deref_613_saved_cur = _cur1031;
+    DESCR_t _r_613 = pat_Parse(_subj1031, _slen1031, &_cur1031, &deref_613_z, 0);
+    if (IS_FAIL_fn(_r_613)) { _cur1031 = deref_613_saved_cur; goto cat_l_612_β; }
+    goto cat_r_611_α;
 }
-cat_r_603_β: {
-    _cur1031 = deref_604_saved_cur;
-    DESCR_t _r_604_b = pat_Parse(_subj1031, _slen1031, &_cur1031, &deref_604_z, 1);
-    if (IS_FAIL_fn(_r_604_b)) { _cur1031 = deref_604_saved_cur; goto cat_l_603_β; }
-    goto cat_r_602_α;
+cat_r_612_β: {
+    _cur1031 = deref_613_saved_cur;
+    DESCR_t _r_613_b = pat_Parse(_subj1031, _slen1031, &_cur1031, &deref_613_z, 1);
+    if (IS_FAIL_fn(_r_613_b)) { _cur1031 = deref_613_saved_cur; goto cat_l_612_β; }
+    goto cat_r_611_α;
 }
-cat_r_602_α: {
-    deref_605_saved_cur = _cur1031;
-    DESCR_t _r_605 = pat_Space(_subj1031, _slen1031, &_cur1031, &deref_605_z, 0);
-    if (IS_FAIL_fn(_r_605)) { _cur1031 = deref_605_saved_cur; goto cat_l_602_β; }
-    goto cat_r_601_α;
+cat_r_611_α: {
+    deref_614_saved_cur = _cur1031;
+    DESCR_t _r_614 = pat_Space(_subj1031, _slen1031, &_cur1031, &deref_614_z, 0);
+    if (IS_FAIL_fn(_r_614)) { _cur1031 = deref_614_saved_cur; goto cat_l_611_β; }
+    goto cat_r_610_α;
 }
-cat_r_602_β: {
-    _cur1031 = deref_605_saved_cur;
-    DESCR_t _r_605_b = pat_Space(_subj1031, _slen1031, &_cur1031, &deref_605_z, 1);
-    if (IS_FAIL_fn(_r_605_b)) { _cur1031 = deref_605_saved_cur; goto cat_l_602_β; }
-    goto cat_r_601_α;
+cat_r_611_β: {
+    _cur1031 = deref_614_saved_cur;
+    DESCR_t _r_614_b = pat_Space(_subj1031, _slen1031, &_cur1031, &deref_614_z, 1);
+    if (IS_FAIL_fn(_r_614_b)) { _cur1031 = deref_614_saved_cur; goto cat_l_611_β; }
+    goto cat_r_610_α;
 }
-    cat_r_601_α:
-                  if (_cur1031 != _slen1031 - 0)            goto cat_l_601_β;
+    cat_r_610_α:
+                  if (_cur1031 != _slen1031 - 0)            goto cat_l_610_β;
                                                             goto _byrd_1031_ok;
-    cat_r_601_β:                                            goto cat_l_601_β;
+    cat_r_610_β:                                            goto cat_l_610_β;
     _byrd_1031_ok:
                   _ok1031 = 1;
                                                             goto _byrd_1031_done;
@@ -14667,52 +14849,52 @@ int64_t _mstart1037 = 0;
 int _ok1037 = 0;
 DESCR_t _stk_save_1037 = NV_GET_fn("@S");
     /* === local storage === */
-int64_t deref_609_saved_cur;
-pat_Parse_t *deref_609_z;
-int64_t deref_610_saved_cur;
-pat_Space_t *deref_610_z;
+int64_t deref_618_saved_cur;
+pat_Parse_t *deref_618_z;
+int64_t deref_619_saved_cur;
+pat_Space_t *deref_619_z;
 
     goto _byrd_1037_α;
 
 /* ===== pattern: _byrd_1037 ===== */
-    _byrd_1037_α:                                           goto cat_l_606_α;
-    _byrd_1037_β:                                           goto cat_r_606_β;
-    cat_l_606_α:                                            goto cat_l_607_α;
-    cat_l_606_β:                                            goto cat_r_607_β;
-    cat_l_607_α:                                            goto cat_l_608_α;
-    cat_l_607_β:                                            goto cat_r_608_β;
-    cat_l_608_α:
+    _byrd_1037_α:                                           goto cat_l_615_α;
+    _byrd_1037_β:                                           goto cat_r_615_β;
+    cat_l_615_α:                                            goto cat_l_616_α;
+    cat_l_615_β:                                            goto cat_r_616_β;
+    cat_l_616_α:                                            goto cat_l_617_α;
+    cat_l_616_β:                                            goto cat_r_617_β;
+    cat_l_617_α:
                   if (_cur1037 != 0)                        goto _byrd_1037_fail;
-                                                            goto cat_r_608_α;
-    cat_l_608_β:                                            goto _byrd_1037_fail;
-cat_r_608_α: {
-    deref_609_saved_cur = _cur1037;
-    DESCR_t _r_609 = pat_Parse(_subj1037, _slen1037, &_cur1037, &deref_609_z, 0);
-    if (IS_FAIL_fn(_r_609)) { _cur1037 = deref_609_saved_cur; goto cat_l_608_β; }
-    goto cat_r_607_α;
+                                                            goto cat_r_617_α;
+    cat_l_617_β:                                            goto _byrd_1037_fail;
+cat_r_617_α: {
+    deref_618_saved_cur = _cur1037;
+    DESCR_t _r_618 = pat_Parse(_subj1037, _slen1037, &_cur1037, &deref_618_z, 0);
+    if (IS_FAIL_fn(_r_618)) { _cur1037 = deref_618_saved_cur; goto cat_l_617_β; }
+    goto cat_r_616_α;
 }
-cat_r_608_β: {
-    _cur1037 = deref_609_saved_cur;
-    DESCR_t _r_609_b = pat_Parse(_subj1037, _slen1037, &_cur1037, &deref_609_z, 1);
-    if (IS_FAIL_fn(_r_609_b)) { _cur1037 = deref_609_saved_cur; goto cat_l_608_β; }
-    goto cat_r_607_α;
+cat_r_617_β: {
+    _cur1037 = deref_618_saved_cur;
+    DESCR_t _r_618_b = pat_Parse(_subj1037, _slen1037, &_cur1037, &deref_618_z, 1);
+    if (IS_FAIL_fn(_r_618_b)) { _cur1037 = deref_618_saved_cur; goto cat_l_617_β; }
+    goto cat_r_616_α;
 }
-cat_r_607_α: {
-    deref_610_saved_cur = _cur1037;
-    DESCR_t _r_610 = pat_Space(_subj1037, _slen1037, &_cur1037, &deref_610_z, 0);
-    if (IS_FAIL_fn(_r_610)) { _cur1037 = deref_610_saved_cur; goto cat_l_607_β; }
-    goto cat_r_606_α;
+cat_r_616_α: {
+    deref_619_saved_cur = _cur1037;
+    DESCR_t _r_619 = pat_Space(_subj1037, _slen1037, &_cur1037, &deref_619_z, 0);
+    if (IS_FAIL_fn(_r_619)) { _cur1037 = deref_619_saved_cur; goto cat_l_616_β; }
+    goto cat_r_615_α;
 }
-cat_r_607_β: {
-    _cur1037 = deref_610_saved_cur;
-    DESCR_t _r_610_b = pat_Space(_subj1037, _slen1037, &_cur1037, &deref_610_z, 1);
-    if (IS_FAIL_fn(_r_610_b)) { _cur1037 = deref_610_saved_cur; goto cat_l_607_β; }
-    goto cat_r_606_α;
+cat_r_616_β: {
+    _cur1037 = deref_619_saved_cur;
+    DESCR_t _r_619_b = pat_Space(_subj1037, _slen1037, &_cur1037, &deref_619_z, 1);
+    if (IS_FAIL_fn(_r_619_b)) { _cur1037 = deref_619_saved_cur; goto cat_l_616_β; }
+    goto cat_r_615_α;
 }
-    cat_r_606_α:
-                  if (_cur1037 != _slen1037 - 0)            goto cat_l_606_β;
+    cat_r_615_α:
+                  if (_cur1037 != _slen1037 - 0)            goto cat_l_615_β;
                                                             goto _byrd_1037_ok;
-    cat_r_606_β:                                            goto cat_l_606_β;
+    cat_r_615_β:                                            goto cat_l_615_β;
     _byrd_1037_ok:
                   _ok1037 = 1;
                                                             goto _byrd_1037_done;
