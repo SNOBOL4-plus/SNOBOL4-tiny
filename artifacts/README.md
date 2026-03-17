@@ -258,3 +258,26 @@ session115 | 2026-03-16 | 6d5919daa03d3c56646b5f0a165f86ee | 15859 lines | compi
 - Also handles `E_NAM` (`.` conditional assignment) with same box — assignment timing distinction deferred to crosscheck phase
 - `cap_buf` (resb 256) registered via `asm_extra_bss[]`; `cap_len` + `dol_N_entry` via `bss_add()`
 - 106/106 crosscheck invariant confirmed PASS before and after
+
+## session148b — 2026-03-17 — ASM backend Sprint A8 (M-ASM-NAMED)
+
+### artifacts/asm/ref_astar_bstar.s  (Sprint A8 — M-ASM-NAMED ✅)
+- **status:** PASS — `POS(0) ASTAR BSTAR RPOS(0)` on `"aaabb"` → `aaabb\n` exit 0
+- **milestone:** M-ASM-NAMED fires session148
+- **assemble:** `nasm -f elf64 ref_astar_bstar.s -o ref_astar_bstar.o && ld ref_astar_bstar.o -o ref_astar_bstar && ./ref_astar_bstar`
+- **design:** Two named patterns ASTAR=ARBNO(LIT("a")) and BSTAR=ARBNO(LIT("b")). Calling convention: caller stores γ/ω addresses into `pat_NAME_ret_gamma/omega` (.bss qwords) then `jmp pat_NAME_alpha`. Named pattern body ends with `jmp [pat_NAME_ret_gamma]` / `jmp [pat_NAME_ret_omega]`. Pure indirect-jmp — no call stack (Proebsting §4.5 gate mechanism).
+
+### artifacts/asm/anbn.s  (Sprint A8 — M-ASM-NAMED ✅)
+- **status:** PASS — `A_BLOCK A_BLOCK B_BLOCK B_BLOCK RPOS(0)` on `"aabb"` → `aabb\n` exit 0
+- **assemble:** `nasm -f elf64 anbn.s -o anbn.o && ld anbn.o -o anbn && ./anbn`
+- **design:** Four sequential named-pattern call sites (2×A_BLOCK + 2×B_BLOCK). Proves multiple references to same named pattern in sequence, and full backtrack chain through all call sites.
+
+### emit_byrd_asm.c — named pattern support (session148)
+- `AsmNamedPat` registry (64 slots); `asm_safe_name()` sanitiser
+- `asm_named_register()` / `asm_named_lookup()` 
+- `emit_asm_named_ref()` — call site: loads γ/ω into ret_ slots, `jmp pat_NAME_alpha/beta`; γ/ω trampolines forward to caller's continuation labels
+- `emit_asm_named_def()` — named pattern body: `pat_NAME_alpha:` entry, recursive `emit_asm_node`, inner γ/ω → `jmp [pat_NAME_ret_gamma/omega]`
+- `asm_scan_named_patterns()` — pre-pass over program to register all `VAR = <expr>` assignments
+- `E_VART` wired in `emit_asm_node` → `emit_asm_named_ref()`
+- End-to-end: `.sno` → `sno2c -asm` → `.s` → `nasm` → `ld` → run: PASS/FAIL correct
+- 106/106 crosscheck invariant confirmed

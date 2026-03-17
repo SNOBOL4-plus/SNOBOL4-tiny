@@ -240,6 +240,27 @@ static void emit_asm_rpos(long n,
 }
 
 /* -----------------------------------------------------------------------
+ * Forward declarations for named pattern machinery
+ * (full definitions are after emit_asm_node, which uses them)
+ * ----------------------------------------------------------------------- */
+
+typedef struct AsmNamedPat AsmNamedPat;
+struct AsmNamedPat {
+    char varname[128];
+    char safe[128];
+    char alpha_lbl[128];
+    char beta_lbl[128];
+    char ret_gamma[128];
+    char ret_omega[128];
+    EXPR_t *pat;
+};
+
+static const AsmNamedPat *asm_named_lookup(const char *varname);
+static void emit_asm_named_ref(const AsmNamedPat *np,
+                                const char *alpha, const char *beta,
+                                const char *gamma, const char *omega);
+
+/* -----------------------------------------------------------------------
  * Forward declaration for recursive emit_asm_node
  * ----------------------------------------------------------------------- */
 
@@ -572,6 +593,23 @@ static void emit_asm_node(EXPR_t *pat,
                      cursor, subj, subj_len_sym, depth);
         break;
 
+    case E_VART: {
+        /* Variable reference in pattern context — named pattern call site.
+         * Look up in the registry; if found emit indirect-jmp call convention.
+         * If not found, emit a comment + omega (unresolved reference). */
+        const char *varname = pat->sval ? pat->sval : "";
+        const AsmNamedPat *np = asm_named_lookup(varname);
+        if (np) {
+            emit_asm_named_ref(np, alpha, beta, gamma, omega);
+        } else {
+            A("\n; UNRESOLVED named pattern ref: %s → ω\n", varname);
+            asmL(alpha);
+            asmL(beta);
+            asmJ(omega);
+        }
+        break;
+    }
+
     case E_DOL: {
         /* expr $ var — immediate assignment.
          * left = sub-pattern, right = capture variable (E_VART). */
@@ -641,6 +679,154 @@ static void extra_bss_emit(void) {
 }
 
 /* -----------------------------------------------------------------------
+ * Named pattern registry
+ *
+ * Maps SNOBOL4 variable names (e.g. "ASTAR") to their flat ASM labels.
+ * Each named pattern gets two entry labels:
+ *   pat_NAME_alpha  — initial match entry
+ *   pat_NAME_beta   — backtrack entry
+ * and two .bss continuation slots:
+ *   pat_NAME_ret_gamma  — caller fills with γ address before jmp
+ *   pat_NAME_ret_omega  — caller fills with ω address before jmp
+ * (AsmNamedPat struct defined above as forward decl)
+ * ----------------------------------------------------------------------- */
+
+#define ASM_NAMED_MAX 64
+#define ASM_NAMED_NAMELEN 128
+
+static AsmNamedPat asm_named[ASM_NAMED_MAX];
+static int         asm_named_count = 0;
+
+static void asm_named_reset(void) { asm_named_count = 0; }
+
+/* Make a label-safe version of a SNOBOL4 variable name */
+static void asm_safe_name(const char *src, char *dst, int dstlen) {
+    int i = 0;
+    for (const char *p = src; *p && i < dstlen - 1; p++)
+        dst[i++] = (isalnum((unsigned char)*p) || *p == '_') ? *p : '_';
+    dst[i] = '\0';
+    if (!i) { dst[0] = 'v'; dst[1] = '\0'; }
+}
+
+/* Register a named pattern — called during program scan */
+static AsmNamedPat *asm_named_register(const char *varname, EXPR_t *pat) {
+    /* dedup */
+    for (int i = 0; i < asm_named_count; i++)
+        if (strcmp(asm_named[i].varname, varname) == 0) {
+            if (pat) asm_named[i].pat = pat; /* update expr if provided */
+            return &asm_named[i];
+        }
+    if (asm_named_count >= ASM_NAMED_MAX) return NULL;
+    AsmNamedPat *e = &asm_named[asm_named_count++];
+    snprintf(e->varname, ASM_NAMED_NAMELEN, "%s", varname);
+    asm_safe_name(varname, e->safe, ASM_NAMED_NAMELEN);
+    snprintf(e->alpha_lbl, ASM_NAMED_NAMELEN, "pat_%s_alpha", e->safe);
+    snprintf(e->beta_lbl,  ASM_NAMED_NAMELEN, "pat_%s_beta",  e->safe);
+    snprintf(e->ret_gamma, ASM_NAMED_NAMELEN, "pat_%s_ret_gamma", e->safe);
+    snprintf(e->ret_omega, ASM_NAMED_NAMELEN, "pat_%s_ret_omega", e->safe);
+    e->pat = pat;
+    return e;
+}
+
+static const AsmNamedPat *asm_named_lookup(const char *varname) {
+    for (int i = 0; i < asm_named_count; i++)
+        if (strcasecmp(asm_named[i].varname, varname) == 0)
+            return &asm_named[i];
+    return NULL;
+}
+
+/* -----------------------------------------------------------------------
+ * emit_asm_named_ref — call site for a named pattern reference (E_VART)
+ *
+ * Emits:
+ *   alpha:  store γ → pat_NAME_ret_gamma; store ω → pat_NAME_ret_omega
+ *           jmp pat_NAME_alpha
+ *   beta:   store γ → pat_NAME_ret_gamma; store ω → pat_NAME_ret_omega
+ *           jmp pat_NAME_beta
+ * ----------------------------------------------------------------------- */
+
+static void emit_asm_named_ref(const AsmNamedPat *np,
+                                const char *alpha, const char *beta,
+                                const char *gamma, const char *omega) {
+    int uid = asm_uid();
+    char glbl[LBUF], olbl[LBUF];
+    snprintf(glbl, LBUF, "nref%d_gamma", uid);
+    snprintf(olbl, LBUF, "nref%d_omega", uid);
+
+    A("\n; REF(%s) α=%s\n", np->varname, alpha);
+
+    /* α: load continuations, jump to named pattern α */
+    asmL(alpha);
+    A("    lea     rax, [rel %s]\n", glbl);
+    A("    mov     [%s], rax\n", np->ret_gamma);
+    A("    lea     rax, [rel %s]\n", olbl);
+    A("    mov     [%s], rax\n", np->ret_omega);
+    A("    jmp     %s\n", np->alpha_lbl);
+
+    /* β: reload continuations (caller may have changed them), jump to β */
+    A("\n; REF(%s) β=%s\n", np->varname, beta);
+    asmL(beta);
+    A("    lea     rax, [rel %s]\n", glbl);
+    A("    mov     [%s], rax\n", np->ret_gamma);
+    A("    lea     rax, [rel %s]\n", olbl);
+    A("    mov     [%s], rax\n", np->ret_omega);
+    A("    jmp     %s\n", np->beta_lbl);
+
+    /* γ and ω trampolines — named pattern jumps here, we forward */
+    A("\n%s:\n", glbl);
+    asmJ(gamma);
+    A("%s:\n", olbl);
+    asmJ(omega);
+}
+
+/* -----------------------------------------------------------------------
+ * emit_asm_named_def — emit the body of a named pattern
+ *
+ * Emits:
+ *   pat_NAME_alpha:  <recursive Byrd box for the pattern expression>
+ *                    (inner γ → jmp [pat_NAME_ret_gamma])
+ *                    (inner ω → jmp [pat_NAME_ret_omega])
+ *   pat_NAME_beta:   <same, backtrack entry>
+ * ----------------------------------------------------------------------- */
+
+static void emit_asm_named_def(const AsmNamedPat *np,
+                                const char *cursor,
+                                const char *subj,
+                                const char *subj_len_sym) {
+    if (!np->pat) {
+        /* No pattern expression — emit stubs that always fail */
+        A("\n; Named pattern %s — no expression, always fails\n", np->varname);
+        asmL(np->alpha_lbl);
+        asmL(np->beta_lbl);
+        A("    jmp     [%s]\n", np->ret_omega);
+        return;
+    }
+
+    /* The named pattern's inner γ and ω connect back via the ret_ slots */
+    char inner_gamma[LBUF], inner_omega[LBUF];
+    snprintf(inner_gamma, LBUF, "patdef_%s_gamma", np->safe);
+    snprintf(inner_omega, LBUF, "patdef_%s_omega", np->safe);
+
+    A("\n; ============ Named pattern: %s ============\n", np->varname);
+
+    /* α entry — initial match */
+    A("; %s (α entry)\n", np->alpha_lbl);
+    emit_asm_node(np->pat,
+                  np->alpha_lbl, np->beta_lbl,
+                  inner_gamma, inner_omega,
+                  cursor, subj, subj_len_sym,
+                  1);
+
+    /* γ trampoline: indirect jump to caller's continuation */
+    A("\n%s:\n", inner_gamma);
+    A("    jmp     [%s]\n", np->ret_gamma);
+
+    /* ω trampoline */
+    A("%s:\n", inner_omega);
+    A("    jmp     [%s]\n", np->ret_omega);
+}
+
+/* -----------------------------------------------------------------------
  * asm_emit_null_program — Sprint A0 fallback
  * ----------------------------------------------------------------------- */
 
@@ -655,14 +841,33 @@ static void asm_emit_null_program(void) {
 }
 
 /* -----------------------------------------------------------------------
+ * asm_scan_named_patterns — walk the program and register all
+ * pattern assignments (VAR = <pattern-expr>) before emitting.
+ * ----------------------------------------------------------------------- */
+
+static void asm_scan_named_patterns(Program *prog) {
+    asm_named_reset();
+    if (!prog) return;
+    for (STMT_t *s = prog->head; s; s = s->next) {
+        /* A pattern assignment: subject is a variable, no pattern field,
+         * has_eq is set, replacement holds the pattern expression.
+         * E.g.   ASTAR = ARBNO(LIT("a"))
+         * In sno2c IR: subject=E_VART("ASTAR"), pattern=NULL, replacement=<expr> */
+        if (s->subject && s->subject->kind == E_VART &&
+            s->has_eq && s->replacement && !s->pattern) {
+            asm_named_register(s->subject->sval, s->replacement);
+        }
+    }
+}
+
+/* -----------------------------------------------------------------------
  * asm_emit_pattern — emit a single statement's pattern as a standalone
  * match program (for crosscheck testing).
  *
  * Emits:
  *   section .data  — subject, literals
- *   section .bss   — cursor + saved slots
- *   section .text  — _start: init cursor, jmp root_alpha, match_success, match_fail
- *                    + recursive Byrd box code for the pattern
+ *   section .bss   — cursor + saved slots + named-pattern ret slots
+ *   section .text  — _start + root pattern + named pattern bodies
  * ----------------------------------------------------------------------- */
 
 static void asm_emit_pattern(STMT_t *stmt) {
@@ -676,20 +881,26 @@ static void asm_emit_pattern(STMT_t *stmt) {
     lit_reset();
     asm_extra_bss_count = 0;
 
-    /* Collect data in a temp buffer, emit sections in correct order */
-    char *code_buf = NULL; size_t code_size = 0;
-    FILE *code_f = open_memstream(&code_buf, &code_size);
-    if (!code_f) { asm_emit_null_program(); return; }
-
-    FILE *real_out = asm_out;
-    asm_out = code_f;
-
     /* Fixed names */
     const char *cursor_sym   = "cursor";
     const char *subj_sym     = "subject_data";
     const char *subj_len_sym = "subject_len_val";
 
     bss_add(cursor_sym);
+
+    /* Register .bss slots for all named patterns' ret_ pointers */
+    for (int i = 0; i < asm_named_count; i++) {
+        bss_add(asm_named[i].ret_gamma);
+        bss_add(asm_named[i].ret_omega);
+    }
+
+    /* Collect root pattern code + named pattern bodies into a temp buffer */
+    char *code_buf = NULL; size_t code_size = 0;
+    FILE *code_f = open_memstream(&code_buf, &code_size);
+    if (!code_f) { asm_emit_null_program(); return; }
+
+    FILE *real_out = asm_out;
+    asm_out = code_f;
 
     /* Determine subject from stmt->subject (E_QLIT) */
     const char *subj_str = "";
@@ -699,12 +910,16 @@ static void asm_emit_pattern(STMT_t *stmt) {
         subj_len = (int)strlen(subj_str);
     }
 
-    /* Emit the pattern tree */
+    /* Emit the root pattern tree */
     emit_asm_node(stmt->pattern,
                   "root_alpha", "root_beta",
                   "match_success", "match_fail",
                   cursor_sym, subj_sym, subj_len_sym,
                   0);
+
+    /* Emit named pattern bodies */
+    for (int i = 0; i < asm_named_count; i++)
+        emit_asm_named_def(&asm_named[i], cursor_sym, subj_sym, subj_len_sym);
 
     fclose(code_f);
 
@@ -737,7 +952,7 @@ static void asm_emit_pattern(STMT_t *stmt) {
 
     /* .bss */
     A("\nsection .bss\n\n");
-    A("%-24s resq 1\n", subj_len_sym);  /* runtime-filled subj_len */
+    A("%-24s resq 1\n", subj_len_sym);
     for (int i = 0; i < bss_count; i++)
         A("%-24s resq 1\n", bss_slots[i]);
     extra_bss_emit();
@@ -750,7 +965,7 @@ static void asm_emit_pattern(STMT_t *stmt) {
     A("    mov     qword [%s], 0\n", cursor_sym);
     A("    jmp     root_alpha\n");
 
-    /* Paste collected pattern code */
+    /* Paste collected pattern + named pattern code */
     A("%.*s", (int)code_size, code_buf);
     free(code_buf);
 
@@ -772,7 +987,10 @@ static void asm_emit_pattern(STMT_t *stmt) {
 void asm_emit(Program *prog, FILE *f) {
     asm_out = f;
 
-    /* Find first statement with a pattern */
+    /* Pass 1: scan for named pattern assignments */
+    asm_scan_named_patterns(prog);
+
+    /* Pass 2: find first statement with a pattern field */
     STMT_t *s = prog ? prog->head : NULL;
     while (s && !s->pattern) s = s->next;
 
