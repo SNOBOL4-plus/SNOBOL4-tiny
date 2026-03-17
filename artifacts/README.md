@@ -281,3 +281,23 @@ session115 | 2026-03-16 | 6d5919daa03d3c56646b5f0a165f86ee | 15859 lines | compi
 - `E_VART` wired in `emit_asm_node` → `emit_asm_named_ref()`
 - End-to-end: `.sno` → `sno2c -asm` → `.s` → `nasm` → `ld` → run: PASS/FAIL correct
 - 106/106 crosscheck invariant confirmed
+
+## session151 — 2026-03-17 — ASM backend Sprint A9 (M-ASM-CROSSCHECK ✅)
+
+### artifacts/asm/multi_capture_abc.s  (Sprint A9 — M-ASM-CROSSCHECK ✅)
+- **status:** PASS — `LEN(2) . A LEN(2) . B LEN(2) . C` on `"abcdef"` → `ab\ncd\nef\n` exit 0
+- **milestone:** M-ASM-CROSSCHECK fires session151
+- **assemble:** `nasm -f elf64 multi_capture_abc.s -o multi_capture_abc.o && gcc -no-pie -o multi_capture_abc multi_capture_abc.o snobol4_asm_harness.o && ./multi_capture_abc abcdef`
+- **design:** Per-variable capture buffers (`cap_A_buf resb 256`, `cap_A_len resq 1` etc.) in `.bss`. `cap_order[]` table in `.data` — null-terminated `{name*, buf*, len*}` triples. Harness walks `cap_order` at `match_success`, prints one capture per line. `/dev/null` dry-run collection pass pre-registers all symbols before sections are emitted; uid counter saved/restored so real pass generates identical labels.
+
+### artifacts/asm/star_deref_capture.s  (Sprint A9 — M-ASM-CROSSCHECK ✅)
+- **status:** PASS — `*PAT . V` where `PAT = 'hello'` on `"say hello world"` → `hello\n` exit 0
+- **assemble:** `nasm -f elf64 star_deref_capture.s -o star_deref_capture.o && gcc -no-pie -o star_deref_capture star_deref_capture.o snobol4_asm_harness.o && ./star_deref_capture "say hello world"`
+- **design:** `E_INDR` case in `emit_asm_node` resolves `*VAR` via named-pattern registry, calls `emit_asm_named_ref()`. `build_bare_sno` keeps plain-string assignments when var referenced as `*VAR`. `extract_subject` finds subject var from match line, then looks up its assignment.
+
+### emit_byrd_asm.c — session151 changes
+- `CaptureVar` registry: per-variable `cap_VAR_buf`/`cap_VAR_len` in `.bss`; `cap_order[]` table in `.data`
+- `/dev/null` dry-run collection pass: replaces `open_memstream`; uid counter saved before dry run, restored before real pass
+- `E_INDR` case added — `*VAR` indirect pattern ref resolved via named-pattern registry
+- `.asm.ref` convention: `TEST.asm.ref` preferred over `TEST.ref` for harness-specific expected output
+- 26/26 ASM crosscheck PASS · 106/106 main invariant holds
