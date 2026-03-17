@@ -5,7 +5,7 @@
 ## §0 — PROJECT VISION (Session 43, 2026-03-12)
 
 > **SNOBOL4 everywhere. SNOBOL4 for all. SNOBOL4 for now. SNOBOL4 forever.**
-> `SNOBOL4everywhere` · `SNOBOL4all` · `snobol4now` · `snobol4ever`
+> `snobol4x` · `snobol4now` · `snobol4ever`
 
 The snobol4ever org is a **two-dimensional compiler matrix**:
 
