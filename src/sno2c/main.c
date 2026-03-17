@@ -9,6 +9,7 @@
 
 extern int trampoline_mode;  /* defined in emit.c */
 void asm_emit(Program *prog, FILE *f); /* defined in emit_byrd_asm.c */
+extern int asm_body_mode;    /* defined in emit_byrd_asm.c */
 
 static int asm_mode = 0;    /* -asm flag: emit x64 NASM instead of C */
 
@@ -25,6 +26,9 @@ int main(int argc, char *argv[]) {
             trampoline_mode = 1;
         } else if (!strcmp(argv[i],"-asm")) {
             asm_mode = 1;
+        } else if (!strcmp(argv[i],"-asm-body")) {
+            asm_mode = 1;
+            asm_body_mode = 1;
         } else if (argv[i][0]!='-') {
             infile = argv[i];
         } else {
