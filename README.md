@@ -1,4 +1,5 @@
 # SNOBOL4-tiny
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
 A native SNOBOL4 compiler targeting x86-64 ASM, JVM bytecode, and MSIL.
 Stackless. Goal-directed like Icon. Faster than SPITBOL.
