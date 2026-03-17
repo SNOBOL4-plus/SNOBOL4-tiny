@@ -1,0 +1,181 @@
+/*
+ * snobol4_stmt_rt.c — Statement-level runtime shim for the x64 ASM backend.
+ *
+ * The SNOBOL4 runtime (snobol4.c) exposes SNO_INIT_fn(), NV_SET_fn(), etc.
+ * as real linkable symbols.  Some operations in runtime_shim.h are static
+ * inlines or macros and cannot be extern'd from NASM.  This file wraps them
+ * as proper exported functions so the generated .s can call them.
+ *
+ * Exported (all use C calling convention — SysV AMD64):
+ *
+ *   void   stmt_init(void)
+ *       Call once at program start.  Calls SNO_INIT_fn + NV_SYNC_fn.
+ *
+ *   DESCR_t stmt_strval(const char *s)          → rax:rdx
+ *       GC-duplicate s and return a DT_S DESCR_t.
+ *
+ *   void   stmt_output(DESCR_t val)              ← rdi:rsi (first two int regs)
+ *       Set SNOBOL4 OUTPUT variable (triggers write to stdout).
+ *
+ *   DESCR_t stmt_get(const char *name)           → rax:rdx
+ *       Get named SNOBOL4 variable value.
+ *
+ *   void   stmt_set(const char *name, DESCR_t v) ← rdi / rsi:rdx
+ *       Set named SNOBOL4 variable.
+ *
+ *   int    stmt_is_fail(DESCR_t v)               → eax (0=ok, 1=fail)
+ *       Returns 1 if descriptor is FAIL, 0 otherwise.
+ *
+ *   DESCR_t stmt_input(void)                     → rax:rdx
+ *       Read one line from INPUT (stdin).  Returns FAILDESCR on EOF.
+ *
+ *   DESCR_t stmt_concat(DESCR_t a, DESCR_t b)   → rax:rdx
+ *       String concatenation.
+ *
+ *   DESCR_t stmt_intval(int64_t i)               → rax:rdx
+ *       Return integer DESCR_t.
+ *
+ * ABI note: DESCR_t is 16 bytes → SysV returns in rax (bytes 0-7) + rdx (bytes 8-15).
+ *   bytes 0-3: DTYPE_t v  (int)
+ *   bytes 4-7: padding
+ *   bytes 8-15: union (ptr / int64 / double)
+ * When passed as argument: first DESCR_t in rdi (low) + rsi (high),
+ *                          second DESCR_t in rdx (low) + rcx (high).
+ * (Each DESCR_t occupies two consecutive integer registers.)
+ */
+
+#include <string.h>
+#include <gc.h>
+#include "snobol4.h"
+#include "runtime_shim.h"
+
+/* ---- init ---- */
+
+void stmt_init(void) {
+    SNO_INIT_fn();
+    extern void inc_init(void);
+    inc_init();
+    NV_SYNC_fn();
+}
+
+/* ---- string value ---- */
+
+DESCR_t stmt_strval(const char *s) {
+    return _str_impl(s);
+}
+
+/* ---- integer value ---- */
+
+DESCR_t stmt_intval(int64_t i) {
+    return INTVAL(i);
+}
+
+/* ---- fail test ---- */
+
+int stmt_is_fail(DESCR_t v) {
+    return IS_FAIL_fn(v);
+}
+
+/* ---- variable get / set ---- */
+
+DESCR_t stmt_get(const char *name) {
+    return NV_GET_fn(name);
+}
+
+void stmt_set(const char *name, DESCR_t v) {
+    NV_SET_fn(name, v);
+}
+
+/* ---- OUTPUT ---- */
+
+void stmt_output(DESCR_t val) {
+    NV_SET_fn("OUTPUT", val);
+}
+
+/* ---- INPUT ---- */
+
+DESCR_t stmt_input(void) {
+    return NV_GET_fn("INPUT");
+}
+
+/* ---- string concatenation ---- */
+
+DESCR_t stmt_concat(DESCR_t a, DESCR_t b) {
+    /* Both must be string-ish; convert integers to string first */
+    const char *sa = VARVAL_fn(a);
+    const char *sb = VARVAL_fn(b);
+    if (!sa) sa = "";
+    if (!sb) sb = "";
+    size_t la = strlen(sa), lb = strlen(sb);
+    char *buf = GC_MALLOC_ATOMIC(la + lb + 1);
+    memcpy(buf, sa, la);
+    memcpy(buf + la, sb, lb);
+    buf[la + lb] = '\0';
+    return STRVAL(buf);
+}
+
+/* ---- program end ---- */
+
+void stmt_finish(void) {
+    /* nothing — placeholder matching C backend's finish() */
+}
+
+/* ---- computed goto dispatch ---- */
+
+/*
+ * stmt_goto_dispatch: resolve a DESCR_t label value to an integer index
+ * into a caller-provided name table.  Returns the 0-based index of the
+ * matching label name, or -1 if not found.
+ *
+ * The ASM emitter generates a name table in .data and calls this function;
+ * the returned index drives an indirect jmp via a jump table in .text.
+ *
+ * Usage in emitted ASM (pseudocode):
+ *   lea  rdi, [rel computed_expr_result]   ; DESCR_t low
+ *   mov  rsi, [computed_expr_result+8]     ; DESCR_t high
+ *   lea  rdx, [rel label_name_table]       ; char** table
+ *   mov  rcx, N                            ; number of entries
+ *   call stmt_goto_dispatch
+ *   ; rax = index (0..N-1) or -1
+ *   cmp  rax, -1
+ *   je   .no_match
+ *   jmp  [rel jump_table + rax*8]
+ */
+int stmt_goto_dispatch(DESCR_t label_val, const char **names, int n) {
+    const char *s = VARVAL_fn(label_val);
+    if (!s || !*s) return -1;
+    /* strip quotes if present */
+    char buf[512]; size_t j = 0;
+    for (size_t i = 0; s[i] && j < sizeof(buf)-1; i++) {
+        if (s[i] == '\'' || s[i] == '"') continue;
+        buf[j++] = s[i];
+    }
+    buf[j] = '\0';
+    for (int i = 0; i < n; i++) {
+        if (strcasecmp(buf, names[i]) == 0) return i;
+    }
+    return -1;
+}
+
+/* ---- arithmetic helpers ---- */
+
+/* stmt_add_int: integer addition on DESCR_t values.
+ * Both operands must be numeric (DT_I or DT_S convertible). */
+DESCR_t stmt_add_int(DESCR_t a, DESCR_t b) {
+    int64_t ia = (a.v == DT_I) ? a.i : (a.s ? atoll(a.s) : 0);
+    int64_t ib = (b.v == DT_I) ? b.i : (b.s ? atoll(b.s) : 0);
+    return INTVAL(ia + ib);
+}
+
+/* stmt_gt: returns 1 (success) if a > b, 0 (fail) otherwise */
+int stmt_gt(DESCR_t a, DESCR_t b) {
+    int64_t ia = (a.v == DT_I) ? a.i : (a.s ? atoll(a.s) : 0);
+    int64_t ib = (b.v == DT_I) ? b.i : (b.s ? atoll(b.s) : 0);
+    return ia > ib;
+}
+
+/* stmt_apply: call a named SNOBOL4 builtin function with an array of DESCR_t args.
+ * Returns FAILDESCR on failure. */
+DESCR_t stmt_apply(const char *name, DESCR_t *args, int nargs) {
+    return APPLY_fn(name, args, nargs);
+}

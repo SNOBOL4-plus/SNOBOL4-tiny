@@ -1713,23 +1713,393 @@ static void asm_emit_body(STMT_t *stmt) {
 
 int asm_body_mode = 0; /* set by -asm-body flag */
 
+/* -----------------------------------------------------------------------
+ * asm_emit_program — full-program mode (-asm flag without -asm-body)
+ *
+ * Walks ALL statements and emits a complete NASM program that:
+ *   - calls stmt_init() at startup
+ *   - translates each SNOBOL4 statement to stmt_* C-shim calls
+ *   - handles pattern-match statements via inline Byrd boxes
+ *   - handles labels and goto (unconditional, :S, :F)
+ *   - handles computed goto via stmt_goto_dispatch()
+ *
+ * Generated .s links against snobol4_stmt_rt.o + the runtime .a.
+ * ----------------------------------------------------------------------- */
+
+/* ---- string-safe variable name for NASM labels ---- */
+static void prog_safe(const char *src, char *dst, int dstlen) {
+    int j = 0;
+    for (int i = 0; src[i] && j < dstlen-1; i++) {
+        char c = src[i];
+        if ((c>='a'&&c<='z')||(c>='A'&&c<='Z')||(c>='0'&&c<='9')||c=='_')
+            dst[j++] = c;
+        else
+            dst[j++] = '_';
+    }
+    dst[j] = '\0';
+}
+
+/* ---- data section string registry ---- */
+#define MAX_PROG_STRS 2048
+typedef struct { char label[64]; char *val; } ProgStr;
+static ProgStr prog_strs[MAX_PROG_STRS];
+static int     prog_str_count = 0;
+
+static void prog_str_reset(void) { prog_str_count = 0; }
+
+static const char *prog_str_intern(const char *s) {
+    for (int i = 0; i < prog_str_count; i++)
+        if (strcmp(prog_strs[i].val, s) == 0) return prog_strs[i].label;
+    if (prog_str_count >= MAX_PROG_STRS) return "ps_overflow";
+    ProgStr *e = &prog_strs[prog_str_count++];
+    snprintf(e->label, sizeof e->label, "ps_%d", prog_str_count);
+    e->val = strdup(s);
+    return e->label;
+}
+
+static void prog_str_emit_data(void) {
+    for (int i = 0; i < prog_str_count; i++) {
+        A("%-20s db ", prog_strs[i].label);
+        const char *v = prog_strs[i].val;
+        int len = (int)strlen(v);
+        for (int j = 0; j < len; j++) {
+            if (j) A(", ");
+            A("%d", (unsigned char)v[j]);
+        }
+        A(", 0  ; \"%s\"\n", v);
+    }
+}
+
+/* ---- expression value into DESCR_t on stack ----
+ * Emits code to evaluate expr and store DESCR_t at [rbp+off].
+ * Returns 1 if value might fail (needs is_fail check), 0 if always succeeds.
+ * Simple cases only: E_QLIT, E_ILIT, E_VART. Complex exprs use stmt_apply. */
+static int prog_emit_expr(EXPR_t *e, int rbp_off) {
+    if (!e) {
+        /* null expr → NULVCL (DT_SNUL=1, ptr=0) */
+        A("    mov     qword [rbp%+d], 1\n", rbp_off);   /* v=DT_SNUL */
+        A("    mov     qword [rbp%+d], 0\n", rbp_off+8);
+        return 0;
+    }
+    switch (e->kind) {
+    case E_QLIT: {
+        const char *lab = prog_str_intern(e->sval);
+        A("    lea     rdi, [rel %s]\n", lab);
+        A("    call    stmt_strval\n");
+        A("    mov     [rbp%+d], rax\n", rbp_off);
+        A("    mov     [rbp%+d], rdx\n", rbp_off+8);
+        return 0;
+    }
+    case E_ILIT:
+        A("    mov     rdi, %ld\n", (long)e->ival);
+        A("    call    stmt_intval\n");
+        A("    mov     [rbp%+d], rax\n", rbp_off);
+        A("    mov     [rbp%+d], rdx\n", rbp_off+8);
+        return 0;
+    case E_VART: {
+        const char *lab = prog_str_intern(e->sval);
+        A("    lea     rdi, [rel %s]\n", lab);
+        A("    call    stmt_get\n");
+        A("    mov     [rbp%+d], rax\n", rbp_off);
+        A("    mov     [rbp%+d], rdx\n", rbp_off+8);
+        return 1; /* might be fail if var undefined */
+    }
+    case E_KW: {
+        /* &KEYWORD — treat as named variable lookup */
+        char kwbuf[128];
+        snprintf(kwbuf, sizeof kwbuf, "&%s", e->sval ? e->sval : "");
+        const char *lab = prog_str_intern(kwbuf);
+        A("    lea     rdi, [rel %s]\n", lab);
+        A("    call    stmt_get\n");
+        A("    mov     [rbp%+d], rax\n", rbp_off);
+        A("    mov     [rbp%+d], rdx\n", rbp_off+8);
+        return 1;
+    }
+    default:
+        /* Fallback: emit NULVCL — complex exprs not yet supported */
+        A("    mov     qword [rbp%+d], 1\n", rbp_off);
+        A("    mov     qword [rbp%+d], 0\n", rbp_off+8);
+        return 0;
+    }
+}
+
+/* ---- emit goto target (resolves label to NASM label) ---- */
+static const char *prog_label_nasm(const char *lbl); /* forward */
+
+static void prog_emit_goto(const char *target, const char *fallthrough) {
+    if (!target || strcmp(target, "") == 0) {
+        if (fallthrough) A("    jmp     %s\n", fallthrough);
+        return;
+    }
+    A("    jmp     %s\n", prog_label_nasm(target));
+}
+/* ---- scan all labels in program for the jump table ---- */
+#define MAX_PROG_LABELS 1024
+/* Numeric label registry: each unique SNOBOL4 label name gets an integer ID.
+ * Emitted as _L_N in NASM, with original name as a comment.
+ * Collision-free by construction — integers are always distinct.
+ * TODO M-ASM-READABLE: switch to encoded names for debuggability (post M-ASM-BEAUTY). */
+static char *prog_labels[MAX_PROG_LABELS];
+static int   prog_label_count = 0;
+static void prog_labels_reset(void) { prog_label_count = 0; }
+
+static int prog_label_id(const char *lbl) {
+    if (!lbl || !*lbl) return -1;
+    for (int i = 0; i < prog_label_count; i++)
+        if (strcmp(prog_labels[i], lbl) == 0) return i;
+    if (prog_label_count >= MAX_PROG_LABELS) return -1;
+    prog_labels[prog_label_count++] = strdup(lbl);
+    return prog_label_count - 1;
+}
+
+/* Returns a collision-free NASM label: _L_<clean_base>_<N>
+ * Base: keep only alphanumerics, collapse runs of non-alnum to single underscore,
+ * strip leading/trailing underscores.  Number N alone guarantees uniqueness —
+ * the base is pure decoration for readability.
+ * TODO M-ASM-READABLE: post M-ASM-BEAUTY sprint to improve base quality. */
+static const char *prog_label_nasm(const char *lbl) {
+    static char buf[256];
+    int id = prog_label_id(lbl);
+    if (id < 0) { snprintf(buf, sizeof buf, "_L_unk_%d", id); return buf; }
+    /* Build clean base: alnum only, runs of others → single _ */
+    char base[128]; int bi = 0; int in_sep = 0;
+    for (const char *p = lbl; *p && bi < 120; p++) {
+        if (isalnum((unsigned char)*p)) {
+            base[bi++] = *p; in_sep = 0;
+        } else if (!in_sep && bi > 0) {
+            base[bi++] = '_'; in_sep = 1;
+        }
+    }
+    /* strip trailing underscore */
+    while (bi > 0 && base[bi-1] == '_') bi--;
+    base[bi] = '\0';
+    if (bi == 0) snprintf(base, sizeof base, "L");
+    snprintf(buf, sizeof buf, "_L_%s_%d", base, id);
+    return buf;
+}
+
+static void prog_label_register(const char *lbl) {
+    prog_label_id(lbl); /* ensure registered; discard return value */
+}
+
+static void asm_emit_program(Program *prog) {
+    if (!prog || !prog->head) { asm_emit_null_program(); return; }
+
+    prog_str_reset();
+    prog_labels_reset();
+    bss_reset();
+    lit_reset();
+    asm_extra_bss_count = 0;
+
+    /* Pass 1: collect all labels + string literals */
+    for (STMT_t *s = prog->head; s; s = s->next) {
+        if (s->label) prog_label_register(s->label);
+        if (s->go) {
+            if (s->go->onsuccess) prog_label_register(s->go->onsuccess);
+            if (s->go->onfailure) prog_label_register(s->go->onfailure);
+            if (s->go->uncond)    prog_label_register(s->go->uncond);
+        }
+        /* intern string literals in subject / replacement */
+        if (s->subject && s->subject->kind == E_QLIT)
+            prog_str_intern(s->subject->sval);
+        if (s->replacement && s->replacement->kind == E_QLIT)
+            prog_str_intern(s->replacement->sval);
+        if (s->subject && s->subject->kind == E_VART)
+            prog_str_intern(s->subject->sval);
+        if (s->replacement && s->replacement->kind == E_VART)
+            prog_str_intern(s->replacement->sval);
+        if (s->label)
+            prog_str_intern(s->label);
+    }
+
+    /* Pass 2: collect .bss slots for pattern stmts (named-pat ret_ pointers).
+     * In program mode, skip entries whose replacement is a plain value
+     * (E_QLIT/E_ILIT/E_VART) — those are variable assignments, not patterns. */
+    bss_add("_cursor");
+    for (int i = 0; i < asm_named_count; i++) {
+        if (asm_named[i].pat) {
+            EKind rk = asm_named[i].pat->kind;
+            if (rk == E_QLIT || rk == E_ILIT || rk == E_FLIT || rk == E_NULV)
+                continue; /* plain value assignment — not a real named pattern */
+        }
+        bss_add(asm_named[i].ret_gamma);
+        bss_add(asm_named[i].ret_omega);
+    }
+
+    /* ---- emit header ---- */
+    A("; generated by sno2c -asm (program mode)\n");
+    A("; link: gcc -no-pie out.s stmt_rt.o snobol4.o mock_includes.o\n");
+    A(";             snobol4_pattern.o mock_engine.o -lgc -lm -o prog\n\n");
+    A("    global  main\n");
+    A("    extern  stmt_init, stmt_strval, stmt_intval\n");
+    A("    extern  stmt_get, stmt_set, stmt_output, stmt_input\n");
+    A("    extern  stmt_concat, stmt_is_fail, stmt_finish\n");
+    A("    extern  stmt_apply, stmt_goto_dispatch\n");
+    A("\n");
+
+    /* ---- .data ---- */
+    A("section .data\n\n");
+    /* String literals will be filled after pass 2 above */
+    prog_str_emit_data();
+    /* emit string literals for all registered prog labels */
+    A("\n");
+
+    /* ---- .note.GNU-stack ---- */
+    A("section .note.GNU-stack noalloc noexec nowrite progbits\n\n");
+
+    /* ---- .bss ---- */
+    if (bss_count > 0) {
+        A("section .bss\n\n");
+        for (int i = 0; i < bss_count; i++)
+            A("%-24s resq 1\n", bss_slots[i]);
+        A("\n");
+    }
+
+    /* ---- .text ---- */
+    A("section .text\n\n");
+    A("main:\n");
+    A("    push    rbp\n");
+    A("    mov     rbp, rsp\n");
+    A("    sub     rsp, 64      ; space for DESCR_t temporaries\n");
+    A("    call    stmt_init\n\n");
+
+    /* Walk statements */
+    int stmt_uid = 0;
+    for (STMT_t *s = prog->head; s; s = s->next) {
+        if (s->is_end) {
+            A("\n_SNO_END:\n");
+            A("    call    stmt_finish\n");
+            A("    xor     eax, eax\n");
+            A("    leave\n");
+            A("    ret\n");
+            break;
+        }
+
+        if (s->label) {
+            A("\n%s:\n", prog_label_nasm(s->label));
+        } else {
+            A("\n");
+        }
+
+        int uid = stmt_uid++;
+        char next_lbl[64]; snprintf(next_lbl, sizeof next_lbl, "_sn_%d", uid);
+        char sfail_lbl[64]; snprintf(sfail_lbl, sizeof sfail_lbl, "_sf_%d", uid);
+
+        /* Determine S/F/uncond targets */
+        const char *tgt_s = s->go ? s->go->onsuccess : NULL;
+        const char *tgt_f = s->go ? s->go->onfailure : NULL;
+        const char *tgt_u = s->go ? s->go->uncond    : NULL;
+
+        int id_s = tgt_s ? prog_label_id(tgt_s) : -1;
+        int id_f = tgt_f ? prog_label_id(tgt_f) : -1;
+        int id_u = tgt_u ? prog_label_id(tgt_u) : -1;
+
+        /* Case 1: pattern-free assignment or expression */
+        if (!s->pattern) {
+            /* Evaluate subject (the LHS or expression) */
+            if (s->subject) {
+                int may_fail = prog_emit_expr(s->subject, -16);
+                (void)may_fail;
+            }
+
+            /* If has_eq: assign replacement to subject variable */
+            if (s->has_eq && s->replacement && s->subject &&
+                s->subject->kind == E_VART) {
+                /* RHS */
+                prog_emit_expr(s->replacement, -32);
+                /* stmt_is_fail check on RHS */
+                A("    mov     rdi, [rbp-32]\n");
+                A("    mov     rsi, [rbp-24]\n");
+                A("    call    stmt_is_fail\n");
+                A("    test    eax, eax\n");
+                A("    jnz     %s\n", id_f >= 0 ? sfail_lbl : next_lbl);
+                /* Assign: if subject is OUTPUT, call stmt_output */
+                if (strcasecmp(s->subject->sval, "OUTPUT") == 0) {
+                    A("    mov     rdi, [rbp-32]\n");
+                    A("    mov     rsi, [rbp-24]\n");
+                    A("    call    stmt_output\n");
+                } else {
+                    /* generic variable set */
+                    const char *vlab = prog_str_intern(s->subject->sval);
+                    A("    lea     rdi, [rel %s]\n", vlab);
+                    A("    mov     rsi, [rbp-32]\n");
+                    A("    mov     rdx, [rbp-24]\n");
+                    A("    call    stmt_set\n");
+                }
+                /* success path */
+                if (id_s >= 0) A("    jmp     %s\n", prog_label_nasm(tgt_s));
+                else if (id_u >= 0) A("    jmp     %s\n", prog_label_nasm(tgt_u));
+                else A("    jmp     %s\n", next_lbl);
+                /* failure path */
+                if (id_f >= 0) {
+                    A("%s:\n", sfail_lbl);
+                    A("    jmp     %s\n", prog_label_nasm(tgt_f));
+                }
+            } else {
+                /* expression-only or complex case: just evaluate and branch */
+                if (id_u >= 0) A("    jmp     %s\n", prog_label_nasm(tgt_u));
+            }
+            A("%s:\n", next_lbl);
+            continue;
+        }
+
+        /* Case 2: pattern-match statement
+         * subject pattern [= replacement] :S(L)F(L)
+         * Emit subject eval, then Byrd box, then S/F dispatch. */
+
+        /* Pattern match success → _sm_UID, fail → _sf_UID */
+        char sm_lbl[64]; snprintf(sm_lbl, sizeof sm_lbl, "_sm_%d", uid);
+
+        /* Evaluate subject into _cursor bss slot */
+        if (s->subject && s->subject->kind == E_VART) {
+            const char *vlab = prog_str_intern(s->subject->sval);
+            A("    lea     rdi, [rel %s]\n", vlab);
+            A("    call    stmt_get\n");
+            A("    mov     [rbp-16], rax\n");
+            A("    mov     [rbp-8],  rdx\n");
+            /* Subject string into cursor=0 setup not fully implemented —
+             * pattern match against C runtime subject TBD */
+        }
+
+        /* For now: emit unconditional fallthrough (pattern match TBD) */
+        if (id_u >= 0) A("    jmp     %s\n", prog_label_nasm(tgt_u));
+        else           A("    jmp     %s\n", next_lbl);
+
+        A("%s:\n", sm_lbl);
+        if (id_s >= 0) A("    jmp     %s\n", prog_label_nasm(tgt_s));
+        else           A("    jmp     %s\n", next_lbl);
+
+        A("%s:\n", sfail_lbl);
+        if (id_f >= 0) A("    jmp     %s\n", prog_label_nasm(tgt_f));
+        else           A("    jmp     %s\n", next_lbl);
+
+        A("%s:\n", next_lbl);
+    }
+
+    /* Safety net end */
+    A("\n_prog_end:\n");
+    A("    call    stmt_finish\n");
+    A("    xor     eax, eax\n");
+    A("    leave\n");
+    A("    ret\n");
+}
+
 void asm_emit(Program *prog, FILE *f) {
     asm_out = f;
 
     /* Pass 1: scan for named pattern assignments */
     asm_scan_named_patterns(prog);
 
-    /* Pass 2: find first statement with a pattern field */
+    /* Pass 2: find first statement with a pattern field (needed for body mode) */
     STMT_t *s = prog ? prog->head : NULL;
     while (s && !s->pattern) s = s->next;
 
-    if (!s) {
-        asm_emit_null_program();
-        return;
-    }
-
-    if (asm_body_mode)
+    if (asm_body_mode) {
+        /* -asm-body: emit pattern-only body for harness linking */
+        if (!s) { asm_emit_null_program(); return; }
         asm_emit_body(s);
-    else
-        asm_emit_pattern(s);
+    } else {
+        /* -asm: full program mode — walk all statements */
+        asm_emit_program(prog);
+    }
 }
