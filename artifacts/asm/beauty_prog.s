@@ -415,8 +415,8 @@ L_sn_13:                    GET_VAR     S_9
                             jmp     P_14_α
 
 
-; REF(ppTokPat) α=P_14_α
-P_14_α:                     lea     rax, [rel nref2_gamma]
+P_14_α: ; REF(ppTokPat)
+                            lea     rax, [rel nref2_gamma]
                             mov     [P_ppTokPat_ret_gamma], rax
                             lea     rax, [rel nref2_omega]
                             mov     [P_ppTokPat_ret_omega], rax
@@ -1075,8 +1075,8 @@ L_sn_79:                    GET_VAR     S_78
                             jmp     P_80_α
 
 
-; REF(ppGPat) α=P_80_α
-P_80_α:                     lea     rax, [rel nref7_gamma]
+P_80_α: ; REF(ppGPat)
+                            lea     rax, [rel nref7_gamma]
                             mov     [P_ppGPat_ret_gamma], rax
                             lea     rax, [rel nref7_omega]
                             mov     [P_ppGPat_ret_omega], rax
@@ -1119,8 +1119,8 @@ L_sn_81:                    GET_VAR     S_79
                             jmp     P_82_α
 
 
-; REF(ppTrimPat) α=P_82_α
-P_82_α:                     lea     rax, [rel nref8_gamma]
+P_82_α: ; REF(ppTrimPat)
+                            lea     rax, [rel nref8_gamma]
                             mov     [P_ppTrimPat_ret_gamma], rax
                             lea     rax, [rel nref8_omega]
                             mov     [P_ppTrimPat_ret_omega], rax
@@ -7762,8 +7762,8 @@ seq_l9_beta:                jmp     seq_r10_beta
 seq_l10_alpha:              POS_ALPHA   0, cursor, seq_r10_alpha, P_407_ω ; POS(%ld)
 seq_l10_beta:               POS_BETA    cursor, P_407_ω
 
-; REF(SpecialNm) α=seq_r10_alpha
-seq_r10_alpha:              lea     rax, [rel nref11_gamma]
+seq_r10_alpha: ; REF(SpecialNm)
+                            lea     rax, [rel nref11_gamma]
                             mov     [P_SpecialNm_ret_gamma], rax
                             lea     rax, [rel nref11_omega]
                             mov     [P_SpecialNm_ret_omega], rax
@@ -10262,8 +10262,8 @@ seq_l25_beta:               jmp     seq_r26_beta
 seq_l26_alpha:              LIT_ALPHA   lit_str_6, 2, seq_l26_alpha_saved, cursor, subject_data, subject_len_val, seq_r26_alpha, patdef_ppTokPat_omega ; LIT α
 seq_l26_beta:               LIT_BETA    seq_l26_alpha_saved, cursor, patdef_ppTokPat_omega ; LIT β
 
-; DOL(ppTokName $  ppTokName)  α=seq_r26_alpha
-seq_r26_alpha:              DOL_SAVE    dol_entry_ppTokName, cursor, dol27_child_alpha ; DOL α — save entry cursor
+seq_r26_alpha: ; DOL(ppTokName $  ppTokName)
+                            DOL_SAVE    dol_entry_ppTokName, cursor, dol27_child_alpha ; DOL α — save entry cursor
 seq_r26_beta:               jmp     dol27_child_beta                    ; DOL β
 dol27_child_alpha:          ALT_ALPHA   alt28_cur_save, cursor, alt_l28_alpha ; ALT α — save cursor, enter left
 dol27_child_beta:           SEQ_BETA    alt_r28_beta                    ; ALT β — resume right
@@ -10281,8 +10281,8 @@ alt_l31_beta:               jmp     seq_r32_beta
 seq_l32_alpha:              LIT_ALPHA1  61, seq_l32_alpha_saved, cursor, subject_data, subject_len_val, seq_r32_alpha, alt31_left_omega ; LIT α
 seq_l32_beta:               LIT_BETA    seq_l32_alpha_saved, cursor, alt31_left_omega ; LIT β
 
-; DOL(ppTokVal $  ppTokVal)  α=seq_r32_alpha
-seq_r32_alpha:              DOL_SAVE    dol_entry_ppTokVal, cursor, dol33_child_alpha ; DOL α — save entry cursor
+seq_r32_alpha: ; DOL(ppTokVal $  ppTokVal)
+                            DOL_SAVE    dol_entry_ppTokVal, cursor, dol33_child_alpha ; DOL α — save entry cursor
 seq_r32_beta:               jmp     dol33_child_beta                    ; DOL β
 dol33_child_alpha:          ALT_ALPHA   alt34_cur_save, cursor, alt_l34_alpha ; ALT α — save cursor, enter left
 dol33_child_beta:           SEQ_BETA    alt_r34_beta                    ; ALT β — resume right
@@ -10295,8 +10295,8 @@ dol33_gamma:                DOL_CAPTURE dol_entry_ppTokVal, cursor, cap_ppTokVal
 dol33_omega:                jmp     seq_l32_beta                        ; DOL ω — child failed
 alt31_left_omega:           ALT_OMEGA   alt31_cur_save, cursor, alt_r31_alpha ; ALT left_ω — restore cursor, enter right
 
-; DOL(ppTokVal $  ppTokVal)  α=alt_r31_alpha
-alt_r31_alpha:              DOL_SAVE    dol_entry_ppTokVal, cursor, dol37_child_alpha ; DOL α — save entry cursor
+alt_r31_alpha: ; DOL(ppTokVal $  ppTokVal)
+                            DOL_SAVE    dol_entry_ppTokVal, cursor, dol37_child_alpha ; DOL α — save entry cursor
 alt_r31_beta:               jmp     dol37_child_beta                    ; DOL β
 dol37_child_alpha:          LIT_ALPHA   lit_str_4, 0, dol37_child_alpha_saved, cursor, subject_data, subject_len_val, dol37_gamma, dol37_omega ; LIT α
 dol37_child_beta:           LIT_BETA    dol37_child_alpha_saved, cursor, dol37_omega ; LIT β
@@ -10374,16 +10374,16 @@ patdef_ppGSfx_omega:        jmp     [P_ppGSfx_ret_omega]
 P_ppGPat_alpha:             jmp     seq_l49_alpha                       ; SEQ
 P_ppGPat_beta:              jmp     seq_r49_beta
 
-; DOL(ppGCon $  ppGCon)  α=seq_l49_alpha
-seq_l49_alpha:              DOL_SAVE    dol_entry_ppGCon, cursor, dol50_child_alpha ; DOL α — save entry cursor
+seq_l49_alpha: ; DOL(ppGCon $  ppGCon)
+                            DOL_SAVE    dol_entry_ppGCon, cursor, dol50_child_alpha ; DOL α — save entry cursor
 seq_l49_beta:               jmp     dol50_child_beta                    ; DOL β
 dol50_child_alpha:          BREAK_ALPHA lit_str_10, 1, brk51_saved, cursor, subject_data, subject_len_val, dol50_gamma, dol50_omega ; BREAK α
 dol50_child_beta:           BREAK_BETA  brk51_saved, cursor, dol50_omega ; BREAK β
 dol50_gamma:                DOL_CAPTURE dol_entry_ppGCon, cursor, cap_ppGCon_buf, cap_ppGCon_len, subject_data, seq_r49_alpha ; DOL γ — capture span
 dol50_omega:                jmp     patdef_ppGPat_omega                 ; DOL ω — child failed
 
-; REF(ppGSfx) α=seq_r49_alpha
-seq_r49_alpha:              lea     rax, [rel nref52_gamma]
+seq_r49_alpha: ; REF(ppGSfx)
+                            lea     rax, [rel nref52_gamma]
                             mov     [P_ppGSfx_ret_gamma], rax
                             lea     rax, [rel nref52_omega]
                             mov     [P_ppGSfx_ret_omega], rax
@@ -10405,8 +10405,8 @@ patdef_ppGPat_omega:        jmp     [P_ppGPat_ret_omega]
 ;  ppTrimPat ===========================================================================================================
 ; P_ppTrimPat_alpha (α entry)
 
-; DOL(ppDrop $  ppDrop)  α=P_ppTrimPat_alpha
-P_ppTrimPat_alpha:          DOL_SAVE    dol_entry_ppDrop, cursor, dol53_child_alpha ; DOL α — save entry cursor
+P_ppTrimPat_alpha: ; DOL(ppDrop $  ppDrop)
+                            DOL_SAVE    dol_entry_ppDrop, cursor, dol53_child_alpha ; DOL α — save entry cursor
 P_ppTrimPat_beta:           jmp     dol53_child_beta                    ; DOL β
 dol53_child_alpha:          jmp     seq_l54_alpha                       ; SEQ
 dol53_child_beta:           jmp     seq_r54_beta
@@ -10476,8 +10476,8 @@ patdef_ppLn_omega:          jmp     [P_ppLn_ret_omega]
 ;  ppTmp ===============================================================================================================
 ; P_ppTmp_alpha (α entry)
 
-; REF(ppLn) α=P_ppTmp_alpha
-P_ppTmp_alpha:              lea     rax, [rel nref58_gamma]
+P_ppTmp_alpha: ; REF(ppLn)
+                            lea     rax, [rel nref58_gamma]
                             mov     [P_ppLn_ret_gamma], rax
                             lea     rax, [rel nref58_omega]
                             mov     [P_ppLn_ret_omega], rax
@@ -10525,8 +10525,8 @@ P_ppStmt_beta:              jmp     seq_r59_beta
 seq_l59_alpha:              jmp     seq_l60_alpha                       ; SEQ
 seq_l59_beta:               jmp     seq_r60_beta
 
-; REF(ppStmt) α=seq_l60_alpha
-seq_l60_alpha:              lea     rax, [rel nref61_gamma]
+seq_l60_alpha: ; REF(ppStmt)
+                            lea     rax, [rel nref61_gamma]
                             mov     [P_ppStmt_ret_gamma], rax
                             lea     rax, [rel nref61_omega]
                             mov     [P_ppStmt_ret_omega], rax
@@ -10543,8 +10543,8 @@ nref61_omega:               jmp     patdef_ppStmt_omega
 seq_r60_alpha:              LIT_ALPHA1  32, seq_r60_alpha_saved, cursor, subject_data, subject_len_val, seq_r59_alpha, seq_l60_beta ; LIT α
 seq_r60_beta:               LIT_BETA    seq_r60_alpha_saved, cursor, seq_l60_beta ; LIT β
 
-; REF(ppLn) α=seq_r59_alpha
-seq_r59_alpha:              lea     rax, [rel nref62_gamma]
+seq_r59_alpha: ; REF(ppLn)
+                            lea     rax, [rel nref62_gamma]
                             mov     [P_ppLn_ret_gamma], rax
                             lea     rax, [rel nref62_omega]
                             mov     [P_ppLn_ret_omega], rax
@@ -10583,8 +10583,8 @@ patdef_ppI_omega:           jmp     [P_ppI_ret_omega]
 ;  ppJ =================================================================================================================
 ; P_ppJ_alpha (α entry)
 
-; REF(ppJ1) α=P_ppJ_alpha
-P_ppJ_alpha:                lea     rax, [rel nref64_gamma]
+P_ppJ_alpha: ; REF(ppJ1)
+                            lea     rax, [rel nref64_gamma]
                             mov     [P_ppJ1_ret_gamma], rax
                             lea     rax, [rel nref64_omega]
                             mov     [P_ppJ1_ret_omega], rax
@@ -10673,8 +10673,8 @@ patdef_SQ_omega:            jmp     [P_SQ_ret_omega]
 P_String_alpha:             ALT_ALPHA   alt72_cur_save, cursor, alt_l72_alpha ; ALT α — save cursor, enter left
 P_String_beta:              SEQ_BETA    alt_r72_beta                    ; ALT β — resume right
 
-; REF(SQ) α=alt_l72_alpha
-alt_l72_alpha:              lea     rax, [rel nref73_gamma]
+alt_l72_alpha: ; REF(SQ)
+                            lea     rax, [rel nref73_gamma]
                             mov     [P_SQ_ret_gamma], rax
                             lea     rax, [rel nref73_omega]
                             mov     [P_SQ_ret_omega], rax
@@ -10690,8 +10690,8 @@ nref73_gamma:
 nref73_omega:               jmp     alt72_left_omega
 alt72_left_omega:           ALT_OMEGA   alt72_cur_save, cursor, alt_r72_alpha ; ALT left_ω — restore cursor, enter right
 
-; REF(DQ) α=alt_r72_alpha
-alt_r72_alpha:              lea     rax, [rel nref74_gamma]
+alt_r72_alpha: ; REF(DQ)
+                            lea     rax, [rel nref74_gamma]
                             mov     [P_DQ_ret_gamma], rax
                             lea     rax, [rel nref74_omega]
                             mov     [P_DQ_ret_omega], rax
@@ -10798,12 +10798,12 @@ patdef_Id_omega:            jmp     [P_Id_ret_omega]
 ;  Function ============================================================================================================
 ; P_Function_alpha (α entry)
 
-; DOL(cap $  cap)  α=P_Function_alpha
-P_Function_alpha:           DOL_SAVE    dol_entry_cap, cursor, dol92_child_alpha ; DOL α — save entry cursor
+P_Function_alpha: ; DOL(cap $  cap)
+                            DOL_SAVE    dol_entry_cap, cursor, dol92_child_alpha ; DOL α — save entry cursor
 P_Function_beta:            jmp     dol92_child_beta                    ; DOL β
 
-; DOL(tx $  tx)  α=dol92_child_alpha
-dol92_child_alpha:          DOL_SAVE    dol_entry_tx, cursor, dol93_child_alpha ; DOL α — save entry cursor
+dol92_child_alpha: ; DOL(tx $  tx)
+                            DOL_SAVE    dol_entry_tx, cursor, dol93_child_alpha ; DOL α — save entry cursor
 dol92_child_beta:           jmp     dol93_child_beta                    ; DOL β
 dol93_child_alpha:          SPAN_ALPHA  lit_str_4, 0, span94_saved, cursor, subject_data, subject_len_val, dol93_gamma, dol93_omega ; SPAN α
 dol93_child_beta:           SPAN_BETA   span94_saved, cursor, dol93_omega ; SPAN β
@@ -10819,12 +10819,12 @@ patdef_Function_omega:      jmp     [P_Function_ret_omega]
 ;  BuiltinVar ==========================================================================================================
 ; P_BuiltinVar_alpha (α entry)
 
-; DOL(cap $  cap)  α=P_BuiltinVar_alpha
-P_BuiltinVar_alpha:         DOL_SAVE    dol_entry_cap, cursor, dol95_child_alpha ; DOL α — save entry cursor
+P_BuiltinVar_alpha: ; DOL(cap $  cap)
+                            DOL_SAVE    dol_entry_cap, cursor, dol95_child_alpha ; DOL α — save entry cursor
 P_BuiltinVar_beta:          jmp     dol95_child_beta                    ; DOL β
 
-; DOL(tx $  tx)  α=dol95_child_alpha
-dol95_child_alpha:          DOL_SAVE    dol_entry_tx, cursor, dol96_child_alpha ; DOL α — save entry cursor
+dol95_child_alpha: ; DOL(tx $  tx)
+                            DOL_SAVE    dol_entry_tx, cursor, dol96_child_alpha ; DOL α — save entry cursor
 dol95_child_beta:           jmp     dol96_child_beta                    ; DOL β
 dol96_child_alpha:          SPAN_ALPHA  lit_str_4, 0, span97_saved, cursor, subject_data, subject_len_val, dol96_gamma, dol96_omega ; SPAN α
 dol96_child_beta:           SPAN_BETA   span97_saved, cursor, dol96_omega ; SPAN β
@@ -10840,12 +10840,12 @@ patdef_BuiltinVar_omega:    jmp     [P_BuiltinVar_ret_omega]
 ;  SpecialNm ===========================================================================================================
 ; P_SpecialNm_alpha (α entry)
 
-; DOL(cap $  cap)  α=P_SpecialNm_alpha
-P_SpecialNm_alpha:          DOL_SAVE    dol_entry_cap, cursor, dol98_child_alpha ; DOL α — save entry cursor
+P_SpecialNm_alpha: ; DOL(cap $  cap)
+                            DOL_SAVE    dol_entry_cap, cursor, dol98_child_alpha ; DOL α — save entry cursor
 P_SpecialNm_beta:           jmp     dol98_child_beta                    ; DOL β
 
-; DOL(tx $  tx)  α=dol98_child_alpha
-dol98_child_alpha:          DOL_SAVE    dol_entry_tx, cursor, dol99_child_alpha ; DOL α — save entry cursor
+dol98_child_alpha: ; DOL(tx $  tx)
+                            DOL_SAVE    dol_entry_tx, cursor, dol99_child_alpha ; DOL α — save entry cursor
 dol98_child_beta:           jmp     dol99_child_beta                    ; DOL β
 dol99_child_alpha:          SPAN_ALPHA  lit_str_4, 0, span100_saved, cursor, subject_data, subject_len_val, dol99_gamma, dol99_omega ; SPAN α
 dol99_child_beta:           SPAN_BETA   span100_saved, cursor, dol99_omega ; SPAN β
@@ -10865,12 +10865,12 @@ P_ProtKwd_beta:             jmp     seq_r101_beta
 seq_l101_alpha:             LIT_ALPHA1  38, seq_l101_alpha_saved, cursor, subject_data, subject_len_val, seq_r101_alpha, patdef_ProtKwd_omega ; LIT α
 seq_l101_beta:              LIT_BETA    seq_l101_alpha_saved, cursor, patdef_ProtKwd_omega ; LIT β
 
-; DOL(cap $  cap)  α=seq_r101_alpha
-seq_r101_alpha:             DOL_SAVE    dol_entry_cap, cursor, dol102_child_alpha ; DOL α — save entry cursor
+seq_r101_alpha: ; DOL(cap $  cap)
+                            DOL_SAVE    dol_entry_cap, cursor, dol102_child_alpha ; DOL α — save entry cursor
 seq_r101_beta:              jmp     dol102_child_beta                   ; DOL β
 
-; DOL(tx $  tx)  α=dol102_child_alpha
-dol102_child_alpha:         DOL_SAVE    dol_entry_tx, cursor, dol103_child_alpha ; DOL α — save entry cursor
+dol102_child_alpha: ; DOL(tx $  tx)
+                            DOL_SAVE    dol_entry_tx, cursor, dol103_child_alpha ; DOL α — save entry cursor
 dol102_child_beta:          jmp     dol103_child_beta                   ; DOL β
 dol103_child_alpha:         SPAN_ALPHA  lit_str_4, 0, span104_saved, cursor, subject_data, subject_len_val, dol103_gamma, dol103_omega ; SPAN α
 dol103_child_beta:          SPAN_BETA   span104_saved, cursor, dol103_omega ; SPAN β
@@ -10890,12 +10890,12 @@ P_UnprotKwd_beta:           jmp     seq_r105_beta
 seq_l105_alpha:             LIT_ALPHA1  38, seq_l105_alpha_saved, cursor, subject_data, subject_len_val, seq_r105_alpha, patdef_UnprotKwd_omega ; LIT α
 seq_l105_beta:              LIT_BETA    seq_l105_alpha_saved, cursor, patdef_UnprotKwd_omega ; LIT β
 
-; DOL(cap $  cap)  α=seq_r105_alpha
-seq_r105_alpha:             DOL_SAVE    dol_entry_cap, cursor, dol106_child_alpha ; DOL α — save entry cursor
+seq_r105_alpha: ; DOL(cap $  cap)
+                            DOL_SAVE    dol_entry_cap, cursor, dol106_child_alpha ; DOL α — save entry cursor
 seq_r105_beta:              jmp     dol106_child_beta                   ; DOL β
 
-; DOL(tx $  tx)  α=dol106_child_alpha
-dol106_child_alpha:         DOL_SAVE    dol_entry_tx, cursor, dol107_child_alpha ; DOL α — save entry cursor
+dol106_child_alpha: ; DOL(tx $  tx)
+                            DOL_SAVE    dol_entry_tx, cursor, dol107_child_alpha ; DOL α — save entry cursor
 dol106_child_beta:          jmp     dol107_child_beta                   ; DOL β
 dol107_child_alpha:         SPAN_ALPHA  lit_str_4, 0, span108_saved, cursor, subject_data, subject_len_val, dol107_gamma, dol107_omega ; SPAN α
 dol107_child_beta:          SPAN_BETA   span108_saved, cursor, dol107_omega ; SPAN β
@@ -10913,8 +10913,8 @@ patdef_UnprotKwd_omega:     jmp     [P_UnprotKwd_ret_omega]
 P_Gray_alpha:               ALT_ALPHA   alt109_cur_save, cursor, alt_l109_alpha ; ALT α — save cursor, enter left
 P_Gray_beta:                SEQ_BETA    alt_r109_beta                   ; ALT β — resume right
 
-; REF(White) α=alt_l109_alpha
-alt_l109_alpha:             lea     rax, [rel nref110_gamma]
+alt_l109_alpha: ; REF(White)
+                            lea     rax, [rel nref110_gamma]
                             mov     [P_White_ret_gamma], rax
                             lea     rax, [rel nref110_omega]
                             mov     [P_White_ret_omega], rax
@@ -11092,8 +11092,8 @@ seq_l134_beta:              jmp     seq_r135_beta
 seq_l135_alpha:
 seq_l135_beta:              jmp     patdef_ExprList_omega
 
-; REF(XList) α=seq_r135_alpha
-seq_r135_alpha:             lea     rax, [rel nref136_gamma]
+seq_r135_alpha: ; REF(XList)
+                            lea     rax, [rel nref136_gamma]
                             mov     [P_XList_ret_gamma], rax
                             lea     rax, [rel nref136_omega]
                             mov     [P_XList_ret_omega], rax
@@ -11133,8 +11133,8 @@ seq_l138_beta:              jmp     patdef_XList_omega
 seq_r138_alpha:             ALT_ALPHA   alt139_cur_save, cursor, alt_l139_alpha ; ALT α — save cursor, enter left
 seq_r138_beta:              SEQ_BETA    alt_r139_beta                   ; ALT β — resume right
 
-; REF(Expr) α=alt_l139_alpha
-alt_l139_alpha:             lea     rax, [rel nref140_gamma]
+alt_l139_alpha: ; REF(Expr)
+                            lea     rax, [rel nref140_gamma]
                             mov     [P_Expr_ret_gamma], rax
                             lea     rax, [rel nref140_omega]
                             mov     [P_Expr_ret_omega], rax
@@ -11150,8 +11150,8 @@ nref140_gamma:
 nref140_omega:              jmp     alt139_left_omega
 alt139_left_omega:          ALT_OMEGA   alt139_cur_save, cursor, alt_r139_alpha ; ALT left_ω — restore cursor, enter right
 
-; DOL( $  v)  α=alt_r139_alpha
-alt_r139_alpha:             DOL_SAVE    dol_entry_v, cursor, dol141_child_alpha ; DOL α — save entry cursor
+alt_r139_alpha: ; DOL( $  v)
+                            DOL_SAVE    dol_entry_v, cursor, dol141_child_alpha ; DOL α — save entry cursor
 alt_r139_beta:              jmp     dol141_child_beta                   ; DOL β
 
 ; UNRESOLVED named pattern ref: epsilon → ω
@@ -11171,8 +11171,8 @@ patdef_XList_omega:         jmp     [P_XList_ret_omega]
 ;  Expr ================================================================================================================
 ; P_Expr_alpha (α entry)
 
-; REF(Expr0) α=P_Expr_alpha
-P_Expr_alpha:               lea     rax, [rel nref142_gamma]
+P_Expr_alpha: ; REF(Expr0)
+                            lea     rax, [rel nref142_gamma]
                             mov     [P_Expr0_ret_gamma], rax
                             lea     rax, [rel nref142_omega]
                             mov     [P_Expr0_ret_omega], rax
@@ -11196,8 +11196,8 @@ patdef_Expr_omega:          jmp     [P_Expr_ret_omega]
 P_Expr0_alpha:              jmp     seq_l143_alpha                      ; SEQ
 P_Expr0_beta:               jmp     seq_r143_beta
 
-; REF(Expr1) α=seq_l143_alpha
-seq_l143_alpha:             lea     rax, [rel nref144_gamma]
+seq_l143_alpha: ; REF(Expr1)
+                            lea     rax, [rel nref144_gamma]
                             mov     [P_Expr1_ret_gamma], rax
                             lea     rax, [rel nref144_omega]
                             mov     [P_Expr1_ret_omega], rax
@@ -11225,8 +11225,8 @@ patdef_Expr0_omega:         jmp     [P_Expr0_ret_omega]
 P_Expr1_alpha:              jmp     seq_l145_alpha                      ; SEQ
 P_Expr1_beta:               jmp     seq_r145_beta
 
-; REF(Expr2) α=seq_l145_alpha
-seq_l145_alpha:             lea     rax, [rel nref146_gamma]
+seq_l145_alpha: ; REF(Expr2)
+                            lea     rax, [rel nref146_gamma]
                             mov     [P_Expr2_ret_gamma], rax
                             lea     rax, [rel nref146_omega]
                             mov     [P_Expr2_ret_omega], rax
@@ -11254,8 +11254,8 @@ patdef_Expr1_omega:         jmp     [P_Expr1_ret_omega]
 P_Expr2_alpha:              jmp     seq_l147_alpha                      ; SEQ
 P_Expr2_beta:               jmp     seq_r147_beta
 
-; REF(Expr3) α=seq_l147_alpha
-seq_l147_alpha:             lea     rax, [rel nref148_gamma]
+seq_l147_alpha: ; REF(Expr3)
+                            lea     rax, [rel nref148_gamma]
                             mov     [P_Expr3_ret_gamma], rax
                             lea     rax, [rel nref148_omega]
                             mov     [P_Expr3_ret_omega], rax
@@ -11291,8 +11291,8 @@ seq_l150_beta:              jmp     seq_r151_beta
 seq_l151_alpha:
 seq_l151_beta:              jmp     patdef_Expr3_omega
 
-; REF(X3) α=seq_r151_alpha
-seq_r151_alpha:             lea     rax, [rel nref152_gamma]
+seq_r151_alpha: ; REF(X3)
+                            lea     rax, [rel nref152_gamma]
                             mov     [P_X3_ret_gamma], rax
                             lea     rax, [rel nref152_omega]
                             mov     [P_X3_ret_omega], rax
@@ -11330,8 +11330,8 @@ seq_l153_beta:              jmp     seq_r154_beta
 seq_l154_alpha:
 seq_l154_beta:              jmp     patdef_X3_omega
 
-; REF(Expr4) α=seq_r154_alpha
-seq_r154_alpha:             lea     rax, [rel nref155_gamma]
+seq_r154_alpha: ; REF(Expr4)
+                            lea     rax, [rel nref155_gamma]
                             mov     [P_Expr4_ret_gamma], rax
                             lea     rax, [rel nref155_omega]
                             mov     [P_Expr4_ret_omega], rax
@@ -11367,8 +11367,8 @@ seq_l157_beta:              jmp     seq_r158_beta
 seq_l158_alpha:
 seq_l158_beta:              jmp     patdef_Expr4_omega
 
-; REF(X4) α=seq_r158_alpha
-seq_r158_alpha:             lea     rax, [rel nref159_gamma]
+seq_r158_alpha: ; REF(X4)
+                            lea     rax, [rel nref159_gamma]
                             mov     [P_X4_ret_gamma], rax
                             lea     rax, [rel nref159_omega]
                             mov     [P_X4_ret_omega], rax
@@ -11406,8 +11406,8 @@ seq_l160_beta:              jmp     seq_r161_beta
 seq_l161_alpha:
 seq_l161_beta:              jmp     patdef_X4_omega
 
-; REF(Expr5) α=seq_r161_alpha
-seq_r161_alpha:             lea     rax, [rel nref162_gamma]
+seq_r161_alpha: ; REF(Expr5)
+                            lea     rax, [rel nref162_gamma]
                             mov     [P_Expr5_ret_gamma], rax
                             lea     rax, [rel nref162_omega]
                             mov     [P_Expr5_ret_omega], rax
@@ -11435,8 +11435,8 @@ patdef_X4_omega:            jmp     [P_X4_ret_omega]
 P_Expr5_alpha:              jmp     seq_l163_alpha                      ; SEQ
 P_Expr5_beta:               jmp     seq_r163_beta
 
-; REF(Expr6) α=seq_l163_alpha
-seq_l163_alpha:             lea     rax, [rel nref164_gamma]
+seq_l163_alpha: ; REF(Expr6)
+                            lea     rax, [rel nref164_gamma]
                             mov     [P_Expr6_ret_gamma], rax
                             lea     rax, [rel nref164_omega]
                             mov     [P_Expr6_ret_omega], rax
@@ -11464,8 +11464,8 @@ patdef_Expr5_omega:         jmp     [P_Expr5_ret_omega]
 P_Expr6_alpha:              jmp     seq_l165_alpha                      ; SEQ
 P_Expr6_beta:               jmp     seq_r165_beta
 
-; REF(Expr7) α=seq_l165_alpha
-seq_l165_alpha:             lea     rax, [rel nref166_gamma]
+seq_l165_alpha: ; REF(Expr7)
+                            lea     rax, [rel nref166_gamma]
                             mov     [P_Expr7_ret_gamma], rax
                             lea     rax, [rel nref166_omega]
                             mov     [P_Expr7_ret_omega], rax
@@ -11493,8 +11493,8 @@ patdef_Expr6_omega:         jmp     [P_Expr6_ret_omega]
 P_Expr7_alpha:              jmp     seq_l167_alpha                      ; SEQ
 P_Expr7_beta:               jmp     seq_r167_beta
 
-; REF(Expr8) α=seq_l167_alpha
-seq_l167_alpha:             lea     rax, [rel nref168_gamma]
+seq_l167_alpha: ; REF(Expr8)
+                            lea     rax, [rel nref168_gamma]
                             mov     [P_Expr8_ret_gamma], rax
                             lea     rax, [rel nref168_omega]
                             mov     [P_Expr8_ret_omega], rax
@@ -11522,8 +11522,8 @@ patdef_Expr7_omega:         jmp     [P_Expr7_ret_omega]
 P_Expr8_alpha:              jmp     seq_l169_alpha                      ; SEQ
 P_Expr8_beta:               jmp     seq_r169_beta
 
-; REF(Expr9) α=seq_l169_alpha
-seq_l169_alpha:             lea     rax, [rel nref170_gamma]
+seq_l169_alpha: ; REF(Expr9)
+                            lea     rax, [rel nref170_gamma]
                             mov     [P_Expr9_ret_gamma], rax
                             lea     rax, [rel nref170_omega]
                             mov     [P_Expr9_ret_omega], rax
@@ -11551,8 +11551,8 @@ patdef_Expr8_omega:         jmp     [P_Expr8_ret_omega]
 P_Expr9_alpha:              jmp     seq_l171_alpha                      ; SEQ
 P_Expr9_beta:               jmp     seq_r171_beta
 
-; REF(Expr10) α=seq_l171_alpha
-seq_l171_alpha:             lea     rax, [rel nref172_gamma]
+seq_l171_alpha: ; REF(Expr10)
+                            lea     rax, [rel nref172_gamma]
                             mov     [P_Expr10_ret_gamma], rax
                             lea     rax, [rel nref172_omega]
                             mov     [P_Expr10_ret_omega], rax
@@ -11580,8 +11580,8 @@ patdef_Expr9_omega:         jmp     [P_Expr9_ret_omega]
 P_Expr10_alpha:             jmp     seq_l173_alpha                      ; SEQ
 P_Expr10_beta:              jmp     seq_r173_beta
 
-; REF(Expr11) α=seq_l173_alpha
-seq_l173_alpha:             lea     rax, [rel nref174_gamma]
+seq_l173_alpha: ; REF(Expr11)
+                            lea     rax, [rel nref174_gamma]
                             mov     [P_Expr11_ret_gamma], rax
                             lea     rax, [rel nref174_omega]
                             mov     [P_Expr11_ret_omega], rax
@@ -11609,8 +11609,8 @@ patdef_Expr10_omega:        jmp     [P_Expr10_ret_omega]
 P_Expr11_alpha:             jmp     seq_l175_alpha                      ; SEQ
 P_Expr11_beta:              jmp     seq_r175_beta
 
-; REF(Expr12) α=seq_l175_alpha
-seq_l175_alpha:             lea     rax, [rel nref176_gamma]
+seq_l175_alpha: ; REF(Expr12)
+                            lea     rax, [rel nref176_gamma]
                             mov     [P_Expr12_ret_gamma], rax
                             lea     rax, [rel nref176_omega]
                             mov     [P_Expr12_ret_omega], rax
@@ -11638,8 +11638,8 @@ patdef_Expr11_omega:        jmp     [P_Expr11_ret_omega]
 P_Expr12_alpha:             jmp     seq_l177_alpha                      ; SEQ
 P_Expr12_beta:              jmp     seq_r177_beta
 
-; REF(Expr13) α=seq_l177_alpha
-seq_l177_alpha:             lea     rax, [rel nref178_gamma]
+seq_l177_alpha: ; REF(Expr13)
+                            lea     rax, [rel nref178_gamma]
                             mov     [P_Expr13_ret_gamma], rax
                             lea     rax, [rel nref178_omega]
                             mov     [P_Expr13_ret_omega], rax
@@ -11667,8 +11667,8 @@ patdef_Expr12_omega:        jmp     [P_Expr12_ret_omega]
 P_Expr13_alpha:             jmp     seq_l179_alpha                      ; SEQ
 P_Expr13_beta:              jmp     seq_r179_beta
 
-; REF(Expr14) α=seq_l179_alpha
-seq_l179_alpha:             lea     rax, [rel nref180_gamma]
+seq_l179_alpha: ; REF(Expr14)
+                            lea     rax, [rel nref180_gamma]
                             mov     [P_Expr14_ret_gamma], rax
                             lea     rax, [rel nref180_omega]
                             mov     [P_Expr14_ret_omega], rax
@@ -11734,8 +11734,8 @@ seq_l198_beta:              jmp     seq_r199_beta
 seq_l199_alpha:             LIT_ALPHA1  64, seq_l199_alpha_saved, cursor, subject_data, subject_len_val, seq_r199_alpha, alt197_left_omega ; LIT α
 seq_l199_beta:              LIT_BETA    seq_l199_alpha_saved, cursor, alt197_left_omega ; LIT β
 
-; REF(Expr14) α=seq_r199_alpha
-seq_r199_alpha:             lea     rax, [rel nref200_gamma]
+seq_r199_alpha: ; REF(Expr14)
+                            lea     rax, [rel nref200_gamma]
                             mov     [P_Expr14_ret_gamma], rax
                             lea     rax, [rel nref200_omega]
                             mov     [P_Expr14_ret_omega], rax
@@ -11761,8 +11761,8 @@ seq_l201_beta:              jmp     seq_r202_beta
 seq_l202_alpha:             LIT_ALPHA1  126, seq_l202_alpha_saved, cursor, subject_data, subject_len_val, seq_r202_alpha, alt196_left_omega ; LIT α
 seq_l202_beta:              LIT_BETA    seq_l202_alpha_saved, cursor, alt196_left_omega ; LIT β
 
-; REF(Expr14) α=seq_r202_alpha
-seq_r202_alpha:             lea     rax, [rel nref203_gamma]
+seq_r202_alpha: ; REF(Expr14)
+                            lea     rax, [rel nref203_gamma]
                             mov     [P_Expr14_ret_gamma], rax
                             lea     rax, [rel nref203_omega]
                             mov     [P_Expr14_ret_omega], rax
@@ -11788,8 +11788,8 @@ seq_l204_beta:              jmp     seq_r205_beta
 seq_l205_alpha:             LIT_ALPHA1  63, seq_l205_alpha_saved, cursor, subject_data, subject_len_val, seq_r205_alpha, alt195_left_omega ; LIT α
 seq_l205_beta:              LIT_BETA    seq_l205_alpha_saved, cursor, alt195_left_omega ; LIT β
 
-; REF(Expr14) α=seq_r205_alpha
-seq_r205_alpha:             lea     rax, [rel nref206_gamma]
+seq_r205_alpha: ; REF(Expr14)
+                            lea     rax, [rel nref206_gamma]
                             mov     [P_Expr14_ret_gamma], rax
                             lea     rax, [rel nref206_omega]
                             mov     [P_Expr14_ret_omega], rax
@@ -11809,12 +11809,12 @@ seq_r204_alpha:
 seq_r204_beta:              jmp     seq_l204_beta
 alt195_left_omega:          ALT_OMEGA   alt195_cur_save, cursor, alt_r195_alpha ; ALT left_ω — restore cursor, enter right
 
-; DOL(ProtKwd $  ProtKwd)  α=alt_r195_alpha
-alt_r195_alpha:             DOL_SAVE    dol_entry_ProtKwd, cursor, dol207_child_alpha ; DOL α — save entry cursor
+alt_r195_alpha: ; DOL(ProtKwd $  ProtKwd)
+                            DOL_SAVE    dol_entry_ProtKwd, cursor, dol207_child_alpha ; DOL α — save entry cursor
 alt_r195_beta:              jmp     dol207_child_beta                   ; DOL β
 
-; REF(ProtKwd) α=dol207_child_alpha
-dol207_child_alpha:         lea     rax, [rel nref208_gamma]
+dol207_child_alpha: ; REF(ProtKwd)
+                            lea     rax, [rel nref208_gamma]
                             mov     [P_ProtKwd_ret_gamma], rax
                             lea     rax, [rel nref208_omega]
                             mov     [P_ProtKwd_ret_omega], rax
@@ -11832,12 +11832,12 @@ dol207_gamma:               DOL_CAPTURE dol_entry_ProtKwd, cursor, cap_ProtKwd_b
 dol207_omega:               jmp     alt194_left_omega                   ; DOL ω — child failed
 alt194_left_omega:          ALT_OMEGA   alt194_cur_save, cursor, alt_r194_alpha ; ALT left_ω — restore cursor, enter right
 
-; DOL(UnprotKwd $  UnprotKwd)  α=alt_r194_alpha
-alt_r194_alpha:             DOL_SAVE    dol_entry_UnprotKwd, cursor, dol209_child_alpha ; DOL α — save entry cursor
+alt_r194_alpha: ; DOL(UnprotKwd $  UnprotKwd)
+                            DOL_SAVE    dol_entry_UnprotKwd, cursor, dol209_child_alpha ; DOL α — save entry cursor
 alt_r194_beta:              jmp     dol209_child_beta                   ; DOL β
 
-; REF(UnprotKwd) α=dol209_child_alpha
-dol209_child_alpha:         lea     rax, [rel nref210_gamma]
+dol209_child_alpha: ; REF(UnprotKwd)
+                            lea     rax, [rel nref210_gamma]
                             mov     [P_UnprotKwd_ret_gamma], rax
                             lea     rax, [rel nref210_omega]
                             mov     [P_UnprotKwd_ret_omega], rax
@@ -11861,8 +11861,8 @@ seq_l211_beta:              jmp     seq_r212_beta
 seq_l212_alpha:             LIT_ALPHA1  38, seq_l212_alpha_saved, cursor, subject_data, subject_len_val, seq_r212_alpha, alt192_left_omega ; LIT α
 seq_l212_beta:              LIT_BETA    seq_l212_alpha_saved, cursor, alt192_left_omega ; LIT β
 
-; REF(Expr14) α=seq_r212_alpha
-seq_r212_alpha:             lea     rax, [rel nref213_gamma]
+seq_r212_alpha: ; REF(Expr14)
+                            lea     rax, [rel nref213_gamma]
                             mov     [P_Expr14_ret_gamma], rax
                             lea     rax, [rel nref213_omega]
                             mov     [P_Expr14_ret_omega], rax
@@ -11888,8 +11888,8 @@ seq_l214_beta:              jmp     seq_r215_beta
 seq_l215_alpha:             LIT_ALPHA1  43, seq_l215_alpha_saved, cursor, subject_data, subject_len_val, seq_r215_alpha, alt191_left_omega ; LIT α
 seq_l215_beta:              LIT_BETA    seq_l215_alpha_saved, cursor, alt191_left_omega ; LIT β
 
-; REF(Expr14) α=seq_r215_alpha
-seq_r215_alpha:             lea     rax, [rel nref216_gamma]
+seq_r215_alpha: ; REF(Expr14)
+                            lea     rax, [rel nref216_gamma]
                             mov     [P_Expr14_ret_gamma], rax
                             lea     rax, [rel nref216_omega]
                             mov     [P_Expr14_ret_omega], rax
@@ -11915,8 +11915,8 @@ seq_l217_beta:              jmp     seq_r218_beta
 seq_l218_alpha:             LIT_ALPHA1  45, seq_l218_alpha_saved, cursor, subject_data, subject_len_val, seq_r218_alpha, alt190_left_omega ; LIT α
 seq_l218_beta:              LIT_BETA    seq_l218_alpha_saved, cursor, alt190_left_omega ; LIT β
 
-; REF(Expr14) α=seq_r218_alpha
-seq_r218_alpha:             lea     rax, [rel nref219_gamma]
+seq_r218_alpha: ; REF(Expr14)
+                            lea     rax, [rel nref219_gamma]
                             mov     [P_Expr14_ret_gamma], rax
                             lea     rax, [rel nref219_omega]
                             mov     [P_Expr14_ret_omega], rax
@@ -11942,8 +11942,8 @@ seq_l220_beta:              jmp     seq_r221_beta
 seq_l221_alpha:             LIT_ALPHA1  42, seq_l221_alpha_saved, cursor, subject_data, subject_len_val, seq_r221_alpha, alt189_left_omega ; LIT α
 seq_l221_beta:              LIT_BETA    seq_l221_alpha_saved, cursor, alt189_left_omega ; LIT β
 
-; REF(Expr14) α=seq_r221_alpha
-seq_r221_alpha:             lea     rax, [rel nref222_gamma]
+seq_r221_alpha: ; REF(Expr14)
+                            lea     rax, [rel nref222_gamma]
                             mov     [P_Expr14_ret_gamma], rax
                             lea     rax, [rel nref222_omega]
                             mov     [P_Expr14_ret_omega], rax
@@ -11969,8 +11969,8 @@ seq_l223_beta:              jmp     seq_r224_beta
 seq_l224_alpha:             LIT_ALPHA1  36, seq_l224_alpha_saved, cursor, subject_data, subject_len_val, seq_r224_alpha, alt188_left_omega ; LIT α
 seq_l224_beta:              LIT_BETA    seq_l224_alpha_saved, cursor, alt188_left_omega ; LIT β
 
-; REF(Expr14) α=seq_r224_alpha
-seq_r224_alpha:             lea     rax, [rel nref225_gamma]
+seq_r224_alpha: ; REF(Expr14)
+                            lea     rax, [rel nref225_gamma]
                             mov     [P_Expr14_ret_gamma], rax
                             lea     rax, [rel nref225_omega]
                             mov     [P_Expr14_ret_omega], rax
@@ -11996,8 +11996,8 @@ seq_l226_beta:              jmp     seq_r227_beta
 seq_l227_alpha:             LIT_ALPHA1  46, seq_l227_alpha_saved, cursor, subject_data, subject_len_val, seq_r227_alpha, alt187_left_omega ; LIT α
 seq_l227_beta:              LIT_BETA    seq_l227_alpha_saved, cursor, alt187_left_omega ; LIT β
 
-; REF(Expr14) α=seq_r227_alpha
-seq_r227_alpha:             lea     rax, [rel nref228_gamma]
+seq_r227_alpha: ; REF(Expr14)
+                            lea     rax, [rel nref228_gamma]
                             mov     [P_Expr14_ret_gamma], rax
                             lea     rax, [rel nref228_omega]
                             mov     [P_Expr14_ret_omega], rax
@@ -12023,8 +12023,8 @@ seq_l229_beta:              jmp     seq_r230_beta
 seq_l230_alpha:             LIT_ALPHA1  33, seq_l230_alpha_saved, cursor, subject_data, subject_len_val, seq_r230_alpha, alt186_left_omega ; LIT α
 seq_l230_beta:              LIT_BETA    seq_l230_alpha_saved, cursor, alt186_left_omega ; LIT β
 
-; REF(Expr14) α=seq_r230_alpha
-seq_r230_alpha:             lea     rax, [rel nref231_gamma]
+seq_r230_alpha: ; REF(Expr14)
+                            lea     rax, [rel nref231_gamma]
                             mov     [P_Expr14_ret_gamma], rax
                             lea     rax, [rel nref231_omega]
                             mov     [P_Expr14_ret_omega], rax
@@ -12050,8 +12050,8 @@ seq_l232_beta:              jmp     seq_r233_beta
 seq_l233_alpha:             LIT_ALPHA1  37, seq_l233_alpha_saved, cursor, subject_data, subject_len_val, seq_r233_alpha, alt185_left_omega ; LIT α
 seq_l233_beta:              LIT_BETA    seq_l233_alpha_saved, cursor, alt185_left_omega ; LIT β
 
-; REF(Expr14) α=seq_r233_alpha
-seq_r233_alpha:             lea     rax, [rel nref234_gamma]
+seq_r233_alpha: ; REF(Expr14)
+                            lea     rax, [rel nref234_gamma]
                             mov     [P_Expr14_ret_gamma], rax
                             lea     rax, [rel nref234_omega]
                             mov     [P_Expr14_ret_omega], rax
@@ -12077,8 +12077,8 @@ seq_l235_beta:              jmp     seq_r236_beta
 seq_l236_alpha:             LIT_ALPHA1  47, seq_l236_alpha_saved, cursor, subject_data, subject_len_val, seq_r236_alpha, alt184_left_omega ; LIT α
 seq_l236_beta:              LIT_BETA    seq_l236_alpha_saved, cursor, alt184_left_omega ; LIT β
 
-; REF(Expr14) α=seq_r236_alpha
-seq_r236_alpha:             lea     rax, [rel nref237_gamma]
+seq_r236_alpha: ; REF(Expr14)
+                            lea     rax, [rel nref237_gamma]
                             mov     [P_Expr14_ret_gamma], rax
                             lea     rax, [rel nref237_omega]
                             mov     [P_Expr14_ret_omega], rax
@@ -12104,8 +12104,8 @@ seq_l238_beta:              jmp     seq_r239_beta
 seq_l239_alpha:             LIT_ALPHA1  35, seq_l239_alpha_saved, cursor, subject_data, subject_len_val, seq_r239_alpha, alt183_left_omega ; LIT α
 seq_l239_beta:              LIT_BETA    seq_l239_alpha_saved, cursor, alt183_left_omega ; LIT β
 
-; REF(Expr14) α=seq_r239_alpha
-seq_r239_alpha:             lea     rax, [rel nref240_gamma]
+seq_r239_alpha: ; REF(Expr14)
+                            lea     rax, [rel nref240_gamma]
                             mov     [P_Expr14_ret_gamma], rax
                             lea     rax, [rel nref240_omega]
                             mov     [P_Expr14_ret_omega], rax
@@ -12131,8 +12131,8 @@ seq_l241_beta:              jmp     seq_r242_beta
 seq_l242_alpha:             LIT_ALPHA1  61, seq_l242_alpha_saved, cursor, subject_data, subject_len_val, seq_r242_alpha, alt182_left_omega ; LIT α
 seq_l242_beta:              LIT_BETA    seq_l242_alpha_saved, cursor, alt182_left_omega ; LIT β
 
-; REF(Expr14) α=seq_r242_alpha
-seq_r242_alpha:             lea     rax, [rel nref243_gamma]
+seq_r242_alpha: ; REF(Expr14)
+                            lea     rax, [rel nref243_gamma]
                             mov     [P_Expr14_ret_gamma], rax
                             lea     rax, [rel nref243_omega]
                             mov     [P_Expr14_ret_omega], rax
@@ -12158,8 +12158,8 @@ seq_l244_beta:              jmp     seq_r245_beta
 seq_l245_alpha:             LIT_ALPHA1  124, seq_l245_alpha_saved, cursor, subject_data, subject_len_val, seq_r245_alpha, alt181_left_omega ; LIT α
 seq_l245_beta:              LIT_BETA    seq_l245_alpha_saved, cursor, alt181_left_omega ; LIT β
 
-; REF(Expr14) α=seq_r245_alpha
-seq_r245_alpha:             lea     rax, [rel nref246_gamma]
+seq_r245_alpha: ; REF(Expr14)
+                            lea     rax, [rel nref246_gamma]
                             mov     [P_Expr14_ret_gamma], rax
                             lea     rax, [rel nref246_omega]
                             mov     [P_Expr14_ret_omega], rax
