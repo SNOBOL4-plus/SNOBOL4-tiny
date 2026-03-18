@@ -1129,7 +1129,114 @@
 %define ALT2_VV  CONC2_VV
 
 ; =============================================================================
-; Session 172 — *16 variants: result stored at [rbp-16/8] (subject slot)
+; Session 180 — CAT2 family: string-value concatenation via stmt_concat.
+;
+; Unlike CONC2 (which calls stmt_apply("CONCAT") for pattern concatenation),
+; these macros call stmt_concat(a, b) directly — producing a string result.
+; Used by prog_emit_expr E_CONC in non-pattern (value) context.
+;
+;   CAT2_SS  s1, s2          — concat(literal, literal)  → [rbp-32/24]
+;   CAT2_SV  s,  varlab      — concat(literal, variable)
+;   CAT2_VS  varlab, s       — concat(variable, literal)
+;   CAT2_VV  v1, v2          — concat(variable, variable)
+;   CAT2_VN  varlab          — concat(variable, "")
+;   CAT2_SN  s               — concat(literal,  "")
+; =============================================================================
+
+; stmt_concat(DESCR_t a, DESCR_t b) → rax:rdx
+; SysV: first DESCR_t in rdi+rsi, second in rdx+rcx
+
+%macro CAT2_SS 2            ; str1, str2  → [rbp-32/24]
+    lea     rdi, [rel %1]
+    call    stmt_strval
+    mov     rsi, rdx           ; a.high = rdx
+    mov     rdi, rax           ; a.low  = rax
+    lea     rax, [rel %2]
+    push    rdi
+    push    rsi
+    mov     rdi, rax
+    call    stmt_strval
+    mov     rcx, rdx           ; b.high
+    mov     rdx, rax           ; b.low
+    pop     rsi
+    pop     rdi
+    call    stmt_concat
+    mov     [rbp-32], rax
+    mov     [rbp-24], rdx
+%endmacro
+
+%macro CAT2_SV 2            ; strlab, varlab  → [rbp-32/24]
+    lea     rdi, [rel %1]
+    call    stmt_strval
+    mov     rsi, rdx
+    mov     rdi, rax
+    lea     rax, [rel %2]
+    push    rdi
+    push    rsi
+    mov     rdi, rax
+    call    stmt_get
+    mov     rcx, rdx
+    mov     rdx, rax
+    pop     rsi
+    pop     rdi
+    call    stmt_concat
+    mov     [rbp-32], rax
+    mov     [rbp-24], rdx
+%endmacro
+
+%macro CAT2_VS 2            ; varlab, strlab  → [rbp-32/24]
+    lea     rdi, [rel %1]
+    call    stmt_get
+    mov     rsi, rdx
+    mov     rdi, rax
+    lea     rax, [rel %2]
+    push    rdi
+    push    rsi
+    mov     rdi, rax
+    call    stmt_strval
+    mov     rcx, rdx
+    mov     rdx, rax
+    pop     rsi
+    pop     rdi
+    call    stmt_concat
+    mov     [rbp-32], rax
+    mov     [rbp-24], rdx
+%endmacro
+
+%macro CAT2_VV 2            ; varlab1, varlab2  → [rbp-32/24]
+    lea     rdi, [rel %1]
+    call    stmt_get
+    mov     rsi, rdx
+    mov     rdi, rax
+    lea     rax, [rel %2]
+    push    rdi
+    push    rsi
+    mov     rdi, rax
+    call    stmt_get
+    mov     rcx, rdx
+    mov     rdx, rax
+    pop     rsi
+    pop     rdi
+    call    stmt_concat
+    mov     [rbp-32], rax
+    mov     [rbp-24], rdx
+%endmacro
+
+%macro CAT2_VN 1            ; varlab  → [rbp-32/24]  (concat var with "")
+    lea     rdi, [rel %1]
+    call    stmt_get
+    mov     [rbp-32], rax
+    mov     [rbp-24], rdx
+%endmacro
+
+%macro CAT2_SN 1            ; strlab  → [rbp-32/24]  (concat literal with "")
+    lea     rdi, [rel %1]
+    call    stmt_strval
+    mov     [rbp-32], rax
+    mov     [rbp-24], rdx
+%endmacro
+
+
 ;
 ; Identical to CONC2/ALT2 family but final mov pair targets rbp-16/rbp-8.
 ; Used when prog_emit_expr is called with rbp_off == -16 (subject position).

@@ -1522,9 +1522,13 @@ static int expr_has_pattern_fn(EXPR_t *e) {
 }
 static int expr_is_pattern_expr(EXPR_t *e) {
     if (!e) return 0;
-    /* E_OR (alternation) and E_CONC (concatenation) with E_QLIT children
-     * are genuine pattern expressions (e.g. P = 'a' | 'b') */
-    if (e->kind == E_OR || e->kind == E_CONC) return 1;
+    /* E_OR (alternation, i.e. P = 'a' | 'b') is always a pattern expression —
+     * alternation has no meaning in pure value context. */
+    if (e->kind == E_OR) return 1;
+    /* E_CONC (concatenation) is a pattern expression only when it contains
+     * a pattern function call. Pure literal concat like 'hello' ' world'
+     * is a VALUE expression (string join), not a pattern. */
+    if (e->kind == E_CONC) return expr_has_pattern_fn(e);
     /* Any function call is a pattern expression */
     return expr_has_pattern_fn(e);
 }
@@ -2129,29 +2133,12 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
     }
     case E_OR:
     case E_CONC: {
-        /* Binary pattern operators: ALT (|) and CONCAT (juxtaposition).
-         * Treat as 2-arg function call: ALT(left,right) or CONCAT(left,right).
+        /* E_CONC = string CAT  (value context): call stmt_concat directly.
+         * E_OR   = pattern SEQ (alternation):   call stmt_apply("ALT").
          *
-         * Fast paths use CONC2/ALT2 macros when both args are literals:
-         *   CONC2_N  fn, s        — fn(s, NULVCL)          left=QLIT, right=NULV/null
-         *   CONC2    fn, s1, s2   — fn(s1, s2)             left=QLIT, right=QLIT
-         *   ALT2_N / ALT2        — same shapes for E_OR
-         * Fallback: generic sub/LOAD/STORE_ARG32/APPLY_FN_N/add sequence. */
-        const char *opname = (e->kind == E_OR) ? "ALT" : "CONCAT";
-        const char *mac_ss = (e->kind == E_OR) ? "ALT2    " : "CONC2   ";
-        const char *mac_sn = (e->kind == E_OR) ? "ALT2_N  " : "CONC2_N ";
-        const char *mac_sv = (e->kind == E_OR) ? "ALT2_SV " : "CONC2_SV";
-        const char *mac_vs = (e->kind == E_OR) ? "ALT2_VS " : "CONC2_VS";
-        const char *mac_vn = (e->kind == E_OR) ? "ALT2_VN " : "CONC2_VN";
-        const char *mac_vv = (e->kind == E_OR) ? "ALT2_VV " : "CONC2_VV";
-        /* *16 variants — result stored at [rbp-16/8] (subject slot) */
-        const char *mac_ss16 = (e->kind == E_OR) ? "ALT2_16   " : "CONC2_16  ";
-        const char *mac_sn16 = (e->kind == E_OR) ? "ALT2_N16  " : "CONC2_N16 ";
-        const char *mac_sv16 = (e->kind == E_OR) ? "ALT2_SV16 " : "CONC2_SV16";
-        const char *mac_vs16 = (e->kind == E_OR) ? "ALT2_VS16 " : "CONC2_VS16";
-        const char *mac_vn16 = (e->kind == E_OR) ? "ALT2_VN16 " : "CONC2_VN16";
-        const char *mac_vv16 = (e->kind == E_OR) ? "ALT2_VV16 " : "CONC2_VV16";
-        const char *fnlab  = prog_str_intern(opname);
+         * Naming: CAT for string concatenation, SEQ/ALT for pattern alternation.
+         * E_CONC in prog_emit_expr is always value-context — pattern-context
+         * E_CONC is handled by emit_asm_node, not here. */
 
         int left_is_str  = e->left  && e->left->kind  == E_QLIT;
         int left_is_var  = e->left  && e->left->kind  == E_VART;
@@ -2160,6 +2147,73 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
                            (e->right->kind == E_ILIT && e->right->ival == 0);
         int right_is_str = e->right && e->right->kind == E_QLIT;
         int right_is_var = e->right && e->right->kind == E_VART;
+
+        if (e->kind == E_CONC) {
+            /* CAT fast paths — CAT2_* macros call stmt_concat(a,b) */
+            if (rbp_off == -32) {
+                if (left_is_str && right_is_str) {
+                    A("    CAT2_SS  %s, %s\n",
+                      prog_str_intern(e->left->sval),
+                      prog_str_intern(e->right->sval));
+                    return 1;
+                }
+                if (left_is_str && right_is_nul) {
+                    A("    CAT2_SN  %s\n", prog_str_intern(e->left->sval));
+                    return 1;
+                }
+                if (left_is_str && right_is_var) {
+                    A("    CAT2_SV  %s, %s\n",
+                      prog_str_intern(e->left->sval),
+                      prog_str_intern(e->right->sval));
+                    return 1;
+                }
+                if (left_is_var && right_is_str) {
+                    A("    CAT2_VS  %s, %s\n",
+                      prog_str_intern(e->left->sval),
+                      prog_str_intern(e->right->sval));
+                    return 1;
+                }
+                if (left_is_var && right_is_nul) {
+                    A("    CAT2_VN  %s\n", prog_str_intern(e->left->sval));
+                    return 1;
+                }
+                if (left_is_var && right_is_var) {
+                    A("    CAT2_VV  %s, %s\n",
+                      prog_str_intern(e->left->sval),
+                      prog_str_intern(e->right->sval));
+                    return 1;
+                }
+            }
+            /* CAT generic fallback: evaluate both, call stmt_concat */
+            prog_emit_expr(e->left, -32);
+            A("    mov     [conc_tmp0_rax], rax\n");
+            A("    mov     [conc_tmp0_rdx], rdx\n");
+            prog_emit_expr(e->right, -32);
+            A("    mov     rcx, rdx\n");
+            A("    mov     rdx, rax\n");
+            A("    mov     rdi, [conc_tmp0_rax]\n");
+            A("    mov     rsi, [conc_tmp0_rdx]\n");
+            A("    call    stmt_concat\n");
+            A("    mov     [rbp%+d], rax\n", rbp_off);
+            A("    mov     [rbp%+d], rdx\n", rbp_off + 8);
+            return 1;
+        }
+
+        /* E_OR — pattern ALT via stmt_apply("ALT") — unchanged */
+        const char *opname = "ALT";
+        const char *mac_ss = "ALT2    ";
+        const char *mac_sn = "ALT2_N  ";
+        const char *mac_sv = "ALT2_SV ";
+        const char *mac_vs = "ALT2_VS ";
+        const char *mac_vn = "ALT2_VN ";
+        const char *mac_vv = "ALT2_VV ";
+        const char *mac_ss16 = "ALT2_16   ";
+        const char *mac_sn16 = "ALT2_N16  ";
+        const char *mac_sv16 = "ALT2_SV16 ";
+        const char *mac_vs16 = "ALT2_VS16 ";
+        const char *mac_vn16 = "ALT2_VN16 ";
+        const char *mac_vv16 = "ALT2_VV16 ";
+        const char *fnlab  = prog_str_intern(opname);
 
         if (left_is_str && right_is_nul && rbp_off == -32) {
             const char *slab = prog_str_intern(e->left->sval);
@@ -2195,7 +2249,6 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
             A("    %s %s, %s, %s\n", mac_vv, fnlab, v1, v2);
             return 1;
         }
-        /* rbp_off == -16 fast paths (subject slot) */
         if (left_is_str && right_is_nul && rbp_off == -16) {
             const char *slab = prog_str_intern(e->left->sval);
             A("    %s%s, %s\n", mac_sn16, fnlab, slab);
@@ -2231,7 +2284,7 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
             return 1;
         }
 
-        /* Generic path: allocate 2-slot args array, evaluate each child */
+        /* Generic ALT fallback */
         A("    sub     rsp, 32\n");
         prog_emit_expr(e->left,  rbp_off);
         A("    STORE_ARG32 0\n");
@@ -2241,7 +2294,7 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
         A("    add     rsp, 32\n");
         A("    mov     [rbp%+d], rax\n", rbp_off);
         A("    mov     [rbp%+d], rdx\n", rbp_off + 8);
-        return 1; /* may fail */
+        return 1;
     }
     /* ---- arithmetic binary operators ---- */
     case E_ADD:
@@ -2514,6 +2567,19 @@ static void asm_emit_program(Program *prog) {
         bss_add(asm_named[i].ret_omega);
     }
 
+    /* Register scan_start_N bss slots for every pattern-match statement.
+     * uid sequence mirrors the real emit pass (one uid per statement). */
+    {
+        int p2_uid = 0;
+        for (STMT_t *sp = prog->head; sp; sp = sp->next) {
+            if (sp->is_end) break;
+            int this_uid = p2_uid++;
+            if (!sp->pattern) continue;
+            char ss[64]; snprintf(ss, sizeof ss, "scan_start_%d", this_uid);
+            bss_add(ss);
+        }
+    }
+
     /* ---- Pass 3: dry-run all pattern emissions to collect bss/lit slots ----
      * Mirrors asm_emit_body dry-run. Redirects output to /dev/null,
      * runs emit_asm_node for every pattern stmt, then restores.
@@ -2719,10 +2785,23 @@ static void asm_emit_program(Program *prog) {
 
         /* -- subject eval -- */
         prog_emit_expr(s->subject, -16);
-        /* stmt_setup_subject — copies into subject_data[], resets cursor */
+        /* stmt_setup_subject — copies into subject_data[], resets cursor=0 */
         A("    SUBJ_FROM16\n");
 
-        /* -- start the pattern -- */
+        /* Unanchored scan: try pattern at positions 0..subject_len.
+         * scan_start_N tracks the current attempt start position.
+         * On omega: if scan_start < subject_len, advance and retry alpha.
+         * On gamma: match succeeded from scan_start_N. */
+        char scan_start[64]; snprintf(scan_start, sizeof scan_start, "scan_start_%d", uid);
+        char scan_retry[64]; snprintf(scan_retry, sizeof scan_retry, "scan_retry_%d", uid);
+        bss_add(scan_start);
+        /* reset scan_start to 0 (subject_data cursor already 0 from SUBJ_FROM16) */
+        A("    mov     qword [%s], 0\n", scan_start);
+
+        /* -- scan retry entry: set cursor = scan_start, then try pattern -- */
+        A("%s:\n", scan_retry);
+        A("    mov     rax, [%s]\n", scan_start);
+        A("    mov     [cursor], rax\n");
         A("    jmp     %s\n", pat_alpha);
 
         /* -- Byrd box inline: alpha/beta → gamma/omega -- */
@@ -2751,8 +2830,17 @@ static void asm_emit_program(Program *prog) {
         }
         emit_jmp(tgt_s, next_lbl);
 
-        /* -- omega: match failed -- */
+        /* -- omega: match failed at this scan_start position --
+         * Unanchored: advance scan_start by 1, retry if not past subject end.
+         * Anchored (&ANCHOR != 0): go directly to F-target. */
         asmL(pat_omega);
+        A("    mov     rax, [%s]\n", scan_start);
+        A("    inc     rax\n");
+        A("    cmp     rax, [subject_len_val]\n");
+        A("    jg      %s\n", next_lbl);   /* exhausted → F-target path */
+        A("    mov     [%s], rax\n", scan_start);
+        A("    jmp     %s\n", scan_retry);
+        /* F-target reached when scan exhausted */
         emit_jmp(tgt_f, next_lbl);
 
         asmL(next_lbl);
