@@ -34,6 +34,12 @@ artifacts/
 | multi_capture_abc.s, star_deref_capture.s | multi-capture, *VAR | M-ASM-CROSSCHECK ✅ |
 | stmt_output_lit.s, stmt_assign.s, stmt_goto.s | program-mode statements | M-ASM-BEAUTY work |
 
+### Sample programs (M-ASM-SAMPLES)
+| File | What | Status |
+|------|------|--------|
+| roman.s | roman numeral converter — patterns, functions, arrays, arithmetic | assembles; output wrong (placeholder) |
+| wordcount.s | word frequency counter — string scanning, table, patterns | NASM_FAIL P_X_ret_gamma (placeholder) |
+
 ---
 
 ## c/ — C backend
