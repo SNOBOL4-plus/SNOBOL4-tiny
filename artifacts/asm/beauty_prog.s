@@ -10310,7 +10310,7 @@ section .data
 lit_str_1            db 32
 lit_str_2            db 42, 45
 lit_str_3            db 43, 46
-lit_str_4            db 
+lit_str_4            db 0  ; ""
 lit_str_5            db 46, 43
 lit_str_6            db 45, 45
 lit_str_7            db 61, 32

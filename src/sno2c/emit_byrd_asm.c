@@ -1643,6 +1643,10 @@ static void asm_emit_pattern(STMT_t *stmt) {
     A("%-20s equ %d\n", "subject_len_imm", subj_len);
     A("newline:             db 10\n");
     for (int i = 0; i < lit_count; i++) {
+        if (lit_table[i].len == 0) {
+            A("%-20s db 0  ; \"\"\n", lit_table[i].label);
+            continue;
+        }
         A("%-20s db ", lit_table[i].label);
         for (int j = 0; j < lit_table[i].len; j++) {
             if (j) A(", ");
@@ -1789,6 +1793,10 @@ static void asm_emit_body(STMT_t *stmt) {
     if (has_data) {
         A("\nsection .data\n");
         for (int i = 0; i < lit_count; i++) {
+            if (lit_table[i].len == 0) {
+                A("%-20s db 0  ; \"\"\n", lit_table[i].label);
+                continue;
+            }
             A("%-20s db ", lit_table[i].label);
             for (int j = 0; j < lit_table[i].len; j++) {
                 if (j) A(", ");
@@ -2856,6 +2864,10 @@ static void asm_emit_program(Program *prog) {
     if (lit_count > 0) {
         A("\nsection .data\n");
         for (int i = 0; i < lit_count; i++) {
+            if (lit_table[i].len == 0) {
+                A("%-20s db 0  ; \"\"\n", lit_table[i].label);
+                continue;
+            }
             A("%-20s db ", lit_table[i].label);
             for (int j = 0; j < lit_table[i].len; j++) {
                 if (j) A(", ");
