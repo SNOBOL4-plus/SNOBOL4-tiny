@@ -486,3 +486,10 @@ session115 | 2026-03-16 | 6d5919daa03d3c56646b5f0a165f86ee | 15859 lines | compi
 - change: SEP_W 80 → 120; separator lines now 120 chars wide (Cherryholmes standard)
 - assemble: nasm -I src/runtime/asm/ -f elf64 beauty_prog_session169.s -o /dev/null
 - invariants: 106/106 C crosscheck PASS, 26/26 ASM crosscheck PASS
+
+### artifacts/asm/beauty_prog_session170.s  (Sprint A14 — M-ASM-BEAUTIFUL)
+- status: 12689 lines, NASM clean
+- change: REF/DOL/ARBNO block-header comments moved to col2 on label line ("alpha: ; REF(Name)")
+- ALFC empty-label guard added (suppresses bare ":" when label is "")
+- assemble: nasm -I src/runtime/asm/ -f elf64 beauty_prog_session170.s -o /dev/null
+- invariants: 106/106 C crosscheck PASS, 26/26 ASM crosscheck PASS

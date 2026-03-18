@@ -300,6 +300,17 @@ static void asmLB(const char *lbl, const char *instr) {
     oc_str(instr);
 }
 
+/* asmLC — emit "label: ; comment\n" — label with col2 comment, no instruction.
+ * Used for block-header comments (REF/DOL/ARBNO) that describe the whole block.
+ * The instructions that follow are emitted normally via A()/ALF()/ALFC(). */
+static void asmLC(const char *lbl, const char *comment) {
+    flush_pending_label();
+    oc_str(lbl); oc_char(':');
+    oc_char(' '); oc_char(';'); oc_char(' ');
+    oc_str(comment);
+    oc_char('\n');
+}
+
 /* ALF — emit "label:  instruction\n" where instruction is printf-formatted.
  * This is the main beauty helper: one source call = one .s line. */
 static char _alf_ibuf[1024];
@@ -317,7 +328,7 @@ static char _alfc_ibuf[768];
     if (_alfc_len > 0 && _alfc_ibuf[_alfc_len-1] == '\n') _alfc_ibuf[--_alfc_len] = '\0'; \
     /* emit label: at col 0, instruction at COL_W, then comment (no wrap) */ \
     flush_pending_label(); \
-    oc_str(lbl); oc_char(':'); \
+    if ((lbl) && *(lbl)) { oc_str(lbl); oc_char(':'); } \
     emit_to_col(COL_W); \
     const char *_alfc_p = _alfc_ibuf; \
     while (*_alfc_p == ' ') _alfc_p++; \
@@ -560,10 +571,11 @@ static void emit_asm_arbno(EXPR_t *child,
         arbno_stack_count++;
     }
 
-    A("\n; ARBNO α=%s\n", alpha);
+    A("\n");
 
-    /* α: initialize depth=0, push cursor, goto γ */
-    ALF(alpha, "mov     qword [%s], 0\n", dep);
+    /* α: header comment on label line, then initialize depth=0, push cursor, goto γ */
+    asmLC(alpha, "ARBNO");
+    A("    mov     qword [%s], 0\n", dep);
     /* push cursor onto stack slot 0 */
     A("    lea     rbx, [rel %s]\n", stk);
     A("    mov     rax, [%s]\n", cursor);
@@ -865,10 +877,16 @@ static void emit_asm_assign(EXPR_t *child, const char *varname,
     /* bss_add is a no-op if already registered; harmless in single-pass mode */
     bss_add(entry_cur);
 
-    A("\n; DOL(%s $  %s)  α=%s\n", varname ? varname : "?", safe, alpha);
+    {
+        char dol_hdr[LBUF];
+        snprintf(dol_hdr, LBUF, "DOL(%s $  %s)", varname ? varname : "?", safe);
+        A("\n");
+        /* α: header comment on label line — "alpha: ; DOL(var $ var)" */
+        asmLC(alpha, dol_hdr);
+    }
 
-    /* α: save entry cursor, enter child — one macro call */
-    ALFC(alpha, "DOL α — save entry cursor",
+    /* α instruction: save entry cursor, enter child — one macro call */
+    ALFC("", "DOL α — save entry cursor",
          "DOL_SAVE    %s, %s, %s\n", entry_cur, cursor, cα);
 
     /* β: transparent — backtrack into child */
@@ -1232,10 +1250,16 @@ static void emit_asm_named_ref(const AsmNamedPat *np,
     snprintf(glbl, LBUF, "nref%d_gamma", uid);
     snprintf(olbl, LBUF, "nref%d_omega", uid);
 
-    A("\n; REF(%s) α=%s\n", np->varname, alpha);
+    {
+        char ref_hdr[LBUF];
+        snprintf(ref_hdr, LBUF, "REF(%s)", np->varname);
+        A("\n");
+        /* α: header comment on label line — "alpha: ; REF(PatName)" */
+        asmLC(alpha, ref_hdr);
+    }
 
-    /* α: load continuations, jump to named pattern α */
-    ALF(alpha, "lea     rax, [rel %s]\n", glbl);
+    /* α instructions: load continuations, jump to named pattern α */
+    A("    lea     rax, [rel %s]\n", glbl);
     A("    mov     [%s], rax\n", np->ret_gamma);
     A("    lea     rax, [rel %s]\n", olbl);
     A("    mov     [%s], rax\n", np->ret_omega);
