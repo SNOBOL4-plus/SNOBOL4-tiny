@@ -52,6 +52,14 @@ These are reference/regression files — not updated every session.
 
 ---
 
+## c/beauty_full.c — C backend historical reference
+
+`beauty_full.c` is the last known-good `-trampoline` C output from the Bug5/6 era (sessions 103–116).
+It differs from `beauty_prog.c` in that it was compiled during active debugging and reflects
+the state of `emit_byrd.c` at session114. Kept for historical reference; `beauty_prog.c` is the canonical current artifact.
+
+---
+
 ## asm/samples/ — Sample programs
 
 | File | What | Status |
