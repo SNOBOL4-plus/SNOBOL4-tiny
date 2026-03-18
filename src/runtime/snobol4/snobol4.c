@@ -608,6 +608,8 @@ static DESCR_t _b_PAT_SUCCEED(DESCR_t *a, int n) { (void)a;(void)n; return pat_s
 static DESCR_t _b_PAT_BAL(DESCR_t *a, int n)     { (void)a;(void)n; return pat_bal();     }
 static DESCR_t _b_PAT_ARBNO(DESCR_t *a, int n)   { return n>=1 ? pat_arbno(a[0])  : FAILDESCR; }
 static DESCR_t _b_PAT_FENCE(DESCR_t *a, int n)   { return n>=1 ? pat_fence_p(a[0]) : pat_fence(); }
+static DESCR_t _b_PAT_ALT(DESCR_t *a, int n)     { return n>=2 ? pat_alt(a[0], a[1])  : (n>=1 ? a[0] : FAILDESCR); }
+static DESCR_t _b_PAT_CONCAT(DESCR_t *a, int n)  { return n>=2 ? pat_cat(a[0], a[1])  : (n>=1 ? a[0] : FAILDESCR); }
 
 void SNO_INIT_fn(void) {
     GC_INIT();
@@ -686,6 +688,8 @@ void SNO_INIT_fn(void) {
     register_fn("BAL",     _b_PAT_BAL,     0, 0);
     register_fn("ARBNO",   _b_PAT_ARBNO,   1, 1);
     register_fn("FENCE",   _b_PAT_FENCE,   0, 1);
+    register_fn("ALT",     _b_PAT_ALT,     2, 2);
+    register_fn("CONCAT",  _b_PAT_CONCAT,  2, 2);
     /* Sprint 23: pre-INIT_fn &ALPHABET-derived constants from global.sno
      * &ALPHABET is a 256-char binary string; POS(n) LEN(1) . var extracts char(n).
      * Since STRVAL uses strlen, &ALPHABET[0]=NUL causes all matches to fail.

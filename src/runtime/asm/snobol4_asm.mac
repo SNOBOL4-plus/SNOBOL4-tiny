@@ -307,6 +307,126 @@
     call    %1
 %endmacro
 
+; -----------------------------------------------------------------------------
+; STORE_ARG32 slot — copy DESCR_t from [rbp-32]/[rbp-24] into arg array [rsp+slot]
+; slot is the byte offset (ai * 16)
+; -----------------------------------------------------------------------------
+%macro STORE_ARG32 1
+    mov     rax, [rbp-32]
+    mov     [rsp + %1], rax
+    mov     rax, [rbp-24]
+    mov     [rsp + %1 + 8], rax
+%endmacro
+
+; -----------------------------------------------------------------------------
+; STORE_ARG16 slot — copy DESCR_t from [rbp-16]/[rbp-8] into arg array [rsp+slot]
+; -----------------------------------------------------------------------------
+%macro STORE_ARG16 1
+    mov     rax, [rbp-16]
+    mov     [rsp + %1], rax
+    mov     rax, [rbp-8]
+    mov     [rsp + %1 + 8], rax
+%endmacro
+
+; -----------------------------------------------------------------------------
+; LOAD_NULVCL — load null/void descriptor into [rbp-16]/[rbp-8]
+; -----------------------------------------------------------------------------
+%macro LOAD_NULVCL 0
+    mov     qword [rbp-16], 1
+    mov     qword [rbp-8],  0
+%endmacro
+
+; -----------------------------------------------------------------------------
+; LOAD_NULVCL32 — load null/void descriptor into [rbp-32]/[rbp-24]
+; -----------------------------------------------------------------------------
+%macro LOAD_NULVCL32 0
+    mov     qword [rbp-32], 1
+    mov     qword [rbp-24], 0
+%endmacro
+
+; -----------------------------------------------------------------------------
+; APPLY_FN_0 fnlab — call stmt_apply(fnlab, NULL, 0) → result at [rbp-16]/[rbp-8]
+; -----------------------------------------------------------------------------
+%macro APPLY_FN_0 1
+    lea     rdi, [rel %1]
+    xor     rsi, rsi
+    xor     rdx, rdx
+    call    stmt_apply
+%endmacro
+
+; -----------------------------------------------------------------------------
+; APPLY_FN_N fnlab, nargs — call stmt_apply(fnlab, rsp, nargs)
+; Caller must have already built args array on stack (sub rsp, nargs*16)
+; and filled slot [rsp+ai*16] for each arg.
+; -----------------------------------------------------------------------------
+%macro APPLY_FN_N 2
+    lea     rdi, [rel %1]
+    mov     rsi, rsp
+    mov     rdx, %2
+    call    stmt_apply
+%endmacro
+
+; -----------------------------------------------------------------------------
+; SET_CAPTURE varlab, buflab, lenlab
+; Materialise a $ capture buffer into a SNOBOL4 variable
+; -----------------------------------------------------------------------------
+%macro SET_CAPTURE 3
+    lea     rdi, [rel %1]
+    lea     rsi, [rel %2]
+    mov     rdx, [%3]
+    call    stmt_set_capture
+%endmacro
+
+; -----------------------------------------------------------------------------
+; CALL_APPLY fnlab — call stmt_apply with args already on stack
+; rdi=fnlab rsi=rsp rdx=nargs must be set by caller before this macro
+; This is the tail of the APPLY sequence — just the call + result save.
+; -----------------------------------------------------------------------------
+%macro CALL_APPLY 0
+    call    stmt_apply
+%endmacro
+
+; -----------------------------------------------------------------------------
+; IS_FAIL_BRANCH fail_lbl — branch to fail_lbl if DESCR_t at [rbp-32] is fail
+; -----------------------------------------------------------------------------
+%macro IS_FAIL_BRANCH 1
+    mov     rdi, [rbp-32]
+    mov     rsi, [rbp-24]
+    call    stmt_is_fail
+    test    eax, eax
+    jnz     %1
+%endmacro
+
+; -----------------------------------------------------------------------------
+; IS_FAIL_BRANCH16 fail_lbl — branch if DESCR_t at [rbp-16] is fail
+; -----------------------------------------------------------------------------
+%macro IS_FAIL_BRANCH16 1
+    mov     rdi, [rbp-16]
+    mov     rsi, [rbp-8]
+    call    stmt_is_fail
+    test    eax, eax
+    jnz     %1
+%endmacro
+
+; -----------------------------------------------------------------------------
+; LOAD_VAR strlab — load named variable → DESCR_t at [rbp-32] (rhs slot)
+; -----------------------------------------------------------------------------
+%macro LOAD_VAR 1
+    lea     rdi, [rel %1]
+    call    stmt_get
+    mov     [rbp-32], rax
+    mov     [rbp-24], rdx
+%endmacro
+
+; -----------------------------------------------------------------------------
+; SETUP_SUBJECT_FROM16 — set up subject from DESCR_t at [rbp-16]
+; -----------------------------------------------------------------------------
+%macro SETUP_SUBJECT_FROM16 0
+    mov     rdi, [rbp-16]
+    mov     rsi, [rbp-8]
+    call    stmt_setup_subject
+%endmacro
+
 ; =============================================================================
 ; END snobol4_asm.mac
 ; =============================================================================

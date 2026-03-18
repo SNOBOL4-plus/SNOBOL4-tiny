@@ -1793,24 +1793,36 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
     switch (e->kind) {
     case E_QLIT: {
         const char *lab = prog_str_intern(e->sval);
-        A("    lea     rdi, [rel %s]\n", lab);
-        A("    call    stmt_strval\n");
-        A("    mov     [rbp%+d], rax\n", rbp_off);
-        A("    mov     [rbp%+d], rdx\n", rbp_off+8);
+        A("    LOAD_STR    %s\n", lab);
+        if (rbp_off == -16) {
+            A("    mov     [rbp-16], rax\n");
+            A("    mov     [rbp-8],  rdx\n");
+        } else {
+            A("    mov     [rbp%+d], rax\n", rbp_off);
+            A("    mov     [rbp%+d], rdx\n", rbp_off+8);
+        }
         return 0;
     }
     case E_ILIT:
-        A("    mov     rdi, %ld\n", (long)e->ival);
-        A("    call    stmt_intval\n");
-        A("    mov     [rbp%+d], rax\n", rbp_off);
-        A("    mov     [rbp%+d], rdx\n", rbp_off+8);
+        A("    LOAD_INT    %ld\n", (long)e->ival);
+        if (rbp_off == -16) {
+            A("    mov     [rbp-16], rax\n");
+            A("    mov     [rbp-8],  rdx\n");
+        } else {
+            A("    mov     [rbp%+d], rax\n", rbp_off);
+            A("    mov     [rbp%+d], rdx\n", rbp_off+8);
+        }
         return 0;
     case E_VART: {
         const char *lab = prog_str_intern(e->sval);
-        A("    lea     rdi, [rel %s]\n", lab);
-        A("    call    stmt_get\n");
-        A("    mov     [rbp%+d], rax\n", rbp_off);
-        A("    mov     [rbp%+d], rdx\n", rbp_off+8);
+        if (rbp_off == -16) {
+            A("    GET_VAR     %s\n", lab);
+        } else {
+            A("    lea     rdi, [rel %s]\n", lab);
+            A("    call    stmt_get\n");
+            A("    mov     [rbp%+d], rax\n", rbp_off);
+            A("    mov     [rbp%+d], rdx\n", rbp_off+8);
+        }
         return 1; /* might be fail if var undefined */
     }
     case E_KW: {
@@ -1818,61 +1830,69 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
         char kwbuf[128];
         snprintf(kwbuf, sizeof kwbuf, "&%s", e->sval ? e->sval : "");
         const char *lab = prog_str_intern(kwbuf);
-        A("    lea     rdi, [rel %s]\n", lab);
-        A("    call    stmt_get\n");
-        A("    mov     [rbp%+d], rax\n", rbp_off);
-        A("    mov     [rbp%+d], rdx\n", rbp_off+8);
+        if (rbp_off == -16) {
+            A("    GET_VAR     %s\n", lab);
+        } else {
+            A("    lea     rdi, [rel %s]\n", lab);
+            A("    call    stmt_get\n");
+            A("    mov     [rbp%+d], rax\n", rbp_off);
+            A("    mov     [rbp%+d], rdx\n", rbp_off+8);
+        }
         return 1;
     }
     case E_FNC: {
-        /* Function call: stmt_apply(name, args_ptr, nargs) → DESCR_t
-         * Build args array on stack, call stmt_apply, store result.
-         * Handles DIFFER(), IDENT(), GT(), LT() etc. used as subjects. */
         if (!e->sval) goto fallback;
         int na = e->nargs;
-        if (na > 8) na = 8; /* cap args */
+        if (na > 8) na = 8;
         const char *fnlab = prog_str_intern(e->sval);
-        /* Save args: emit each arg into successive stack slots */
-        /* We use [rbp-48] through [rbp-48-(na*16)] for arg array */
-        /* Stack layout (sub rsp,56 gives us [rbp-8]..[rbp-56]): */
-        /* [rbp-16]: subj descr, [rbp-32]: rhs descr */
-        /* [rbp-48]: spare — use as args array base (16 bytes each) */
-        /* For up to 2 args: [rbp-48] and [rbp-64] — but we only have 56 bytes! */
-        /* Simple solution: emit each arg eval into [rbp-32], build C array on stack */
-        /* For safety: handle 0-arg and 1-arg cases inline */
         if (na == 0) {
-            /* No args: call stmt_apply(name, NULL, 0) */
-            A("    lea     rdi, [rel %s]\n", fnlab);
-            A("    xor     rsi, rsi\n");
-            A("    xor     rdx, rdx\n");
-            A("    call    stmt_apply\n");
+            A("    APPLY_FN_0  %s\n", fnlab);
         } else {
-            /* Allocate arg array on stack dynamically */
             int arr_bytes = na * 16;
             A("    sub     rsp, %d\n", arr_bytes);
             for (int ai = 0; ai < na && e->args[ai]; ai++) {
                 prog_emit_expr(e->args[ai], -(rbp_off < 0 ? -rbp_off : 32) - 0);
-                /* Store evaluated arg into array slot ai*16 from rsp */
-                A("    mov     rax, [rbp%+d]\n", rbp_off < 0 ? rbp_off : -32);
-                A("    mov     [rsp + %d], rax\n", ai * 16);
-                A("    mov     rax, [rbp%+d]\n", rbp_off < 0 ? rbp_off+8 : -24);
-                A("    mov     [rsp + %d], rax\n", ai * 16 + 8);
+                A("    STORE_ARG32 %d\n", ai * 16);
             }
-            A("    lea     rdi, [rel %s]\n", fnlab);
-            A("    mov     rsi, rsp\n");
-            A("    mov     rdx, %d\n", na);
-            A("    call    stmt_apply\n");
+            A("    APPLY_FN_N  %s, %d\n", fnlab, na);
             A("    add     rsp, %d\n", arr_bytes);
         }
         A("    mov     [rbp%+d], rax\n", rbp_off);
         A("    mov     [rbp%+d], rdx\n", rbp_off+8);
+        return 1;
+    }
+    case E_OR:
+    case E_CONC: {
+        /* Binary pattern operators: ALT (|) and CONCAT (juxtaposition).
+         * Treat as 2-arg function call: ALT(left,right) or CONCAT(left,right).
+         * Allocate 2-slot args array on stack (32 bytes), evaluate each child,
+         * store into array, then call stmt_apply. */
+        const char *opname = (e->kind == E_OR) ? "ALT" : "CONCAT";
+        const char *fnlab  = prog_str_intern(opname);
+        /* Reserve 32 bytes (2 × 16-byte DESCR_t) for args array */
+        A("    sub     rsp, 32\n");
+        /* Evaluate left child → [rsp+0] */
+        prog_emit_expr(e->left,  rbp_off);
+        A("    STORE_ARG32 0\n");
+        /* Evaluate right child → [rsp+16] */
+        prog_emit_expr(e->right, rbp_off);
+        A("    STORE_ARG32 16\n");
+        /* Call stmt_apply(name, args_ptr, 2) */
+        A("    APPLY_FN_N  %s, 2\n", fnlab);
+        A("    add     rsp, 32\n");
+        A("    mov     [rbp%+d], rax\n", rbp_off);
+        A("    mov     [rbp%+d], rdx\n", rbp_off + 8);
         return 1; /* may fail */
     }
     fallback:
     default:
         /* Fallback: emit NULVCL — complex exprs not yet supported */
-        A("    mov     qword [rbp%+d], 1\n", rbp_off);
-        A("    mov     qword [rbp%+d], 0\n", rbp_off+8);
+        if (rbp_off == -16) {
+            A("    LOAD_NULVCL\n");
+        } else {
+            A("    mov     qword [rbp%+d], 1\n", rbp_off);
+            A("    mov     qword [rbp%+d], 0\n", rbp_off+8);
+        }
         return 0;
     }
 }
@@ -2132,11 +2152,7 @@ static void asm_emit_program(Program *prog) {
                 int may_fail = prog_emit_expr(s->subject, -16);
                 /* If subject may fail AND there are S/F targets, dispatch */
                 if (may_fail && !s->has_eq && (id_s >= 0 || id_f >= 0)) {
-                    A("    mov     rdi, [rbp-16]\n");
-                    A("    mov     rsi, [rbp-8]\n");
-                    A("    call    stmt_is_fail\n");
-                    A("    test    eax, eax\n");
-                    A("    jnz     %s\n", id_f >= 0 ? sfail_lbl : next_lbl);
+                    A("    IS_FAIL_BRANCH16  %s\n", id_f >= 0 ? sfail_lbl : next_lbl);
                     /* success path */
                     emit_jmp(tgt_s ? tgt_s : tgt_u, next_lbl);
                     /* failure path */
@@ -2155,23 +2171,14 @@ static void asm_emit_program(Program *prog) {
                 /* RHS */
                 prog_emit_expr(s->replacement, -32);
                 /* stmt_is_fail check on RHS */
-                A("    mov     rdi, [rbp-32]\n");
-                A("    mov     rsi, [rbp-24]\n");
-                A("    call    stmt_is_fail\n");
-                A("    test    eax, eax\n");
-                A("    jnz     %s\n", id_f >= 0 ? sfail_lbl : next_lbl);
+                A("    IS_FAIL_BRANCH  %s\n", id_f >= 0 ? sfail_lbl : next_lbl);
                 /* Assign: if subject is OUTPUT, call stmt_output */
                 if (strcasecmp(s->subject->sval, "OUTPUT") == 0) {
-                    A("    mov     rdi, [rbp-32]\n");
-                    A("    mov     rsi, [rbp-24]\n");
-                    A("    call    stmt_output\n");
+                    A("    SET_OUTPUT\n");
                 } else {
                     /* generic variable set */
                     const char *vlab = prog_str_intern(s->subject->sval);
-                    A("    lea     rdi, [rel %s]\n", vlab);
-                    A("    mov     rsi, [rbp-32]\n");
-                    A("    mov     rdx, [rbp-24]\n");
-                    A("    call    stmt_set\n");
+                    A("    SET_VAR     %s\n", vlab);
                 }
                 /* success path */
                 emit_jmp(tgt_s ? tgt_s : tgt_u, next_lbl);
@@ -2214,10 +2221,8 @@ static void asm_emit_program(Program *prog) {
 
         /* -- subject eval -- */
         prog_emit_expr(s->subject, -16);
-        /* stmt_setup_subject(subj_descr) — copies into subject_data[], resets cursor */
-        A("    mov     rdi, [rbp-16]\n");
-        A("    mov     rsi, [rbp-8]\n");
-        A("    call    stmt_setup_subject\n");
+        /* stmt_setup_subject — copies into subject_data[], resets cursor */
+        A("    SETUP_SUBJECT_FROM16\n");
 
         /* -- start the pattern -- */
         A("    jmp     %s\n", pat_alpha);
@@ -2235,27 +2240,16 @@ static void asm_emit_program(Program *prog) {
         A("%s:\n", pat_gamma);
         /* Materialise DOL/NAM captures into SNOBOL4 variables */
         for (int ci = 0; ci < cap_var_count; ci++) {
-            /* cap_vars[ci].name is the variable name */
-            /* cap_VAR_buf and cap_VAR_len are the capture buffer symbols */
-            char vlab[128], blab[128], llab[128];
-                        /* intern the variable name as a string */
             const char *vnlab = prog_str_intern(cap_vars[ci].varname);
-            snprintf(blab, sizeof blab, "%s", cap_vars[ci].safe);
-            /* emit: stmt_set_capture("V", cap_V_buf, cap_V_len) */
-            A("    lea     rdi, [rel %s]\n", vnlab);
-            A("    lea     rsi, [rel %s]\n", cap_vars[ci].buf_sym);
-            A("    mov     rdx, [%s]\n", cap_vars[ci].len_sym);
-            A("    call    stmt_set_capture\n");
+            A("    SET_CAPTURE %s, %s, %s\n",
+              vnlab, cap_vars[ci].buf_sym, cap_vars[ci].len_sym);
         }
         if (s->has_eq && s->replacement && s->subject &&
             s->subject->kind == E_VART) {
             /* apply replacement → subject variable */
             prog_emit_expr(s->replacement, -32);
             const char *vlab = prog_str_intern(s->subject->sval);
-            A("    lea     rdi, [rel %s]\n", vlab);
-            A("    mov     rsi, [rbp-32]\n");
-            A("    mov     rdx, [rbp-24]\n");
-            A("    call    stmt_apply_replacement\n");
+            A("    APPLY_REPL  %s\n", vlab);
         }
         emit_jmp(tgt_s, next_lbl);
 

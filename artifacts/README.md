@@ -364,3 +364,18 @@ session115 | 2026-03-16 | 6d5919daa03d3c56646b5f0a165f86ee | 15859 lines | compi
   - Case 1 S/F dispatch for expression-only stmts (DIFFER/IDENT with `:F`)
   - `stmt_set_capture()` shim + gamma-path materialisation of DOL/NAM captures
   - Pattern capture working: `X *PAT . V` → `V = "bc"` PASS
+
+### artifacts/asm/beauty_prog_session159.s  (Sprint A10/A14 — M-ASM-BEAUTY/M-ASM-BEAUTIFUL progress)
+- status: ASSEMBLES CLEAN — beauty.sno compiled to macro-driven x64 ASM
+- session: 159 — pivot to M-ASM-BEAUTIFUL
+- assemble: nasm -f elf64 -I src/runtime/asm/ beauty_prog_session159.s -o /dev/null
+- lines: 18220
+- changes this session:
+  - E_OR/E_CONC → ALT/CONCAT runtime builtins registered; test 101 PASS
+  - snobol4_asm.mac: STORE_ARG32/16, LOAD_NULVCL/32, APPLY_FN_0/N, SET_CAPTURE,
+    IS_FAIL_BRANCH/16, LOAD_VAR, SETUP_SUBJECT_FROM16 macros added
+  - emit_byrd_asm.c: prog_emit_expr + asm_emit_program raw register sequences
+    replaced with macro calls throughout (GET_VAR, LOAD_STR, LOAD_INT, SET_VAR,
+    SET_OUTPUT, IS_FAIL_BRANCH, APPLY_FN_0/N, STORE_ARG32, SET_CAPTURE,
+    APPLY_REPL, SETUP_SUBJECT_FROM16, LOAD_NULVCL)
+- invariants: 106/106 C crosscheck PASS, 26/26 ASM crosscheck PASS
