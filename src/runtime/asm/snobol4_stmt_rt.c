@@ -210,3 +210,19 @@ void stmt_apply_replacement(const char *varname, DESCR_t repl) {
     if (varname && *varname)
         NV_SET_fn(varname, repl);
 }
+
+/* ---- capture variable materialisation ---- */
+
+/* stmt_set_capture: after a DOL/NAM pattern match, copy the captured
+ * byte span from cap_VAR_buf (length cap_VAR_len) into the SNOBOL4
+ * variable named varname.
+ * Called from ASM in the pattern γ path before goto S-target. */
+void stmt_set_capture(const char *varname, const char *buf, uint64_t len) {
+    if (!varname || !buf) return;
+    if (len == (uint64_t)-1) return; /* sentinel: no capture */
+    char *s = GC_MALLOC_ATOMIC(len + 1);
+    if (!s) return;
+    memcpy(s, buf, len);
+    s[len] = '\0';
+    NV_SET_fn(varname, STRVAL(s));
+}

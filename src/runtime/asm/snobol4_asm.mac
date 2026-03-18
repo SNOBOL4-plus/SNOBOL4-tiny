@@ -57,9 +57,18 @@
 ; PROG_INIT — program startup: call stmt_init
 ; -----------------------------------------------------------------------------
 %macro PROG_INIT 0
+    ; Save callee-saved registers BEFORE frame so rbp-relative slots are clean
+    push    r15             ; callee-saved — reserve
+    push    r14             ; callee-saved — reserve
+    push    r13             ; callee-saved — ARBNO depth
+    push    r12             ; callee-saved — SPAN/ANY position
+    push    rbx             ; callee-saved — Byrd box scratch
+    ; Establish frame
     push    rbp
     mov     rbp, rsp
-    sub     rsp, 64
+    ; Allocate DESCR_t temporaries: [rbp-16]=subj, [rbp-32]=rhs, [rbp-48]=spare
+    ; 56 bytes: aligns rsp to 16 (entry rsp%16=8, +6 pushes×8=48, +56=112, 112%16=0)
+    sub     rsp, 56
     call    stmt_init
 %endmacro
 
@@ -69,7 +78,13 @@
 %macro PROG_END 0
     call    stmt_finish
     xor     eax, eax
-    leave
+    add     rsp, 56         ; reclaim DESCR_t slots
+    pop     rbp             ; restore frame
+    pop     rbx             ; restore callee-saved (reverse order)
+    pop     r12
+    pop     r13
+    pop     r14
+    pop     r15
     ret
 %endmacro
 

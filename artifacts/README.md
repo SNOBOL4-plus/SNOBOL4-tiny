@@ -349,3 +349,18 @@ session115 | 2026-03-16 | 6d5919daa03d3c56646b5f0a165f86ee | 15859 lines | compi
 
 ### beauty_tramp session156b — no change
 - md5: 185f391427d156b6a7ee5f9153f19b89 (same as session116)
+
+## beauty_prog_session158.s
+
+- **Session:** 158
+- **Sprint:** A10 M-ASM-BEAUTY
+- **Status:** 101_comment PASS ✅; 102-109 Parse Error (E_OR/E_CONC → NULVCL for named pattern assignments)
+- **Assemble:** `nasm -f elf64 -i src/runtime/asm/ beauty_prog_session158.s -o /dev/null`
+- **Changes since session156:**
+  - `section .text` before named pattern bodies (was in `.data` → segfault)
+  - `PROG_INIT`: push r15..rbx before frame; `sub rsp,56` (16-byte aligned: 6 pushes+56=112)
+  - `PROG_END`: explicit pops matching push order
+  - E_FNC → `stmt_apply()` in `prog_emit_expr`
+  - Case 1 S/F dispatch for expression-only stmts (DIFFER/IDENT with `:F`)
+  - `stmt_set_capture()` shim + gamma-path materialisation of DOL/NAM captures
+  - Pattern capture working: `X *PAT . V` → `V = "bc"` PASS

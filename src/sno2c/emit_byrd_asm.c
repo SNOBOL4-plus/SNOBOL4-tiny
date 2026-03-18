@@ -1824,6 +1824,51 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
         A("    mov     [rbp%+d], rdx\n", rbp_off+8);
         return 1;
     }
+    case E_FNC: {
+        /* Function call: stmt_apply(name, args_ptr, nargs) → DESCR_t
+         * Build args array on stack, call stmt_apply, store result.
+         * Handles DIFFER(), IDENT(), GT(), LT() etc. used as subjects. */
+        if (!e->sval) goto fallback;
+        int na = e->nargs;
+        if (na > 8) na = 8; /* cap args */
+        const char *fnlab = prog_str_intern(e->sval);
+        /* Save args: emit each arg into successive stack slots */
+        /* We use [rbp-48] through [rbp-48-(na*16)] for arg array */
+        /* Stack layout (sub rsp,56 gives us [rbp-8]..[rbp-56]): */
+        /* [rbp-16]: subj descr, [rbp-32]: rhs descr */
+        /* [rbp-48]: spare — use as args array base (16 bytes each) */
+        /* For up to 2 args: [rbp-48] and [rbp-64] — but we only have 56 bytes! */
+        /* Simple solution: emit each arg eval into [rbp-32], build C array on stack */
+        /* For safety: handle 0-arg and 1-arg cases inline */
+        if (na == 0) {
+            /* No args: call stmt_apply(name, NULL, 0) */
+            A("    lea     rdi, [rel %s]\n", fnlab);
+            A("    xor     rsi, rsi\n");
+            A("    xor     rdx, rdx\n");
+            A("    call    stmt_apply\n");
+        } else {
+            /* Allocate arg array on stack dynamically */
+            int arr_bytes = na * 16;
+            A("    sub     rsp, %d\n", arr_bytes);
+            for (int ai = 0; ai < na && e->args[ai]; ai++) {
+                prog_emit_expr(e->args[ai], -(rbp_off < 0 ? -rbp_off : 32) - 0);
+                /* Store evaluated arg into array slot ai*16 from rsp */
+                A("    mov     rax, [rbp%+d]\n", rbp_off < 0 ? rbp_off : -32);
+                A("    mov     [rsp + %d], rax\n", ai * 16);
+                A("    mov     rax, [rbp%+d]\n", rbp_off < 0 ? rbp_off+8 : -24);
+                A("    mov     [rsp + %d], rax\n", ai * 16 + 8);
+            }
+            A("    lea     rdi, [rel %s]\n", fnlab);
+            A("    mov     rsi, rsp\n");
+            A("    mov     rdx, %d\n", na);
+            A("    call    stmt_apply\n");
+            A("    add     rsp, %d\n", arr_bytes);
+        }
+        A("    mov     [rbp%+d], rax\n", rbp_off);
+        A("    mov     [rbp%+d], rdx\n", rbp_off+8);
+        return 1; /* may fail */
+    }
+    fallback:
     default:
         /* Fallback: emit NULVCL — complex exprs not yet supported */
         A("    mov     qword [rbp%+d], 1\n", rbp_off);
@@ -2020,6 +2065,7 @@ static void asm_emit_program(Program *prog) {
     A("    extern  stmt_concat, stmt_is_fail, stmt_finish\n");
     A("    extern  stmt_apply, stmt_goto_dispatch\n");
     A("    extern  stmt_setup_subject, stmt_apply_replacement\n");
+    A("    extern  stmt_set_capture\n");
     A("    global  cursor, subject_data, subject_len_val\n");
     A("\n");
     /* subject_data/subject_len_val/cursor: defined here, exported for stmt_rt.c */
@@ -2084,7 +2130,23 @@ static void asm_emit_program(Program *prog) {
             /* Evaluate subject (the LHS or expression) */
             if (s->subject) {
                 int may_fail = prog_emit_expr(s->subject, -16);
-                (void)may_fail;
+                /* If subject may fail AND there are S/F targets, dispatch */
+                if (may_fail && !s->has_eq && (id_s >= 0 || id_f >= 0)) {
+                    A("    mov     rdi, [rbp-16]\n");
+                    A("    mov     rsi, [rbp-8]\n");
+                    A("    call    stmt_is_fail\n");
+                    A("    test    eax, eax\n");
+                    A("    jnz     %s\n", id_f >= 0 ? sfail_lbl : next_lbl);
+                    /* success path */
+                    emit_jmp(tgt_s ? tgt_s : tgt_u, next_lbl);
+                    /* failure path */
+                    if (id_f >= 0) {
+                        A("%s:\n", sfail_lbl);
+                        emit_jmp(tgt_f, next_lbl);
+                    }
+                    A("%s:\n", next_lbl);
+                    continue;
+                }
             }
 
             /* If has_eq: assign replacement to subject variable */
@@ -2171,6 +2233,20 @@ static void asm_emit_program(Program *prog) {
 
         /* -- gamma: match succeeded -- */
         A("%s:\n", pat_gamma);
+        /* Materialise DOL/NAM captures into SNOBOL4 variables */
+        for (int ci = 0; ci < cap_var_count; ci++) {
+            /* cap_vars[ci].name is the variable name */
+            /* cap_VAR_buf and cap_VAR_len are the capture buffer symbols */
+            char vlab[128], blab[128], llab[128];
+                        /* intern the variable name as a string */
+            const char *vnlab = prog_str_intern(cap_vars[ci].varname);
+            snprintf(blab, sizeof blab, "%s", cap_vars[ci].safe);
+            /* emit: stmt_set_capture("V", cap_V_buf, cap_V_len) */
+            A("    lea     rdi, [rel %s]\n", vnlab);
+            A("    lea     rsi, [rel %s]\n", cap_vars[ci].buf_sym);
+            A("    mov     rdx, [%s]\n", cap_vars[ci].len_sym);
+            A("    call    stmt_set_capture\n");
+        }
         if (s->has_eq && s->replacement && s->subject &&
             s->subject->kind == E_VART) {
             /* apply replacement → subject variable */
@@ -2207,7 +2283,8 @@ static void asm_emit_program(Program *prog) {
         }
     }
 
-    /* ---- Named pattern bodies (emit_asm_named_def for each real pattern) ---- */
+    /* ---- Named pattern bodies — must be in .text (executable) ---- */
+    A("\nsection .text\n");
     A("\n; ======== named pattern bodies ========\n");
     for (int i = 0; i < asm_named_count; i++) {
         if (asm_named[i].pat) {
@@ -2218,6 +2295,7 @@ static void asm_emit_program(Program *prog) {
                            "cursor","subject_data","subject_len_val");
     }
 
+    A("\nsection .text\n"); /* stubs must also be in .text */
     /* ---- Stub definitions for referenced-but-undefined labels ----
      * These are dangling gotos (e.g. :F(error) with no "error" label defined,
      * or computed goto dispatch labels not yet implemented).
