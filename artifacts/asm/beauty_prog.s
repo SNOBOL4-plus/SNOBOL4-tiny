@@ -8,7 +8,7 @@ extern  stmt_get, stmt_set, stmt_output, stmt_input
 extern  stmt_concat, stmt_is_fail, stmt_finish
 extern  stmt_apply, stmt_goto_dispatch
 extern  stmt_setup_subject, stmt_apply_replacement
-extern  stmt_set_capture
+extern  stmt_set_capture, stmt_match_var
 global  cursor, subject_data, subject_len_val
 
 section .note.GNU-stack noalloc noexec nowrite progbits
@@ -21,8 +21,6 @@ P_ppArgs_ret_γ          resq 1
 P_ppArgs_ret_ω          resq 1
 P_ppTokPat_ret_γ        resq 1
 P_ppTokPat_ret_ω        resq 1
-P_OUTPUT_ret_γ          resq 1
-P_OUTPUT_ret_ω          resq 1
 P_ppTab_ret_γ           resq 1
 P_ppTab_ret_ω           resq 1
 P_ppGSfx_ret_γ          resq 1
@@ -37,8 +35,6 @@ P_ppTmpFile_ret_γ       resq 1
 P_ppTmpFile_ret_ω       resq 1
 P_ppW_ret_γ             resq 1
 P_ppW_ret_ω             resq 1
-P_ppStmt_ret_γ          resq 1
-P_ppStmt_ret_ω          resq 1
 P_ppI_ret_γ             resq 1
 P_ppI_ret_ω             resq 1
 P_Integer_ret_γ         resq 1
@@ -69,12 +65,6 @@ P_White_ret_γ           resq 1
 P_White_ret_ω           resq 1
 P_TxInList_ret_γ        resq 1
 P_TxInList_ret_ω        resq 1
-P_ProtKwds_ret_γ        resq 1
-P_ProtKwds_ret_ω        resq 1
-P_UnprotKwds_ret_γ      resq 1
-P_UnprotKwds_ret_ω      resq 1
-P_Functions_ret_γ       resq 1
-P_Functions_ret_ω       resq 1
 P_ExprList_ret_γ        resq 1
 P_ExprList_ret_ω        resq 1
 P_XList_ret_γ           resq 1
@@ -143,6 +133,28 @@ P_Command_ret_γ         resq 1
 P_Command_ret_ω         resq 1
 P_Parse_ret_γ           resq 1
 P_Parse_ret_ω           resq 1
+P_Compiland_ret_γ       resq 1
+P_Compiland_ret_ω       resq 1
+P_t_ret_γ               resq 1
+P_t_ret_ω               resq 1
+P_v_ret_γ               resq 1
+P_v_ret_ω               resq 1
+P_n_ret_γ               resq 1
+P_n_ret_ω               resq 1
+P_c_ret_γ               resq 1
+P_c_ret_ω               resq 1
+scan_start_12            resq 1
+scan_start_14            resq 1
+scan_start_77            resq 1
+scan_start_78            resq 1
+scan_start_80            resq 1
+scan_start_82            resq 1
+scan_start_407           resq 1
+scan_start_495           resq 1
+scan_start_518           resq 1
+scan_start_522           resq 1
+scan_start_523           resq 1
+scan_start_526           resq 1
 span1_saved              resq 1
 any4_saved               resq 1
 any6_saved               resq 1
@@ -161,142 +173,135 @@ alt36_cur_save           resq 1
 brk37_saved              resq 1
 rem38_saved              resq 1
 dol39_child_alpha_saved  resq 1
+alt44_cur_save           resq 1
+span45_saved             resq 1
+alt_r44_alpha_saved      resq 1
 seq_r43_alpha_saved      resq 1
-seq_r41_alpha_saved      resq 1
+alt46_cur_save           resq 1
+any47_saved              resq 1
+alt_r46_alpha_saved      resq 1
 alt48_cur_save           resq 1
-span49_saved             resq 1
+any49_saved              resq 1
 alt_r48_alpha_saved      resq 1
-seq_r47_alpha_saved      resq 1
-alt50_cur_save           resq 1
-any51_saved              resq 1
-alt_r50_alpha_saved      resq 1
-alt52_cur_save           resq 1
-any53_saved              resq 1
-alt_r52_alpha_saved      resq 1
-rem54_saved              resq 1
+rem50_saved              resq 1
 dol_entry_ppGCon         resq 1
-brk57_saved              resq 1
+brk53_saved              resq 1
 dol_entry_ppDrop         resq 1
+span57_saved             resq 1
+seq_l59_alpha_saved      resq 1
+seq_r58_alpha_saved      resq 1
 span61_saved             resq 1
 seq_l63_alpha_saved      resq 1
+brk64_saved              resq 1
 seq_r62_alpha_saved      resq 1
+seq_l66_alpha_saved      resq 1
+brk67_saved              resq 1
 seq_r65_alpha_saved      resq 1
-span68_saved             resq 1
-seq_l70_alpha_saved      resq 1
-brk71_saved              resq 1
-seq_r69_alpha_saved      resq 1
-seq_l73_alpha_saved      resq 1
-brk74_saved              resq 1
-seq_r72_alpha_saved      resq 1
-alt75_cur_save           resq 1
-alt78_cur_save           resq 1
-span83_saved             resq 1
-alt84_cur_save           resq 1
-seq_l85_alpha_saved      resq 1
-alt86_cur_save           resq 1
-alt_l86_alpha_saved      resq 1
-alt_r86_alpha_saved      resq 1
-alt87_cur_save           resq 1
-alt88_cur_save           resq 1
-alt_l88_alpha_saved      resq 1
-alt_r88_alpha_saved      resq 1
-span89_saved             resq 1
-span92_saved             resq 1
-seq_r91_alpha_saved      resq 1
-any94_saved              resq 1
+alt68_cur_save           resq 1
+alt71_cur_save           resq 1
+span76_saved             resq 1
+alt77_cur_save           resq 1
+seq_l78_alpha_saved      resq 1
+alt79_cur_save           resq 1
+alt_l79_alpha_saved      resq 1
+alt_r79_alpha_saved      resq 1
+alt80_cur_save           resq 1
+alt81_cur_save           resq 1
+alt_l81_alpha_saved      resq 1
+alt_r81_alpha_saved      resq 1
+span82_saved             resq 1
+span85_saved             resq 1
+seq_r84_alpha_saved      resq 1
+any87_saved              resq 1
 dol_entry_cap            resq 1
 dol_entry_tx             resq 1
-span97_saved             resq 1
+span90_saved             resq 1
+span93_saved             resq 1
+span96_saved             resq 1
+seq_l97_alpha_saved      resq 1
 span100_saved            resq 1
-span103_saved            resq 1
-seq_l104_alpha_saved     resq 1
-span107_saved            resq 1
-seq_l108_alpha_saved     resq 1
-span111_saved            resq 1
+seq_l101_alpha_saved     resq 1
+span104_saved            resq 1
+alt105_cur_save          resq 1
+alt107_cur_save          resq 1
+span109_saved            resq 1
 alt112_cur_save          resq 1
-alt114_cur_save          resq 1
-span116_saved            resq 1
-alt119_cur_save          resq 1
-alt_l119_alpha_saved     resq 1
-alt_r119_alpha_saved     resq 1
-alt122_cur_save          resq 1
-alt_r122_alpha_saved     resq 1
+alt_l112_alpha_saved     resq 1
+alt_r112_alpha_saved     resq 1
+alt115_cur_save          resq 1
+alt_r115_alpha_saved     resq 1
+alt116_cur_save          resq 1
+alt_l116_alpha_saved     resq 1
 alt123_cur_save          resq 1
-alt_l123_alpha_saved     resq 1
-seq_l125_alpha_saved     resq 1
-seq_r125_alpha_saved     resq 1
-seq_r124_alpha_saved     resq 1
-seq_l127_alpha_saved     resq 1
-seq_r127_alpha_saved     resq 1
-seq_r126_alpha_saved     resq 1
-seq_l135_alpha_saved     resq 1
-seq_r135_alpha_saved     resq 1
-seq_r134_alpha_saved     resq 1
-seq_r133_alpha_saved     resq 1
-seq_r132_alpha_saved     resq 1
-seq_r131_alpha_saved     resq 1
-seq_r130_alpha_saved     resq 1
-seq_r129_alpha_saved     resq 1
-seq_r128_alpha_saved     resq 1
-alt142_cur_save          resq 1
 dol_entry_v              resq 1
-alt182_cur_save          resq 1
-alt183_cur_save          resq 1
-alt184_cur_save          resq 1
-alt185_cur_save          resq 1
-alt186_cur_save          resq 1
-alt187_cur_save          resq 1
-alt188_cur_save          resq 1
-alt189_cur_save          resq 1
-alt190_cur_save          resq 1
-alt191_cur_save          resq 1
-alt192_cur_save          resq 1
-alt193_cur_save          resq 1
-alt194_cur_save          resq 1
-alt195_cur_save          resq 1
-alt196_cur_save          resq 1
-alt197_cur_save          resq 1
-alt198_cur_save          resq 1
+alt163_cur_save          resq 1
+alt164_cur_save          resq 1
+alt165_cur_save          resq 1
+alt166_cur_save          resq 1
+alt167_cur_save          resq 1
+alt168_cur_save          resq 1
+alt169_cur_save          resq 1
+alt170_cur_save          resq 1
+alt171_cur_save          resq 1
+alt172_cur_save          resq 1
+alt173_cur_save          resq 1
+alt174_cur_save          resq 1
+alt175_cur_save          resq 1
+alt176_cur_save          resq 1
+alt177_cur_save          resq 1
+alt178_cur_save          resq 1
+alt179_cur_save          resq 1
+seq_l181_alpha_saved     resq 1
+seq_l184_alpha_saved     resq 1
+seq_l187_alpha_saved     resq 1
+dol_entry_ProtKwd        resq 1
+dol_entry_UnprotKwd      resq 1
+seq_l194_alpha_saved     resq 1
+seq_l197_alpha_saved     resq 1
 seq_l200_alpha_saved     resq 1
 seq_l203_alpha_saved     resq 1
 seq_l206_alpha_saved     resq 1
-dol_entry_ProtKwd        resq 1
-dol_entry_UnprotKwd      resq 1
-seq_l213_alpha_saved     resq 1
-seq_l216_alpha_saved     resq 1
-seq_l219_alpha_saved     resq 1
-seq_l222_alpha_saved     resq 1
-seq_l225_alpha_saved     resq 1
-seq_l228_alpha_saved     resq 1
-seq_l231_alpha_saved     resq 1
-seq_l234_alpha_saved     resq 1
-seq_l237_alpha_saved     resq 1
-seq_l240_alpha_saved     resq 1
-seq_l243_alpha_saved     resq 1
-seq_l246_alpha_saved     resq 1
-alt253_cur_save          resq 1
+seq_l209_alpha_saved     resq 1
+seq_l212_alpha_saved     resq 1
+seq_l215_alpha_saved     resq 1
+seq_l218_alpha_saved     resq 1
+seq_l221_alpha_saved     resq 1
+seq_l224_alpha_saved     resq 1
+seq_l227_alpha_saved     resq 1
+alt234_cur_save          resq 1
 dol_entry_RB             resq 1
 dol_entry_GT             resq 1
-alt261_cur_save          resq 1
-alt_l261_alpha_saved     resq 1
-alt_r261_alpha_saved     resq 1
-alt263_cur_save          resq 1
-alt_l263_alpha_saved     resq 1
-alt_r263_alpha_saved     resq 1
-alt264_cur_save          resq 1
-alt267_cur_save          resq 1
+alt242_cur_save          resq 1
+alt_l242_alpha_saved     resq 1
+alt_r242_alpha_saved     resq 1
+alt244_cur_save          resq 1
+alt_l244_alpha_saved     resq 1
+alt_r244_alpha_saved     resq 1
+alt245_cur_save          resq 1
+alt248_cur_save          resq 1
 dol_entry_RP             resq 1
-seq_r276_alpha_saved     resq 1
-seq_l279_alpha_saved     resq 1
-brk280_saved             resq 1
-seq_l281_alpha_saved     resq 1
-brk282_saved             resq 1
+seq_r257_alpha_saved     resq 1
+seq_l260_alpha_saved     resq 1
+brk261_saved             resq 1
+seq_l262_alpha_saved     resq 1
+brk263_saved             resq 1
 dol_entry_Label          resq 1
-brk284_saved             resq 1
-alt289_cur_save          resq 1
-arb308_depth             resq 1
-arb308_cur_before        resq 1
-arb308_stack             resq 64
+brk265_saved             resq 1
+alt270_cur_save          resq 1
+arb289_depth             resq 1
+arb289_cur_before        resq 1
+arb295_depth             resq 1
+arb295_cur_before        resq 1
+alt297_cur_save          resq 1
+alt300_cur_save          resq 1
+seq_l302_alpha_saved     resq 1
+brk303_saved             resq 1
+arb304_depth             resq 1
+arb304_cur_before        resq 1
+brk306_saved             resq 1
+arb289_stack             resq 64
+arb295_stack             resq 64
+arb304_stack             resq 64
 cap_ppTokName_buf        resb 256
 cap_ppTokName_len        resq 1
 cap_ppTokVal_buf         resb 256
@@ -387,27 +392,31 @@ Ln_9:                       GET_VAR     S_ppArgs
 
 ; ======================================================================================================================
 Ln_10:                      GET_VAR     S_ppTokPat
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_MI_MI
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
-                            sub         rsp, 32
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             LOAD_STR    S_EQ
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
@@ -418,9 +427,11 @@ Ln_10:                      GET_VAR     S_ppTokPat
                             add         rsp, 32
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_11
@@ -432,6 +443,10 @@ Ln_11:
 L_ppArgLoop_1:              GET_VAR     S_ppArgs
                             SUBJ_FROM16
 
+                            mov         qword [scan_start_12], 0
+scan_retry_12:
+                            mov         rax, [scan_start_12]
+                            mov         [cursor], rax
                             jmp         P_12_α
 
 P_12_α:                     jmp         seq_l0_alpha ; SEQ
@@ -455,7 +470,13 @@ P_12_γ:                     SET_CAPTURE S_ppTokName, cap_ppTokName_buf, cap_ppT
                             SET_CAPTURE S_RP, cap_RP_buf, cap_RP_len
                             SET_CAPTURE S_Label, cap_Label_buf, cap_Label_len
                             jmp         Ln_12
-P_12_ω:                     jmp         Ln_12
+P_12_ω:                     mov         rax, [scan_start_12]
+                            inc         rax
+                            cmp         rax, [subject_len_val]
+                            jg          Ln_12
+                            mov         [scan_start_12], rax
+                            jmp         scan_retry_12
+                            jmp         Ln_12
 
 ; ======================================================================================================================
 Ln_12:                      sub         rsp, 16
@@ -473,6 +494,10 @@ Lf_13:                      jmp         L_ppArgDone_2
 Ln_13:                      GET_VAR     S_ppArgs
                             SUBJ_FROM16
 
+                            mov         qword [scan_start_14], 0
+scan_retry_14:
+                            mov         rax, [scan_start_14]
+                            mov         [cursor], rax
                             jmp         P_14_α
 
 
@@ -506,7 +531,13 @@ P_14_γ:                     SET_CAPTURE S_ppTokName, cap_ppTokName_buf, cap_ppT
                             SET_CAPTURE S_RP, cap_RP_buf, cap_RP_len
                             SET_CAPTURE S_Label, cap_Label_buf, cap_Label_len
                             jmp         Ln_14
-P_14_ω:                     jmp         L_ppArgDone_2
+P_14_ω:                     mov         rax, [scan_start_14]
+                            inc         rax
+                            cmp         rax, [subject_len_val]
+                            jg          Ln_14
+                            mov         [scan_start_14], rax
+                            jmp         scan_retry_14
+                            jmp         L_ppArgDone_2
 
 ; ======================================================================================================================
 Ln_14:                      CONC2_VS16  S_IDENT, S_ppTokName, S_micro
@@ -769,7 +800,7 @@ Ln_62:                      GET_VAR     S_ppAutoMode
 Ln_63:
 ;  ppArgWarn ===========================================================================================================
 L_ppArgWarn_14:             GET_VAR     S_OUTPUT
-                            CONC2_SV    S_CONCAT, S_ST_SP_Warning_CL_SP_unknown_SP_switch_SP_MI_MI, S_ppTokName
+                            CAT2_SV     S_ST_SP_Warning_CL_SP_unknown_SP_switch_SP_MI_MI, S_ppTokName
                             FAIL_BR     Ln_64
                             SET_OUTPUT
 
@@ -802,12 +833,8 @@ Ln_66:                      GET_VAR     S_ppTab
 ; ======================================================================================================================
 Ln_67:                      GET_VAR     S_ppGSfx
                             sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             sub         rsp, 16
-                            CONC2_SV    S_CONCAT, S_SP, S_ppTab
+                            CAT2_SV     S_SP, S_ppTab
                             STORE_ARG32 0
                             APPLY_FN_N  S_SPAN, 1
                             add         rsp, 16
@@ -820,14 +847,18 @@ Ln_67:                      GET_VAR     S_ppGSfx
                             add         rsp, 32
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_CL
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             CALL1_STR   S_ANY, S_SF
                             STORE_ARG32 0
@@ -837,12 +868,15 @@ Ln_67:                      GET_VAR     S_ppGSfx
                             add         rsp, 32
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             CALL1_STR   S_ANY, S_LP_LT
                             STORE_ARG32 0
@@ -852,19 +886,24 @@ Ln_67:                      GET_VAR     S_ppGSfx
                             add         rsp, 32
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_REM]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_68
@@ -873,17 +912,19 @@ Ln_67:                      GET_VAR     S_ppGSfx
 
 ; ======================================================================================================================
 Ln_68:                      GET_VAR     S_ppGPat
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_ppGSfx]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_69
@@ -912,21 +953,25 @@ Ln_71:                      GET_VAR     S_ppWArr
 
 ; ======================================================================================================================
 Ln_72:                      GET_VAR     S_ppTmpFile
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_SL_tmp_SL_beauty_auto
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             CALL1_INT   S_HOST, 1
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_DT_sno
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_73
@@ -979,6 +1024,10 @@ Ln_75:                      GET_VAR     S_ppTmp
 Ln_76:                      GET_VAR     S_ppLn
                             SUBJ_FROM16
 
+                            mov         qword [scan_start_77], 0
+scan_retry_77:
+                            mov         rax, [scan_start_77]
+                            mov         [cursor], rax
                             jmp         P_77_α
 
 P_77_α:                     jmp         seq_l3_alpha ; SEQ
@@ -1002,12 +1051,22 @@ P_77_γ:                     SET_CAPTURE S_ppTokName, cap_ppTokName_buf, cap_ppT
                             SET_CAPTURE S_RP, cap_RP_buf, cap_RP_len
                             SET_CAPTURE S_Label, cap_Label_buf, cap_Label_len
                             jmp         L_ppAutoR_16
-P_77_ω:                     jmp         Ln_77
+P_77_ω:                     mov         rax, [scan_start_77]
+                            inc         rax
+                            cmp         rax, [subject_len_val]
+                            jg          Ln_77
+                            mov         [scan_start_77], rax
+                            jmp         scan_retry_77
+                            jmp         Ln_77
 
 ; ======================================================================================================================
 Ln_77:                      GET_VAR     S_ppLn
                             SUBJ_FROM16
 
+                            mov         qword [scan_start_78], 0
+scan_retry_78:
+                            mov         rax, [scan_start_78]
+                            mov         [cursor], rax
                             jmp         P_78_α
 
 P_78_α:                     jmp         seq_l5_alpha ; SEQ
@@ -1031,7 +1090,13 @@ P_78_γ:                     SET_CAPTURE S_ppTokName, cap_ppTokName_buf, cap_ppT
                             SET_CAPTURE S_RP, cap_RP_buf, cap_RP_len
                             SET_CAPTURE S_Label, cap_Label_buf, cap_Label_len
                             jmp         L_ppAutoCont_18
-P_78_ω:                     jmp         Ln_78
+P_78_ω:                     mov         rax, [scan_start_78]
+                            inc         rax
+                            cmp         rax, [subject_len_val]
+                            jg          Ln_78
+                            mov         [scan_start_78], rax
+                            jmp         scan_retry_78
+                            jmp         Ln_78
 
 ; ======================================================================================================================
 Ln_78:                      sub         rsp, 16
@@ -1049,6 +1114,10 @@ Lf_79:                      jmp         L_ppAutoNew_19
 Ln_79:                      GET_VAR     S_ppStmt
                             SUBJ_FROM16
 
+                            mov         qword [scan_start_80], 0
+scan_retry_80:
+                            mov         rax, [scan_start_80]
+                            mov         [cursor], rax
                             jmp         P_80_α
 
 
@@ -1082,7 +1151,13 @@ P_80_γ:                     SET_CAPTURE S_ppTokName, cap_ppTokName_buf, cap_ppT
                             SET_CAPTURE S_RP, cap_RP_buf, cap_RP_len
                             SET_CAPTURE S_Label, cap_Label_buf, cap_Label_len
                             jmp         Ln_80
-P_80_ω:                     jmp         L_ppAutoNew_19
+P_80_ω:                     mov         rax, [scan_start_80]
+                            inc         rax
+                            cmp         rax, [subject_len_val]
+                            jg          Ln_80
+                            mov         [scan_start_80], rax
+                            jmp         scan_retry_80
+                            jmp         L_ppAutoNew_19
 
 ; ======================================================================================================================
 Ln_80:                      GET_VAR     S_ppGConT
@@ -1098,6 +1173,10 @@ Ln_80:                      GET_VAR     S_ppGConT
 Ln_81:                      GET_VAR     S_ppGConT
                             SUBJ_FROM16
 
+                            mov         qword [scan_start_82], 0
+scan_retry_82:
+                            mov         rax, [scan_start_82]
+                            mov         [cursor], rax
                             jmp         P_82_α
 
 
@@ -1131,7 +1210,13 @@ P_82_γ:                     SET_CAPTURE S_ppTokName, cap_ppTokName_buf, cap_ppT
                             SET_CAPTURE S_RP, cap_RP_buf, cap_RP_len
                             SET_CAPTURE S_Label, cap_Label_buf, cap_Label_len
                             jmp         Ln_82
-P_82_ω:                     jmp         Ln_82
+P_82_ω:                     mov         rax, [scan_start_82]
+                            inc         rax
+                            cmp         rax, [subject_len_val]
+                            jg          Ln_82
+                            mov         [scan_start_82], rax
+                            jmp         scan_retry_82
+                            jmp         Ln_82
 
 ; ======================================================================================================================
 Ln_82:                      GET_VAR     S_ppW
@@ -1171,16 +1256,18 @@ L_ppAutoNew_19:             GET_VAR     S_ppStmt
 Ln_87:
 ;  ppAutoCont ==========================================================================================================
 L_ppAutoCont_18:            GET_VAR     S_ppStmt
-                            sub         rsp, 32
-                            CONC2_VS    S_CONCAT, S_ppStmt, S_SP
-                            STORE_ARG32 0
+                            CAT2_VS     S_ppStmt, S_SP
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_ppLn]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_88
@@ -1207,13 +1294,15 @@ Ln_89:                      GET_VAR     S_ppI
 Ln_90:
 ;  ppAS1 ===============================================================================================================
 L_ppAS1_20:                 GET_VAR     S_ppI
-                            sub         rsp, 32
                             CONC2_VV    S_LT, S_ppI, S_ppNg
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_ppI, 1
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_91
@@ -1456,130 +1545,158 @@ Ln_115:                     GET_VAR     S_ppLgBump
 Ln_116:
 ;  ppAutoMsg ===========================================================================================================
 L_ppAutoMsg_27:             GET_VAR     S_OUTPUT
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            CONC2_SV    S_CONCAT, S_ST_SP_MI_MI_auto_CL_SP_n_EQ, S_ppNg
-                            STORE_ARG32 0
+                            CAT2_SV     S_ST_SP_MI_MI_auto_CL_SP_n_EQ, S_ppNg
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_SP_p90_EQ
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_ppP90]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_SP_s1_EQ
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_SP_s2_EQ
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_SP_s3_EQ
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_SP_s4_EQ
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_SP_smbump_EQ
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_ppSmBump]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_SP_lgbump_EQ
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_ppLgBump]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_117
@@ -1621,27 +1738,31 @@ Ln_119:                     GET_VAR     S_Integer
 
 ; ======================================================================================================================
 Ln_120:                     GET_VAR     S_DQ
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_XX
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
-                            CONC2_SV    S_CONCAT, S_XX, S_nl
+                            CAT2_SV     S_XX, S_nl
                             STORE_ARG32 0
                             APPLY_FN_N  S_BREAK, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_XX
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_121
@@ -1650,27 +1771,31 @@ Ln_120:                     GET_VAR     S_DQ
 
 ; ======================================================================================================================
 Ln_121:                     GET_VAR     S_SQ
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_XX_117
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
-                            CONC2_SV    S_CONCAT, S_XX_117, S_nl
+                            CAT2_SV     S_XX_117, S_nl
                             STORE_ARG32 0
                             APPLY_FN_N  S_BREAK, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_XX_117
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_122
@@ -1697,16 +1822,13 @@ Ln_122:                     GET_VAR     S_String
 ; ======================================================================================================================
 Ln_123:                     GET_VAR     S_Real
                             sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             CALL1_VAR   S_SPAN, S_digits
-                            STORE_ARG32 0
-                            sub         rsp, 32
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             LOAD_STR    S_DT
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
                             CALL1_VAR   S_SPAN, S_digits
@@ -1725,9 +1847,11 @@ Ln_123:                     GET_VAR     S_Real
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
@@ -1740,19 +1864,25 @@ Ln_123:                     GET_VAR     S_Real
                             add         rsp, 32
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             ALT2        S_ALT, S_E, S_e
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             ALT2        S_ALT, S_PL, S_MI
                             STORE_ARG32 0
@@ -1765,30 +1895,37 @@ Ln_123:                     GET_VAR     S_Real
                             add         rsp, 32
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
+                            CALL1_VAR   S_SPAN, S_digits
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
                             CALL1_VAR   S_SPAN, S_digits
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
-                            mov         [rbp-32], rax
-                            mov         [rbp-24], rdx
-                            STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            CALL1_VAR   S_SPAN, S_digits
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_DT
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
                             CALL1_VAR   S_SPAN, S_digits
@@ -1807,9 +1944,11 @@ Ln_123:                     GET_VAR     S_Real
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -1823,21 +1962,22 @@ Ln_123:                     GET_VAR     S_Real
 
 ; ======================================================================================================================
 Ln_124:                     GET_VAR     S_Id
-                            sub         rsp, 32
                             sub         rsp, 16
-                            sub         rsp, 32
                             lea         rdi, [rel S_AM_UCASE]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_AM_LCASE]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
@@ -1845,39 +1985,46 @@ Ln_124:                     GET_VAR     S_Id
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
                             sub         rsp, 16
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            CONC2_SV    S_CONCAT, S_DT, S_digits
-                            STORE_ARG32 0
+                            CAT2_SV     S_DT, S_digits
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_AM_UCASE]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_129
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_AM_LCASE]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
@@ -1900,9 +2047,11 @@ Ln_124:                     GET_VAR     S_Id
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_125
@@ -1935,14 +2084,16 @@ Ln_127:                     GET_VAR     S_SpecialNm
 
 ; ======================================================================================================================
 Ln_128:                     GET_VAR     S_ProtKwd
-                            sub         rsp, 32
                             LOAD_STR    S_AM
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_129
@@ -1951,14 +2102,16 @@ Ln_128:                     GET_VAR     S_ProtKwd
 
 ; ======================================================================================================================
 Ln_129:                     GET_VAR     S_UnprotKwd
-                            sub         rsp, 32
                             LOAD_STR    S_AM
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_130
@@ -1987,35 +2140,37 @@ Ln_130:                     GET_VAR     S_Gray
 ; ======================================================================================================================
 Ln_131:                     GET_VAR     S_White
                             sub         rsp, 32
-                            sub         rsp, 32
                             sub         rsp, 16
-                            CONC2_SV    S_CONCAT, S_SP, S_tab
+                            CAT2_SV     S_SP, S_tab
                             STORE_ARG32 0
                             APPLY_FN_N  S_SPAN, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
-                            sub         rsp, 32
-                            sub         rsp, 32
                             sub         rsp, 32
                             lea         rdi, [rel S_nl]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             ALT2        S_ALT, S_PL, S_DT
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
                             sub         rsp, 16
-                            CONC2_SV    S_CONCAT, S_SP, S_tab
+                            CAT2_SV     S_SP, S_tab
                             STORE_ARG32 0
                             APPLY_FN_N  S_SPAN, 1
                             add         rsp, 16
@@ -2036,9 +2191,11 @@ Ln_131:                     GET_VAR     S_White
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
@@ -2056,30 +2213,34 @@ Ln_131:                     GET_VAR     S_White
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
                             lea         rdi, [rel S_nl]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             ALT2        S_ALT, S_PL, S_DT
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
                             sub         rsp, 16
-                            CONC2_SV    S_CONCAT, S_SP, S_tab
+                            CAT2_SV     S_SP, S_tab
                             STORE_ARG32 0
                             APPLY_FN_N  S_SPAN, 1
                             add         rsp, 16
@@ -2100,9 +2261,11 @@ Ln_131:                     GET_VAR     S_White
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -2117,8 +2280,6 @@ Ln_131:                     GET_VAR     S_White
 ; ======================================================================================================================
 Ln_132:                     GET_VAR     S_TxInList
                             sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             CALL1_INT   S_POS, 0
                             STORE_ARG32 0
                             LOAD_STR    S_SP
@@ -2127,15 +2288,19 @@ Ln_132:                     GET_VAR     S_TxInList
                             add         rsp, 32
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             LOAD_STR    S_SP
                             STORE_ARG32 0
@@ -2145,9 +2310,11 @@ Ln_132:                     GET_VAR     S_TxInList
                             add         rsp, 32
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_133
@@ -2166,13 +2333,15 @@ Ln_134:                     GET_VAR     S_BuiltinVars
 
 ; ======================================================================================================================
 Ln_135:                     GET_VAR     S_ProtKwds
-                            sub         rsp, 32
-                            CONC2       S_CONCAT, S_ABORT_SP_ALPHABET_SP_ARB_SP_BAL_SP_FAIL_SP_FENCE_SP_FILE_SP_F, S_LASTFILE_SP_LASTLINE_SP_LASTNO_SP_LCASE_SP_LINE_SP_REM_SP_RTN
-                            STORE_ARG32 0
+                            CAT2_SS     S_ABORT_SP_ALPHABET_SP_ARB_SP_BAL_SP_FAIL_SP_FENCE_SP_FILE_SP_F, S_LASTFILE_SP_LASTLINE_SP_LASTNO_SP_LCASE_SP_LINE_SP_REM_SP_RTN
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_STCOUNT_SP_STNO_SP_SUCCEED_SP_UCASE
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_136
@@ -2181,13 +2350,15 @@ Ln_135:                     GET_VAR     S_ProtKwds
 
 ; ======================================================================================================================
 Ln_136:                     GET_VAR     S_UnprotKwds
-                            sub         rsp, 32
-                            CONC2       S_CONCAT, S_ABEND_SP_ANCHOR_SP_CASE_SP_CODE_SP_COMPARE_SP_DUMP_SP_ERRLIMI, S_ERRTEXT_SP_ERRTYPE_SP_FTRACE_SP_INPUT_SP_MAXLNGTH_SP_OUTPUT_S
-                            STORE_ARG32 0
+                            CAT2_SS     S_ABEND_SP_ANCHOR_SP_CASE_SP_CODE_SP_COMPARE_SP_DUMP_SP_ERRLIMI, S_ERRTEXT_SP_ERRTYPE_SP_FTRACE_SP_INPUT_SP_MAXLNGTH_SP_OUTPUT_S
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_PROFILE_SP_STLIMIT_SP_TRACE_SP_TRIM_SP_FULLSCAN
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_137
@@ -2196,61 +2367,75 @@ Ln_136:                     GET_VAR     S_UnprotKwds
 
 ; ======================================================================================================================
 Ln_137:                     GET_VAR     S_Functions
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            CONC2       S_CONCAT, S_ANY_SP_APPLY_SP_ARBNO_SP_ARG_SP_ARRAY_SP_ATAN_SP_BACKSPACE_SP, S_CHAR_SP_CHOP_SP_CLEAR_SP_CODE_SP_COLLECT_SP_CONVERT_SP_COPY_S
-                            STORE_ARG32 0
+                            CAT2_SS     S_ANY_SP_APPLY_SP_ARBNO_SP_ARG_SP_ARRAY_SP_ATAN_SP_BACKSPACE_SP, S_CHAR_SP_CHOP_SP_CLEAR_SP_CODE_SP_COLLECT_SP_CONVERT_SP_COPY_S
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_DATATYPE_SP_DATE_SP_DEFINE_SP_DETACH_SP_DIFFER_SP_DUMP_SP_DUP
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_ENDFILE_SP_EQ_SP_EVAL_SP_EXIT_SP_EXP_SP_FENCE_SP_FIELD_SP_GE_
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_IDENT_SP_INPUT_SP_INTEGER_SP_ITEM_SP_LE_SP_LEN_SP_LEQ_SP_LGE_
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_LLT_SP_LN_SP_LNE_SP_LOAD_SP_LOCAL_SP_LPAD_SP_LT_SP_NE_SP_NOTA
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_POS_SP_PROTOTYPE_SP_REMDR_SP_REPLACE_SP_REVERSE_SP_REWIND_SP_
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_RSORT_SP_RTAB_SP_SET_SP_SETEXIT_SP_SIN_SP_SIZE_SP_SORT_SP_SPA
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_SUBSTR_SP_TAB_SP_TABLE_SP_TAN_SP_TIME_SP_TRACE_SP_TRIM_SP_UNL
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_138
@@ -2355,35 +2540,41 @@ Ln_161:                     LOAD_NULVCL
 
 ; ======================================================================================================================
 Ln_162:                     GET_VAR     S_ExprList
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             APPLY_FN_0  S_nPush
                             STORE_RESULT
 
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             APPLY_FN_0  S_nPop
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_163
@@ -2392,12 +2583,11 @@ Ln_162:                     GET_VAR     S_ExprList
 
 ; ======================================================================================================================
 Ln_163:                     GET_VAR     S_XList
-                            sub         rsp, 32
-                            sub         rsp, 32
                             APPLY_FN_0  S_nInc
                             STORE_RESULT
 
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
@@ -2409,23 +2599,28 @@ Ln_163:                     GET_VAR     S_XList
                             add         rsp, 32
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
@@ -2443,9 +2638,11 @@ Ln_163:                     GET_VAR     S_XList
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_164
@@ -2462,30 +2659,34 @@ Ln_164:                     GET_VAR     S_Expr
 
 ; ======================================================================================================================
 Ln_165:                     GET_VAR     S_Expr0
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
@@ -2503,9 +2704,11 @@ Ln_165:                     GET_VAR     S_Expr0
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_166
@@ -2514,30 +2717,34 @@ Ln_165:                     GET_VAR     S_Expr0
 
 ; ======================================================================================================================
 Ln_166:                     GET_VAR     S_Expr1
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
@@ -2555,9 +2762,11 @@ Ln_166:                     GET_VAR     S_Expr1
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_167
@@ -2566,30 +2775,34 @@ Ln_166:                     GET_VAR     S_Expr1
 
 ; ======================================================================================================================
 Ln_167:                     GET_VAR     S_Expr2
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
@@ -2607,9 +2820,11 @@ Ln_167:                     GET_VAR     S_Expr2
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_168
@@ -2618,35 +2833,41 @@ Ln_167:                     GET_VAR     S_Expr2
 
 ; ======================================================================================================================
 Ln_168:                     GET_VAR     S_Expr3
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             APPLY_FN_0  S_nPush
                             STORE_RESULT
 
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             APPLY_FN_0  S_nPop
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_169
@@ -2655,31 +2876,35 @@ Ln_168:                     GET_VAR     S_Expr3
 
 ; ======================================================================================================================
 Ln_169:                     GET_VAR     S_X3
-                            sub         rsp, 32
-                            sub         rsp, 32
                             APPLY_FN_0  S_nInc
                             STORE_RESULT
 
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
@@ -2697,9 +2922,11 @@ Ln_169:                     GET_VAR     S_X3
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_170
@@ -2708,35 +2935,41 @@ Ln_169:                     GET_VAR     S_X3
 
 ; ======================================================================================================================
 Ln_170:                     GET_VAR     S_Expr4
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             APPLY_FN_0  S_nPush
                             STORE_RESULT
 
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             APPLY_FN_0  S_nPop
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_171
@@ -2745,31 +2978,35 @@ Ln_170:                     GET_VAR     S_Expr4
 
 ; ======================================================================================================================
 Ln_171:                     GET_VAR     S_X4
-                            sub         rsp, 32
-                            sub         rsp, 32
                             APPLY_FN_0  S_nInc
                             STORE_RESULT
 
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
@@ -2787,9 +3024,11 @@ Ln_171:                     GET_VAR     S_X4
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_172
@@ -2798,30 +3037,34 @@ Ln_171:                     GET_VAR     S_X4
 
 ; ======================================================================================================================
 Ln_172:                     GET_VAR     S_Expr5
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
@@ -2839,9 +3082,11 @@ Ln_172:                     GET_VAR     S_Expr5
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_173
@@ -2850,52 +3095,60 @@ Ln_172:                     GET_VAR     S_Expr5
 
 ; ======================================================================================================================
 Ln_173:                     GET_VAR     S_Expr6
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
                             sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
-                            mov         [rbp-32], rax
-                            mov         [rbp-24], rdx
-                            STORE_ARG32 0
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -2918,9 +3171,11 @@ Ln_173:                     GET_VAR     S_Expr6
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_174
@@ -2929,30 +3184,34 @@ Ln_173:                     GET_VAR     S_Expr6
 
 ; ======================================================================================================================
 Ln_174:                     GET_VAR     S_Expr7
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
@@ -2970,9 +3229,11 @@ Ln_174:                     GET_VAR     S_Expr7
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_175
@@ -2981,30 +3242,34 @@ Ln_174:                     GET_VAR     S_Expr7
 
 ; ======================================================================================================================
 Ln_175:                     GET_VAR     S_Expr8
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
@@ -3022,9 +3287,11 @@ Ln_175:                     GET_VAR     S_Expr8
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_176
@@ -3033,30 +3300,34 @@ Ln_175:                     GET_VAR     S_Expr8
 
 ; ======================================================================================================================
 Ln_176:                     GET_VAR     S_Expr9
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
@@ -3074,9 +3345,11 @@ Ln_176:                     GET_VAR     S_Expr9
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_177
@@ -3085,30 +3358,34 @@ Ln_176:                     GET_VAR     S_Expr9
 
 ; ======================================================================================================================
 Ln_177:                     GET_VAR     S_Expr10
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
@@ -3126,9 +3403,11 @@ Ln_177:                     GET_VAR     S_Expr10
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_178
@@ -3137,16 +3416,14 @@ Ln_177:                     GET_VAR     S_Expr10
 
 ; ======================================================================================================================
 Ln_178:                     GET_VAR     S_Expr11
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
                             sub         rsp, 32
                             sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             STORE_ARG32 0
@@ -3165,20 +3442,26 @@ Ln_178:                     GET_VAR     S_Expr11
                             add         rsp, 32
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
@@ -3196,9 +3479,11 @@ Ln_178:                     GET_VAR     S_Expr11
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_179
@@ -3207,52 +3492,60 @@ Ln_178:                     GET_VAR     S_Expr11
 
 ; ======================================================================================================================
 Ln_179:                     GET_VAR     S_Expr12
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
                             sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
-                            mov         [rbp-32], rax
-                            mov         [rbp-24], rdx
-                            STORE_ARG32 0
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -3275,9 +3568,11 @@ Ln_179:                     GET_VAR     S_Expr12
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_180
@@ -3286,30 +3581,34 @@ Ln_179:                     GET_VAR     S_Expr12
 
 ; ======================================================================================================================
 Ln_180:                     GET_VAR     S_Expr13
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
@@ -3327,9 +3626,11 @@ Ln_180:                     GET_VAR     S_Expr13
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_181
@@ -3355,43 +3656,51 @@ Ln_181:                     GET_VAR     S_Expr14
                             sub         rsp, 32
                             sub         rsp, 32
                             sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_AT
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
-                            mov         [rbp-32], rax
-                            mov         [rbp-24], rdx
-                            STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_TL
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -3400,23 +3709,27 @@ Ln_181:                     GET_VAR     S_Expr14
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_QM
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -3441,23 +3754,27 @@ Ln_181:                     GET_VAR     S_Expr14
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_AM
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -3466,23 +3783,27 @@ Ln_181:                     GET_VAR     S_Expr14
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_PL
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -3491,23 +3812,27 @@ Ln_181:                     GET_VAR     S_Expr14
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_MI
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -3516,23 +3841,27 @@ Ln_181:                     GET_VAR     S_Expr14
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_ST
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -3541,23 +3870,27 @@ Ln_181:                     GET_VAR     S_Expr14
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_DL
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -3566,23 +3899,27 @@ Ln_181:                     GET_VAR     S_Expr14
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_DT
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -3591,23 +3928,27 @@ Ln_181:                     GET_VAR     S_Expr14
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_BG
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -3616,23 +3957,27 @@ Ln_181:                     GET_VAR     S_Expr14
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_PC
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -3641,23 +3986,27 @@ Ln_181:                     GET_VAR     S_Expr14
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_SL
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -3666,23 +4015,27 @@ Ln_181:                     GET_VAR     S_Expr14
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_HS
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -3691,23 +4044,27 @@ Ln_181:                     GET_VAR     S_Expr14
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_EQ
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -3716,23 +4073,27 @@ Ln_181:                     GET_VAR     S_Expr14
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_OR
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -3754,41 +4115,47 @@ Ln_181:                     GET_VAR     S_Expr14
 
 ; ======================================================================================================================
 Ln_182:                     GET_VAR     S_Expr15
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             sub         rsp, 32
                             APPLY_FN_0  S_nPush
                             STORE_RESULT
 
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             APPLY_FN_0  S_nPop
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
@@ -3806,9 +4173,11 @@ Ln_182:                     GET_VAR     S_Expr15
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_183
@@ -3817,34 +4186,37 @@ Ln_182:                     GET_VAR     S_Expr15
 
 ; ======================================================================================================================
 Ln_183:                     GET_VAR     S_Expr16
-                            sub         rsp, 32
-                            sub         rsp, 32
                             APPLY_FN_0  S_nInc
                             STORE_RESULT
 
-                            STORE_ARG32 0
-                            sub         rsp, 32
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -3852,12 +4224,15 @@ Ln_183:                     GET_VAR     S_Expr16
                             add         rsp, 32
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
@@ -3877,9 +4252,11 @@ Ln_183:                     GET_VAR     S_Expr16
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_184
@@ -3897,55 +4274,65 @@ Ln_184:                     GET_VAR     S_Expr17
                             sub         rsp, 32
                             sub         rsp, 32
                             sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             APPLY_FN_0  S_nPop
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
-                            mov         [rbp-32], rax
-                            mov         [rbp-24], rdx
-                            STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
-                            STORE_ARG32 0
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -3954,24 +4341,28 @@ Ln_184:                     GET_VAR     S_Expr17
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -4072,27 +4463,31 @@ Ln_187:                     GET_VAR     S_SorF
 ; ======================================================================================================================
 Ln_188:                     GET_VAR     S_Target
                             sub         rsp, 32
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -4106,101 +4501,119 @@ Ln_188:                     GET_VAR     S_Target
 
 ; ======================================================================================================================
 Ln_189:                     GET_VAR     S_Goto
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_CL
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
-                            mov         [rbp-32], rax
-                            mov         [rbp-24], rdx
-                            STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
@@ -4216,9 +4629,11 @@ Ln_189:                     GET_VAR     S_Goto
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -4231,9 +4646,11 @@ Ln_189:                     GET_VAR     S_Goto
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_190
@@ -4242,19 +4659,21 @@ Ln_189:                     GET_VAR     S_Goto
 
 ; ======================================================================================================================
 Ln_190:                     GET_VAR     S_Control
-                            sub         rsp, 32
                             LOAD_STR    S_MI
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
-                            CONC2_VS    S_CONCAT, S_nl, S_XX_251
+                            CAT2_VS     S_nl, S_XX_251
                             STORE_ARG32 0
                             APPLY_FN_N  S_BREAK, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_191
@@ -4263,13 +4682,15 @@ Ln_190:                     GET_VAR     S_Control
 
 ; ======================================================================================================================
 Ln_191:                     GET_VAR     S_Comment
-                            sub         rsp, 32
                             LOAD_STR    S_ST
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             CALL1_VAR   S_BREAK, S_nl
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_192
@@ -4286,145 +4707,81 @@ Ln_192:                     GET_VAR     S_Label
 
 ; ======================================================================================================================
 Ln_193:                     GET_VAR     S_Stmt
-                            sub         rsp, 32
-                            sub         rsp, 32
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
-                            sub         rsp, 16
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
-                            STORE_ARG32 0
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
-                            mov         [rbp-32], rax
-                            mov         [rbp-24], rdx
-                            STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
-                            STORE_ARG32 0
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
-                            mov         [rbp-32], rax
-                            mov         [rbp-24], rdx
-                            STORE_ARG32 0
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
-                            mov         [rbp-32], rax
-                            mov         [rbp-24], rdx
-                            STORE_ARG32 0
-                            sub         rsp, 32
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
-                            STORE_ARG32 0
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
-                            mov         [rbp-32], rax
-                            mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_ALT, 2
-                            add         rsp, 32
-                            mov         [rbp-32], rax
-                            mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
-                            mov         [rbp-32], rax
-                            mov         [rbp-24], rdx
-                            STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
-                            STORE_ARG32 0
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_ALT, 2
-                            add         rsp, 32
-                            mov         [rbp-32], rax
-                            mov         [rbp-24], rdx
-                            STORE_ARG32 0
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
-                            mov         [rbp-32], rax
-                            mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
-                            mov         [rbp-32], rax
-                            mov         [rbp-24], rdx
-                            STORE_ARG32 0
-                            sub         rsp, 32
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -4432,9 +4789,11 @@ Ln_193:                     GET_VAR     S_Stmt
                             add         rsp, 32
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
@@ -4445,8 +4804,92 @@ Ln_193:                     GET_VAR     S_Stmt
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
+                            APPLY_FN_N  S_ALT, 2
                             add         rsp, 32
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
+                            sub         rsp, 16
+                            sub         rsp, 32
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
+                            sub         rsp, 32
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
+                            STORE_ARG32 0
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
+                            STORE_ARG32 16
+                            APPLY_FN_N  S_ALT, 2
+                            add         rsp, 32
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
+                            STORE_ARG32 0
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -4459,9 +4902,11 @@ Ln_193:                     GET_VAR     S_Stmt
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -4470,24 +4915,28 @@ Ln_193:                     GET_VAR     S_Stmt
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -4500,39 +4949,47 @@ Ln_193:                     GET_VAR     S_Stmt
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
-                            mov         [rbp-32], rax
-                            mov         [rbp-24], rdx
-                            STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
-                            STORE_ARG32 0
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
-                            mov         [rbp-32], rax
-                            mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -4540,26 +4997,31 @@ Ln_193:                     GET_VAR     S_Stmt
                             add         rsp, 32
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             STORE_ARG32 0
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -4572,17 +5034,22 @@ Ln_193:                     GET_VAR     S_Stmt
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_194
@@ -4591,10 +5058,10 @@ Ln_193:                     GET_VAR     S_Stmt
 
 ; ======================================================================================================================
 Ln_194:                     GET_VAR     S_Commands
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
@@ -4614,9 +5081,11 @@ Ln_194:                     GET_VAR     S_Commands
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_195
@@ -4625,54 +5094,62 @@ Ln_194:                     GET_VAR     S_Commands
 
 ; ======================================================================================================================
 Ln_195:                     GET_VAR     S_Command
-                            sub         rsp, 32
                             APPLY_FN_0  S_nInc
                             STORE_RESULT
 
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             sub         rsp, 32
                             sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_nl]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             ALT2_VS     S_ALT, S_nl, S_XX_251
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -4681,23 +5158,27 @@ Ln_195:                     GET_VAR     S_Command
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             ALT2_VS     S_ALT, S_nl, S_XX_251
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 16
@@ -4710,9 +5191,11 @@ Ln_195:                     GET_VAR     S_Command
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_196
@@ -4721,13 +5204,11 @@ Ln_195:                     GET_VAR     S_Command
 
 ; ======================================================================================================================
 Ln_196:                     GET_VAR     S_Parse
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             APPLY_FN_0  S_nPush
                             STORE_RESULT
 
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
@@ -4736,26 +5217,34 @@ Ln_196:                     GET_VAR     S_Parse
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             APPLY_FN_0  S_nPop
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_197
@@ -4764,14 +5253,11 @@ Ln_196:                     GET_VAR     S_Parse
 
 ; ======================================================================================================================
 Ln_197:                     GET_VAR     S_Compiland
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             APPLY_FN_0  S_nPush
                             STORE_RESULT
 
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
@@ -4780,44 +5266,53 @@ Ln_197:                     GET_VAR     S_Compiland
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             CALL1_STR   S_icase, S_END
-                            STORE_ARG32 0
-                            sub         rsp, 32
-                            sub         rsp, 32
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             LOAD_STR    S_SP
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             CALL1_VAR   S_BREAK, S_nl
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_nl]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
@@ -4830,23 +5325,28 @@ Ln_197:                     GET_VAR     S_Compiland
                             add         rsp, 32
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
-                            sub         rsp, 32
                             CALL1_VAR   S_BREAK, S_nl
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_nl]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
@@ -4854,9 +5354,11 @@ Ln_197:                     GET_VAR     S_Compiland
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
@@ -4869,18 +5371,23 @@ Ln_197:                     GET_VAR     S_Compiland
                             add         rsp, 32
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             APPLY_FN_0  S_nPop
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_198
@@ -4942,86 +5449,104 @@ Ln_203:                     GET_VAR     S_c
 
 ; ======================================================================================================================
 Ln_204:                     GET_VAR     S_OUTPUT
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             CONC2_VN    S_GT_279, S_doDebug
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_pp_LP
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_t]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_RP
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_CM_SP_sz_SP_EQ_SP
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_level]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_PL
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             CALL1_VAR   S_SIZE, S_v
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_CM_SP_v_SP_EQ_SP
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_v]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_205
@@ -5059,13 +5584,15 @@ L_pp_0_32:                  GET_VAR     S_i
 Ln_208:
 ;  pp_1 ================================================================================================================
 L_pp_1_33:                  GET_VAR     S_i
-                            sub         rsp, 32
                             CONC2_VV    S_LT, S_i, S_n
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_i, 1
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_209
@@ -5716,20 +6243,25 @@ Ln_266:                     APPLY_FN_0  S_GenSetCont
 
 ; ======================================================================================================================
 Ln_267:                     sub         rsp, 16
-                            sub         rsp, 32
                             sub         rsp, 16
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 0
                             APPLY_FN_N  S_v, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 0
-                            GET_VAR     S_nl
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
+                            lea         rdi, [rel S_nl]
+                            call        stmt_get
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-16], rax
                             mov         [rbp-8], rdx
                             STORE_ARG32 0
@@ -5758,20 +6290,25 @@ Ln_269:                     APPLY_FN_0  S_GenSetCont
 
 ; ======================================================================================================================
 Ln_270:                     sub         rsp, 16
-                            sub         rsp, 32
                             sub         rsp, 16
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 0
                             APPLY_FN_N  S_v, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 0
-                            GET_VAR     S_nl
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
+                            lea         rdi, [rel S_nl]
+                            call        stmt_get
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-16], rax
                             mov         [rbp-8], rdx
                             STORE_ARG32 0
@@ -5940,9 +6477,6 @@ Ln_285:                     sub         rsp, 16
 
 ; ======================================================================================================================
 Ln_286:                     GET_VAR     S_ppWidth
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             sub         rsp, 16
                             CALL1_VAR   S_t, S_ppPatrn
                             STORE_ARG32 0
@@ -5950,14 +6484,18 @@ Ln_286:                     GET_VAR     S_ppWidth
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             CALL1_VAR   S_IDENT, S_ppAsgn
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             CALL1_VAR   S_t, S_ppGo1
                             STORE_ARG32 0
@@ -5965,12 +6503,15 @@ Ln_286:                     GET_VAR     S_ppWidth
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
@@ -5984,9 +6525,11 @@ Ln_286:                     GET_VAR     S_ppWidth
                             add         rsp, 32
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_287
@@ -6053,10 +6596,9 @@ Ln_291:                     sub         rsp, 16
 
 ; ======================================================================================================================
 Ln_292:                     GET_VAR     S_ppWidth
-                            sub         rsp, 32
-                            sub         rsp, 32
                             CALL1_VAR   S_IDENT, S_ppAsgn
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
                             CALL1_VAR   S_t, S_ppGo1
                             STORE_ARG32 0
@@ -6064,12 +6606,15 @@ Ln_292:                     GET_VAR     S_ppWidth
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
@@ -6083,9 +6628,11 @@ Ln_292:                     GET_VAR     S_ppWidth
                             add         rsp, 32
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_293
@@ -6269,7 +6816,6 @@ Ln_307:                     sub         rsp, 16
 
 ; ======================================================================================================================
 Ln_308:                     GET_VAR     S_ppWidth
-                            sub         rsp, 32
                             sub         rsp, 16
                             CALL1_VAR   S_t, S_ppGo1
                             STORE_ARG32 0
@@ -6277,7 +6823,8 @@ Ln_308:                     GET_VAR     S_ppWidth
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
@@ -6291,9 +6838,11 @@ Ln_308:                     GET_VAR     S_ppWidth
                             add         rsp, 32
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_309
@@ -6475,13 +7024,15 @@ Ln_322:                     GET_VAR     S_i
 Ln_323:
 ;  pp_ExprList0 ========================================================================================================
 L_pp_ExprList0_75:          GET_VAR     S_i
-                            sub         rsp, 32
                             CONC2_VV    S_LT, S_i, S_n
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_i, 1
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_324
@@ -6607,13 +7158,15 @@ Ln_335:                     GET_VAR     S_i
 Ln_336:
 ;  pp_,0 ===============================================================================================================
 L_pp_0_77:                  GET_VAR     S_i
-                            sub         rsp, 32
                             CONC2_VV    S_LT, S_i, S_n
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_i, 1
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_337
@@ -6750,13 +7303,15 @@ Ln_349:                     GET_VAR     S_i
 Ln_350:
 ;  pp_|0 ===============================================================================================================
 L_pp_0_82:                  GET_VAR     S_i
-                            sub         rsp, 32
                             CONC2_VV    S_LT, S_i, S_n
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_i, 1
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_351
@@ -6851,13 +7406,15 @@ Ln_358:                     GET_VAR     S_i
 Ln_359:
 ;  pp_..0 ==============================================================================================================
 L_pp_0_85:                  GET_VAR     S_i
-                            sub         rsp, 32
                             CONC2_VV    S_LT, S_i, S_n
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_i, 1
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_360
@@ -6876,19 +7433,15 @@ Ln_360:                     sub         rsp, 16
 
 
 ; ======================================================================================================================
-Ln_361:                     sub         rsp, 32
-                            CONC2_VV16  S_LT, S_i, S_n
-                            STORE_ARG32 0
-                            sub         rsp, 16
-                            GET_VAR     S_nl
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+Ln_361:                     CONC2_VV    S_LT, S_i, S_n
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
+                            CALL1_VAR   S_Gen, S_nl
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-16], rax
                             mov         [rbp-8], rdx
                             jmp         L_COMPUTED_pp_0_86
@@ -6944,13 +7497,15 @@ Ln_364:                     GET_VAR     S_i
 Ln_365:
 ;  pp_[]0 ==============================================================================================================
 L_pp_0_88:                  GET_VAR     S_i
-                            sub         rsp, 32
                             CONC2_VV    S_LT, S_i, S_n
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_i, 1
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_366
@@ -7015,19 +7570,15 @@ Ln_372:                     sub         rsp, 16
 
 
 ; ======================================================================================================================
-Ln_373:                     sub         rsp, 32
-                            CONC2_VV16  S_LT, S_i, S_n
-                            STORE_ARG32 0
-                            sub         rsp, 16
-                            GET_VAR     S_nl
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+Ln_373:                     CONC2_VV    S_LT, S_i, S_n
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
+                            CALL1_VAR   S_Gen, S_nl
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-16], rax
                             mov         [rbp-8], rdx
                             jmp         L_COMPUTED_pp_0_89
@@ -7167,7 +7718,20 @@ Ln_383:                     sub         rsp, 16
 
 ; ======================================================================================================================
 Ln_384:                     sub         rsp, 16
-                            CONC2_SV16  S_CONCAT, S_LP, S_nl
+                            LOAD_STR    S_LP
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
+                            lea         rdi, [rel S_nl]
+                            call        stmt_get
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
+                            mov         [rbp-16], rax
+                            mov         [rbp-8], rdx
                             STORE_ARG32 0
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
@@ -7252,13 +7816,15 @@ Lf_394:                     GOTO_ALWAYS L_SNO_END     ; RETURN
 
 ; ======================================================================================================================
 Ln_394:                     GET_VAR     S_len
-                            sub         rsp, 32
                             CALL1_VAR   S_IDENT, S_len
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_INT    1024
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_395
@@ -7301,86 +7867,104 @@ Ln_399:                     GET_VAR     S_c
 
 ; ======================================================================================================================
 Ln_400:                     GET_VAR     S_OUTPUT
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             CONC2_VN    S_GT_279, S_doDebug
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_ss_LP
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_t]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_RP
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_CM_SP_sz_SP_EQ_SP
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_level]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_PL
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             CALL1_VAR   S_SIZE, S_v
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_CM_SP_v_SP_EQ_SP
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_v]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_401
@@ -7443,6 +8027,10 @@ Ln_406:
 L_ss_Label_100:             GET_VAR     S_v
                             SUBJ_FROM16
 
+                            mov         qword [scan_start_407], 0
+scan_retry_407:
+                            mov         rax, [scan_start_407]
+                            mov         [cursor], rax
                             jmp         P_407_α
 
 P_407_α:                    jmp         seq_l9_alpha ; SEQ
@@ -7484,7 +8072,13 @@ P_407_γ:                    SET_CAPTURE S_ppTokName, cap_ppTokName_buf, cap_ppT
                             SET_CAPTURE S_RP, cap_RP_buf, cap_RP_len
                             SET_CAPTURE S_Label, cap_Label_buf, cap_Label_len
                             jmp         L_ss_Label0_101
-P_407_ω:                    jmp         L_ss_Label1_102
+P_407_ω:                    mov         rax, [scan_start_407]
+                            inc         rax
+                            cmp         rax, [subject_len_val]
+                            jg          Ln_407
+                            mov         [scan_start_407], rax
+                            jmp         scan_retry_407
+                            jmp         L_ss_Label1_102
 
 Ln_407:
 ;  ss_Label0 ===========================================================================================================
@@ -7575,10 +8169,9 @@ Lf_415:                     GOTO_ALWAYS L_SNO_END     ; FRETURN
 Ln_415:
 ;  ss_:() ==============================================================================================================
 L_ss_108:                   GET_VAR     S_ss
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_LP
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
@@ -7589,16 +8182,21 @@ L_ss_108:                   GET_VAR     S_ss
                             add         rsp, 32
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_RP
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_416
@@ -7609,10 +8207,9 @@ Lf_416:                     jmp         L_error_35
 Ln_416:
 ;  ss_:<> ==============================================================================================================
 L_ss_109:                   GET_VAR     S_ss
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_LT_181
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
@@ -7623,16 +8220,21 @@ L_ss_109:                   GET_VAR     S_ss
                             add         rsp, 32
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_GT
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_417
@@ -7643,10 +8245,9 @@ Lf_417:                     jmp         L_error_35
 Ln_417:
 ;  ss_:S() =============================================================================================================
 L_ss_S_110:                 GET_VAR     S_ss
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_S_LP
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
@@ -7657,16 +8258,21 @@ L_ss_S_110:                 GET_VAR     S_ss
                             add         rsp, 32
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_RP
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_418
@@ -7677,10 +8283,9 @@ Lf_418:                     jmp         L_error_35
 Ln_418:
 ;  ss_:S<> =============================================================================================================
 L_ss_S_111:                 GET_VAR     S_ss
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_S_LT
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
@@ -7691,16 +8296,21 @@ L_ss_S_111:                 GET_VAR     S_ss
                             add         rsp, 32
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_GT
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_419
@@ -7711,10 +8321,9 @@ Lf_419:                     jmp         L_error_35
 Ln_419:
 ;  ss_:F() =============================================================================================================
 L_ss_F_112:                 GET_VAR     S_ss
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_F_LP
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
@@ -7725,16 +8334,21 @@ L_ss_F_112:                 GET_VAR     S_ss
                             add         rsp, 32
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_RP
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_420
@@ -7745,10 +8359,9 @@ Lf_420:                     jmp         L_error_35
 Ln_420:
 ;  ss_:F<> =============================================================================================================
 L_ss_F_113:                 GET_VAR     S_ss
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_F_LT
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
@@ -7759,16 +8372,21 @@ L_ss_F_113:                 GET_VAR     S_ss
                             add         rsp, 32
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_GT
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_421
@@ -7779,12 +8397,12 @@ Lf_421:                     jmp         L_error_35
 Ln_421:
 ;  ssUnOp ==============================================================================================================
 L_ssUnOp_114:               GET_VAR     S_ss
-                            sub         rsp, 32
                             lea         rdi, [rel S_t]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
@@ -7806,9 +8424,11 @@ L_ssUnOp_114:               GET_VAR     S_ss
                             add         rsp, 32
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_422
@@ -7839,28 +8459,32 @@ Lf_423:                     GOTO_ALWAYS L_SNO_END     ; FRETURN
 
 ; ======================================================================================================================
 Ln_423:                     GET_VAR     S_ss
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            CONC2_VS    S_CONCAT, S_ss, S_SP
-                            STORE_ARG32 0
+                            CAT2_VS     S_ss, S_SP
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_t]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_SP
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
@@ -7898,9 +8522,11 @@ Ln_423:                     GET_VAR     S_ss
                             add         rsp, 32
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_424
@@ -8106,13 +8732,15 @@ Ln_453:                     GET_VAR     S_i
 Ln_454:
 ;  ss_ExprList0 ========================================================================================================
 L_ss_ExprList0_132:         GET_VAR     S_i
-                            sub         rsp, 32
                             CONC2_VV    S_LT, S_i, S_n
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_i, 1
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_455
@@ -8122,9 +8750,9 @@ Lf_455:                     GOTO_ALWAYS L_SNO_END     ; RETURN
 
 ; ======================================================================================================================
 Ln_455:                     GET_VAR     S_ss
-                            sub         rsp, 32
-                            CONC2_VS    S_CONCAT, S_ss, S_CM_SP
-                            STORE_ARG32 0
+                            CAT2_VS     S_ss, S_CM_SP
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
@@ -8154,9 +8782,11 @@ Ln_455:                     GET_VAR     S_ss
                             add         rsp, 32
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_456
@@ -8167,9 +8797,9 @@ Lf_456:                     GOTO_ALWAYS L_SNO_END     ; FRETURN
 Ln_456:
 ;  ss_, ================================================================================================================
 L_ss_133:                   GET_VAR     S_ss
-                            sub         rsp, 32
                             LOAD_STR    S_LP
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
@@ -8180,9 +8810,11 @@ L_ss_133:                   GET_VAR     S_ss
                             add         rsp, 32
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_457
@@ -8198,13 +8830,15 @@ Ln_457:                     GET_VAR     S_i
 Ln_458:
 ;  ss_,0 ===============================================================================================================
 L_ss_0_134:                 GET_VAR     S_i
-                            sub         rsp, 32
                             CONC2_VV    S_LT, S_i, S_n
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_i, 1
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_459
@@ -8214,9 +8848,9 @@ Lf_459:                     jmp         L_COMPUTED_ss_1_135
 
 ; ======================================================================================================================
 Ln_459:                     GET_VAR     S_ss
-                            sub         rsp, 32
-                            CONC2_VS    S_CONCAT, S_ss, S_CM_SP
-                            STORE_ARG32 0
+                            CAT2_VS     S_ss, S_CM_SP
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
@@ -8246,9 +8880,11 @@ Ln_459:                     GET_VAR     S_ss
                             add         rsp, 32
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_460
@@ -8259,7 +8895,7 @@ Lf_460:                     GOTO_ALWAYS L_SNO_END     ; FRETURN
 Ln_460:
 ;  ss_,1 ===============================================================================================================
 L_ss_1_137:                 GET_VAR     S_ss
-                            CONC2_VS    S_CONCAT, S_ss, S_RP
+                            CAT2_VS     S_ss, S_RP
                             FAIL_BR     Ln_461
                             SET_VAR     S_ss
                             GOTO_ALWAYS L_SNO_END     ; RETURN
@@ -8298,13 +8934,15 @@ Ln_463:                     GET_VAR     S_i
 Ln_464:
 ;  ss_|0 ===============================================================================================================
 L_ss_0_139:                 GET_VAR     S_i
-                            sub         rsp, 32
                             CONC2_VV    S_LT, S_i, S_n
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_i, 1
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_465
@@ -8314,9 +8952,9 @@ Lf_465:                     GOTO_ALWAYS L_SNO_END     ; RETURN
 
 ; ======================================================================================================================
 Ln_465:                     GET_VAR     S_ss
-                            sub         rsp, 32
-                            CONC2_VS    S_CONCAT, S_ss, S_SP_OR_SP
-                            STORE_ARG32 0
+                            CAT2_VS     S_ss, S_SP_OR_SP
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
@@ -8346,9 +8984,11 @@ Ln_465:                     GET_VAR     S_ss
                             add         rsp, 32
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_466
@@ -8385,13 +9025,15 @@ Ln_467:                     GET_VAR     S_i
 Ln_468:
 ;  ss_..0 ==============================================================================================================
 L_ss_0_142:                 GET_VAR     S_i
-                            sub         rsp, 32
                             CONC2_VV    S_LT, S_i, S_n
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_i, 1
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_469
@@ -8401,9 +9043,9 @@ Lf_469:                     GOTO_ALWAYS L_SNO_END     ; RETURN
 
 ; ======================================================================================================================
 Ln_469:                     GET_VAR     S_ss
-                            sub         rsp, 32
-                            CONC2_VS    S_CONCAT, S_ss, S_SP
-                            STORE_ARG32 0
+                            CAT2_VS     S_ss, S_SP
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
@@ -8433,9 +9075,11 @@ Ln_469:                     GET_VAR     S_ss
                             add         rsp, 32
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_470
@@ -8472,13 +9116,15 @@ Ln_471:                     GET_VAR     S_i
 Ln_472:
 ;  ss_[]0 ==============================================================================================================
 L_ss_0_145:                 GET_VAR     S_i
-                            sub         rsp, 32
                             CONC2_VV    S_LT, S_i, S_n
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_i, 1
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_473
@@ -8488,10 +9134,9 @@ Lf_473:                     GOTO_ALWAYS L_SNO_END     ; RETURN
 
 ; ======================================================================================================================
 Ln_473:                     GET_VAR     S_ss
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            CONC2_VS    S_CONCAT, S_ss, S_LB
-                            STORE_ARG32 0
+                            CAT2_VS     S_ss, S_LB
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
@@ -8521,16 +9166,21 @@ Ln_473:                     GET_VAR     S_ss
                             add         rsp, 32
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_RB
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_474
@@ -8541,10 +9191,9 @@ Lf_474:                     GOTO_ALWAYS L_SNO_END     ; FRETURN
 Ln_474:
 ;  ss_() ===============================================================================================================
 L_ss_147:                   GET_VAR     S_ss
-                            sub         rsp, 32
-                            sub         rsp, 32
                             LOAD_STR    S_LP
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
@@ -8555,16 +9204,21 @@ L_ss_147:                   GET_VAR     S_ss
                             add         rsp, 32
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_RP
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_475
@@ -8575,9 +9229,6 @@ Lf_475:                     GOTO_ALWAYS L_SNO_END     ; FRETURN
 Ln_475:
 ;  ss_Call =============================================================================================================
 L_ss_Call_148:              GET_VAR     S_ss
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             sub         rsp, 16
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
@@ -8586,14 +9237,18 @@ L_ss_Call_148:              GET_VAR     S_ss
                             add         rsp, 16
                             STORE_RESULT
 
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_LP
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
@@ -8623,16 +9278,21 @@ L_ss_Call_148:              GET_VAR     S_ss
                             add         rsp, 32
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_RP
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_476
@@ -8665,7 +9325,6 @@ Ln_480:
 ;  bVisit_1 ============================================================================================================
 L_bVisit_1_151:             GET_VAR     S_i
                             sub         rsp, 32
-                            sub         rsp, 32
                             lea         rdi, [rel S_i]
                             call        stmt_get
                             mov         [rbp-32], rax
@@ -8677,11 +9336,14 @@ L_bVisit_1_151:             GET_VAR     S_i
                             add         rsp, 32
                             STORE_RESULT
 
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_i, 1
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_481
@@ -8766,7 +9428,6 @@ Ln_488:
 ;  findRefs_0 ==========================================================================================================
 L_findRefs_0_155:           GET_VAR     S_n
                             sub         rsp, 32
-                            sub         rsp, 32
                             lea         rdi, [rel S_n]
                             call        stmt_get
                             mov         [rbp-32], rax
@@ -8778,11 +9439,14 @@ L_findRefs_0_155:           GET_VAR     S_n
                             add         rsp, 32
                             STORE_RESULT
 
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_n, 1
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_489
@@ -8807,44 +9471,30 @@ Ln_489:                     sub         rsp, 32
 Ln_490:
 ;  findRefs_1 ==========================================================================================================
 L_findRefs_1_154:           sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 16
-                            GET_VAR     S_x
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_t, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_t, S_x
                             STORE_ARG32 0
                             LOAD_STR    S_AM
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
                             STORE_ARG32 16
                             APPLY_FN_N  S_IDENT, 2
                             add         rsp, 32
                             STORE_RESULT
 
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
-                            sub         rsp, 16
-                            GET_VAR     S_x
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_n, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_n, S_x
                             STORE_ARG32 0
                             LOAD_INT    1
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
                             STORE_ARG32 16
                             APPLY_FN_N  S_EQ_311, 2
                             add         rsp, 32
                             STORE_RESULT
 
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-16], rax
                             mov         [rbp-8], rdx
                             FAIL_BR16   Lf_491
@@ -8893,6 +9543,10 @@ Ln_494:
 L_findRefs_9_157:           GET_VAR     S_v
                             SUBJ_FROM16
 
+                            mov         qword [scan_start_495], 0
+scan_retry_495:
+                            mov         rax, [scan_start_495]
+                            mov         [cursor], rax
                             jmp         P_495_α
 
 P_495_α:                    jmp         seq_l12_alpha ; SEQ
@@ -8920,39 +9574,51 @@ P_495_γ:                    SET_CAPTURE S_ppTokName, cap_ppTokName_buf, cap_ppT
                             SET_CAPTURE S_RP, cap_RP_buf, cap_RP_len
                             SET_CAPTURE S_Label, cap_Label_buf, cap_Label_len
                             jmp         Ln_495
-P_495_ω:                    GOTO_ALWAYS L_SNO_END     ; FRETURN
+P_495_ω:                    mov         rax, [scan_start_495]
+                            inc         rax
+                            cmp         rax, [subject_len_val]
+                            jg          Ln_495
+                            mov         [scan_start_495], rax
+                            jmp         scan_retry_495
+                            GOTO_ALWAYS L_SNO_END     ; FRETURN
 
 ; ======================================================================================================================
 Ln_495:                     GET_VAR     S_Refs
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             CALL1_VAR   S_DIFFER, S_Refs
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_Refs]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_SP
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_v]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_496
@@ -8961,16 +9627,18 @@ Ln_495:                     GET_VAR     S_Refs
 
 ; ======================================================================================================================
 Ln_496:                     GET_VAR     S_Refs
-                            sub         rsp, 32
                             CALL1_VAR   S_IDENT, S_Refs
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_v]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_497
@@ -9011,7 +9679,6 @@ Ln_501:
 ;  refs_0 ==============================================================================================================
 L_refs_0_160:               GET_VAR     S_n
                             sub         rsp, 32
-                            sub         rsp, 32
                             lea         rdi, [rel S_n]
                             call        stmt_get
                             mov         [rbp-32], rax
@@ -9023,11 +9690,14 @@ L_refs_0_160:               GET_VAR     S_n
                             add         rsp, 32
                             STORE_RESULT
 
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_n, 1
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_502
@@ -9185,10 +9855,6 @@ Ln_510:                     sub         rsp, 32
 
 ; ======================================================================================================================
 Ln_511:                     GET_VAR     S_OUTPUT
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
-                            sub         rsp, 32
                             sub         rsp, 48
                             lea         rdi, [rel S_s]
                             call        stmt_get
@@ -9203,35 +9869,47 @@ Ln_511:                     GET_VAR     S_OUTPUT
                             add         rsp, 48
                             STORE_RESULT
 
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_CL_SP
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_RPAD, S_subj, 38
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_SP
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 0
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_Refs]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_512
@@ -9253,7 +9931,7 @@ Ln_513:                     GET_VAR     S_doDebug
 Ln_514:                     GET_VAR     S_Space
                             sub         rsp, 32
                             sub         rsp, 16
-                            CONC2_SV    S_CONCAT, S_SP, S_tab
+                            CAT2_SV     S_SP, S_tab
                             STORE_ARG32 0
                             APPLY_FN_N  S_SPAN, 1
                             add         rsp, 16
@@ -9293,6 +9971,10 @@ L_main01_163:               GET_VAR     S_Src
 Ln_517:                     GET_VAR     S_Line
                             SUBJ_FROM16
 
+                            mov         qword [scan_start_518], 0
+scan_retry_518:
+                            mov         rax, [scan_start_518]
+                            mov         [cursor], rax
                             jmp         P_518_α
 
 P_518_α:                    jmp         seq_l15_alpha ; SEQ
@@ -9316,7 +9998,13 @@ P_518_γ:                    SET_CAPTURE S_ppTokName, cap_ppTokName_buf, cap_ppT
                             SET_CAPTURE S_RP, cap_RP_buf, cap_RP_len
                             SET_CAPTURE S_Label, cap_Label_buf, cap_Label_len
                             jmp         Ln_518
-P_518_ω:                    jmp         L_main02_164
+P_518_ω:                    mov         rax, [scan_start_518]
+                            inc         rax
+                            cmp         rax, [subject_len_val]
+                            jg          Ln_518
+                            mov         [scan_start_518], rax
+                            jmp         scan_retry_518
+                            jmp         L_main02_164
 
 ; ======================================================================================================================
 Ln_518:                     GET_VAR     S_OUTPUT
@@ -9332,16 +10020,18 @@ Ln_518:                     GET_VAR     S_OUTPUT
 Ln_519:
 ;  main02 ==============================================================================================================
 L_main02_164:               GET_VAR     S_Src
-                            sub         rsp, 32
-                            CONC2_VV    S_CONCAT, S_Src, S_Line
-                            STORE_ARG32 0
+                            CAT2_VV     S_Src, S_Line
+                            mov         [conc_tmp0_rax], rax
+                            mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_nl]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            STORE_ARG32 16
-                            APPLY_FN_N  S_CONCAT, 2
-                            add         rsp, 32
+                            mov         rcx, rdx
+                            mov         rdx, rax
+                            mov         rdi, [conc_tmp0_rax]
+                            mov         rsi, [conc_tmp0_rdx]
+                            call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             FAIL_BR     Ln_520
@@ -9363,6 +10053,10 @@ Lf_521:                     jmp         L_main05_165
 Ln_521:                     GET_VAR     S_Line
                             SUBJ_FROM16
 
+                            mov         qword [scan_start_522], 0
+scan_retry_522:
+                            mov         rax, [scan_start_522]
+                            mov         [cursor], rax
                             jmp         P_522_α
 
 P_522_α:                    jmp         seq_l17_alpha ; SEQ
@@ -9386,12 +10080,22 @@ P_522_γ:                    SET_CAPTURE S_ppTokName, cap_ppTokName_buf, cap_ppT
                             SET_CAPTURE S_RP, cap_RP_buf, cap_RP_len
                             SET_CAPTURE S_Label, cap_Label_buf, cap_Label_len
                             jmp         L_main02_164
-P_522_ω:                    jmp         Ln_522
+P_522_ω:                    mov         rax, [scan_start_522]
+                            inc         rax
+                            cmp         rax, [subject_len_val]
+                            jg          Ln_522
+                            mov         [scan_start_522], rax
+                            jmp         scan_retry_522
+                            jmp         Ln_522
 
 ; ======================================================================================================================
 Ln_522:                     GET_VAR     S_Src
                             SUBJ_FROM16
 
+                            mov         qword [scan_start_523], 0
+scan_retry_523:
+                            mov         rax, [scan_start_523]
+                            mov         [cursor], rax
                             jmp         P_523_α
 
 P_523_α:                    jmp         seq_l19_alpha ; SEQ
@@ -9439,7 +10143,13 @@ P_523_γ:                    SET_CAPTURE S_ppTokName, cap_ppTokName_buf, cap_ppT
                             SET_CAPTURE S_RP, cap_RP_buf, cap_RP_len
                             SET_CAPTURE S_Label, cap_Label_buf, cap_Label_len
                             jmp         Ln_523
-P_523_ω:                    jmp         L_mainErr1_166
+P_523_ω:                    mov         rax, [scan_start_523]
+                            inc         rax
+                            cmp         rax, [subject_len_val]
+                            jg          Ln_523
+                            mov         [scan_start_523], rax
+                            jmp         scan_retry_523
+                            jmp         L_mainErr1_166
 
 ; ======================================================================================================================
 Ln_523:                     sub         rsp, 16
@@ -9469,6 +10179,10 @@ Ln_525:
 L_main05_165:               GET_VAR     S_Src
                             SUBJ_FROM16
 
+                            mov         qword [scan_start_526], 0
+scan_retry_526:
+                            mov         rax, [scan_start_526]
+                            mov         [cursor], rax
                             jmp         P_526_α
 
 P_526_α:                    jmp         seq_l23_alpha ; SEQ
@@ -9516,7 +10230,13 @@ P_526_γ:                    SET_CAPTURE S_ppTokName, cap_ppTokName_buf, cap_ppT
                             SET_CAPTURE S_RP, cap_RP_buf, cap_RP_len
                             SET_CAPTURE S_Label, cap_Label_buf, cap_Label_len
                             jmp         Ln_526
-P_526_ω:                    jmp         L_mainErr1_166
+P_526_ω:                    mov         rax, [scan_start_526]
+                            inc         rax
+                            cmp         rax, [subject_len_val]
+                            jg          Ln_526
+                            mov         [scan_start_526], rax
+                            jmp         scan_retry_526
+                            jmp         L_mainErr1_166
 
 ; ======================================================================================================================
 Ln_526:                     sub         rsp, 16
@@ -9594,27 +10314,11 @@ lit_str_4            db
 lit_str_5            db 46, 43
 lit_str_6            db 45, 45
 lit_str_7            db 61, 32
-lit_str_8            db 58, 32
-lit_str_9            db 83, 70
-lit_str_10           db 40, 60
-lit_str_11           db 58
-lit_str_12           db 47, 116, 109, 112, 47, 98, 101, 97, 117, 116, 121, 95, 97, 117, 116, 111, 95
-lit_str_13           db 46, 115, 110, 111
-lit_str_14           db 65, 66, 79, 82, 84, 32, 65, 76, 80, 72, 65, 66, 69, 84, 32, 65, 82, 66, 32, 66, 65, 76, 32, 70, 65, 73, 76, 32, 70, 69, 78, 67, 69, 32, 70, 73, 76, 69, 32, 70, 78, 67, 76, 69, 86, 69, 76, 32
-lit_str_15           db 76, 65, 83, 84, 70, 73, 76, 69, 32, 76, 65, 83, 84, 76, 73, 78, 69, 32, 76, 65, 83, 84, 78, 79, 32, 76, 67, 65, 83, 69, 32, 76, 73, 78, 69, 32, 82, 69, 77, 32, 82, 84, 78, 84, 89, 80, 69, 32
-lit_str_16           db 83, 84, 67, 79, 85, 78, 84, 32, 83, 84, 78, 79, 32, 83, 85, 67, 67, 69, 69, 68, 32, 85, 67, 65, 83, 69
-lit_str_17           db 65, 66, 69, 78, 68, 32, 65, 78, 67, 72, 79, 82, 32, 67, 65, 83, 69, 32, 67, 79, 68, 69, 32, 67, 79, 77, 80, 65, 82, 69, 32, 68, 85, 77, 80, 32, 69, 82, 82, 76, 73, 77, 73, 84, 32
-lit_str_18           db 69, 82, 82, 84, 69, 88, 84, 32, 69, 82, 82, 84, 89, 80, 69, 32, 70, 84, 82, 65, 67, 69, 32, 73, 78, 80, 85, 84, 32, 77, 65, 88, 76, 78, 71, 84, 72, 32, 79, 85, 84, 80, 85, 84, 32
-lit_str_19           db 80, 82, 79, 70, 73, 76, 69, 32, 83, 84, 76, 73, 77, 73, 84, 32, 84, 82, 65, 67, 69, 32, 84, 82, 73, 77, 32, 70, 85, 76, 76, 83, 67, 65, 78
-lit_str_20           db 65, 78, 89, 32, 65, 80, 80, 76, 89, 32, 65, 82, 66, 78, 79, 32, 65, 82, 71, 32, 65, 82, 82, 65, 89, 32, 65, 84, 65, 78, 32, 66, 65, 67, 75, 83, 80, 65, 67, 69, 32, 66, 82, 69, 65, 75, 32, 66, 82, 69, 65, 75, 88, 32
-lit_str_21           db 67, 72, 65, 82, 32, 67, 72, 79, 80, 32, 67, 76, 69, 65, 82, 32, 67, 79, 68, 69, 32, 67, 79, 76, 76, 69, 67, 84, 32, 67, 79, 78, 86, 69, 82, 84, 32, 67, 79, 80, 89, 32, 67, 79, 83, 32, 68, 65, 84, 65, 32
-lit_str_22           db 68, 65, 84, 65, 84, 89, 80, 69, 32, 68, 65, 84, 69, 32, 68, 69, 70, 73, 78, 69, 32, 68, 69, 84, 65, 67, 72, 32, 68, 73, 70, 70, 69, 82, 32, 68, 85, 77, 80, 32, 68, 85, 80, 76, 32, 69, 74, 69, 67, 84, 32
-lit_str_23           db 69, 78, 68, 70, 73, 76, 69, 32, 69, 81, 32, 69, 86, 65, 76, 32, 69, 88, 73, 84, 32, 69, 88, 80, 32, 70, 69, 78, 67, 69, 32, 70, 73, 69, 76, 68, 32, 71, 69, 32, 71, 84, 32, 72, 79, 83, 84, 32
-lit_str_24           db 73, 68, 69, 78, 84, 32, 73, 78, 80, 85, 84, 32, 73, 78, 84, 69, 71, 69, 82, 32, 73, 84, 69, 77, 32, 76, 69, 32, 76, 69, 78, 32, 76, 69, 81, 32, 76, 71, 69, 32, 76, 71, 84, 32, 76, 76, 69, 32
-lit_str_25           db 76, 76, 84, 32, 76, 78, 32, 76, 78, 69, 32, 76, 79, 65, 68, 32, 76, 79, 67, 65, 76, 32, 76, 80, 65, 68, 32, 76, 84, 32, 78, 69, 32, 78, 79, 84, 65, 78, 89, 32, 79, 80, 83, 89, 78, 32, 79, 85, 84, 80, 85, 84, 32
-lit_str_26           db 80, 79, 83, 32, 80, 82, 79, 84, 79, 84, 89, 80, 69, 32, 82, 69, 77, 68, 82, 32, 82, 69, 80, 76, 65, 67, 69, 32, 82, 69, 86, 69, 82, 83, 69, 32, 82, 69, 87, 73, 78, 68, 32, 82, 80, 65, 68, 32, 82, 80, 79, 83, 32
-lit_str_27           db 82, 83, 79, 82, 84, 32, 82, 84, 65, 66, 32, 83, 69, 84, 32, 83, 69, 84, 69, 88, 73, 84, 32, 83, 73, 78, 32, 83, 73, 90, 69, 32, 83, 79, 82, 84, 32, 83, 80, 65, 78, 32, 83, 81, 82, 84, 32, 83, 84, 79, 80, 84, 82, 32
-lit_str_28           db 83, 85, 66, 83, 84, 82, 32, 84, 65, 66, 32, 84, 65, 66, 76, 69, 32, 84, 65, 78, 32, 84, 73, 77, 69, 32, 84, 82, 65, 67, 69, 32, 84, 82, 73, 77, 32, 85, 78, 76, 79, 65, 68
+lit_str_8            db 83, 70
+lit_str_9            db 40, 60
+lit_str_10           db 58
+lit_str_11           db 47, 116, 109, 112, 47, 98, 101, 97, 117, 116, 121, 95, 97, 117, 116, 111, 95
+lit_str_12           db 46, 115, 110, 111
 ;  END =================================================================================================================
 
 section .text
@@ -9697,37 +10401,6 @@ patdef_ppTokPat_gamma:
 ;  ppTokPat ============================================================================================================
 patdef_ppTokPat_omega:      jmp         [P_ppTokPat_ret_ω]
 
-; P_OUTPUT_α (α entry)
-P_OUTPUT_α:                 jmp         seq_l40_alpha ; SEQ
-P_OUTPUT_β:                 jmp         seq_r40_beta
-seq_l40_alpha:              jmp         seq_l41_alpha ; SEQ
-seq_l40_beta:               jmp         seq_r41_beta
-seq_l41_alpha:              jmp         seq_l42_alpha ; SEQ
-seq_l41_beta:               jmp         seq_r42_beta
-seq_l42_alpha:              jmp         seq_l43_alpha ; SEQ
-seq_l42_beta:               jmp         seq_r43_beta
-
-; UNIMPLEMENTED: LPAD() → ω
-seq_l43_alpha:
-seq_l43_beta:               jmp         patdef_OUTPUT_omega
-seq_r43_alpha:              LIT_ALPHA   lit_str_8, 2, seq_r43_alpha_saved, cursor, subject_data, subject_len_val, seq_r42_alpha, seq_l43_beta ; LIT α
-seq_r43_beta:               LIT_BETA    seq_r43_alpha_saved, cursor, seq_l43_beta ; LIT β
-
-; UNIMPLEMENTED: RPAD() → ω
-seq_r42_alpha:
-seq_r42_beta:               jmp         seq_l42_beta
-seq_r41_alpha:              LIT_ALPHA1  32, seq_r41_alpha_saved, cursor, subject_data, subject_len_val, seq_r40_alpha, seq_l41_beta ; LIT α
-seq_r41_beta:               LIT_BETA    seq_r41_alpha_saved, cursor, seq_l41_beta ; LIT β
-
-; UNRESOLVED named pattern ref: Refs → ω
-seq_r40_alpha:
-seq_r40_beta:               jmp         seq_l40_beta
-;  γ/ω ---------------------------------------------------------------------------------------------------------------
-patdef_OUTPUT_gamma:
-                            jmp         [P_OUTPUT_ret_γ]
-;  OUTPUT ==============================================================================================================
-patdef_OUTPUT_omega:        jmp         [P_OUTPUT_ret_ω]
-
 ; P_ppTab_α (α entry)
 
 ; UNIMPLEMENTED: CHAR() → ω
@@ -9740,39 +10413,39 @@ patdef_ppTab_gamma:
 patdef_ppTab_omega:         jmp         [P_ppTab_ret_ω]
 
 ; P_ppGSfx_α (α entry)
-P_ppGSfx_α:                 jmp         seq_l44_alpha ; SEQ
-P_ppGSfx_β:                 jmp         seq_r44_beta
-seq_l44_alpha:              jmp         seq_l45_alpha ; SEQ
-seq_l44_beta:               jmp         seq_r45_beta
-seq_l45_alpha:              jmp         seq_l46_alpha ; SEQ
-seq_l45_beta:               jmp         seq_r46_beta
-seq_l46_alpha:              jmp         seq_l47_alpha ; SEQ
-seq_l46_beta:               jmp         seq_r47_beta
-seq_l47_alpha:              ALT_ALPHA   alt48_cur_save, cursor, alt_l48_alpha ; ALT α — save cursor, enter left
-seq_l47_beta:               SEQ_BETA    alt_r48_beta ; ALT β — resume right
-alt_l48_alpha:              SPAN_ALPHA  lit_str_4, 0, span49_saved, cursor, subject_data, subject_len_val, seq_r47_alpha, alt48_left_omega ; SPAN α
-alt_l48_beta:               SPAN_BETA   span49_saved, cursor, alt48_left_omega ; SPAN β
+P_ppGSfx_α:                 jmp         seq_l40_alpha ; SEQ
+P_ppGSfx_β:                 jmp         seq_r40_beta
+seq_l40_alpha:              jmp         seq_l41_alpha ; SEQ
+seq_l40_beta:               jmp         seq_r41_beta
+seq_l41_alpha:              jmp         seq_l42_alpha ; SEQ
+seq_l41_beta:               jmp         seq_r42_beta
+seq_l42_alpha:              jmp         seq_l43_alpha ; SEQ
+seq_l42_beta:               jmp         seq_r43_beta
+seq_l43_alpha:              ALT_ALPHA   alt44_cur_save, cursor, alt_l44_alpha ; ALT α — save cursor, enter left
+seq_l43_beta:               SEQ_BETA    alt_r44_beta ; ALT β — resume right
+alt_l44_alpha:              SPAN_ALPHA  lit_str_4, 0, span45_saved, cursor, subject_data, subject_len_val, seq_r43_alpha, alt44_left_omega ; SPAN α
+alt_l44_beta:               SPAN_BETA   span45_saved, cursor, alt44_left_omega ; SPAN β
+alt44_left_omega:           ALT_OMEGA   alt44_cur_save, cursor, alt_r44_alpha ; ALT left_ω — restore cursor, enter right
+alt_r44_alpha:              LIT_ALPHA   lit_str_4, 0, alt_r44_alpha_saved, cursor, subject_data, subject_len_val, seq_r43_alpha, patdef_ppGSfx_omega ; LIT α
+alt_r44_beta:               LIT_BETA    alt_r44_alpha_saved, cursor, patdef_ppGSfx_omega ; LIT β
+seq_r43_alpha:              LIT_ALPHA1  58, seq_r43_alpha_saved, cursor, subject_data, subject_len_val, seq_r42_alpha, seq_l43_beta ; LIT α
+seq_r43_beta:               LIT_BETA    seq_r43_alpha_saved, cursor, seq_l43_beta ; LIT β
+seq_r42_alpha:              ALT_ALPHA   alt46_cur_save, cursor, alt_l46_alpha ; ALT α — save cursor, enter left
+seq_r42_beta:               SEQ_BETA    alt_r46_beta ; ALT β — resume right
+alt_l46_alpha:              ANY_ALPHA   lit_str_8, 2, any47_saved, cursor, subject_data, subject_len_val, seq_r41_alpha, alt46_left_omega ; ANY α
+alt_l46_beta:               ANY_BETA    any47_saved, cursor, alt46_left_omega ; ANY β
+alt46_left_omega:           ALT_OMEGA   alt46_cur_save, cursor, alt_r46_alpha ; ALT left_ω — restore cursor, enter right
+alt_r46_alpha:              LIT_ALPHA   lit_str_4, 0, alt_r46_alpha_saved, cursor, subject_data, subject_len_val, seq_r41_alpha, seq_l42_beta ; LIT α
+alt_r46_beta:               LIT_BETA    alt_r46_alpha_saved, cursor, seq_l42_beta ; LIT β
+seq_r41_alpha:              ALT_ALPHA   alt48_cur_save, cursor, alt_l48_alpha ; ALT α — save cursor, enter left
+seq_r41_beta:               SEQ_BETA    alt_r48_beta ; ALT β — resume right
+alt_l48_alpha:              ANY_ALPHA   lit_str_9, 2, any49_saved, cursor, subject_data, subject_len_val, seq_r40_alpha, alt48_left_omega ; ANY α
+alt_l48_beta:               ANY_BETA    any49_saved, cursor, alt48_left_omega ; ANY β
 alt48_left_omega:           ALT_OMEGA   alt48_cur_save, cursor, alt_r48_alpha ; ALT left_ω — restore cursor, enter right
-alt_r48_alpha:              LIT_ALPHA   lit_str_4, 0, alt_r48_alpha_saved, cursor, subject_data, subject_len_val, seq_r47_alpha, patdef_ppGSfx_omega ; LIT α
-alt_r48_beta:               LIT_BETA    alt_r48_alpha_saved, cursor, patdef_ppGSfx_omega ; LIT β
-seq_r47_alpha:              LIT_ALPHA1  58, seq_r47_alpha_saved, cursor, subject_data, subject_len_val, seq_r46_alpha, seq_l47_beta ; LIT α
-seq_r47_beta:               LIT_BETA    seq_r47_alpha_saved, cursor, seq_l47_beta ; LIT β
-seq_r46_alpha:              ALT_ALPHA   alt50_cur_save, cursor, alt_l50_alpha ; ALT α — save cursor, enter left
-seq_r46_beta:               SEQ_BETA    alt_r50_beta ; ALT β — resume right
-alt_l50_alpha:              ANY_ALPHA   lit_str_9, 2, any51_saved, cursor, subject_data, subject_len_val, seq_r45_alpha, alt50_left_omega ; ANY α
-alt_l50_beta:               ANY_BETA    any51_saved, cursor, alt50_left_omega ; ANY β
-alt50_left_omega:           ALT_OMEGA   alt50_cur_save, cursor, alt_r50_alpha ; ALT left_ω — restore cursor, enter right
-alt_r50_alpha:              LIT_ALPHA   lit_str_4, 0, alt_r50_alpha_saved, cursor, subject_data, subject_len_val, seq_r45_alpha, seq_l46_beta ; LIT α
-alt_r50_beta:               LIT_BETA    alt_r50_alpha_saved, cursor, seq_l46_beta ; LIT β
-seq_r45_alpha:              ALT_ALPHA   alt52_cur_save, cursor, alt_l52_alpha ; ALT α — save cursor, enter left
-seq_r45_beta:               SEQ_BETA    alt_r52_beta ; ALT β — resume right
-alt_l52_alpha:              ANY_ALPHA   lit_str_10, 2, any53_saved, cursor, subject_data, subject_len_val, seq_r44_alpha, alt52_left_omega ; ANY α
-alt_l52_beta:               ANY_BETA    any53_saved, cursor, alt52_left_omega ; ANY β
-alt52_left_omega:           ALT_OMEGA   alt52_cur_save, cursor, alt_r52_alpha ; ALT left_ω — restore cursor, enter right
-alt_r52_alpha:              LIT_ALPHA   lit_str_4, 0, alt_r52_alpha_saved, cursor, subject_data, subject_len_val, seq_r44_alpha, seq_l45_beta ; LIT α
-alt_r52_beta:               LIT_BETA    alt_r52_alpha_saved, cursor, seq_l45_beta ; LIT β
-seq_r44_alpha:              REM_ALPHA   rem54_saved, cursor, subject_len_val, patdef_ppGSfx_gamma ; REM
-seq_r44_beta:               REM_BETA    rem54_saved, cursor, seq_l44_beta ; REM β
+alt_r48_alpha:              LIT_ALPHA   lit_str_4, 0, alt_r48_alpha_saved, cursor, subject_data, subject_len_val, seq_r40_alpha, seq_l41_beta ; LIT α
+alt_r48_beta:               LIT_BETA    alt_r48_alpha_saved, cursor, seq_l41_beta ; LIT β
+seq_r40_alpha:              REM_ALPHA   rem50_saved, cursor, subject_len_val, patdef_ppGSfx_gamma ; REM
+seq_r40_beta:               REM_BETA    rem50_saved, cursor, seq_l40_beta ; REM β
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_ppGSfx_gamma:
                             jmp         [P_ppGSfx_ret_γ]
@@ -9780,33 +10453,33 @@ patdef_ppGSfx_gamma:
 patdef_ppGSfx_omega:        jmp         [P_ppGSfx_ret_ω]
 
 ; P_ppGPat_α (α entry)
-P_ppGPat_α:                 jmp         seq_l55_alpha ; SEQ
-P_ppGPat_β:                 jmp         seq_r55_beta
+P_ppGPat_α:                 jmp         seq_l51_alpha ; SEQ
+P_ppGPat_β:                 jmp         seq_r51_beta
 
-seq_l55_alpha: ; DOL(ppGCon $  ppGCon)
-                            DOL_SAVE    dol_entry_ppGCon, cursor, dol56_child_alpha ; DOL α — save entry cursor
-seq_l55_beta:               jmp         dol56_child_beta ; DOL β
-dol56_child_alpha:          BREAK_ALPHA lit_str_11, 1, brk57_saved, cursor, subject_data, subject_len_val, dol56_gamma, dol56_omega ; BREAK α
-dol56_child_beta:           BREAK_BETA  brk57_saved, cursor, dol56_omega ; BREAK β
-dol56_gamma:                DOL_CAPTURE dol_entry_ppGCon, cursor, cap_ppGCon_buf, cap_ppGCon_len, subject_data, seq_r55_alpha ; DOL γ — capture span
-dol56_omega:                jmp         patdef_ppGPat_omega ; DOL ω — child failed
+seq_l51_alpha: ; DOL(ppGCon $  ppGCon)
+                            DOL_SAVE    dol_entry_ppGCon, cursor, dol52_child_alpha ; DOL α — save entry cursor
+seq_l51_beta:               jmp         dol52_child_beta ; DOL β
+dol52_child_alpha:          BREAK_ALPHA lit_str_10, 1, brk53_saved, cursor, subject_data, subject_len_val, dol52_gamma, dol52_omega ; BREAK α
+dol52_child_beta:           BREAK_BETA  brk53_saved, cursor, dol52_omega ; BREAK β
+dol52_gamma:                DOL_CAPTURE dol_entry_ppGCon, cursor, cap_ppGCon_buf, cap_ppGCon_len, subject_data, seq_r51_alpha ; DOL γ — capture span
+dol52_omega:                jmp         patdef_ppGPat_omega ; DOL ω — child failed
 
-seq_r55_alpha: ; REF(ppGSfx)
-                            lea         rax, [rel nref58_gamma]
+seq_r51_alpha: ; REF(ppGSfx)
+                            lea         rax, [rel nref54_gamma]
                             mov         [P_ppGSfx_ret_γ], rax
-                            lea         rax, [rel nref58_omega]
+                            lea         rax, [rel nref54_omega]
                             mov         [P_ppGSfx_ret_ω], rax
                             jmp         P_ppGSfx_α
-seq_r55_beta:               lea         rax, [rel nref58_gamma] ; REF(%s)
+seq_r51_beta:               lea         rax, [rel nref54_gamma] ; REF(%s)
                             mov         [P_ppGSfx_ret_γ], rax
-                            lea         rax, [rel nref58_omega]
+                            lea         rax, [rel nref54_omega]
                             mov         [P_ppGSfx_ret_ω], rax
                             jmp         P_ppGSfx_β
 
-nref58_gamma:
+nref54_gamma:
                             jmp         patdef_ppGPat_gamma
 ;  ppGPat ==============================================================================================================
-nref58_omega:               jmp         seq_l55_beta
+nref54_omega:               jmp         seq_l51_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_ppGPat_gamma:
                             jmp         [P_ppGPat_ret_γ]
@@ -9815,16 +10488,16 @@ patdef_ppGPat_omega:        jmp         [P_ppGPat_ret_ω]
 ; P_ppTrimPat_α (α entry)
 
 P_ppTrimPat_α: ; DOL(ppDrop $  ppDrop)
-                            DOL_SAVE    dol_entry_ppDrop, cursor, dol59_child_alpha ; DOL α — save entry cursor
-P_ppTrimPat_β:              jmp         dol59_child_beta ; DOL β
-dol59_child_alpha:          jmp         seq_l60_alpha ; SEQ
-dol59_child_beta:           jmp         seq_r60_beta
-seq_l60_alpha:              SPAN_ALPHA  lit_str_4, 0, span61_saved, cursor, subject_data, subject_len_val, seq_r60_alpha, dol59_omega ; SPAN α
-seq_l60_beta:               SPAN_BETA   span61_saved, cursor, dol59_omega ; SPAN β
-seq_r60_alpha:              RPOS_ALPHA  0, cursor, subject_len_val, dol59_gamma, seq_l60_beta ; RPOS(%ld)
-seq_r60_beta:               RPOS_BETA   cursor, seq_l60_beta
-dol59_gamma:                DOL_CAPTURE dol_entry_ppDrop, cursor, cap_ppDrop_buf, cap_ppDrop_len, subject_data, patdef_ppTrimPat_gamma ; DOL γ — capture span
-dol59_omega:                jmp         patdef_ppTrimPat_omega ; DOL ω — child failed
+                            DOL_SAVE    dol_entry_ppDrop, cursor, dol55_child_alpha ; DOL α — save entry cursor
+P_ppTrimPat_β:              jmp         dol55_child_beta ; DOL β
+dol55_child_alpha:          jmp         seq_l56_alpha ; SEQ
+dol55_child_beta:           jmp         seq_r56_beta
+seq_l56_alpha:              SPAN_ALPHA  lit_str_4, 0, span57_saved, cursor, subject_data, subject_len_val, seq_r56_alpha, dol55_omega ; SPAN α
+seq_l56_beta:               SPAN_BETA   span57_saved, cursor, dol55_omega ; SPAN β
+seq_r56_alpha:              RPOS_ALPHA  0, cursor, subject_len_val, dol55_gamma, seq_l56_beta ; RPOS(%ld)
+seq_r56_beta:               RPOS_BETA   cursor, seq_l56_beta
+dol55_gamma:                DOL_CAPTURE dol_entry_ppDrop, cursor, cap_ppDrop_buf, cap_ppDrop_len, subject_data, patdef_ppTrimPat_gamma ; DOL γ — capture span
+dol55_omega:                jmp         patdef_ppTrimPat_omega ; DOL ω — child failed
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_ppTrimPat_gamma:
                             jmp         [P_ppTrimPat_ret_γ]
@@ -9843,18 +10516,18 @@ patdef_ppWArr_gamma:
 patdef_ppWArr_omega:        jmp         [P_ppWArr_ret_ω]
 
 ; P_ppTmpFile_α (α entry)
-P_ppTmpFile_α:              jmp         seq_l62_alpha ; SEQ
-P_ppTmpFile_β:              jmp         seq_r62_beta
-seq_l62_alpha:              jmp         seq_l63_alpha ; SEQ
-seq_l62_beta:               jmp         seq_r63_beta
-seq_l63_alpha:              LIT_ALPHA   lit_str_12, 17, seq_l63_alpha_saved, cursor, subject_data, subject_len_val, seq_r63_alpha, patdef_ppTmpFile_omega ; LIT α
-seq_l63_beta:               LIT_BETA    seq_l63_alpha_saved, cursor, patdef_ppTmpFile_omega ; LIT β
+P_ppTmpFile_α:              jmp         seq_l58_alpha ; SEQ
+P_ppTmpFile_β:              jmp         seq_r58_beta
+seq_l58_alpha:              jmp         seq_l59_alpha ; SEQ
+seq_l58_beta:               jmp         seq_r59_beta
+seq_l59_alpha:              LIT_ALPHA   lit_str_11, 17, seq_l59_alpha_saved, cursor, subject_data, subject_len_val, seq_r59_alpha, patdef_ppTmpFile_omega ; LIT α
+seq_l59_beta:               LIT_BETA    seq_l59_alpha_saved, cursor, patdef_ppTmpFile_omega ; LIT β
 
 ; UNIMPLEMENTED: HOST() → ω
-seq_r63_alpha:
-seq_r63_beta:               jmp         seq_l63_beta
-seq_r62_alpha:              LIT_ALPHA   lit_str_13, 4, seq_r62_alpha_saved, cursor, subject_data, subject_len_val, patdef_ppTmpFile_gamma, seq_l62_beta ; LIT α
-seq_r62_beta:               LIT_BETA    seq_r62_alpha_saved, cursor, seq_l62_beta ; LIT β
+seq_r59_alpha:
+seq_r59_beta:               jmp         seq_l59_beta
+seq_r58_alpha:              LIT_ALPHA   lit_str_12, 4, seq_r58_alpha_saved, cursor, subject_data, subject_len_val, patdef_ppTmpFile_gamma, seq_l58_beta ; LIT α
+seq_r58_beta:               LIT_BETA    seq_r58_alpha_saved, cursor, seq_l58_beta ; LIT β
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_ppTmpFile_gamma:
                             jmp         [P_ppTmpFile_ret_γ]
@@ -9872,50 +10545,17 @@ patdef_ppW_gamma:
 ;  ppW =================================================================================================================
 patdef_ppW_omega:           jmp         [P_ppW_ret_ω]
 
-; P_ppStmt_α (α entry)
-P_ppStmt_α:                 jmp         seq_l64_alpha ; SEQ
-P_ppStmt_β:                 jmp         seq_r64_beta
-seq_l64_alpha:              jmp         seq_l65_alpha ; SEQ
-seq_l64_beta:               jmp         seq_r65_beta
-
-seq_l65_alpha: ; REF(ppStmt)
-                            lea         rax, [rel nref66_gamma]
-                            mov         [P_ppStmt_ret_γ], rax
-                            lea         rax, [rel nref66_omega]
-                            mov         [P_ppStmt_ret_ω], rax
-                            jmp         P_ppStmt_α
-seq_l65_beta:               lea         rax, [rel nref66_gamma] ; REF(%s)
-                            mov         [P_ppStmt_ret_γ], rax
-                            lea         rax, [rel nref66_omega]
-                            mov         [P_ppStmt_ret_ω], rax
-                            jmp         P_ppStmt_β
-
-nref66_gamma:
-                            jmp         seq_r65_alpha
-;  ppStmt ==============================================================================================================
-nref66_omega:               jmp         patdef_ppStmt_omega
-seq_r65_alpha:              LIT_ALPHA1  32, seq_r65_alpha_saved, cursor, subject_data, subject_len_val, seq_r64_alpha, seq_l65_beta ; LIT α
-seq_r65_beta:               LIT_BETA    seq_r65_alpha_saved, cursor, seq_l65_beta ; LIT β
-
-; UNRESOLVED named pattern ref: ppLn → ω
-seq_r64_alpha:
-seq_r64_beta:               jmp         seq_l64_beta
-;  γ/ω ---------------------------------------------------------------------------------------------------------------
-patdef_ppStmt_gamma:
-                            jmp         [P_ppStmt_ret_γ]
-patdef_ppStmt_omega:        jmp         [P_ppStmt_ret_ω]
-
 ; P_ppI_α (α entry)
-P_ppI_α:                    jmp         seq_l67_alpha ; SEQ
-P_ppI_β:                    jmp         seq_r67_beta
+P_ppI_α:                    jmp         seq_l60_alpha ; SEQ
+P_ppI_β:                    jmp         seq_r60_beta
 
 ; UNIMPLEMENTED: LT() → ω
-seq_l67_alpha:
-seq_l67_beta:               jmp         patdef_ppI_omega
+seq_l60_alpha:
+seq_l60_beta:               jmp         patdef_ppI_omega
 
 ; UNIMPLEMENTED node kind 8 → ω
-seq_r67_alpha:
-seq_r67_beta:               jmp         seq_l67_beta
+seq_r60_alpha:
+seq_r60_beta:               jmp         seq_l60_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_ppI_gamma:
                             jmp         [P_ppI_ret_γ]
@@ -9923,8 +10563,8 @@ patdef_ppI_gamma:
 patdef_ppI_omega:           jmp         [P_ppI_ret_ω]
 
 ; P_Integer_α (α entry)
-P_Integer_α:                SPAN_ALPHA  lit_str_4, 0, span68_saved, cursor, subject_data, subject_len_val, patdef_Integer_gamma, patdef_Integer_omega ; SPAN α
-P_Integer_β:                SPAN_BETA   span68_saved, cursor, patdef_Integer_omega ; SPAN β
+P_Integer_α:                SPAN_ALPHA  lit_str_4, 0, span61_saved, cursor, subject_data, subject_len_val, patdef_Integer_gamma, patdef_Integer_omega ; SPAN α
+P_Integer_β:                SPAN_BETA   span61_saved, cursor, patdef_Integer_omega ; SPAN β
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Integer_gamma:
                             jmp         [P_Integer_ret_γ]
@@ -9932,16 +10572,16 @@ patdef_Integer_gamma:
 patdef_Integer_omega:       jmp         [P_Integer_ret_ω]
 
 ; P_DQ_α (α entry)
-P_DQ_α:                     jmp         seq_l69_alpha ; SEQ
-P_DQ_β:                     jmp         seq_r69_beta
-seq_l69_alpha:              jmp         seq_l70_alpha ; SEQ
-seq_l69_beta:               jmp         seq_r70_beta
-seq_l70_alpha:              LIT_ALPHA1  34, seq_l70_alpha_saved, cursor, subject_data, subject_len_val, seq_r70_alpha, patdef_DQ_omega ; LIT α
-seq_l70_beta:               LIT_BETA    seq_l70_alpha_saved, cursor, patdef_DQ_omega ; LIT β
-seq_r70_alpha:              BREAK_ALPHA lit_str_4, 0, brk71_saved, cursor, subject_data, subject_len_val, seq_r69_alpha, seq_l70_beta ; BREAK α
-seq_r70_beta:               BREAK_BETA  brk71_saved, cursor, seq_l70_beta ; BREAK β
-seq_r69_alpha:              LIT_ALPHA1  34, seq_r69_alpha_saved, cursor, subject_data, subject_len_val, patdef_DQ_gamma, seq_l69_beta ; LIT α
-seq_r69_beta:               LIT_BETA    seq_r69_alpha_saved, cursor, seq_l69_beta ; LIT β
+P_DQ_α:                     jmp         seq_l62_alpha ; SEQ
+P_DQ_β:                     jmp         seq_r62_beta
+seq_l62_alpha:              jmp         seq_l63_alpha ; SEQ
+seq_l62_beta:               jmp         seq_r63_beta
+seq_l63_alpha:              LIT_ALPHA1  34, seq_l63_alpha_saved, cursor, subject_data, subject_len_val, seq_r63_alpha, patdef_DQ_omega ; LIT α
+seq_l63_beta:               LIT_BETA    seq_l63_alpha_saved, cursor, patdef_DQ_omega ; LIT β
+seq_r63_alpha:              BREAK_ALPHA lit_str_4, 0, brk64_saved, cursor, subject_data, subject_len_val, seq_r62_alpha, seq_l63_beta ; BREAK α
+seq_r63_beta:               BREAK_BETA  brk64_saved, cursor, seq_l63_beta ; BREAK β
+seq_r62_alpha:              LIT_ALPHA1  34, seq_r62_alpha_saved, cursor, subject_data, subject_len_val, patdef_DQ_gamma, seq_l62_beta ; LIT α
+seq_r62_beta:               LIT_BETA    seq_r62_alpha_saved, cursor, seq_l62_beta ; LIT β
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_DQ_gamma:
                             jmp         [P_DQ_ret_γ]
@@ -9949,16 +10589,16 @@ patdef_DQ_gamma:
 patdef_DQ_omega:            jmp         [P_DQ_ret_ω]
 
 ; P_SQ_α (α entry)
-P_SQ_α:                     jmp         seq_l72_alpha ; SEQ
-P_SQ_β:                     jmp         seq_r72_beta
-seq_l72_alpha:              jmp         seq_l73_alpha ; SEQ
-seq_l72_beta:               jmp         seq_r73_beta
-seq_l73_alpha:              LIT_ALPHA1  39, seq_l73_alpha_saved, cursor, subject_data, subject_len_val, seq_r73_alpha, patdef_SQ_omega ; LIT α
-seq_l73_beta:               LIT_BETA    seq_l73_alpha_saved, cursor, patdef_SQ_omega ; LIT β
-seq_r73_alpha:              BREAK_ALPHA lit_str_4, 0, brk74_saved, cursor, subject_data, subject_len_val, seq_r72_alpha, seq_l73_beta ; BREAK α
-seq_r73_beta:               BREAK_BETA  brk74_saved, cursor, seq_l73_beta ; BREAK β
-seq_r72_alpha:              LIT_ALPHA1  39, seq_r72_alpha_saved, cursor, subject_data, subject_len_val, patdef_SQ_gamma, seq_l72_beta ; LIT α
-seq_r72_beta:               LIT_BETA    seq_r72_alpha_saved, cursor, seq_l72_beta ; LIT β
+P_SQ_α:                     jmp         seq_l65_alpha ; SEQ
+P_SQ_β:                     jmp         seq_r65_beta
+seq_l65_alpha:              jmp         seq_l66_alpha ; SEQ
+seq_l65_beta:               jmp         seq_r66_beta
+seq_l66_alpha:              LIT_ALPHA1  39, seq_l66_alpha_saved, cursor, subject_data, subject_len_val, seq_r66_alpha, patdef_SQ_omega ; LIT α
+seq_l66_beta:               LIT_BETA    seq_l66_alpha_saved, cursor, patdef_SQ_omega ; LIT β
+seq_r66_alpha:              BREAK_ALPHA lit_str_4, 0, brk67_saved, cursor, subject_data, subject_len_val, seq_r65_alpha, seq_l66_beta ; BREAK α
+seq_r66_beta:               BREAK_BETA  brk67_saved, cursor, seq_l66_beta ; BREAK β
+seq_r65_alpha:              LIT_ALPHA1  39, seq_r65_alpha_saved, cursor, subject_data, subject_len_val, patdef_SQ_gamma, seq_l65_beta ; LIT α
+seq_r65_beta:               LIT_BETA    seq_r65_alpha_saved, cursor, seq_l65_beta ; LIT β
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_SQ_gamma:
                             jmp         [P_SQ_ret_γ]
@@ -9966,111 +10606,111 @@ patdef_SQ_gamma:
 patdef_SQ_omega:            jmp         [P_SQ_ret_ω]
 
 ; P_String_α (α entry)
-P_String_α:                 ALT_ALPHA   alt75_cur_save, cursor, alt_l75_alpha ; ALT α — save cursor, enter left
-P_String_β:                 SEQ_BETA    alt_r75_beta ; ALT β — resume right
+P_String_α:                 ALT_ALPHA   alt68_cur_save, cursor, alt_l68_alpha ; ALT α — save cursor, enter left
+P_String_β:                 SEQ_BETA    alt_r68_beta ; ALT β — resume right
 
-alt_l75_alpha: ; REF(SQ)
-                            lea         rax, [rel nref76_gamma]
+alt_l68_alpha: ; REF(SQ)
+                            lea         rax, [rel nref69_gamma]
                             mov         [P_SQ_ret_γ], rax
-                            lea         rax, [rel nref76_omega]
+                            lea         rax, [rel nref69_omega]
                             mov         [P_SQ_ret_ω], rax
                             jmp         P_SQ_α
-alt_l75_beta:               lea         rax, [rel nref76_gamma] ; REF(%s)
+alt_l68_beta:               lea         rax, [rel nref69_gamma] ; REF(%s)
                             mov         [P_SQ_ret_γ], rax
-                            lea         rax, [rel nref76_omega]
+                            lea         rax, [rel nref69_omega]
                             mov         [P_SQ_ret_ω], rax
                             jmp         P_SQ_β
 
-nref76_gamma:
+nref69_gamma:
                             jmp         patdef_String_gamma
 ;  String ==============================================================================================================
-nref76_omega:               jmp         alt75_left_omega
-alt75_left_omega:           ALT_OMEGA   alt75_cur_save, cursor, alt_r75_alpha ; ALT left_ω — restore cursor, enter right
+nref69_omega:               jmp         alt68_left_omega
+alt68_left_omega:           ALT_OMEGA   alt68_cur_save, cursor, alt_r68_alpha ; ALT left_ω — restore cursor, enter right
 
-alt_r75_alpha: ; REF(DQ)
-                            lea         rax, [rel nref77_gamma]
+alt_r68_alpha: ; REF(DQ)
+                            lea         rax, [rel nref70_gamma]
                             mov         [P_DQ_ret_γ], rax
-                            lea         rax, [rel nref77_omega]
+                            lea         rax, [rel nref70_omega]
                             mov         [P_DQ_ret_ω], rax
                             jmp         P_DQ_α
-alt_r75_beta:               lea         rax, [rel nref77_gamma] ; REF(%s)
+alt_r68_beta:               lea         rax, [rel nref70_gamma] ; REF(%s)
                             mov         [P_DQ_ret_γ], rax
-                            lea         rax, [rel nref77_omega]
+                            lea         rax, [rel nref70_omega]
                             mov         [P_DQ_ret_ω], rax
                             jmp         P_DQ_β
 
-nref77_gamma:
+nref70_gamma:
                             jmp         patdef_String_gamma
-nref77_omega:               jmp         patdef_String_omega
+nref70_omega:               jmp         patdef_String_omega
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_String_gamma:
                             jmp         [P_String_ret_γ]
 patdef_String_omega:        jmp         [P_String_ret_ω]
 
 ; P_Real_α (α entry)
-P_Real_α:                   ALT_ALPHA   alt78_cur_save, cursor, alt_l78_alpha ; ALT α — save cursor, enter left
-P_Real_β:                   SEQ_BETA    alt_r78_beta ; ALT β — resume right
-alt_l78_alpha:              jmp         seq_l79_alpha ; SEQ
-alt_l78_beta:               jmp         seq_r79_beta
-seq_l79_alpha:              jmp         seq_l80_alpha ; SEQ
-seq_l79_beta:               jmp         seq_r80_beta
-seq_l80_alpha:              jmp         seq_l81_alpha ; SEQ
-seq_l80_beta:               jmp         seq_r81_beta
-seq_l81_alpha:              jmp         seq_l82_alpha ; SEQ
-seq_l81_beta:               jmp         seq_r82_beta
-seq_l82_alpha:              SPAN_ALPHA  lit_str_4, 0, span83_saved, cursor, subject_data, subject_len_val, seq_r82_alpha, alt78_left_omega ; SPAN α
-seq_l82_beta:               SPAN_BETA   span83_saved, cursor, alt78_left_omega ; SPAN β
-seq_r82_alpha:              ALT_ALPHA   alt84_cur_save, cursor, alt_l84_alpha ; ALT α — save cursor, enter left
-seq_r82_beta:               SEQ_BETA    alt_r84_beta ; ALT β — resume right
-alt_l84_alpha:              jmp         seq_l85_alpha ; SEQ
-alt_l84_beta:               jmp         seq_r85_beta
-seq_l85_alpha:              LIT_ALPHA1  46, seq_l85_alpha_saved, cursor, subject_data, subject_len_val, seq_r85_alpha, alt84_left_omega ; LIT α
-seq_l85_beta:               LIT_BETA    seq_l85_alpha_saved, cursor, alt84_left_omega ; LIT β
+P_Real_α:                   ALT_ALPHA   alt71_cur_save, cursor, alt_l71_alpha ; ALT α — save cursor, enter left
+P_Real_β:                   SEQ_BETA    alt_r71_beta ; ALT β — resume right
+alt_l71_alpha:              jmp         seq_l72_alpha ; SEQ
+alt_l71_beta:               jmp         seq_r72_beta
+seq_l72_alpha:              jmp         seq_l73_alpha ; SEQ
+seq_l72_beta:               jmp         seq_r73_beta
+seq_l73_alpha:              jmp         seq_l74_alpha ; SEQ
+seq_l73_beta:               jmp         seq_r74_beta
+seq_l74_alpha:              jmp         seq_l75_alpha ; SEQ
+seq_l74_beta:               jmp         seq_r75_beta
+seq_l75_alpha:              SPAN_ALPHA  lit_str_4, 0, span76_saved, cursor, subject_data, subject_len_val, seq_r75_alpha, alt71_left_omega ; SPAN α
+seq_l75_beta:               SPAN_BETA   span76_saved, cursor, alt71_left_omega ; SPAN β
+seq_r75_alpha:              ALT_ALPHA   alt77_cur_save, cursor, alt_l77_alpha ; ALT α — save cursor, enter left
+seq_r75_beta:               SEQ_BETA    alt_r77_beta ; ALT β — resume right
+alt_l77_alpha:              jmp         seq_l78_alpha ; SEQ
+alt_l77_beta:               jmp         seq_r78_beta
+seq_l78_alpha:              LIT_ALPHA1  46, seq_l78_alpha_saved, cursor, subject_data, subject_len_val, seq_r78_alpha, alt77_left_omega ; LIT α
+seq_l78_beta:               LIT_BETA    seq_l78_alpha_saved, cursor, alt77_left_omega ; LIT β
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r85_alpha:
-seq_r85_beta:               jmp         seq_l85_beta
-alt84_left_omega:           ALT_OMEGA   alt84_cur_save, cursor, alt_r84_alpha ; ALT left_ω — restore cursor, enter right
+seq_r78_alpha:
+seq_r78_beta:               jmp         seq_l78_beta
+alt77_left_omega:           ALT_OMEGA   alt77_cur_save, cursor, alt_r77_alpha ; ALT left_ω — restore cursor, enter right
 
 ; UNRESOLVED named pattern ref: epsilon → ω
-alt_r84_alpha:
-alt_r84_beta:               jmp         seq_l82_beta
-seq_r81_alpha:              ALT_ALPHA   alt86_cur_save, cursor, alt_l86_alpha ; ALT α — save cursor, enter left
-seq_r81_beta:               SEQ_BETA    alt_r86_beta ; ALT β — resume right
-alt_l86_alpha:              LIT_ALPHA1  69, alt_l86_alpha_saved, cursor, subject_data, subject_len_val, seq_r80_alpha, alt86_left_omega ; LIT α
-alt_l86_beta:               LIT_BETA    alt_l86_alpha_saved, cursor, alt86_left_omega ; LIT β
-alt86_left_omega:           ALT_OMEGA   alt86_cur_save, cursor, alt_r86_alpha ; ALT left_ω — restore cursor, enter right
-alt_r86_alpha:              LIT_ALPHA1  101, alt_r86_alpha_saved, cursor, subject_data, subject_len_val, seq_r80_alpha, seq_l81_beta ; LIT α
-alt_r86_beta:               LIT_BETA    alt_r86_alpha_saved, cursor, seq_l81_beta ; LIT β
-seq_r80_alpha:              ALT_ALPHA   alt87_cur_save, cursor, alt_l87_alpha ; ALT α — save cursor, enter left
-seq_r80_beta:               SEQ_BETA    alt_r87_beta ; ALT β — resume right
-alt_l87_alpha:              ALT_ALPHA   alt88_cur_save, cursor, alt_l88_alpha ; ALT α — save cursor, enter left
-alt_l87_beta:               SEQ_BETA    alt_r88_beta ; ALT β — resume right
-alt_l88_alpha:              LIT_ALPHA1  43, alt_l88_alpha_saved, cursor, subject_data, subject_len_val, seq_r79_alpha, alt88_left_omega ; LIT α
-alt_l88_beta:               LIT_BETA    alt_l88_alpha_saved, cursor, alt88_left_omega ; LIT β
-alt88_left_omega:           ALT_OMEGA   alt88_cur_save, cursor, alt_r88_alpha ; ALT left_ω — restore cursor, enter right
-alt_r88_alpha:              LIT_ALPHA1  45, alt_r88_alpha_saved, cursor, subject_data, subject_len_val, seq_r79_alpha, alt87_left_omega ; LIT α
-alt_r88_beta:               LIT_BETA    alt_r88_alpha_saved, cursor, alt87_left_omega ; LIT β
-alt87_left_omega:           ALT_OMEGA   alt87_cur_save, cursor, alt_r87_alpha ; ALT left_ω — restore cursor, enter right
+alt_r77_alpha:
+alt_r77_beta:               jmp         seq_l75_beta
+seq_r74_alpha:              ALT_ALPHA   alt79_cur_save, cursor, alt_l79_alpha ; ALT α — save cursor, enter left
+seq_r74_beta:               SEQ_BETA    alt_r79_beta ; ALT β — resume right
+alt_l79_alpha:              LIT_ALPHA1  69, alt_l79_alpha_saved, cursor, subject_data, subject_len_val, seq_r73_alpha, alt79_left_omega ; LIT α
+alt_l79_beta:               LIT_BETA    alt_l79_alpha_saved, cursor, alt79_left_omega ; LIT β
+alt79_left_omega:           ALT_OMEGA   alt79_cur_save, cursor, alt_r79_alpha ; ALT left_ω — restore cursor, enter right
+alt_r79_alpha:              LIT_ALPHA1  101, alt_r79_alpha_saved, cursor, subject_data, subject_len_val, seq_r73_alpha, seq_l74_beta ; LIT α
+alt_r79_beta:               LIT_BETA    alt_r79_alpha_saved, cursor, seq_l74_beta ; LIT β
+seq_r73_alpha:              ALT_ALPHA   alt80_cur_save, cursor, alt_l80_alpha ; ALT α — save cursor, enter left
+seq_r73_beta:               SEQ_BETA    alt_r80_beta ; ALT β — resume right
+alt_l80_alpha:              ALT_ALPHA   alt81_cur_save, cursor, alt_l81_alpha ; ALT α — save cursor, enter left
+alt_l80_beta:               SEQ_BETA    alt_r81_beta ; ALT β — resume right
+alt_l81_alpha:              LIT_ALPHA1  43, alt_l81_alpha_saved, cursor, subject_data, subject_len_val, seq_r72_alpha, alt81_left_omega ; LIT α
+alt_l81_beta:               LIT_BETA    alt_l81_alpha_saved, cursor, alt81_left_omega ; LIT β
+alt81_left_omega:           ALT_OMEGA   alt81_cur_save, cursor, alt_r81_alpha ; ALT left_ω — restore cursor, enter right
+alt_r81_alpha:              LIT_ALPHA1  45, alt_r81_alpha_saved, cursor, subject_data, subject_len_val, seq_r72_alpha, alt80_left_omega ; LIT α
+alt_r81_beta:               LIT_BETA    alt_r81_alpha_saved, cursor, alt80_left_omega ; LIT β
+alt80_left_omega:           ALT_OMEGA   alt80_cur_save, cursor, alt_r80_alpha ; ALT left_ω — restore cursor, enter right
 
 ; UNRESOLVED named pattern ref: epsilon → ω
-alt_r87_alpha:
-alt_r87_beta:               jmp         seq_l80_beta
-seq_r79_alpha:              SPAN_ALPHA  lit_str_4, 0, span89_saved, cursor, subject_data, subject_len_val, patdef_Real_gamma, seq_l79_beta ; SPAN α
-seq_r79_beta:               SPAN_BETA   span89_saved, cursor, seq_l79_beta ; SPAN β
-alt78_left_omega:           ALT_OMEGA   alt78_cur_save, cursor, alt_r78_alpha ; ALT left_ω — restore cursor, enter right
-alt_r78_alpha:              jmp         seq_l90_alpha ; SEQ
-alt_r78_beta:               jmp         seq_r90_beta
-seq_l90_alpha:              jmp         seq_l91_alpha ; SEQ
-seq_l90_beta:               jmp         seq_r91_beta
-seq_l91_alpha:              SPAN_ALPHA  lit_str_4, 0, span92_saved, cursor, subject_data, subject_len_val, seq_r91_alpha, patdef_Real_omega ; SPAN α
-seq_l91_beta:               SPAN_BETA   span92_saved, cursor, patdef_Real_omega ; SPAN β
-seq_r91_alpha:              LIT_ALPHA1  46, seq_r91_alpha_saved, cursor, subject_data, subject_len_val, seq_r90_alpha, seq_l91_beta ; LIT α
-seq_r91_beta:               LIT_BETA    seq_r91_alpha_saved, cursor, seq_l91_beta ; LIT β
+alt_r80_alpha:
+alt_r80_beta:               jmp         seq_l73_beta
+seq_r72_alpha:              SPAN_ALPHA  lit_str_4, 0, span82_saved, cursor, subject_data, subject_len_val, patdef_Real_gamma, seq_l72_beta ; SPAN α
+seq_r72_beta:               SPAN_BETA   span82_saved, cursor, seq_l72_beta ; SPAN β
+alt71_left_omega:           ALT_OMEGA   alt71_cur_save, cursor, alt_r71_alpha ; ALT left_ω — restore cursor, enter right
+alt_r71_alpha:              jmp         seq_l83_alpha ; SEQ
+alt_r71_beta:               jmp         seq_r83_beta
+seq_l83_alpha:              jmp         seq_l84_alpha ; SEQ
+seq_l83_beta:               jmp         seq_r84_beta
+seq_l84_alpha:              SPAN_ALPHA  lit_str_4, 0, span85_saved, cursor, subject_data, subject_len_val, seq_r84_alpha, patdef_Real_omega ; SPAN α
+seq_l84_beta:               SPAN_BETA   span85_saved, cursor, patdef_Real_omega ; SPAN β
+seq_r84_alpha:              LIT_ALPHA1  46, seq_r84_alpha_saved, cursor, subject_data, subject_len_val, seq_r83_alpha, seq_l84_beta ; LIT α
+seq_r84_beta:               LIT_BETA    seq_r84_alpha_saved, cursor, seq_l84_beta ; LIT β
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r90_alpha:
-seq_r90_beta:               jmp         seq_l90_beta
+seq_r83_alpha:
+seq_r83_beta:               jmp         seq_l83_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Real_gamma:
                             jmp         [P_Real_ret_γ]
@@ -10078,14 +10718,14 @@ patdef_Real_gamma:
 patdef_Real_omega:          jmp         [P_Real_ret_ω]
 
 ; P_Id_α (α entry)
-P_Id_α:                     jmp         seq_l93_alpha ; SEQ
-P_Id_β:                     jmp         seq_r93_beta
-seq_l93_alpha:              ANY_ALPHA   lit_str_4, 0, any94_saved, cursor, subject_data, subject_len_val, seq_r93_alpha, patdef_Id_omega ; ANY α
-seq_l93_beta:               ANY_BETA    any94_saved, cursor, patdef_Id_omega ; ANY β
+P_Id_α:                     jmp         seq_l86_alpha ; SEQ
+P_Id_β:                     jmp         seq_r86_beta
+seq_l86_alpha:              ANY_ALPHA   lit_str_4, 0, any87_saved, cursor, subject_data, subject_len_val, seq_r86_alpha, patdef_Id_omega ; ANY α
+seq_l86_beta:               ANY_BETA    any87_saved, cursor, patdef_Id_omega ; ANY β
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r93_alpha:
-seq_r93_beta:               jmp         seq_l93_beta
+seq_r86_alpha:
+seq_r86_beta:               jmp         seq_l86_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Id_gamma:
                             jmp         [P_Id_ret_γ]
@@ -10095,18 +10735,18 @@ patdef_Id_omega:            jmp         [P_Id_ret_ω]
 ; P_Function_α (α entry)
 
 P_Function_α: ; DOL(cap $  cap)
-                            DOL_SAVE    dol_entry_cap, cursor, dol95_child_alpha ; DOL α — save entry cursor
-P_Function_β:               jmp         dol95_child_beta ; DOL β
+                            DOL_SAVE    dol_entry_cap, cursor, dol88_child_alpha ; DOL α — save entry cursor
+P_Function_β:               jmp         dol88_child_beta ; DOL β
 
-dol95_child_alpha: ; DOL(tx $  tx)
-                            DOL_SAVE    dol_entry_tx, cursor, dol96_child_alpha ; DOL α — save entry cursor
-dol95_child_beta:           jmp         dol96_child_beta ; DOL β
-dol96_child_alpha:          SPAN_ALPHA  lit_str_4, 0, span97_saved, cursor, subject_data, subject_len_val, dol96_gamma, dol96_omega ; SPAN α
-dol96_child_beta:           SPAN_BETA   span97_saved, cursor, dol96_omega ; SPAN β
-dol96_gamma:                DOL_CAPTURE dol_entry_tx, cursor, cap_tx_buf, cap_tx_len, subject_data, dol95_gamma ; DOL γ — capture span
-dol96_omega:                jmp         dol95_omega ; DOL ω — child failed
-dol95_gamma:                DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_Function_gamma ; DOL γ — capture span
-dol95_omega:                jmp         patdef_Function_omega ; DOL ω — child failed
+dol88_child_alpha: ; DOL(tx $  tx)
+                            DOL_SAVE    dol_entry_tx, cursor, dol89_child_alpha ; DOL α — save entry cursor
+dol88_child_beta:           jmp         dol89_child_beta ; DOL β
+dol89_child_alpha:          SPAN_ALPHA  lit_str_4, 0, span90_saved, cursor, subject_data, subject_len_val, dol89_gamma, dol89_omega ; SPAN α
+dol89_child_beta:           SPAN_BETA   span90_saved, cursor, dol89_omega ; SPAN β
+dol89_gamma:                DOL_CAPTURE dol_entry_tx, cursor, cap_tx_buf, cap_tx_len, subject_data, dol88_gamma ; DOL γ — capture span
+dol89_omega:                jmp         dol88_omega ; DOL ω — child failed
+dol88_gamma:                DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_Function_gamma ; DOL γ — capture span
+dol88_omega:                jmp         patdef_Function_omega ; DOL ω — child failed
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Function_gamma:
                             jmp         [P_Function_ret_γ]
@@ -10116,18 +10756,18 @@ patdef_Function_omega:      jmp         [P_Function_ret_ω]
 ; P_BuiltinVar_α (α entry)
 
 P_BuiltinVar_α: ; DOL(cap $  cap)
-                            DOL_SAVE    dol_entry_cap, cursor, dol98_child_alpha ; DOL α — save entry cursor
-P_BuiltinVar_β:             jmp         dol98_child_beta ; DOL β
+                            DOL_SAVE    dol_entry_cap, cursor, dol91_child_alpha ; DOL α — save entry cursor
+P_BuiltinVar_β:             jmp         dol91_child_beta ; DOL β
 
-dol98_child_alpha: ; DOL(tx $  tx)
-                            DOL_SAVE    dol_entry_tx, cursor, dol99_child_alpha ; DOL α — save entry cursor
-dol98_child_beta:           jmp         dol99_child_beta ; DOL β
-dol99_child_alpha:          SPAN_ALPHA  lit_str_4, 0, span100_saved, cursor, subject_data, subject_len_val, dol99_gamma, dol99_omega ; SPAN α
-dol99_child_beta:           SPAN_BETA   span100_saved, cursor, dol99_omega ; SPAN β
-dol99_gamma:                DOL_CAPTURE dol_entry_tx, cursor, cap_tx_buf, cap_tx_len, subject_data, dol98_gamma ; DOL γ — capture span
-dol99_omega:                jmp         dol98_omega ; DOL ω — child failed
-dol98_gamma:                DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_BuiltinVar_gamma ; DOL γ — capture span
-dol98_omega:                jmp         patdef_BuiltinVar_omega ; DOL ω — child failed
+dol91_child_alpha: ; DOL(tx $  tx)
+                            DOL_SAVE    dol_entry_tx, cursor, dol92_child_alpha ; DOL α — save entry cursor
+dol91_child_beta:           jmp         dol92_child_beta ; DOL β
+dol92_child_alpha:          SPAN_ALPHA  lit_str_4, 0, span93_saved, cursor, subject_data, subject_len_val, dol92_gamma, dol92_omega ; SPAN α
+dol92_child_beta:           SPAN_BETA   span93_saved, cursor, dol92_omega ; SPAN β
+dol92_gamma:                DOL_CAPTURE dol_entry_tx, cursor, cap_tx_buf, cap_tx_len, subject_data, dol91_gamma ; DOL γ — capture span
+dol92_omega:                jmp         dol91_omega ; DOL ω — child failed
+dol91_gamma:                DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_BuiltinVar_gamma ; DOL γ — capture span
+dol91_omega:                jmp         patdef_BuiltinVar_omega ; DOL ω — child failed
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_BuiltinVar_gamma:
                             jmp         [P_BuiltinVar_ret_γ]
@@ -10137,18 +10777,18 @@ patdef_BuiltinVar_omega:    jmp         [P_BuiltinVar_ret_ω]
 ; P_SpecialNm_α (α entry)
 
 P_SpecialNm_α: ; DOL(cap $  cap)
-                            DOL_SAVE    dol_entry_cap, cursor, dol101_child_alpha ; DOL α — save entry cursor
-P_SpecialNm_β:              jmp         dol101_child_beta ; DOL β
+                            DOL_SAVE    dol_entry_cap, cursor, dol94_child_alpha ; DOL α — save entry cursor
+P_SpecialNm_β:              jmp         dol94_child_beta ; DOL β
 
-dol101_child_alpha: ; DOL(tx $  tx)
-                            DOL_SAVE    dol_entry_tx, cursor, dol102_child_alpha ; DOL α — save entry cursor
-dol101_child_beta:          jmp         dol102_child_beta ; DOL β
-dol102_child_alpha:         SPAN_ALPHA  lit_str_4, 0, span103_saved, cursor, subject_data, subject_len_val, dol102_gamma, dol102_omega ; SPAN α
-dol102_child_beta:          SPAN_BETA   span103_saved, cursor, dol102_omega ; SPAN β
-dol102_gamma:               DOL_CAPTURE dol_entry_tx, cursor, cap_tx_buf, cap_tx_len, subject_data, dol101_gamma ; DOL γ — capture span
-dol102_omega:               jmp         dol101_omega ; DOL ω — child failed
-dol101_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_SpecialNm_gamma ; DOL γ — capture span
-dol101_omega:               jmp         patdef_SpecialNm_omega ; DOL ω — child failed
+dol94_child_alpha: ; DOL(tx $  tx)
+                            DOL_SAVE    dol_entry_tx, cursor, dol95_child_alpha ; DOL α — save entry cursor
+dol94_child_beta:           jmp         dol95_child_beta ; DOL β
+dol95_child_alpha:          SPAN_ALPHA  lit_str_4, 0, span96_saved, cursor, subject_data, subject_len_val, dol95_gamma, dol95_omega ; SPAN α
+dol95_child_beta:           SPAN_BETA   span96_saved, cursor, dol95_omega ; SPAN β
+dol95_gamma:                DOL_CAPTURE dol_entry_tx, cursor, cap_tx_buf, cap_tx_len, subject_data, dol94_gamma ; DOL γ — capture span
+dol95_omega:                jmp         dol94_omega ; DOL ω — child failed
+dol94_gamma:                DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_SpecialNm_gamma ; DOL γ — capture span
+dol94_omega:                jmp         patdef_SpecialNm_omega ; DOL ω — child failed
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_SpecialNm_gamma:
                             jmp         [P_SpecialNm_ret_γ]
@@ -10156,24 +10796,24 @@ patdef_SpecialNm_gamma:
 patdef_SpecialNm_omega:     jmp         [P_SpecialNm_ret_ω]
 
 ; P_ProtKwd_α (α entry)
-P_ProtKwd_α:                jmp         seq_l104_alpha ; SEQ
-P_ProtKwd_β:                jmp         seq_r104_beta
-seq_l104_alpha:             LIT_ALPHA1  38, seq_l104_alpha_saved, cursor, subject_data, subject_len_val, seq_r104_alpha, patdef_ProtKwd_omega ; LIT α
-seq_l104_beta:              LIT_BETA    seq_l104_alpha_saved, cursor, patdef_ProtKwd_omega ; LIT β
+P_ProtKwd_α:                jmp         seq_l97_alpha ; SEQ
+P_ProtKwd_β:                jmp         seq_r97_beta
+seq_l97_alpha:              LIT_ALPHA1  38, seq_l97_alpha_saved, cursor, subject_data, subject_len_val, seq_r97_alpha, patdef_ProtKwd_omega ; LIT α
+seq_l97_beta:               LIT_BETA    seq_l97_alpha_saved, cursor, patdef_ProtKwd_omega ; LIT β
 
-seq_r104_alpha: ; DOL(cap $  cap)
-                            DOL_SAVE    dol_entry_cap, cursor, dol105_child_alpha ; DOL α — save entry cursor
-seq_r104_beta:              jmp         dol105_child_beta ; DOL β
+seq_r97_alpha: ; DOL(cap $  cap)
+                            DOL_SAVE    dol_entry_cap, cursor, dol98_child_alpha ; DOL α — save entry cursor
+seq_r97_beta:               jmp         dol98_child_beta ; DOL β
 
-dol105_child_alpha: ; DOL(tx $  tx)
-                            DOL_SAVE    dol_entry_tx, cursor, dol106_child_alpha ; DOL α — save entry cursor
-dol105_child_beta:          jmp         dol106_child_beta ; DOL β
-dol106_child_alpha:         SPAN_ALPHA  lit_str_4, 0, span107_saved, cursor, subject_data, subject_len_val, dol106_gamma, dol106_omega ; SPAN α
-dol106_child_beta:          SPAN_BETA   span107_saved, cursor, dol106_omega ; SPAN β
-dol106_gamma:               DOL_CAPTURE dol_entry_tx, cursor, cap_tx_buf, cap_tx_len, subject_data, dol105_gamma ; DOL γ — capture span
-dol106_omega:               jmp         dol105_omega ; DOL ω — child failed
-dol105_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_ProtKwd_gamma ; DOL γ — capture span
-dol105_omega:               jmp         seq_l104_beta ; DOL ω — child failed
+dol98_child_alpha: ; DOL(tx $  tx)
+                            DOL_SAVE    dol_entry_tx, cursor, dol99_child_alpha ; DOL α — save entry cursor
+dol98_child_beta:           jmp         dol99_child_beta ; DOL β
+dol99_child_alpha:          SPAN_ALPHA  lit_str_4, 0, span100_saved, cursor, subject_data, subject_len_val, dol99_gamma, dol99_omega ; SPAN α
+dol99_child_beta:           SPAN_BETA   span100_saved, cursor, dol99_omega ; SPAN β
+dol99_gamma:                DOL_CAPTURE dol_entry_tx, cursor, cap_tx_buf, cap_tx_len, subject_data, dol98_gamma ; DOL γ — capture span
+dol99_omega:                jmp         dol98_omega ; DOL ω — child failed
+dol98_gamma:                DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_ProtKwd_gamma ; DOL γ — capture span
+dol98_omega:                jmp         seq_l97_beta ; DOL ω — child failed
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_ProtKwd_gamma:
                             jmp         [P_ProtKwd_ret_γ]
@@ -10181,24 +10821,24 @@ patdef_ProtKwd_gamma:
 patdef_ProtKwd_omega:       jmp         [P_ProtKwd_ret_ω]
 
 ; P_UnprotKwd_α (α entry)
-P_UnprotKwd_α:              jmp         seq_l108_alpha ; SEQ
-P_UnprotKwd_β:              jmp         seq_r108_beta
-seq_l108_alpha:             LIT_ALPHA1  38, seq_l108_alpha_saved, cursor, subject_data, subject_len_val, seq_r108_alpha, patdef_UnprotKwd_omega ; LIT α
-seq_l108_beta:              LIT_BETA    seq_l108_alpha_saved, cursor, patdef_UnprotKwd_omega ; LIT β
+P_UnprotKwd_α:              jmp         seq_l101_alpha ; SEQ
+P_UnprotKwd_β:              jmp         seq_r101_beta
+seq_l101_alpha:             LIT_ALPHA1  38, seq_l101_alpha_saved, cursor, subject_data, subject_len_val, seq_r101_alpha, patdef_UnprotKwd_omega ; LIT α
+seq_l101_beta:              LIT_BETA    seq_l101_alpha_saved, cursor, patdef_UnprotKwd_omega ; LIT β
 
-seq_r108_alpha: ; DOL(cap $  cap)
-                            DOL_SAVE    dol_entry_cap, cursor, dol109_child_alpha ; DOL α — save entry cursor
-seq_r108_beta:              jmp         dol109_child_beta ; DOL β
+seq_r101_alpha: ; DOL(cap $  cap)
+                            DOL_SAVE    dol_entry_cap, cursor, dol102_child_alpha ; DOL α — save entry cursor
+seq_r101_beta:              jmp         dol102_child_beta ; DOL β
 
-dol109_child_alpha: ; DOL(tx $  tx)
-                            DOL_SAVE    dol_entry_tx, cursor, dol110_child_alpha ; DOL α — save entry cursor
-dol109_child_beta:          jmp         dol110_child_beta ; DOL β
-dol110_child_alpha:         SPAN_ALPHA  lit_str_4, 0, span111_saved, cursor, subject_data, subject_len_val, dol110_gamma, dol110_omega ; SPAN α
-dol110_child_beta:          SPAN_BETA   span111_saved, cursor, dol110_omega ; SPAN β
-dol110_gamma:               DOL_CAPTURE dol_entry_tx, cursor, cap_tx_buf, cap_tx_len, subject_data, dol109_gamma ; DOL γ — capture span
-dol110_omega:               jmp         dol109_omega ; DOL ω — child failed
-dol109_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_UnprotKwd_gamma ; DOL γ — capture span
-dol109_omega:               jmp         seq_l108_beta ; DOL ω — child failed
+dol102_child_alpha: ; DOL(tx $  tx)
+                            DOL_SAVE    dol_entry_tx, cursor, dol103_child_alpha ; DOL α — save entry cursor
+dol102_child_beta:          jmp         dol103_child_beta ; DOL β
+dol103_child_alpha:         SPAN_ALPHA  lit_str_4, 0, span104_saved, cursor, subject_data, subject_len_val, dol103_gamma, dol103_omega ; SPAN α
+dol103_child_beta:          SPAN_BETA   span104_saved, cursor, dol103_omega ; SPAN β
+dol103_gamma:               DOL_CAPTURE dol_entry_tx, cursor, cap_tx_buf, cap_tx_len, subject_data, dol102_gamma ; DOL γ — capture span
+dol103_omega:               jmp         dol102_omega ; DOL ω — child failed
+dol102_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_UnprotKwd_gamma ; DOL γ — capture span
+dol102_omega:               jmp         seq_l101_beta ; DOL ω — child failed
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_UnprotKwd_gamma:
                             jmp         [P_UnprotKwd_ret_γ]
@@ -10206,66 +10846,66 @@ patdef_UnprotKwd_gamma:
 patdef_UnprotKwd_omega:     jmp         [P_UnprotKwd_ret_ω]
 
 ; P_Gray_α (α entry)
-P_Gray_α:                   ALT_ALPHA   alt112_cur_save, cursor, alt_l112_alpha ; ALT α — save cursor, enter left
-P_Gray_β:                   SEQ_BETA    alt_r112_beta ; ALT β — resume right
+P_Gray_α:                   ALT_ALPHA   alt105_cur_save, cursor, alt_l105_alpha ; ALT α — save cursor, enter left
+P_Gray_β:                   SEQ_BETA    alt_r105_beta ; ALT β — resume right
 
-alt_l112_alpha: ; REF(White)
-                            lea         rax, [rel nref113_gamma]
+alt_l105_alpha: ; REF(White)
+                            lea         rax, [rel nref106_gamma]
                             mov         [P_White_ret_γ], rax
-                            lea         rax, [rel nref113_omega]
+                            lea         rax, [rel nref106_omega]
                             mov         [P_White_ret_ω], rax
                             jmp         P_White_α
-alt_l112_beta:              lea         rax, [rel nref113_gamma] ; REF(%s)
+alt_l105_beta:              lea         rax, [rel nref106_gamma] ; REF(%s)
                             mov         [P_White_ret_γ], rax
-                            lea         rax, [rel nref113_omega]
+                            lea         rax, [rel nref106_omega]
                             mov         [P_White_ret_ω], rax
                             jmp         P_White_β
 
-nref113_gamma:
+nref106_gamma:
                             jmp         patdef_Gray_gamma
 ;  Gray ================================================================================================================
-nref113_omega:              jmp         alt112_left_omega
-alt112_left_omega:          ALT_OMEGA   alt112_cur_save, cursor, alt_r112_alpha ; ALT left_ω — restore cursor, enter right
+nref106_omega:              jmp         alt105_left_omega
+alt105_left_omega:          ALT_OMEGA   alt105_cur_save, cursor, alt_r105_alpha ; ALT left_ω — restore cursor, enter right
 
 ; UNRESOLVED named pattern ref: epsilon → ω
-alt_r112_alpha:
-alt_r112_beta:              jmp         patdef_Gray_omega
+alt_r105_alpha:
+alt_r105_beta:              jmp         patdef_Gray_omega
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Gray_gamma:
                             jmp         [P_Gray_ret_γ]
 patdef_Gray_omega:          jmp         [P_Gray_ret_ω]
 
 ; P_White_α (α entry)
-P_White_α:                  ALT_ALPHA   alt114_cur_save, cursor, alt_l114_alpha ; ALT α — save cursor, enter left
-P_White_β:                  SEQ_BETA    alt_r114_beta ; ALT β — resume right
-alt_l114_alpha:             jmp         seq_l115_alpha ; SEQ
-alt_l114_beta:              jmp         seq_r115_beta
-seq_l115_alpha:             SPAN_ALPHA  lit_str_4, 0, span116_saved, cursor, subject_data, subject_len_val, seq_r115_alpha, alt114_left_omega ; SPAN α
-seq_l115_beta:              SPAN_BETA   span116_saved, cursor, alt114_left_omega ; SPAN β
+P_White_α:                  ALT_ALPHA   alt107_cur_save, cursor, alt_l107_alpha ; ALT α — save cursor, enter left
+P_White_β:                  SEQ_BETA    alt_r107_beta ; ALT β — resume right
+alt_l107_alpha:             jmp         seq_l108_alpha ; SEQ
+alt_l107_beta:              jmp         seq_r108_beta
+seq_l108_alpha:             SPAN_ALPHA  lit_str_4, 0, span109_saved, cursor, subject_data, subject_len_val, seq_r108_alpha, alt107_left_omega ; SPAN α
+seq_l108_beta:              SPAN_BETA   span109_saved, cursor, alt107_left_omega ; SPAN β
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r115_alpha:
-seq_r115_beta:              jmp         seq_l115_beta
-alt114_left_omega:          ALT_OMEGA   alt114_cur_save, cursor, alt_r114_alpha ; ALT left_ω — restore cursor, enter right
-alt_r114_alpha:             jmp         seq_l117_alpha ; SEQ
-alt_r114_beta:              jmp         seq_r117_beta
-seq_l117_alpha:             jmp         seq_l118_alpha ; SEQ
-seq_l117_beta:              jmp         seq_r118_beta
+seq_r108_alpha:
+seq_r108_beta:              jmp         seq_l108_beta
+alt107_left_omega:          ALT_OMEGA   alt107_cur_save, cursor, alt_r107_alpha ; ALT left_ω — restore cursor, enter right
+alt_r107_alpha:             jmp         seq_l110_alpha ; SEQ
+alt_r107_beta:              jmp         seq_r110_beta
+seq_l110_alpha:             jmp         seq_l111_alpha ; SEQ
+seq_l110_beta:              jmp         seq_r111_beta
 
 ; UNRESOLVED named pattern ref: nl → ω
-seq_l118_alpha:
-seq_l118_beta:              jmp         patdef_White_omega
-seq_r118_alpha:             ALT_ALPHA   alt119_cur_save, cursor, alt_l119_alpha ; ALT α — save cursor, enter left
-seq_r118_beta:              SEQ_BETA    alt_r119_beta ; ALT β — resume right
-alt_l119_alpha:             LIT_ALPHA1  43, alt_l119_alpha_saved, cursor, subject_data, subject_len_val, seq_r117_alpha, alt119_left_omega ; LIT α
-alt_l119_beta:              LIT_BETA    alt_l119_alpha_saved, cursor, alt119_left_omega ; LIT β
-alt119_left_omega:          ALT_OMEGA   alt119_cur_save, cursor, alt_r119_alpha ; ALT left_ω — restore cursor, enter right
-alt_r119_alpha:             LIT_ALPHA1  46, alt_r119_alpha_saved, cursor, subject_data, subject_len_val, seq_r117_alpha, seq_l118_beta ; LIT α
-alt_r119_beta:              LIT_BETA    alt_r119_alpha_saved, cursor, seq_l118_beta ; LIT β
+seq_l111_alpha:
+seq_l111_beta:              jmp         patdef_White_omega
+seq_r111_alpha:             ALT_ALPHA   alt112_cur_save, cursor, alt_l112_alpha ; ALT α — save cursor, enter left
+seq_r111_beta:              SEQ_BETA    alt_r112_beta ; ALT β — resume right
+alt_l112_alpha:             LIT_ALPHA1  43, alt_l112_alpha_saved, cursor, subject_data, subject_len_val, seq_r110_alpha, alt112_left_omega ; LIT α
+alt_l112_beta:              LIT_BETA    alt_l112_alpha_saved, cursor, alt112_left_omega ; LIT β
+alt112_left_omega:          ALT_OMEGA   alt112_cur_save, cursor, alt_r112_alpha ; ALT left_ω — restore cursor, enter right
+alt_r112_alpha:             LIT_ALPHA1  46, alt_r112_alpha_saved, cursor, subject_data, subject_len_val, seq_r110_alpha, seq_l111_beta ; LIT α
+alt_r112_beta:              LIT_BETA    alt_r112_alpha_saved, cursor, seq_l111_beta ; LIT β
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r117_alpha:
-seq_r117_beta:              jmp         seq_l117_beta
+seq_r110_alpha:
+seq_r110_beta:              jmp         seq_l110_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_White_gamma:
                             jmp         [P_White_ret_γ]
@@ -10273,180 +10913,105 @@ patdef_White_gamma:
 patdef_White_omega:         jmp         [P_White_ret_ω]
 
 ; P_TxInList_α (α entry)
-P_TxInList_α:               jmp         seq_l120_alpha ; SEQ
-P_TxInList_β:               jmp         seq_r120_beta
-seq_l120_alpha:             jmp         seq_l121_alpha ; SEQ
-seq_l120_beta:              jmp         seq_r121_beta
-seq_l121_alpha:             ALT_ALPHA   alt122_cur_save, cursor, alt_l122_alpha ; ALT α — save cursor, enter left
-seq_l121_beta:              SEQ_BETA    alt_r122_beta ; ALT β — resume right
-alt_l122_alpha:             POS_ALPHA   0, cursor, seq_r121_alpha, alt122_left_omega ; POS(%ld)
-alt_l122_beta:              POS_BETA    cursor, alt122_left_omega
-alt122_left_omega:          ALT_OMEGA   alt122_cur_save, cursor, alt_r122_alpha ; ALT left_ω — restore cursor, enter right
-alt_r122_alpha:             LIT_ALPHA1  32, alt_r122_alpha_saved, cursor, subject_data, subject_len_val, seq_r121_alpha, patdef_TxInList_omega ; LIT α
-alt_r122_beta:              LIT_BETA    alt_r122_alpha_saved, cursor, patdef_TxInList_omega ; LIT β
+P_TxInList_α:               jmp         seq_l113_alpha ; SEQ
+P_TxInList_β:               jmp         seq_r113_beta
+seq_l113_alpha:             jmp         seq_l114_alpha ; SEQ
+seq_l113_beta:              jmp         seq_r114_beta
+seq_l114_alpha:             ALT_ALPHA   alt115_cur_save, cursor, alt_l115_alpha ; ALT α — save cursor, enter left
+seq_l114_beta:              SEQ_BETA    alt_r115_beta ; ALT β — resume right
+alt_l115_alpha:             POS_ALPHA   0, cursor, seq_r114_alpha, alt115_left_omega ; POS(%ld)
+alt_l115_beta:              POS_BETA    cursor, alt115_left_omega
+alt115_left_omega:          ALT_OMEGA   alt115_cur_save, cursor, alt_r115_alpha ; ALT left_ω — restore cursor, enter right
+alt_r115_alpha:             LIT_ALPHA1  32, alt_r115_alpha_saved, cursor, subject_data, subject_len_val, seq_r114_alpha, patdef_TxInList_omega ; LIT α
+alt_r115_beta:              LIT_BETA    alt_r115_alpha_saved, cursor, patdef_TxInList_omega ; LIT β
 
 ; E_INDR unresolved: upr → ω
-seq_r121_alpha:
-seq_r121_beta:              jmp         seq_l121_beta
-seq_r120_alpha:             ALT_ALPHA   alt123_cur_save, cursor, alt_l123_alpha ; ALT α — save cursor, enter left
-seq_r120_beta:              SEQ_BETA    alt_r123_beta ; ALT β — resume right
-alt_l123_alpha:             LIT_ALPHA1  32, alt_l123_alpha_saved, cursor, subject_data, subject_len_val, patdef_TxInList_gamma, alt123_left_omega ; LIT α
-alt_l123_beta:              LIT_BETA    alt_l123_alpha_saved, cursor, alt123_left_omega ; LIT β
-alt123_left_omega:          ALT_OMEGA   alt123_cur_save, cursor, alt_r123_alpha ; ALT left_ω — restore cursor, enter right
-alt_r123_alpha:             RPOS_ALPHA  0, cursor, subject_len_val, patdef_TxInList_gamma, seq_l120_beta ; RPOS(%ld)
-alt_r123_beta:              RPOS_BETA   cursor, seq_l120_beta
+seq_r114_alpha:
+seq_r114_beta:              jmp         seq_l114_beta
+seq_r113_alpha:             ALT_ALPHA   alt116_cur_save, cursor, alt_l116_alpha ; ALT α — save cursor, enter left
+seq_r113_beta:              SEQ_BETA    alt_r116_beta ; ALT β — resume right
+alt_l116_alpha:             LIT_ALPHA1  32, alt_l116_alpha_saved, cursor, subject_data, subject_len_val, patdef_TxInList_gamma, alt116_left_omega ; LIT α
+alt_l116_beta:              LIT_BETA    alt_l116_alpha_saved, cursor, alt116_left_omega ; LIT β
+alt116_left_omega:          ALT_OMEGA   alt116_cur_save, cursor, alt_r116_alpha ; ALT left_ω — restore cursor, enter right
+alt_r116_alpha:             RPOS_ALPHA  0, cursor, subject_len_val, patdef_TxInList_gamma, seq_l113_beta ; RPOS(%ld)
+alt_r116_beta:              RPOS_BETA   cursor, seq_l113_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_TxInList_gamma:
                             jmp         [P_TxInList_ret_γ]
 ;  TxInList ============================================================================================================
 patdef_TxInList_omega:      jmp         [P_TxInList_ret_ω]
 
-; P_ProtKwds_α (α entry)
-P_ProtKwds_α:               jmp         seq_l124_alpha ; SEQ
-P_ProtKwds_β:               jmp         seq_r124_beta
-seq_l124_alpha:             jmp         seq_l125_alpha ; SEQ
-seq_l124_beta:              jmp         seq_r125_beta
-seq_l125_alpha:             LIT_ALPHA   lit_str_14, 48, seq_l125_alpha_saved, cursor, subject_data, subject_len_val, seq_r125_alpha, patdef_ProtKwds_omega ; LIT α
-seq_l125_beta:              LIT_BETA    seq_l125_alpha_saved, cursor, patdef_ProtKwds_omega ; LIT β
-seq_r125_alpha:             LIT_ALPHA   lit_str_15, 48, seq_r125_alpha_saved, cursor, subject_data, subject_len_val, seq_r124_alpha, seq_l125_beta ; LIT α
-seq_r125_beta:              LIT_BETA    seq_r125_alpha_saved, cursor, seq_l125_beta ; LIT β
-seq_r124_alpha:             LIT_ALPHA   lit_str_16, 26, seq_r124_alpha_saved, cursor, subject_data, subject_len_val, patdef_ProtKwds_gamma, seq_l124_beta ; LIT α
-seq_r124_beta:              LIT_BETA    seq_r124_alpha_saved, cursor, seq_l124_beta ; LIT β
-;  γ/ω ---------------------------------------------------------------------------------------------------------------
-patdef_ProtKwds_gamma:
-                            jmp         [P_ProtKwds_ret_γ]
-;  ProtKwds ============================================================================================================
-patdef_ProtKwds_omega:      jmp         [P_ProtKwds_ret_ω]
-
-; P_UnprotKwds_α (α entry)
-P_UnprotKwds_α:             jmp         seq_l126_alpha ; SEQ
-P_UnprotKwds_β:             jmp         seq_r126_beta
-seq_l126_alpha:             jmp         seq_l127_alpha ; SEQ
-seq_l126_beta:              jmp         seq_r127_beta
-seq_l127_alpha:             LIT_ALPHA   lit_str_17, 45, seq_l127_alpha_saved, cursor, subject_data, subject_len_val, seq_r127_alpha, patdef_UnprotKwds_omega ; LIT α
-seq_l127_beta:              LIT_BETA    seq_l127_alpha_saved, cursor, patdef_UnprotKwds_omega ; LIT β
-seq_r127_alpha:             LIT_ALPHA   lit_str_18, 45, seq_r127_alpha_saved, cursor, subject_data, subject_len_val, seq_r126_alpha, seq_l127_beta ; LIT α
-seq_r127_beta:              LIT_BETA    seq_r127_alpha_saved, cursor, seq_l127_beta ; LIT β
-seq_r126_alpha:             LIT_ALPHA   lit_str_19, 35, seq_r126_alpha_saved, cursor, subject_data, subject_len_val, patdef_UnprotKwds_gamma, seq_l126_beta ; LIT α
-seq_r126_beta:              LIT_BETA    seq_r126_alpha_saved, cursor, seq_l126_beta ; LIT β
-;  γ/ω ---------------------------------------------------------------------------------------------------------------
-patdef_UnprotKwds_gamma:
-                            jmp         [P_UnprotKwds_ret_γ]
-;  UnprotKwds ==========================================================================================================
-patdef_UnprotKwds_omega:    jmp         [P_UnprotKwds_ret_ω]
-
-; P_Functions_α (α entry)
-P_Functions_α:              jmp         seq_l128_alpha ; SEQ
-P_Functions_β:              jmp         seq_r128_beta
-seq_l128_alpha:             jmp         seq_l129_alpha ; SEQ
-seq_l128_beta:              jmp         seq_r129_beta
-seq_l129_alpha:             jmp         seq_l130_alpha ; SEQ
-seq_l129_beta:              jmp         seq_r130_beta
-seq_l130_alpha:             jmp         seq_l131_alpha ; SEQ
-seq_l130_beta:              jmp         seq_r131_beta
-seq_l131_alpha:             jmp         seq_l132_alpha ; SEQ
-seq_l131_beta:              jmp         seq_r132_beta
-seq_l132_alpha:             jmp         seq_l133_alpha ; SEQ
-seq_l132_beta:              jmp         seq_r133_beta
-seq_l133_alpha:             jmp         seq_l134_alpha ; SEQ
-seq_l133_beta:              jmp         seq_r134_beta
-seq_l134_alpha:             jmp         seq_l135_alpha ; SEQ
-seq_l134_beta:              jmp         seq_r135_beta
-seq_l135_alpha:             LIT_ALPHA   lit_str_20, 54, seq_l135_alpha_saved, cursor, subject_data, subject_len_val, seq_r135_alpha, patdef_Functions_omega ; LIT α
-seq_l135_beta:              LIT_BETA    seq_l135_alpha_saved, cursor, patdef_Functions_omega ; LIT β
-seq_r135_alpha:             LIT_ALPHA   lit_str_21, 51, seq_r135_alpha_saved, cursor, subject_data, subject_len_val, seq_r134_alpha, seq_l135_beta ; LIT α
-seq_r135_beta:              LIT_BETA    seq_r135_alpha_saved, cursor, seq_l135_beta ; LIT β
-seq_r134_alpha:             LIT_ALPHA   lit_str_22, 51, seq_r134_alpha_saved, cursor, subject_data, subject_len_val, seq_r133_alpha, seq_l134_beta ; LIT α
-seq_r134_beta:              LIT_BETA    seq_r134_alpha_saved, cursor, seq_l134_beta ; LIT β
-seq_r133_alpha:             LIT_ALPHA   lit_str_23, 48, seq_r133_alpha_saved, cursor, subject_data, subject_len_val, seq_r132_alpha, seq_l133_beta ; LIT α
-seq_r133_beta:              LIT_BETA    seq_r133_alpha_saved, cursor, seq_l133_beta ; LIT β
-seq_r132_alpha:             LIT_ALPHA   lit_str_24, 48, seq_r132_alpha_saved, cursor, subject_data, subject_len_val, seq_r131_alpha, seq_l132_beta ; LIT α
-seq_r132_beta:              LIT_BETA    seq_r132_alpha_saved, cursor, seq_l132_beta ; LIT β
-seq_r131_alpha:             LIT_ALPHA   lit_str_25, 53, seq_r131_alpha_saved, cursor, subject_data, subject_len_val, seq_r130_alpha, seq_l131_beta ; LIT α
-seq_r131_beta:              LIT_BETA    seq_r131_alpha_saved, cursor, seq_l131_beta ; LIT β
-seq_r130_alpha:             LIT_ALPHA   lit_str_26, 53, seq_r130_alpha_saved, cursor, subject_data, subject_len_val, seq_r129_alpha, seq_l130_beta ; LIT α
-seq_r130_beta:              LIT_BETA    seq_r130_alpha_saved, cursor, seq_l130_beta ; LIT β
-seq_r129_alpha:             LIT_ALPHA   lit_str_27, 54, seq_r129_alpha_saved, cursor, subject_data, subject_len_val, seq_r128_alpha, seq_l129_beta ; LIT α
-seq_r129_beta:              LIT_BETA    seq_r129_alpha_saved, cursor, seq_l129_beta ; LIT β
-seq_r128_alpha:             LIT_ALPHA   lit_str_28, 43, seq_r128_alpha_saved, cursor, subject_data, subject_len_val, patdef_Functions_gamma, seq_l128_beta ; LIT α
-seq_r128_beta:              LIT_BETA    seq_r128_alpha_saved, cursor, seq_l128_beta ; LIT β
-;  γ/ω ---------------------------------------------------------------------------------------------------------------
-patdef_Functions_gamma:
-                            jmp         [P_Functions_ret_γ]
-;  Functions ===========================================================================================================
-patdef_Functions_omega:     jmp         [P_Functions_ret_ω]
-
 ; P_ExprList_α (α entry)
-P_ExprList_α:               jmp         seq_l136_alpha ; SEQ
-P_ExprList_β:               jmp         seq_r136_beta
-seq_l136_alpha:             jmp         seq_l137_alpha ; SEQ
-seq_l136_beta:              jmp         seq_r137_beta
-seq_l137_alpha:             jmp         seq_l138_alpha ; SEQ
-seq_l137_beta:              jmp         seq_r138_beta
+P_ExprList_α:               jmp         seq_l117_alpha ; SEQ
+P_ExprList_β:               jmp         seq_r117_beta
+seq_l117_alpha:             jmp         seq_l118_alpha ; SEQ
+seq_l117_beta:              jmp         seq_r118_beta
+seq_l118_alpha:             jmp         seq_l119_alpha ; SEQ
+seq_l118_beta:              jmp         seq_r119_beta
 
 ; UNIMPLEMENTED: nPush() → ω
-seq_l138_alpha:
-seq_l138_beta:              jmp         patdef_ExprList_omega
+seq_l119_alpha:
+seq_l119_beta:              jmp         patdef_ExprList_omega
 
-seq_r138_alpha: ; REF(XList)
-                            lea         rax, [rel nref139_gamma]
+seq_r119_alpha: ; REF(XList)
+                            lea         rax, [rel nref120_gamma]
                             mov         [P_XList_ret_γ], rax
-                            lea         rax, [rel nref139_omega]
+                            lea         rax, [rel nref120_omega]
                             mov         [P_XList_ret_ω], rax
                             jmp         P_XList_α
-seq_r138_beta:              lea         rax, [rel nref139_gamma] ; REF(%s)
+seq_r119_beta:              lea         rax, [rel nref120_gamma] ; REF(%s)
                             mov         [P_XList_ret_γ], rax
-                            lea         rax, [rel nref139_omega]
+                            lea         rax, [rel nref120_omega]
                             mov         [P_XList_ret_ω], rax
                             jmp         P_XList_β
 
-nref139_gamma:
-                            jmp         seq_r137_alpha
+nref120_gamma:
+                            jmp         seq_r118_alpha
 ;  ExprList ============================================================================================================
-nref139_omega:              jmp         seq_l138_beta
+nref120_omega:              jmp         seq_l119_beta
 
 ; UNIMPLEMENTED node kind 14 → ω
-seq_r137_alpha:
-seq_r137_beta:              jmp         seq_l137_beta
+seq_r118_alpha:
+seq_r118_beta:              jmp         seq_l118_beta
 
 ; UNIMPLEMENTED: nPop() → ω
-seq_r136_alpha:
-seq_r136_beta:              jmp         seq_l136_beta
+seq_r117_alpha:
+seq_r117_beta:              jmp         seq_l117_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_ExprList_gamma:
                             jmp         [P_ExprList_ret_γ]
 patdef_ExprList_omega:      jmp         [P_ExprList_ret_ω]
 
 ; P_XList_α (α entry)
-P_XList_α:                  jmp         seq_l140_alpha ; SEQ
-P_XList_β:                  jmp         seq_r140_beta
-seq_l140_alpha:             jmp         seq_l141_alpha ; SEQ
-seq_l140_beta:              jmp         seq_r141_beta
+P_XList_α:                  jmp         seq_l121_alpha ; SEQ
+P_XList_β:                  jmp         seq_r121_beta
+seq_l121_alpha:             jmp         seq_l122_alpha ; SEQ
+seq_l121_beta:              jmp         seq_r122_beta
 
 ; UNIMPLEMENTED: nInc() → ω
-seq_l141_alpha:
-seq_l141_beta:              jmp         patdef_XList_omega
-seq_r141_alpha:             ALT_ALPHA   alt142_cur_save, cursor, alt_l142_alpha ; ALT α — save cursor, enter left
-seq_r141_beta:              SEQ_BETA    alt_r142_beta ; ALT β — resume right
+seq_l122_alpha:
+seq_l122_beta:              jmp         patdef_XList_omega
+seq_r122_alpha:             ALT_ALPHA   alt123_cur_save, cursor, alt_l123_alpha ; ALT α — save cursor, enter left
+seq_r122_beta:              SEQ_BETA    alt_r123_beta ; ALT β — resume right
 
 ; E_INDR unresolved: Expr → ω
-alt_l142_alpha:
-alt_l142_beta:              jmp         alt142_left_omega
-alt142_left_omega:          ALT_OMEGA   alt142_cur_save, cursor, alt_r142_alpha ; ALT left_ω — restore cursor, enter right
+alt_l123_alpha:
+alt_l123_beta:              jmp         alt123_left_omega
+alt123_left_omega:          ALT_OMEGA   alt123_cur_save, cursor, alt_r123_alpha ; ALT left_ω — restore cursor, enter right
 
-alt_r142_alpha: ; DOL( $  v)
-                            DOL_SAVE    dol_entry_v, cursor, dol143_child_alpha ; DOL α — save entry cursor
-alt_r142_beta:              jmp         dol143_child_beta ; DOL β
+alt_r123_alpha: ; DOL( $  v)
+                            DOL_SAVE    dol_entry_v, cursor, dol124_child_alpha ; DOL α — save entry cursor
+alt_r123_beta:              jmp         dol124_child_beta ; DOL β
 
 ; UNRESOLVED named pattern ref: epsilon → ω
-dol143_child_alpha:
-dol143_child_beta:          jmp         dol143_omega
-dol143_gamma:               DOL_CAPTURE dol_entry_v, cursor, cap_v_buf, cap_v_len, subject_data, seq_r140_alpha ; DOL γ — capture span
-dol143_omega:               jmp         seq_l141_beta ; DOL ω — child failed
+dol124_child_alpha:
+dol124_child_beta:          jmp         dol124_omega
+dol124_gamma:               DOL_CAPTURE dol_entry_v, cursor, cap_v_buf, cap_v_len, subject_data, seq_r121_alpha ; DOL γ — capture span
+dol124_omega:               jmp         seq_l122_beta ; DOL ω — child failed
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r140_alpha:
-seq_r140_beta:              jmp         seq_l140_beta
+seq_r121_alpha:
+seq_r121_beta:              jmp         seq_l121_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_XList_gamma:
                             jmp         [P_XList_ret_γ]
@@ -10454,546 +11019,728 @@ patdef_XList_gamma:
 patdef_XList_omega:         jmp         [P_XList_ret_ω]
 
 ; P_Expr0_α (α entry)
-P_Expr0_α:                  jmp         seq_l144_alpha ; SEQ
-P_Expr0_β:                  jmp         seq_r144_beta
+P_Expr0_α:                  jmp         seq_l125_alpha ; SEQ
+P_Expr0_β:                  jmp         seq_r125_beta
 
-seq_l144_alpha: ; REF(Expr1)
-                            lea         rax, [rel nref145_gamma]
+seq_l125_alpha: ; REF(Expr1)
+                            lea         rax, [rel nref126_gamma]
                             mov         [P_Expr1_ret_γ], rax
-                            lea         rax, [rel nref145_omega]
+                            lea         rax, [rel nref126_omega]
                             mov         [P_Expr1_ret_ω], rax
                             jmp         P_Expr1_α
-seq_l144_beta:              lea         rax, [rel nref145_gamma] ; REF(%s)
+seq_l125_beta:              lea         rax, [rel nref126_gamma] ; REF(%s)
                             mov         [P_Expr1_ret_γ], rax
-                            lea         rax, [rel nref145_omega]
+                            lea         rax, [rel nref126_omega]
                             mov         [P_Expr1_ret_ω], rax
                             jmp         P_Expr1_β
 
-nref145_gamma:
-                            jmp         seq_r144_alpha
+nref126_gamma:
+                            jmp         seq_r125_alpha
 ;  Expr0 ===============================================================================================================
-nref145_omega:              jmp         patdef_Expr0_omega
+nref126_omega:              jmp         patdef_Expr0_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r144_alpha:
-seq_r144_beta:              jmp         seq_l144_beta
+seq_r125_alpha:
+seq_r125_beta:              jmp         seq_l125_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr0_gamma:
                             jmp         [P_Expr0_ret_γ]
 patdef_Expr0_omega:         jmp         [P_Expr0_ret_ω]
 
 ; P_Expr1_α (α entry)
-P_Expr1_α:                  jmp         seq_l146_alpha ; SEQ
-P_Expr1_β:                  jmp         seq_r146_beta
+P_Expr1_α:                  jmp         seq_l127_alpha ; SEQ
+P_Expr1_β:                  jmp         seq_r127_beta
 
-seq_l146_alpha: ; REF(Expr2)
-                            lea         rax, [rel nref147_gamma]
+seq_l127_alpha: ; REF(Expr2)
+                            lea         rax, [rel nref128_gamma]
                             mov         [P_Expr2_ret_γ], rax
-                            lea         rax, [rel nref147_omega]
+                            lea         rax, [rel nref128_omega]
                             mov         [P_Expr2_ret_ω], rax
                             jmp         P_Expr2_α
-seq_l146_beta:              lea         rax, [rel nref147_gamma] ; REF(%s)
+seq_l127_beta:              lea         rax, [rel nref128_gamma] ; REF(%s)
                             mov         [P_Expr2_ret_γ], rax
-                            lea         rax, [rel nref147_omega]
+                            lea         rax, [rel nref128_omega]
                             mov         [P_Expr2_ret_ω], rax
                             jmp         P_Expr2_β
 
-nref147_gamma:
-                            jmp         seq_r146_alpha
+nref128_gamma:
+                            jmp         seq_r127_alpha
 ;  Expr1 ===============================================================================================================
-nref147_omega:              jmp         patdef_Expr1_omega
+nref128_omega:              jmp         patdef_Expr1_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r146_alpha:
-seq_r146_beta:              jmp         seq_l146_beta
+seq_r127_alpha:
+seq_r127_beta:              jmp         seq_l127_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr1_gamma:
                             jmp         [P_Expr1_ret_γ]
 patdef_Expr1_omega:         jmp         [P_Expr1_ret_ω]
 
 ; P_Expr2_α (α entry)
-P_Expr2_α:                  jmp         seq_l148_alpha ; SEQ
-P_Expr2_β:                  jmp         seq_r148_beta
+P_Expr2_α:                  jmp         seq_l129_alpha ; SEQ
+P_Expr2_β:                  jmp         seq_r129_beta
 
-seq_l148_alpha: ; REF(Expr3)
-                            lea         rax, [rel nref149_gamma]
+seq_l129_alpha: ; REF(Expr3)
+                            lea         rax, [rel nref130_gamma]
                             mov         [P_Expr3_ret_γ], rax
-                            lea         rax, [rel nref149_omega]
+                            lea         rax, [rel nref130_omega]
                             mov         [P_Expr3_ret_ω], rax
                             jmp         P_Expr3_α
-seq_l148_beta:              lea         rax, [rel nref149_gamma] ; REF(%s)
+seq_l129_beta:              lea         rax, [rel nref130_gamma] ; REF(%s)
                             mov         [P_Expr3_ret_γ], rax
-                            lea         rax, [rel nref149_omega]
+                            lea         rax, [rel nref130_omega]
                             mov         [P_Expr3_ret_ω], rax
                             jmp         P_Expr3_β
 
-nref149_gamma:
-                            jmp         seq_r148_alpha
+nref130_gamma:
+                            jmp         seq_r129_alpha
 ;  Expr2 ===============================================================================================================
-nref149_omega:              jmp         patdef_Expr2_omega
+nref130_omega:              jmp         patdef_Expr2_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r148_alpha:
-seq_r148_beta:              jmp         seq_l148_beta
+seq_r129_alpha:
+seq_r129_beta:              jmp         seq_l129_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr2_gamma:
                             jmp         [P_Expr2_ret_γ]
 patdef_Expr2_omega:         jmp         [P_Expr2_ret_ω]
 
 ; P_Expr3_α (α entry)
-P_Expr3_α:                  jmp         seq_l150_alpha ; SEQ
-P_Expr3_β:                  jmp         seq_r150_beta
-seq_l150_alpha:             jmp         seq_l151_alpha ; SEQ
-seq_l150_beta:              jmp         seq_r151_beta
-seq_l151_alpha:             jmp         seq_l152_alpha ; SEQ
-seq_l151_beta:              jmp         seq_r152_beta
+P_Expr3_α:                  jmp         seq_l131_alpha ; SEQ
+P_Expr3_β:                  jmp         seq_r131_beta
+seq_l131_alpha:             jmp         seq_l132_alpha ; SEQ
+seq_l131_beta:              jmp         seq_r132_beta
+seq_l132_alpha:             jmp         seq_l133_alpha ; SEQ
+seq_l132_beta:              jmp         seq_r133_beta
 
 ; UNIMPLEMENTED: nPush() → ω
-seq_l152_alpha:
-seq_l152_beta:              jmp         patdef_Expr3_omega
+seq_l133_alpha:
+seq_l133_beta:              jmp         patdef_Expr3_omega
 
-seq_r152_alpha: ; REF(X3)
-                            lea         rax, [rel nref153_gamma]
+seq_r133_alpha: ; REF(X3)
+                            lea         rax, [rel nref134_gamma]
                             mov         [P_X3_ret_γ], rax
-                            lea         rax, [rel nref153_omega]
+                            lea         rax, [rel nref134_omega]
                             mov         [P_X3_ret_ω], rax
                             jmp         P_X3_α
-seq_r152_beta:              lea         rax, [rel nref153_gamma] ; REF(%s)
+seq_r133_beta:              lea         rax, [rel nref134_gamma] ; REF(%s)
                             mov         [P_X3_ret_γ], rax
-                            lea         rax, [rel nref153_omega]
+                            lea         rax, [rel nref134_omega]
                             mov         [P_X3_ret_ω], rax
                             jmp         P_X3_β
 
-nref153_gamma:
-                            jmp         seq_r151_alpha
+nref134_gamma:
+                            jmp         seq_r132_alpha
 ;  Expr3 ===============================================================================================================
-nref153_omega:              jmp         seq_l152_beta
+nref134_omega:              jmp         seq_l133_beta
 
 ; UNIMPLEMENTED node kind 14 → ω
-seq_r151_alpha:
-seq_r151_beta:              jmp         seq_l151_beta
+seq_r132_alpha:
+seq_r132_beta:              jmp         seq_l132_beta
 
 ; UNIMPLEMENTED: nPop() → ω
-seq_r150_alpha:
-seq_r150_beta:              jmp         seq_l150_beta
+seq_r131_alpha:
+seq_r131_beta:              jmp         seq_l131_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr3_gamma:
                             jmp         [P_Expr3_ret_γ]
 patdef_Expr3_omega:         jmp         [P_Expr3_ret_ω]
 
 ; P_X3_α (α entry)
-P_X3_α:                     jmp         seq_l154_alpha ; SEQ
-P_X3_β:                     jmp         seq_r154_beta
-seq_l154_alpha:             jmp         seq_l155_alpha ; SEQ
-seq_l154_beta:              jmp         seq_r155_beta
+P_X3_α:                     jmp         seq_l135_alpha ; SEQ
+P_X3_β:                     jmp         seq_r135_beta
+seq_l135_alpha:             jmp         seq_l136_alpha ; SEQ
+seq_l135_beta:              jmp         seq_r136_beta
 
 ; UNIMPLEMENTED: nInc() → ω
-seq_l155_alpha:
-seq_l155_beta:              jmp         patdef_X3_omega
+seq_l136_alpha:
+seq_l136_beta:              jmp         patdef_X3_omega
 
-seq_r155_alpha: ; REF(Expr4)
-                            lea         rax, [rel nref156_gamma]
+seq_r136_alpha: ; REF(Expr4)
+                            lea         rax, [rel nref137_gamma]
                             mov         [P_Expr4_ret_γ], rax
-                            lea         rax, [rel nref156_omega]
+                            lea         rax, [rel nref137_omega]
                             mov         [P_Expr4_ret_ω], rax
                             jmp         P_Expr4_α
-seq_r155_beta:              lea         rax, [rel nref156_gamma] ; REF(%s)
+seq_r136_beta:              lea         rax, [rel nref137_gamma] ; REF(%s)
                             mov         [P_Expr4_ret_γ], rax
-                            lea         rax, [rel nref156_omega]
+                            lea         rax, [rel nref137_omega]
                             mov         [P_Expr4_ret_ω], rax
                             jmp         P_Expr4_β
 
-nref156_gamma:
-                            jmp         seq_r154_alpha
+nref137_gamma:
+                            jmp         seq_r135_alpha
 ;  X3 ==================================================================================================================
-nref156_omega:              jmp         seq_l155_beta
+nref137_omega:              jmp         seq_l136_beta
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r154_alpha:
-seq_r154_beta:              jmp         seq_l154_beta
+seq_r135_alpha:
+seq_r135_beta:              jmp         seq_l135_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_X3_gamma:
                             jmp         [P_X3_ret_γ]
 patdef_X3_omega:            jmp         [P_X3_ret_ω]
 
 ; P_Expr4_α (α entry)
-P_Expr4_α:                  jmp         seq_l157_alpha ; SEQ
-P_Expr4_β:                  jmp         seq_r157_beta
-seq_l157_alpha:             jmp         seq_l158_alpha ; SEQ
-seq_l157_beta:              jmp         seq_r158_beta
-seq_l158_alpha:             jmp         seq_l159_alpha ; SEQ
-seq_l158_beta:              jmp         seq_r159_beta
+P_Expr4_α:                  jmp         seq_l138_alpha ; SEQ
+P_Expr4_β:                  jmp         seq_r138_beta
+seq_l138_alpha:             jmp         seq_l139_alpha ; SEQ
+seq_l138_beta:              jmp         seq_r139_beta
+seq_l139_alpha:             jmp         seq_l140_alpha ; SEQ
+seq_l139_beta:              jmp         seq_r140_beta
 
 ; UNIMPLEMENTED: nPush() → ω
-seq_l159_alpha:
-seq_l159_beta:              jmp         patdef_Expr4_omega
+seq_l140_alpha:
+seq_l140_beta:              jmp         patdef_Expr4_omega
 
-seq_r159_alpha: ; REF(X4)
-                            lea         rax, [rel nref160_gamma]
+seq_r140_alpha: ; REF(X4)
+                            lea         rax, [rel nref141_gamma]
                             mov         [P_X4_ret_γ], rax
-                            lea         rax, [rel nref160_omega]
+                            lea         rax, [rel nref141_omega]
                             mov         [P_X4_ret_ω], rax
                             jmp         P_X4_α
-seq_r159_beta:              lea         rax, [rel nref160_gamma] ; REF(%s)
+seq_r140_beta:              lea         rax, [rel nref141_gamma] ; REF(%s)
                             mov         [P_X4_ret_γ], rax
-                            lea         rax, [rel nref160_omega]
+                            lea         rax, [rel nref141_omega]
                             mov         [P_X4_ret_ω], rax
                             jmp         P_X4_β
 
-nref160_gamma:
-                            jmp         seq_r158_alpha
+nref141_gamma:
+                            jmp         seq_r139_alpha
 ;  Expr4 ===============================================================================================================
-nref160_omega:              jmp         seq_l159_beta
+nref141_omega:              jmp         seq_l140_beta
 
 ; UNIMPLEMENTED node kind 14 → ω
-seq_r158_alpha:
-seq_r158_beta:              jmp         seq_l158_beta
+seq_r139_alpha:
+seq_r139_beta:              jmp         seq_l139_beta
 
 ; UNIMPLEMENTED: nPop() → ω
-seq_r157_alpha:
-seq_r157_beta:              jmp         seq_l157_beta
+seq_r138_alpha:
+seq_r138_beta:              jmp         seq_l138_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr4_gamma:
                             jmp         [P_Expr4_ret_γ]
 patdef_Expr4_omega:         jmp         [P_Expr4_ret_ω]
 
 ; P_X4_α (α entry)
-P_X4_α:                     jmp         seq_l161_alpha ; SEQ
-P_X4_β:                     jmp         seq_r161_beta
-seq_l161_alpha:             jmp         seq_l162_alpha ; SEQ
-seq_l161_beta:              jmp         seq_r162_beta
+P_X4_α:                     jmp         seq_l142_alpha ; SEQ
+P_X4_β:                     jmp         seq_r142_beta
+seq_l142_alpha:             jmp         seq_l143_alpha ; SEQ
+seq_l142_beta:              jmp         seq_r143_beta
 
 ; UNIMPLEMENTED: nInc() → ω
-seq_l162_alpha:
-seq_l162_beta:              jmp         patdef_X4_omega
+seq_l143_alpha:
+seq_l143_beta:              jmp         patdef_X4_omega
 
-seq_r162_alpha: ; REF(Expr5)
-                            lea         rax, [rel nref163_gamma]
+seq_r143_alpha: ; REF(Expr5)
+                            lea         rax, [rel nref144_gamma]
                             mov         [P_Expr5_ret_γ], rax
-                            lea         rax, [rel nref163_omega]
+                            lea         rax, [rel nref144_omega]
                             mov         [P_Expr5_ret_ω], rax
                             jmp         P_Expr5_α
-seq_r162_beta:              lea         rax, [rel nref163_gamma] ; REF(%s)
+seq_r143_beta:              lea         rax, [rel nref144_gamma] ; REF(%s)
                             mov         [P_Expr5_ret_γ], rax
-                            lea         rax, [rel nref163_omega]
+                            lea         rax, [rel nref144_omega]
                             mov         [P_Expr5_ret_ω], rax
                             jmp         P_Expr5_β
 
-nref163_gamma:
-                            jmp         seq_r161_alpha
+nref144_gamma:
+                            jmp         seq_r142_alpha
 ;  X4 ==================================================================================================================
-nref163_omega:              jmp         seq_l162_beta
+nref144_omega:              jmp         seq_l143_beta
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r161_alpha:
-seq_r161_beta:              jmp         seq_l161_beta
+seq_r142_alpha:
+seq_r142_beta:              jmp         seq_l142_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_X4_gamma:
                             jmp         [P_X4_ret_γ]
 patdef_X4_omega:            jmp         [P_X4_ret_ω]
 
 ; P_Expr5_α (α entry)
-P_Expr5_α:                  jmp         seq_l164_alpha ; SEQ
-P_Expr5_β:                  jmp         seq_r164_beta
+P_Expr5_α:                  jmp         seq_l145_alpha ; SEQ
+P_Expr5_β:                  jmp         seq_r145_beta
 
-seq_l164_alpha: ; REF(Expr6)
-                            lea         rax, [rel nref165_gamma]
+seq_l145_alpha: ; REF(Expr6)
+                            lea         rax, [rel nref146_gamma]
                             mov         [P_Expr6_ret_γ], rax
-                            lea         rax, [rel nref165_omega]
+                            lea         rax, [rel nref146_omega]
                             mov         [P_Expr6_ret_ω], rax
                             jmp         P_Expr6_α
-seq_l164_beta:              lea         rax, [rel nref165_gamma] ; REF(%s)
+seq_l145_beta:              lea         rax, [rel nref146_gamma] ; REF(%s)
                             mov         [P_Expr6_ret_γ], rax
-                            lea         rax, [rel nref165_omega]
+                            lea         rax, [rel nref146_omega]
                             mov         [P_Expr6_ret_ω], rax
                             jmp         P_Expr6_β
 
-nref165_gamma:
-                            jmp         seq_r164_alpha
+nref146_gamma:
+                            jmp         seq_r145_alpha
 ;  Expr5 ===============================================================================================================
-nref165_omega:              jmp         patdef_Expr5_omega
+nref146_omega:              jmp         patdef_Expr5_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r164_alpha:
-seq_r164_beta:              jmp         seq_l164_beta
+seq_r145_alpha:
+seq_r145_beta:              jmp         seq_l145_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr5_gamma:
                             jmp         [P_Expr5_ret_γ]
 patdef_Expr5_omega:         jmp         [P_Expr5_ret_ω]
 
 ; P_Expr6_α (α entry)
-P_Expr6_α:                  jmp         seq_l166_alpha ; SEQ
-P_Expr6_β:                  jmp         seq_r166_beta
+P_Expr6_α:                  jmp         seq_l147_alpha ; SEQ
+P_Expr6_β:                  jmp         seq_r147_beta
 
-seq_l166_alpha: ; REF(Expr7)
-                            lea         rax, [rel nref167_gamma]
+seq_l147_alpha: ; REF(Expr7)
+                            lea         rax, [rel nref148_gamma]
                             mov         [P_Expr7_ret_γ], rax
-                            lea         rax, [rel nref167_omega]
+                            lea         rax, [rel nref148_omega]
                             mov         [P_Expr7_ret_ω], rax
                             jmp         P_Expr7_α
-seq_l166_beta:              lea         rax, [rel nref167_gamma] ; REF(%s)
+seq_l147_beta:              lea         rax, [rel nref148_gamma] ; REF(%s)
                             mov         [P_Expr7_ret_γ], rax
-                            lea         rax, [rel nref167_omega]
+                            lea         rax, [rel nref148_omega]
                             mov         [P_Expr7_ret_ω], rax
                             jmp         P_Expr7_β
 
-nref167_gamma:
-                            jmp         seq_r166_alpha
+nref148_gamma:
+                            jmp         seq_r147_alpha
 ;  Expr6 ===============================================================================================================
-nref167_omega:              jmp         patdef_Expr6_omega
+nref148_omega:              jmp         patdef_Expr6_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r166_alpha:
-seq_r166_beta:              jmp         seq_l166_beta
+seq_r147_alpha:
+seq_r147_beta:              jmp         seq_l147_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr6_gamma:
                             jmp         [P_Expr6_ret_γ]
 patdef_Expr6_omega:         jmp         [P_Expr6_ret_ω]
 
 ; P_Expr7_α (α entry)
-P_Expr7_α:                  jmp         seq_l168_alpha ; SEQ
-P_Expr7_β:                  jmp         seq_r168_beta
+P_Expr7_α:                  jmp         seq_l149_alpha ; SEQ
+P_Expr7_β:                  jmp         seq_r149_beta
 
-seq_l168_alpha: ; REF(Expr8)
-                            lea         rax, [rel nref169_gamma]
+seq_l149_alpha: ; REF(Expr8)
+                            lea         rax, [rel nref150_gamma]
                             mov         [P_Expr8_ret_γ], rax
-                            lea         rax, [rel nref169_omega]
+                            lea         rax, [rel nref150_omega]
                             mov         [P_Expr8_ret_ω], rax
                             jmp         P_Expr8_α
-seq_l168_beta:              lea         rax, [rel nref169_gamma] ; REF(%s)
+seq_l149_beta:              lea         rax, [rel nref150_gamma] ; REF(%s)
                             mov         [P_Expr8_ret_γ], rax
-                            lea         rax, [rel nref169_omega]
+                            lea         rax, [rel nref150_omega]
                             mov         [P_Expr8_ret_ω], rax
                             jmp         P_Expr8_β
 
-nref169_gamma:
-                            jmp         seq_r168_alpha
+nref150_gamma:
+                            jmp         seq_r149_alpha
 ;  Expr7 ===============================================================================================================
-nref169_omega:              jmp         patdef_Expr7_omega
+nref150_omega:              jmp         patdef_Expr7_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r168_alpha:
-seq_r168_beta:              jmp         seq_l168_beta
+seq_r149_alpha:
+seq_r149_beta:              jmp         seq_l149_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr7_gamma:
                             jmp         [P_Expr7_ret_γ]
 patdef_Expr7_omega:         jmp         [P_Expr7_ret_ω]
 
 ; P_Expr8_α (α entry)
-P_Expr8_α:                  jmp         seq_l170_alpha ; SEQ
-P_Expr8_β:                  jmp         seq_r170_beta
+P_Expr8_α:                  jmp         seq_l151_alpha ; SEQ
+P_Expr8_β:                  jmp         seq_r151_beta
 
-seq_l170_alpha: ; REF(Expr9)
-                            lea         rax, [rel nref171_gamma]
+seq_l151_alpha: ; REF(Expr9)
+                            lea         rax, [rel nref152_gamma]
                             mov         [P_Expr9_ret_γ], rax
-                            lea         rax, [rel nref171_omega]
+                            lea         rax, [rel nref152_omega]
                             mov         [P_Expr9_ret_ω], rax
                             jmp         P_Expr9_α
-seq_l170_beta:              lea         rax, [rel nref171_gamma] ; REF(%s)
+seq_l151_beta:              lea         rax, [rel nref152_gamma] ; REF(%s)
                             mov         [P_Expr9_ret_γ], rax
-                            lea         rax, [rel nref171_omega]
+                            lea         rax, [rel nref152_omega]
                             mov         [P_Expr9_ret_ω], rax
                             jmp         P_Expr9_β
 
-nref171_gamma:
-                            jmp         seq_r170_alpha
+nref152_gamma:
+                            jmp         seq_r151_alpha
 ;  Expr8 ===============================================================================================================
-nref171_omega:              jmp         patdef_Expr8_omega
+nref152_omega:              jmp         patdef_Expr8_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r170_alpha:
-seq_r170_beta:              jmp         seq_l170_beta
+seq_r151_alpha:
+seq_r151_beta:              jmp         seq_l151_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr8_gamma:
                             jmp         [P_Expr8_ret_γ]
 patdef_Expr8_omega:         jmp         [P_Expr8_ret_ω]
 
 ; P_Expr9_α (α entry)
-P_Expr9_α:                  jmp         seq_l172_alpha ; SEQ
-P_Expr9_β:                  jmp         seq_r172_beta
+P_Expr9_α:                  jmp         seq_l153_alpha ; SEQ
+P_Expr9_β:                  jmp         seq_r153_beta
 
-seq_l172_alpha: ; REF(Expr10)
-                            lea         rax, [rel nref173_gamma]
+seq_l153_alpha: ; REF(Expr10)
+                            lea         rax, [rel nref154_gamma]
                             mov         [P_Expr10_ret_γ], rax
-                            lea         rax, [rel nref173_omega]
+                            lea         rax, [rel nref154_omega]
                             mov         [P_Expr10_ret_ω], rax
                             jmp         P_Expr10_α
-seq_l172_beta:              lea         rax, [rel nref173_gamma] ; REF(%s)
+seq_l153_beta:              lea         rax, [rel nref154_gamma] ; REF(%s)
                             mov         [P_Expr10_ret_γ], rax
-                            lea         rax, [rel nref173_omega]
+                            lea         rax, [rel nref154_omega]
                             mov         [P_Expr10_ret_ω], rax
                             jmp         P_Expr10_β
 
-nref173_gamma:
-                            jmp         seq_r172_alpha
+nref154_gamma:
+                            jmp         seq_r153_alpha
 ;  Expr9 ===============================================================================================================
-nref173_omega:              jmp         patdef_Expr9_omega
+nref154_omega:              jmp         patdef_Expr9_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r172_alpha:
-seq_r172_beta:              jmp         seq_l172_beta
+seq_r153_alpha:
+seq_r153_beta:              jmp         seq_l153_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr9_gamma:
                             jmp         [P_Expr9_ret_γ]
 patdef_Expr9_omega:         jmp         [P_Expr9_ret_ω]
 
 ; P_Expr10_α (α entry)
-P_Expr10_α:                 jmp         seq_l174_alpha ; SEQ
-P_Expr10_β:                 jmp         seq_r174_beta
+P_Expr10_α:                 jmp         seq_l155_alpha ; SEQ
+P_Expr10_β:                 jmp         seq_r155_beta
 
-seq_l174_alpha: ; REF(Expr11)
-                            lea         rax, [rel nref175_gamma]
+seq_l155_alpha: ; REF(Expr11)
+                            lea         rax, [rel nref156_gamma]
                             mov         [P_Expr11_ret_γ], rax
-                            lea         rax, [rel nref175_omega]
+                            lea         rax, [rel nref156_omega]
                             mov         [P_Expr11_ret_ω], rax
                             jmp         P_Expr11_α
-seq_l174_beta:              lea         rax, [rel nref175_gamma] ; REF(%s)
+seq_l155_beta:              lea         rax, [rel nref156_gamma] ; REF(%s)
                             mov         [P_Expr11_ret_γ], rax
-                            lea         rax, [rel nref175_omega]
+                            lea         rax, [rel nref156_omega]
                             mov         [P_Expr11_ret_ω], rax
                             jmp         P_Expr11_β
 
-nref175_gamma:
-                            jmp         seq_r174_alpha
+nref156_gamma:
+                            jmp         seq_r155_alpha
 ;  Expr10 ==============================================================================================================
-nref175_omega:              jmp         patdef_Expr10_omega
+nref156_omega:              jmp         patdef_Expr10_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r174_alpha:
-seq_r174_beta:              jmp         seq_l174_beta
+seq_r155_alpha:
+seq_r155_beta:              jmp         seq_l155_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr10_gamma:
                             jmp         [P_Expr10_ret_γ]
 patdef_Expr10_omega:        jmp         [P_Expr10_ret_ω]
 
 ; P_Expr11_α (α entry)
-P_Expr11_α:                 jmp         seq_l176_alpha ; SEQ
-P_Expr11_β:                 jmp         seq_r176_beta
+P_Expr11_α:                 jmp         seq_l157_alpha ; SEQ
+P_Expr11_β:                 jmp         seq_r157_beta
 
-seq_l176_alpha: ; REF(Expr12)
-                            lea         rax, [rel nref177_gamma]
+seq_l157_alpha: ; REF(Expr12)
+                            lea         rax, [rel nref158_gamma]
                             mov         [P_Expr12_ret_γ], rax
-                            lea         rax, [rel nref177_omega]
+                            lea         rax, [rel nref158_omega]
                             mov         [P_Expr12_ret_ω], rax
                             jmp         P_Expr12_α
-seq_l176_beta:              lea         rax, [rel nref177_gamma] ; REF(%s)
+seq_l157_beta:              lea         rax, [rel nref158_gamma] ; REF(%s)
                             mov         [P_Expr12_ret_γ], rax
-                            lea         rax, [rel nref177_omega]
+                            lea         rax, [rel nref158_omega]
                             mov         [P_Expr12_ret_ω], rax
                             jmp         P_Expr12_β
 
-nref177_gamma:
-                            jmp         seq_r176_alpha
+nref158_gamma:
+                            jmp         seq_r157_alpha
 ;  Expr11 ==============================================================================================================
-nref177_omega:              jmp         patdef_Expr11_omega
+nref158_omega:              jmp         patdef_Expr11_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r176_alpha:
-seq_r176_beta:              jmp         seq_l176_beta
+seq_r157_alpha:
+seq_r157_beta:              jmp         seq_l157_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr11_gamma:
                             jmp         [P_Expr11_ret_γ]
 patdef_Expr11_omega:        jmp         [P_Expr11_ret_ω]
 
 ; P_Expr12_α (α entry)
-P_Expr12_α:                 jmp         seq_l178_alpha ; SEQ
-P_Expr12_β:                 jmp         seq_r178_beta
+P_Expr12_α:                 jmp         seq_l159_alpha ; SEQ
+P_Expr12_β:                 jmp         seq_r159_beta
 
-seq_l178_alpha: ; REF(Expr13)
-                            lea         rax, [rel nref179_gamma]
+seq_l159_alpha: ; REF(Expr13)
+                            lea         rax, [rel nref160_gamma]
                             mov         [P_Expr13_ret_γ], rax
-                            lea         rax, [rel nref179_omega]
+                            lea         rax, [rel nref160_omega]
                             mov         [P_Expr13_ret_ω], rax
                             jmp         P_Expr13_α
-seq_l178_beta:              lea         rax, [rel nref179_gamma] ; REF(%s)
+seq_l159_beta:              lea         rax, [rel nref160_gamma] ; REF(%s)
                             mov         [P_Expr13_ret_γ], rax
-                            lea         rax, [rel nref179_omega]
+                            lea         rax, [rel nref160_omega]
                             mov         [P_Expr13_ret_ω], rax
                             jmp         P_Expr13_β
 
-nref179_gamma:
-                            jmp         seq_r178_alpha
+nref160_gamma:
+                            jmp         seq_r159_alpha
 ;  Expr12 ==============================================================================================================
-nref179_omega:              jmp         patdef_Expr12_omega
+nref160_omega:              jmp         patdef_Expr12_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r178_alpha:
-seq_r178_beta:              jmp         seq_l178_beta
+seq_r159_alpha:
+seq_r159_beta:              jmp         seq_l159_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr12_gamma:
                             jmp         [P_Expr12_ret_γ]
 patdef_Expr12_omega:        jmp         [P_Expr12_ret_ω]
 
 ; P_Expr13_α (α entry)
-P_Expr13_α:                 jmp         seq_l180_alpha ; SEQ
-P_Expr13_β:                 jmp         seq_r180_beta
+P_Expr13_α:                 jmp         seq_l161_alpha ; SEQ
+P_Expr13_β:                 jmp         seq_r161_beta
 
-seq_l180_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref181_gamma]
+seq_l161_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref162_gamma]
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref181_omega]
+                            lea         rax, [rel nref162_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_α
-seq_l180_beta:              lea         rax, [rel nref181_gamma] ; REF(%s)
+seq_l161_beta:              lea         rax, [rel nref162_gamma] ; REF(%s)
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref181_omega]
+                            lea         rax, [rel nref162_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_β
 
-nref181_gamma:
-                            jmp         seq_r180_alpha
+nref162_gamma:
+                            jmp         seq_r161_alpha
 ;  Expr13 ==============================================================================================================
-nref181_omega:              jmp         patdef_Expr13_omega
+nref162_omega:              jmp         patdef_Expr13_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r180_alpha:
-seq_r180_beta:              jmp         seq_l180_beta
+seq_r161_alpha:
+seq_r161_beta:              jmp         seq_l161_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr13_gamma:
                             jmp         [P_Expr13_ret_γ]
 patdef_Expr13_omega:        jmp         [P_Expr13_ret_ω]
 
 ; P_Expr14_α (α entry)
-P_Expr14_α:                 ALT_ALPHA   alt182_cur_save, cursor, alt_l182_alpha ; ALT α — save cursor, enter left
-P_Expr14_β:                 SEQ_BETA    alt_r182_beta ; ALT β — resume right
-alt_l182_alpha:             ALT_ALPHA   alt183_cur_save, cursor, alt_l183_alpha ; ALT α — save cursor, enter left
-alt_l182_beta:              SEQ_BETA    alt_r183_beta ; ALT β — resume right
-alt_l183_alpha:             ALT_ALPHA   alt184_cur_save, cursor, alt_l184_alpha ; ALT α — save cursor, enter left
-alt_l183_beta:              SEQ_BETA    alt_r184_beta ; ALT β — resume right
-alt_l184_alpha:             ALT_ALPHA   alt185_cur_save, cursor, alt_l185_alpha ; ALT α — save cursor, enter left
-alt_l184_beta:              SEQ_BETA    alt_r185_beta ; ALT β — resume right
-alt_l185_alpha:             ALT_ALPHA   alt186_cur_save, cursor, alt_l186_alpha ; ALT α — save cursor, enter left
-alt_l185_beta:              SEQ_BETA    alt_r186_beta ; ALT β — resume right
-alt_l186_alpha:             ALT_ALPHA   alt187_cur_save, cursor, alt_l187_alpha ; ALT α — save cursor, enter left
-alt_l186_beta:              SEQ_BETA    alt_r187_beta ; ALT β — resume right
-alt_l187_alpha:             ALT_ALPHA   alt188_cur_save, cursor, alt_l188_alpha ; ALT α — save cursor, enter left
-alt_l187_beta:              SEQ_BETA    alt_r188_beta ; ALT β — resume right
-alt_l188_alpha:             ALT_ALPHA   alt189_cur_save, cursor, alt_l189_alpha ; ALT α — save cursor, enter left
-alt_l188_beta:              SEQ_BETA    alt_r189_beta ; ALT β — resume right
-alt_l189_alpha:             ALT_ALPHA   alt190_cur_save, cursor, alt_l190_alpha ; ALT α — save cursor, enter left
-alt_l189_beta:              SEQ_BETA    alt_r190_beta ; ALT β — resume right
-alt_l190_alpha:             ALT_ALPHA   alt191_cur_save, cursor, alt_l191_alpha ; ALT α — save cursor, enter left
-alt_l190_beta:              SEQ_BETA    alt_r191_beta ; ALT β — resume right
-alt_l191_alpha:             ALT_ALPHA   alt192_cur_save, cursor, alt_l192_alpha ; ALT α — save cursor, enter left
-alt_l191_beta:              SEQ_BETA    alt_r192_beta ; ALT β — resume right
-alt_l192_alpha:             ALT_ALPHA   alt193_cur_save, cursor, alt_l193_alpha ; ALT α — save cursor, enter left
-alt_l192_beta:              SEQ_BETA    alt_r193_beta ; ALT β — resume right
-alt_l193_alpha:             ALT_ALPHA   alt194_cur_save, cursor, alt_l194_alpha ; ALT α — save cursor, enter left
-alt_l193_beta:              SEQ_BETA    alt_r194_beta ; ALT β — resume right
-alt_l194_alpha:             ALT_ALPHA   alt195_cur_save, cursor, alt_l195_alpha ; ALT α — save cursor, enter left
-alt_l194_beta:              SEQ_BETA    alt_r195_beta ; ALT β — resume right
-alt_l195_alpha:             ALT_ALPHA   alt196_cur_save, cursor, alt_l196_alpha ; ALT α — save cursor, enter left
-alt_l195_beta:              SEQ_BETA    alt_r196_beta ; ALT β — resume right
-alt_l196_alpha:             ALT_ALPHA   alt197_cur_save, cursor, alt_l197_alpha ; ALT α — save cursor, enter left
-alt_l196_beta:              SEQ_BETA    alt_r197_beta ; ALT β — resume right
-alt_l197_alpha:             ALT_ALPHA   alt198_cur_save, cursor, alt_l198_alpha ; ALT α — save cursor, enter left
-alt_l197_beta:              SEQ_BETA    alt_r198_beta ; ALT β — resume right
-alt_l198_alpha:             jmp         seq_l199_alpha ; SEQ
-alt_l198_beta:              jmp         seq_r199_beta
+P_Expr14_α:                 ALT_ALPHA   alt163_cur_save, cursor, alt_l163_alpha ; ALT α — save cursor, enter left
+P_Expr14_β:                 SEQ_BETA    alt_r163_beta ; ALT β — resume right
+alt_l163_alpha:             ALT_ALPHA   alt164_cur_save, cursor, alt_l164_alpha ; ALT α — save cursor, enter left
+alt_l163_beta:              SEQ_BETA    alt_r164_beta ; ALT β — resume right
+alt_l164_alpha:             ALT_ALPHA   alt165_cur_save, cursor, alt_l165_alpha ; ALT α — save cursor, enter left
+alt_l164_beta:              SEQ_BETA    alt_r165_beta ; ALT β — resume right
+alt_l165_alpha:             ALT_ALPHA   alt166_cur_save, cursor, alt_l166_alpha ; ALT α — save cursor, enter left
+alt_l165_beta:              SEQ_BETA    alt_r166_beta ; ALT β — resume right
+alt_l166_alpha:             ALT_ALPHA   alt167_cur_save, cursor, alt_l167_alpha ; ALT α — save cursor, enter left
+alt_l166_beta:              SEQ_BETA    alt_r167_beta ; ALT β — resume right
+alt_l167_alpha:             ALT_ALPHA   alt168_cur_save, cursor, alt_l168_alpha ; ALT α — save cursor, enter left
+alt_l167_beta:              SEQ_BETA    alt_r168_beta ; ALT β — resume right
+alt_l168_alpha:             ALT_ALPHA   alt169_cur_save, cursor, alt_l169_alpha ; ALT α — save cursor, enter left
+alt_l168_beta:              SEQ_BETA    alt_r169_beta ; ALT β — resume right
+alt_l169_alpha:             ALT_ALPHA   alt170_cur_save, cursor, alt_l170_alpha ; ALT α — save cursor, enter left
+alt_l169_beta:              SEQ_BETA    alt_r170_beta ; ALT β — resume right
+alt_l170_alpha:             ALT_ALPHA   alt171_cur_save, cursor, alt_l171_alpha ; ALT α — save cursor, enter left
+alt_l170_beta:              SEQ_BETA    alt_r171_beta ; ALT β — resume right
+alt_l171_alpha:             ALT_ALPHA   alt172_cur_save, cursor, alt_l172_alpha ; ALT α — save cursor, enter left
+alt_l171_beta:              SEQ_BETA    alt_r172_beta ; ALT β — resume right
+alt_l172_alpha:             ALT_ALPHA   alt173_cur_save, cursor, alt_l173_alpha ; ALT α — save cursor, enter left
+alt_l172_beta:              SEQ_BETA    alt_r173_beta ; ALT β — resume right
+alt_l173_alpha:             ALT_ALPHA   alt174_cur_save, cursor, alt_l174_alpha ; ALT α — save cursor, enter left
+alt_l173_beta:              SEQ_BETA    alt_r174_beta ; ALT β — resume right
+alt_l174_alpha:             ALT_ALPHA   alt175_cur_save, cursor, alt_l175_alpha ; ALT α — save cursor, enter left
+alt_l174_beta:              SEQ_BETA    alt_r175_beta ; ALT β — resume right
+alt_l175_alpha:             ALT_ALPHA   alt176_cur_save, cursor, alt_l176_alpha ; ALT α — save cursor, enter left
+alt_l175_beta:              SEQ_BETA    alt_r176_beta ; ALT β — resume right
+alt_l176_alpha:             ALT_ALPHA   alt177_cur_save, cursor, alt_l177_alpha ; ALT α — save cursor, enter left
+alt_l176_beta:              SEQ_BETA    alt_r177_beta ; ALT β — resume right
+alt_l177_alpha:             ALT_ALPHA   alt178_cur_save, cursor, alt_l178_alpha ; ALT α — save cursor, enter left
+alt_l177_beta:              SEQ_BETA    alt_r178_beta ; ALT β — resume right
+alt_l178_alpha:             ALT_ALPHA   alt179_cur_save, cursor, alt_l179_alpha ; ALT α — save cursor, enter left
+alt_l178_beta:              SEQ_BETA    alt_r179_beta ; ALT β — resume right
+alt_l179_alpha:             jmp         seq_l180_alpha ; SEQ
+alt_l179_beta:              jmp         seq_r180_beta
+seq_l180_alpha:             jmp         seq_l181_alpha ; SEQ
+seq_l180_beta:              jmp         seq_r181_beta
+seq_l181_alpha:             LIT_ALPHA1  64, seq_l181_alpha_saved, cursor, subject_data, subject_len_val, seq_r181_alpha, alt179_left_omega ; LIT α
+seq_l181_beta:              LIT_BETA    seq_l181_alpha_saved, cursor, alt179_left_omega ; LIT β
+
+seq_r181_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref182_gamma]
+                            mov         [P_Expr14_ret_γ], rax
+                            lea         rax, [rel nref182_omega]
+                            mov         [P_Expr14_ret_ω], rax
+                            jmp         P_Expr14_α
+seq_r181_beta:              lea         rax, [rel nref182_gamma] ; REF(%s)
+                            mov         [P_Expr14_ret_γ], rax
+                            lea         rax, [rel nref182_omega]
+                            mov         [P_Expr14_ret_ω], rax
+                            jmp         P_Expr14_β
+
+nref182_gamma:
+                            jmp         seq_r180_alpha
+;  Expr14 ==============================================================================================================
+nref182_omega:              jmp         seq_l181_beta
+
+; UNIMPLEMENTED node kind 14 → ω
+seq_r180_alpha:
+seq_r180_beta:              jmp         seq_l180_beta
+alt179_left_omega:          ALT_OMEGA   alt179_cur_save, cursor, alt_r179_alpha ; ALT left_ω — restore cursor, enter right
+alt_r179_alpha:             jmp         seq_l183_alpha ; SEQ
+alt_r179_beta:              jmp         seq_r183_beta
+seq_l183_alpha:             jmp         seq_l184_alpha ; SEQ
+seq_l183_beta:              jmp         seq_r184_beta
+seq_l184_alpha:             LIT_ALPHA1  126, seq_l184_alpha_saved, cursor, subject_data, subject_len_val, seq_r184_alpha, alt178_left_omega ; LIT α
+seq_l184_beta:              LIT_BETA    seq_l184_alpha_saved, cursor, alt178_left_omega ; LIT β
+
+seq_r184_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref185_gamma]
+                            mov         [P_Expr14_ret_γ], rax
+                            lea         rax, [rel nref185_omega]
+                            mov         [P_Expr14_ret_ω], rax
+                            jmp         P_Expr14_α
+seq_r184_beta:              lea         rax, [rel nref185_gamma] ; REF(%s)
+                            mov         [P_Expr14_ret_γ], rax
+                            lea         rax, [rel nref185_omega]
+                            mov         [P_Expr14_ret_ω], rax
+                            jmp         P_Expr14_β
+
+nref185_gamma:
+                            jmp         seq_r183_alpha
+nref185_omega:              jmp         seq_l184_beta
+
+; UNIMPLEMENTED node kind 14 → ω
+seq_r183_alpha:
+seq_r183_beta:              jmp         seq_l183_beta
+alt178_left_omega:          ALT_OMEGA   alt178_cur_save, cursor, alt_r178_alpha ; ALT left_ω — restore cursor, enter right
+alt_r178_alpha:             jmp         seq_l186_alpha ; SEQ
+alt_r178_beta:              jmp         seq_r186_beta
+seq_l186_alpha:             jmp         seq_l187_alpha ; SEQ
+seq_l186_beta:              jmp         seq_r187_beta
+seq_l187_alpha:             LIT_ALPHA1  63, seq_l187_alpha_saved, cursor, subject_data, subject_len_val, seq_r187_alpha, alt177_left_omega ; LIT α
+seq_l187_beta:              LIT_BETA    seq_l187_alpha_saved, cursor, alt177_left_omega ; LIT β
+
+seq_r187_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref188_gamma]
+                            mov         [P_Expr14_ret_γ], rax
+                            lea         rax, [rel nref188_omega]
+                            mov         [P_Expr14_ret_ω], rax
+                            jmp         P_Expr14_α
+seq_r187_beta:              lea         rax, [rel nref188_gamma] ; REF(%s)
+                            mov         [P_Expr14_ret_γ], rax
+                            lea         rax, [rel nref188_omega]
+                            mov         [P_Expr14_ret_ω], rax
+                            jmp         P_Expr14_β
+
+nref188_gamma:
+                            jmp         seq_r186_alpha
+nref188_omega:              jmp         seq_l187_beta
+
+; UNIMPLEMENTED node kind 14 → ω
+seq_r186_alpha:
+seq_r186_beta:              jmp         seq_l186_beta
+alt177_left_omega:          ALT_OMEGA   alt177_cur_save, cursor, alt_r177_alpha ; ALT left_ω — restore cursor, enter right
+
+alt_r177_alpha: ; DOL(ProtKwd $  ProtKwd)
+                            DOL_SAVE    dol_entry_ProtKwd, cursor, dol189_child_alpha ; DOL α — save entry cursor
+alt_r177_beta:              jmp         dol189_child_beta ; DOL β
+
+dol189_child_alpha: ; REF(ProtKwd)
+                            lea         rax, [rel nref190_gamma]
+                            mov         [P_ProtKwd_ret_γ], rax
+                            lea         rax, [rel nref190_omega]
+                            mov         [P_ProtKwd_ret_ω], rax
+                            jmp         P_ProtKwd_α
+dol189_child_beta:          lea         rax, [rel nref190_gamma] ; REF(%s)
+                            mov         [P_ProtKwd_ret_γ], rax
+                            lea         rax, [rel nref190_omega]
+                            mov         [P_ProtKwd_ret_ω], rax
+                            jmp         P_ProtKwd_β
+
+nref190_gamma:
+                            jmp         dol189_gamma
+nref190_omega:              jmp         dol189_omega
+dol189_gamma:               DOL_CAPTURE dol_entry_ProtKwd, cursor, cap_ProtKwd_buf, cap_ProtKwd_len, subject_data, patdef_Expr14_gamma ; DOL γ — capture span
+dol189_omega:               jmp         alt176_left_omega ; DOL ω — child failed
+alt176_left_omega:          ALT_OMEGA   alt176_cur_save, cursor, alt_r176_alpha ; ALT left_ω — restore cursor, enter right
+
+alt_r176_alpha: ; DOL(UnprotKwd $  UnprotKwd)
+                            DOL_SAVE    dol_entry_UnprotKwd, cursor, dol191_child_alpha ; DOL α — save entry cursor
+alt_r176_beta:              jmp         dol191_child_beta ; DOL β
+
+dol191_child_alpha: ; REF(UnprotKwd)
+                            lea         rax, [rel nref192_gamma]
+                            mov         [P_UnprotKwd_ret_γ], rax
+                            lea         rax, [rel nref192_omega]
+                            mov         [P_UnprotKwd_ret_ω], rax
+                            jmp         P_UnprotKwd_α
+dol191_child_beta:          lea         rax, [rel nref192_gamma] ; REF(%s)
+                            mov         [P_UnprotKwd_ret_γ], rax
+                            lea         rax, [rel nref192_omega]
+                            mov         [P_UnprotKwd_ret_ω], rax
+                            jmp         P_UnprotKwd_β
+
+nref192_gamma:
+                            jmp         dol191_gamma
+nref192_omega:              jmp         dol191_omega
+dol191_gamma:               DOL_CAPTURE dol_entry_UnprotKwd, cursor, cap_UnprotKwd_buf, cap_UnprotKwd_len, subject_data, patdef_Expr14_gamma ; DOL γ — capture span
+dol191_omega:               jmp         alt175_left_omega ; DOL ω — child failed
+alt175_left_omega:          ALT_OMEGA   alt175_cur_save, cursor, alt_r175_alpha ; ALT left_ω — restore cursor, enter right
+alt_r175_alpha:             jmp         seq_l193_alpha ; SEQ
+alt_r175_beta:              jmp         seq_r193_beta
+seq_l193_alpha:             jmp         seq_l194_alpha ; SEQ
+seq_l193_beta:              jmp         seq_r194_beta
+seq_l194_alpha:             LIT_ALPHA1  38, seq_l194_alpha_saved, cursor, subject_data, subject_len_val, seq_r194_alpha, alt174_left_omega ; LIT α
+seq_l194_beta:              LIT_BETA    seq_l194_alpha_saved, cursor, alt174_left_omega ; LIT β
+
+seq_r194_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref195_gamma]
+                            mov         [P_Expr14_ret_γ], rax
+                            lea         rax, [rel nref195_omega]
+                            mov         [P_Expr14_ret_ω], rax
+                            jmp         P_Expr14_α
+seq_r194_beta:              lea         rax, [rel nref195_gamma] ; REF(%s)
+                            mov         [P_Expr14_ret_γ], rax
+                            lea         rax, [rel nref195_omega]
+                            mov         [P_Expr14_ret_ω], rax
+                            jmp         P_Expr14_β
+
+nref195_gamma:
+                            jmp         seq_r193_alpha
+nref195_omega:              jmp         seq_l194_beta
+
+; UNIMPLEMENTED node kind 14 → ω
+seq_r193_alpha:
+seq_r193_beta:              jmp         seq_l193_beta
+alt174_left_omega:          ALT_OMEGA   alt174_cur_save, cursor, alt_r174_alpha ; ALT left_ω — restore cursor, enter right
+alt_r174_alpha:             jmp         seq_l196_alpha ; SEQ
+alt_r174_beta:              jmp         seq_r196_beta
+seq_l196_alpha:             jmp         seq_l197_alpha ; SEQ
+seq_l196_beta:              jmp         seq_r197_beta
+seq_l197_alpha:             LIT_ALPHA1  43, seq_l197_alpha_saved, cursor, subject_data, subject_len_val, seq_r197_alpha, alt173_left_omega ; LIT α
+seq_l197_beta:              LIT_BETA    seq_l197_alpha_saved, cursor, alt173_left_omega ; LIT β
+
+seq_r197_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref198_gamma]
+                            mov         [P_Expr14_ret_γ], rax
+                            lea         rax, [rel nref198_omega]
+                            mov         [P_Expr14_ret_ω], rax
+                            jmp         P_Expr14_α
+seq_r197_beta:              lea         rax, [rel nref198_gamma] ; REF(%s)
+                            mov         [P_Expr14_ret_γ], rax
+                            lea         rax, [rel nref198_omega]
+                            mov         [P_Expr14_ret_ω], rax
+                            jmp         P_Expr14_β
+
+nref198_gamma:
+                            jmp         seq_r196_alpha
+nref198_omega:              jmp         seq_l197_beta
+
+; UNIMPLEMENTED node kind 14 → ω
+seq_r196_alpha:
+seq_r196_beta:              jmp         seq_l196_beta
+alt173_left_omega:          ALT_OMEGA   alt173_cur_save, cursor, alt_r173_alpha ; ALT left_ω — restore cursor, enter right
+alt_r173_alpha:             jmp         seq_l199_alpha ; SEQ
+alt_r173_beta:              jmp         seq_r199_beta
 seq_l199_alpha:             jmp         seq_l200_alpha ; SEQ
 seq_l199_beta:              jmp         seq_r200_beta
-seq_l200_alpha:             LIT_ALPHA1  64, seq_l200_alpha_saved, cursor, subject_data, subject_len_val, seq_r200_alpha, alt198_left_omega ; LIT α
-seq_l200_beta:              LIT_BETA    seq_l200_alpha_saved, cursor, alt198_left_omega ; LIT β
+seq_l200_alpha:             LIT_ALPHA1  45, seq_l200_alpha_saved, cursor, subject_data, subject_len_val, seq_r200_alpha, alt172_left_omega ; LIT α
+seq_l200_beta:              LIT_BETA    seq_l200_alpha_saved, cursor, alt172_left_omega ; LIT β
 
 seq_r200_alpha: ; REF(Expr14)
                             lea         rax, [rel nref201_gamma]
@@ -11009,19 +11756,18 @@ seq_r200_beta:              lea         rax, [rel nref201_gamma] ; REF(%s)
 
 nref201_gamma:
                             jmp         seq_r199_alpha
-;  Expr14 ==============================================================================================================
 nref201_omega:              jmp         seq_l200_beta
 
 ; UNIMPLEMENTED node kind 14 → ω
 seq_r199_alpha:
 seq_r199_beta:              jmp         seq_l199_beta
-alt198_left_omega:          ALT_OMEGA   alt198_cur_save, cursor, alt_r198_alpha ; ALT left_ω — restore cursor, enter right
-alt_r198_alpha:             jmp         seq_l202_alpha ; SEQ
-alt_r198_beta:              jmp         seq_r202_beta
+alt172_left_omega:          ALT_OMEGA   alt172_cur_save, cursor, alt_r172_alpha ; ALT left_ω — restore cursor, enter right
+alt_r172_alpha:             jmp         seq_l202_alpha ; SEQ
+alt_r172_beta:              jmp         seq_r202_beta
 seq_l202_alpha:             jmp         seq_l203_alpha ; SEQ
 seq_l202_beta:              jmp         seq_r203_beta
-seq_l203_alpha:             LIT_ALPHA1  126, seq_l203_alpha_saved, cursor, subject_data, subject_len_val, seq_r203_alpha, alt197_left_omega ; LIT α
-seq_l203_beta:              LIT_BETA    seq_l203_alpha_saved, cursor, alt197_left_omega ; LIT β
+seq_l203_alpha:             LIT_ALPHA1  42, seq_l203_alpha_saved, cursor, subject_data, subject_len_val, seq_r203_alpha, alt171_left_omega ; LIT α
+seq_l203_beta:              LIT_BETA    seq_l203_alpha_saved, cursor, alt171_left_omega ; LIT β
 
 seq_r203_alpha: ; REF(Expr14)
                             lea         rax, [rel nref204_gamma]
@@ -11042,13 +11788,13 @@ nref204_omega:              jmp         seq_l203_beta
 ; UNIMPLEMENTED node kind 14 → ω
 seq_r202_alpha:
 seq_r202_beta:              jmp         seq_l202_beta
-alt197_left_omega:          ALT_OMEGA   alt197_cur_save, cursor, alt_r197_alpha ; ALT left_ω — restore cursor, enter right
-alt_r197_alpha:             jmp         seq_l205_alpha ; SEQ
-alt_r197_beta:              jmp         seq_r205_beta
+alt171_left_omega:          ALT_OMEGA   alt171_cur_save, cursor, alt_r171_alpha ; ALT left_ω — restore cursor, enter right
+alt_r171_alpha:             jmp         seq_l205_alpha ; SEQ
+alt_r171_beta:              jmp         seq_r205_beta
 seq_l205_alpha:             jmp         seq_l206_alpha ; SEQ
 seq_l205_beta:              jmp         seq_r206_beta
-seq_l206_alpha:             LIT_ALPHA1  63, seq_l206_alpha_saved, cursor, subject_data, subject_len_val, seq_r206_alpha, alt196_left_omega ; LIT α
-seq_l206_beta:              LIT_BETA    seq_l206_alpha_saved, cursor, alt196_left_omega ; LIT β
+seq_l206_alpha:             LIT_ALPHA1  36, seq_l206_alpha_saved, cursor, subject_data, subject_len_val, seq_r206_alpha, alt170_left_omega ; LIT α
+seq_l206_beta:              LIT_BETA    seq_l206_alpha_saved, cursor, alt170_left_omega ; LIT β
 
 seq_r206_alpha: ; REF(Expr14)
                             lea         rax, [rel nref207_gamma]
@@ -11069,500 +11815,319 @@ nref207_omega:              jmp         seq_l206_beta
 ; UNIMPLEMENTED node kind 14 → ω
 seq_r205_alpha:
 seq_r205_beta:              jmp         seq_l205_beta
-alt196_left_omega:          ALT_OMEGA   alt196_cur_save, cursor, alt_r196_alpha ; ALT left_ω — restore cursor, enter right
+alt170_left_omega:          ALT_OMEGA   alt170_cur_save, cursor, alt_r170_alpha ; ALT left_ω — restore cursor, enter right
+alt_r170_alpha:             jmp         seq_l208_alpha ; SEQ
+alt_r170_beta:              jmp         seq_r208_beta
+seq_l208_alpha:             jmp         seq_l209_alpha ; SEQ
+seq_l208_beta:              jmp         seq_r209_beta
+seq_l209_alpha:             LIT_ALPHA1  46, seq_l209_alpha_saved, cursor, subject_data, subject_len_val, seq_r209_alpha, alt169_left_omega ; LIT α
+seq_l209_beta:              LIT_BETA    seq_l209_alpha_saved, cursor, alt169_left_omega ; LIT β
 
-alt_r196_alpha: ; DOL(ProtKwd $  ProtKwd)
-                            DOL_SAVE    dol_entry_ProtKwd, cursor, dol208_child_alpha ; DOL α — save entry cursor
-alt_r196_beta:              jmp         dol208_child_beta ; DOL β
-
-dol208_child_alpha: ; REF(ProtKwd)
-                            lea         rax, [rel nref209_gamma]
-                            mov         [P_ProtKwd_ret_γ], rax
-                            lea         rax, [rel nref209_omega]
-                            mov         [P_ProtKwd_ret_ω], rax
-                            jmp         P_ProtKwd_α
-dol208_child_beta:          lea         rax, [rel nref209_gamma] ; REF(%s)
-                            mov         [P_ProtKwd_ret_γ], rax
-                            lea         rax, [rel nref209_omega]
-                            mov         [P_ProtKwd_ret_ω], rax
-                            jmp         P_ProtKwd_β
-
-nref209_gamma:
-                            jmp         dol208_gamma
-nref209_omega:              jmp         dol208_omega
-dol208_gamma:               DOL_CAPTURE dol_entry_ProtKwd, cursor, cap_ProtKwd_buf, cap_ProtKwd_len, subject_data, patdef_Expr14_gamma ; DOL γ — capture span
-dol208_omega:               jmp         alt195_left_omega ; DOL ω — child failed
-alt195_left_omega:          ALT_OMEGA   alt195_cur_save, cursor, alt_r195_alpha ; ALT left_ω — restore cursor, enter right
-
-alt_r195_alpha: ; DOL(UnprotKwd $  UnprotKwd)
-                            DOL_SAVE    dol_entry_UnprotKwd, cursor, dol210_child_alpha ; DOL α — save entry cursor
-alt_r195_beta:              jmp         dol210_child_beta ; DOL β
-
-dol210_child_alpha: ; REF(UnprotKwd)
-                            lea         rax, [rel nref211_gamma]
-                            mov         [P_UnprotKwd_ret_γ], rax
-                            lea         rax, [rel nref211_omega]
-                            mov         [P_UnprotKwd_ret_ω], rax
-                            jmp         P_UnprotKwd_α
-dol210_child_beta:          lea         rax, [rel nref211_gamma] ; REF(%s)
-                            mov         [P_UnprotKwd_ret_γ], rax
-                            lea         rax, [rel nref211_omega]
-                            mov         [P_UnprotKwd_ret_ω], rax
-                            jmp         P_UnprotKwd_β
-
-nref211_gamma:
-                            jmp         dol210_gamma
-nref211_omega:              jmp         dol210_omega
-dol210_gamma:               DOL_CAPTURE dol_entry_UnprotKwd, cursor, cap_UnprotKwd_buf, cap_UnprotKwd_len, subject_data, patdef_Expr14_gamma ; DOL γ — capture span
-dol210_omega:               jmp         alt194_left_omega ; DOL ω — child failed
-alt194_left_omega:          ALT_OMEGA   alt194_cur_save, cursor, alt_r194_alpha ; ALT left_ω — restore cursor, enter right
-alt_r194_alpha:             jmp         seq_l212_alpha ; SEQ
-alt_r194_beta:              jmp         seq_r212_beta
-seq_l212_alpha:             jmp         seq_l213_alpha ; SEQ
-seq_l212_beta:              jmp         seq_r213_beta
-seq_l213_alpha:             LIT_ALPHA1  38, seq_l213_alpha_saved, cursor, subject_data, subject_len_val, seq_r213_alpha, alt193_left_omega ; LIT α
-seq_l213_beta:              LIT_BETA    seq_l213_alpha_saved, cursor, alt193_left_omega ; LIT β
-
-seq_r213_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref214_gamma]
+seq_r209_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref210_gamma]
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref214_omega]
+                            lea         rax, [rel nref210_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_α
-seq_r213_beta:              lea         rax, [rel nref214_gamma] ; REF(%s)
+seq_r209_beta:              lea         rax, [rel nref210_gamma] ; REF(%s)
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref214_omega]
+                            lea         rax, [rel nref210_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_β
 
-nref214_gamma:
-                            jmp         seq_r212_alpha
-nref214_omega:              jmp         seq_l213_beta
+nref210_gamma:
+                            jmp         seq_r208_alpha
+nref210_omega:              jmp         seq_l209_beta
 
 ; UNIMPLEMENTED node kind 14 → ω
-seq_r212_alpha:
-seq_r212_beta:              jmp         seq_l212_beta
-alt193_left_omega:          ALT_OMEGA   alt193_cur_save, cursor, alt_r193_alpha ; ALT left_ω — restore cursor, enter right
-alt_r193_alpha:             jmp         seq_l215_alpha ; SEQ
-alt_r193_beta:              jmp         seq_r215_beta
-seq_l215_alpha:             jmp         seq_l216_alpha ; SEQ
-seq_l215_beta:              jmp         seq_r216_beta
-seq_l216_alpha:             LIT_ALPHA1  43, seq_l216_alpha_saved, cursor, subject_data, subject_len_val, seq_r216_alpha, alt192_left_omega ; LIT α
-seq_l216_beta:              LIT_BETA    seq_l216_alpha_saved, cursor, alt192_left_omega ; LIT β
+seq_r208_alpha:
+seq_r208_beta:              jmp         seq_l208_beta
+alt169_left_omega:          ALT_OMEGA   alt169_cur_save, cursor, alt_r169_alpha ; ALT left_ω — restore cursor, enter right
+alt_r169_alpha:             jmp         seq_l211_alpha ; SEQ
+alt_r169_beta:              jmp         seq_r211_beta
+seq_l211_alpha:             jmp         seq_l212_alpha ; SEQ
+seq_l211_beta:              jmp         seq_r212_beta
+seq_l212_alpha:             LIT_ALPHA1  33, seq_l212_alpha_saved, cursor, subject_data, subject_len_val, seq_r212_alpha, alt168_left_omega ; LIT α
+seq_l212_beta:              LIT_BETA    seq_l212_alpha_saved, cursor, alt168_left_omega ; LIT β
 
-seq_r216_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref217_gamma]
+seq_r212_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref213_gamma]
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref217_omega]
+                            lea         rax, [rel nref213_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_α
-seq_r216_beta:              lea         rax, [rel nref217_gamma] ; REF(%s)
+seq_r212_beta:              lea         rax, [rel nref213_gamma] ; REF(%s)
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref217_omega]
+                            lea         rax, [rel nref213_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_β
 
-nref217_gamma:
-                            jmp         seq_r215_alpha
-nref217_omega:              jmp         seq_l216_beta
+nref213_gamma:
+                            jmp         seq_r211_alpha
+nref213_omega:              jmp         seq_l212_beta
 
 ; UNIMPLEMENTED node kind 14 → ω
-seq_r215_alpha:
-seq_r215_beta:              jmp         seq_l215_beta
-alt192_left_omega:          ALT_OMEGA   alt192_cur_save, cursor, alt_r192_alpha ; ALT left_ω — restore cursor, enter right
-alt_r192_alpha:             jmp         seq_l218_alpha ; SEQ
-alt_r192_beta:              jmp         seq_r218_beta
-seq_l218_alpha:             jmp         seq_l219_alpha ; SEQ
-seq_l218_beta:              jmp         seq_r219_beta
-seq_l219_alpha:             LIT_ALPHA1  45, seq_l219_alpha_saved, cursor, subject_data, subject_len_val, seq_r219_alpha, alt191_left_omega ; LIT α
-seq_l219_beta:              LIT_BETA    seq_l219_alpha_saved, cursor, alt191_left_omega ; LIT β
+seq_r211_alpha:
+seq_r211_beta:              jmp         seq_l211_beta
+alt168_left_omega:          ALT_OMEGA   alt168_cur_save, cursor, alt_r168_alpha ; ALT left_ω — restore cursor, enter right
+alt_r168_alpha:             jmp         seq_l214_alpha ; SEQ
+alt_r168_beta:              jmp         seq_r214_beta
+seq_l214_alpha:             jmp         seq_l215_alpha ; SEQ
+seq_l214_beta:              jmp         seq_r215_beta
+seq_l215_alpha:             LIT_ALPHA1  37, seq_l215_alpha_saved, cursor, subject_data, subject_len_val, seq_r215_alpha, alt167_left_omega ; LIT α
+seq_l215_beta:              LIT_BETA    seq_l215_alpha_saved, cursor, alt167_left_omega ; LIT β
 
-seq_r219_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref220_gamma]
+seq_r215_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref216_gamma]
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref220_omega]
+                            lea         rax, [rel nref216_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_α
-seq_r219_beta:              lea         rax, [rel nref220_gamma] ; REF(%s)
+seq_r215_beta:              lea         rax, [rel nref216_gamma] ; REF(%s)
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref220_omega]
+                            lea         rax, [rel nref216_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_β
 
-nref220_gamma:
-                            jmp         seq_r218_alpha
-nref220_omega:              jmp         seq_l219_beta
+nref216_gamma:
+                            jmp         seq_r214_alpha
+nref216_omega:              jmp         seq_l215_beta
 
 ; UNIMPLEMENTED node kind 14 → ω
-seq_r218_alpha:
-seq_r218_beta:              jmp         seq_l218_beta
-alt191_left_omega:          ALT_OMEGA   alt191_cur_save, cursor, alt_r191_alpha ; ALT left_ω — restore cursor, enter right
-alt_r191_alpha:             jmp         seq_l221_alpha ; SEQ
-alt_r191_beta:              jmp         seq_r221_beta
-seq_l221_alpha:             jmp         seq_l222_alpha ; SEQ
-seq_l221_beta:              jmp         seq_r222_beta
-seq_l222_alpha:             LIT_ALPHA1  42, seq_l222_alpha_saved, cursor, subject_data, subject_len_val, seq_r222_alpha, alt190_left_omega ; LIT α
-seq_l222_beta:              LIT_BETA    seq_l222_alpha_saved, cursor, alt190_left_omega ; LIT β
+seq_r214_alpha:
+seq_r214_beta:              jmp         seq_l214_beta
+alt167_left_omega:          ALT_OMEGA   alt167_cur_save, cursor, alt_r167_alpha ; ALT left_ω — restore cursor, enter right
+alt_r167_alpha:             jmp         seq_l217_alpha ; SEQ
+alt_r167_beta:              jmp         seq_r217_beta
+seq_l217_alpha:             jmp         seq_l218_alpha ; SEQ
+seq_l217_beta:              jmp         seq_r218_beta
+seq_l218_alpha:             LIT_ALPHA1  47, seq_l218_alpha_saved, cursor, subject_data, subject_len_val, seq_r218_alpha, alt166_left_omega ; LIT α
+seq_l218_beta:              LIT_BETA    seq_l218_alpha_saved, cursor, alt166_left_omega ; LIT β
 
-seq_r222_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref223_gamma]
+seq_r218_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref219_gamma]
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref223_omega]
+                            lea         rax, [rel nref219_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_α
-seq_r222_beta:              lea         rax, [rel nref223_gamma] ; REF(%s)
+seq_r218_beta:              lea         rax, [rel nref219_gamma] ; REF(%s)
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref223_omega]
+                            lea         rax, [rel nref219_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_β
 
-nref223_gamma:
-                            jmp         seq_r221_alpha
-nref223_omega:              jmp         seq_l222_beta
+nref219_gamma:
+                            jmp         seq_r217_alpha
+nref219_omega:              jmp         seq_l218_beta
 
 ; UNIMPLEMENTED node kind 14 → ω
-seq_r221_alpha:
-seq_r221_beta:              jmp         seq_l221_beta
-alt190_left_omega:          ALT_OMEGA   alt190_cur_save, cursor, alt_r190_alpha ; ALT left_ω — restore cursor, enter right
-alt_r190_alpha:             jmp         seq_l224_alpha ; SEQ
-alt_r190_beta:              jmp         seq_r224_beta
-seq_l224_alpha:             jmp         seq_l225_alpha ; SEQ
-seq_l224_beta:              jmp         seq_r225_beta
-seq_l225_alpha:             LIT_ALPHA1  36, seq_l225_alpha_saved, cursor, subject_data, subject_len_val, seq_r225_alpha, alt189_left_omega ; LIT α
-seq_l225_beta:              LIT_BETA    seq_l225_alpha_saved, cursor, alt189_left_omega ; LIT β
+seq_r217_alpha:
+seq_r217_beta:              jmp         seq_l217_beta
+alt166_left_omega:          ALT_OMEGA   alt166_cur_save, cursor, alt_r166_alpha ; ALT left_ω — restore cursor, enter right
+alt_r166_alpha:             jmp         seq_l220_alpha ; SEQ
+alt_r166_beta:              jmp         seq_r220_beta
+seq_l220_alpha:             jmp         seq_l221_alpha ; SEQ
+seq_l220_beta:              jmp         seq_r221_beta
+seq_l221_alpha:             LIT_ALPHA1  35, seq_l221_alpha_saved, cursor, subject_data, subject_len_val, seq_r221_alpha, alt165_left_omega ; LIT α
+seq_l221_beta:              LIT_BETA    seq_l221_alpha_saved, cursor, alt165_left_omega ; LIT β
 
-seq_r225_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref226_gamma]
+seq_r221_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref222_gamma]
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref226_omega]
+                            lea         rax, [rel nref222_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_α
-seq_r225_beta:              lea         rax, [rel nref226_gamma] ; REF(%s)
+seq_r221_beta:              lea         rax, [rel nref222_gamma] ; REF(%s)
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref226_omega]
+                            lea         rax, [rel nref222_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_β
 
-nref226_gamma:
-                            jmp         seq_r224_alpha
-nref226_omega:              jmp         seq_l225_beta
+nref222_gamma:
+                            jmp         seq_r220_alpha
+nref222_omega:              jmp         seq_l221_beta
 
 ; UNIMPLEMENTED node kind 14 → ω
-seq_r224_alpha:
-seq_r224_beta:              jmp         seq_l224_beta
-alt189_left_omega:          ALT_OMEGA   alt189_cur_save, cursor, alt_r189_alpha ; ALT left_ω — restore cursor, enter right
-alt_r189_alpha:             jmp         seq_l227_alpha ; SEQ
-alt_r189_beta:              jmp         seq_r227_beta
-seq_l227_alpha:             jmp         seq_l228_alpha ; SEQ
-seq_l227_beta:              jmp         seq_r228_beta
-seq_l228_alpha:             LIT_ALPHA1  46, seq_l228_alpha_saved, cursor, subject_data, subject_len_val, seq_r228_alpha, alt188_left_omega ; LIT α
-seq_l228_beta:              LIT_BETA    seq_l228_alpha_saved, cursor, alt188_left_omega ; LIT β
+seq_r220_alpha:
+seq_r220_beta:              jmp         seq_l220_beta
+alt165_left_omega:          ALT_OMEGA   alt165_cur_save, cursor, alt_r165_alpha ; ALT left_ω — restore cursor, enter right
+alt_r165_alpha:             jmp         seq_l223_alpha ; SEQ
+alt_r165_beta:              jmp         seq_r223_beta
+seq_l223_alpha:             jmp         seq_l224_alpha ; SEQ
+seq_l223_beta:              jmp         seq_r224_beta
+seq_l224_alpha:             LIT_ALPHA1  61, seq_l224_alpha_saved, cursor, subject_data, subject_len_val, seq_r224_alpha, alt164_left_omega ; LIT α
+seq_l224_beta:              LIT_BETA    seq_l224_alpha_saved, cursor, alt164_left_omega ; LIT β
 
-seq_r228_alpha: ; REF(Expr14)
+seq_r224_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref225_gamma]
+                            mov         [P_Expr14_ret_γ], rax
+                            lea         rax, [rel nref225_omega]
+                            mov         [P_Expr14_ret_ω], rax
+                            jmp         P_Expr14_α
+seq_r224_beta:              lea         rax, [rel nref225_gamma] ; REF(%s)
+                            mov         [P_Expr14_ret_γ], rax
+                            lea         rax, [rel nref225_omega]
+                            mov         [P_Expr14_ret_ω], rax
+                            jmp         P_Expr14_β
+
+nref225_gamma:
+                            jmp         seq_r223_alpha
+nref225_omega:              jmp         seq_l224_beta
+
+; UNIMPLEMENTED node kind 14 → ω
+seq_r223_alpha:
+seq_r223_beta:              jmp         seq_l223_beta
+alt164_left_omega:          ALT_OMEGA   alt164_cur_save, cursor, alt_r164_alpha ; ALT left_ω — restore cursor, enter right
+alt_r164_alpha:             jmp         seq_l226_alpha ; SEQ
+alt_r164_beta:              jmp         seq_r226_beta
+seq_l226_alpha:             jmp         seq_l227_alpha ; SEQ
+seq_l226_beta:              jmp         seq_r227_beta
+seq_l227_alpha:             LIT_ALPHA1  124, seq_l227_alpha_saved, cursor, subject_data, subject_len_val, seq_r227_alpha, alt163_left_omega ; LIT α
+seq_l227_beta:              LIT_BETA    seq_l227_alpha_saved, cursor, alt163_left_omega ; LIT β
+
+seq_r227_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref228_gamma]
+                            mov         [P_Expr14_ret_γ], rax
+                            lea         rax, [rel nref228_omega]
+                            mov         [P_Expr14_ret_ω], rax
+                            jmp         P_Expr14_α
+seq_r227_beta:              lea         rax, [rel nref228_gamma] ; REF(%s)
+                            mov         [P_Expr14_ret_γ], rax
+                            lea         rax, [rel nref228_omega]
+                            mov         [P_Expr14_ret_ω], rax
+                            jmp         P_Expr14_β
+
+nref228_gamma:
+                            jmp         seq_r226_alpha
+nref228_omega:              jmp         seq_l227_beta
+
+; UNIMPLEMENTED node kind 14 → ω
+seq_r226_alpha:
+seq_r226_beta:              jmp         seq_l226_beta
+alt163_left_omega:          ALT_OMEGA   alt163_cur_save, cursor, alt_r163_alpha ; ALT left_ω — restore cursor, enter right
+
+alt_r163_alpha: ; REF(Expr15)
                             lea         rax, [rel nref229_gamma]
-                            mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref229_omega]
-                            mov         [P_Expr14_ret_ω], rax
-                            jmp         P_Expr14_α
-seq_r228_beta:              lea         rax, [rel nref229_gamma] ; REF(%s)
-                            mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref229_omega]
-                            mov         [P_Expr14_ret_ω], rax
-                            jmp         P_Expr14_β
-
-nref229_gamma:
-                            jmp         seq_r227_alpha
-nref229_omega:              jmp         seq_l228_beta
-
-; UNIMPLEMENTED node kind 14 → ω
-seq_r227_alpha:
-seq_r227_beta:              jmp         seq_l227_beta
-alt188_left_omega:          ALT_OMEGA   alt188_cur_save, cursor, alt_r188_alpha ; ALT left_ω — restore cursor, enter right
-alt_r188_alpha:             jmp         seq_l230_alpha ; SEQ
-alt_r188_beta:              jmp         seq_r230_beta
-seq_l230_alpha:             jmp         seq_l231_alpha ; SEQ
-seq_l230_beta:              jmp         seq_r231_beta
-seq_l231_alpha:             LIT_ALPHA1  33, seq_l231_alpha_saved, cursor, subject_data, subject_len_val, seq_r231_alpha, alt187_left_omega ; LIT α
-seq_l231_beta:              LIT_BETA    seq_l231_alpha_saved, cursor, alt187_left_omega ; LIT β
-
-seq_r231_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref232_gamma]
-                            mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref232_omega]
-                            mov         [P_Expr14_ret_ω], rax
-                            jmp         P_Expr14_α
-seq_r231_beta:              lea         rax, [rel nref232_gamma] ; REF(%s)
-                            mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref232_omega]
-                            mov         [P_Expr14_ret_ω], rax
-                            jmp         P_Expr14_β
-
-nref232_gamma:
-                            jmp         seq_r230_alpha
-nref232_omega:              jmp         seq_l231_beta
-
-; UNIMPLEMENTED node kind 14 → ω
-seq_r230_alpha:
-seq_r230_beta:              jmp         seq_l230_beta
-alt187_left_omega:          ALT_OMEGA   alt187_cur_save, cursor, alt_r187_alpha ; ALT left_ω — restore cursor, enter right
-alt_r187_alpha:             jmp         seq_l233_alpha ; SEQ
-alt_r187_beta:              jmp         seq_r233_beta
-seq_l233_alpha:             jmp         seq_l234_alpha ; SEQ
-seq_l233_beta:              jmp         seq_r234_beta
-seq_l234_alpha:             LIT_ALPHA1  37, seq_l234_alpha_saved, cursor, subject_data, subject_len_val, seq_r234_alpha, alt186_left_omega ; LIT α
-seq_l234_beta:              LIT_BETA    seq_l234_alpha_saved, cursor, alt186_left_omega ; LIT β
-
-seq_r234_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref235_gamma]
-                            mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref235_omega]
-                            mov         [P_Expr14_ret_ω], rax
-                            jmp         P_Expr14_α
-seq_r234_beta:              lea         rax, [rel nref235_gamma] ; REF(%s)
-                            mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref235_omega]
-                            mov         [P_Expr14_ret_ω], rax
-                            jmp         P_Expr14_β
-
-nref235_gamma:
-                            jmp         seq_r233_alpha
-nref235_omega:              jmp         seq_l234_beta
-
-; UNIMPLEMENTED node kind 14 → ω
-seq_r233_alpha:
-seq_r233_beta:              jmp         seq_l233_beta
-alt186_left_omega:          ALT_OMEGA   alt186_cur_save, cursor, alt_r186_alpha ; ALT left_ω — restore cursor, enter right
-alt_r186_alpha:             jmp         seq_l236_alpha ; SEQ
-alt_r186_beta:              jmp         seq_r236_beta
-seq_l236_alpha:             jmp         seq_l237_alpha ; SEQ
-seq_l236_beta:              jmp         seq_r237_beta
-seq_l237_alpha:             LIT_ALPHA1  47, seq_l237_alpha_saved, cursor, subject_data, subject_len_val, seq_r237_alpha, alt185_left_omega ; LIT α
-seq_l237_beta:              LIT_BETA    seq_l237_alpha_saved, cursor, alt185_left_omega ; LIT β
-
-seq_r237_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref238_gamma]
-                            mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref238_omega]
-                            mov         [P_Expr14_ret_ω], rax
-                            jmp         P_Expr14_α
-seq_r237_beta:              lea         rax, [rel nref238_gamma] ; REF(%s)
-                            mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref238_omega]
-                            mov         [P_Expr14_ret_ω], rax
-                            jmp         P_Expr14_β
-
-nref238_gamma:
-                            jmp         seq_r236_alpha
-nref238_omega:              jmp         seq_l237_beta
-
-; UNIMPLEMENTED node kind 14 → ω
-seq_r236_alpha:
-seq_r236_beta:              jmp         seq_l236_beta
-alt185_left_omega:          ALT_OMEGA   alt185_cur_save, cursor, alt_r185_alpha ; ALT left_ω — restore cursor, enter right
-alt_r185_alpha:             jmp         seq_l239_alpha ; SEQ
-alt_r185_beta:              jmp         seq_r239_beta
-seq_l239_alpha:             jmp         seq_l240_alpha ; SEQ
-seq_l239_beta:              jmp         seq_r240_beta
-seq_l240_alpha:             LIT_ALPHA1  35, seq_l240_alpha_saved, cursor, subject_data, subject_len_val, seq_r240_alpha, alt184_left_omega ; LIT α
-seq_l240_beta:              LIT_BETA    seq_l240_alpha_saved, cursor, alt184_left_omega ; LIT β
-
-seq_r240_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref241_gamma]
-                            mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref241_omega]
-                            mov         [P_Expr14_ret_ω], rax
-                            jmp         P_Expr14_α
-seq_r240_beta:              lea         rax, [rel nref241_gamma] ; REF(%s)
-                            mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref241_omega]
-                            mov         [P_Expr14_ret_ω], rax
-                            jmp         P_Expr14_β
-
-nref241_gamma:
-                            jmp         seq_r239_alpha
-nref241_omega:              jmp         seq_l240_beta
-
-; UNIMPLEMENTED node kind 14 → ω
-seq_r239_alpha:
-seq_r239_beta:              jmp         seq_l239_beta
-alt184_left_omega:          ALT_OMEGA   alt184_cur_save, cursor, alt_r184_alpha ; ALT left_ω — restore cursor, enter right
-alt_r184_alpha:             jmp         seq_l242_alpha ; SEQ
-alt_r184_beta:              jmp         seq_r242_beta
-seq_l242_alpha:             jmp         seq_l243_alpha ; SEQ
-seq_l242_beta:              jmp         seq_r243_beta
-seq_l243_alpha:             LIT_ALPHA1  61, seq_l243_alpha_saved, cursor, subject_data, subject_len_val, seq_r243_alpha, alt183_left_omega ; LIT α
-seq_l243_beta:              LIT_BETA    seq_l243_alpha_saved, cursor, alt183_left_omega ; LIT β
-
-seq_r243_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref244_gamma]
-                            mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref244_omega]
-                            mov         [P_Expr14_ret_ω], rax
-                            jmp         P_Expr14_α
-seq_r243_beta:              lea         rax, [rel nref244_gamma] ; REF(%s)
-                            mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref244_omega]
-                            mov         [P_Expr14_ret_ω], rax
-                            jmp         P_Expr14_β
-
-nref244_gamma:
-                            jmp         seq_r242_alpha
-nref244_omega:              jmp         seq_l243_beta
-
-; UNIMPLEMENTED node kind 14 → ω
-seq_r242_alpha:
-seq_r242_beta:              jmp         seq_l242_beta
-alt183_left_omega:          ALT_OMEGA   alt183_cur_save, cursor, alt_r183_alpha ; ALT left_ω — restore cursor, enter right
-alt_r183_alpha:             jmp         seq_l245_alpha ; SEQ
-alt_r183_beta:              jmp         seq_r245_beta
-seq_l245_alpha:             jmp         seq_l246_alpha ; SEQ
-seq_l245_beta:              jmp         seq_r246_beta
-seq_l246_alpha:             LIT_ALPHA1  124, seq_l246_alpha_saved, cursor, subject_data, subject_len_val, seq_r246_alpha, alt182_left_omega ; LIT α
-seq_l246_beta:              LIT_BETA    seq_l246_alpha_saved, cursor, alt182_left_omega ; LIT β
-
-seq_r246_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref247_gamma]
-                            mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref247_omega]
-                            mov         [P_Expr14_ret_ω], rax
-                            jmp         P_Expr14_α
-seq_r246_beta:              lea         rax, [rel nref247_gamma] ; REF(%s)
-                            mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref247_omega]
-                            mov         [P_Expr14_ret_ω], rax
-                            jmp         P_Expr14_β
-
-nref247_gamma:
-                            jmp         seq_r245_alpha
-nref247_omega:              jmp         seq_l246_beta
-
-; UNIMPLEMENTED node kind 14 → ω
-seq_r245_alpha:
-seq_r245_beta:              jmp         seq_l245_beta
-alt182_left_omega:          ALT_OMEGA   alt182_cur_save, cursor, alt_r182_alpha ; ALT left_ω — restore cursor, enter right
-
-alt_r182_alpha: ; REF(Expr15)
-                            lea         rax, [rel nref248_gamma]
                             mov         [P_Expr15_ret_γ], rax
-                            lea         rax, [rel nref248_omega]
+                            lea         rax, [rel nref229_omega]
                             mov         [P_Expr15_ret_ω], rax
                             jmp         P_Expr15_α
-alt_r182_beta:              lea         rax, [rel nref248_gamma] ; REF(%s)
+alt_r163_beta:              lea         rax, [rel nref229_gamma] ; REF(%s)
                             mov         [P_Expr15_ret_γ], rax
-                            lea         rax, [rel nref248_omega]
+                            lea         rax, [rel nref229_omega]
                             mov         [P_Expr15_ret_ω], rax
                             jmp         P_Expr15_β
 
-nref248_gamma:
+nref229_gamma:
                             jmp         patdef_Expr14_gamma
-nref248_omega:              jmp         patdef_Expr14_omega
+nref229_omega:              jmp         patdef_Expr14_omega
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr14_gamma:
                             jmp         [P_Expr14_ret_γ]
 patdef_Expr14_omega:        jmp         [P_Expr14_ret_ω]
 
 ; P_Expr15_α (α entry)
-P_Expr15_α:                 jmp         seq_l249_alpha ; SEQ
-P_Expr15_β:                 jmp         seq_r249_beta
+P_Expr15_α:                 jmp         seq_l230_alpha ; SEQ
+P_Expr15_β:                 jmp         seq_r230_beta
 
-seq_l249_alpha: ; REF(Expr17)
-                            lea         rax, [rel nref250_gamma]
+seq_l230_alpha: ; REF(Expr17)
+                            lea         rax, [rel nref231_gamma]
                             mov         [P_Expr17_ret_γ], rax
-                            lea         rax, [rel nref250_omega]
+                            lea         rax, [rel nref231_omega]
                             mov         [P_Expr17_ret_ω], rax
                             jmp         P_Expr17_α
-seq_l249_beta:              lea         rax, [rel nref250_gamma] ; REF(%s)
+seq_l230_beta:              lea         rax, [rel nref231_gamma] ; REF(%s)
                             mov         [P_Expr17_ret_γ], rax
-                            lea         rax, [rel nref250_omega]
+                            lea         rax, [rel nref231_omega]
                             mov         [P_Expr17_ret_ω], rax
                             jmp         P_Expr17_β
 
-nref250_gamma:
-                            jmp         seq_r249_alpha
+nref231_gamma:
+                            jmp         seq_r230_alpha
 ;  Expr15 ==============================================================================================================
-nref250_omega:              jmp         patdef_Expr15_omega
+nref231_omega:              jmp         patdef_Expr15_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r249_alpha:
-seq_r249_beta:              jmp         seq_l249_beta
+seq_r230_alpha:
+seq_r230_beta:              jmp         seq_l230_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr15_gamma:
                             jmp         [P_Expr15_ret_γ]
 patdef_Expr15_omega:        jmp         [P_Expr15_ret_ω]
 
 ; P_Expr16_α (α entry)
-P_Expr16_α:                 jmp         seq_l251_alpha ; SEQ
-P_Expr16_β:                 jmp         seq_r251_beta
-seq_l251_alpha:             jmp         seq_l252_alpha ; SEQ
-seq_l251_beta:              jmp         seq_r252_beta
+P_Expr16_α:                 jmp         seq_l232_alpha ; SEQ
+P_Expr16_β:                 jmp         seq_r232_beta
+seq_l232_alpha:             jmp         seq_l233_alpha ; SEQ
+seq_l232_beta:              jmp         seq_r233_beta
 
 ; UNIMPLEMENTED: nInc() → ω
-seq_l252_alpha:
-seq_l252_beta:              jmp         patdef_Expr16_omega
-seq_r252_alpha:             ALT_ALPHA   alt253_cur_save, cursor, alt_l253_alpha ; ALT α — save cursor, enter left
-seq_r252_beta:              SEQ_BETA    alt_r253_beta ; ALT β — resume right
-alt_l253_alpha:             jmp         seq_l254_alpha ; SEQ
-alt_l253_beta:              jmp         seq_r254_beta
+seq_l233_alpha:
+seq_l233_beta:              jmp         patdef_Expr16_omega
+seq_r233_alpha:             ALT_ALPHA   alt234_cur_save, cursor, alt_l234_alpha ; ALT α — save cursor, enter left
+seq_r233_beta:              SEQ_BETA    alt_r234_beta ; ALT β — resume right
+alt_l234_alpha:             jmp         seq_l235_alpha ; SEQ
+alt_l234_beta:              jmp         seq_r235_beta
 
 ; E_INDR no varname → ω
-seq_l254_alpha:
-seq_l254_beta:              jmp         alt253_left_omega
+seq_l235_alpha:
+seq_l235_beta:              jmp         alt234_left_omega
 
-seq_r254_alpha: ; DOL(] $  RB)
-                            DOL_SAVE    dol_entry_RB, cursor, dol255_child_alpha ; DOL α — save entry cursor
-seq_r254_beta:              jmp         dol255_child_beta ; DOL β
+seq_r235_alpha: ; DOL(] $  RB)
+                            DOL_SAVE    dol_entry_RB, cursor, dol236_child_alpha ; DOL α — save entry cursor
+seq_r235_beta:              jmp         dol236_child_beta ; DOL β
 
-dol255_child_alpha: ; REF(ExprList)
-                            lea         rax, [rel nref256_gamma]
+dol236_child_alpha: ; REF(ExprList)
+                            lea         rax, [rel nref237_gamma]
                             mov         [P_ExprList_ret_γ], rax
-                            lea         rax, [rel nref256_omega]
+                            lea         rax, [rel nref237_omega]
                             mov         [P_ExprList_ret_ω], rax
                             jmp         P_ExprList_α
-dol255_child_beta:          lea         rax, [rel nref256_gamma] ; REF(%s)
+dol236_child_beta:          lea         rax, [rel nref237_gamma] ; REF(%s)
                             mov         [P_ExprList_ret_γ], rax
-                            lea         rax, [rel nref256_omega]
+                            lea         rax, [rel nref237_omega]
                             mov         [P_ExprList_ret_ω], rax
                             jmp         P_ExprList_β
 
-nref256_gamma:
-                            jmp         dol255_gamma
+nref237_gamma:
+                            jmp         dol236_gamma
 ;  Expr16 ==============================================================================================================
-nref256_omega:              jmp         dol255_omega
-dol255_gamma:               DOL_CAPTURE dol_entry_RB, cursor, cap_RB_buf, cap_RB_len, subject_data, seq_r251_alpha ; DOL γ — capture span
-dol255_omega:               jmp         seq_l254_beta ; DOL ω — child failed
-alt253_left_omega:          ALT_OMEGA   alt253_cur_save, cursor, alt_r253_alpha ; ALT left_ω — restore cursor, enter right
-alt_r253_alpha:             jmp         seq_l257_alpha ; SEQ
-alt_r253_beta:              jmp         seq_r257_beta
+nref237_omega:              jmp         dol236_omega
+dol236_gamma:               DOL_CAPTURE dol_entry_RB, cursor, cap_RB_buf, cap_RB_len, subject_data, seq_r232_alpha ; DOL γ — capture span
+dol236_omega:               jmp         seq_l235_beta ; DOL ω — child failed
+alt234_left_omega:          ALT_OMEGA   alt234_cur_save, cursor, alt_r234_alpha ; ALT left_ω — restore cursor, enter right
+alt_r234_alpha:             jmp         seq_l238_alpha ; SEQ
+alt_r234_beta:              jmp         seq_r238_beta
 
 ; E_INDR no varname → ω
-seq_l257_alpha:
-seq_l257_beta:              jmp         seq_l252_beta
+seq_l238_alpha:
+seq_l238_beta:              jmp         seq_l233_beta
 
-seq_r257_alpha: ; DOL(> $  GT)
-                            DOL_SAVE    dol_entry_GT, cursor, dol258_child_alpha ; DOL α — save entry cursor
-seq_r257_beta:              jmp         dol258_child_beta ; DOL β
+seq_r238_alpha: ; DOL(> $  GT)
+                            DOL_SAVE    dol_entry_GT, cursor, dol239_child_alpha ; DOL α — save entry cursor
+seq_r238_beta:              jmp         dol239_child_beta ; DOL β
 
-dol258_child_alpha: ; REF(ExprList)
-                            lea         rax, [rel nref259_gamma]
+dol239_child_alpha: ; REF(ExprList)
+                            lea         rax, [rel nref240_gamma]
                             mov         [P_ExprList_ret_γ], rax
-                            lea         rax, [rel nref259_omega]
+                            lea         rax, [rel nref240_omega]
                             mov         [P_ExprList_ret_ω], rax
                             jmp         P_ExprList_α
-dol258_child_beta:          lea         rax, [rel nref259_gamma] ; REF(%s)
+dol239_child_beta:          lea         rax, [rel nref240_gamma] ; REF(%s)
                             mov         [P_ExprList_ret_γ], rax
-                            lea         rax, [rel nref259_omega]
+                            lea         rax, [rel nref240_omega]
                             mov         [P_ExprList_ret_ω], rax
                             jmp         P_ExprList_β
 
-nref259_gamma:
-                            jmp         dol258_gamma
-nref259_omega:              jmp         dol258_omega
-dol258_gamma:               DOL_CAPTURE dol_entry_GT, cursor, cap_GT_buf, cap_GT_len, subject_data, seq_r251_alpha ; DOL γ — capture span
-dol258_omega:               jmp         seq_l257_beta ; DOL ω — child failed
+nref240_gamma:
+                            jmp         dol239_gamma
+nref240_omega:              jmp         dol239_omega
+dol239_gamma:               DOL_CAPTURE dol_entry_GT, cursor, cap_GT_buf, cap_GT_len, subject_data, seq_r232_alpha ; DOL γ — capture span
+dol239_omega:               jmp         seq_l238_beta ; DOL ω — child failed
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r251_alpha:
-seq_r251_beta:              jmp         seq_l251_beta
+seq_r232_alpha:
+seq_r232_beta:              jmp         seq_l232_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr16_gamma:
                             jmp         [P_Expr16_ret_γ]
@@ -11582,17 +12147,17 @@ patdef_Expr17_omega:        jmp         [P_Expr17_ret_ω]
 ; P_SGoto_α (α entry)
 
 P_SGoto_α: ; DOL(cap $  cap)
-                            DOL_SAVE    dol_entry_cap, cursor, dol260_child_alpha ; DOL α — save entry cursor
-P_SGoto_β:                  jmp         dol260_child_beta ; DOL β
-dol260_child_alpha:         ALT_ALPHA   alt261_cur_save, cursor, alt_l261_alpha ; ALT α — save cursor, enter left
-dol260_child_beta:          SEQ_BETA    alt_r261_beta ; ALT β — resume right
-alt_l261_alpha:             LIT_ALPHA1  83, alt_l261_alpha_saved, cursor, subject_data, subject_len_val, dol260_gamma, alt261_left_omega ; LIT α
-alt_l261_beta:              LIT_BETA    alt_l261_alpha_saved, cursor, alt261_left_omega ; LIT β
-alt261_left_omega:          ALT_OMEGA   alt261_cur_save, cursor, alt_r261_alpha ; ALT left_ω — restore cursor, enter right
-alt_r261_alpha:             LIT_ALPHA1  115, alt_r261_alpha_saved, cursor, subject_data, subject_len_val, dol260_gamma, dol260_omega ; LIT α
-alt_r261_beta:              LIT_BETA    alt_r261_alpha_saved, cursor, dol260_omega ; LIT β
-dol260_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_SGoto_gamma ; DOL γ — capture span
-dol260_omega:               jmp         patdef_SGoto_omega ; DOL ω — child failed
+                            DOL_SAVE    dol_entry_cap, cursor, dol241_child_alpha ; DOL α — save entry cursor
+P_SGoto_β:                  jmp         dol241_child_beta ; DOL β
+dol241_child_alpha:         ALT_ALPHA   alt242_cur_save, cursor, alt_l242_alpha ; ALT α — save cursor, enter left
+dol241_child_beta:          SEQ_BETA    alt_r242_beta ; ALT β — resume right
+alt_l242_alpha:             LIT_ALPHA1  83, alt_l242_alpha_saved, cursor, subject_data, subject_len_val, dol241_gamma, alt242_left_omega ; LIT α
+alt_l242_beta:              LIT_BETA    alt_l242_alpha_saved, cursor, alt242_left_omega ; LIT β
+alt242_left_omega:          ALT_OMEGA   alt242_cur_save, cursor, alt_r242_alpha ; ALT left_ω — restore cursor, enter right
+alt_r242_alpha:             LIT_ALPHA1  115, alt_r242_alpha_saved, cursor, subject_data, subject_len_val, dol241_gamma, dol241_omega ; LIT α
+alt_r242_beta:              LIT_BETA    alt_r242_alpha_saved, cursor, dol241_omega ; LIT β
+dol241_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_SGoto_gamma ; DOL γ — capture span
+dol241_omega:               jmp         patdef_SGoto_omega ; DOL ω — child failed
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_SGoto_gamma:
                             jmp         [P_SGoto_ret_γ]
@@ -11602,17 +12167,17 @@ patdef_SGoto_omega:         jmp         [P_SGoto_ret_ω]
 ; P_FGoto_α (α entry)
 
 P_FGoto_α: ; DOL(cap $  cap)
-                            DOL_SAVE    dol_entry_cap, cursor, dol262_child_alpha ; DOL α — save entry cursor
-P_FGoto_β:                  jmp         dol262_child_beta ; DOL β
-dol262_child_alpha:         ALT_ALPHA   alt263_cur_save, cursor, alt_l263_alpha ; ALT α — save cursor, enter left
-dol262_child_beta:          SEQ_BETA    alt_r263_beta ; ALT β — resume right
-alt_l263_alpha:             LIT_ALPHA1  70, alt_l263_alpha_saved, cursor, subject_data, subject_len_val, dol262_gamma, alt263_left_omega ; LIT α
-alt_l263_beta:              LIT_BETA    alt_l263_alpha_saved, cursor, alt263_left_omega ; LIT β
-alt263_left_omega:          ALT_OMEGA   alt263_cur_save, cursor, alt_r263_alpha ; ALT left_ω — restore cursor, enter right
-alt_r263_alpha:             LIT_ALPHA1  102, alt_r263_alpha_saved, cursor, subject_data, subject_len_val, dol262_gamma, dol262_omega ; LIT α
-alt_r263_beta:              LIT_BETA    alt_r263_alpha_saved, cursor, dol262_omega ; LIT β
-dol262_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_FGoto_gamma ; DOL γ — capture span
-dol262_omega:               jmp         patdef_FGoto_omega ; DOL ω — child failed
+                            DOL_SAVE    dol_entry_cap, cursor, dol243_child_alpha ; DOL α — save entry cursor
+P_FGoto_β:                  jmp         dol243_child_beta ; DOL β
+dol243_child_alpha:         ALT_ALPHA   alt244_cur_save, cursor, alt_l244_alpha ; ALT α — save cursor, enter left
+dol243_child_beta:          SEQ_BETA    alt_r244_beta ; ALT β — resume right
+alt_l244_alpha:             LIT_ALPHA1  70, alt_l244_alpha_saved, cursor, subject_data, subject_len_val, dol243_gamma, alt244_left_omega ; LIT α
+alt_l244_beta:              LIT_BETA    alt_l244_alpha_saved, cursor, alt244_left_omega ; LIT β
+alt244_left_omega:          ALT_OMEGA   alt244_cur_save, cursor, alt_r244_alpha ; ALT left_ω — restore cursor, enter right
+alt_r244_alpha:             LIT_ALPHA1  102, alt_r244_alpha_saved, cursor, subject_data, subject_len_val, dol243_gamma, dol243_omega ; LIT α
+alt_r244_beta:              LIT_BETA    alt_r244_alpha_saved, cursor, dol243_omega ; LIT β
+dol243_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_FGoto_gamma ; DOL γ — capture span
+dol243_omega:               jmp         patdef_FGoto_omega ; DOL ω — child failed
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_FGoto_gamma:
                             jmp         [P_FGoto_ret_γ]
@@ -11620,95 +12185,95 @@ patdef_FGoto_gamma:
 patdef_FGoto_omega:         jmp         [P_FGoto_ret_ω]
 
 ; P_SorF_α (α entry)
-P_SorF_α:                   ALT_ALPHA   alt264_cur_save, cursor, alt_l264_alpha ; ALT α — save cursor, enter left
-P_SorF_β:                   SEQ_BETA    alt_r264_beta ; ALT β — resume right
+P_SorF_α:                   ALT_ALPHA   alt245_cur_save, cursor, alt_l245_alpha ; ALT α — save cursor, enter left
+P_SorF_β:                   SEQ_BETA    alt_r245_beta ; ALT β — resume right
 
-alt_l264_alpha: ; REF(SGoto)
-                            lea         rax, [rel nref265_gamma]
+alt_l245_alpha: ; REF(SGoto)
+                            lea         rax, [rel nref246_gamma]
                             mov         [P_SGoto_ret_γ], rax
-                            lea         rax, [rel nref265_omega]
+                            lea         rax, [rel nref246_omega]
                             mov         [P_SGoto_ret_ω], rax
                             jmp         P_SGoto_α
-alt_l264_beta:              lea         rax, [rel nref265_gamma] ; REF(%s)
+alt_l245_beta:              lea         rax, [rel nref246_gamma] ; REF(%s)
                             mov         [P_SGoto_ret_γ], rax
-                            lea         rax, [rel nref265_omega]
+                            lea         rax, [rel nref246_omega]
                             mov         [P_SGoto_ret_ω], rax
                             jmp         P_SGoto_β
 
-nref265_gamma:
+nref246_gamma:
                             jmp         patdef_SorF_gamma
 ;  SorF ================================================================================================================
-nref265_omega:              jmp         alt264_left_omega
-alt264_left_omega:          ALT_OMEGA   alt264_cur_save, cursor, alt_r264_alpha ; ALT left_ω — restore cursor, enter right
+nref246_omega:              jmp         alt245_left_omega
+alt245_left_omega:          ALT_OMEGA   alt245_cur_save, cursor, alt_r245_alpha ; ALT left_ω — restore cursor, enter right
 
-alt_r264_alpha: ; REF(FGoto)
-                            lea         rax, [rel nref266_gamma]
+alt_r245_alpha: ; REF(FGoto)
+                            lea         rax, [rel nref247_gamma]
                             mov         [P_FGoto_ret_γ], rax
-                            lea         rax, [rel nref266_omega]
+                            lea         rax, [rel nref247_omega]
                             mov         [P_FGoto_ret_ω], rax
                             jmp         P_FGoto_α
-alt_r264_beta:              lea         rax, [rel nref266_gamma] ; REF(%s)
+alt_r245_beta:              lea         rax, [rel nref247_gamma] ; REF(%s)
                             mov         [P_FGoto_ret_γ], rax
-                            lea         rax, [rel nref266_omega]
+                            lea         rax, [rel nref247_omega]
                             mov         [P_FGoto_ret_ω], rax
                             jmp         P_FGoto_β
 
-nref266_gamma:
+nref247_gamma:
                             jmp         patdef_SorF_gamma
-nref266_omega:              jmp         patdef_SorF_omega
+nref247_omega:              jmp         patdef_SorF_omega
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_SorF_gamma:
                             jmp         [P_SorF_ret_γ]
 patdef_SorF_omega:          jmp         [P_SorF_ret_ω]
 
 ; P_Target_α (α entry)
-P_Target_α:                 ALT_ALPHA   alt267_cur_save, cursor, alt_l267_alpha ; ALT α — save cursor, enter left
-P_Target_β:                 SEQ_BETA    alt_r267_beta ; ALT β — resume right
-alt_l267_alpha:             jmp         seq_l268_alpha ; SEQ
-alt_l267_beta:              jmp         seq_r268_beta
+P_Target_α:                 ALT_ALPHA   alt248_cur_save, cursor, alt_l248_alpha ; ALT α — save cursor, enter left
+P_Target_β:                 SEQ_BETA    alt_r248_beta ; ALT β — resume right
+alt_l248_alpha:             jmp         seq_l249_alpha ; SEQ
+alt_l248_beta:              jmp         seq_r249_beta
 
-seq_l268_alpha: ; DOL(cap $  cap)
-                            DOL_SAVE    dol_entry_cap, cursor, dol269_child_alpha ; DOL α — save entry cursor
-seq_l268_beta:              jmp         dol269_child_beta ; DOL β
-
-; E_INDR no varname → ω
-dol269_child_alpha:
-dol269_child_beta:          jmp         dol269_omega
-dol269_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, seq_r268_alpha ; DOL γ — capture span
-dol269_omega:               jmp         alt267_left_omega ; DOL ω — child failed
-
-seq_r268_alpha: ; DOL() $  RP)
-                            DOL_SAVE    dol_entry_RP, cursor, dol270_child_alpha ; DOL α — save entry cursor
-seq_r268_beta:              jmp         dol270_child_beta ; DOL β
-
-; E_INDR unresolved: Expr → ω
-dol270_child_alpha:
-dol270_child_beta:          jmp         dol270_omega
-dol270_gamma:               DOL_CAPTURE dol_entry_RP, cursor, cap_RP_buf, cap_RP_len, subject_data, patdef_Target_gamma ; DOL γ — capture span
-dol270_omega:               jmp         seq_l268_beta ; DOL ω — child failed
-alt267_left_omega:          ALT_OMEGA   alt267_cur_save, cursor, alt_r267_alpha ; ALT left_ω — restore cursor, enter right
-alt_r267_alpha:             jmp         seq_l271_alpha ; SEQ
-alt_r267_beta:              jmp         seq_r271_beta
-
-seq_l271_alpha: ; DOL(cap $  cap)
-                            DOL_SAVE    dol_entry_cap, cursor, dol272_child_alpha ; DOL α — save entry cursor
-seq_l271_beta:              jmp         dol272_child_beta ; DOL β
+seq_l249_alpha: ; DOL(cap $  cap)
+                            DOL_SAVE    dol_entry_cap, cursor, dol250_child_alpha ; DOL α — save entry cursor
+seq_l249_beta:              jmp         dol250_child_beta ; DOL β
 
 ; E_INDR no varname → ω
-dol272_child_alpha:
-dol272_child_beta:          jmp         dol272_omega
-dol272_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, seq_r271_alpha ; DOL γ — capture span
-dol272_omega:               jmp         patdef_Target_omega ; DOL ω — child failed
+dol250_child_alpha:
+dol250_child_beta:          jmp         dol250_omega
+dol250_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, seq_r249_alpha ; DOL γ — capture span
+dol250_omega:               jmp         alt248_left_omega ; DOL ω — child failed
 
-seq_r271_alpha: ; DOL(> $  GT)
-                            DOL_SAVE    dol_entry_GT, cursor, dol273_child_alpha ; DOL α — save entry cursor
-seq_r271_beta:              jmp         dol273_child_beta ; DOL β
+seq_r249_alpha: ; DOL() $  RP)
+                            DOL_SAVE    dol_entry_RP, cursor, dol251_child_alpha ; DOL α — save entry cursor
+seq_r249_beta:              jmp         dol251_child_beta ; DOL β
 
 ; E_INDR unresolved: Expr → ω
-dol273_child_alpha:
-dol273_child_beta:          jmp         dol273_omega
-dol273_gamma:               DOL_CAPTURE dol_entry_GT, cursor, cap_GT_buf, cap_GT_len, subject_data, patdef_Target_gamma ; DOL γ — capture span
-dol273_omega:               jmp         seq_l271_beta ; DOL ω — child failed
+dol251_child_alpha:
+dol251_child_beta:          jmp         dol251_omega
+dol251_gamma:               DOL_CAPTURE dol_entry_RP, cursor, cap_RP_buf, cap_RP_len, subject_data, patdef_Target_gamma ; DOL γ — capture span
+dol251_omega:               jmp         seq_l249_beta ; DOL ω — child failed
+alt248_left_omega:          ALT_OMEGA   alt248_cur_save, cursor, alt_r248_alpha ; ALT left_ω — restore cursor, enter right
+alt_r248_alpha:             jmp         seq_l252_alpha ; SEQ
+alt_r248_beta:              jmp         seq_r252_beta
+
+seq_l252_alpha: ; DOL(cap $  cap)
+                            DOL_SAVE    dol_entry_cap, cursor, dol253_child_alpha ; DOL α — save entry cursor
+seq_l252_beta:              jmp         dol253_child_beta ; DOL β
+
+; E_INDR no varname → ω
+dol253_child_alpha:
+dol253_child_beta:          jmp         dol253_omega
+dol253_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, seq_r252_alpha ; DOL γ — capture span
+dol253_omega:               jmp         patdef_Target_omega ; DOL ω — child failed
+
+seq_r252_alpha: ; DOL(> $  GT)
+                            DOL_SAVE    dol_entry_GT, cursor, dol254_child_alpha ; DOL α — save entry cursor
+seq_r252_beta:              jmp         dol254_child_beta ; DOL β
+
+; E_INDR unresolved: Expr → ω
+dol254_child_alpha:
+dol254_child_beta:          jmp         dol254_omega
+dol254_gamma:               DOL_CAPTURE dol_entry_GT, cursor, cap_GT_buf, cap_GT_len, subject_data, patdef_Target_gamma ; DOL γ — capture span
+dol254_omega:               jmp         seq_l252_beta ; DOL ω — child failed
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Target_gamma:
                             jmp         [P_Target_ret_γ]
@@ -11716,63 +12281,63 @@ patdef_Target_gamma:
 patdef_Target_omega:        jmp         [P_Target_ret_ω]
 
 ; P_Goto_α (α entry)
-P_Goto_α:                   jmp         seq_l274_alpha ; SEQ
-P_Goto_β:                   jmp         seq_r274_beta
-seq_l274_alpha:             jmp         seq_l275_alpha ; SEQ
-seq_l274_beta:              jmp         seq_r275_beta
-seq_l275_alpha:             jmp         seq_l276_alpha ; SEQ
-seq_l275_beta:              jmp         seq_r276_beta
+P_Goto_α:                   jmp         seq_l255_alpha ; SEQ
+P_Goto_β:                   jmp         seq_r255_beta
+seq_l255_alpha:             jmp         seq_l256_alpha ; SEQ
+seq_l255_beta:              jmp         seq_r256_beta
+seq_l256_alpha:             jmp         seq_l257_alpha ; SEQ
+seq_l256_beta:              jmp         seq_r257_beta
 
-seq_l276_alpha: ; REF(Gray)
-                            lea         rax, [rel nref277_gamma]
+seq_l257_alpha: ; REF(Gray)
+                            lea         rax, [rel nref258_gamma]
                             mov         [P_Gray_ret_γ], rax
-                            lea         rax, [rel nref277_omega]
+                            lea         rax, [rel nref258_omega]
                             mov         [P_Gray_ret_ω], rax
                             jmp         P_Gray_α
-seq_l276_beta:              lea         rax, [rel nref277_gamma] ; REF(%s)
+seq_l257_beta:              lea         rax, [rel nref258_gamma] ; REF(%s)
                             mov         [P_Gray_ret_γ], rax
-                            lea         rax, [rel nref277_omega]
+                            lea         rax, [rel nref258_omega]
                             mov         [P_Gray_ret_ω], rax
                             jmp         P_Gray_β
 
-nref277_gamma:
-                            jmp         seq_r276_alpha
+nref258_gamma:
+                            jmp         seq_r257_alpha
 ;  Goto ================================================================================================================
-nref277_omega:              jmp         patdef_Goto_omega
-seq_r276_alpha:             LIT_ALPHA1  58, seq_r276_alpha_saved, cursor, subject_data, subject_len_val, seq_r275_alpha, seq_l276_beta ; LIT α
-seq_r276_beta:              LIT_BETA    seq_r276_alpha_saved, cursor, seq_l276_beta ; LIT β
+nref258_omega:              jmp         patdef_Goto_omega
+seq_r257_alpha:             LIT_ALPHA1  58, seq_r257_alpha_saved, cursor, subject_data, subject_len_val, seq_r256_alpha, seq_l257_beta ; LIT α
+seq_r257_beta:              LIT_BETA    seq_r257_alpha_saved, cursor, seq_l257_beta ; LIT β
 
-seq_r275_alpha: ; REF(Gray)
-                            lea         rax, [rel nref278_gamma]
+seq_r256_alpha: ; REF(Gray)
+                            lea         rax, [rel nref259_gamma]
                             mov         [P_Gray_ret_γ], rax
-                            lea         rax, [rel nref278_omega]
+                            lea         rax, [rel nref259_omega]
                             mov         [P_Gray_ret_ω], rax
                             jmp         P_Gray_α
-seq_r275_beta:              lea         rax, [rel nref278_gamma] ; REF(%s)
+seq_r256_beta:              lea         rax, [rel nref259_gamma] ; REF(%s)
                             mov         [P_Gray_ret_γ], rax
-                            lea         rax, [rel nref278_omega]
+                            lea         rax, [rel nref259_omega]
                             mov         [P_Gray_ret_ω], rax
                             jmp         P_Gray_β
 
-nref278_gamma:
-                            jmp         seq_r274_alpha
-nref278_omega:              jmp         seq_l275_beta
+nref259_gamma:
+                            jmp         seq_r255_alpha
+nref259_omega:              jmp         seq_l256_beta
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r274_alpha:
-seq_r274_beta:              jmp         seq_l274_beta
+seq_r255_alpha:
+seq_r255_beta:              jmp         seq_l255_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Goto_gamma:
                             jmp         [P_Goto_ret_γ]
 patdef_Goto_omega:          jmp         [P_Goto_ret_ω]
 
 ; P_Control_α (α entry)
-P_Control_α:                jmp         seq_l279_alpha ; SEQ
-P_Control_β:                jmp         seq_r279_beta
-seq_l279_alpha:             LIT_ALPHA1  45, seq_l279_alpha_saved, cursor, subject_data, subject_len_val, seq_r279_alpha, patdef_Control_omega ; LIT α
-seq_l279_beta:              LIT_BETA    seq_l279_alpha_saved, cursor, patdef_Control_omega ; LIT β
-seq_r279_alpha:             BREAK_ALPHA lit_str_4, 0, brk280_saved, cursor, subject_data, subject_len_val, patdef_Control_gamma, seq_l279_beta ; BREAK α
-seq_r279_beta:              BREAK_BETA  brk280_saved, cursor, seq_l279_beta ; BREAK β
+P_Control_α:                jmp         seq_l260_alpha ; SEQ
+P_Control_β:                jmp         seq_r260_beta
+seq_l260_alpha:             LIT_ALPHA1  45, seq_l260_alpha_saved, cursor, subject_data, subject_len_val, seq_r260_alpha, patdef_Control_omega ; LIT α
+seq_l260_beta:              LIT_BETA    seq_l260_alpha_saved, cursor, patdef_Control_omega ; LIT β
+seq_r260_alpha:             BREAK_ALPHA lit_str_4, 0, brk261_saved, cursor, subject_data, subject_len_val, patdef_Control_gamma, seq_l260_beta ; BREAK α
+seq_r260_beta:              BREAK_BETA  brk261_saved, cursor, seq_l260_beta ; BREAK β
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Control_gamma:
                             jmp         [P_Control_ret_γ]
@@ -11780,12 +12345,12 @@ patdef_Control_gamma:
 patdef_Control_omega:       jmp         [P_Control_ret_ω]
 
 ; P_Comment_α (α entry)
-P_Comment_α:                jmp         seq_l281_alpha ; SEQ
-P_Comment_β:                jmp         seq_r281_beta
-seq_l281_alpha:             LIT_ALPHA1  42, seq_l281_alpha_saved, cursor, subject_data, subject_len_val, seq_r281_alpha, patdef_Comment_omega ; LIT α
-seq_l281_beta:              LIT_BETA    seq_l281_alpha_saved, cursor, patdef_Comment_omega ; LIT β
-seq_r281_alpha:             BREAK_ALPHA lit_str_4, 0, brk282_saved, cursor, subject_data, subject_len_val, patdef_Comment_gamma, seq_l281_beta ; BREAK α
-seq_r281_beta:              BREAK_BETA  brk282_saved, cursor, seq_l281_beta ; BREAK β
+P_Comment_α:                jmp         seq_l262_alpha ; SEQ
+P_Comment_β:                jmp         seq_r262_beta
+seq_l262_alpha:             LIT_ALPHA1  42, seq_l262_alpha_saved, cursor, subject_data, subject_len_val, seq_r262_alpha, patdef_Comment_omega ; LIT α
+seq_l262_beta:              LIT_BETA    seq_l262_alpha_saved, cursor, patdef_Comment_omega ; LIT β
+seq_r262_alpha:             BREAK_ALPHA lit_str_4, 0, brk263_saved, cursor, subject_data, subject_len_val, patdef_Comment_gamma, seq_l262_beta ; BREAK α
+seq_r262_beta:              BREAK_BETA  brk263_saved, cursor, seq_l262_beta ; BREAK β
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Comment_gamma:
                             jmp         [P_Comment_ret_γ]
@@ -11795,12 +12360,12 @@ patdef_Comment_omega:       jmp         [P_Comment_ret_ω]
 ; P_Label_α (α entry)
 
 P_Label_α: ; DOL(Label $  Label)
-                            DOL_SAVE    dol_entry_Label, cursor, dol283_child_alpha ; DOL α — save entry cursor
-P_Label_β:                  jmp         dol283_child_beta ; DOL β
-dol283_child_alpha:         BREAK_ALPHA lit_str_4, 0, brk284_saved, cursor, subject_data, subject_len_val, dol283_gamma, dol283_omega ; BREAK α
-dol283_child_beta:          BREAK_BETA  brk284_saved, cursor, dol283_omega ; BREAK β
-dol283_gamma:               DOL_CAPTURE dol_entry_Label, cursor, cap_Label_buf, cap_Label_len, subject_data, patdef_Label_gamma ; DOL γ — capture span
-dol283_omega:               jmp         patdef_Label_omega ; DOL ω — child failed
+                            DOL_SAVE    dol_entry_Label, cursor, dol264_child_alpha ; DOL α — save entry cursor
+P_Label_β:                  jmp         dol264_child_beta ; DOL β
+dol264_child_alpha:         BREAK_ALPHA lit_str_4, 0, brk265_saved, cursor, subject_data, subject_len_val, dol264_gamma, dol264_omega ; BREAK α
+dol264_child_beta:          BREAK_BETA  brk265_saved, cursor, dol264_omega ; BREAK β
+dol264_gamma:               DOL_CAPTURE dol_entry_Label, cursor, cap_Label_buf, cap_Label_len, subject_data, patdef_Label_gamma ; DOL γ — capture span
+dol264_omega:               jmp         patdef_Label_omega ; DOL ω — child failed
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Label_gamma:
                             jmp         [P_Label_ret_γ]
@@ -11808,183 +12373,183 @@ patdef_Label_gamma:
 patdef_Label_omega:         jmp         [P_Label_ret_ω]
 
 ; P_Stmt_α (α entry)
-P_Stmt_α:                   jmp         seq_l285_alpha ; SEQ
-P_Stmt_β:                   jmp         seq_r285_beta
-seq_l285_alpha:             jmp         seq_l286_alpha ; SEQ
-seq_l285_beta:              jmp         seq_r286_beta
-seq_l286_alpha:             jmp         seq_l287_alpha ; SEQ
-seq_l286_beta:              jmp         seq_r287_beta
+P_Stmt_α:                   jmp         seq_l266_alpha ; SEQ
+P_Stmt_β:                   jmp         seq_r266_beta
+seq_l266_alpha:             jmp         seq_l267_alpha ; SEQ
+seq_l266_beta:              jmp         seq_r267_beta
+seq_l267_alpha:             jmp         seq_l268_alpha ; SEQ
+seq_l267_beta:              jmp         seq_r268_beta
 
-seq_l287_alpha: ; REF(Label)
-                            lea         rax, [rel nref288_gamma]
+seq_l268_alpha: ; REF(Label)
+                            lea         rax, [rel nref269_gamma]
                             mov         [P_Label_ret_γ], rax
-                            lea         rax, [rel nref288_omega]
+                            lea         rax, [rel nref269_omega]
                             mov         [P_Label_ret_ω], rax
                             jmp         P_Label_α
-seq_l287_beta:              lea         rax, [rel nref288_gamma] ; REF(%s)
+seq_l268_beta:              lea         rax, [rel nref269_gamma] ; REF(%s)
                             mov         [P_Label_ret_γ], rax
-                            lea         rax, [rel nref288_omega]
+                            lea         rax, [rel nref269_omega]
                             mov         [P_Label_ret_ω], rax
                             jmp         P_Label_β
 
-nref288_gamma:
-                            jmp         seq_r287_alpha
+nref269_gamma:
+                            jmp         seq_r268_alpha
 ;  Stmt ================================================================================================================
-nref288_omega:              jmp         patdef_Stmt_omega
-seq_r287_alpha:             ALT_ALPHA   alt289_cur_save, cursor, alt_l289_alpha ; ALT α — save cursor, enter left
-seq_r287_beta:              SEQ_BETA    alt_r289_beta ; ALT β — resume right
-alt_l289_alpha:             jmp         seq_l290_alpha ; SEQ
-alt_l289_beta:              jmp         seq_r290_beta
-seq_l290_alpha:             jmp         seq_l291_alpha ; SEQ
-seq_l290_beta:              jmp         seq_r291_beta
+nref269_omega:              jmp         patdef_Stmt_omega
+seq_r268_alpha:             ALT_ALPHA   alt270_cur_save, cursor, alt_l270_alpha ; ALT α — save cursor, enter left
+seq_r268_beta:              SEQ_BETA    alt_r270_beta ; ALT β — resume right
+alt_l270_alpha:             jmp         seq_l271_alpha ; SEQ
+alt_l270_beta:              jmp         seq_r271_beta
+seq_l271_alpha:             jmp         seq_l272_alpha ; SEQ
+seq_l271_beta:              jmp         seq_r272_beta
 
-seq_l291_alpha: ; REF(White)
-                            lea         rax, [rel nref292_gamma]
+seq_l272_alpha: ; REF(White)
+                            lea         rax, [rel nref273_gamma]
                             mov         [P_White_ret_γ], rax
-                            lea         rax, [rel nref292_omega]
+                            lea         rax, [rel nref273_omega]
                             mov         [P_White_ret_ω], rax
                             jmp         P_White_α
-seq_l291_beta:              lea         rax, [rel nref292_gamma] ; REF(%s)
+seq_l272_beta:              lea         rax, [rel nref273_gamma] ; REF(%s)
                             mov         [P_White_ret_γ], rax
-                            lea         rax, [rel nref292_omega]
+                            lea         rax, [rel nref273_omega]
                             mov         [P_White_ret_ω], rax
                             jmp         P_White_β
 
-nref292_gamma:
-                            jmp         seq_r291_alpha
-nref292_omega:              jmp         alt289_left_omega
+nref273_gamma:
+                            jmp         seq_r272_alpha
+nref273_omega:              jmp         alt270_left_omega
 
-seq_r291_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref293_gamma]
+seq_r272_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref274_gamma]
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref293_omega]
+                            lea         rax, [rel nref274_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_α
-seq_r291_beta:              lea         rax, [rel nref293_gamma] ; REF(%s)
+seq_r272_beta:              lea         rax, [rel nref274_gamma] ; REF(%s)
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref293_omega]
+                            lea         rax, [rel nref274_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_β
 
-nref293_gamma:
-                            jmp         seq_r290_alpha
-nref293_omega:              jmp         seq_l291_beta
+nref274_gamma:
+                            jmp         seq_r271_alpha
+nref274_omega:              jmp         seq_l272_beta
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r290_alpha:
-seq_r290_beta:              jmp         seq_l290_beta
-alt289_left_omega:          ALT_OMEGA   alt289_cur_save, cursor, alt_r289_alpha ; ALT left_ω — restore cursor, enter right
-alt_r289_alpha:             jmp         seq_l294_alpha ; SEQ
-alt_r289_beta:              jmp         seq_r294_beta
-seq_l294_alpha:             jmp         seq_l295_alpha ; SEQ
-seq_l294_beta:              jmp         seq_r295_beta
-seq_l295_alpha:             jmp         seq_l296_alpha ; SEQ
-seq_l295_beta:              jmp         seq_r296_beta
+seq_r271_alpha:
+seq_r271_beta:              jmp         seq_l271_beta
+alt270_left_omega:          ALT_OMEGA   alt270_cur_save, cursor, alt_r270_alpha ; ALT left_ω — restore cursor, enter right
+alt_r270_alpha:             jmp         seq_l275_alpha ; SEQ
+alt_r270_beta:              jmp         seq_r275_beta
+seq_l275_alpha:             jmp         seq_l276_alpha ; SEQ
+seq_l275_beta:              jmp         seq_r276_beta
+seq_l276_alpha:             jmp         seq_l277_alpha ; SEQ
+seq_l276_beta:              jmp         seq_r277_beta
 
-seq_l296_alpha: ; DOL( $  v)
-                            DOL_SAVE    dol_entry_v, cursor, dol297_child_alpha ; DOL α — save entry cursor
-seq_l296_beta:              jmp         dol297_child_beta ; DOL β
-
-; UNRESOLVED named pattern ref: epsilon → ω
-dol297_child_alpha:
-dol297_child_beta:          jmp         dol297_omega
-dol297_gamma:               DOL_CAPTURE dol_entry_v, cursor, cap_v_buf, cap_v_len, subject_data, seq_r296_alpha ; DOL γ — capture span
-dol297_omega:               jmp         seq_l287_beta ; DOL ω — child failed
-
-seq_r296_alpha: ; DOL( $  v)
-                            DOL_SAVE    dol_entry_v, cursor, dol298_child_alpha ; DOL α — save entry cursor
-seq_r296_beta:              jmp         dol298_child_beta ; DOL β
+seq_l277_alpha: ; DOL( $  v)
+                            DOL_SAVE    dol_entry_v, cursor, dol278_child_alpha ; DOL α — save entry cursor
+seq_l277_beta:              jmp         dol278_child_beta ; DOL β
 
 ; UNRESOLVED named pattern ref: epsilon → ω
-dol298_child_alpha:
-dol298_child_beta:          jmp         dol298_omega
-dol298_gamma:               DOL_CAPTURE dol_entry_v, cursor, cap_v_buf, cap_v_len, subject_data, seq_r295_alpha ; DOL γ — capture span
-dol298_omega:               jmp         seq_l296_beta ; DOL ω — child failed
+dol278_child_alpha:
+dol278_child_beta:          jmp         dol278_omega
+dol278_gamma:               DOL_CAPTURE dol_entry_v, cursor, cap_v_buf, cap_v_len, subject_data, seq_r277_alpha ; DOL γ — capture span
+dol278_omega:               jmp         seq_l268_beta ; DOL ω — child failed
 
-seq_r295_alpha: ; DOL( $  v)
-                            DOL_SAVE    dol_entry_v, cursor, dol299_child_alpha ; DOL α — save entry cursor
-seq_r295_beta:              jmp         dol299_child_beta ; DOL β
-
-; UNRESOLVED named pattern ref: epsilon → ω
-dol299_child_alpha:
-dol299_child_beta:          jmp         dol299_omega
-dol299_gamma:               DOL_CAPTURE dol_entry_v, cursor, cap_v_buf, cap_v_len, subject_data, seq_r294_alpha ; DOL γ — capture span
-dol299_omega:               jmp         seq_l295_beta ; DOL ω — child failed
-
-seq_r294_alpha: ; DOL( $  v)
-                            DOL_SAVE    dol_entry_v, cursor, dol300_child_alpha ; DOL α — save entry cursor
-seq_r294_beta:              jmp         dol300_child_beta ; DOL β
+seq_r277_alpha: ; DOL( $  v)
+                            DOL_SAVE    dol_entry_v, cursor, dol279_child_alpha ; DOL α — save entry cursor
+seq_r277_beta:              jmp         dol279_child_beta ; DOL β
 
 ; UNRESOLVED named pattern ref: epsilon → ω
-dol300_child_alpha:
-dol300_child_beta:          jmp         dol300_omega
-dol300_gamma:               DOL_CAPTURE dol_entry_v, cursor, cap_v_buf, cap_v_len, subject_data, seq_r286_alpha ; DOL γ — capture span
-dol300_omega:               jmp         seq_l294_beta ; DOL ω — child failed
+dol279_child_alpha:
+dol279_child_beta:          jmp         dol279_omega
+dol279_gamma:               DOL_CAPTURE dol_entry_v, cursor, cap_v_buf, cap_v_len, subject_data, seq_r276_alpha ; DOL γ — capture span
+dol279_omega:               jmp         seq_l277_beta ; DOL ω — child failed
+
+seq_r276_alpha: ; DOL( $  v)
+                            DOL_SAVE    dol_entry_v, cursor, dol280_child_alpha ; DOL α — save entry cursor
+seq_r276_beta:              jmp         dol280_child_beta ; DOL β
+
+; UNRESOLVED named pattern ref: epsilon → ω
+dol280_child_alpha:
+dol280_child_beta:          jmp         dol280_omega
+dol280_gamma:               DOL_CAPTURE dol_entry_v, cursor, cap_v_buf, cap_v_len, subject_data, seq_r275_alpha ; DOL γ — capture span
+dol280_omega:               jmp         seq_l276_beta ; DOL ω — child failed
+
+seq_r275_alpha: ; DOL( $  v)
+                            DOL_SAVE    dol_entry_v, cursor, dol281_child_alpha ; DOL α — save entry cursor
+seq_r275_beta:              jmp         dol281_child_beta ; DOL β
+
+; UNRESOLVED named pattern ref: epsilon → ω
+dol281_child_alpha:
+dol281_child_beta:          jmp         dol281_omega
+dol281_gamma:               DOL_CAPTURE dol_entry_v, cursor, cap_v_buf, cap_v_len, subject_data, seq_r267_alpha ; DOL γ — capture span
+dol281_omega:               jmp         seq_l275_beta ; DOL ω — child failed
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r286_alpha:
-seq_r286_beta:              jmp         seq_l286_beta
+seq_r267_alpha:
+seq_r267_beta:              jmp         seq_l267_beta
 
-seq_r285_alpha: ; REF(Gray)
-                            lea         rax, [rel nref301_gamma]
+seq_r266_alpha: ; REF(Gray)
+                            lea         rax, [rel nref282_gamma]
                             mov         [P_Gray_ret_γ], rax
-                            lea         rax, [rel nref301_omega]
+                            lea         rax, [rel nref282_omega]
                             mov         [P_Gray_ret_ω], rax
                             jmp         P_Gray_α
-seq_r285_beta:              lea         rax, [rel nref301_gamma] ; REF(%s)
+seq_r266_beta:              lea         rax, [rel nref282_gamma] ; REF(%s)
                             mov         [P_Gray_ret_γ], rax
-                            lea         rax, [rel nref301_omega]
+                            lea         rax, [rel nref282_omega]
                             mov         [P_Gray_ret_ω], rax
                             jmp         P_Gray_β
 
-nref301_gamma:
+nref282_gamma:
                             jmp         patdef_Stmt_gamma
-nref301_omega:              jmp         seq_l285_beta
+nref282_omega:              jmp         seq_l266_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Stmt_gamma:
                             jmp         [P_Stmt_ret_γ]
 patdef_Stmt_omega:          jmp         [P_Stmt_ret_ω]
 
 ; P_Commands_α (α entry)
-P_Commands_α:               jmp         seq_l302_alpha ; SEQ
-P_Commands_β:               jmp         seq_r302_beta
+P_Commands_α:               jmp         seq_l283_alpha ; SEQ
+P_Commands_β:               jmp         seq_r283_beta
 
-seq_l302_alpha: ; REF(Command)
-                            lea         rax, [rel nref303_gamma]
+seq_l283_alpha: ; REF(Command)
+                            lea         rax, [rel nref284_gamma]
                             mov         [P_Command_ret_γ], rax
-                            lea         rax, [rel nref303_omega]
+                            lea         rax, [rel nref284_omega]
                             mov         [P_Command_ret_ω], rax
                             jmp         P_Command_α
-seq_l302_beta:              lea         rax, [rel nref303_gamma] ; REF(%s)
+seq_l283_beta:              lea         rax, [rel nref284_gamma] ; REF(%s)
                             mov         [P_Command_ret_γ], rax
-                            lea         rax, [rel nref303_omega]
+                            lea         rax, [rel nref284_omega]
                             mov         [P_Command_ret_ω], rax
                             jmp         P_Command_β
 
-nref303_gamma:
-                            jmp         seq_r302_alpha
+nref284_gamma:
+                            jmp         seq_r283_alpha
 ;  Commands ============================================================================================================
-nref303_omega:              jmp         patdef_Commands_omega
+nref284_omega:              jmp         patdef_Commands_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r302_alpha:
-seq_r302_beta:              jmp         seq_l302_beta
+seq_r283_alpha:
+seq_r283_beta:              jmp         seq_l283_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Commands_gamma:
                             jmp         [P_Commands_ret_γ]
 patdef_Commands_omega:      jmp         [P_Commands_ret_ω]
 
 ; P_Command_α (α entry)
-P_Command_α:                jmp         seq_l304_alpha ; SEQ
-P_Command_β:                jmp         seq_r304_beta
+P_Command_α:                jmp         seq_l285_alpha ; SEQ
+P_Command_β:                jmp         seq_r285_beta
 
 ; UNIMPLEMENTED: nInc() → ω
-seq_l304_alpha:
-seq_l304_beta:              jmp         patdef_Command_omega
+seq_l285_alpha:
+seq_l285_beta:              jmp         patdef_Command_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r304_alpha:
-seq_r304_beta:              jmp         seq_l304_beta
+seq_r285_alpha:
+seq_r285_beta:              jmp         seq_l285_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Command_gamma:
                             jmp         [P_Command_ret_γ]
@@ -11992,73 +12557,264 @@ patdef_Command_gamma:
 patdef_Command_omega:       jmp         [P_Command_ret_ω]
 
 ; P_Parse_α (α entry)
-P_Parse_α:                  jmp         seq_l305_alpha ; SEQ
-P_Parse_β:                  jmp         seq_r305_beta
-seq_l305_alpha:             jmp         seq_l306_alpha ; SEQ
-seq_l305_beta:              jmp         seq_r306_beta
-seq_l306_alpha:             jmp         seq_l307_alpha ; SEQ
-seq_l306_beta:              jmp         seq_r307_beta
+P_Parse_α:                  jmp         seq_l286_alpha ; SEQ
+P_Parse_β:                  jmp         seq_r286_beta
+seq_l286_alpha:             jmp         seq_l287_alpha ; SEQ
+seq_l286_beta:              jmp         seq_r287_beta
+seq_l287_alpha:             jmp         seq_l288_alpha ; SEQ
+seq_l287_beta:              jmp         seq_r288_beta
 
 ; UNIMPLEMENTED: nPush() → ω
-seq_l307_alpha:
-seq_l307_beta:              jmp         patdef_Parse_omega
+seq_l288_alpha:
+seq_l288_beta:              jmp         patdef_Parse_omega
 
-seq_r307_alpha: ; ARBNO
-                            mov         qword [arb308_depth], 0
-                            lea         rbx, [rel arb308_stack]
+seq_r288_alpha: ; ARBNO
+                            mov         qword [arb289_depth], 0
+                            lea         rbx, [rel arb289_stack]
                             mov         rax, [cursor]
                             mov         [rbx], rax
-                            mov         qword [arb308_depth], 1
-                            jmp         seq_r306_alpha
-seq_r307_beta:              mov         rax, [arb308_depth] ; ARBNO
+                            mov         qword [arb289_depth], 1
+                            jmp         seq_r287_alpha
+seq_r288_beta:              mov         rax, [arb289_depth] ; ARBNO
                             test        rax, rax
-                            je          seq_l307_beta
+                            je          seq_l288_beta
                             dec         rax
-                            mov         [arb308_depth], rax
-                            lea         rbx, [rel arb308_stack]
+                            mov         [arb289_depth], rax
+                            lea         rbx, [rel arb289_stack]
                             mov         rcx, [rbx + rax*8]
                             mov         [cursor], rcx
-                            mov         [arb308_cur_before], rcx
-                            jmp         arb308_child_alpha
-arb308_child_ok:            mov         rax, [cursor] ; ARBNO child_ok
-                            mov         rbx, [arb308_cur_before]
+                            mov         [arb289_cur_before], rcx
+                            jmp         arb289_child_alpha
+arb289_child_ok:            mov         rax, [cursor] ; ARBNO child_ok
+                            mov         rbx, [arb289_cur_before]
                             cmp         rax, rbx
-                            je          seq_l307_beta
-                            mov         rdx, [arb308_depth]
-                            lea         rbx, [rel arb308_stack]
+                            je          seq_l288_beta
+                            mov         rdx, [arb289_depth]
+                            lea         rbx, [rel arb289_stack]
                             mov         [rbx + rdx*8], rax
-                            inc         qword [arb308_depth]
-                            jmp         seq_r306_alpha
-arb308_child_fail:          jmp         seq_l307_beta ; ARBNO child_fail
+                            inc         qword [arb289_depth]
+                            jmp         seq_r287_alpha
+arb289_child_fail:          jmp         seq_l288_beta ; ARBNO child_fail
 
-arb308_child_alpha: ; REF(Command)
-                            lea         rax, [rel nref309_gamma]
+arb289_child_alpha: ; REF(Command)
+                            lea         rax, [rel nref290_gamma]
                             mov         [P_Command_ret_γ], rax
-                            lea         rax, [rel nref309_omega]
+                            lea         rax, [rel nref290_omega]
                             mov         [P_Command_ret_ω], rax
                             jmp         P_Command_α
-arb308_child_beta:          lea         rax, [rel nref309_gamma] ; REF(%s)
+arb289_child_beta:          lea         rax, [rel nref290_gamma] ; REF(%s)
                             mov         [P_Command_ret_γ], rax
-                            lea         rax, [rel nref309_omega]
+                            lea         rax, [rel nref290_omega]
                             mov         [P_Command_ret_ω], rax
                             jmp         P_Command_β
 
-nref309_gamma:
-                            jmp         arb308_child_ok
+nref290_gamma:
+                            jmp         arb289_child_ok
 ;  Parse ===============================================================================================================
-nref309_omega:              jmp         arb308_child_fail
+nref290_omega:              jmp         arb289_child_fail
 
 ; UNIMPLEMENTED node kind 14 → ω
-seq_r306_alpha:
-seq_r306_beta:              jmp         seq_l306_beta
+seq_r287_alpha:
+seq_r287_beta:              jmp         seq_l287_beta
 
 ; UNIMPLEMENTED: nPop() → ω
-seq_r305_alpha:
-seq_r305_beta:              jmp         seq_l305_beta
+seq_r286_alpha:
+seq_r286_beta:              jmp         seq_l286_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Parse_gamma:
                             jmp         [P_Parse_ret_γ]
 patdef_Parse_omega:         jmp         [P_Parse_ret_ω]
+
+; P_Compiland_α (α entry)
+P_Compiland_α:              jmp         seq_l291_alpha ; SEQ
+P_Compiland_β:              jmp         seq_r291_beta
+seq_l291_alpha:             jmp         seq_l292_alpha ; SEQ
+seq_l291_beta:              jmp         seq_r292_beta
+seq_l292_alpha:             jmp         seq_l293_alpha ; SEQ
+seq_l292_beta:              jmp         seq_r293_beta
+seq_l293_alpha:             jmp         seq_l294_alpha ; SEQ
+seq_l293_beta:              jmp         seq_r294_beta
+
+; UNIMPLEMENTED: nPush() → ω
+seq_l294_alpha:
+seq_l294_beta:              jmp         patdef_Compiland_omega
+
+seq_r294_alpha: ; ARBNO
+                            mov         qword [arb295_depth], 0
+                            lea         rbx, [rel arb295_stack]
+                            mov         rax, [cursor]
+                            mov         [rbx], rax
+                            mov         qword [arb295_depth], 1
+                            jmp         seq_r293_alpha
+seq_r294_beta:              mov         rax, [arb295_depth] ; ARBNO
+                            test        rax, rax
+                            je          seq_l294_beta
+                            dec         rax
+                            mov         [arb295_depth], rax
+                            lea         rbx, [rel arb295_stack]
+                            mov         rcx, [rbx + rax*8]
+                            mov         [cursor], rcx
+                            mov         [arb295_cur_before], rcx
+                            jmp         arb295_child_alpha
+arb295_child_ok:            mov         rax, [cursor] ; ARBNO child_ok
+                            mov         rbx, [arb295_cur_before]
+                            cmp         rax, rbx
+                            je          seq_l294_beta
+                            mov         rdx, [arb295_depth]
+                            lea         rbx, [rel arb295_stack]
+                            mov         [rbx + rdx*8], rax
+                            inc         qword [arb295_depth]
+                            jmp         seq_r293_alpha
+arb295_child_fail:          jmp         seq_l294_beta ; ARBNO child_fail
+
+arb295_child_alpha: ; REF(Command)
+                            lea         rax, [rel nref296_gamma]
+                            mov         [P_Command_ret_γ], rax
+                            lea         rax, [rel nref296_omega]
+                            mov         [P_Command_ret_ω], rax
+                            jmp         P_Command_α
+arb295_child_beta:          lea         rax, [rel nref296_gamma] ; REF(%s)
+                            mov         [P_Command_ret_γ], rax
+                            lea         rax, [rel nref296_omega]
+                            mov         [P_Command_ret_ω], rax
+                            jmp         P_Command_β
+
+nref296_gamma:
+                            jmp         arb295_child_ok
+;  Compiland ===========================================================================================================
+nref296_omega:              jmp         arb295_child_fail
+
+; UNIMPLEMENTED node kind 14 → ω
+seq_r293_alpha:
+seq_r293_beta:              jmp         seq_l293_beta
+seq_r292_alpha:             ALT_ALPHA   alt297_cur_save, cursor, alt_l297_alpha ; ALT α — save cursor, enter left
+seq_r292_beta:              SEQ_BETA    alt_r297_beta ; ALT β — resume right
+alt_l297_alpha:             jmp         seq_l298_alpha ; SEQ
+alt_l297_beta:              jmp         seq_r298_beta
+seq_l298_alpha:             jmp         seq_l299_alpha ; SEQ
+seq_l298_beta:              jmp         seq_r299_beta
+
+; UNIMPLEMENTED: icase() → ω
+seq_l299_alpha:
+seq_l299_beta:              jmp         alt297_left_omega
+seq_r299_alpha:             ALT_ALPHA   alt300_cur_save, cursor, alt_l300_alpha ; ALT α — save cursor, enter left
+seq_r299_beta:              SEQ_BETA    alt_r300_beta ; ALT β — resume right
+alt_l300_alpha:             jmp         seq_l301_alpha ; SEQ
+alt_l300_beta:              jmp         seq_r301_beta
+seq_l301_alpha:             jmp         seq_l302_alpha ; SEQ
+seq_l301_beta:              jmp         seq_r302_beta
+seq_l302_alpha:             LIT_ALPHA1  32, seq_l302_alpha_saved, cursor, subject_data, subject_len_val, seq_r302_alpha, alt300_left_omega ; LIT α
+seq_l302_beta:              LIT_BETA    seq_l302_alpha_saved, cursor, alt300_left_omega ; LIT β
+seq_r302_alpha:             BREAK_ALPHA lit_str_4, 0, brk303_saved, cursor, subject_data, subject_len_val, seq_r301_alpha, seq_l302_beta ; BREAK α
+seq_r302_beta:              BREAK_BETA  brk303_saved, cursor, seq_l302_beta ; BREAK β
+
+; UNRESOLVED named pattern ref: nl → ω
+seq_r301_alpha:
+seq_r301_beta:              jmp         seq_l301_beta
+alt300_left_omega:          ALT_OMEGA   alt300_cur_save, cursor, alt_r300_alpha ; ALT left_ω — restore cursor, enter right
+
+; UNRESOLVED named pattern ref: nl → ω
+alt_r300_alpha:
+alt_r300_beta:              jmp         seq_l299_beta
+
+seq_r298_alpha: ; ARBNO
+                            mov         qword [arb304_depth], 0
+                            lea         rbx, [rel arb304_stack]
+                            mov         rax, [cursor]
+                            mov         [rbx], rax
+                            mov         qword [arb304_depth], 1
+                            jmp         seq_r291_alpha
+seq_r298_beta:              mov         rax, [arb304_depth] ; ARBNO
+                            test        rax, rax
+                            je          seq_l298_beta
+                            dec         rax
+                            mov         [arb304_depth], rax
+                            lea         rbx, [rel arb304_stack]
+                            mov         rcx, [rbx + rax*8]
+                            mov         [cursor], rcx
+                            mov         [arb304_cur_before], rcx
+                            jmp         arb304_child_alpha
+arb304_child_ok:            mov         rax, [cursor] ; ARBNO child_ok
+                            mov         rbx, [arb304_cur_before]
+                            cmp         rax, rbx
+                            je          seq_l298_beta
+                            mov         rdx, [arb304_depth]
+                            lea         rbx, [rel arb304_stack]
+                            mov         [rbx + rdx*8], rax
+                            inc         qword [arb304_depth]
+                            jmp         seq_r291_alpha
+arb304_child_fail:          jmp         seq_l298_beta ; ARBNO child_fail
+arb304_child_alpha:         jmp         seq_l305_alpha ; SEQ
+arb304_child_beta:          jmp         seq_r305_beta
+seq_l305_alpha:             BREAK_ALPHA lit_str_4, 0, brk306_saved, cursor, subject_data, subject_len_val, seq_r305_alpha, arb304_child_fail ; BREAK α
+seq_l305_beta:              BREAK_BETA  brk306_saved, cursor, arb304_child_fail ; BREAK β
+
+; UNRESOLVED named pattern ref: nl → ω
+seq_r305_alpha:
+seq_r305_beta:              jmp         seq_l305_beta
+alt297_left_omega:          ALT_OMEGA   alt297_cur_save, cursor, alt_r297_alpha ; ALT left_ω — restore cursor, enter right
+
+; UNRESOLVED named pattern ref: epsilon → ω
+alt_r297_alpha:
+alt_r297_beta:              jmp         seq_l292_beta
+
+; UNIMPLEMENTED: nPop() → ω
+seq_r291_alpha:
+seq_r291_beta:              jmp         seq_l291_beta
+;  γ/ω ---------------------------------------------------------------------------------------------------------------
+patdef_Compiland_gamma:
+                            jmp         [P_Compiland_ret_γ]
+patdef_Compiland_omega:     jmp         [P_Compiland_ret_ω]
+
+; P_t_α (α entry)
+
+; UNIMPLEMENTED: t() → ω
+P_t_α:
+P_t_β:                      jmp         patdef_t_omega
+;  γ/ω ---------------------------------------------------------------------------------------------------------------
+patdef_t_gamma:
+                            jmp         [P_t_ret_γ]
+;  t ===================================================================================================================
+patdef_t_omega:             jmp         [P_t_ret_ω]
+
+; P_v_α (α entry)
+
+; UNIMPLEMENTED: v() → ω
+P_v_α:
+P_v_β:                      jmp         patdef_v_omega
+;  γ/ω ---------------------------------------------------------------------------------------------------------------
+patdef_v_gamma:
+                            jmp         [P_v_ret_γ]
+;  v ===================================================================================================================
+patdef_v_omega:             jmp         [P_v_ret_ω]
+
+; P_n_α (α entry)
+P_n_α:                      jmp         seq_l307_alpha ; SEQ
+P_n_β:                      jmp         seq_r307_beta
+
+; UNIMPLEMENTED: LT() → ω
+seq_l307_alpha:
+seq_l307_beta:              jmp         patdef_n_omega
+
+; UNIMPLEMENTED node kind 8 → ω
+seq_r307_alpha:
+seq_r307_beta:              jmp         seq_l307_beta
+;  γ/ω ---------------------------------------------------------------------------------------------------------------
+patdef_n_gamma:
+                            jmp         [P_n_ret_γ]
+;  n ===================================================================================================================
+patdef_n_omega:             jmp         [P_n_ret_ω]
+
+; P_c_α (α entry)
+
+; UNIMPLEMENTED: c() → ω
+P_c_α:
+P_c_β:                      jmp         patdef_c_omega
+;  γ/ω ---------------------------------------------------------------------------------------------------------------
+patdef_c_gamma:
+                            jmp         [P_c_ret_γ]
+;  c ===================================================================================================================
+patdef_c_omega:             jmp         [P_c_ret_ω]
 
 section .text
 L_COMPUTED_pp_t_30:  ; STUB → _SNO_END (dangling or computed goto)
@@ -12554,7 +13310,6 @@ S_mainErr2           db 109, 97, 105, 110, 69, 114, 114, 50, 0  ; "mainErr2"
 S_Internal_SP_Error  db 73, 110, 116, 101, 114, 110, 97, 108, 32, 69, 114, 114, 111, 114, 0  ; "Internal Error"
 S_AM_FULLSCAN        db 38, 70, 85, 76, 76, 83, 67, 65, 78, 0  ; "&FULLSCAN"
 S_AM_MAXLNGTH        db 38, 77, 65, 88, 76, 78, 71, 84, 72, 0  ; "&MAXLNGTH"
-S_CONCAT             db 67, 79, 78, 67, 65, 84, 0  ; "CONCAT"
 S_ALT                db 65, 76, 84, 0  ; "ALT"
 S_cap                db 99, 97, 112, 0  ; "cap"
 S_add                db 97, 100, 100, 0  ; "add"
