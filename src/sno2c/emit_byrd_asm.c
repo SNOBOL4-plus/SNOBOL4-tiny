@@ -565,6 +565,10 @@ static void emit_asm_named_ref(const AsmNamedPat *np,
                                 const char *alpha, const char *beta,
                                 const char *gamma, const char *omega);
 
+/* Forward declaration for plain-string variable registry (VAR = 'literal') */
+typedef struct { char varname[128]; const char *sval; } AsmStrVar;
+static const AsmStrVar *asm_str_var_lookup(const char *varname);
+
 /* -----------------------------------------------------------------------
  * Forward declaration for recursive emit_asm_node
  * ----------------------------------------------------------------------- */
@@ -1114,7 +1118,9 @@ static void emit_asm_node(EXPR_t *pat,
     case E_INDR: {
         /* *VAR — indirect pattern reference.
          * pat->left is E_VART holding the variable name.
-         * Look it up in the named-pattern registry and call it. */
+         * Look it up in the named-pattern registry and call it.
+         * If not a named pattern, try asm_str_vars for plain-string vars
+         * (e.g. PAT = 'hello' → *PAT emitted as inline LIT). */
         const char *varname = (pat->left && pat->left->sval)
                               ? pat->left->sval
                               : (pat->sval ? pat->sval : NULL);
@@ -1123,8 +1129,17 @@ static void emit_asm_node(EXPR_t *pat,
             if (np) {
                 emit_asm_named_ref(np, alpha, beta, gamma, omega);
             } else {
-                A("\n; E_INDR unresolved: %s → ω\n", varname);
-                asmL(alpha); ALF(beta, "jmp     %s\n", omega);
+                /* Try plain-string variable registry */
+                const AsmStrVar *sv = asm_str_var_lookup(varname);
+                if (sv && sv->sval) {
+                    A("\n; E_INDR *%s → inline LIT '%s'\n", varname, sv->sval);
+                    emit_asm_lit(sv->sval, (int)strlen(sv->sval),
+                                 alpha, beta, gamma, omega,
+                                 cursor, subj, subj_len_sym);
+                } else {
+                    A("\n; E_INDR unresolved: %s → ω\n", varname);
+                    asmL(alpha); ALF(beta, "jmp     %s\n", omega);
+                }
             }
         } else {
             A("\n; E_INDR no varname → ω\n");
@@ -1316,6 +1331,33 @@ static int         asm_named_count = 0;
 
 static void asm_named_reset(void) { asm_named_count = 0; }
 
+/* asm_str_vars — registry for plain-string variable assignments (VAR = 'literal').
+ * Used by E_INDR (*VAR) when the variable holds a string, not a named pattern.
+ * At compile time we know the literal value, so we emit an inline LIT. */
+#define ASM_STR_VARS_MAX 64
+static AsmStrVar asm_str_vars[ASM_STR_VARS_MAX];
+static int       asm_str_vars_count = 0;
+
+static void asm_str_vars_reset(void) { asm_str_vars_count = 0; }
+
+static void asm_str_var_register(const char *varname, const char *sval) {
+    for (int i = 0; i < asm_str_vars_count; i++)
+        if (strcasecmp(asm_str_vars[i].varname, varname) == 0) {
+            asm_str_vars[i].sval = sval; return;
+        }
+    if (asm_str_vars_count >= ASM_STR_VARS_MAX) return;
+    AsmStrVar *e = &asm_str_vars[asm_str_vars_count++];
+    snprintf(e->varname, ASM_NAMED_NAMELEN, "%s", varname);
+    e->sval = sval;
+}
+
+static const AsmStrVar *asm_str_var_lookup(const char *varname) {
+    for (int i = 0; i < asm_str_vars_count; i++)
+        if (strcasecmp(asm_str_vars[i].varname, varname) == 0)
+            return &asm_str_vars[i];
+    return NULL;
+}
+
 /* Make a label-safe version of a SNOBOL4 variable name — use expansion table */
 static void asm_safe_name(const char *src, char *dst, int dstlen) {
     asm_expand_name(src, dst, dstlen);
@@ -1462,7 +1504,7 @@ static void asm_emit_null_program(void) {
 }
 
 /* -----------------------------------------------------------------------
-/* expr_is_pattern_expr — return 1 if expression tree is a genuine
+ * expr_is_pattern_expr — return 1 if expression tree is a genuine
  * pattern-building expression (contains E_FNC, E_OR, or E_CONC with
  * at least one non-literal/non-value child).
  * Pure value assignments (E_VART, E_QLIT, E_ILIT alone, or
@@ -1493,6 +1535,7 @@ static int expr_is_pattern_expr(EXPR_t *e) {
 
 static void asm_scan_named_patterns(Program *prog) {
     asm_named_reset();
+    asm_str_vars_reset();
     if (!prog) return;
     for (STMT_t *s = prog->head; s; s = s->next) {
         /* A pattern assignment: subject is a variable, no pattern field,
@@ -1503,9 +1546,13 @@ static void asm_scan_named_patterns(Program *prog) {
          * expression (contains E_FNC).  Plain value assignments like
          * X = 'hello' or OUTPUT = X 'world' are NOT named patterns. */
         if (s->subject && s->subject->kind == E_VART &&
-            s->has_eq && s->replacement && !s->pattern &&
-            expr_is_pattern_expr(s->replacement)) {
-            asm_named_register(s->subject->sval, s->replacement);
+            s->has_eq && s->replacement && !s->pattern) {
+            if (expr_is_pattern_expr(s->replacement)) {
+                asm_named_register(s->subject->sval, s->replacement);
+            } else if (s->replacement->kind == E_QLIT && s->replacement->sval) {
+                /* Plain string assignment — register for *VAR indirect use */
+                asm_str_var_register(s->subject->sval, s->replacement->sval);
+            }
         }
     }
 }
@@ -2513,7 +2560,7 @@ static void asm_emit_program(Program *prog) {
     A("    extern  stmt_concat, stmt_is_fail, stmt_finish\n");
     A("    extern  stmt_apply, stmt_goto_dispatch\n");
     A("    extern  stmt_setup_subject, stmt_apply_replacement\n");
-    A("    extern  stmt_set_capture\n");
+    A("    extern  stmt_set_capture, stmt_match_var\n");
     A("    global  cursor, subject_data, subject_len_val\n");
     A("\n");
     /* subject_data/subject_len_val/cursor: defined here, exported for stmt_rt.c */

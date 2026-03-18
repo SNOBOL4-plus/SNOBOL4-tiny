@@ -211,6 +211,23 @@ void stmt_apply_replacement(const char *varname, DESCR_t repl) {
         NV_SET_fn(varname, repl);
 }
 
+/* stmt_match_var: dynamic indirect pattern match (*VAR).
+ * Fetches the string value of SNOBOL4 variable 'varname', then tries to match
+ * it as a literal at the current cursor position in subject_data.
+ * Returns 1 on success (cursor advanced), 0 on failure.
+ * Used by E_INDR nodes where the variable holds a plain string, not a named pattern. */
+int stmt_match_var(const char *varname) {
+    DESCR_t val = NV_GET_fn(varname);
+    const char *s = VARVAL_fn(val);
+    if (!s) return 0;
+    size_t len = strlen(s);
+    if (len == 0) return 1; /* empty string always matches — advance 0 */
+    if (cursor + len > subject_len_val) return 0;
+    if (memcmp(subject_data + cursor, s, len) != 0) return 0;
+    cursor += (uint64_t)len;
+    return 1;
+}
+
 /* ---- capture variable materialisation ---- */
 
 /* stmt_set_capture: after a DOL/NAM pattern match, copy the captured
