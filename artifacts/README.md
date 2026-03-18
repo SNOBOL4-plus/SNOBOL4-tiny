@@ -301,3 +301,19 @@ session115 | 2026-03-16 | 6d5919daa03d3c56646b5f0a165f86ee | 15859 lines | compi
 - `E_INDR` case added — `*VAR` indirect pattern ref resolved via named-pattern registry
 - `.asm.ref` convention: `TEST.asm.ref` preferred over `TEST.ref` for harness-specific expected output
 - 26/26 ASM crosscheck PASS · 106/106 main invariant holds
+
+### beauty_tramp_session154 — no change
+- md5: 185f391427d156b6a7ee5f9153f19b89 (same as session116)
+- sessions 152–154: no change to sno2c C emitter path; only ASM emitter (emit_byrd_asm.c) modified
+- active bug: Bug7 (FENCE nPop imbalance) — unchanged
+
+### artifacts/asm/stmt_output_lit.s  (Sprint A10 — step 1)
+- status: PASS — OUTPUT = 'hello world' via ASM calling stmt_* shims
+- assemble: nasm -f elf64 stmt_output_lit.s -o o.o && gcc -no-pie o.o [rt] -lgc -lm -o prog
+- design: DESCR_t=16 bytes rax:rdx; stmt_init+stmt_strval+stmt_is_fail+stmt_output
+
+### artifacts/asm/stmt_assign.s  (Sprint A10 — step 2)
+- status: PASS — X = 'foo'; OUTPUT = X via ASM
+
+### artifacts/asm/stmt_goto.s  (Sprint A10 — step 3)
+- status: PASS — N=1; LOOP: OUTPUT=N; N+1; GT(N,3):F(LOOP) via ASM
