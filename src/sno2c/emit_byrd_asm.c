@@ -1334,10 +1334,10 @@ static AsmNamedPat *asm_named_register(const char *varname, EXPR_t *pat) {
     AsmNamedPat *e = &asm_named[asm_named_count++];
     snprintf(e->varname, ASM_NAMED_NAMELEN, "%s", varname);
     asm_safe_name(varname, e->safe, ASM_NAMED_NAMELEN);
-    snprintf(e->alpha_lbl, ASM_NAMED_NAMELEN, "P_%s_alpha", e->safe);
-    snprintf(e->beta_lbl,  ASM_NAMED_NAMELEN, "P_%s_beta",  e->safe);
-    snprintf(e->ret_gamma, ASM_NAMED_NAMELEN, "P_%s_ret_gamma", e->safe);
-    snprintf(e->ret_omega, ASM_NAMED_NAMELEN, "P_%s_ret_omega", e->safe);
+    snprintf(e->alpha_lbl, ASM_NAMED_NAMELEN, "P_%s_α", e->safe);
+    snprintf(e->beta_lbl,  ASM_NAMED_NAMELEN, "P_%s_β", e->safe);
+    snprintf(e->ret_gamma, ASM_NAMED_NAMELEN, "P_%s_ret_γ", e->safe);
+    snprintf(e->ret_omega, ASM_NAMED_NAMELEN, "P_%s_ret_ω", e->safe);
     e->pat = pat;
     return e;
 }
