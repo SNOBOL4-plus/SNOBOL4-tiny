@@ -432,52 +432,17 @@ P_12_β:
 
 ; POS(0)  α=seq_l0_alpha
 seq_l0_alpha:
-    cmp     qword [cursor], 0
-    jne     P_12_ω
-    jmp     seq_r0_alpha
-
+    POS_ALPHA   0, cursor, seq_r0_alpha, P_12_ω
 ; POS β=seq_l0_beta
 seq_l0_beta:
-    jmp     P_12_ω
+    POS_BETA    cursor, P_12_ω
 
-; SPAN(" ") REAL  α=seq_r0_alpha
+; SPAN(" ")  α=seq_r0_alpha
 seq_r0_alpha:
-    mov     rax, [cursor]
-    cmp     rax, [subject_len_val]
-    jge     seq_l0_beta
-    mov     [span1_saved], rax
-    mov     r12, rax
-span1_outer:
-    cmp     r12, [subject_len_val]
-    jge     span1_notin
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + r12]
-    lea     rsi, [rel lit_str_1]
-    mov     rdx, 1
-span1_csscan:
-    test    rdx, rdx
-    jz      span1_notin
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      span1_inset
-    inc     rsi
-    dec     rdx
-    jmp     span1_csscan
-span1_inset:
-    inc     r12
-    jmp     span1_outer
-span1_notin:
-    mov     rbx, [span1_saved]
-    cmp     r12, rbx
-    je      seq_l0_beta
-    mov     [cursor], r12
-    jmp     P_12_γ
-
+    SPAN_ALPHA  lit_str_1, 1, span1_saved, cursor, subject_data, subject_len_val, P_12_γ, seq_l0_beta
 ; SPAN β=seq_r0_beta
 seq_r0_beta:
-    mov     rax, [span1_saved]
-    mov     [cursor], rax
-    jmp     seq_l0_beta
+    SPAN_BETA   span1_saved, cursor, seq_l0_beta
 
 P_12_γ:
     SET_CAPTURE S_18, cap_ppTokName_buf, cap_ppTokName_len
@@ -1325,46 +1290,17 @@ P_77_β:
 
 ; POS(0)  α=seq_l3_alpha
 seq_l3_alpha:
-    cmp     qword [cursor], 0
-    jne     P_77_ω
-    jmp     seq_r3_alpha
-
+    POS_ALPHA   0, cursor, seq_r3_alpha, P_77_ω
 ; POS β=seq_l3_beta
 seq_l3_beta:
-    jmp     P_77_ω
+    POS_BETA    cursor, P_77_ω
 
 ; ANY("*-")  α=seq_r3_alpha
 seq_r3_alpha:
-    mov     rax, [cursor]
-    cmp     rax, [subject_len_val]
-    jge     seq_l3_beta
-    mov     [any4_saved], rax
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + rax]
-    lea     rsi, [rel lit_str_2]
-    mov     rdx, 2
-any4_loop:
-    test    rdx, rdx
-    jz      any4_notfound
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      any4_found
-    inc     rsi
-    dec     rdx
-    jmp     any4_loop
-any4_notfound:
-    jmp     seq_l3_beta
-any4_found:
-    mov     rax, [any4_saved]
-    inc     rax
-    mov     [cursor], rax
-    jmp     P_77_γ
-
+    ANY_ALPHA   lit_str_2, 2, any4_saved, cursor, subject_data, subject_len_val, P_77_γ, seq_l3_beta
 ; ANY β=seq_r3_beta
 seq_r3_beta:
-    mov     rax, [any4_saved]
-    mov     [cursor], rax
-    jmp     seq_l3_beta
+    ANY_BETA    any4_saved, cursor, seq_l3_beta
 
 P_77_γ:
     SET_CAPTURE S_18, cap_ppTokName_buf, cap_ppTokName_len
@@ -1395,46 +1331,17 @@ P_78_β:
 
 ; POS(0)  α=seq_l5_alpha
 seq_l5_alpha:
-    cmp     qword [cursor], 0
-    jne     P_78_ω
-    jmp     seq_r5_alpha
-
+    POS_ALPHA   0, cursor, seq_r5_alpha, P_78_ω
 ; POS β=seq_l5_beta
 seq_l5_beta:
-    jmp     P_78_ω
+    POS_BETA    cursor, P_78_ω
 
 ; ANY("+.")  α=seq_r5_alpha
 seq_r5_alpha:
-    mov     rax, [cursor]
-    cmp     rax, [subject_len_val]
-    jge     seq_l5_beta
-    mov     [any6_saved], rax
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + rax]
-    lea     rsi, [rel lit_str_3]
-    mov     rdx, 2
-any6_loop:
-    test    rdx, rdx
-    jz      any6_notfound
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      any6_found
-    inc     rsi
-    dec     rdx
-    jmp     any6_loop
-any6_notfound:
-    jmp     seq_l5_beta
-any6_found:
-    mov     rax, [any6_saved]
-    inc     rax
-    mov     [cursor], rax
-    jmp     P_78_γ
-
+    ANY_ALPHA   lit_str_3, 2, any6_saved, cursor, subject_data, subject_len_val, P_78_γ, seq_l5_beta
 ; ANY β=seq_r5_beta
 seq_r5_beta:
-    mov     rax, [any6_saved]
-    mov     [cursor], rax
-    jmp     seq_l5_beta
+    ANY_BETA    any6_saved, cursor, seq_l5_beta
 
 P_78_γ:
     SET_CAPTURE S_18, cap_ppTokName_buf, cap_ppTokName_len
@@ -9175,13 +9082,10 @@ seq_l9_beta:
 
 ; POS(0)  α=seq_l10_alpha
 seq_l10_alpha:
-    cmp     qword [cursor], 0
-    jne     P_407_ω
-    jmp     seq_r10_alpha
-
+    POS_ALPHA   0, cursor, seq_r10_alpha, P_407_ω
 ; POS β=seq_l10_beta
 seq_l10_beta:
-    jmp     P_407_ω
+    POS_BETA    cursor, P_407_ω
 
 ; REF(SpecialNm) α=seq_r10_alpha
 seq_r10_alpha:
@@ -9206,14 +9110,10 @@ nref11_omega:
 
 ; RPOS(0)  α=seq_r9_alpha
 seq_r9_alpha:
-    mov     rax, [subject_len_val]
-    cmp     [cursor], rax
-    jne     seq_l9_beta
-    jmp     P_407_γ
-
+    RPOS_ALPHA  0, cursor, subject_len_val, P_407_γ, seq_l9_beta
 ; RPOS β=seq_r9_beta
 seq_r9_beta:
-    jmp     seq_l9_beta
+    RPOS_BETA   cursor, seq_l9_beta
 
 P_407_γ:
     SET_CAPTURE S_18, cap_ppTokName_buf, cap_ppTokName_len
@@ -11261,63 +11161,24 @@ seq_l12_beta:
 
 ; POS(0)  α=seq_l13_alpha
 seq_l13_alpha:
-    cmp     qword [cursor], 0
-    jne     P_495_ω
-    jmp     seq_r13_alpha
-
+    POS_ALPHA   0, cursor, seq_r13_alpha, P_495_ω
 ; POS β=seq_l13_beta
 seq_l13_beta:
-    jmp     P_495_ω
+    POS_BETA    cursor, P_495_ω
 
-; SPAN("") REAL  α=seq_r13_alpha
+; SPAN("")  α=seq_r13_alpha
 seq_r13_alpha:
-    mov     rax, [cursor]
-    cmp     rax, [subject_len_val]
-    jge     seq_l13_beta
-    mov     [span14_saved], rax
-    mov     r12, rax
-span14_outer:
-    cmp     r12, [subject_len_val]
-    jge     span14_notin
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + r12]
-    lea     rsi, [rel lit_str_4]
-    mov     rdx, 0
-span14_csscan:
-    test    rdx, rdx
-    jz      span14_notin
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      span14_inset
-    inc     rsi
-    dec     rdx
-    jmp     span14_csscan
-span14_inset:
-    inc     r12
-    jmp     span14_outer
-span14_notin:
-    mov     rbx, [span14_saved]
-    cmp     r12, rbx
-    je      seq_l13_beta
-    mov     [cursor], r12
-    jmp     seq_r12_alpha
-
+    SPAN_ALPHA  lit_str_4, 0, span14_saved, cursor, subject_data, subject_len_val, seq_r12_alpha, seq_l13_beta
 ; SPAN β=seq_r13_beta
 seq_r13_beta:
-    mov     rax, [span14_saved]
-    mov     [cursor], rax
-    jmp     seq_l13_beta
+    SPAN_BETA   span14_saved, cursor, seq_l13_beta
 
 ; RPOS(0)  α=seq_r12_alpha
 seq_r12_alpha:
-    mov     rax, [subject_len_val]
-    cmp     [cursor], rax
-    jne     seq_l12_beta
-    jmp     P_495_γ
-
+    RPOS_ALPHA  0, cursor, subject_len_val, P_495_γ, seq_l12_beta
 ; RPOS β=seq_r12_beta
 seq_r12_beta:
-    jmp     seq_l12_beta
+    RPOS_BETA   cursor, seq_l12_beta
 
 P_495_γ:
     SET_CAPTURE S_18, cap_ppTokName_buf, cap_ppTokName_len
@@ -11813,46 +11674,17 @@ P_518_β:
 
 ; POS(0)  α=seq_l15_alpha
 seq_l15_alpha:
-    cmp     qword [cursor], 0
-    jne     P_518_ω
-    jmp     seq_r15_alpha
-
+    POS_ALPHA   0, cursor, seq_r15_alpha, P_518_ω
 ; POS β=seq_l15_beta
 seq_l15_beta:
-    jmp     P_518_ω
+    POS_BETA    cursor, P_518_ω
 
 ; ANY("*-")  α=seq_r15_alpha
 seq_r15_alpha:
-    mov     rax, [cursor]
-    cmp     rax, [subject_len_val]
-    jge     seq_l15_beta
-    mov     [any16_saved], rax
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + rax]
-    lea     rsi, [rel lit_str_2]
-    mov     rdx, 2
-any16_loop:
-    test    rdx, rdx
-    jz      any16_notfound
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      any16_found
-    inc     rsi
-    dec     rdx
-    jmp     any16_loop
-any16_notfound:
-    jmp     seq_l15_beta
-any16_found:
-    mov     rax, [any16_saved]
-    inc     rax
-    mov     [cursor], rax
-    jmp     P_518_γ
-
+    ANY_ALPHA   lit_str_2, 2, any16_saved, cursor, subject_data, subject_len_val, P_518_γ, seq_l15_beta
 ; ANY β=seq_r15_beta
 seq_r15_beta:
-    mov     rax, [any16_saved]
-    mov     [cursor], rax
-    jmp     seq_l15_beta
+    ANY_BETA    any16_saved, cursor, seq_l15_beta
 
 P_518_γ:
     SET_CAPTURE S_18, cap_ppTokName_buf, cap_ppTokName_len
@@ -11941,46 +11773,17 @@ P_522_β:
 
 ; POS(0)  α=seq_l17_alpha
 seq_l17_alpha:
-    cmp     qword [cursor], 0
-    jne     P_522_ω
-    jmp     seq_r17_alpha
-
+    POS_ALPHA   0, cursor, seq_r17_alpha, P_522_ω
 ; POS β=seq_l17_beta
 seq_l17_beta:
-    jmp     P_522_ω
+    POS_BETA    cursor, P_522_ω
 
 ; ANY(".+")  α=seq_r17_alpha
 seq_r17_alpha:
-    mov     rax, [cursor]
-    cmp     rax, [subject_len_val]
-    jge     seq_l17_beta
-    mov     [any18_saved], rax
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + rax]
-    lea     rsi, [rel lit_str_5]
-    mov     rdx, 2
-any18_loop:
-    test    rdx, rdx
-    jz      any18_notfound
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      any18_found
-    inc     rsi
-    dec     rdx
-    jmp     any18_loop
-any18_notfound:
-    jmp     seq_l17_beta
-any18_found:
-    mov     rax, [any18_saved]
-    inc     rax
-    mov     [cursor], rax
-    jmp     P_522_γ
-
+    ANY_ALPHA   lit_str_5, 2, any18_saved, cursor, subject_data, subject_len_val, P_522_γ, seq_l17_beta
 ; ANY β=seq_r17_beta
 seq_r17_beta:
-    mov     rax, [any18_saved]
-    mov     [cursor], rax
-    jmp     seq_l17_beta
+    ANY_BETA    any18_saved, cursor, seq_l17_beta
 
 P_522_γ:
     SET_CAPTURE S_18, cap_ppTokName_buf, cap_ppTokName_len
@@ -12023,13 +11826,10 @@ seq_l20_beta:
 
 ; POS(0)  α=seq_l21_alpha
 seq_l21_alpha:
-    cmp     qword [cursor], 0
-    jne     P_523_ω
-    jmp     seq_r21_alpha
-
+    POS_ALPHA   0, cursor, seq_r21_alpha, P_523_ω
 ; POS β=seq_l21_beta
 seq_l21_beta:
-    jmp     P_523_ω
+    POS_BETA    cursor, P_523_ω
 
 ; E_INDR unresolved: Parse → ω
 seq_r21_alpha:
@@ -12043,14 +11843,10 @@ seq_r20_beta:
 
 ; RPOS(0)  α=seq_r19_alpha
 seq_r19_alpha:
-    mov     rax, [subject_len_val]
-    cmp     [cursor], rax
-    jne     seq_l19_beta
-    jmp     P_523_γ
-
+    RPOS_ALPHA  0, cursor, subject_len_val, P_523_γ, seq_l19_beta
 ; RPOS β=seq_r19_beta
 seq_r19_beta:
-    jmp     seq_l19_beta
+    RPOS_BETA   cursor, seq_l19_beta
 
 P_523_γ:
     SET_CAPTURE S_18, cap_ppTokName_buf, cap_ppTokName_len
@@ -12119,13 +11915,10 @@ seq_l23_beta:
 
 ; POS(0)  α=seq_l24_alpha
 seq_l24_alpha:
-    cmp     qword [cursor], 0
-    jne     P_526_ω
-    jmp     seq_r24_alpha
-
+    POS_ALPHA   0, cursor, seq_r24_alpha, P_526_ω
 ; POS β=seq_l24_beta
 seq_l24_beta:
-    jmp     P_526_ω
+    POS_BETA    cursor, P_526_ω
 
 ; E_INDR unresolved: Parse → ω
 seq_r24_alpha:
@@ -12139,14 +11932,10 @@ seq_r23_beta:
 
 ; RPOS(0)  α=seq_r22_alpha
 seq_r22_alpha:
-    mov     rax, [subject_len_val]
-    cmp     [cursor], rax
-    jne     seq_l22_beta
-    jmp     P_526_γ
-
+    RPOS_ALPHA  0, cursor, subject_len_val, P_526_γ, seq_l22_beta
 ; RPOS β=seq_r22_beta
 seq_r22_beta:
-    jmp     seq_l22_beta
+    RPOS_BETA   cursor, seq_l22_beta
 
 P_526_γ:
     SET_CAPTURE S_18, cap_ppTokName_buf, cap_ppTokName_len
@@ -12245,45 +12034,26 @@ lit_str_4            db
 lit_str_5            db 46, 43
 lit_str_6            db 45, 45
 lit_str_7            db 61, 32
-lit_str_8            db 61
-lit_str_9            db 58
-lit_str_10           db 83, 70
-lit_str_11           db 40, 60
-lit_str_12           db 47, 116, 109, 112, 47, 98, 101, 97, 117, 116, 121, 95, 97, 117, 116, 111, 95
-lit_str_13           db 46, 115, 110, 111
-lit_str_14           db 34
-lit_str_15           db 39
-lit_str_16           db 46
-lit_str_17           db 69
-lit_str_18           db 101
-lit_str_19           db 43
-lit_str_20           db 45
-lit_str_21           db 38
-lit_str_22           db 65, 66, 79, 82, 84, 32, 65, 76, 80, 72, 65, 66, 69, 84, 32, 65, 82, 66, 32, 66, 65, 76, 32, 70, 65, 73, 76, 32, 70, 69, 78, 67, 69, 32, 70, 73, 76, 69, 32, 70, 78, 67, 76, 69, 86, 69, 76, 32
-lit_str_23           db 76, 65, 83, 84, 70, 73, 76, 69, 32, 76, 65, 83, 84, 76, 73, 78, 69, 32, 76, 65, 83, 84, 78, 79, 32, 76, 67, 65, 83, 69, 32, 76, 73, 78, 69, 32, 82, 69, 77, 32, 82, 84, 78, 84, 89, 80, 69, 32
-lit_str_24           db 83, 84, 67, 79, 85, 78, 84, 32, 83, 84, 78, 79, 32, 83, 85, 67, 67, 69, 69, 68, 32, 85, 67, 65, 83, 69
-lit_str_25           db 65, 66, 69, 78, 68, 32, 65, 78, 67, 72, 79, 82, 32, 67, 65, 83, 69, 32, 67, 79, 68, 69, 32, 67, 79, 77, 80, 65, 82, 69, 32, 68, 85, 77, 80, 32, 69, 82, 82, 76, 73, 77, 73, 84, 32
-lit_str_26           db 69, 82, 82, 84, 69, 88, 84, 32, 69, 82, 82, 84, 89, 80, 69, 32, 70, 84, 82, 65, 67, 69, 32, 73, 78, 80, 85, 84, 32, 77, 65, 88, 76, 78, 71, 84, 72, 32, 79, 85, 84, 80, 85, 84, 32
-lit_str_27           db 80, 82, 79, 70, 73, 76, 69, 32, 83, 84, 76, 73, 77, 73, 84, 32, 84, 82, 65, 67, 69, 32, 84, 82, 73, 77, 32, 70, 85, 76, 76, 83, 67, 65, 78
-lit_str_28           db 65, 78, 89, 32, 65, 80, 80, 76, 89, 32, 65, 82, 66, 78, 79, 32, 65, 82, 71, 32, 65, 82, 82, 65, 89, 32, 65, 84, 65, 78, 32, 66, 65, 67, 75, 83, 80, 65, 67, 69, 32, 66, 82, 69, 65, 75, 32, 66, 82, 69, 65, 75, 88, 32
-lit_str_29           db 67, 72, 65, 82, 32, 67, 72, 79, 80, 32, 67, 76, 69, 65, 82, 32, 67, 79, 68, 69, 32, 67, 79, 76, 76, 69, 67, 84, 32, 67, 79, 78, 86, 69, 82, 84, 32, 67, 79, 80, 89, 32, 67, 79, 83, 32, 68, 65, 84, 65, 32
-lit_str_30           db 68, 65, 84, 65, 84, 89, 80, 69, 32, 68, 65, 84, 69, 32, 68, 69, 70, 73, 78, 69, 32, 68, 69, 84, 65, 67, 72, 32, 68, 73, 70, 70, 69, 82, 32, 68, 85, 77, 80, 32, 68, 85, 80, 76, 32, 69, 74, 69, 67, 84, 32
-lit_str_31           db 69, 78, 68, 70, 73, 76, 69, 32, 69, 81, 32, 69, 86, 65, 76, 32, 69, 88, 73, 84, 32, 69, 88, 80, 32, 70, 69, 78, 67, 69, 32, 70, 73, 69, 76, 68, 32, 71, 69, 32, 71, 84, 32, 72, 79, 83, 84, 32
-lit_str_32           db 73, 68, 69, 78, 84, 32, 73, 78, 80, 85, 84, 32, 73, 78, 84, 69, 71, 69, 82, 32, 73, 84, 69, 77, 32, 76, 69, 32, 76, 69, 78, 32, 76, 69, 81, 32, 76, 71, 69, 32, 76, 71, 84, 32, 76, 76, 69, 32
-lit_str_33           db 76, 76, 84, 32, 76, 78, 32, 76, 78, 69, 32, 76, 79, 65, 68, 32, 76, 79, 67, 65, 76, 32, 76, 80, 65, 68, 32, 76, 84, 32, 78, 69, 32, 78, 79, 84, 65, 78, 89, 32, 79, 80, 83, 89, 78, 32, 79, 85, 84, 80, 85, 84, 32
-lit_str_34           db 80, 79, 83, 32, 80, 82, 79, 84, 79, 84, 89, 80, 69, 32, 82, 69, 77, 68, 82, 32, 82, 69, 80, 76, 65, 67, 69, 32, 82, 69, 86, 69, 82, 83, 69, 32, 82, 69, 87, 73, 78, 68, 32, 82, 80, 65, 68, 32, 82, 80, 79, 83, 32
-lit_str_35           db 82, 83, 79, 82, 84, 32, 82, 84, 65, 66, 32, 83, 69, 84, 32, 83, 69, 84, 69, 88, 73, 84, 32, 83, 73, 78, 32, 83, 73, 90, 69, 32, 83, 79, 82, 84, 32, 83, 80, 65, 78, 32, 83, 81, 82, 84, 32, 83, 84, 79, 80, 84, 82, 32
-lit_str_36           db 83, 85, 66, 83, 84, 82, 32, 84, 65, 66, 32, 84, 65, 66, 76, 69, 32, 84, 65, 78, 32, 84, 73, 77, 69, 32, 84, 82, 65, 67, 69, 32, 84, 82, 73, 77, 32, 85, 78, 76, 79, 65, 68
-lit_str_37           db 64
-lit_str_38           db 126
-lit_str_39           db 63
-lit_str_40           db 42
-lit_str_41           db 36
-lit_str_42           db 33
-lit_str_43           db 37
-lit_str_44           db 47
-lit_str_45           db 35
-lit_str_46           db 124
+lit_str_8            db 83, 70
+lit_str_9            db 40, 60
+lit_str_10           db 58
+lit_str_11           db 47, 116, 109, 112, 47, 98, 101, 97, 117, 116, 121, 95, 97, 117, 116, 111, 95
+lit_str_12           db 46, 115, 110, 111
+lit_str_13           db 65, 66, 79, 82, 84, 32, 65, 76, 80, 72, 65, 66, 69, 84, 32, 65, 82, 66, 32, 66, 65, 76, 32, 70, 65, 73, 76, 32, 70, 69, 78, 67, 69, 32, 70, 73, 76, 69, 32, 70, 78, 67, 76, 69, 86, 69, 76, 32
+lit_str_14           db 76, 65, 83, 84, 70, 73, 76, 69, 32, 76, 65, 83, 84, 76, 73, 78, 69, 32, 76, 65, 83, 84, 78, 79, 32, 76, 67, 65, 83, 69, 32, 76, 73, 78, 69, 32, 82, 69, 77, 32, 82, 84, 78, 84, 89, 80, 69, 32
+lit_str_15           db 83, 84, 67, 79, 85, 78, 84, 32, 83, 84, 78, 79, 32, 83, 85, 67, 67, 69, 69, 68, 32, 85, 67, 65, 83, 69
+lit_str_16           db 65, 66, 69, 78, 68, 32, 65, 78, 67, 72, 79, 82, 32, 67, 65, 83, 69, 32, 67, 79, 68, 69, 32, 67, 79, 77, 80, 65, 82, 69, 32, 68, 85, 77, 80, 32, 69, 82, 82, 76, 73, 77, 73, 84, 32
+lit_str_17           db 69, 82, 82, 84, 69, 88, 84, 32, 69, 82, 82, 84, 89, 80, 69, 32, 70, 84, 82, 65, 67, 69, 32, 73, 78, 80, 85, 84, 32, 77, 65, 88, 76, 78, 71, 84, 72, 32, 79, 85, 84, 80, 85, 84, 32
+lit_str_18           db 80, 82, 79, 70, 73, 76, 69, 32, 83, 84, 76, 73, 77, 73, 84, 32, 84, 82, 65, 67, 69, 32, 84, 82, 73, 77, 32, 70, 85, 76, 76, 83, 67, 65, 78
+lit_str_19           db 65, 78, 89, 32, 65, 80, 80, 76, 89, 32, 65, 82, 66, 78, 79, 32, 65, 82, 71, 32, 65, 82, 82, 65, 89, 32, 65, 84, 65, 78, 32, 66, 65, 67, 75, 83, 80, 65, 67, 69, 32, 66, 82, 69, 65, 75, 32, 66, 82, 69, 65, 75, 88, 32
+lit_str_20           db 67, 72, 65, 82, 32, 67, 72, 79, 80, 32, 67, 76, 69, 65, 82, 32, 67, 79, 68, 69, 32, 67, 79, 76, 76, 69, 67, 84, 32, 67, 79, 78, 86, 69, 82, 84, 32, 67, 79, 80, 89, 32, 67, 79, 83, 32, 68, 65, 84, 65, 32
+lit_str_21           db 68, 65, 84, 65, 84, 89, 80, 69, 32, 68, 65, 84, 69, 32, 68, 69, 70, 73, 78, 69, 32, 68, 69, 84, 65, 67, 72, 32, 68, 73, 70, 70, 69, 82, 32, 68, 85, 77, 80, 32, 68, 85, 80, 76, 32, 69, 74, 69, 67, 84, 32
+lit_str_22           db 69, 78, 68, 70, 73, 76, 69, 32, 69, 81, 32, 69, 86, 65, 76, 32, 69, 88, 73, 84, 32, 69, 88, 80, 32, 70, 69, 78, 67, 69, 32, 70, 73, 69, 76, 68, 32, 71, 69, 32, 71, 84, 32, 72, 79, 83, 84, 32
+lit_str_23           db 73, 68, 69, 78, 84, 32, 73, 78, 80, 85, 84, 32, 73, 78, 84, 69, 71, 69, 82, 32, 73, 84, 69, 77, 32, 76, 69, 32, 76, 69, 78, 32, 76, 69, 81, 32, 76, 71, 69, 32, 76, 71, 84, 32, 76, 76, 69, 32
+lit_str_24           db 76, 76, 84, 32, 76, 78, 32, 76, 78, 69, 32, 76, 79, 65, 68, 32, 76, 79, 67, 65, 76, 32, 76, 80, 65, 68, 32, 76, 84, 32, 78, 69, 32, 78, 79, 84, 65, 78, 89, 32, 79, 80, 83, 89, 78, 32, 79, 85, 84, 80, 85, 84, 32
+lit_str_25           db 80, 79, 83, 32, 80, 82, 79, 84, 79, 84, 89, 80, 69, 32, 82, 69, 77, 68, 82, 32, 82, 69, 80, 76, 65, 67, 69, 32, 82, 69, 86, 69, 82, 83, 69, 32, 82, 69, 87, 73, 78, 68, 32, 82, 80, 65, 68, 32, 82, 80, 79, 83, 32
+lit_str_26           db 82, 83, 79, 82, 84, 32, 82, 84, 65, 66, 32, 83, 69, 84, 32, 83, 69, 84, 69, 88, 73, 84, 32, 83, 73, 78, 32, 83, 73, 90, 69, 32, 83, 79, 82, 84, 32, 83, 80, 65, 78, 32, 83, 81, 82, 84, 32, 83, 84, 79, 80, 84, 82, 32
+lit_str_27           db 83, 85, 66, 83, 84, 82, 32, 84, 65, 66, 32, 84, 65, 66, 76, 69, 32, 84, 65, 78, 32, 84, 73, 77, 69, 32, 84, 82, 65, 67, 69, 32, 84, 82, 73, 77, 32, 85, 78, 76, 79, 65, 68
 
 section .text
 
@@ -12345,28 +12115,10 @@ seq_l25_beta:
 
 ; LIT("--")  α=seq_l26_alpha
 seq_l26_alpha:
-    mov     rax, [cursor]
-    add     rax, 2
-    cmp     rax, [subject_len_val]
-    jg      patdef_ppTokPat_omega
-    lea     rsi, [rel subject_data]
-    mov     rcx, [cursor]
-    add     rsi, rcx
-    lea     rdi, [rel lit_str_6]
-    mov     rcx, 2
-    repe    cmpsb
-    jne     patdef_ppTokPat_omega
-    mov     rax, [cursor]
-    mov     [seq_l26_alpha_saved], rax
-    add     rax, 2
-    mov     [cursor], rax
-    jmp     seq_r26_alpha
-
+    LIT_ALPHA   lit_str_6, 2, seq_l26_alpha_saved, cursor, subject_data, subject_len_val, seq_r26_alpha, patdef_ppTokPat_omega
 ; LIT β=seq_l26_beta
 seq_l26_beta:
-    mov     rax, [seq_l26_alpha_saved]
-    mov     [cursor], rax
-    jmp     patdef_ppTokPat_omega
+    LIT_BETA    seq_l26_alpha_saved, cursor, patdef_ppTokPat_omega
 
 ; DOL(ppTokName $  ppTokName)  α=seq_r26_alpha
 seq_r26_alpha:
@@ -12384,39 +12136,12 @@ dol27_child_alpha:
 dol27_child_beta:
     jmp     alt_r28_beta
 
-; BREAK("= ") REAL  α=alt_l28_alpha
+; BREAK("= ")  α=alt_l28_alpha
 alt_l28_alpha:
-    mov     rax, [cursor]
-    mov     [brk29_saved], rax
-    mov     r12, rax
-brk29_outer:
-    cmp     r12, [subject_len_val]
-    jge     alt28_left_omega
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + r12]
-    lea     rsi, [rel lit_str_7]
-    mov     rdx, 2
-brk29_csscan:
-    test    rdx, rdx
-    je      brk29_advance
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      brk29_inset
-    inc     rsi
-    dec     rdx
-    jmp     brk29_csscan
-brk29_advance:
-    inc     r12
-    jmp     brk29_outer
-brk29_inset:
-    mov     [cursor], r12
-    jmp     dol27_gamma
-
+    BREAK_ALPHA lit_str_7, 2, brk29_saved, cursor, subject_data, subject_len_val, dol27_gamma, alt28_left_omega
 ; BREAK β=alt_l28_beta
 alt_l28_beta:
-    mov     rax, [brk29_saved]
-    mov     [cursor], rax
-    jmp     alt28_left_omega
+    BREAK_BETA  brk29_saved, cursor, alt28_left_omega
 
 ; ALT left_ω trampoline
 alt28_left_omega:
@@ -12426,17 +12151,10 @@ alt28_left_omega:
 
 ; REM  α=alt_r28_alpha
 alt_r28_alpha:
-    mov     rax, [cursor]
-    mov     [rem30_saved], rax
-    mov     rax, [subject_len_val]
-    mov     [cursor], rax
-    jmp     dol27_gamma
-
+    REM_ALPHA   rem30_saved, cursor, subject_len_val, dol27_gamma
 ; REM β=alt_r28_beta
 alt_r28_beta:
-    mov     rax, [rem30_saved]
-    mov     [cursor], rax
-    jmp     dol27_omega
+    REM_BETA    rem30_saved, cursor, dol27_omega
 
 ; DOL γ — capture span into cap_ppTokName_buf
 dol27_gamma:
@@ -12471,26 +12189,10 @@ alt_l31_beta:
 
 ; LIT("=")  α=seq_l32_alpha
 seq_l32_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      alt31_left_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 61
-    jne     alt31_left_omega
-    mov     rax, [cursor]
-    mov     [seq_l32_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r32_alpha
-
+    LIT_ALPHA1  61, seq_l32_alpha_saved, cursor, subject_data, subject_len_val, seq_r32_alpha, alt31_left_omega
 ; LIT β=seq_l32_beta
 seq_l32_beta:
-    mov     rax, [seq_l32_alpha_saved]
-    mov     [cursor], rax
-    jmp     alt31_left_omega
+    LIT_BETA    seq_l32_alpha_saved, cursor, alt31_left_omega
 
 ; DOL(ppTokVal $  ppTokVal)  α=seq_r32_alpha
 seq_r32_alpha:
@@ -12508,39 +12210,12 @@ dol33_child_alpha:
 dol33_child_beta:
     jmp     alt_r34_beta
 
-; BREAK(" ") REAL  α=alt_l34_alpha
+; BREAK(" ")  α=alt_l34_alpha
 alt_l34_alpha:
-    mov     rax, [cursor]
-    mov     [brk35_saved], rax
-    mov     r12, rax
-brk35_outer:
-    cmp     r12, [subject_len_val]
-    jge     alt34_left_omega
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + r12]
-    lea     rsi, [rel lit_str_1]
-    mov     rdx, 1
-brk35_csscan:
-    test    rdx, rdx
-    je      brk35_advance
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      brk35_inset
-    inc     rsi
-    dec     rdx
-    jmp     brk35_csscan
-brk35_advance:
-    inc     r12
-    jmp     brk35_outer
-brk35_inset:
-    mov     [cursor], r12
-    jmp     dol33_gamma
-
+    BREAK_ALPHA lit_str_1, 1, brk35_saved, cursor, subject_data, subject_len_val, dol33_gamma, alt34_left_omega
 ; BREAK β=alt_l34_beta
 alt_l34_beta:
-    mov     rax, [brk35_saved]
-    mov     [cursor], rax
-    jmp     alt34_left_omega
+    BREAK_BETA  brk35_saved, cursor, alt34_left_omega
 
 ; ALT left_ω trampoline
 alt34_left_omega:
@@ -12550,17 +12225,10 @@ alt34_left_omega:
 
 ; REM  α=alt_r34_alpha
 alt_r34_alpha:
-    mov     rax, [cursor]
-    mov     [rem36_saved], rax
-    mov     rax, [subject_len_val]
-    mov     [cursor], rax
-    jmp     dol33_gamma
-
+    REM_ALPHA   rem36_saved, cursor, subject_len_val, dol33_gamma
 ; REM β=alt_r34_beta
 alt_r34_beta:
-    mov     rax, [rem36_saved]
-    mov     [cursor], rax
-    jmp     dol33_omega
+    REM_BETA    rem36_saved, cursor, dol33_omega
 
 ; DOL γ — capture span into cap_ppTokVal_buf
 dol33_gamma:
@@ -12595,28 +12263,10 @@ alt_r31_beta:
 
 ; LIT("")  α=dol37_child_alpha
 dol37_child_alpha:
-    mov     rax, [cursor]
-    add     rax, 0
-    cmp     rax, [subject_len_val]
-    jg      dol37_omega
-    lea     rsi, [rel subject_data]
-    mov     rcx, [cursor]
-    add     rsi, rcx
-    lea     rdi, [rel lit_str_4]
-    mov     rcx, 0
-    repe    cmpsb
-    jne     dol37_omega
-    mov     rax, [cursor]
-    mov     [dol37_child_alpha_saved], rax
-    add     rax, 0
-    mov     [cursor], rax
-    jmp     dol37_gamma
-
+    LIT_ALPHA   lit_str_4, 0, dol37_child_alpha_saved, cursor, subject_data, subject_len_val, dol37_gamma, dol37_omega
 ; LIT β=dol37_child_beta
 dol37_child_beta:
-    mov     rax, [dol37_child_alpha_saved]
-    mov     [cursor], rax
-    jmp     dol37_omega
+    LIT_BETA    dol37_child_alpha_saved, cursor, dol37_omega
 
 ; DOL γ — capture span into cap_ppTokVal_buf
 dol37_gamma:
@@ -12701,44 +12351,12 @@ seq_l41_alpha:
 seq_l41_beta:
     jmp     alt_r42_beta
 
-; SPAN("") REAL  α=alt_l42_alpha
+; SPAN("")  α=alt_l42_alpha
 alt_l42_alpha:
-    mov     rax, [cursor]
-    cmp     rax, [subject_len_val]
-    jge     alt42_left_omega
-    mov     [span43_saved], rax
-    mov     r12, rax
-span43_outer:
-    cmp     r12, [subject_len_val]
-    jge     span43_notin
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + r12]
-    lea     rsi, [rel lit_str_4]
-    mov     rdx, 0
-span43_csscan:
-    test    rdx, rdx
-    jz      span43_notin
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      span43_inset
-    inc     rsi
-    dec     rdx
-    jmp     span43_csscan
-span43_inset:
-    inc     r12
-    jmp     span43_outer
-span43_notin:
-    mov     rbx, [span43_saved]
-    cmp     r12, rbx
-    je      alt42_left_omega
-    mov     [cursor], r12
-    jmp     seq_r41_alpha
-
+    SPAN_ALPHA  lit_str_4, 0, span43_saved, cursor, subject_data, subject_len_val, seq_r41_alpha, alt42_left_omega
 ; SPAN β=alt_l42_beta
 alt_l42_beta:
-    mov     rax, [span43_saved]
-    mov     [cursor], rax
-    jmp     alt42_left_omega
+    SPAN_BETA   span43_saved, cursor, alt42_left_omega
 
 ; ALT left_ω trampoline
 alt42_left_omega:
@@ -12748,51 +12366,17 @@ alt42_left_omega:
 
 ; LIT("")  α=alt_r42_alpha
 alt_r42_alpha:
-    mov     rax, [cursor]
-    add     rax, 0
-    cmp     rax, [subject_len_val]
-    jg      patdef_ppGSfx_omega
-    lea     rsi, [rel subject_data]
-    mov     rcx, [cursor]
-    add     rsi, rcx
-    lea     rdi, [rel lit_str_4]
-    mov     rcx, 0
-    repe    cmpsb
-    jne     patdef_ppGSfx_omega
-    mov     rax, [cursor]
-    mov     [alt_r42_alpha_saved], rax
-    add     rax, 0
-    mov     [cursor], rax
-    jmp     seq_r41_alpha
-
+    LIT_ALPHA   lit_str_4, 0, alt_r42_alpha_saved, cursor, subject_data, subject_len_val, seq_r41_alpha, patdef_ppGSfx_omega
 ; LIT β=alt_r42_beta
 alt_r42_beta:
-    mov     rax, [alt_r42_alpha_saved]
-    mov     [cursor], rax
-    jmp     patdef_ppGSfx_omega
+    LIT_BETA    alt_r42_alpha_saved, cursor, patdef_ppGSfx_omega
 
 ; LIT(":")  α=seq_r41_alpha
 seq_r41_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      seq_l41_beta
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 58
-    jne     seq_l41_beta
-    mov     rax, [cursor]
-    mov     [seq_r41_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r40_alpha
-
+    LIT_ALPHA1  58, seq_r41_alpha_saved, cursor, subject_data, subject_len_val, seq_r40_alpha, seq_l41_beta
 ; LIT β=seq_r41_beta
 seq_r41_beta:
-    mov     rax, [seq_r41_alpha_saved]
-    mov     [cursor], rax
-    jmp     seq_l41_beta
+    LIT_BETA    seq_r41_alpha_saved, cursor, seq_l41_beta
 
 ; ALT α=seq_r40_alpha
 seq_r40_alpha:
@@ -12804,36 +12388,10 @@ seq_r40_beta:
 
 ; ANY("SF")  α=alt_l44_alpha
 alt_l44_alpha:
-    mov     rax, [cursor]
-    cmp     rax, [subject_len_val]
-    jge     alt44_left_omega
-    mov     [any45_saved], rax
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + rax]
-    lea     rsi, [rel lit_str_10]
-    mov     rdx, 2
-any45_loop:
-    test    rdx, rdx
-    jz      any45_notfound
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      any45_found
-    inc     rsi
-    dec     rdx
-    jmp     any45_loop
-any45_notfound:
-    jmp     alt44_left_omega
-any45_found:
-    mov     rax, [any45_saved]
-    inc     rax
-    mov     [cursor], rax
-    jmp     seq_r39_alpha
-
+    ANY_ALPHA   lit_str_8, 2, any45_saved, cursor, subject_data, subject_len_val, seq_r39_alpha, alt44_left_omega
 ; ANY β=alt_l44_beta
 alt_l44_beta:
-    mov     rax, [any45_saved]
-    mov     [cursor], rax
-    jmp     alt44_left_omega
+    ANY_BETA    any45_saved, cursor, alt44_left_omega
 
 ; ALT left_ω trampoline
 alt44_left_omega:
@@ -12843,28 +12401,10 @@ alt44_left_omega:
 
 ; LIT("")  α=alt_r44_alpha
 alt_r44_alpha:
-    mov     rax, [cursor]
-    add     rax, 0
-    cmp     rax, [subject_len_val]
-    jg      seq_l40_beta
-    lea     rsi, [rel subject_data]
-    mov     rcx, [cursor]
-    add     rsi, rcx
-    lea     rdi, [rel lit_str_4]
-    mov     rcx, 0
-    repe    cmpsb
-    jne     seq_l40_beta
-    mov     rax, [cursor]
-    mov     [alt_r44_alpha_saved], rax
-    add     rax, 0
-    mov     [cursor], rax
-    jmp     seq_r39_alpha
-
+    LIT_ALPHA   lit_str_4, 0, alt_r44_alpha_saved, cursor, subject_data, subject_len_val, seq_r39_alpha, seq_l40_beta
 ; LIT β=alt_r44_beta
 alt_r44_beta:
-    mov     rax, [alt_r44_alpha_saved]
-    mov     [cursor], rax
-    jmp     seq_l40_beta
+    LIT_BETA    alt_r44_alpha_saved, cursor, seq_l40_beta
 
 ; ALT α=seq_r39_alpha
 seq_r39_alpha:
@@ -12876,36 +12416,10 @@ seq_r39_beta:
 
 ; ANY("(<")  α=alt_l46_alpha
 alt_l46_alpha:
-    mov     rax, [cursor]
-    cmp     rax, [subject_len_val]
-    jge     alt46_left_omega
-    mov     [any47_saved], rax
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + rax]
-    lea     rsi, [rel lit_str_11]
-    mov     rdx, 2
-any47_loop:
-    test    rdx, rdx
-    jz      any47_notfound
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      any47_found
-    inc     rsi
-    dec     rdx
-    jmp     any47_loop
-any47_notfound:
-    jmp     alt46_left_omega
-any47_found:
-    mov     rax, [any47_saved]
-    inc     rax
-    mov     [cursor], rax
-    jmp     seq_r38_alpha
-
+    ANY_ALPHA   lit_str_9, 2, any47_saved, cursor, subject_data, subject_len_val, seq_r38_alpha, alt46_left_omega
 ; ANY β=alt_l46_beta
 alt_l46_beta:
-    mov     rax, [any47_saved]
-    mov     [cursor], rax
-    jmp     alt46_left_omega
+    ANY_BETA    any47_saved, cursor, alt46_left_omega
 
 ; ALT left_ω trampoline
 alt46_left_omega:
@@ -12915,42 +12429,17 @@ alt46_left_omega:
 
 ; LIT("")  α=alt_r46_alpha
 alt_r46_alpha:
-    mov     rax, [cursor]
-    add     rax, 0
-    cmp     rax, [subject_len_val]
-    jg      seq_l39_beta
-    lea     rsi, [rel subject_data]
-    mov     rcx, [cursor]
-    add     rsi, rcx
-    lea     rdi, [rel lit_str_4]
-    mov     rcx, 0
-    repe    cmpsb
-    jne     seq_l39_beta
-    mov     rax, [cursor]
-    mov     [alt_r46_alpha_saved], rax
-    add     rax, 0
-    mov     [cursor], rax
-    jmp     seq_r38_alpha
-
+    LIT_ALPHA   lit_str_4, 0, alt_r46_alpha_saved, cursor, subject_data, subject_len_val, seq_r38_alpha, seq_l39_beta
 ; LIT β=alt_r46_beta
 alt_r46_beta:
-    mov     rax, [alt_r46_alpha_saved]
-    mov     [cursor], rax
-    jmp     seq_l39_beta
+    LIT_BETA    alt_r46_alpha_saved, cursor, seq_l39_beta
 
 ; REM  α=seq_r38_alpha
 seq_r38_alpha:
-    mov     rax, [cursor]
-    mov     [rem48_saved], rax
-    mov     rax, [subject_len_val]
-    mov     [cursor], rax
-    jmp     patdef_ppGSfx_gamma
-
+    REM_ALPHA   rem48_saved, cursor, subject_len_val, patdef_ppGSfx_gamma
 ; REM β=seq_r38_beta
 seq_r38_beta:
-    mov     rax, [rem48_saved]
-    mov     [cursor], rax
-    jmp     seq_l38_beta
+    REM_BETA    rem48_saved, cursor, seq_l38_beta
 
 patdef_ppGSfx_gamma:
     jmp     [P_ppGSfx_ret_gamma]
@@ -12974,39 +12463,12 @@ seq_l49_alpha:
 seq_l49_beta:
     jmp     dol50_child_beta
 
-; BREAK(":") REAL  α=dol50_child_alpha
+; BREAK(":")  α=dol50_child_alpha
 dol50_child_alpha:
-    mov     rax, [cursor]
-    mov     [brk51_saved], rax
-    mov     r12, rax
-brk51_outer:
-    cmp     r12, [subject_len_val]
-    jge     dol50_omega
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + r12]
-    lea     rsi, [rel lit_str_9]
-    mov     rdx, 1
-brk51_csscan:
-    test    rdx, rdx
-    je      brk51_advance
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      brk51_inset
-    inc     rsi
-    dec     rdx
-    jmp     brk51_csscan
-brk51_advance:
-    inc     r12
-    jmp     brk51_outer
-brk51_inset:
-    mov     [cursor], r12
-    jmp     dol50_gamma
-
+    BREAK_ALPHA lit_str_10, 1, brk51_saved, cursor, subject_data, subject_len_val, dol50_gamma, dol50_omega
 ; BREAK β=dol50_child_beta
 dol50_child_beta:
-    mov     rax, [brk51_saved]
-    mov     [cursor], rax
-    jmp     dol50_omega
+    BREAK_BETA  brk51_saved, cursor, dol50_omega
 
 ; DOL γ — capture span into cap_ppGCon_buf
 dol50_gamma:
@@ -13068,55 +12530,19 @@ dol53_child_alpha:
 dol53_child_beta:
     jmp     seq_r54_beta
 
-; SPAN("") REAL  α=seq_l54_alpha
+; SPAN("")  α=seq_l54_alpha
 seq_l54_alpha:
-    mov     rax, [cursor]
-    cmp     rax, [subject_len_val]
-    jge     dol53_omega
-    mov     [span55_saved], rax
-    mov     r12, rax
-span55_outer:
-    cmp     r12, [subject_len_val]
-    jge     span55_notin
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + r12]
-    lea     rsi, [rel lit_str_4]
-    mov     rdx, 0
-span55_csscan:
-    test    rdx, rdx
-    jz      span55_notin
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      span55_inset
-    inc     rsi
-    dec     rdx
-    jmp     span55_csscan
-span55_inset:
-    inc     r12
-    jmp     span55_outer
-span55_notin:
-    mov     rbx, [span55_saved]
-    cmp     r12, rbx
-    je      dol53_omega
-    mov     [cursor], r12
-    jmp     seq_r54_alpha
-
+    SPAN_ALPHA  lit_str_4, 0, span55_saved, cursor, subject_data, subject_len_val, seq_r54_alpha, dol53_omega
 ; SPAN β=seq_l54_beta
 seq_l54_beta:
-    mov     rax, [span55_saved]
-    mov     [cursor], rax
-    jmp     dol53_omega
+    SPAN_BETA   span55_saved, cursor, dol53_omega
 
 ; RPOS(0)  α=seq_r54_alpha
 seq_r54_alpha:
-    mov     rax, [subject_len_val]
-    cmp     [cursor], rax
-    jne     seq_l54_beta
-    jmp     dol53_gamma
-
+    RPOS_ALPHA  0, cursor, subject_len_val, dol53_gamma, seq_l54_beta
 ; RPOS β=seq_r54_beta
 seq_r54_beta:
-    jmp     seq_l54_beta
+    RPOS_BETA   cursor, seq_l54_beta
 
 ; DOL γ — capture span into cap_ppDrop_buf
 dol53_gamma:
@@ -13183,28 +12609,10 @@ seq_l56_beta:
 
 ; LIT("/tmp/beauty_auto_")  α=seq_l57_alpha
 seq_l57_alpha:
-    mov     rax, [cursor]
-    add     rax, 17
-    cmp     rax, [subject_len_val]
-    jg      patdef_ppTmpFile_omega
-    lea     rsi, [rel subject_data]
-    mov     rcx, [cursor]
-    add     rsi, rcx
-    lea     rdi, [rel lit_str_12]
-    mov     rcx, 17
-    repe    cmpsb
-    jne     patdef_ppTmpFile_omega
-    mov     rax, [cursor]
-    mov     [seq_l57_alpha_saved], rax
-    add     rax, 17
-    mov     [cursor], rax
-    jmp     seq_r57_alpha
-
+    LIT_ALPHA   lit_str_11, 17, seq_l57_alpha_saved, cursor, subject_data, subject_len_val, seq_r57_alpha, patdef_ppTmpFile_omega
 ; LIT β=seq_l57_beta
 seq_l57_beta:
-    mov     rax, [seq_l57_alpha_saved]
-    mov     [cursor], rax
-    jmp     patdef_ppTmpFile_omega
+    LIT_BETA    seq_l57_alpha_saved, cursor, patdef_ppTmpFile_omega
 
 ; UNIMPLEMENTED: HOST() → ω
 seq_r57_alpha:
@@ -13213,28 +12621,10 @@ seq_r57_beta:
 
 ; LIT(".sno")  α=seq_r56_alpha
 seq_r56_alpha:
-    mov     rax, [cursor]
-    add     rax, 4
-    cmp     rax, [subject_len_val]
-    jg      seq_l56_beta
-    lea     rsi, [rel subject_data]
-    mov     rcx, [cursor]
-    add     rsi, rcx
-    lea     rdi, [rel lit_str_13]
-    mov     rcx, 4
-    repe    cmpsb
-    jne     seq_l56_beta
-    mov     rax, [cursor]
-    mov     [seq_r56_alpha_saved], rax
-    add     rax, 4
-    mov     [cursor], rax
-    jmp     patdef_ppTmpFile_gamma
-
+    LIT_ALPHA   lit_str_12, 4, seq_r56_alpha_saved, cursor, subject_data, subject_len_val, patdef_ppTmpFile_gamma, seq_l56_beta
 ; LIT β=seq_r56_beta
 seq_r56_beta:
-    mov     rax, [seq_r56_alpha_saved]
-    mov     [cursor], rax
-    jmp     seq_l56_beta
+    LIT_BETA    seq_r56_alpha_saved, cursor, seq_l56_beta
 
 patdef_ppTmpFile_gamma:
     jmp     [P_ppTmpFile_ret_gamma]
@@ -13347,26 +12737,10 @@ nref61_omega:
 
 ; LIT(" ")  α=seq_r60_alpha
 seq_r60_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      seq_l60_beta
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 32
-    jne     seq_l60_beta
-    mov     rax, [cursor]
-    mov     [seq_r60_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r59_alpha
-
+    LIT_ALPHA1  32, seq_r60_alpha_saved, cursor, subject_data, subject_len_val, seq_r59_alpha, seq_l60_beta
 ; LIT β=seq_r60_beta
 seq_r60_beta:
-    mov     rax, [seq_r60_alpha_saved]
-    mov     [cursor], rax
-    jmp     seq_l60_beta
+    LIT_BETA    seq_r60_alpha_saved, cursor, seq_l60_beta
 
 ; REF(ppLn) α=seq_r59_alpha
 seq_r59_alpha:
@@ -13476,44 +12850,12 @@ patdef_ppJ1_omega:
 ; ============ Named pattern: Integer ============
 ; P_Integer_alpha (α entry)
 
-; SPAN("") REAL  α=P_Integer_alpha
+; SPAN("")  α=P_Integer_alpha
 P_Integer_alpha:
-    mov     rax, [cursor]
-    cmp     rax, [subject_len_val]
-    jge     patdef_Integer_omega
-    mov     [span65_saved], rax
-    mov     r12, rax
-span65_outer:
-    cmp     r12, [subject_len_val]
-    jge     span65_notin
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + r12]
-    lea     rsi, [rel lit_str_4]
-    mov     rdx, 0
-span65_csscan:
-    test    rdx, rdx
-    jz      span65_notin
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      span65_inset
-    inc     rsi
-    dec     rdx
-    jmp     span65_csscan
-span65_inset:
-    inc     r12
-    jmp     span65_outer
-span65_notin:
-    mov     rbx, [span65_saved]
-    cmp     r12, rbx
-    je      patdef_Integer_omega
-    mov     [cursor], r12
-    jmp     patdef_Integer_gamma
-
+    SPAN_ALPHA  lit_str_4, 0, span65_saved, cursor, subject_data, subject_len_val, patdef_Integer_gamma, patdef_Integer_omega
 ; SPAN β=P_Integer_beta
 P_Integer_beta:
-    mov     rax, [span65_saved]
-    mov     [cursor], rax
-    jmp     patdef_Integer_omega
+    SPAN_BETA   span65_saved, cursor, patdef_Integer_omega
 
 patdef_Integer_gamma:
     jmp     [P_Integer_ret_gamma]
@@ -13537,83 +12879,24 @@ seq_l66_beta:
 
 ; LIT(""")  α=seq_l67_alpha
 seq_l67_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      patdef_DQ_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 34
-    jne     patdef_DQ_omega
-    mov     rax, [cursor]
-    mov     [seq_l67_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r67_alpha
-
+    LIT_ALPHA1  34, seq_l67_alpha_saved, cursor, subject_data, subject_len_val, seq_r67_alpha, patdef_DQ_omega
 ; LIT β=seq_l67_beta
 seq_l67_beta:
-    mov     rax, [seq_l67_alpha_saved]
-    mov     [cursor], rax
-    jmp     patdef_DQ_omega
+    LIT_BETA    seq_l67_alpha_saved, cursor, patdef_DQ_omega
 
-; BREAK("") REAL  α=seq_r67_alpha
+; BREAK("")  α=seq_r67_alpha
 seq_r67_alpha:
-    mov     rax, [cursor]
-    mov     [brk68_saved], rax
-    mov     r12, rax
-brk68_outer:
-    cmp     r12, [subject_len_val]
-    jge     seq_l67_beta
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + r12]
-    lea     rsi, [rel lit_str_4]
-    mov     rdx, 0
-brk68_csscan:
-    test    rdx, rdx
-    je      brk68_advance
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      brk68_inset
-    inc     rsi
-    dec     rdx
-    jmp     brk68_csscan
-brk68_advance:
-    inc     r12
-    jmp     brk68_outer
-brk68_inset:
-    mov     [cursor], r12
-    jmp     seq_r66_alpha
-
+    BREAK_ALPHA lit_str_4, 0, brk68_saved, cursor, subject_data, subject_len_val, seq_r66_alpha, seq_l67_beta
 ; BREAK β=seq_r67_beta
 seq_r67_beta:
-    mov     rax, [brk68_saved]
-    mov     [cursor], rax
-    jmp     seq_l67_beta
+    BREAK_BETA  brk68_saved, cursor, seq_l67_beta
 
 ; LIT(""")  α=seq_r66_alpha
 seq_r66_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      seq_l66_beta
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 34
-    jne     seq_l66_beta
-    mov     rax, [cursor]
-    mov     [seq_r66_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     patdef_DQ_gamma
-
+    LIT_ALPHA1  34, seq_r66_alpha_saved, cursor, subject_data, subject_len_val, patdef_DQ_gamma, seq_l66_beta
 ; LIT β=seq_r66_beta
 seq_r66_beta:
-    mov     rax, [seq_r66_alpha_saved]
-    mov     [cursor], rax
-    jmp     seq_l66_beta
+    LIT_BETA    seq_r66_alpha_saved, cursor, seq_l66_beta
 
 patdef_DQ_gamma:
     jmp     [P_DQ_ret_gamma]
@@ -13637,83 +12920,24 @@ seq_l69_beta:
 
 ; LIT("'")  α=seq_l70_alpha
 seq_l70_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      patdef_SQ_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 39
-    jne     patdef_SQ_omega
-    mov     rax, [cursor]
-    mov     [seq_l70_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r70_alpha
-
+    LIT_ALPHA1  39, seq_l70_alpha_saved, cursor, subject_data, subject_len_val, seq_r70_alpha, patdef_SQ_omega
 ; LIT β=seq_l70_beta
 seq_l70_beta:
-    mov     rax, [seq_l70_alpha_saved]
-    mov     [cursor], rax
-    jmp     patdef_SQ_omega
+    LIT_BETA    seq_l70_alpha_saved, cursor, patdef_SQ_omega
 
-; BREAK("") REAL  α=seq_r70_alpha
+; BREAK("")  α=seq_r70_alpha
 seq_r70_alpha:
-    mov     rax, [cursor]
-    mov     [brk71_saved], rax
-    mov     r12, rax
-brk71_outer:
-    cmp     r12, [subject_len_val]
-    jge     seq_l70_beta
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + r12]
-    lea     rsi, [rel lit_str_4]
-    mov     rdx, 0
-brk71_csscan:
-    test    rdx, rdx
-    je      brk71_advance
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      brk71_inset
-    inc     rsi
-    dec     rdx
-    jmp     brk71_csscan
-brk71_advance:
-    inc     r12
-    jmp     brk71_outer
-brk71_inset:
-    mov     [cursor], r12
-    jmp     seq_r69_alpha
-
+    BREAK_ALPHA lit_str_4, 0, brk71_saved, cursor, subject_data, subject_len_val, seq_r69_alpha, seq_l70_beta
 ; BREAK β=seq_r70_beta
 seq_r70_beta:
-    mov     rax, [brk71_saved]
-    mov     [cursor], rax
-    jmp     seq_l70_beta
+    BREAK_BETA  brk71_saved, cursor, seq_l70_beta
 
 ; LIT("'")  α=seq_r69_alpha
 seq_r69_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      seq_l69_beta
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 39
-    jne     seq_l69_beta
-    mov     rax, [cursor]
-    mov     [seq_r69_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     patdef_SQ_gamma
-
+    LIT_ALPHA1  39, seq_r69_alpha_saved, cursor, subject_data, subject_len_val, patdef_SQ_gamma, seq_l69_beta
 ; LIT β=seq_r69_beta
 seq_r69_beta:
-    mov     rax, [seq_r69_alpha_saved]
-    mov     [cursor], rax
-    jmp     seq_l69_beta
+    LIT_BETA    seq_r69_alpha_saved, cursor, seq_l69_beta
 
 patdef_SQ_gamma:
     jmp     [P_SQ_ret_gamma]
@@ -13819,44 +13043,12 @@ seq_l78_alpha:
 seq_l78_beta:
     jmp     seq_r79_beta
 
-; SPAN("") REAL  α=seq_l79_alpha
+; SPAN("")  α=seq_l79_alpha
 seq_l79_alpha:
-    mov     rax, [cursor]
-    cmp     rax, [subject_len_val]
-    jge     alt75_left_omega
-    mov     [span80_saved], rax
-    mov     r12, rax
-span80_outer:
-    cmp     r12, [subject_len_val]
-    jge     span80_notin
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + r12]
-    lea     rsi, [rel lit_str_4]
-    mov     rdx, 0
-span80_csscan:
-    test    rdx, rdx
-    jz      span80_notin
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      span80_inset
-    inc     rsi
-    dec     rdx
-    jmp     span80_csscan
-span80_inset:
-    inc     r12
-    jmp     span80_outer
-span80_notin:
-    mov     rbx, [span80_saved]
-    cmp     r12, rbx
-    je      alt75_left_omega
-    mov     [cursor], r12
-    jmp     seq_r79_alpha
-
+    SPAN_ALPHA  lit_str_4, 0, span80_saved, cursor, subject_data, subject_len_val, seq_r79_alpha, alt75_left_omega
 ; SPAN β=seq_l79_beta
 seq_l79_beta:
-    mov     rax, [span80_saved]
-    mov     [cursor], rax
-    jmp     alt75_left_omega
+    SPAN_BETA   span80_saved, cursor, alt75_left_omega
 
 ; ALT α=seq_r79_alpha
 seq_r79_alpha:
@@ -13874,26 +13066,10 @@ alt_l81_beta:
 
 ; LIT(".")  α=seq_l82_alpha
 seq_l82_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      alt81_left_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 46
-    jne     alt81_left_omega
-    mov     rax, [cursor]
-    mov     [seq_l82_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r82_alpha
-
+    LIT_ALPHA1  46, seq_l82_alpha_saved, cursor, subject_data, subject_len_val, seq_r82_alpha, alt81_left_omega
 ; LIT β=seq_l82_beta
 seq_l82_beta:
-    mov     rax, [seq_l82_alpha_saved]
-    mov     [cursor], rax
-    jmp     alt81_left_omega
+    LIT_BETA    seq_l82_alpha_saved, cursor, alt81_left_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
 seq_r82_alpha:
@@ -13921,26 +13097,10 @@ seq_r78_beta:
 
 ; LIT("E")  α=alt_l83_alpha
 alt_l83_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      alt83_left_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 69
-    jne     alt83_left_omega
-    mov     rax, [cursor]
-    mov     [alt_l83_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r77_alpha
-
+    LIT_ALPHA1  69, alt_l83_alpha_saved, cursor, subject_data, subject_len_val, seq_r77_alpha, alt83_left_omega
 ; LIT β=alt_l83_beta
 alt_l83_beta:
-    mov     rax, [alt_l83_alpha_saved]
-    mov     [cursor], rax
-    jmp     alt83_left_omega
+    LIT_BETA    alt_l83_alpha_saved, cursor, alt83_left_omega
 
 ; ALT left_ω trampoline
 alt83_left_omega:
@@ -13950,26 +13110,10 @@ alt83_left_omega:
 
 ; LIT("e")  α=alt_r83_alpha
 alt_r83_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      seq_l78_beta
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 101
-    jne     seq_l78_beta
-    mov     rax, [cursor]
-    mov     [alt_r83_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r77_alpha
-
+    LIT_ALPHA1  101, alt_r83_alpha_saved, cursor, subject_data, subject_len_val, seq_r77_alpha, seq_l78_beta
 ; LIT β=alt_r83_beta
 alt_r83_beta:
-    mov     rax, [alt_r83_alpha_saved]
-    mov     [cursor], rax
-    jmp     seq_l78_beta
+    LIT_BETA    alt_r83_alpha_saved, cursor, seq_l78_beta
 
 ; ALT α=seq_r77_alpha
 seq_r77_alpha:
@@ -13989,26 +13133,10 @@ alt_l84_beta:
 
 ; LIT("+")  α=alt_l85_alpha
 alt_l85_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      alt85_left_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 43
-    jne     alt85_left_omega
-    mov     rax, [cursor]
-    mov     [alt_l85_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r76_alpha
-
+    LIT_ALPHA1  43, alt_l85_alpha_saved, cursor, subject_data, subject_len_val, seq_r76_alpha, alt85_left_omega
 ; LIT β=alt_l85_beta
 alt_l85_beta:
-    mov     rax, [alt_l85_alpha_saved]
-    mov     [cursor], rax
-    jmp     alt85_left_omega
+    LIT_BETA    alt_l85_alpha_saved, cursor, alt85_left_omega
 
 ; ALT left_ω trampoline
 alt85_left_omega:
@@ -14018,26 +13146,10 @@ alt85_left_omega:
 
 ; LIT("-")  α=alt_r85_alpha
 alt_r85_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      alt84_left_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 45
-    jne     alt84_left_omega
-    mov     rax, [cursor]
-    mov     [alt_r85_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r76_alpha
-
+    LIT_ALPHA1  45, alt_r85_alpha_saved, cursor, subject_data, subject_len_val, seq_r76_alpha, alt84_left_omega
 ; LIT β=alt_r85_beta
 alt_r85_beta:
-    mov     rax, [alt_r85_alpha_saved]
-    mov     [cursor], rax
-    jmp     alt84_left_omega
+    LIT_BETA    alt_r85_alpha_saved, cursor, alt84_left_omega
 
 ; ALT left_ω trampoline
 alt84_left_omega:
@@ -14050,44 +13162,12 @@ alt_r84_alpha:
 alt_r84_beta:
     jmp     seq_l77_beta
 
-; SPAN("") REAL  α=seq_r76_alpha
+; SPAN("")  α=seq_r76_alpha
 seq_r76_alpha:
-    mov     rax, [cursor]
-    cmp     rax, [subject_len_val]
-    jge     seq_l76_beta
-    mov     [span86_saved], rax
-    mov     r12, rax
-span86_outer:
-    cmp     r12, [subject_len_val]
-    jge     span86_notin
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + r12]
-    lea     rsi, [rel lit_str_4]
-    mov     rdx, 0
-span86_csscan:
-    test    rdx, rdx
-    jz      span86_notin
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      span86_inset
-    inc     rsi
-    dec     rdx
-    jmp     span86_csscan
-span86_inset:
-    inc     r12
-    jmp     span86_outer
-span86_notin:
-    mov     rbx, [span86_saved]
-    cmp     r12, rbx
-    je      seq_l76_beta
-    mov     [cursor], r12
-    jmp     patdef_Real_gamma
-
+    SPAN_ALPHA  lit_str_4, 0, span86_saved, cursor, subject_data, subject_len_val, patdef_Real_gamma, seq_l76_beta
 ; SPAN β=seq_r76_beta
 seq_r76_beta:
-    mov     rax, [span86_saved]
-    mov     [cursor], rax
-    jmp     seq_l76_beta
+    SPAN_BETA   span86_saved, cursor, seq_l76_beta
 
 ; ALT left_ω trampoline
 alt75_left_omega:
@@ -14107,67 +13187,19 @@ seq_l87_alpha:
 seq_l87_beta:
     jmp     seq_r88_beta
 
-; SPAN("") REAL  α=seq_l88_alpha
+; SPAN("")  α=seq_l88_alpha
 seq_l88_alpha:
-    mov     rax, [cursor]
-    cmp     rax, [subject_len_val]
-    jge     patdef_Real_omega
-    mov     [span89_saved], rax
-    mov     r12, rax
-span89_outer:
-    cmp     r12, [subject_len_val]
-    jge     span89_notin
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + r12]
-    lea     rsi, [rel lit_str_4]
-    mov     rdx, 0
-span89_csscan:
-    test    rdx, rdx
-    jz      span89_notin
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      span89_inset
-    inc     rsi
-    dec     rdx
-    jmp     span89_csscan
-span89_inset:
-    inc     r12
-    jmp     span89_outer
-span89_notin:
-    mov     rbx, [span89_saved]
-    cmp     r12, rbx
-    je      patdef_Real_omega
-    mov     [cursor], r12
-    jmp     seq_r88_alpha
-
+    SPAN_ALPHA  lit_str_4, 0, span89_saved, cursor, subject_data, subject_len_val, seq_r88_alpha, patdef_Real_omega
 ; SPAN β=seq_l88_beta
 seq_l88_beta:
-    mov     rax, [span89_saved]
-    mov     [cursor], rax
-    jmp     patdef_Real_omega
+    SPAN_BETA   span89_saved, cursor, patdef_Real_omega
 
 ; LIT(".")  α=seq_r88_alpha
 seq_r88_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      seq_l88_beta
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 46
-    jne     seq_l88_beta
-    mov     rax, [cursor]
-    mov     [seq_r88_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r87_alpha
-
+    LIT_ALPHA1  46, seq_r88_alpha_saved, cursor, subject_data, subject_len_val, seq_r87_alpha, seq_l88_beta
 ; LIT β=seq_r88_beta
 seq_r88_beta:
-    mov     rax, [seq_r88_alpha_saved]
-    mov     [cursor], rax
-    jmp     seq_l88_beta
+    LIT_BETA    seq_r88_alpha_saved, cursor, seq_l88_beta
 
 ; UNIMPLEMENTED: FENCE() → ω
 seq_r87_alpha:
@@ -14190,36 +13222,10 @@ P_Id_beta:
 
 ; ANY("")  α=seq_l90_alpha
 seq_l90_alpha:
-    mov     rax, [cursor]
-    cmp     rax, [subject_len_val]
-    jge     patdef_Id_omega
-    mov     [any91_saved], rax
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + rax]
-    lea     rsi, [rel lit_str_4]
-    mov     rdx, 0
-any91_loop:
-    test    rdx, rdx
-    jz      any91_notfound
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      any91_found
-    inc     rsi
-    dec     rdx
-    jmp     any91_loop
-any91_notfound:
-    jmp     patdef_Id_omega
-any91_found:
-    mov     rax, [any91_saved]
-    inc     rax
-    mov     [cursor], rax
-    jmp     seq_r90_alpha
-
+    ANY_ALPHA   lit_str_4, 0, any91_saved, cursor, subject_data, subject_len_val, seq_r90_alpha, patdef_Id_omega
 ; ANY β=seq_l90_beta
 seq_l90_beta:
-    mov     rax, [any91_saved]
-    mov     [cursor], rax
-    jmp     patdef_Id_omega
+    ANY_BETA    any91_saved, cursor, patdef_Id_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
 seq_r90_alpha:
@@ -14250,44 +13256,12 @@ dol92_child_alpha:
 dol92_child_beta:
     jmp     dol93_child_beta
 
-; SPAN("") REAL  α=dol93_child_alpha
+; SPAN("")  α=dol93_child_alpha
 dol93_child_alpha:
-    mov     rax, [cursor]
-    cmp     rax, [subject_len_val]
-    jge     dol93_omega
-    mov     [span94_saved], rax
-    mov     r12, rax
-span94_outer:
-    cmp     r12, [subject_len_val]
-    jge     span94_notin
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + r12]
-    lea     rsi, [rel lit_str_4]
-    mov     rdx, 0
-span94_csscan:
-    test    rdx, rdx
-    jz      span94_notin
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      span94_inset
-    inc     rsi
-    dec     rdx
-    jmp     span94_csscan
-span94_inset:
-    inc     r12
-    jmp     span94_outer
-span94_notin:
-    mov     rbx, [span94_saved]
-    cmp     r12, rbx
-    je      dol93_omega
-    mov     [cursor], r12
-    jmp     dol93_gamma
-
+    SPAN_ALPHA  lit_str_4, 0, span94_saved, cursor, subject_data, subject_len_val, dol93_gamma, dol93_omega
 ; SPAN β=dol93_child_beta
 dol93_child_beta:
-    mov     rax, [span94_saved]
-    mov     [cursor], rax
-    jmp     dol93_omega
+    SPAN_BETA   span94_saved, cursor, dol93_omega
 
 ; DOL γ — capture span into cap_tx_buf
 dol93_gamma:
@@ -14347,44 +13321,12 @@ dol95_child_alpha:
 dol95_child_beta:
     jmp     dol96_child_beta
 
-; SPAN("") REAL  α=dol96_child_alpha
+; SPAN("")  α=dol96_child_alpha
 dol96_child_alpha:
-    mov     rax, [cursor]
-    cmp     rax, [subject_len_val]
-    jge     dol96_omega
-    mov     [span97_saved], rax
-    mov     r12, rax
-span97_outer:
-    cmp     r12, [subject_len_val]
-    jge     span97_notin
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + r12]
-    lea     rsi, [rel lit_str_4]
-    mov     rdx, 0
-span97_csscan:
-    test    rdx, rdx
-    jz      span97_notin
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      span97_inset
-    inc     rsi
-    dec     rdx
-    jmp     span97_csscan
-span97_inset:
-    inc     r12
-    jmp     span97_outer
-span97_notin:
-    mov     rbx, [span97_saved]
-    cmp     r12, rbx
-    je      dol96_omega
-    mov     [cursor], r12
-    jmp     dol96_gamma
-
+    SPAN_ALPHA  lit_str_4, 0, span97_saved, cursor, subject_data, subject_len_val, dol96_gamma, dol96_omega
 ; SPAN β=dol96_child_beta
 dol96_child_beta:
-    mov     rax, [span97_saved]
-    mov     [cursor], rax
-    jmp     dol96_omega
+    SPAN_BETA   span97_saved, cursor, dol96_omega
 
 ; DOL γ — capture span into cap_tx_buf
 dol96_gamma:
@@ -14444,44 +13386,12 @@ dol98_child_alpha:
 dol98_child_beta:
     jmp     dol99_child_beta
 
-; SPAN("") REAL  α=dol99_child_alpha
+; SPAN("")  α=dol99_child_alpha
 dol99_child_alpha:
-    mov     rax, [cursor]
-    cmp     rax, [subject_len_val]
-    jge     dol99_omega
-    mov     [span100_saved], rax
-    mov     r12, rax
-span100_outer:
-    cmp     r12, [subject_len_val]
-    jge     span100_notin
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + r12]
-    lea     rsi, [rel lit_str_4]
-    mov     rdx, 0
-span100_csscan:
-    test    rdx, rdx
-    jz      span100_notin
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      span100_inset
-    inc     rsi
-    dec     rdx
-    jmp     span100_csscan
-span100_inset:
-    inc     r12
-    jmp     span100_outer
-span100_notin:
-    mov     rbx, [span100_saved]
-    cmp     r12, rbx
-    je      dol99_omega
-    mov     [cursor], r12
-    jmp     dol99_gamma
-
+    SPAN_ALPHA  lit_str_4, 0, span100_saved, cursor, subject_data, subject_len_val, dol99_gamma, dol99_omega
 ; SPAN β=dol99_child_beta
 dol99_child_beta:
-    mov     rax, [span100_saved]
-    mov     [cursor], rax
-    jmp     dol99_omega
+    SPAN_BETA   span100_saved, cursor, dol99_omega
 
 ; DOL γ — capture span into cap_tx_buf
 dol99_gamma:
@@ -14533,26 +13443,10 @@ P_ProtKwd_beta:
 
 ; LIT("&")  α=seq_l101_alpha
 seq_l101_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      patdef_ProtKwd_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 38
-    jne     patdef_ProtKwd_omega
-    mov     rax, [cursor]
-    mov     [seq_l101_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r101_alpha
-
+    LIT_ALPHA1  38, seq_l101_alpha_saved, cursor, subject_data, subject_len_val, seq_r101_alpha, patdef_ProtKwd_omega
 ; LIT β=seq_l101_beta
 seq_l101_beta:
-    mov     rax, [seq_l101_alpha_saved]
-    mov     [cursor], rax
-    jmp     patdef_ProtKwd_omega
+    LIT_BETA    seq_l101_alpha_saved, cursor, patdef_ProtKwd_omega
 
 ; DOL(cap $  cap)  α=seq_r101_alpha
 seq_r101_alpha:
@@ -14570,44 +13464,12 @@ dol102_child_alpha:
 dol102_child_beta:
     jmp     dol103_child_beta
 
-; SPAN("") REAL  α=dol103_child_alpha
+; SPAN("")  α=dol103_child_alpha
 dol103_child_alpha:
-    mov     rax, [cursor]
-    cmp     rax, [subject_len_val]
-    jge     dol103_omega
-    mov     [span104_saved], rax
-    mov     r12, rax
-span104_outer:
-    cmp     r12, [subject_len_val]
-    jge     span104_notin
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + r12]
-    lea     rsi, [rel lit_str_4]
-    mov     rdx, 0
-span104_csscan:
-    test    rdx, rdx
-    jz      span104_notin
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      span104_inset
-    inc     rsi
-    dec     rdx
-    jmp     span104_csscan
-span104_inset:
-    inc     r12
-    jmp     span104_outer
-span104_notin:
-    mov     rbx, [span104_saved]
-    cmp     r12, rbx
-    je      dol103_omega
-    mov     [cursor], r12
-    jmp     dol103_gamma
-
+    SPAN_ALPHA  lit_str_4, 0, span104_saved, cursor, subject_data, subject_len_val, dol103_gamma, dol103_omega
 ; SPAN β=dol103_child_beta
 dol103_child_beta:
-    mov     rax, [span104_saved]
-    mov     [cursor], rax
-    jmp     dol103_omega
+    SPAN_BETA   span104_saved, cursor, dol103_omega
 
 ; DOL γ — capture span into cap_tx_buf
 dol103_gamma:
@@ -14659,26 +13521,10 @@ P_UnprotKwd_beta:
 
 ; LIT("&")  α=seq_l105_alpha
 seq_l105_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      patdef_UnprotKwd_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 38
-    jne     patdef_UnprotKwd_omega
-    mov     rax, [cursor]
-    mov     [seq_l105_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r105_alpha
-
+    LIT_ALPHA1  38, seq_l105_alpha_saved, cursor, subject_data, subject_len_val, seq_r105_alpha, patdef_UnprotKwd_omega
 ; LIT β=seq_l105_beta
 seq_l105_beta:
-    mov     rax, [seq_l105_alpha_saved]
-    mov     [cursor], rax
-    jmp     patdef_UnprotKwd_omega
+    LIT_BETA    seq_l105_alpha_saved, cursor, patdef_UnprotKwd_omega
 
 ; DOL(cap $  cap)  α=seq_r105_alpha
 seq_r105_alpha:
@@ -14696,44 +13542,12 @@ dol106_child_alpha:
 dol106_child_beta:
     jmp     dol107_child_beta
 
-; SPAN("") REAL  α=dol107_child_alpha
+; SPAN("")  α=dol107_child_alpha
 dol107_child_alpha:
-    mov     rax, [cursor]
-    cmp     rax, [subject_len_val]
-    jge     dol107_omega
-    mov     [span108_saved], rax
-    mov     r12, rax
-span108_outer:
-    cmp     r12, [subject_len_val]
-    jge     span108_notin
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + r12]
-    lea     rsi, [rel lit_str_4]
-    mov     rdx, 0
-span108_csscan:
-    test    rdx, rdx
-    jz      span108_notin
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      span108_inset
-    inc     rsi
-    dec     rdx
-    jmp     span108_csscan
-span108_inset:
-    inc     r12
-    jmp     span108_outer
-span108_notin:
-    mov     rbx, [span108_saved]
-    cmp     r12, rbx
-    je      dol107_omega
-    mov     [cursor], r12
-    jmp     dol107_gamma
-
+    SPAN_ALPHA  lit_str_4, 0, span108_saved, cursor, subject_data, subject_len_val, dol107_gamma, dol107_omega
 ; SPAN β=dol107_child_beta
 dol107_child_beta:
-    mov     rax, [span108_saved]
-    mov     [cursor], rax
-    jmp     dol107_omega
+    SPAN_BETA   span108_saved, cursor, dol107_omega
 
 ; DOL γ — capture span into cap_tx_buf
 dol107_gamma:
@@ -14839,44 +13653,12 @@ alt_l111_alpha:
 alt_l111_beta:
     jmp     seq_r112_beta
 
-; SPAN("") REAL  α=seq_l112_alpha
+; SPAN("")  α=seq_l112_alpha
 seq_l112_alpha:
-    mov     rax, [cursor]
-    cmp     rax, [subject_len_val]
-    jge     alt111_left_omega
-    mov     [span113_saved], rax
-    mov     r12, rax
-span113_outer:
-    cmp     r12, [subject_len_val]
-    jge     span113_notin
-    lea     rbx, [rel subject_data]
-    movzx   ecx, byte [rbx + r12]
-    lea     rsi, [rel lit_str_4]
-    mov     rdx, 0
-span113_csscan:
-    test    rdx, rdx
-    jz      span113_notin
-    movzx   eax, byte [rsi]
-    cmp     al, cl
-    je      span113_inset
-    inc     rsi
-    dec     rdx
-    jmp     span113_csscan
-span113_inset:
-    inc     r12
-    jmp     span113_outer
-span113_notin:
-    mov     rbx, [span113_saved]
-    cmp     r12, rbx
-    je      alt111_left_omega
-    mov     [cursor], r12
-    jmp     seq_r112_alpha
-
+    SPAN_ALPHA  lit_str_4, 0, span113_saved, cursor, subject_data, subject_len_val, seq_r112_alpha, alt111_left_omega
 ; SPAN β=seq_l112_beta
 seq_l112_beta:
-    mov     rax, [span113_saved]
-    mov     [cursor], rax
-    jmp     alt111_left_omega
+    SPAN_BETA   span113_saved, cursor, alt111_left_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
 seq_r112_alpha:
@@ -14916,26 +13698,10 @@ seq_r115_beta:
 
 ; LIT("+")  α=alt_l116_alpha
 alt_l116_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      alt116_left_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 43
-    jne     alt116_left_omega
-    mov     rax, [cursor]
-    mov     [alt_l116_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r114_alpha
-
+    LIT_ALPHA1  43, alt_l116_alpha_saved, cursor, subject_data, subject_len_val, seq_r114_alpha, alt116_left_omega
 ; LIT β=alt_l116_beta
 alt_l116_beta:
-    mov     rax, [alt_l116_alpha_saved]
-    mov     [cursor], rax
-    jmp     alt116_left_omega
+    LIT_BETA    alt_l116_alpha_saved, cursor, alt116_left_omega
 
 ; ALT left_ω trampoline
 alt116_left_omega:
@@ -14945,26 +13711,10 @@ alt116_left_omega:
 
 ; LIT(".")  α=alt_r116_alpha
 alt_r116_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      seq_l115_beta
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 46
-    jne     seq_l115_beta
-    mov     rax, [cursor]
-    mov     [alt_r116_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r114_alpha
-
+    LIT_ALPHA1  46, alt_r116_alpha_saved, cursor, subject_data, subject_len_val, seq_r114_alpha, seq_l115_beta
 ; LIT β=alt_r116_beta
 alt_r116_beta:
-    mov     rax, [alt_r116_alpha_saved]
-    mov     [cursor], rax
-    jmp     seq_l115_beta
+    LIT_BETA    alt_r116_alpha_saved, cursor, seq_l115_beta
 
 ; UNIMPLEMENTED: FENCE() → ω
 seq_r114_alpha:
@@ -15001,13 +13751,10 @@ seq_l118_beta:
 
 ; POS(0)  α=alt_l119_alpha
 alt_l119_alpha:
-    cmp     qword [cursor], 0
-    jne     alt119_left_omega
-    jmp     seq_r118_alpha
-
+    POS_ALPHA   0, cursor, seq_r118_alpha, alt119_left_omega
 ; POS β=alt_l119_beta
 alt_l119_beta:
-    jmp     alt119_left_omega
+    POS_BETA    cursor, alt119_left_omega
 
 ; ALT left_ω trampoline
 alt119_left_omega:
@@ -15017,26 +13764,10 @@ alt119_left_omega:
 
 ; LIT(" ")  α=alt_r119_alpha
 alt_r119_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      patdef_TxInList_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 32
-    jne     patdef_TxInList_omega
-    mov     rax, [cursor]
-    mov     [alt_r119_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r118_alpha
-
+    LIT_ALPHA1  32, alt_r119_alpha_saved, cursor, subject_data, subject_len_val, seq_r118_alpha, patdef_TxInList_omega
 ; LIT β=alt_r119_beta
 alt_r119_beta:
-    mov     rax, [alt_r119_alpha_saved]
-    mov     [cursor], rax
-    jmp     patdef_TxInList_omega
+    LIT_BETA    alt_r119_alpha_saved, cursor, patdef_TxInList_omega
 
 ; E_INDR unresolved: upr → ω
 seq_r118_alpha:
@@ -15053,26 +13784,10 @@ seq_r117_beta:
 
 ; LIT(" ")  α=alt_l120_alpha
 alt_l120_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      alt120_left_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 32
-    jne     alt120_left_omega
-    mov     rax, [cursor]
-    mov     [alt_l120_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     patdef_TxInList_gamma
-
+    LIT_ALPHA1  32, alt_l120_alpha_saved, cursor, subject_data, subject_len_val, patdef_TxInList_gamma, alt120_left_omega
 ; LIT β=alt_l120_beta
 alt_l120_beta:
-    mov     rax, [alt_l120_alpha_saved]
-    mov     [cursor], rax
-    jmp     alt120_left_omega
+    LIT_BETA    alt_l120_alpha_saved, cursor, alt120_left_omega
 
 ; ALT left_ω trampoline
 alt120_left_omega:
@@ -15082,14 +13797,10 @@ alt120_left_omega:
 
 ; RPOS(0)  α=alt_r120_alpha
 alt_r120_alpha:
-    mov     rax, [subject_len_val]
-    cmp     [cursor], rax
-    jne     seq_l117_beta
-    jmp     patdef_TxInList_gamma
-
+    RPOS_ALPHA  0, cursor, subject_len_val, patdef_TxInList_gamma, seq_l117_beta
 ; RPOS β=alt_r120_beta
 alt_r120_beta:
-    jmp     seq_l117_beta
+    RPOS_BETA   cursor, seq_l117_beta
 
 patdef_TxInList_gamma:
     jmp     [P_TxInList_ret_gamma]
@@ -15113,78 +13824,24 @@ seq_l121_beta:
 
 ; LIT("ABORT ALPHABET ARB BAL FAIL FENCE FILE FNCLEVEL ")  α=seq_l122_alpha
 seq_l122_alpha:
-    mov     rax, [cursor]
-    add     rax, 48
-    cmp     rax, [subject_len_val]
-    jg      patdef_ProtKwds_omega
-    lea     rsi, [rel subject_data]
-    mov     rcx, [cursor]
-    add     rsi, rcx
-    lea     rdi, [rel lit_str_22]
-    mov     rcx, 48
-    repe    cmpsb
-    jne     patdef_ProtKwds_omega
-    mov     rax, [cursor]
-    mov     [seq_l122_alpha_saved], rax
-    add     rax, 48
-    mov     [cursor], rax
-    jmp     seq_r122_alpha
-
+    LIT_ALPHA   lit_str_13, 48, seq_l122_alpha_saved, cursor, subject_data, subject_len_val, seq_r122_alpha, patdef_ProtKwds_omega
 ; LIT β=seq_l122_beta
 seq_l122_beta:
-    mov     rax, [seq_l122_alpha_saved]
-    mov     [cursor], rax
-    jmp     patdef_ProtKwds_omega
+    LIT_BETA    seq_l122_alpha_saved, cursor, patdef_ProtKwds_omega
 
 ; LIT("LASTFILE LASTLINE LASTNO LCASE LINE REM RTNTYPE ")  α=seq_r122_alpha
 seq_r122_alpha:
-    mov     rax, [cursor]
-    add     rax, 48
-    cmp     rax, [subject_len_val]
-    jg      seq_l122_beta
-    lea     rsi, [rel subject_data]
-    mov     rcx, [cursor]
-    add     rsi, rcx
-    lea     rdi, [rel lit_str_23]
-    mov     rcx, 48
-    repe    cmpsb
-    jne     seq_l122_beta
-    mov     rax, [cursor]
-    mov     [seq_r122_alpha_saved], rax
-    add     rax, 48
-    mov     [cursor], rax
-    jmp     seq_r121_alpha
-
+    LIT_ALPHA   lit_str_14, 48, seq_r122_alpha_saved, cursor, subject_data, subject_len_val, seq_r121_alpha, seq_l122_beta
 ; LIT β=seq_r122_beta
 seq_r122_beta:
-    mov     rax, [seq_r122_alpha_saved]
-    mov     [cursor], rax
-    jmp     seq_l122_beta
+    LIT_BETA    seq_r122_alpha_saved, cursor, seq_l122_beta
 
 ; LIT("STCOUNT STNO SUCCEED UCASE")  α=seq_r121_alpha
 seq_r121_alpha:
-    mov     rax, [cursor]
-    add     rax, 26
-    cmp     rax, [subject_len_val]
-    jg      seq_l121_beta
-    lea     rsi, [rel subject_data]
-    mov     rcx, [cursor]
-    add     rsi, rcx
-    lea     rdi, [rel lit_str_24]
-    mov     rcx, 26
-    repe    cmpsb
-    jne     seq_l121_beta
-    mov     rax, [cursor]
-    mov     [seq_r121_alpha_saved], rax
-    add     rax, 26
-    mov     [cursor], rax
-    jmp     patdef_ProtKwds_gamma
-
+    LIT_ALPHA   lit_str_15, 26, seq_r121_alpha_saved, cursor, subject_data, subject_len_val, patdef_ProtKwds_gamma, seq_l121_beta
 ; LIT β=seq_r121_beta
 seq_r121_beta:
-    mov     rax, [seq_r121_alpha_saved]
-    mov     [cursor], rax
-    jmp     seq_l121_beta
+    LIT_BETA    seq_r121_alpha_saved, cursor, seq_l121_beta
 
 patdef_ProtKwds_gamma:
     jmp     [P_ProtKwds_ret_gamma]
@@ -15208,78 +13865,24 @@ seq_l123_beta:
 
 ; LIT("ABEND ANCHOR CASE CODE COMPARE DUMP ERRLIMIT ")  α=seq_l124_alpha
 seq_l124_alpha:
-    mov     rax, [cursor]
-    add     rax, 45
-    cmp     rax, [subject_len_val]
-    jg      patdef_UnprotKwds_omega
-    lea     rsi, [rel subject_data]
-    mov     rcx, [cursor]
-    add     rsi, rcx
-    lea     rdi, [rel lit_str_25]
-    mov     rcx, 45
-    repe    cmpsb
-    jne     patdef_UnprotKwds_omega
-    mov     rax, [cursor]
-    mov     [seq_l124_alpha_saved], rax
-    add     rax, 45
-    mov     [cursor], rax
-    jmp     seq_r124_alpha
-
+    LIT_ALPHA   lit_str_16, 45, seq_l124_alpha_saved, cursor, subject_data, subject_len_val, seq_r124_alpha, patdef_UnprotKwds_omega
 ; LIT β=seq_l124_beta
 seq_l124_beta:
-    mov     rax, [seq_l124_alpha_saved]
-    mov     [cursor], rax
-    jmp     patdef_UnprotKwds_omega
+    LIT_BETA    seq_l124_alpha_saved, cursor, patdef_UnprotKwds_omega
 
 ; LIT("ERRTEXT ERRTYPE FTRACE INPUT MAXLNGTH OUTPUT ")  α=seq_r124_alpha
 seq_r124_alpha:
-    mov     rax, [cursor]
-    add     rax, 45
-    cmp     rax, [subject_len_val]
-    jg      seq_l124_beta
-    lea     rsi, [rel subject_data]
-    mov     rcx, [cursor]
-    add     rsi, rcx
-    lea     rdi, [rel lit_str_26]
-    mov     rcx, 45
-    repe    cmpsb
-    jne     seq_l124_beta
-    mov     rax, [cursor]
-    mov     [seq_r124_alpha_saved], rax
-    add     rax, 45
-    mov     [cursor], rax
-    jmp     seq_r123_alpha
-
+    LIT_ALPHA   lit_str_17, 45, seq_r124_alpha_saved, cursor, subject_data, subject_len_val, seq_r123_alpha, seq_l124_beta
 ; LIT β=seq_r124_beta
 seq_r124_beta:
-    mov     rax, [seq_r124_alpha_saved]
-    mov     [cursor], rax
-    jmp     seq_l124_beta
+    LIT_BETA    seq_r124_alpha_saved, cursor, seq_l124_beta
 
 ; LIT("PROFILE STLIMIT TRACE TRIM FULLSCAN")  α=seq_r123_alpha
 seq_r123_alpha:
-    mov     rax, [cursor]
-    add     rax, 35
-    cmp     rax, [subject_len_val]
-    jg      seq_l123_beta
-    lea     rsi, [rel subject_data]
-    mov     rcx, [cursor]
-    add     rsi, rcx
-    lea     rdi, [rel lit_str_27]
-    mov     rcx, 35
-    repe    cmpsb
-    jne     seq_l123_beta
-    mov     rax, [cursor]
-    mov     [seq_r123_alpha_saved], rax
-    add     rax, 35
-    mov     [cursor], rax
-    jmp     patdef_UnprotKwds_gamma
-
+    LIT_ALPHA   lit_str_18, 35, seq_r123_alpha_saved, cursor, subject_data, subject_len_val, patdef_UnprotKwds_gamma, seq_l123_beta
 ; LIT β=seq_r123_beta
 seq_r123_beta:
-    mov     rax, [seq_r123_alpha_saved]
-    mov     [cursor], rax
-    jmp     seq_l123_beta
+    LIT_BETA    seq_r123_alpha_saved, cursor, seq_l123_beta
 
 patdef_UnprotKwds_gamma:
     jmp     [P_UnprotKwds_ret_gamma]
@@ -15339,228 +13942,66 @@ seq_l131_beta:
 
 ; LIT("ANY APPLY ARBNO ARG ARRAY ATAN BACKSPACE BREAK BREAKX ")  α=seq_l132_alpha
 seq_l132_alpha:
-    mov     rax, [cursor]
-    add     rax, 54
-    cmp     rax, [subject_len_val]
-    jg      patdef_Functions_omega
-    lea     rsi, [rel subject_data]
-    mov     rcx, [cursor]
-    add     rsi, rcx
-    lea     rdi, [rel lit_str_28]
-    mov     rcx, 54
-    repe    cmpsb
-    jne     patdef_Functions_omega
-    mov     rax, [cursor]
-    mov     [seq_l132_alpha_saved], rax
-    add     rax, 54
-    mov     [cursor], rax
-    jmp     seq_r132_alpha
-
+    LIT_ALPHA   lit_str_19, 54, seq_l132_alpha_saved, cursor, subject_data, subject_len_val, seq_r132_alpha, patdef_Functions_omega
 ; LIT β=seq_l132_beta
 seq_l132_beta:
-    mov     rax, [seq_l132_alpha_saved]
-    mov     [cursor], rax
-    jmp     patdef_Functions_omega
+    LIT_BETA    seq_l132_alpha_saved, cursor, patdef_Functions_omega
 
 ; LIT("CHAR CHOP CLEAR CODE COLLECT CONVERT COPY COS DATA ")  α=seq_r132_alpha
 seq_r132_alpha:
-    mov     rax, [cursor]
-    add     rax, 51
-    cmp     rax, [subject_len_val]
-    jg      seq_l132_beta
-    lea     rsi, [rel subject_data]
-    mov     rcx, [cursor]
-    add     rsi, rcx
-    lea     rdi, [rel lit_str_29]
-    mov     rcx, 51
-    repe    cmpsb
-    jne     seq_l132_beta
-    mov     rax, [cursor]
-    mov     [seq_r132_alpha_saved], rax
-    add     rax, 51
-    mov     [cursor], rax
-    jmp     seq_r131_alpha
-
+    LIT_ALPHA   lit_str_20, 51, seq_r132_alpha_saved, cursor, subject_data, subject_len_val, seq_r131_alpha, seq_l132_beta
 ; LIT β=seq_r132_beta
 seq_r132_beta:
-    mov     rax, [seq_r132_alpha_saved]
-    mov     [cursor], rax
-    jmp     seq_l132_beta
+    LIT_BETA    seq_r132_alpha_saved, cursor, seq_l132_beta
 
 ; LIT("DATATYPE DATE DEFINE DETACH DIFFER DUMP DUPL EJECT ")  α=seq_r131_alpha
 seq_r131_alpha:
-    mov     rax, [cursor]
-    add     rax, 51
-    cmp     rax, [subject_len_val]
-    jg      seq_l131_beta
-    lea     rsi, [rel subject_data]
-    mov     rcx, [cursor]
-    add     rsi, rcx
-    lea     rdi, [rel lit_str_30]
-    mov     rcx, 51
-    repe    cmpsb
-    jne     seq_l131_beta
-    mov     rax, [cursor]
-    mov     [seq_r131_alpha_saved], rax
-    add     rax, 51
-    mov     [cursor], rax
-    jmp     seq_r130_alpha
-
+    LIT_ALPHA   lit_str_21, 51, seq_r131_alpha_saved, cursor, subject_data, subject_len_val, seq_r130_alpha, seq_l131_beta
 ; LIT β=seq_r131_beta
 seq_r131_beta:
-    mov     rax, [seq_r131_alpha_saved]
-    mov     [cursor], rax
-    jmp     seq_l131_beta
+    LIT_BETA    seq_r131_alpha_saved, cursor, seq_l131_beta
 
 ; LIT("ENDFILE EQ EVAL EXIT EXP FENCE FIELD GE GT HOST ")  α=seq_r130_alpha
 seq_r130_alpha:
-    mov     rax, [cursor]
-    add     rax, 48
-    cmp     rax, [subject_len_val]
-    jg      seq_l130_beta
-    lea     rsi, [rel subject_data]
-    mov     rcx, [cursor]
-    add     rsi, rcx
-    lea     rdi, [rel lit_str_31]
-    mov     rcx, 48
-    repe    cmpsb
-    jne     seq_l130_beta
-    mov     rax, [cursor]
-    mov     [seq_r130_alpha_saved], rax
-    add     rax, 48
-    mov     [cursor], rax
-    jmp     seq_r129_alpha
-
+    LIT_ALPHA   lit_str_22, 48, seq_r130_alpha_saved, cursor, subject_data, subject_len_val, seq_r129_alpha, seq_l130_beta
 ; LIT β=seq_r130_beta
 seq_r130_beta:
-    mov     rax, [seq_r130_alpha_saved]
-    mov     [cursor], rax
-    jmp     seq_l130_beta
+    LIT_BETA    seq_r130_alpha_saved, cursor, seq_l130_beta
 
 ; LIT("IDENT INPUT INTEGER ITEM LE LEN LEQ LGE LGT LLE ")  α=seq_r129_alpha
 seq_r129_alpha:
-    mov     rax, [cursor]
-    add     rax, 48
-    cmp     rax, [subject_len_val]
-    jg      seq_l129_beta
-    lea     rsi, [rel subject_data]
-    mov     rcx, [cursor]
-    add     rsi, rcx
-    lea     rdi, [rel lit_str_32]
-    mov     rcx, 48
-    repe    cmpsb
-    jne     seq_l129_beta
-    mov     rax, [cursor]
-    mov     [seq_r129_alpha_saved], rax
-    add     rax, 48
-    mov     [cursor], rax
-    jmp     seq_r128_alpha
-
+    LIT_ALPHA   lit_str_23, 48, seq_r129_alpha_saved, cursor, subject_data, subject_len_val, seq_r128_alpha, seq_l129_beta
 ; LIT β=seq_r129_beta
 seq_r129_beta:
-    mov     rax, [seq_r129_alpha_saved]
-    mov     [cursor], rax
-    jmp     seq_l129_beta
+    LIT_BETA    seq_r129_alpha_saved, cursor, seq_l129_beta
 
 ; LIT("LLT LN LNE LOAD LOCAL LPAD LT NE NOTANY OPSYN OUTPUT ")  α=seq_r128_alpha
 seq_r128_alpha:
-    mov     rax, [cursor]
-    add     rax, 53
-    cmp     rax, [subject_len_val]
-    jg      seq_l128_beta
-    lea     rsi, [rel subject_data]
-    mov     rcx, [cursor]
-    add     rsi, rcx
-    lea     rdi, [rel lit_str_33]
-    mov     rcx, 53
-    repe    cmpsb
-    jne     seq_l128_beta
-    mov     rax, [cursor]
-    mov     [seq_r128_alpha_saved], rax
-    add     rax, 53
-    mov     [cursor], rax
-    jmp     seq_r127_alpha
-
+    LIT_ALPHA   lit_str_24, 53, seq_r128_alpha_saved, cursor, subject_data, subject_len_val, seq_r127_alpha, seq_l128_beta
 ; LIT β=seq_r128_beta
 seq_r128_beta:
-    mov     rax, [seq_r128_alpha_saved]
-    mov     [cursor], rax
-    jmp     seq_l128_beta
+    LIT_BETA    seq_r128_alpha_saved, cursor, seq_l128_beta
 
 ; LIT("POS PROTOTYPE REMDR REPLACE REVERSE REWIND RPAD RPOS ")  α=seq_r127_alpha
 seq_r127_alpha:
-    mov     rax, [cursor]
-    add     rax, 53
-    cmp     rax, [subject_len_val]
-    jg      seq_l127_beta
-    lea     rsi, [rel subject_data]
-    mov     rcx, [cursor]
-    add     rsi, rcx
-    lea     rdi, [rel lit_str_34]
-    mov     rcx, 53
-    repe    cmpsb
-    jne     seq_l127_beta
-    mov     rax, [cursor]
-    mov     [seq_r127_alpha_saved], rax
-    add     rax, 53
-    mov     [cursor], rax
-    jmp     seq_r126_alpha
-
+    LIT_ALPHA   lit_str_25, 53, seq_r127_alpha_saved, cursor, subject_data, subject_len_val, seq_r126_alpha, seq_l127_beta
 ; LIT β=seq_r127_beta
 seq_r127_beta:
-    mov     rax, [seq_r127_alpha_saved]
-    mov     [cursor], rax
-    jmp     seq_l127_beta
+    LIT_BETA    seq_r127_alpha_saved, cursor, seq_l127_beta
 
 ; LIT("RSORT RTAB SET SETEXIT SIN SIZE SORT SPAN SQRT STOPTR ")  α=seq_r126_alpha
 seq_r126_alpha:
-    mov     rax, [cursor]
-    add     rax, 54
-    cmp     rax, [subject_len_val]
-    jg      seq_l126_beta
-    lea     rsi, [rel subject_data]
-    mov     rcx, [cursor]
-    add     rsi, rcx
-    lea     rdi, [rel lit_str_35]
-    mov     rcx, 54
-    repe    cmpsb
-    jne     seq_l126_beta
-    mov     rax, [cursor]
-    mov     [seq_r126_alpha_saved], rax
-    add     rax, 54
-    mov     [cursor], rax
-    jmp     seq_r125_alpha
-
+    LIT_ALPHA   lit_str_26, 54, seq_r126_alpha_saved, cursor, subject_data, subject_len_val, seq_r125_alpha, seq_l126_beta
 ; LIT β=seq_r126_beta
 seq_r126_beta:
-    mov     rax, [seq_r126_alpha_saved]
-    mov     [cursor], rax
-    jmp     seq_l126_beta
+    LIT_BETA    seq_r126_alpha_saved, cursor, seq_l126_beta
 
 ; LIT("SUBSTR TAB TABLE TAN TIME TRACE TRIM UNLOAD")  α=seq_r125_alpha
 seq_r125_alpha:
-    mov     rax, [cursor]
-    add     rax, 43
-    cmp     rax, [subject_len_val]
-    jg      seq_l125_beta
-    lea     rsi, [rel subject_data]
-    mov     rcx, [cursor]
-    add     rsi, rcx
-    lea     rdi, [rel lit_str_36]
-    mov     rcx, 43
-    repe    cmpsb
-    jne     seq_l125_beta
-    mov     rax, [cursor]
-    mov     [seq_r125_alpha_saved], rax
-    add     rax, 43
-    mov     [cursor], rax
-    jmp     patdef_Functions_gamma
-
+    LIT_ALPHA   lit_str_27, 43, seq_r125_alpha_saved, cursor, subject_data, subject_len_val, patdef_Functions_gamma, seq_l125_beta
 ; LIT β=seq_r125_beta
 seq_r125_beta:
-    mov     rax, [seq_r125_alpha_saved]
-    mov     [cursor], rax
-    jmp     seq_l125_beta
+    LIT_BETA    seq_r125_alpha_saved, cursor, seq_l125_beta
 
 patdef_Functions_gamma:
     jmp     [P_Functions_ret_gamma]
@@ -16612,26 +15053,10 @@ seq_l198_beta:
 
 ; LIT("@")  α=seq_l199_alpha
 seq_l199_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      alt197_left_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 64
-    jne     alt197_left_omega
-    mov     rax, [cursor]
-    mov     [seq_l199_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r199_alpha
-
+    LIT_ALPHA1  64, seq_l199_alpha_saved, cursor, subject_data, subject_len_val, seq_r199_alpha, alt197_left_omega
 ; LIT β=seq_l199_beta
 seq_l199_beta:
-    mov     rax, [seq_l199_alpha_saved]
-    mov     [cursor], rax
-    jmp     alt197_left_omega
+    LIT_BETA    seq_l199_alpha_saved, cursor, alt197_left_omega
 
 ; REF(Expr14) α=seq_r199_alpha
 seq_r199_alpha:
@@ -16679,26 +15104,10 @@ seq_l201_beta:
 
 ; LIT("~")  α=seq_l202_alpha
 seq_l202_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      alt196_left_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 126
-    jne     alt196_left_omega
-    mov     rax, [cursor]
-    mov     [seq_l202_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r202_alpha
-
+    LIT_ALPHA1  126, seq_l202_alpha_saved, cursor, subject_data, subject_len_val, seq_r202_alpha, alt196_left_omega
 ; LIT β=seq_l202_beta
 seq_l202_beta:
-    mov     rax, [seq_l202_alpha_saved]
-    mov     [cursor], rax
-    jmp     alt196_left_omega
+    LIT_BETA    seq_l202_alpha_saved, cursor, alt196_left_omega
 
 ; REF(Expr14) α=seq_r202_alpha
 seq_r202_alpha:
@@ -16746,26 +15155,10 @@ seq_l204_beta:
 
 ; LIT("?")  α=seq_l205_alpha
 seq_l205_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      alt195_left_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 63
-    jne     alt195_left_omega
-    mov     rax, [cursor]
-    mov     [seq_l205_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r205_alpha
-
+    LIT_ALPHA1  63, seq_l205_alpha_saved, cursor, subject_data, subject_len_val, seq_r205_alpha, alt195_left_omega
 ; LIT β=seq_l205_beta
 seq_l205_beta:
-    mov     rax, [seq_l205_alpha_saved]
-    mov     [cursor], rax
-    jmp     alt195_left_omega
+    LIT_BETA    seq_l205_alpha_saved, cursor, alt195_left_omega
 
 ; REF(Expr14) α=seq_r205_alpha
 seq_r205_alpha:
@@ -16917,26 +15310,10 @@ seq_l211_beta:
 
 ; LIT("&")  α=seq_l212_alpha
 seq_l212_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      alt192_left_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 38
-    jne     alt192_left_omega
-    mov     rax, [cursor]
-    mov     [seq_l212_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r212_alpha
-
+    LIT_ALPHA1  38, seq_l212_alpha_saved, cursor, subject_data, subject_len_val, seq_r212_alpha, alt192_left_omega
 ; LIT β=seq_l212_beta
 seq_l212_beta:
-    mov     rax, [seq_l212_alpha_saved]
-    mov     [cursor], rax
-    jmp     alt192_left_omega
+    LIT_BETA    seq_l212_alpha_saved, cursor, alt192_left_omega
 
 ; REF(Expr14) α=seq_r212_alpha
 seq_r212_alpha:
@@ -16984,26 +15361,10 @@ seq_l214_beta:
 
 ; LIT("+")  α=seq_l215_alpha
 seq_l215_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      alt191_left_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 43
-    jne     alt191_left_omega
-    mov     rax, [cursor]
-    mov     [seq_l215_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r215_alpha
-
+    LIT_ALPHA1  43, seq_l215_alpha_saved, cursor, subject_data, subject_len_val, seq_r215_alpha, alt191_left_omega
 ; LIT β=seq_l215_beta
 seq_l215_beta:
-    mov     rax, [seq_l215_alpha_saved]
-    mov     [cursor], rax
-    jmp     alt191_left_omega
+    LIT_BETA    seq_l215_alpha_saved, cursor, alt191_left_omega
 
 ; REF(Expr14) α=seq_r215_alpha
 seq_r215_alpha:
@@ -17051,26 +15412,10 @@ seq_l217_beta:
 
 ; LIT("-")  α=seq_l218_alpha
 seq_l218_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      alt190_left_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 45
-    jne     alt190_left_omega
-    mov     rax, [cursor]
-    mov     [seq_l218_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r218_alpha
-
+    LIT_ALPHA1  45, seq_l218_alpha_saved, cursor, subject_data, subject_len_val, seq_r218_alpha, alt190_left_omega
 ; LIT β=seq_l218_beta
 seq_l218_beta:
-    mov     rax, [seq_l218_alpha_saved]
-    mov     [cursor], rax
-    jmp     alt190_left_omega
+    LIT_BETA    seq_l218_alpha_saved, cursor, alt190_left_omega
 
 ; REF(Expr14) α=seq_r218_alpha
 seq_r218_alpha:
@@ -17118,26 +15463,10 @@ seq_l220_beta:
 
 ; LIT("*")  α=seq_l221_alpha
 seq_l221_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      alt189_left_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 42
-    jne     alt189_left_omega
-    mov     rax, [cursor]
-    mov     [seq_l221_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r221_alpha
-
+    LIT_ALPHA1  42, seq_l221_alpha_saved, cursor, subject_data, subject_len_val, seq_r221_alpha, alt189_left_omega
 ; LIT β=seq_l221_beta
 seq_l221_beta:
-    mov     rax, [seq_l221_alpha_saved]
-    mov     [cursor], rax
-    jmp     alt189_left_omega
+    LIT_BETA    seq_l221_alpha_saved, cursor, alt189_left_omega
 
 ; REF(Expr14) α=seq_r221_alpha
 seq_r221_alpha:
@@ -17185,26 +15514,10 @@ seq_l223_beta:
 
 ; LIT("$")  α=seq_l224_alpha
 seq_l224_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      alt188_left_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 36
-    jne     alt188_left_omega
-    mov     rax, [cursor]
-    mov     [seq_l224_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r224_alpha
-
+    LIT_ALPHA1  36, seq_l224_alpha_saved, cursor, subject_data, subject_len_val, seq_r224_alpha, alt188_left_omega
 ; LIT β=seq_l224_beta
 seq_l224_beta:
-    mov     rax, [seq_l224_alpha_saved]
-    mov     [cursor], rax
-    jmp     alt188_left_omega
+    LIT_BETA    seq_l224_alpha_saved, cursor, alt188_left_omega
 
 ; REF(Expr14) α=seq_r224_alpha
 seq_r224_alpha:
@@ -17252,26 +15565,10 @@ seq_l226_beta:
 
 ; LIT(".")  α=seq_l227_alpha
 seq_l227_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      alt187_left_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 46
-    jne     alt187_left_omega
-    mov     rax, [cursor]
-    mov     [seq_l227_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r227_alpha
-
+    LIT_ALPHA1  46, seq_l227_alpha_saved, cursor, subject_data, subject_len_val, seq_r227_alpha, alt187_left_omega
 ; LIT β=seq_l227_beta
 seq_l227_beta:
-    mov     rax, [seq_l227_alpha_saved]
-    mov     [cursor], rax
-    jmp     alt187_left_omega
+    LIT_BETA    seq_l227_alpha_saved, cursor, alt187_left_omega
 
 ; REF(Expr14) α=seq_r227_alpha
 seq_r227_alpha:
@@ -17319,26 +15616,10 @@ seq_l229_beta:
 
 ; LIT("!")  α=seq_l230_alpha
 seq_l230_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      alt186_left_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 33
-    jne     alt186_left_omega
-    mov     rax, [cursor]
-    mov     [seq_l230_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r230_alpha
-
+    LIT_ALPHA1  33, seq_l230_alpha_saved, cursor, subject_data, subject_len_val, seq_r230_alpha, alt186_left_omega
 ; LIT β=seq_l230_beta
 seq_l230_beta:
-    mov     rax, [seq_l230_alpha_saved]
-    mov     [cursor], rax
-    jmp     alt186_left_omega
+    LIT_BETA    seq_l230_alpha_saved, cursor, alt186_left_omega
 
 ; REF(Expr14) α=seq_r230_alpha
 seq_r230_alpha:
@@ -17386,26 +15667,10 @@ seq_l232_beta:
 
 ; LIT("%")  α=seq_l233_alpha
 seq_l233_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      alt185_left_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 37
-    jne     alt185_left_omega
-    mov     rax, [cursor]
-    mov     [seq_l233_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r233_alpha
-
+    LIT_ALPHA1  37, seq_l233_alpha_saved, cursor, subject_data, subject_len_val, seq_r233_alpha, alt185_left_omega
 ; LIT β=seq_l233_beta
 seq_l233_beta:
-    mov     rax, [seq_l233_alpha_saved]
-    mov     [cursor], rax
-    jmp     alt185_left_omega
+    LIT_BETA    seq_l233_alpha_saved, cursor, alt185_left_omega
 
 ; REF(Expr14) α=seq_r233_alpha
 seq_r233_alpha:
@@ -17453,26 +15718,10 @@ seq_l235_beta:
 
 ; LIT("/")  α=seq_l236_alpha
 seq_l236_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      alt184_left_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 47
-    jne     alt184_left_omega
-    mov     rax, [cursor]
-    mov     [seq_l236_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r236_alpha
-
+    LIT_ALPHA1  47, seq_l236_alpha_saved, cursor, subject_data, subject_len_val, seq_r236_alpha, alt184_left_omega
 ; LIT β=seq_l236_beta
 seq_l236_beta:
-    mov     rax, [seq_l236_alpha_saved]
-    mov     [cursor], rax
-    jmp     alt184_left_omega
+    LIT_BETA    seq_l236_alpha_saved, cursor, alt184_left_omega
 
 ; REF(Expr14) α=seq_r236_alpha
 seq_r236_alpha:
@@ -17520,26 +15769,10 @@ seq_l238_beta:
 
 ; LIT("#")  α=seq_l239_alpha
 seq_l239_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      alt183_left_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 35
-    jne     alt183_left_omega
-    mov     rax, [cursor]
-    mov     [seq_l239_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r239_alpha
-
+    LIT_ALPHA1  35, seq_l239_alpha_saved, cursor, subject_data, subject_len_val, seq_r239_alpha, alt183_left_omega
 ; LIT β=seq_l239_beta
 seq_l239_beta:
-    mov     rax, [seq_l239_alpha_saved]
-    mov     [cursor], rax
-    jmp     alt183_left_omega
+    LIT_BETA    seq_l239_alpha_saved, cursor, alt183_left_omega
 
 ; REF(Expr14) α=seq_r239_alpha
 seq_r239_alpha:
@@ -17587,26 +15820,10 @@ seq_l241_beta:
 
 ; LIT("=")  α=seq_l242_alpha
 seq_l242_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      alt182_left_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 61
-    jne     alt182_left_omega
-    mov     rax, [cursor]
-    mov     [seq_l242_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r242_alpha
-
+    LIT_ALPHA1  61, seq_l242_alpha_saved, cursor, subject_data, subject_len_val, seq_r242_alpha, alt182_left_omega
 ; LIT β=seq_l242_beta
 seq_l242_beta:
-    mov     rax, [seq_l242_alpha_saved]
-    mov     [cursor], rax
-    jmp     alt182_left_omega
+    LIT_BETA    seq_l242_alpha_saved, cursor, alt182_left_omega
 
 ; REF(Expr14) α=seq_r242_alpha
 seq_r242_alpha:
@@ -17654,26 +15871,10 @@ seq_l244_beta:
 
 ; LIT("|")  α=seq_l245_alpha
 seq_l245_alpha:
-    mov     rax, [cursor]
-    add     rax, 1
-    cmp     rax, [subject_len_val]
-    jg      alt181_left_omega
-    lea     rbx, [rel subject_data]
-    mov     rcx, [cursor]
-    movzx   eax, byte [rbx + rcx]
-    cmp     al, 124
-    jne     alt181_left_omega
-    mov     rax, [cursor]
-    mov     [seq_l245_alpha_saved], rax
-    add     rax, 1
-    mov     [cursor], rax
-    jmp     seq_r245_alpha
-
+    LIT_ALPHA1  124, seq_l245_alpha_saved, cursor, subject_data, subject_len_val, seq_r245_alpha, alt181_left_omega
 ; LIT β=seq_l245_beta
 seq_l245_beta:
-    mov     rax, [seq_l245_alpha_saved]
-    mov     [cursor], rax
-    jmp     alt181_left_omega
+    LIT_BETA    seq_l245_alpha_saved, cursor, alt181_left_omega
 
 ; REF(Expr14) α=seq_r245_alpha
 seq_r245_alpha:
