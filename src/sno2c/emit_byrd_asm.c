@@ -66,15 +66,47 @@ static int out_col = 0;
 /* emit_sep_major — strong horizontal rule: ; ====...  (SEP_W chars total)
  * Embeds optional tag: ";  tag ===..."
  * Used for: SNOBOL4 statement boundaries, section headers, named pattern headers. */
+/* pending_sep: buffered separator text to attach to next label.
+ * When emit_sep_major fires and a label follows, we fold:
+ *   label:  ; === tag ===...
+ * instead of emitting the sep at col 1 then the label on the next line. */
+static char pending_sep[256] = "";
+
 static void emit_sep_major(const char *tag) {
+    /* Build the sep text into pending_sep — asmL will attach it */
     int used = 2;
-    fprintf(asm_out, "\n; ");
-    if (tag && tag[0]) {
-        used += fprintf(asm_out, " %s ", tag);
+    char *p = pending_sep;
+    int rem = (int)sizeof pending_sep;
+    int n;
+    /* flush any existing pending_sep that was never consumed */
+    if (pending_sep[0]) {
+        fprintf(asm_out, "\n; %s\n", pending_sep);
+        out_col = 0;
+        pending_sep[0] = '\0';
     }
-    for (int i = used; i < SEP_W; i++) fputc('=', asm_out);
-    fputc('\n', asm_out);
+    /* build new sep line in pending_sep as plain text (no leading "; ") */
+    p = pending_sep; rem = (int)sizeof pending_sep;
+    if (tag && tag[0]) {
+        n = snprintf(p, rem, " %s ", tag); p += n; rem -= n; used += n;
+    }
+    /* fill remainder with '=' */
+    int eq_count = SEP_W - 2 - (int)(p - pending_sep);
+    for (int i = 0; i < eq_count && rem > 1; i++, p++, rem--) *p = '=';
+    *p = '\0';
+    /* Emit leading blank line immediately */
+    fprintf(asm_out, "\n");
     out_col = 0;
+    /* NOTE: no second \n here — sep line itself provides the visual break,
+     * and asmL will emit the label immediately after pending_sep is consumed. */
+}
+
+/* flush_pending_sep — called when no label follows: emit sep at col 1 */
+static void flush_pending_sep(void) {
+    if (pending_sep[0]) {
+        fprintf(asm_out, "; %s\n", pending_sep);
+        out_col = 0;
+        pending_sep[0] = '\0';
+    }
 }
 
 /* emit_sep_minor — light horizontal rule: ; ----...  (SEP_W chars total)
@@ -155,9 +187,14 @@ static void A(const char *fmt, ...) {
             return;  /* pending label survives blank lines and separators */
         }
         if (is_instr) {
-            /* Emit any leading newlines first, then fold label+instruction. */
+            /* Emit any leading newlines first, then sep (if any), then fold label+instruction. */
             const char *start = buf;
             while (*start == '\n') { oc_char('\n'); start++; }
+            /* Rule 3: sep immediately precedes label:  INSTR with no blank between */
+            if (pending_sep[0]) {
+                oc_char(';'); oc_char(' '); oc_str(pending_sep); oc_char('\n');
+                pending_sep[0] = '\0';
+            }
             /* emit label: then pad to COL_W */
             oc_str(pending_label);
             oc_char(':');
@@ -194,7 +231,23 @@ static void A(const char *fmt, ...) {
                                     p[0] == ';');
                 if (!is_directive) {
                     emit_to_col(COL_W);
-                    oc_str(p);
+                    /* Col3 alignment: emit opcode word, then pad to COL3 before operands */
+                    const char *op = p;
+                    const char *sp = p;
+                    while (*sp && *sp != ' ' && *sp != '\t') sp++; /* end of opcode */
+                    /* emit the opcode word */
+                    while (op < sp) oc_char(*op++);
+                    /* skip whitespace in source */
+                    while (*sp == ' ' || *sp == '\t') sp++;
+                    if (*sp) {
+                        /* pad to COL3 for operands */
+                        int col3 = COL_W + COL2_W;
+                        if (out_col < col3) emit_to_col(col3);
+                        else oc_char(' ');
+                        oc_str(sp);
+                    } else {
+                        oc_char('\n');
+                    }
                     return;
                 }
             }
@@ -285,10 +338,10 @@ static void lit_emit_data(void) {
 #define LBUF 128
 
 static void asmL(const char *lbl) {
-    /* Queue label — A() will fold it onto the next instruction line,
-     * or flush_pending_label() will emit it standalone if another label follows */
-    flush_pending_label();   /* flush any previous pending label first */
+    flush_pending_label();
     snprintf(pending_label, sizeof pending_label, "%s", lbl);
+    /* pending_sep will be consumed by A() when it folds the label+instruction.
+     * It is printed just before "label:  INSTR" via the A() pending-label path. */
 }
 
 /* asmLB(lbl, instr) — label and pre-built instruction string on one line */
@@ -333,8 +386,8 @@ static char _alfc_ibuf[768];
     const char *_alfc_p = _alfc_ibuf; \
     while (*_alfc_p == ' ') _alfc_p++; \
     oc_str(_alfc_p); \
-    /* pad to comment col if room, else just one space */ \
-    if (out_col < COL_CMT) { emit_to_col(COL_CMT); } else { oc_char(' '); } \
+    /* one space before comment — rule: no fourth column */ \
+    oc_char(' '); \
     oc_str("; "); oc_str(comment); oc_char('\n'); \
 } while(0)
 
@@ -2187,6 +2240,7 @@ static void asm_emit_program(Program *prog) {
 
     /* ---- .text ---- */
     flush_pending_label();
+    flush_pending_sep();
     emit_sep_major("PROGRAM BODY");
     A("section .text\n");
     A("main:\n");
@@ -2353,7 +2407,7 @@ static void asm_emit_program(Program *prog) {
     }
 
     /* Safety net end — also serves as RETURN/FRETURN/END target */
-    emit_sep_major("END");
+    flush_pending_sep(); emit_sep_major("END");
     A("L_SNO_END:\n");
     flush_pending_label();
     A("    PROG_END\n");
@@ -2372,7 +2426,7 @@ static void asm_emit_program(Program *prog) {
     }
 
     /* ---- Named pattern bodies — must be in .text (executable) ---- */
-    emit_sep_major("NAMED PATTERN BODIES");
+    flush_pending_sep(); emit_sep_major("NAMED PATTERN BODIES");
     A("section .text\n");
     for (int i = 0; i < asm_named_count; i++) {
         if (asm_named[i].pat) {
@@ -2383,7 +2437,7 @@ static void asm_emit_program(Program *prog) {
                            "cursor","subject_data","subject_len_val");
     }
 
-    emit_sep_major("STUB LABELS");
+    flush_pending_sep(); emit_sep_major("STUB LABELS");
     A("section .text\n"); /* stubs must also be in .text */
     /* ---- Stub definitions for referenced-but-undefined labels ----
      * These are dangling gotos (e.g. :F(error) with no "error" label defined,
@@ -2398,7 +2452,7 @@ static void asm_emit_program(Program *prog) {
     }
 
     /* ---- .data emitted last so all prog_str_intern() calls are captured ---- */
-    emit_sep_major("STRING TABLE");
+    flush_pending_sep(); emit_sep_major("STRING TABLE");
     A("section .data\n");
     prog_str_emit_data();
 }
