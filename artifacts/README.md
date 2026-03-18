@@ -514,3 +514,11 @@ session115 | 2026-03-16 | 6d5919daa03d3c56646b5f0a165f86ee | 15859 lines | compi
 - change: three formatting rules: (1) col3 operand alignment at COL_W+COL2_W=40; (2) no fourth column — ALFC uses one space before ";"; (3) sep comments folded to immediately precede label:  INSTR with no blank gap
 - assemble: nasm -I src/runtime/asm/ -f elf64 beauty_prog_session173.s -o /dev/null
 - invariants: 106/106 C crosscheck PASS, 26/26 ASM crosscheck PASS
+
+## beauty_prog_session174.s
+- **Session:** 174
+- **Sprint:** A14 M-ASM-BEAUTIFUL
+- **Lines:** 11594 (was 12594 session173, −1000)
+- **Status:** NASM clean, 106/106 C, 26/26 ASM
+- **Changes:** CALL1_VAR + CONC2_VI/IV/II/NI/SI/IS + *16 variants; 77→15 verbose sub rsp,32 blocks remain (all have complex children: E_IDX/E_SUB/E_FNC/E_NAM); remaining 15 need result-temp strategy
+- **Assemble:** `nasm -f elf64 -I src/runtime/asm/ beauty_prog_session174.s -o /dev/null`

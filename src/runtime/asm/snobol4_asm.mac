@@ -969,6 +969,24 @@
     mov     [rbp-24], rdx
 %endmacro
 
+; CALL1_VAR fn, varlab
+;   [rbp-32/24] = fn(var)  — 1-arg call with variable arg
+; -----------------------------------------------------------------------------
+%macro CALL1_VAR 2            ; fn_strlab, var_strlab
+    sub     rsp, 16
+    lea     rdi, [rel %2]
+    call    stmt_get
+    mov     [rsp], rax
+    mov     [rsp+8], rdx
+    lea     rdi, [rel %1]
+    mov     rsi, rsp
+    mov     rdx, 1
+    call    stmt_apply
+    add     rsp, 16
+    mov     [rbp-32], rax
+    mov     [rbp-24], rdx
+%endmacro
+
 ; -----------------------------------------------------------------------------
 ; CONC2 fn, strlab1, strlab2   — fn(s1, s2)  two string-literal args → [rbp-32/24]
 ; ALT2  fn, strlab1, strlab2   — same shape, different fn
@@ -1241,6 +1259,278 @@
 %endmacro
 %define ALT2_VV16  CONC2_VV16
 
+; CONC2_NN fn   — fn(NULVCL, NULVCL) → [rbp-32/24]
+%macro CONC2_NN 1
+    sub     rsp, 32
+    mov     qword [rsp],    1
+    mov     qword [rsp+8],  0
+    mov     qword [rsp+16], 1
+    mov     qword [rsp+24], 0
+    lea     rdi, [rel %1]
+    mov     rsi, rsp
+    mov     rdx, 2
+    call    stmt_apply
+    add     rsp, 32
+    mov     [rbp-32], rax
+    mov     [rbp-24], rdx
+%endmacro
+%define ALT2_NN  CONC2_NN
+
 ; =============================================================================
-; END Session 167/171/172 high-level statement macros
+; Session 174: integer-literal 2-arg fast paths
+; CONC2_VI fn, varlab, n   — fn(variable, int)     → [rbp-32/24]
+; CONC2_IV fn, n, varlab   — fn(int, variable)     → [rbp-32/24]
+; CONC2_II fn, n1, n2      — fn(int, int)           → [rbp-32/24]
+; CONC2_NI fn, n           — fn(NULVCL, int)        → [rbp-32/24]
+; CONC2_SI fn, strlab, n   — fn(str_literal, int)   → [rbp-32/24]
+; CONC2_IS fn, n, strlab   — fn(int, str_literal)   → [rbp-32/24]
+; ALT2_* aliases — same expansion
+; =============================================================================
+
+; CONC2_VI fn, varlab, n   — fn(variable, int) → [rbp-32/24]
+%macro CONC2_VI 3           ; fn_strlab, var_strlab, int_val
+    sub     rsp, 32
+    lea     rdi, [rel %2]
+    call    stmt_get
+    mov     [rsp], rax
+    mov     [rsp+8], rdx
+    mov     rdi, %3
+    call    stmt_intval
+    mov     [rsp+16], rax
+    mov     [rsp+24], rdx
+    lea     rdi, [rel %1]
+    mov     rsi, rsp
+    mov     rdx, 2
+    call    stmt_apply
+    add     rsp, 32
+    mov     [rbp-32], rax
+    mov     [rbp-24], rdx
+%endmacro
+%define ALT2_VI  CONC2_VI
+
+; CONC2_IV fn, n, varlab   — fn(int, variable) → [rbp-32/24]
+%macro CONC2_IV 3           ; fn_strlab, int_val, var_strlab
+    sub     rsp, 32
+    mov     rdi, %2
+    call    stmt_intval
+    mov     [rsp], rax
+    mov     [rsp+8], rdx
+    lea     rdi, [rel %3]
+    call    stmt_get
+    mov     [rsp+16], rax
+    mov     [rsp+24], rdx
+    lea     rdi, [rel %1]
+    mov     rsi, rsp
+    mov     rdx, 2
+    call    stmt_apply
+    add     rsp, 32
+    mov     [rbp-32], rax
+    mov     [rbp-24], rdx
+%endmacro
+%define ALT2_IV  CONC2_IV
+
+; CONC2_II fn, n1, n2      — fn(int, int) → [rbp-32/24]
+%macro CONC2_II 3           ; fn_strlab, int_val1, int_val2
+    sub     rsp, 32
+    mov     rdi, %2
+    call    stmt_intval
+    mov     [rsp], rax
+    mov     [rsp+8], rdx
+    mov     rdi, %3
+    call    stmt_intval
+    mov     [rsp+16], rax
+    mov     [rsp+24], rdx
+    lea     rdi, [rel %1]
+    mov     rsi, rsp
+    mov     rdx, 2
+    call    stmt_apply
+    add     rsp, 32
+    mov     [rbp-32], rax
+    mov     [rbp-24], rdx
+%endmacro
+%define ALT2_II  CONC2_II
+
+; CONC2_NI fn, n           — fn(NULVCL, int) → [rbp-32/24]
+%macro CONC2_NI 2           ; fn_strlab, int_val
+    sub     rsp, 32
+    mov     qword [rsp],   1
+    mov     qword [rsp+8], 0
+    mov     rdi, %2
+    call    stmt_intval
+    mov     [rsp+16], rax
+    mov     [rsp+24], rdx
+    lea     rdi, [rel %1]
+    mov     rsi, rsp
+    mov     rdx, 2
+    call    stmt_apply
+    add     rsp, 32
+    mov     [rbp-32], rax
+    mov     [rbp-24], rdx
+%endmacro
+%define ALT2_NI  CONC2_NI
+
+; CONC2_SI fn, strlab, n   — fn(str_literal, int) → [rbp-32/24]
+%macro CONC2_SI 3           ; fn_strlab, str_strlab, int_val
+    sub     rsp, 32
+    lea     rdi, [rel %2]
+    call    stmt_strval
+    mov     [rsp], rax
+    mov     [rsp+8], rdx
+    mov     rdi, %3
+    call    stmt_intval
+    mov     [rsp+16], rax
+    mov     [rsp+24], rdx
+    lea     rdi, [rel %1]
+    mov     rsi, rsp
+    mov     rdx, 2
+    call    stmt_apply
+    add     rsp, 32
+    mov     [rbp-32], rax
+    mov     [rbp-24], rdx
+%endmacro
+%define ALT2_SI  CONC2_SI
+
+; CONC2_IS fn, n, strlab   — fn(int, str_literal) → [rbp-32/24]
+%macro CONC2_IS 3           ; fn_strlab, int_val, str_strlab
+    sub     rsp, 32
+    mov     rdi, %2
+    call    stmt_intval
+    mov     [rsp], rax
+    mov     [rsp+8], rdx
+    lea     rdi, [rel %3]
+    call    stmt_strval
+    mov     [rsp+16], rax
+    mov     [rsp+24], rdx
+    lea     rdi, [rel %1]
+    mov     rsi, rsp
+    mov     rdx, 2
+    call    stmt_apply
+    add     rsp, 32
+    mov     [rbp-32], rax
+    mov     [rbp-24], rdx
+%endmacro
+%define ALT2_IS  CONC2_IS
+
+; --- *16 variants: result stored at [rbp-16/8] (subject slot) ---
+
+%macro CONC2_VI16 3
+    sub     rsp, 32
+    lea     rdi, [rel %2]
+    call    stmt_get
+    mov     [rsp], rax
+    mov     [rsp+8], rdx
+    mov     rdi, %3
+    call    stmt_intval
+    mov     [rsp+16], rax
+    mov     [rsp+24], rdx
+    lea     rdi, [rel %1]
+    mov     rsi, rsp
+    mov     rdx, 2
+    call    stmt_apply
+    add     rsp, 32
+    mov     [rbp-16], rax
+    mov     [rbp-8],  rdx
+%endmacro
+%define ALT2_VI16  CONC2_VI16
+
+%macro CONC2_IV16 3
+    sub     rsp, 32
+    mov     rdi, %2
+    call    stmt_intval
+    mov     [rsp], rax
+    mov     [rsp+8], rdx
+    lea     rdi, [rel %3]
+    call    stmt_get
+    mov     [rsp+16], rax
+    mov     [rsp+24], rdx
+    lea     rdi, [rel %1]
+    mov     rsi, rsp
+    mov     rdx, 2
+    call    stmt_apply
+    add     rsp, 32
+    mov     [rbp-16], rax
+    mov     [rbp-8],  rdx
+%endmacro
+%define ALT2_IV16  CONC2_IV16
+
+%macro CONC2_II16 3
+    sub     rsp, 32
+    mov     rdi, %2
+    call    stmt_intval
+    mov     [rsp], rax
+    mov     [rsp+8], rdx
+    mov     rdi, %3
+    call    stmt_intval
+    mov     [rsp+16], rax
+    mov     [rsp+24], rdx
+    lea     rdi, [rel %1]
+    mov     rsi, rsp
+    mov     rdx, 2
+    call    stmt_apply
+    add     rsp, 32
+    mov     [rbp-16], rax
+    mov     [rbp-8],  rdx
+%endmacro
+%define ALT2_II16  CONC2_II16
+
+%macro CONC2_NI16 2
+    sub     rsp, 32
+    mov     qword [rsp],   1
+    mov     qword [rsp+8], 0
+    mov     rdi, %2
+    call    stmt_intval
+    mov     [rsp+16], rax
+    mov     [rsp+24], rdx
+    lea     rdi, [rel %1]
+    mov     rsi, rsp
+    mov     rdx, 2
+    call    stmt_apply
+    add     rsp, 32
+    mov     [rbp-16], rax
+    mov     [rbp-8],  rdx
+%endmacro
+%define ALT2_NI16  CONC2_NI16
+
+%macro CONC2_SI16 3
+    sub     rsp, 32
+    lea     rdi, [rel %2]
+    call    stmt_strval
+    mov     [rsp], rax
+    mov     [rsp+8], rdx
+    mov     rdi, %3
+    call    stmt_intval
+    mov     [rsp+16], rax
+    mov     [rsp+24], rdx
+    lea     rdi, [rel %1]
+    mov     rsi, rsp
+    mov     rdx, 2
+    call    stmt_apply
+    add     rsp, 32
+    mov     [rbp-16], rax
+    mov     [rbp-8],  rdx
+%endmacro
+%define ALT2_SI16  CONC2_SI16
+
+%macro CONC2_IS16 3
+    sub     rsp, 32
+    mov     rdi, %2
+    call    stmt_intval
+    mov     [rsp], rax
+    mov     [rsp+8], rdx
+    lea     rdi, [rel %3]
+    call    stmt_strval
+    mov     [rsp+16], rax
+    mov     [rsp+24], rdx
+    lea     rdi, [rel %1]
+    mov     rsi, rsp
+    mov     rdx, 2
+    call    stmt_apply
+    add     rsp, 32
+    mov     [rbp-16], rax
+    mov     [rbp-8],  rdx
+%endmacro
+%define ALT2_IS16  CONC2_IS16
+
+; =============================================================================
+; END Session 167/171/172/174 high-level statement macros
 ; =============================================================================
