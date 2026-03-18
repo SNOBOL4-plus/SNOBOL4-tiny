@@ -419,3 +419,12 @@ session115 | 2026-03-16 | 6d5919daa03d3c56646b5f0a165f86ee | 15859 lines | compi
   blocks to single lines. All double-newlines removed. Every state is one line:
   `label:  MACRO args ; comment` — four columns throughout.
 - **Invariants:** 106/106 C crosscheck PASS, 26/26 ASM crosscheck PASS
+
+## beauty_prog_session164.s
+- **Sprint:** A14 — M-ASM-BEAUTIFUL
+- **Status:** assembles clean (nasm -f elf64 -I src/runtime/asm/)
+- **Lines:** 13664 (down 4556 from session159's 18220)
+- **What changed:** Pending-label mechanism in A() — labels fold onto their
+  first instruction. Rule: label on own line only when two labels are consecutive.
+  `L_sn_0:  GET_VAR S_457` — one line per state throughout program body.
+- **Invariants:** 106/106 C crosscheck PASS, 26/26 ASM crosscheck PASS
