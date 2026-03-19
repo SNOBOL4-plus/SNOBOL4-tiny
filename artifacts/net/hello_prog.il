@@ -10,19 +10,18 @@
        extends [mscorlib]System.Object
 {
 
-    // SNOBOL4 variable fields — added per rung as needed (N-R2+)
-    // static string field example: .field static string sno_OUTPUT
-
   .method public static void main(string[] args) cil managed
   {
     .entrypoint
     .maxstack 8
+    .locals init (int32 V_0)  // V_0 = success flag
 
 
     // --- END statement ---
 
     // --- END ---
-L_END:                  nop
+  L_END:
+                        nop
                         ret
   }
 

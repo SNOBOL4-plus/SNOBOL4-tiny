@@ -10,17 +10,17 @@
  *   mono prog.exe
  *
  * Sprint map:
- *   N-R0  M-NET-HELLO   — skeleton: null program → exit 0          ← NOW
- *   N-R1  M-NET-LIT     — OUTPUT = 'hello' correct
+ *   N-R0  M-NET-HELLO   — skeleton: null program → exit 0          ✅ session195
+ *   N-R1  M-NET-LIT     — OUTPUT = 'hello' correct                 ← NOW
  *   N-R2  M-NET-ASSIGN  — variable assign + arithmetic
  *   N-R3  M-NET-GOTO    — :S/:F branching
  *   N-R4  M-NET-PATTERN — Byrd boxes in CIL: LIT/SEQ/ALT/ARBNO
  *   N-R5  M-NET-CAPTURE — . and $ capture
- *   N-R1  M-NET-R1      — hello/ output/ assign/ arith/ PASS
- *   N-R2  M-NET-R2      — control/ patterns/ capture/ PASS
- *   N-R3  M-NET-R3      — strings/ keywords/ PASS
- *   N-R4  M-NET-R4      — functions/ data/ PASS
- *   N-R5  M-NET-CROSSCHECK — 106/106 corpus PASS
+ *   M-NET-R1            — hello/ output/ assign/ arith/ PASS
+ *   M-NET-R2            — control/ patterns/ capture/ PASS
+ *   M-NET-R3            — strings/ keywords/ PASS
+ *   M-NET-R4            — functions/ data/ PASS
+ *   M-NET-CROSSCHECK    — 106/106 corpus PASS
  *
  * Design:
  *   Each SNOBOL4 program becomes one CIL class with a static main().
@@ -30,8 +30,15 @@
  *     label:       instruction    operands
  *
  *   SNOBOL4 variables are stored as static string fields on the class.
- *   null/failure represented as ldnull / null reference on the eval stack.
- *   :S/:F goto uses brtrue / brfalse — mirrors JCON bc_conditional_transfer_to.
+ *   Representation: all values are strings (SNOBOL4 untyped).
+ *   null/empty string is "" (not null reference) — SNOBOL4 has no null.
+ *   OUTPUT = x  →  Console.WriteLine(x)
+ *   :S(L)       →  brtrue  L_<name>   (last result non-empty = success)
+ *   :F(L)       →  brfalse L_<name>
+ *   :(L)        →  br      L_<name>
+ *
+ *   eval stack convention: every expr leaves one string on stack.
+ *   Success/failure flag: local 0 (int32) — 1=success, 0=fail.
  *
  * References:
  *   emit_byrd_asm.c  — structural oracle (same IR, same corpus)
@@ -65,7 +72,7 @@ static int   net_col = 0;
 static void nc(char c) {
     fputc(c, net_out);
     if (c == '\n') net_col = 0;
-    else if ((c & 0xC0) != 0x80) net_col++;  /* skip UTF-8 continuations */
+    else if ((c & 0xC0) != 0x80) net_col++;
 }
 
 static void ns(const char *s) { for (; *s; s++) nc(*s); }
@@ -81,7 +88,6 @@ static void N(const char *fmt, ...) {
     va_start(ap, fmt);
     vfprintf(net_out, fmt, ap);
     va_end(ap);
-    /* reset col tracker on newline (approximate — good enough for our patterns) */
     const char *p = fmt;
     while (*p) { if (*p == '\n') net_col = 0; p++; }
 }
@@ -89,32 +95,21 @@ static void N(const char *fmt, ...) {
 /* NL(label, instr, ops) — three-column line */
 static void NL(const char *label, const char *instr, const char *ops) {
     net_col = 0;
-    if (label && label[0]) {
-        ns(label); nc(':');
-    }
+    if (label && label[0]) { ns(label); nc(':'); }
     npad(COL_INSTR);
     ns(instr);
-    if (ops && ops[0]) {
-        npad(COL_OPS);
-        ns(ops);
-    }
+    if (ops && ops[0]) { npad(COL_OPS); ns(ops); }
     nc('\n');
 }
 
 /* NI(instr, ops) — instruction with no label */
-static void NI(const char *instr, const char *ops) {
-    NL("", instr, ops);
-}
+static void NI(const char *instr, const char *ops) { NL("", instr, ops); }
 
 /* NC(comment) — comment line */
-static void NC(const char *comment) {
-    N("    // %s\n", comment);
-}
+static void NC(const char *comment) { N("    // %s\n", comment); }
 
 /* NSep(tag) — section separator */
-static void NSep(const char *tag) {
-    N("\n    // --- %s ---\n", tag);
-}
+static void NSep(const char *tag) { N("\n    // --- %s ---\n", tag); }
 
 /* -----------------------------------------------------------------------
  * Class name derivation
@@ -127,31 +122,304 @@ static void net_set_classname(const char *filename) {
         strcpy(net_classname, "SnobolProg");
         return;
     }
-    /* strip directory */
     const char *base = strrchr(filename, '/');
     base = base ? base + 1 : filename;
-    /* strip extension */
     char buf[256];
-    strncpy(buf, base, sizeof buf - 1);
-    buf[sizeof buf - 1] = '\0';
-    char *dot = strrchr(buf, '.');
-    if (dot) *dot = '\0';
-    /* sanitize: replace non-alnum with _ */
+    strncpy(buf, base, sizeof buf - 1); buf[sizeof buf - 1] = '\0';
+    char *dot = strrchr(buf, '.'); if (dot) *dot = '\0';
     char *p = buf;
     if (!isalpha((unsigned char)*p) && *p != '_') *p = '_';
     for (; *p; p++)
         if (!isalnum((unsigned char)*p) && *p != '_') *p = '_';
-    /* Capitalise first letter (.NET class convention) */
     buf[0] = (char)toupper((unsigned char)buf[0]);
     strncpy(net_classname, buf, sizeof net_classname - 1);
     net_classname[sizeof net_classname - 1] = '\0';
 }
 
 /* -----------------------------------------------------------------------
- * N-R0 skeleton emitters
+ * Variable registry — collect all variables for .field declarations
  * ----------------------------------------------------------------------- */
 
-static void net_emit_header(void) {
+#define MAX_VARS 512
+static char *net_vars[MAX_VARS];
+static int   net_nvar = 0;
+
+static void net_var_register(const char *name) {
+    if (!name || !name[0]) return;
+    /* case-insensitive dedup */
+    for (int i = 0; i < net_nvar; i++)
+        if (strcasecmp(net_vars[i], name) == 0) return;
+    if (net_nvar < MAX_VARS)
+        net_vars[net_nvar++] = strdup(name);
+}
+
+/* Safe field name: uppercase, replace special chars with _ */
+static void net_field_name(char *out, size_t sz, const char *var) {
+    size_t i = 0;
+    for (; *var && i < sz - 1; var++, i++) {
+        char c = (char)toupper((unsigned char)*var);
+        out[i] = isalnum((unsigned char)c) ? c : '_';
+    }
+    out[i] = '\0';
+}
+
+static int net_is_output(const char *name) {
+    return name && strcasecmp(name, "OUTPUT") == 0;
+}
+
+/* -----------------------------------------------------------------------
+ * Expr scanner — collect all variable refs before emitting
+ * ----------------------------------------------------------------------- */
+
+static void scan_expr_vars(EXPR_t *e) {
+    if (!e) return;
+    if (e->kind == E_VART && e->sval && !net_is_output(e->sval))
+        net_var_register(e->sval);
+    scan_expr_vars(e->left);
+    scan_expr_vars(e->right);
+}
+
+static void scan_prog_vars(Program *prog) {
+    if (!prog) return;
+    for (STMT_t *s = prog->head; s; s = s->next) {
+        /* subject variable (LHS of assignment) */
+        if (s->subject && s->subject->kind == E_VART && s->subject->sval
+                && !net_is_output(s->subject->sval))
+            net_var_register(s->subject->sval);
+        scan_expr_vars(s->subject);
+        scan_expr_vars(s->pattern);
+        scan_expr_vars(s->replacement);
+    }
+}
+
+/* -----------------------------------------------------------------------
+ * CIL string escape — escape backslash and double-quote inside ldstr
+ * ----------------------------------------------------------------------- */
+
+static void net_ldstr(const char *s) {
+    /* emit:  ldstr  "<escaped>" */
+    N("    ldstr      \"");
+    for (; *s; s++) {
+        if (*s == '"')       N("\\\"");
+        else if (*s == '\\') N("\\\\");
+        else                 nc(*s);
+    }
+    N("\"\n");
+}
+
+/* -----------------------------------------------------------------------
+ * Expr emitter — leaves one string on the CIL eval stack
+ * ----------------------------------------------------------------------- */
+
+static void net_emit_expr(EXPR_t *e) {
+    if (!e) {
+        /* null expr → empty string */
+        net_ldstr("");
+        return;
+    }
+    switch (e->kind) {
+    case E_QLIT:
+        net_ldstr(e->sval ? e->sval : "");
+        break;
+    case E_ILIT: {
+        /* integer → string via Int32.ToString() */
+        char buf[64];
+        snprintf(buf, sizeof buf, "%ld", e->ival);
+        net_ldstr(buf);
+        break;
+    }
+    case E_FLIT: {
+        char buf[64];
+        snprintf(buf, sizeof buf, "%g", e->dval);
+        net_ldstr(buf);
+        break;
+    }
+    case E_NULV:
+        net_ldstr("");
+        break;
+    case E_VART: {
+        if (!e->sval) { net_ldstr(""); break; }
+        if (net_is_output(e->sval)) {
+            /* reading OUTPUT not common but handle gracefully */
+            net_ldstr("");
+            break;
+        }
+        char fn[256];
+        net_field_name(fn, sizeof fn, e->sval);
+        N("    ldsfld     string %s::%s\n", net_classname, fn);
+        break;
+    }
+    case E_KW:
+        /* keywords (&STCOUNT etc.) — stub as empty string for now */
+        net_ldstr("");
+        break;
+    case E_CONC:
+        /* string concatenation: eval both sides, String.Concat */
+        net_emit_expr(e->left);
+        net_emit_expr(e->right);
+        N("    call       string [mscorlib]System.String::Concat(string, string)\n");
+        break;
+    case E_ADD:
+        /* arithmetic: Int32.Parse both, add, ToString */
+        net_emit_expr(e->left);
+        N("    call       int32 [mscorlib]System.Int32::Parse(string)\n");
+        net_emit_expr(e->right);
+        N("    call       int32 [mscorlib]System.Int32::Parse(string)\n");
+        N("    add\n");
+        N("    call       string [mscorlib]System.Int32::ToString(int32)\n");
+        break;
+    case E_SUB:
+        net_emit_expr(e->left);
+        N("    call       int32 [mscorlib]System.Int32::Parse(string)\n");
+        net_emit_expr(e->right);
+        N("    call       int32 [mscorlib]System.Int32::Parse(string)\n");
+        N("    sub\n");
+        N("    call       string [mscorlib]System.Int32::ToString(int32)\n");
+        break;
+    case E_MPY:
+        net_emit_expr(e->left);
+        N("    call       int32 [mscorlib]System.Int32::Parse(string)\n");
+        net_emit_expr(e->right);
+        N("    call       int32 [mscorlib]System.Int32::Parse(string)\n");
+        N("    mul\n");
+        N("    call       string [mscorlib]System.Int32::ToString(int32)\n");
+        break;
+    case E_DIV:
+        net_emit_expr(e->left);
+        N("    call       int32 [mscorlib]System.Int32::Parse(string)\n");
+        net_emit_expr(e->right);
+        N("    call       int32 [mscorlib]System.Int32::Parse(string)\n");
+        N("    div\n");
+        N("    call       string [mscorlib]System.Int32::ToString(int32)\n");
+        break;
+    case E_MNS:
+        /* unary minus */
+        net_emit_expr(e->left ? e->left : e->right);
+        N("    call       int32 [mscorlib]System.Int32::Parse(string)\n");
+        N("    neg\n");
+        N("    call       string [mscorlib]System.Int32::ToString(int32)\n");
+        break;
+    default:
+        /* unhandled — push empty string stub */
+        NC("unhandled expr kind — stub");
+        net_ldstr("");
+        break;
+    }
+}
+
+/* -----------------------------------------------------------------------
+ * Goto emitter
+ * ----------------------------------------------------------------------- */
+
+/* Emit a branch to target label, or fall through if NULL */
+static void net_emit_goto(const char *target, const char *next_lbl) {
+    if (!target) return;
+    if (next_lbl && strcmp(target, next_lbl) == 0) return; /* fall-through */
+    N("    br         L_%s\n", target);
+}
+
+static void net_emit_branch_success(const char *target) {
+    /* local 0 = success flag (1=success,0=fail); brtrue if success */
+    if (!target) return;
+    N("    ldloc.0\n");
+    N("    brtrue     L_%s\n", target);
+}
+
+static void net_emit_branch_fail(const char *target) {
+    if (!target) return;
+    N("    ldloc.0\n");
+    N("    brfalse    L_%s\n", target);
+}
+
+/* -----------------------------------------------------------------------
+ * Statement emitter — N-R1: assignments + OUTPUT + goto
+ * ----------------------------------------------------------------------- */
+
+static void net_emit_one_stmt(STMT_t *s, const char *next_lbl) {
+    const char *tgt_s = s->go ? s->go->onsuccess : NULL;
+    const char *tgt_f = s->go ? s->go->onfailure : NULL;
+    const char *tgt_u = s->go ? s->go->uncond    : NULL;
+
+    /* Emit statement label if present */
+    if (s->label) {
+        NSep(s->label);
+        N("  L_%s:\n", s->label);
+    }
+
+    if (s->is_end) {
+        NSep("END");
+        net_emit_goto(tgt_u, "END");
+        return;
+    }
+
+    /* Case 1: pure assignment — subject is a variable or OUTPUT, has_eq set */
+    if (s->has_eq && s->subject &&
+        (s->subject->kind == E_VART || s->subject->kind == E_KW)) {
+
+        int is_out = net_is_output(s->subject->sval);
+        EXPR_t *rhs = s->replacement;
+
+        /* eval RHS onto stack */
+        net_emit_expr(rhs);
+
+        if (is_out) {
+            /* OUTPUT = expr → Console.WriteLine */
+            N("    call       void [mscorlib]System.Console::WriteLine(string)\n");
+        } else {
+            /* VAR = expr → stsfld */
+            char fn[256];
+            net_field_name(fn, sizeof fn, s->subject->sval);
+            N("    stsfld     string %s::%s\n", net_classname, fn);
+        }
+
+        /* success: set flag=1 */
+        N("    ldc.i4.1\n");
+        N("    stloc.0\n");
+
+        /* goto */
+        if (tgt_u) net_emit_goto(tgt_u, next_lbl);
+        else {
+            if (tgt_s) net_emit_branch_success(tgt_s);
+            if (tgt_f) net_emit_branch_fail(tgt_f);
+        }
+        return;
+    }
+
+    /* No-op / unhandled statement — emit nop + goto only */
+    N("    nop\n");
+    if (tgt_u) net_emit_goto(tgt_u, next_lbl);
+}
+
+static void net_emit_stmts(Program *prog) {
+    if (!prog || !prog->head) return;
+
+    STMT_t *stmts[4096];
+    int n = 0;
+    for (STMT_t *s = prog->head; s && n < 4095; s = s->next)
+        stmts[n++] = s;
+
+    for (int i = 0; i < n; i++) {
+        STMT_t *s = stmts[i];
+        /* compute next_lbl for fall-through optimisation */
+        const char *next_lbl = NULL;
+        if (i + 1 < n && stmts[i+1]->label)
+            next_lbl = stmts[i+1]->label;
+        else if (i + 1 < n && stmts[i+1]->is_end)
+            next_lbl = "END";
+
+        if (s->is_end) {
+            NSep("END statement");
+            break;
+        }
+        net_emit_one_stmt(s, next_lbl);
+    }
+}
+
+/* -----------------------------------------------------------------------
+ * Header / footer emitters
+ * ----------------------------------------------------------------------- */
+
+static void net_emit_header(Program *prog) {
     N(".assembly extern mscorlib {}\n");
     N(".assembly %s {}\n", net_classname);
     N(".module %s.exe\n", net_classname);
@@ -160,9 +428,35 @@ static void net_emit_header(void) {
     N("       extends [mscorlib]System.Object\n");
     N("{\n");
     N("\n");
-    NC("SNOBOL4 variable fields — added per rung as needed (N-R2+)");
-    NC("static string field example: .field static string sno_OUTPUT");
-    N("\n");
+
+    /* Emit one static string field per SNOBOL4 variable */
+    if (net_nvar > 0) {
+        NC("SNOBOL4 variable fields");
+        for (int i = 0; i < net_nvar; i++) {
+            char fn[256];
+            net_field_name(fn, sizeof fn, net_vars[i]);
+            N("  .field static string %s\n", fn);
+        }
+        N("\n");
+    }
+
+    /* Static initialiser: set all variables to "" */
+    if (net_nvar > 0) {
+        N("  .method static void .cctor() cil managed\n");
+        N("  {\n");
+        N("    .maxstack 1\n");
+        for (int i = 0; i < net_nvar; i++) {
+            char fn[256];
+            net_field_name(fn, sizeof fn, net_vars[i]);
+            N("    ldstr      \"\"\n");
+            N("    stsfld     string %s::%s\n", net_classname, fn);
+        }
+        N("    ret\n");
+        N("  }\n");
+        N("\n");
+    }
+
+    (void)prog; /* suppress unused warning; prog used by scan_prog_vars above */
 }
 
 static void net_emit_main_open(void) {
@@ -170,12 +464,14 @@ static void net_emit_main_open(void) {
     N("  {\n");
     N("    .entrypoint\n");
     N("    .maxstack 8\n");
+    N("    .locals init (int32 V_0)  // V_0 = success flag\n");
     N("\n");
 }
 
 static void net_emit_main_close(void) {
     NSep("END");
-    NL("L_END", "nop", "");
+    N("  L_END:\n");
+    NI("nop", "");
     NI("ret", "");
     N("  }\n");
     N("\n");
@@ -186,42 +482,29 @@ static void net_emit_footer(void) {
 }
 
 /* -----------------------------------------------------------------------
- * Statement stub walker — N-R0 emits labels only; body filled in N-R1+
- * ----------------------------------------------------------------------- */
-
-static void net_emit_stmts(Program *prog) {
-    if (!prog || !prog->head) return;
-
-    for (STMT_t *s = prog->head; s; s = s->next) {
-        if (s->is_end) {
-            NSep("END statement");
-            /* fall through to L_END + ret in main_close */
-            break;
-        }
-        if (s->label) {
-            NSep(s->label);
-            N("    L_%s:\n", s->label);
-            NI("nop", "// stub — N-R1+ will fill body");
-        }
-    }
-}
-
-/* -----------------------------------------------------------------------
  * Public entry point
  * ----------------------------------------------------------------------- */
 
 void net_emit(Program *prog, FILE *out, const char *filename) {
     net_out = out;
+    net_nvar = 0;
     net_set_classname(filename);
+
+    /* Two-pass: scan variables first, then emit */
+    scan_prog_vars(prog);
 
     NC("Generated by sno2c -net");
     NC("Assemble: ilasm <file>.il /output:<file>.exe");
     NC("Run:      mono <file>.exe");
     N("\n");
 
-    net_emit_header();
+    net_emit_header(prog);
     net_emit_main_open();
     net_emit_stmts(prog);
     net_emit_main_close();
     net_emit_footer();
+
+    /* free registered variable names */
+    for (int i = 0; i < net_nvar; i++) { free(net_vars[i]); net_vars[i] = NULL; }
+    net_nvar = 0;
 }
