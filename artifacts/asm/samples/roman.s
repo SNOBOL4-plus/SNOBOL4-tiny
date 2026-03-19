@@ -10,7 +10,11 @@ extern  stmt_concat, stmt_is_fail, stmt_finish
 extern  stmt_realval, stmt_set_null, stmt_set_indirect
 extern  stmt_apply, stmt_goto_dispatch
 extern  stmt_setup_subject, stmt_apply_replacement
+extern  stmt_apply_replacement_splice
 extern  stmt_set_capture, stmt_match_var
+extern  stmt_pos_var, stmt_rpos_var
+extern  stmt_break_var, stmt_span_var, stmt_any_var
+extern  stmt_breakx
 extern  kw_anchor
 global  cursor, subject_data, subject_len_val
 
@@ -20,6 +24,10 @@ cursor                   resq 1
 subject_len_val          resq 1
 P_ROMAN_ret_γ           resq 1
 P_ROMAN_ret_ω           resq 1
+fn_ROMAN_save_N_t        resq 1
+fn_ROMAN_save_N_p        resq 1
+fn_ROMAN_arg_0_t         resq 1
+fn_ROMAN_arg_0_p         resq 1
 P_T1_ret_γ              resq 1
 P_T1_ret_ω              resq 1
 P_R_ret_γ               resq 1
@@ -47,28 +55,18 @@ main:
 
 ;  PROGRAM BODY ========================================================================================================
 
-                            GET_VAR     S_AM_TRIM
                             ASSIGN_INT  S_TRIM, 1, Ln_0
                             jmp         Ln_0
 
 ; ======================================================================================================================
 
 ; ======================================================================================================================
-Ln_0:                       GET_VAR     S_AM_STLIMIT
-                            ASSIGN_INT  S_STLIMIT, 1000000000, Ln_1
+Ln_0:                       ASSIGN_INT  S_STLIMIT, 1000000000, Ln_1
                             jmp         Ln_1
 
-; ======================================================================================================================
-Ln_1:                       sub         rsp, 16
-                            LOAD_STR    S_ROMAN_LP_N_RP_T
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_DEFINE, 1
-                            add         rsp, 16
-                            STORE_RESULT
+Ln_1:
 
-                            jmp         L_ROMAN_END_0
+; ======================================================================================================================
 
 Ln_2:
 ;  ROMAN ===============================================================================================================
@@ -95,6 +93,9 @@ dol1_gamma:                 DOL_CAPTURE dol_entry_T, cursor, cap_T_buf, cap_T_le
 dol1_omega:                 jmp         seq_l0_beta ; DOL ω — child failed
 
 P_3_γ:                      SET_CAPTURE S_T, cap_T_buf, cap_T_len
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            APPLY_REPL_SPLICE S_N, scan_start_3
                             jmp         Ln_3
 P_3_ω:                      cmp         qword [rel kw_anchor], 0
                             jne         L_RETURN_4
@@ -104,7 +105,7 @@ P_3_ω:                      cmp         qword [rel kw_anchor], 0
                             jg          L_RETURN_4
                             mov         [scan_start_3], rax
                             jmp         scan_retry_3
-                            GOTO_ALWAYS L_SNO_END     ; RETURN
+                            jmp         [P_ROMAN_ret_γ]     ; RETURN
 
 ; ======================================================================================================================
 Ln_3:                       LOAD_STR    S_0_CM_1I_CM_2II_CM_3III_CM_4IV_CM_5V_CM_6VI_CM_7VII_CM_8VIII_C
@@ -143,12 +144,32 @@ P_4_ω:                      cmp         qword [rel kw_anchor], 0
                             jg          L_FRETURN_5
                             mov         [scan_start_4], rax
                             jmp         scan_retry_4
-                            GOTO_ALWAYS L_SNO_END     ; FRETURN
+                            jmp         [P_ROMAN_ret_γ]     ; FRETURN
 
 ; ======================================================================================================================
-Ln_4:                       GET_VAR     S_ROMAN
-                            sub         rsp, 48
-                            CALL1_VAR   S_ROMAN, S_N
+Ln_4:                       sub         rsp, 48
+                            lea         rdi, [rel S_N]
+                            call        stmt_get
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
+                            mov         rax, [rbp-32]
+                            mov         rcx, [rbp-24]
+                            mov         [fn_ROMAN_arg_0_t], rax
+                            mov         [fn_ROMAN_arg_0_p], rcx
+                            lea         rax, [rel ucall6_ret_g]
+                            mov         [P_ROMAN_ret_γ], rax
+                            lea         rax, [rel ucall6_ret_o]
+                            mov         [P_ROMAN_ret_ω], rax
+                            jmp         P_ROMAN_α
+ucall6_ret_g:
+                            GET_VAR     S_ROMAN
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
+                            jmp         ucall6_done
+ucall6_ret_o:
+                            LOAD_NULVCL32
+
+ucall6_done:
                             STORE_ARG32 0
                             LOAD_STR    S_IVXLCDM
                             STORE_ARG32 16
@@ -173,8 +194,8 @@ Ln_4:                       GET_VAR     S_ROMAN
                             mov         [rbp-24], rdx
                             FAIL_BR     Lf_5
                             SET_VAR     S_ROMAN
-                            GOTO_ALWAYS L_SNO_END     ; RETURN
-Lf_5:                       GOTO_ALWAYS L_SNO_END     ; FRETURN
+                            jmp         [P_ROMAN_ret_γ]     ; RETURN
+Lf_5:                       jmp         [P_ROMAN_ret_γ]     ; FRETURN
 
 Ln_5:
 L_ROMAN_END_0:
@@ -182,8 +203,7 @@ L_ROMAN_END_0:
 ;  ROMAN_END ===========================================================================================================
 
 ; ======================================================================================================================
-Ln_6:                       GET_VAR     S_T1
-                            APPLY_FN_0  S_TIME
+Ln_6:                       APPLY_FN_0  S_TIME
                             STORE_RESULT
 
                             FAIL_BR     Ln_7
@@ -191,21 +211,36 @@ Ln_6:                       GET_VAR     S_T1
                             jmp         Ln_7
 
 ; ======================================================================================================================
-Ln_7:                       GET_VAR     S_N
-                            ASSIGN_INT  S_N, 0, Ln_8
+Ln_7:                       ASSIGN_INT  S_N, 0, Ln_8
                             jmp         Ln_8
 
 Ln_8:
 ;  LOOP ================================================================================================================
-L_LOOP_2:                   GET_VAR     S_R
-                            CALL1_STR   S_ROMAN, S_1776
+L_LOOP_2:                   LOAD_STR    S_1776
+                            mov         rax, [rbp-32]
+                            mov         rcx, [rbp-24]
+                            mov         [fn_ROMAN_arg_0_t], rax
+                            mov         [fn_ROMAN_arg_0_p], rcx
+                            lea         rax, [rel ucall7_ret_g]
+                            mov         [P_ROMAN_ret_γ], rax
+                            lea         rax, [rel ucall7_ret_o]
+                            mov         [P_ROMAN_ret_ω], rax
+                            jmp         P_ROMAN_α
+ucall7_ret_g:
+                            GET_VAR     S_ROMAN
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
+                            jmp         ucall7_done
+ucall7_ret_o:
+                            LOAD_NULVCL32
+
+ucall7_done:
                             FAIL_BR     Ln_9
                             SET_VAR     S_R
                             jmp         Ln_9
 
 ; ======================================================================================================================
-Ln_9:                       GET_VAR     S_N
-                            CONC2_VI    S_LT, S_N, 100000
+Ln_9:                       CONC2_VI    S_LT, S_N, 100000
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_N, 1
@@ -221,8 +256,7 @@ Ln_9:                       GET_VAR     S_N
                             jmp         L_LOOP_2
 
 ; ======================================================================================================================
-Ln_10:                      GET_VAR     S_T2
-                            APPLY_FN_0  S_TIME
+Ln_10:                      APPLY_FN_0  S_TIME
                             STORE_RESULT
 
                             FAIL_BR     Ln_11
@@ -230,16 +264,14 @@ Ln_10:                      GET_VAR     S_T2
                             jmp         Ln_11
 
 ; ======================================================================================================================
-Ln_11:                      GET_VAR     S_OUTPUT
-                            CAT2_SV     S_result_CL_SP, S_R
+Ln_11:                      CAT2_SV     S_result_CL_SP, S_R
                             FAIL_BR     Ln_12
                             SET_OUTPUT
 
                             jmp         Ln_12
 
 ; ======================================================================================================================
-Ln_12:                      GET_VAR     S_OUTPUT
-                            LOAD_STR    S_ms_CL_SP
+Ln_12:                      LOAD_STR    S_ms_CL_SP
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             CONC2_VV    S_sub, S_T2, S_T1
@@ -268,22 +300,29 @@ section .text
 
 ;  NAMED PATTERN BODIES ================================================================================================
 
-; P_ROMAN_α (α entry)
-P_ROMAN_α:                  jmp         seq_l6_alpha ; SEQ
-P_ROMAN_β:                  jmp         seq_r6_beta
-
-; UNIMPLEMENTED: REPLACE() → ω
-seq_l6_alpha:
-seq_l6_beta:                jmp         patdef_ROMAN_omega
-
-; UNRESOLVED named pattern ref: T → ω
-seq_r6_alpha:
-seq_r6_beta:                jmp         seq_l6_beta
-;  γ/ω ---------------------------------------------------------------------------------------------------------------
-patdef_ROMAN_gamma:
-                            jmp         [P_ROMAN_ret_γ]
+; P_ROMAN_α — user function α entry (1 param)
 ;  ROMAN ===============================================================================================================
-patdef_ROMAN_omega:         jmp         [P_ROMAN_ret_ω]
+P_ROMAN_α:                  GET_VAR     S_N
+                            mov         rax, [rbp-16]
+                            mov         rdx, [rbp-8]
+                            mov         [fn_ROMAN_save_N_t], rax
+                            mov         [fn_ROMAN_save_N_p], rdx
+                            lea         rdi, [rel S_N]
+                            mov         rsi, [fn_ROMAN_arg_0_t]
+                            mov         rdx, [fn_ROMAN_arg_0_p]
+                            call        stmt_set
+                            jmp         L_ROMAN_1
+;  γ/ω ---------------------------------------------------------------------------------------------------------------
+fn_ROMAN_gamma:             lea         rdi, [rel S_N]
+                            mov         rsi, [fn_ROMAN_save_N_t]
+                            mov         rdx, [fn_ROMAN_save_N_p]
+                            call        stmt_set
+                            jmp         [P_ROMAN_ret_γ]
+fn_ROMAN_omega:             lea         rdi, [rel S_N]
+                            mov         rsi, [fn_ROMAN_save_N_t]
+                            mov         rdx, [fn_ROMAN_save_N_p]
+                            call        stmt_set
+                            jmp         [P_ROMAN_ret_ω]
 
 ; P_T1_α (α entry)
 
@@ -308,16 +347,16 @@ patdef_R_gamma:
 patdef_R_omega:             jmp         [P_R_ret_ω]
 
 ; P_N_α (α entry)
-P_N_α:                      jmp         seq_l7_alpha ; SEQ
-P_N_β:                      jmp         seq_r7_beta
+P_N_α:                      jmp         seq_l8_alpha ; SEQ
+P_N_β:                      jmp         seq_r8_beta
 
 ; UNIMPLEMENTED: LT() → ω
-seq_l7_alpha:
-seq_l7_beta:                jmp         patdef_N_omega
+seq_l8_alpha:
+seq_l8_beta:                jmp         patdef_N_omega
 
 ; UNIMPLEMENTED node kind 8 → ω
-seq_r7_alpha:
-seq_r7_beta:                jmp         seq_l7_beta
+seq_r8_alpha:
+seq_r8_beta:                jmp         seq_l8_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_N_gamma:
                             jmp         [P_N_ret_γ]
@@ -372,7 +411,5 @@ S_OUTPUT             db 79, 85, 84, 80, 85, 84, 0  ; "OUTPUT"
 S_result_CL_SP       db 114, 101, 115, 117, 108, 116, 58, 32, 0  ; "result: "
 S_ms_CL_SP           db 109, 115, 58, 32, 0  ; "ms: "
 S_END                db 69, 78, 68, 0  ; "END"
-S_AM_TRIM            db 38, 84, 82, 73, 77, 0  ; "&TRIM"
-S_AM_STLIMIT         db 38, 83, 84, 76, 73, 77, 73, 84, 0  ; "&STLIMIT"
 S_add                db 97, 100, 100, 0  ; "add"
 S_sub                db 115, 117, 98, 0  ; "sub"

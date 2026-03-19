@@ -1203,9 +1203,18 @@ static void emit_asm_node(EXPR_t *pat,
                            cursor, subj, subj_len_sym, depth);
         } else if (pat->sval && strcasecmp(pat->sval, "ANY") == 0 && pat->nargs == 1) {
             EXPR_t *arg = pat->args[0];
-            const char *cs = (arg->kind == E_QLIT && arg->sval) ? arg->sval : "";
-            int cslen = (arg->kind == E_QLIT && arg->sval) ? (int)strlen(arg->sval) : 0;
-            emit_asm_any(cs, cslen, alpha, beta, gamma, omega, cursor, subj, subj_len_sym);
+            if (arg->kind == E_VART && arg->sval) {
+                const char *vlab = prog_str_intern(arg->sval);
+                char saved[128]; snprintf(saved, sizeof saved, "any_var%d_saved", depth);
+                bss_add(saved);
+                ALFC(alpha, "ANY_VAR α", "ANY_ALPHA_VAR %s, %s, %s, %s, %s\n",
+                     vlab, saved, cursor, gamma, omega);
+                ALFC(beta,  "ANY_VAR β", "ANY_BETA_VAR  %s, %s, %s\n", saved, cursor, omega);
+            } else {
+                const char *cs = (arg->kind == E_QLIT && arg->sval) ? arg->sval : "";
+                int cslen = (arg->kind == E_QLIT && arg->sval) ? (int)strlen(arg->sval) : 0;
+                emit_asm_any(cs, cslen, alpha, beta, gamma, omega, cursor, subj, subj_len_sym);
+            }
         } else if (pat->sval && strcasecmp(pat->sval, "NOTANY") == 0 && pat->nargs == 1) {
             EXPR_t *arg = pat->args[0];
             const char *cs = (arg->kind == E_QLIT && arg->sval) ? arg->sval : "";
@@ -1213,14 +1222,42 @@ static void emit_asm_node(EXPR_t *pat,
             emit_asm_notany(cs, cslen, alpha, beta, gamma, omega, cursor, subj, subj_len_sym);
         } else if (pat->sval && strcasecmp(pat->sval, "SPAN") == 0 && pat->nargs == 1) {
             EXPR_t *arg = pat->args[0];
-            const char *cs = (arg->kind == E_QLIT && arg->sval) ? arg->sval : "";
-            int cslen = (arg->kind == E_QLIT && arg->sval) ? (int)strlen(arg->sval) : 0;
-            emit_asm_span(cs, cslen, alpha, beta, gamma, omega, cursor, subj, subj_len_sym);
+            if (arg->kind == E_VART && arg->sval) {
+                const char *vlab = prog_str_intern(arg->sval);
+                char saved[128]; snprintf(saved, sizeof saved, "span_var%d_saved", depth);
+                bss_add(saved);
+                ALFC(alpha, "SPAN_VAR α", "SPAN_ALPHA_VAR %s, %s, %s, %s, %s\n",
+                     vlab, saved, cursor, gamma, omega);
+                ALFC(beta,  "SPAN_VAR β", "SPAN_BETA_VAR  %s, %s, %s\n", saved, cursor, omega);
+            } else {
+                const char *cs = (arg->kind == E_QLIT && arg->sval) ? arg->sval : "";
+                int cslen = (arg->kind == E_QLIT && arg->sval) ? (int)strlen(arg->sval) : 0;
+                emit_asm_span(cs, cslen, alpha, beta, gamma, omega, cursor, subj, subj_len_sym);
+            }
         } else if (pat->sval && strcasecmp(pat->sval, "BREAK") == 0 && pat->nargs == 1) {
             EXPR_t *arg = pat->args[0];
-            const char *cs = (arg->kind == E_QLIT && arg->sval) ? arg->sval : "";
-            int cslen = (arg->kind == E_QLIT && arg->sval) ? (int)strlen(arg->sval) : 0;
-            emit_asm_break(cs, cslen, alpha, beta, gamma, omega, cursor, subj, subj_len_sym);
+            if (arg->kind == E_VART && arg->sval) {
+                const char *vlab = prog_str_intern(arg->sval);
+                char saved[128]; snprintf(saved, sizeof saved, "brk_var%d_saved", depth);
+                bss_add(saved);
+                ALFC(alpha, "BREAK_VAR α", "BREAK_ALPHA_VAR %s, %s, %s, %s, %s\n",
+                     vlab, saved, cursor, gamma, omega);
+                ALFC(beta,  "BREAK_VAR β", "BREAK_BETA_VAR  %s, %s, %s\n", saved, cursor, omega);
+            } else {
+                const char *cs = (arg->kind == E_QLIT && arg->sval) ? arg->sval : "";
+                int cslen = (arg->kind == E_QLIT && arg->sval) ? (int)strlen(arg->sval) : 0;
+                emit_asm_break(cs, cslen, alpha, beta, gamma, omega, cursor, subj, subj_len_sym);
+            }
+        } else if (pat->sval && strcasecmp(pat->sval, "BREAKX") == 0 && pat->nargs == 1) {
+            EXPR_t *arg = pat->args[0];
+            const char *cs    = (arg->kind == E_QLIT && arg->sval) ? arg->sval : "";
+            int         cslen = (arg->kind == E_QLIT && arg->sval) ? (int)strlen(arg->sval) : 0;
+            const char *cslab = lit_intern(cs, cslen);
+            char saved[128]; snprintf(saved, sizeof saved, "brkx%d_saved", depth);
+            bss_add(saved);
+            ALFC(alpha, "BREAKX α", "BREAKX_ALPHA %s, %d, %s, %s, %s, %s, %s, %s\n",
+                 cslab, cslen, saved, cursor, subj, subj_len_sym, gamma, omega);
+            ALFC(beta,  "BREAKX β", "BREAKX_BETA  %s, %s, %s\n", saved, cursor, omega);
         } else if (pat->sval && strcasecmp(pat->sval, "LEN") == 0 && pat->nargs == 1) {
             EXPR_t *arg = pat->args[0];
             long n = (arg->kind == E_ILIT) ? arg->ival : 0;
@@ -1652,6 +1689,9 @@ static int expr_has_pattern_fn(EXPR_t *e) {
     if (!e) return 0;
     /* E_FNC nodes that are pattern builtins make this a pattern expr */
     if (e->kind == E_FNC) return 1;
+    /* E_DOL (. capture operator) and E_NAM (unary . name-of) are pattern ops */
+    if (e->kind == E_DOL) return 1;
+    if (e->kind == E_NAM) return 1;
     if (expr_has_pattern_fn(e->left))  return 1;
     if (expr_has_pattern_fn(e->right)) return 1;
     for (int i = 0; i < e->nargs; i++)
@@ -3003,6 +3043,8 @@ static void asm_emit_program(Program *prog) {
     A("    extern  stmt_apply_replacement_splice\n");
     A("    extern  stmt_set_capture, stmt_match_var\n");
     A("    extern  stmt_pos_var, stmt_rpos_var\n");
+    A("    extern  stmt_break_var, stmt_span_var, stmt_any_var\n");
+    A("    extern  stmt_breakx\n");
     A("    extern  kw_anchor\n");
     A("    global  cursor, subject_data, subject_len_val\n");
     A("\n");
@@ -3098,13 +3140,15 @@ static void asm_emit_program(Program *prog) {
             }
             /* Evaluate subject (the LHS or expression).
              * Skip for indirect-assignment ($X=val): has_eq + E_INDR/E_DOL subject.
+             * Also skip for plain assignment (has_eq + VART/KW): no need to load LHS.
              * The indirect handler below evaluates the inner name expression itself. */
             if (s->subject &&
-                !(s->has_eq && (s->subject->kind == E_INDR || s->subject->kind == E_DOL))) {
-                int may_fail = prog_emit_expr(s->subject, -16);
+                !(s->has_eq && (s->subject->kind == E_INDR || s->subject->kind == E_DOL)) &&
+                !(s->has_eq && (s->subject->kind == E_VART || s->subject->kind == E_KW))) {
+                int may_fail = prog_emit_expr(s->subject, -32);
                 /* If subject may fail AND there are S/F targets, dispatch */
                 if (may_fail && !s->has_eq && (id_s >= 0 || id_f >= 0)) {
-                    A("    FAIL_BR16   %s\n", id_f >= 0 ? sfail_lbl : next_lbl);
+                    A("    FAIL_BR     %s\n", id_f >= 0 ? sfail_lbl : next_lbl);
                     /* success path */
                     emit_jmp(tgt_s ? tgt_s : tgt_u, next_lbl);
                     /* failure path */
@@ -3273,14 +3317,16 @@ static void asm_emit_program(Program *prog) {
             }
             A("    APPLY_REPL_SPLICE  %s, %s\n", vlab, scan_start);
         }
-        emit_jmp(tgt_s, next_lbl);
+        emit_jmp(tgt_s ? tgt_s : tgt_u, next_lbl);
 
         /* -- omega: match failed at this scan_start position --
          * Anchored (&ANCHOR != 0): go directly to F-target, no retry.
          * Unanchored: advance scan_start by 1, retry if not past subject end. */
         asmL(pat_omega);
         {
-            const char *scan_fail = tgt_f ? prog_label_nasm(tgt_f) : next_lbl;
+            /* scan_fail = F-target if explicit :F(), else unconditional target if :(L), else fall-through */
+            const char *fail_dest = tgt_f ? tgt_f : (tgt_u ? tgt_u : NULL);
+            const char *scan_fail = fail_dest ? prog_label_nasm(fail_dest) : next_lbl;
             /* &ANCHOR check: if kw_anchor != 0, skip retry entirely */
             A("    cmp     qword [rel kw_anchor], 0\n");
             A("    jne     %s\n", scan_fail);
@@ -3292,7 +3338,7 @@ static void asm_emit_program(Program *prog) {
             A("    mov     [%s], rax\n", scan_start);
             A("    jmp     %s\n", scan_retry);
         }
-        emit_jmp(tgt_f, next_lbl);
+        emit_jmp(tgt_f ? tgt_f : tgt_u, next_lbl);
 
         asmL(next_lbl);
     }

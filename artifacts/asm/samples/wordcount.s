@@ -10,7 +10,11 @@ extern  stmt_concat, stmt_is_fail, stmt_finish
 extern  stmt_realval, stmt_set_null, stmt_set_indirect
 extern  stmt_apply, stmt_goto_dispatch
 extern  stmt_setup_subject, stmt_apply_replacement
+extern  stmt_apply_replacement_splice
 extern  stmt_set_capture, stmt_match_var
+extern  stmt_pos_var, stmt_rpos_var
+extern  stmt_break_var, stmt_span_var, stmt_any_var
+extern  stmt_breakx
 extern  kw_anchor
 global  cursor, subject_data, subject_len_val
 
@@ -21,8 +25,8 @@ subject_len_val          resq 1
 P_WPAT_ret_γ            resq 1
 P_WPAT_ret_ω            resq 1
 scan_start_5             resq 1
-brk2_saved               resq 1
-span3_saved              resq 1
+brk_var2_saved           resq 1
+span_var2_saved          resq 1
 conc_tmp0_rax            resq 1
 conc_tmp0_rdx            resq 1
 subject_data             resb 65536
@@ -35,20 +39,17 @@ main:
 
 ;  PROGRAM BODY ========================================================================================================
 
-                            GET_VAR     S_AM_TRIM
                             ASSIGN_INT  S_TRIM, 1, Ln_0
                             jmp         Ln_0
 
 ; ======================================================================================================================
 
 ; ======================================================================================================================
-Ln_0:                       GET_VAR     S_NUMERALS
-                            ASSIGN_STR  S_NUMERALS, S_0123456789, Ln_1
+Ln_0:                       ASSIGN_STR  S_NUMERALS, S_0123456789, Ln_1
                             jmp         Ln_1
 
 ; ======================================================================================================================
-Ln_1:                       GET_VAR     S_WORD
-                            CAT2_SV     S_XX_MI, S_NUMERALS
+Ln_1:                       CAT2_SV     S_XX_MI, S_NUMERALS
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_AM_UCASE]
@@ -80,8 +81,7 @@ Ln_1:                       GET_VAR     S_WORD
                             jmp         Ln_2
 
 ; ======================================================================================================================
-Ln_2:                       GET_VAR     S_WPAT
-                            CALL1_VAR   S_BREAK, S_WORD
+Ln_2:                       CALL1_VAR   S_BREAK, S_WORD
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             CALL1_VAR   S_SPAN, S_WORD
@@ -98,8 +98,7 @@ Ln_2:                       GET_VAR     S_WPAT
 
 Ln_3:
 ;  NEXTL ===============================================================================================================
-L_NEXTL_0:                  GET_VAR     S_LINE
-                            lea         rdi, [rel S_INPUT]
+L_NEXTL_0:                  lea         rdi, [rel S_INPUT]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
@@ -136,7 +135,10 @@ nref0_gamma:
                             jmp         P_5_γ
 nref0_omega:                jmp         P_5_ω
 
-P_5_γ:                      jmp         Ln_5
+P_5_γ:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            APPLY_REPL_SPLICE S_LINE, scan_start_5
+                            jmp         Ln_5
 P_5_ω:                      cmp         qword [rel kw_anchor], 0
                             jne         L_NEXTL_0
                             mov         rax, [scan_start_5]
@@ -148,16 +150,14 @@ P_5_ω:                      cmp         qword [rel kw_anchor], 0
                             jmp         L_NEXTL_0
 
 ; ======================================================================================================================
-Ln_5:                       GET_VAR     S_N
-                            CONC2_VI    S_add, S_N, 1
+Ln_5:                       CONC2_VI    S_add, S_N, 1
                             FAIL_BR     Ln_6
                             SET_VAR     S_N
                             jmp         L_NEXTW_2
 
 Ln_6:
 ;  DONE ================================================================================================================
-L_DONE_1:                   GET_VAR     S_OUTPUT
-                            CAT2_VS     S_N, S_SP_words
+L_DONE_1:                   CAT2_VS     S_N, S_SP_words
                             FAIL_BR     Ln_7
                             SET_OUTPUT
 
@@ -167,9 +167,6 @@ Ln_7:                       GOTO_ALWAYS L_SNO_END
 L_SNO_END:
                             PROG_END
 
-
-section .data
-lit_str_1            db 0  ; ""
 ;  END =================================================================================================================
 
 section .text
@@ -179,10 +176,10 @@ section .text
 ; P_WPAT_α (α entry)
 P_WPAT_α:                   jmp         seq_l1_alpha ; SEQ
 P_WPAT_β:                   jmp         seq_r1_beta
-seq_l1_alpha:               BREAK_ALPHA lit_str_1, 0, brk2_saved, cursor, subject_data, subject_len_val, seq_r1_alpha, patdef_WPAT_omega ; BREAK α
-seq_l1_beta:                BREAK_BETA  brk2_saved, cursor, patdef_WPAT_omega ; BREAK β
-seq_r1_alpha:               SPAN_ALPHA  lit_str_1, 0, span3_saved, cursor, subject_data, subject_len_val, patdef_WPAT_gamma, seq_l1_beta ; SPAN α
-seq_r1_beta:                SPAN_BETA   span3_saved, cursor, seq_l1_beta ; SPAN β
+seq_l1_alpha:               BREAK_ALPHA_VAR S_WORD, brk_var2_saved, cursor, seq_r1_alpha, patdef_WPAT_omega ; BREAK_VAR α
+seq_l1_beta:                BREAK_BETA_VAR brk_var2_saved, cursor, patdef_WPAT_omega ; BREAK_VAR β
+seq_r1_alpha:               SPAN_ALPHA_VAR S_WORD, span_var2_saved, cursor, patdef_WPAT_gamma, seq_l1_beta ; SPAN_VAR α
+seq_r1_beta:                SPAN_BETA_VAR span_var2_saved, cursor, seq_l1_beta ; SPAN_VAR β
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_WPAT_gamma:
                             jmp         [P_WPAT_ret_γ]
@@ -214,7 +211,6 @@ S_DONE               db 68, 79, 78, 69, 0  ; "DONE"
 S_OUTPUT             db 79, 85, 84, 80, 85, 84, 0  ; "OUTPUT"
 S_SP_words           db 32, 119, 111, 114, 100, 115, 0  ; " words"
 S_END                db 69, 78, 68, 0  ; "END"
-S_AM_TRIM            db 38, 84, 82, 73, 77, 0  ; "&TRIM"
 S_AM_UCASE           db 38, 85, 67, 65, 83, 69, 0  ; "&UCASE"
 S_AM_LCASE           db 38, 76, 67, 65, 83, 69, 0  ; "&LCASE"
 S_add                db 97, 100, 100, 0  ; "add"

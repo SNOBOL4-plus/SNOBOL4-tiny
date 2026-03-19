@@ -13,6 +13,8 @@ extern  stmt_setup_subject, stmt_apply_replacement
 extern  stmt_apply_replacement_splice
 extern  stmt_set_capture, stmt_match_var
 extern  stmt_pos_var, stmt_rpos_var
+extern  stmt_break_var, stmt_span_var, stmt_any_var
+extern  stmt_breakx
 extern  kw_anchor
 global  cursor, subject_data, subject_len_val
 
@@ -199,50 +201,54 @@ dol_entry_ppDrop         resq 1
 span57_saved             resq 1
 seq_l59_alpha_saved      resq 1
 seq_r58_alpha_saved      resq 1
-span61_saved             resq 1
-seq_l63_alpha_saved      resq 1
-brk64_saved              resq 1
-seq_r62_alpha_saved      resq 1
-seq_l66_alpha_saved      resq 1
-brk67_saved              resq 1
-seq_r65_alpha_saved      resq 1
-alt68_cur_save           resq 1
-alt71_cur_save           resq 1
-span76_saved             resq 1
+span_var1_saved          resq 1
+seq_l62_alpha_saved      resq 1
+brk63_saved              resq 1
+seq_r61_alpha_saved      resq 1
+seq_l65_alpha_saved      resq 1
+brk66_saved              resq 1
+seq_r64_alpha_saved      resq 1
+alt67_cur_save           resq 1
+alt70_cur_save           resq 1
+span_var6_saved          resq 1
+alt75_cur_save           resq 1
+seq_l76_alpha_saved      resq 1
 alt77_cur_save           resq 1
-seq_l78_alpha_saved      resq 1
+alt_l77_alpha_saved      resq 1
+alt_r77_alpha_saved      resq 1
+alt78_cur_save           resq 1
 alt79_cur_save           resq 1
 alt_l79_alpha_saved      resq 1
 alt_r79_alpha_saved      resq 1
-alt80_cur_save           resq 1
-alt81_cur_save           resq 1
-alt_l81_alpha_saved      resq 1
-alt_r81_alpha_saved      resq 1
-span82_saved             resq 1
-span85_saved             resq 1
-seq_r84_alpha_saved      resq 1
-any87_saved              resq 1
+span_var3_saved          resq 1
+span_var4_saved          resq 1
+seq_r81_alpha_saved      resq 1
+any83_saved              resq 1
 dol_entry_cap            resq 1
 dol_entry_tx             resq 1
-span90_saved             resq 1
-span93_saved             resq 1
+span86_saved             resq 1
+span89_saved             resq 1
+span92_saved             resq 1
+seq_l93_alpha_saved      resq 1
 span96_saved             resq 1
 seq_l97_alpha_saved      resq 1
 span100_saved            resq 1
-seq_l101_alpha_saved     resq 1
-span104_saved            resq 1
-alt105_cur_save          resq 1
-alt107_cur_save          resq 1
-span109_saved            resq 1
+alt101_cur_save          resq 1
+alt103_cur_save          resq 1
+span105_saved            resq 1
+alt108_cur_save          resq 1
+alt_l108_alpha_saved     resq 1
+alt_r108_alpha_saved     resq 1
+alt111_cur_save          resq 1
+alt_r111_alpha_saved     resq 1
 alt112_cur_save          resq 1
 alt_l112_alpha_saved     resq 1
-alt_r112_alpha_saved     resq 1
-alt115_cur_save          resq 1
-alt_r115_alpha_saved     resq 1
-alt116_cur_save          resq 1
-alt_l116_alpha_saved     resq 1
-alt123_cur_save          resq 1
+alt119_cur_save          resq 1
 dol_entry_v              resq 1
+alt159_cur_save          resq 1
+alt160_cur_save          resq 1
+alt161_cur_save          resq 1
+alt162_cur_save          resq 1
 alt163_cur_save          resq 1
 alt164_cur_save          resq 1
 alt165_cur_save          resq 1
@@ -256,61 +262,57 @@ alt172_cur_save          resq 1
 alt173_cur_save          resq 1
 alt174_cur_save          resq 1
 alt175_cur_save          resq 1
-alt176_cur_save          resq 1
-alt177_cur_save          resq 1
-alt178_cur_save          resq 1
-alt179_cur_save          resq 1
-seq_l181_alpha_saved     resq 1
-seq_l184_alpha_saved     resq 1
-seq_l187_alpha_saved     resq 1
+seq_l177_alpha_saved     resq 1
+seq_l180_alpha_saved     resq 1
+seq_l183_alpha_saved     resq 1
 dol_entry_ProtKwd        resq 1
 dol_entry_UnprotKwd      resq 1
-seq_l194_alpha_saved     resq 1
-seq_l197_alpha_saved     resq 1
-seq_l200_alpha_saved     resq 1
-seq_l203_alpha_saved     resq 1
-seq_l206_alpha_saved     resq 1
-seq_l209_alpha_saved     resq 1
-seq_l212_alpha_saved     resq 1
-seq_l215_alpha_saved     resq 1
-seq_l218_alpha_saved     resq 1
-seq_l221_alpha_saved     resq 1
-seq_l224_alpha_saved     resq 1
-seq_l227_alpha_saved     resq 1
-alt234_cur_save          resq 1
+seq_l190_alpha_saved     resq 1
+seq_l193_alpha_saved     resq 1
+seq_l196_alpha_saved     resq 1
+seq_l199_alpha_saved     resq 1
+seq_l202_alpha_saved     resq 1
+seq_l205_alpha_saved     resq 1
+seq_l208_alpha_saved     resq 1
+seq_l211_alpha_saved     resq 1
+seq_l214_alpha_saved     resq 1
+seq_l217_alpha_saved     resq 1
+seq_l220_alpha_saved     resq 1
+seq_l223_alpha_saved     resq 1
+alt230_cur_save          resq 1
 dol_entry_RB             resq 1
 dol_entry_GT             resq 1
-alt242_cur_save          resq 1
-alt_l242_alpha_saved     resq 1
-alt_r242_alpha_saved     resq 1
+alt238_cur_save          resq 1
+alt_l238_alpha_saved     resq 1
+alt_r238_alpha_saved     resq 1
+alt240_cur_save          resq 1
+alt_l240_alpha_saved     resq 1
+alt_r240_alpha_saved     resq 1
+alt241_cur_save          resq 1
 alt244_cur_save          resq 1
-alt_l244_alpha_saved     resq 1
-alt_r244_alpha_saved     resq 1
-alt245_cur_save          resq 1
-alt248_cur_save          resq 1
 dol_entry_RP             resq 1
-seq_r257_alpha_saved     resq 1
-seq_l260_alpha_saved     resq 1
-brk261_saved             resq 1
-seq_l262_alpha_saved     resq 1
-brk263_saved             resq 1
+seq_r253_alpha_saved     resq 1
+seq_l256_alpha_saved     resq 1
+brk257_saved             resq 1
+seq_l258_alpha_saved     resq 1
+brk_var2_saved           resq 1
 dol_entry_Label          resq 1
-brk265_saved             resq 1
-alt270_cur_save          resq 1
-arb289_depth             resq 1
-arb289_cur_before        resq 1
-arb295_depth             resq 1
-arb295_cur_before        resq 1
-alt297_cur_save          resq 1
-alt300_cur_save          resq 1
-seq_l302_alpha_saved     resq 1
-brk303_saved             resq 1
-arb304_depth             resq 1
-arb304_cur_before        resq 1
-brk306_saved             resq 1
-arb289_stack             resq 64
-arb295_stack             resq 64
-arb304_stack             resq 64
+brk260_saved             resq 1
+alt265_cur_save          resq 1
+arb284_depth             resq 1
+arb284_cur_before        resq 1
+arb290_depth             resq 1
+arb290_cur_before        resq 1
+alt292_cur_save          resq 1
+alt295_cur_save          resq 1
+seq_l297_alpha_saved     resq 1
+brk_var9_saved           resq 1
+arb298_depth             resq 1
+arb298_cur_before        resq 1
+brk_var7_saved           resq 1
+arb284_stack             resq 64
+arb290_stack             resq 64
+arb298_stack             resq 64
 cap_ppTokName_buf        resb 256
 cap_ppTokName_len        resq 1
 cap_ppTokVal_buf         resb 256
@@ -354,58 +356,51 @@ L_START_0:
 ;  START ===============================================================================================================
 
 ; ======================================================================================================================
-Ln_0:                       GET_VAR     S_AM_FULLSCAN
-                            ASSIGN_INT  S_FULLSCAN, 1, Ln_1
+Ln_0:                       ASSIGN_INT  S_FULLSCAN, 1, Ln_1
                             jmp         Ln_1
 
 ; ======================================================================================================================
-Ln_1:                       GET_VAR     S_AM_MAXLNGTH
-                            ASSIGN_INT  S_MAXLNGTH, 524288, Ln_2
+Ln_1:                       ASSIGN_INT  S_MAXLNGTH, 524288, Ln_2
                             jmp         Ln_2
 
 ; ======================================================================================================================
-Ln_2:                       GET_VAR     S_ppStop
-                            CALL1_STR   S_ARRAY, S_1_CL_4
+Ln_2:                       CALL1_STR   S_ARRAY, S_1_CL_4
                             FAIL_BR     Ln_3
                             SET_VAR     S_ppStop
                             jmp         Ln_3
 
 ; ======================================================================================================================
-Ln_3:                       LOAD_NULVCL
-
-
-; ======================================================================================================================
-Ln_4:                       LOAD_NULVCL
-
+Ln_3:                       mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
 
 ; ======================================================================================================================
-Ln_5:                       LOAD_NULVCL
-
-
-; ======================================================================================================================
-Ln_6:                       LOAD_NULVCL
-
+Ln_4:                       mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
 
 ; ======================================================================================================================
-Ln_7:                       GET_VAR     S_ppSmBump
-                            ASSIGN_INT  S_ppSmBump, 5, Ln_8
+Ln_5:                       mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+
+; ======================================================================================================================
+Ln_6:                       mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+
+; ======================================================================================================================
+Ln_7:                       ASSIGN_INT  S_ppSmBump, 5, Ln_8
                             jmp         Ln_8
 
 ; ======================================================================================================================
-Ln_8:                       GET_VAR     S_ppLgBump
-                            ASSIGN_INT  S_ppLgBump, 42, Ln_9
+Ln_8:                       ASSIGN_INT  S_ppLgBump, 42, Ln_9
                             jmp         Ln_9
 
 ; ======================================================================================================================
-Ln_9:                       GET_VAR     S_ppArgs
-                            CALL1_INT   S_HOST, 0
+Ln_9:                       CALL1_INT   S_HOST, 0
                             FAIL_BR     Ln_10
                             SET_VAR     S_ppArgs
                             jmp         Ln_10
 
 ; ======================================================================================================================
-Ln_10:                      GET_VAR     S_ppTokPat
-                            LOAD_STR    S_MI_MI
+Ln_10:                      LOAD_STR    S_MI_MI
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
@@ -497,14 +492,8 @@ P_12_ω:                     cmp         qword [rel kw_anchor], 0
                             jmp         Ln_12
 
 ; ======================================================================================================================
-Ln_12:                      sub         rsp, 16
-                            GET_VAR     S_ppArgs
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_DIFFER, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
-                            FAIL_BR16   Lf_13
+Ln_12:                      CALL1_VAR   S_DIFFER, S_ppArgs
+                            FAIL_BR     Lf_13
                             jmp         Ln_13
 Lf_13:                      jmp         L_ppArgDone_2
 
@@ -563,227 +552,216 @@ P_14_ω:                     cmp         qword [rel kw_anchor], 0
                             jmp         L_ppArgDone_2
 
 ; ======================================================================================================================
-Ln_14:                      CONC2_VS16  S_IDENT, S_ppTokName, S_micro
-                            FAIL_BR16   Lf_15
+Ln_14:                      CONC2_VS    S_IDENT, S_ppTokName, S_micro
+                            FAIL_BR     Lf_15
                             jmp         Ln_15
 Lf_15:                      jmp         L_ppArgP2_3
 
 ; ======================================================================================================================
-Ln_15:                      LOAD_NULVCL
-
-
-; ======================================================================================================================
-Ln_16:                      LOAD_NULVCL
-
+Ln_15:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
 
 ; ======================================================================================================================
-Ln_17:                      LOAD_NULVCL
-
-
-; ======================================================================================================================
-Ln_18:                      LOAD_NULVCL
-
+Ln_16:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
 
 ; ======================================================================================================================
-Ln_19:                      GET_VAR     S_ppSmBump
-                            ASSIGN_INT  S_ppSmBump, 3, Ln_20
+Ln_17:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+
+; ======================================================================================================================
+Ln_18:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+
+; ======================================================================================================================
+Ln_19:                      ASSIGN_INT  S_ppSmBump, 3, Ln_20
                             jmp         Ln_20
 
 ; ======================================================================================================================
-Ln_20:                      GET_VAR     S_ppLgBump
-                            ASSIGN_INT  S_ppLgBump, 21, Ln_21
+Ln_20:                      ASSIGN_INT  S_ppLgBump, 21, Ln_21
                             jmp         L_ppArgLoop_1
 
 Ln_21:
 ;  ppArgP2 =============================================================================================================
-L_ppArgP2_3:                CONC2_VS16  S_IDENT, S_ppTokName, S_small
-                            FAIL_BR16   Lf_22
+L_ppArgP2_3:                CONC2_VS    S_IDENT, S_ppTokName, S_small
+                            FAIL_BR     Lf_22
                             jmp         Ln_22
 Lf_22:                      jmp         L_ppArgP3_4
 
 ; ======================================================================================================================
-Ln_22:                      LOAD_NULVCL
-
-
-; ======================================================================================================================
-Ln_23:                      LOAD_NULVCL
-
+Ln_22:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
 
 ; ======================================================================================================================
-Ln_24:                      LOAD_NULVCL
-
-
-; ======================================================================================================================
-Ln_25:                      LOAD_NULVCL
-
+Ln_23:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
 
 ; ======================================================================================================================
-Ln_26:                      GET_VAR     S_ppSmBump
-                            ASSIGN_INT  S_ppSmBump, 4, Ln_27
+Ln_24:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+
+; ======================================================================================================================
+Ln_25:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+
+; ======================================================================================================================
+Ln_26:                      ASSIGN_INT  S_ppSmBump, 4, Ln_27
                             jmp         Ln_27
 
 ; ======================================================================================================================
-Ln_27:                      GET_VAR     S_ppLgBump
-                            ASSIGN_INT  S_ppLgBump, 24, Ln_28
+Ln_27:                      ASSIGN_INT  S_ppLgBump, 24, Ln_28
                             jmp         L_ppArgLoop_1
 
 Ln_28:
 ;  ppArgP3 =============================================================================================================
-L_ppArgP3_4:                CONC2_VS16  S_IDENT, S_ppTokName, S_medium
-                            FAIL_BR16   Lf_29
+L_ppArgP3_4:                CONC2_VS    S_IDENT, S_ppTokName, S_medium
+                            FAIL_BR     Lf_29
                             jmp         Ln_29
 Lf_29:                      jmp         L_ppArgP4_5
 
 ; ======================================================================================================================
-Ln_29:                      LOAD_NULVCL
-
-
-; ======================================================================================================================
-Ln_30:                      LOAD_NULVCL
-
+Ln_29:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
 
 ; ======================================================================================================================
-Ln_31:                      LOAD_NULVCL
-
-
-; ======================================================================================================================
-Ln_32:                      LOAD_NULVCL
-
+Ln_30:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
 
 ; ======================================================================================================================
-Ln_33:                      GET_VAR     S_ppSmBump
-                            ASSIGN_INT  S_ppSmBump, 5, Ln_34
+Ln_31:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+
+; ======================================================================================================================
+Ln_32:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+
+; ======================================================================================================================
+Ln_33:                      ASSIGN_INT  S_ppSmBump, 5, Ln_34
                             jmp         Ln_34
 
 ; ======================================================================================================================
-Ln_34:                      GET_VAR     S_ppLgBump
-                            ASSIGN_INT  S_ppLgBump, 42, Ln_35
+Ln_34:                      ASSIGN_INT  S_ppLgBump, 42, Ln_35
                             jmp         L_ppArgLoop_1
 
 Ln_35:
 ;  ppArgP4 =============================================================================================================
-L_ppArgP4_5:                CONC2_VS16  S_IDENT, S_ppTokName, S_large
-                            FAIL_BR16   Lf_36
+L_ppArgP4_5:                CONC2_VS    S_IDENT, S_ppTokName, S_large
+                            FAIL_BR     Lf_36
                             jmp         Ln_36
 Lf_36:                      jmp         L_ppArgP5_6
 
 ; ======================================================================================================================
-Ln_36:                      LOAD_NULVCL
-
-
-; ======================================================================================================================
-Ln_37:                      LOAD_NULVCL
-
+Ln_36:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
 
 ; ======================================================================================================================
-Ln_38:                      LOAD_NULVCL
-
-
-; ======================================================================================================================
-Ln_39:                      LOAD_NULVCL
-
+Ln_37:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
 
 ; ======================================================================================================================
-Ln_40:                      GET_VAR     S_ppSmBump
-                            ASSIGN_INT  S_ppSmBump, 6, Ln_41
+Ln_38:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+
+; ======================================================================================================================
+Ln_39:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+
+; ======================================================================================================================
+Ln_40:                      ASSIGN_INT  S_ppSmBump, 6, Ln_41
                             jmp         Ln_41
 
 ; ======================================================================================================================
-Ln_41:                      GET_VAR     S_ppLgBump
-                            ASSIGN_INT  S_ppLgBump, 54, Ln_42
+Ln_41:                      ASSIGN_INT  S_ppLgBump, 54, Ln_42
                             jmp         L_ppArgLoop_1
 
 Ln_42:
 ;  ppArgP5 =============================================================================================================
-L_ppArgP5_6:                CONC2_VS16  S_IDENT, S_ppTokName, S_wide
-                            FAIL_BR16   Lf_43
+L_ppArgP5_6:                CONC2_VS    S_IDENT, S_ppTokName, S_wide
+                            FAIL_BR     Lf_43
                             jmp         Ln_43
 Lf_43:                      jmp         L_ppArgChk1_7
 
 ; ======================================================================================================================
-Ln_43:                      LOAD_NULVCL
-
-
-; ======================================================================================================================
-Ln_44:                      LOAD_NULVCL
-
+Ln_43:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
 
 ; ======================================================================================================================
-Ln_45:                      LOAD_NULVCL
-
-
-; ======================================================================================================================
-Ln_46:                      LOAD_NULVCL
-
+Ln_44:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
 
 ; ======================================================================================================================
-Ln_47:                      GET_VAR     S_ppSmBump
-                            ASSIGN_INT  S_ppSmBump, 7, Ln_48
+Ln_45:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+
+; ======================================================================================================================
+Ln_46:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+
+; ======================================================================================================================
+Ln_47:                      ASSIGN_INT  S_ppSmBump, 7, Ln_48
                             jmp         Ln_48
 
 ; ======================================================================================================================
-Ln_48:                      GET_VAR     S_ppLgBump
-                            ASSIGN_INT  S_ppLgBump, 68, Ln_49
+Ln_48:                      ASSIGN_INT  S_ppLgBump, 68, Ln_49
                             jmp         L_ppArgLoop_1
 
 Ln_49:
 ;  ppArgChk1 ===========================================================================================================
-L_ppArgChk1_7:              CONC2_VS16  S_IDENT, S_ppTokName, S_s1
-                            FAIL_BR16   Lf_50
+L_ppArgChk1_7:              CONC2_VS    S_IDENT, S_ppTokName, S_s1
+                            FAIL_BR     Lf_50
                             jmp         Ln_50
 Lf_50:                      jmp         L_ppArgChk2_8
 
 ; ======================================================================================================================
-Ln_50:                      LOAD_NULVCL
-
+Ln_50:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             jmp         L_ppArgLoop_1
 
 Ln_51:
 ;  ppArgChk2 ===========================================================================================================
-L_ppArgChk2_8:              CONC2_VS16  S_IDENT, S_ppTokName, S_s2
-                            FAIL_BR16   Lf_52
+L_ppArgChk2_8:              CONC2_VS    S_IDENT, S_ppTokName, S_s2
+                            FAIL_BR     Lf_52
                             jmp         Ln_52
 Lf_52:                      jmp         L_ppArgChk3_9
 
 ; ======================================================================================================================
-Ln_52:                      LOAD_NULVCL
-
+Ln_52:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             jmp         L_ppArgLoop_1
 
 Ln_53:
 ;  ppArgChk3 ===========================================================================================================
-L_ppArgChk3_9:              CONC2_VS16  S_IDENT, S_ppTokName, S_s3
-                            FAIL_BR16   Lf_54
+L_ppArgChk3_9:              CONC2_VS    S_IDENT, S_ppTokName, S_s3
+                            FAIL_BR     Lf_54
                             jmp         Ln_54
 Lf_54:                      jmp         L_ppArgChk4_10
 
 ; ======================================================================================================================
-Ln_54:                      LOAD_NULVCL
-
+Ln_54:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             jmp         L_ppArgLoop_1
 
 Ln_55:
 ;  ppArgChk4 ===========================================================================================================
-L_ppArgChk4_10:             CONC2_VS16  S_IDENT, S_ppTokName, S_s4
-                            FAIL_BR16   Lf_56
+L_ppArgChk4_10:             CONC2_VS    S_IDENT, S_ppTokName, S_s4
+                            FAIL_BR     Lf_56
                             jmp         Ln_56
 Lf_56:                      jmp         L_ppArgChk5_11
 
 ; ======================================================================================================================
-Ln_56:                      LOAD_NULVCL
-
+Ln_56:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             jmp         L_ppArgLoop_1
 
 Ln_57:
 ;  ppArgChk5 ===========================================================================================================
-L_ppArgChk5_11:             CONC2_VS16  S_IDENT, S_ppTokName, S_smbump
-                            FAIL_BR16   Lf_58
+L_ppArgChk5_11:             CONC2_VS    S_IDENT, S_ppTokName, S_smbump
+                            FAIL_BR     Lf_58
                             jmp         Ln_58
 Lf_58:                      jmp         L_ppArgChk6_12
 
 ; ======================================================================================================================
-Ln_58:                      GET_VAR     S_ppSmBump
-                            lea         rdi, [rel S_ppTokVal]
+Ln_58:                      lea         rdi, [rel S_ppTokVal]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
@@ -793,14 +771,13 @@ Ln_58:                      GET_VAR     S_ppSmBump
 
 Ln_59:
 ;  ppArgChk6 ===========================================================================================================
-L_ppArgChk6_12:             CONC2_VS16  S_IDENT, S_ppTokName, S_lgbump
-                            FAIL_BR16   Lf_60
+L_ppArgChk6_12:             CONC2_VS    S_IDENT, S_ppTokName, S_lgbump
+                            FAIL_BR     Lf_60
                             jmp         Ln_60
 Lf_60:                      jmp         L_ppArgUnk_13
 
 ; ======================================================================================================================
-Ln_60:                      GET_VAR     S_ppLgBump
-                            lea         rdi, [rel S_ppTokVal]
+Ln_60:                      lea         rdi, [rel S_ppTokVal]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
@@ -810,20 +787,18 @@ Ln_60:                      GET_VAR     S_ppLgBump
 
 Ln_61:
 ;  ppArgUnk ============================================================================================================
-L_ppArgUnk_13:              CONC2_VS16  S_IDENT, S_ppTokName, S_auto
-                            FAIL_BR16   Lf_62
+L_ppArgUnk_13:              CONC2_VS    S_IDENT, S_ppTokName, S_auto
+                            FAIL_BR     Lf_62
                             jmp         Ln_62
 Lf_62:                      jmp         L_ppArgWarn_14
 
 ; ======================================================================================================================
-Ln_62:                      GET_VAR     S_ppAutoMode
-                            ASSIGN_INT  S_ppAutoMode, 1, Ln_63
+Ln_62:                      ASSIGN_INT  S_ppAutoMode, 1, Ln_63
                             jmp         L_ppArgLoop_1
 
 Ln_63:
 ;  ppArgWarn ===========================================================================================================
-L_ppArgWarn_14:             GET_VAR     S_OUTPUT
-                            CAT2_SV     S_ST_SP_Warning_CL_SP_unknown_SP_switch_SP_MI_MI, S_ppTokName
+L_ppArgWarn_14:             CAT2_SV     S_ST_SP_Warning_CL_SP_unknown_SP_switch_SP_MI_MI, S_ppTokName
                             FAIL_BR     Ln_64
                             SET_OUTPUT
 
@@ -835,27 +810,19 @@ L_ppArgDone_2:
 ;  ppArgDone ===========================================================================================================
 
 ; ======================================================================================================================
-Ln_65:                      sub         rsp, 16
-                            GET_VAR     S_ppAutoMode
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_DIFFER, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
-                            FAIL_BR16   Lf_66
+Ln_65:                      CALL1_VAR   S_DIFFER, S_ppAutoMode
+                            FAIL_BR     Lf_66
                             jmp         Ln_66
 Lf_66:                      jmp         L_ppAutoSkip_15
 
 ; ======================================================================================================================
-Ln_66:                      GET_VAR     S_ppTab
-                            CALL1_INT   S_CHAR, 9
+Ln_66:                      CALL1_INT   S_CHAR, 9
                             FAIL_BR     Ln_67
                             SET_VAR     S_ppTab
                             jmp         Ln_67
 
 ; ======================================================================================================================
-Ln_67:                      GET_VAR     S_ppGSfx
-                            sub         rsp, 32
+Ln_67:                      sub         rsp, 32
                             sub         rsp, 16
                             CAT2_SV     S_SP, S_ppTab
                             STORE_ARG32 0
@@ -934,8 +901,7 @@ Ln_67:                      GET_VAR     S_ppGSfx
                             jmp         Ln_68
 
 ; ======================================================================================================================
-Ln_68:                      GET_VAR     S_ppGPat
-                            mov         qword [rbp-32], 1
+Ln_68:                      mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
@@ -955,28 +921,24 @@ Ln_68:                      GET_VAR     S_ppGPat
                             jmp         Ln_69
 
 ; ======================================================================================================================
-Ln_69:                      GET_VAR     S_ppTrimPat
-                            mov         qword [rbp-32], 1
+Ln_69:                      mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             FAIL_BR     Ln_70
                             SET_VAR     S_ppTrimPat
                             jmp         Ln_70
 
 ; ======================================================================================================================
-Ln_70:                      GET_VAR     S_ppNg
-                            ASSIGN_INT  S_ppNg, 0, Ln_71
+Ln_70:                      ASSIGN_INT  S_ppNg, 0, Ln_71
                             jmp         Ln_71
 
 ; ======================================================================================================================
-Ln_71:                      GET_VAR     S_ppWArr
-                            CALL1_INT   S_ARRAY, 2000
+Ln_71:                      CALL1_INT   S_ARRAY, 2000
                             FAIL_BR     Ln_72
                             SET_VAR     S_ppWArr
                             jmp         Ln_72
 
 ; ======================================================================================================================
-Ln_72:                      GET_VAR     S_ppTmpFile
-                            LOAD_STR    S_SL_tmp_SL_beauty_auto
+Ln_72:                      LOAD_STR    S_SL_tmp_SL_beauty_auto
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             CALL1_INT   S_HOST, 1
@@ -1003,18 +965,17 @@ Ln_72:                      GET_VAR     S_ppTmpFile
 
 ; ======================================================================================================================
 Ln_73:                      sub         rsp, 64
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 0
                             LOAD_INT    3
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
                             STORE_ARG32 16
                             LOAD_STR    S_13
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
                             STORE_ARG32 32
-                            GET_VAR     S_ppTmpFile
+                            lea         rdi, [rel S_ppTmpFile]
+                            call        stmt_get
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
                             STORE_ARG32 48
                             APPLY_FN_N  S_output, 4
                             add         rsp, 64
@@ -1023,8 +984,7 @@ Ln_73:                      sub         rsp, 64
 
 Ln_74:
 ;  ppAutoR =============================================================================================================
-L_ppAutoR_16:               GET_VAR     S_ppLn
-                            lea         rdi, [rel S_INPUT]
+L_ppAutoR_16:               lea         rdi, [rel S_INPUT]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
@@ -1034,8 +994,7 @@ L_ppAutoR_16:               GET_VAR     S_ppLn
 Lf_75:                      jmp         L_ppAutoSort_17
 
 ; ======================================================================================================================
-Ln_75:                      GET_VAR     S_ppTmp
-                            lea         rdi, [rel S_ppLn]
+Ln_75:                      lea         rdi, [rel S_ppLn]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
@@ -1126,14 +1085,8 @@ P_78_ω:                     cmp         qword [rel kw_anchor], 0
                             jmp         Ln_78
 
 ; ======================================================================================================================
-Ln_78:                      sub         rsp, 16
-                            GET_VAR     S_ppStmt
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_DIFFER, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
-                            FAIL_BR16   Lf_79
+Ln_78:                      CALL1_VAR   S_DIFFER, S_ppStmt
+                            FAIL_BR     Lf_79
                             jmp         Ln_79
 Lf_79:                      jmp         L_ppAutoNew_19
 
@@ -1189,8 +1142,7 @@ P_80_ω:                     cmp         qword [rel kw_anchor], 0
                             jmp         L_ppAutoNew_19
 
 ; ======================================================================================================================
-Ln_80:                      GET_VAR     S_ppGConT
-                            lea         rdi, [rel S_ppGCon]
+Ln_80:                      lea         rdi, [rel S_ppGCon]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
@@ -1253,33 +1205,30 @@ P_82_ω:                     cmp         qword [rel kw_anchor], 0
                             jmp         Ln_82
 
 ; ======================================================================================================================
-Ln_82:                      GET_VAR     S_ppW
-                            CALL1_VAR   S_SIZE, S_ppGConT
+Ln_82:                      CALL1_VAR   S_SIZE, S_ppGConT
                             FAIL_BR     Ln_83
                             SET_VAR     S_ppW
                             jmp         Ln_83
 
 ; ======================================================================================================================
-Ln_83:                      CONC2_VN16  S_DIFFER, S_ppW
-                            FAIL_BR16   Lf_84
+Ln_83:                      CONC2_VN    S_DIFFER, S_ppW
+                            FAIL_BR     Lf_84
                             jmp         Ln_84
 Lf_84:                      jmp         L_ppAutoNew_19
 
 ; ======================================================================================================================
-Ln_84:                      GET_VAR     S_ppNg
-                            CONC2_VI    S_add, S_ppNg, 1
+Ln_84:                      CONC2_VI    S_add, S_ppNg, 1
                             FAIL_BR     Ln_85
                             SET_VAR     S_ppNg
                             jmp         Ln_85
 
 ; ======================================================================================================================
-Ln_85:                      LOAD_NULVCL
-
+Ln_85:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
 
 Ln_86:
 ;  ppAutoNew ===========================================================================================================
-L_ppAutoNew_19:             GET_VAR     S_ppStmt
-                            lea         rdi, [rel S_ppLn]
+L_ppAutoNew_19:             lea         rdi, [rel S_ppLn]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
@@ -1289,8 +1238,7 @@ L_ppAutoNew_19:             GET_VAR     S_ppStmt
 
 Ln_87:
 ;  ppAutoCont ==========================================================================================================
-L_ppAutoCont_18:            GET_VAR     S_ppStmt
-                            CAT2_VS     S_ppStmt, S_SP
+L_ppAutoCont_18:            CAT2_VS     S_ppStmt, S_SP
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_ppLn]
@@ -1310,25 +1258,15 @@ L_ppAutoCont_18:            GET_VAR     S_ppStmt
 
 Ln_88:
 ;  ppAutoSort ==========================================================================================================
-L_ppAutoSort_17:            sub         rsp, 16
-                            LOAD_INT    3
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_ENDFILE, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+L_ppAutoSort_17:            CALL1_INT   S_ENDFILE, 3
 
 ; ======================================================================================================================
-Ln_89:                      GET_VAR     S_ppI
-                            ASSIGN_INT  S_ppI, 1, Ln_90
+Ln_89:                      ASSIGN_INT  S_ppI, 1, Ln_90
                             jmp         Ln_90
 
 Ln_90:
 ;  ppAS1 ===============================================================================================================
-L_ppAS1_20:                 GET_VAR     S_ppI
-                            CONC2_VV    S_LT, S_ppI, S_ppNg
+L_ppAS1_20:                 CONC2_VV    S_LT, S_ppI, S_ppNg
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_ppI, 1
@@ -1345,8 +1283,7 @@ L_ppAS1_20:                 GET_VAR     S_ppI
 Lf_91:                      jmp         L_ppAutoCalc_21
 
 ; ======================================================================================================================
-Ln_91:                      GET_VAR     S_ppJ
-                            lea         rdi, [rel S_ppI]
+Ln_91:                      lea         rdi, [rel S_ppI]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
@@ -1355,8 +1292,7 @@ Ln_91:                      GET_VAR     S_ppJ
                             jmp         Ln_92
 
 ; ======================================================================================================================
-Ln_92:                      GET_VAR     S_ppKey
-                            mov         qword [rbp-32], 1
+Ln_92:                      mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             FAIL_BR     Ln_93
                             SET_VAR     S_ppKey
@@ -1364,39 +1300,40 @@ Ln_92:                      GET_VAR     S_ppKey
 
 Ln_93:
 ;  ppAS2 ===============================================================================================================
-L_ppAS2_22:                 GET_VAR     S_ppJ1
-                            CONC2_VI    S_sub, S_ppJ, 1
+L_ppAS2_22:                 CONC2_VI    S_sub, S_ppJ, 1
                             FAIL_BR     Ln_94
                             SET_VAR     S_ppJ1
                             jmp         Ln_94
 
 ; ======================================================================================================================
-Ln_94:                      CONC2_VI16  S_LT, S_ppJ1, 1
-                            FAIL_BR16   Ln_95
+Ln_94:                      CONC2_VI    S_LT, S_ppJ1, 1
+                            FAIL_BR     Ln_95
                             jmp         L_ppASins_23
 
 ; ======================================================================================================================
 Ln_95:                      sub         rsp, 32
-                            GET_VAR     S_ppKey
+                            lea         rdi, [rel S_ppKey]
+                            call        stmt_get
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
                             STORE_ARG32 0
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 16
                             APPLY_FN_N  S_LT, 2
                             add         rsp, 32
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_96
+                            FAIL_BR     Lf_96
                             jmp         Ln_96
 Lf_96:                      jmp         L_ppASins_23
 
 ; ======================================================================================================================
-Ln_96:                      LOAD_NULVCL
-
+Ln_96:                      mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
 
 ; ======================================================================================================================
-Ln_97:                      GET_VAR     S_ppJ
-                            lea         rdi, [rel S_ppJ1]
+Ln_97:                      lea         rdi, [rel S_ppJ1]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
@@ -1406,14 +1343,13 @@ Ln_97:                      GET_VAR     S_ppJ
 
 Ln_98:
 ;  ppASins =============================================================================================================
-L_ppASins_23:               LOAD_NULVCL
-
+L_ppASins_23:               mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             jmp         L_ppAS1_20
 
 Ln_99:
 ;  ppAutoCalc ==========================================================================================================
-L_ppAutoCalc_21:            GET_VAR     S_ppP90i
-                            sub         rsp, 32
+L_ppAutoCalc_21:            sub         rsp, 32
                             CONC2_VI    S_mul, S_ppNg, 9
                             STORE_ARG32 0
                             LOAD_INT    10
@@ -1427,34 +1363,31 @@ L_ppAutoCalc_21:            GET_VAR     S_ppP90i
                             jmp         Ln_100
 
 ; ======================================================================================================================
-Ln_100:                     CONC2_VI16  S_LT, S_ppP90i, 1
-                            FAIL_BR16   Lf_101
+Ln_100:                     CONC2_VI    S_LT, S_ppP90i, 1
+                            FAIL_BR     Lf_101
                             jmp         Ln_101
 Lf_101:                     jmp         L_ppAP90ok_24
 
 ; ======================================================================================================================
-Ln_101:                     GET_VAR     S_ppP90i
-                            ASSIGN_INT  S_ppP90i, 1, Ln_102
+Ln_101:                     ASSIGN_INT  S_ppP90i, 1, Ln_102
                             jmp         Ln_102
 
 Ln_102:
 ;  ppAP90ok ============================================================================================================
-L_ppAP90ok_24:              GET_VAR     S_ppP90
-                            mov         qword [rbp-32], 1
+L_ppAP90ok_24:              mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             FAIL_BR     Ln_103
                             SET_VAR     S_ppP90
                             jmp         Ln_103
 
 ; ======================================================================================================================
-Ln_103:                     CONC2_VI16  S_LT, S_ppP90, 20
-                            FAIL_BR16   Lf_104
+Ln_103:                     CONC2_VI    S_LT, S_ppP90, 20
+                            FAIL_BR     Lf_104
                             jmp         Ln_104
 Lf_104:                     jmp         L_ppAscale_25
 
 ; ======================================================================================================================
-Ln_104:                     GET_VAR     S_ppP90
-                            ASSIGN_INT  S_ppP90, 20, Ln_105
+Ln_104:                     ASSIGN_INT  S_ppP90, 20, Ln_105
                             jmp         Ln_105
 
 Ln_105:
@@ -1463,46 +1396,43 @@ L_ppAscale_25:
 ;  ppAscale ============================================================================================================
 
 ; ======================================================================================================================
-Ln_106:                     LOAD_NULVCL
-
+Ln_106:                     mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
 
 ; ======================================================================================================================
 Ln_107:                     sub         rsp, 32
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 0
                             LOAD_INT    40
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
                             STORE_ARG32 16
                             APPLY_FN_N  S_LT, 2
                             add         rsp, 32
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_108
+                            FAIL_BR     Lf_108
                             jmp         Ln_108
 Lf_108:                     jmp         L_ppAs1_26
 
 ; ======================================================================================================================
-Ln_108:                     LOAD_NULVCL
-
+Ln_108:                     mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
 
 Ln_109:
 ;  ppAs1 ===============================================================================================================
-L_ppAs1_26:                 LOAD_NULVCL
-
-
-; ======================================================================================================================
-Ln_110:                     LOAD_NULVCL
-
+L_ppAs1_26:                 mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
 
 ; ======================================================================================================================
-Ln_111:                     LOAD_NULVCL
-
+Ln_110:                     mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
 
 ; ======================================================================================================================
-Ln_112:                     GET_VAR     S_ppSmBump
-                            sub         rsp, 32
+Ln_111:                     mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+
+; ======================================================================================================================
+Ln_112:                     sub         rsp, 32
                             LOAD_INT    3
                             STORE_ARG32 0
                             sub         rsp, 32
@@ -1541,8 +1471,7 @@ Ln_112:                     GET_VAR     S_ppSmBump
                             jmp         Ln_113
 
 ; ======================================================================================================================
-Ln_113:                     GET_VAR     S_ppLgBump
-                            sub         rsp, 32
+Ln_113:                     sub         rsp, 32
                             sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
@@ -1566,20 +1495,18 @@ Ln_113:                     GET_VAR     S_ppLgBump
                             jmp         Ln_114
 
 ; ======================================================================================================================
-Ln_114:                     CONC2_VI16  S_LT, S_ppLgBump, 10
-                            FAIL_BR16   Lf_115
+Ln_114:                     CONC2_VI    S_LT, S_ppLgBump, 10
+                            FAIL_BR     Lf_115
                             jmp         Ln_115
 Lf_115:                     jmp         L_ppAutoMsg_27
 
 ; ======================================================================================================================
-Ln_115:                     GET_VAR     S_ppLgBump
-                            ASSIGN_INT  S_ppLgBump, 10, Ln_116
+Ln_115:                     ASSIGN_INT  S_ppLgBump, 10, Ln_116
                             jmp         Ln_116
 
 Ln_116:
 ;  ppAutoMsg ===========================================================================================================
-L_ppAutoMsg_27:             GET_VAR     S_OUTPUT
-                            CAT2_SV     S_ST_SP_MI_MI_auto_CL_SP_n_EQ, S_ppNg
+L_ppAutoMsg_27:             CAT2_SV     S_ST_SP_MI_MI_auto_CL_SP_n_EQ, S_ppNg
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_SP_p90_EQ
@@ -1740,18 +1667,17 @@ L_ppAutoMsg_27:             GET_VAR     S_OUTPUT
 
 ; ======================================================================================================================
 Ln_117:                     sub         rsp, 64
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 0
                             LOAD_INT    1
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
                             STORE_ARG32 16
                             LOAD_STR    S_13
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
                             STORE_ARG32 32
-                            GET_VAR     S_ppTmpFile
+                            lea         rdi, [rel S_ppTmpFile]
+                            call        stmt_get
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
                             STORE_ARG32 48
                             APPLY_FN_N  S_input, 4
                             add         rsp, 64
@@ -1764,15 +1690,13 @@ L_ppAutoSkip_15:
 ;  ppAutoSkip ==========================================================================================================
 
 ; ======================================================================================================================
-Ln_119:                     GET_VAR     S_Integer
-                            CALL1_VAR   S_SPAN, S_digits
+Ln_119:                     CALL1_VAR   S_SPAN, S_digits
                             FAIL_BR     Ln_120
                             SET_VAR     S_Integer
                             jmp         Ln_120
 
 ; ======================================================================================================================
-Ln_120:                     GET_VAR     S_DQ
-                            LOAD_STR    S_XX
+Ln_120:                     LOAD_STR    S_XX
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
@@ -1804,8 +1728,7 @@ Ln_120:                     GET_VAR     S_DQ
                             jmp         Ln_121
 
 ; ======================================================================================================================
-Ln_121:                     GET_VAR     S_SQ
-                            LOAD_STR    S_XX_117
+Ln_121:                     LOAD_STR    S_XX_117
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
@@ -1837,8 +1760,7 @@ Ln_121:                     GET_VAR     S_SQ
                             jmp         Ln_122
 
 ; ======================================================================================================================
-Ln_122:                     GET_VAR     S_String
-                            sub         rsp, 32
+Ln_122:                     sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             STORE_ARG32 0
@@ -1854,8 +1776,7 @@ Ln_122:                     GET_VAR     S_String
                             jmp         Ln_123
 
 ; ======================================================================================================================
-Ln_123:                     GET_VAR     S_Real
-                            sub         rsp, 32
+Ln_123:                     sub         rsp, 32
                             CALL1_VAR   S_SPAN, S_digits
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
@@ -1995,8 +1916,7 @@ Ln_123:                     GET_VAR     S_Real
                             jmp         Ln_124
 
 ; ======================================================================================================================
-Ln_124:                     GET_VAR     S_Id
-                            sub         rsp, 16
+Ln_124:                     sub         rsp, 16
                             lea         rdi, [rel S_AM_UCASE]
                             call        stmt_get
                             mov         [rbp-32], rax
@@ -2093,32 +2013,28 @@ Ln_124:                     GET_VAR     S_Id
                             jmp         Ln_125
 
 ; ======================================================================================================================
-Ln_125:                     GET_VAR     S_Function
-                            mov         qword [rbp-32], 1
+Ln_125:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             FAIL_BR     Ln_126
                             SET_VAR     S_Function
                             jmp         Ln_126
 
 ; ======================================================================================================================
-Ln_126:                     GET_VAR     S_BuiltinVar
-                            mov         qword [rbp-32], 1
+Ln_126:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             FAIL_BR     Ln_127
                             SET_VAR     S_BuiltinVar
                             jmp         Ln_127
 
 ; ======================================================================================================================
-Ln_127:                     GET_VAR     S_SpecialNm
-                            mov         qword [rbp-32], 1
+Ln_127:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             FAIL_BR     Ln_128
                             SET_VAR     S_SpecialNm
                             jmp         Ln_128
 
 ; ======================================================================================================================
-Ln_128:                     GET_VAR     S_ProtKwd
-                            LOAD_STR    S_AM
+Ln_128:                     LOAD_STR    S_AM
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
@@ -2135,8 +2051,7 @@ Ln_128:                     GET_VAR     S_ProtKwd
                             jmp         Ln_129
 
 ; ======================================================================================================================
-Ln_129:                     GET_VAR     S_UnprotKwd
-                            LOAD_STR    S_AM
+Ln_129:                     LOAD_STR    S_AM
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             mov         qword [rbp-32], 1
@@ -2153,8 +2068,7 @@ Ln_129:                     GET_VAR     S_UnprotKwd
                             jmp         Ln_130
 
 ; ======================================================================================================================
-Ln_130:                     GET_VAR     S_Gray
-                            sub         rsp, 32
+Ln_130:                     sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             STORE_ARG32 0
@@ -2172,8 +2086,7 @@ Ln_130:                     GET_VAR     S_Gray
                             jmp         Ln_131
 
 ; ======================================================================================================================
-Ln_131:                     GET_VAR     S_White
-                            sub         rsp, 32
+Ln_131:                     sub         rsp, 32
                             sub         rsp, 16
                             CAT2_SV     S_SP, S_tab
                             STORE_ARG32 0
@@ -2312,8 +2225,7 @@ Ln_131:                     GET_VAR     S_White
                             jmp         Ln_132
 
 ; ======================================================================================================================
-Ln_132:                     GET_VAR     S_TxInList
-                            sub         rsp, 32
+Ln_132:                     sub         rsp, 32
                             CALL1_INT   S_POS, 0
                             STORE_ARG32 0
                             LOAD_STR    S_SP
@@ -2356,18 +2268,15 @@ Ln_132:                     GET_VAR     S_TxInList
                             jmp         Ln_133
 
 ; ======================================================================================================================
-Ln_133:                     GET_VAR     S_SpecialNms
-                            ASSIGN_STR  S_SpecialNms, S_ABORT_SP_CONTINUE_SP_END_SP_FRETURN_SP_NRETURN_SP_RETURN_SP_S, Ln_134
+Ln_133:                     ASSIGN_STR  S_SpecialNms, S_ABORT_SP_CONTINUE_SP_END_SP_FRETURN_SP_NRETURN_SP_RETURN_SP_S, Ln_134
                             jmp         Ln_134
 
 ; ======================================================================================================================
-Ln_134:                     GET_VAR     S_BuiltinVars
-                            ASSIGN_STR  S_BuiltinVars, S_ABORT_SP_ARB_SP_BAL_SP_FAIL_SP_FENCE_SP_INPUT_SP_OUTPUT_SP_RE, Ln_135
+Ln_134:                     ASSIGN_STR  S_BuiltinVars, S_ABORT_SP_ARB_SP_BAL_SP_FAIL_SP_FENCE_SP_INPUT_SP_OUTPUT_SP_RE, Ln_135
                             jmp         Ln_135
 
 ; ======================================================================================================================
-Ln_135:                     GET_VAR     S_ProtKwds
-                            CAT2_SS     S_ABORT_SP_ALPHABET_SP_ARB_SP_BAL_SP_FAIL_SP_FENCE_SP_FILE_SP_F, S_LASTFILE_SP_LASTLINE_SP_LASTNO_SP_LCASE_SP_LINE_SP_REM_SP_RTN
+Ln_135:                     CAT2_SS     S_ABORT_SP_ALPHABET_SP_ARB_SP_BAL_SP_FAIL_SP_FENCE_SP_FILE_SP_F, S_LASTFILE_SP_LASTLINE_SP_LASTNO_SP_LCASE_SP_LINE_SP_REM_SP_RTN
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_STCOUNT_SP_STNO_SP_SUCCEED_SP_UCASE
@@ -2383,8 +2292,7 @@ Ln_135:                     GET_VAR     S_ProtKwds
                             jmp         Ln_136
 
 ; ======================================================================================================================
-Ln_136:                     GET_VAR     S_UnprotKwds
-                            CAT2_SS     S_ABEND_SP_ANCHOR_SP_CASE_SP_CODE_SP_COMPARE_SP_DUMP_SP_ERRLIMI, S_ERRTEXT_SP_ERRTYPE_SP_FTRACE_SP_INPUT_SP_MAXLNGTH_SP_OUTPUT_S
+Ln_136:                     CAT2_SS     S_ABEND_SP_ANCHOR_SP_CASE_SP_CODE_SP_COMPARE_SP_DUMP_SP_ERRLIMI, S_ERRTEXT_SP_ERRTYPE_SP_FTRACE_SP_INPUT_SP_MAXLNGTH_SP_OUTPUT_S
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_PROFILE_SP_STLIMIT_SP_TRACE_SP_TRIM_SP_FULLSCAN
@@ -2400,8 +2308,7 @@ Ln_136:                     GET_VAR     S_UnprotKwds
                             jmp         Ln_137
 
 ; ======================================================================================================================
-Ln_137:                     GET_VAR     S_Functions
-                            CAT2_SS     S_ANY_SP_APPLY_SP_ARBNO_SP_ARG_SP_ARRAY_SP_ATAN_SP_BACKSPACE_SP, S_CHAR_SP_CHOP_SP_CLEAR_SP_CODE_SP_COLLECT_SP_CONVERT_SP_COPY_S
+Ln_137:                     CAT2_SS     S_ANY_SP_APPLY_SP_ARBNO_SP_ARG_SP_ARRAY_SP_ATAN_SP_BACKSPACE_SP, S_CHAR_SP_CHOP_SP_CLEAR_SP_CODE_SP_COLLECT_SP_CONVERT_SP_COPY_S
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_DATATYPE_SP_DATE_SP_DEFINE_SP_DETACH_SP_DIFFER_SP_DUMP_SP_DUP
@@ -3179,8 +3086,7 @@ Ln_161:                     LOAD_STR    S_GT
                             jmp         Ln_162
 
 ; ======================================================================================================================
-Ln_162:                     GET_VAR     S_ExprList
-                            APPLY_FN_0  S_nPush
+Ln_162:                     APPLY_FN_0  S_nPush
                             STORE_RESULT
 
                             mov         [conc_tmp0_rax], rax
@@ -3222,8 +3128,7 @@ Ln_162:                     GET_VAR     S_ExprList
                             jmp         Ln_163
 
 ; ======================================================================================================================
-Ln_163:                     GET_VAR     S_XList
-                            APPLY_FN_0  S_nInc
+Ln_163:                     APPLY_FN_0  S_nInc
                             STORE_RESULT
 
                             mov         [conc_tmp0_rax], rax
@@ -3290,16 +3195,14 @@ Ln_163:                     GET_VAR     S_XList
                             jmp         Ln_164
 
 ; ======================================================================================================================
-Ln_164:                     GET_VAR     S_Expr
-                            mov         qword [rbp-32], 1
+Ln_164:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             FAIL_BR     Ln_165
                             SET_VAR     S_Expr
                             jmp         Ln_165
 
 ; ======================================================================================================================
-Ln_165:                     GET_VAR     S_Expr0
-                            mov         qword [rbp-32], 1
+Ln_165:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
@@ -3356,8 +3259,7 @@ Ln_165:                     GET_VAR     S_Expr0
                             jmp         Ln_166
 
 ; ======================================================================================================================
-Ln_166:                     GET_VAR     S_Expr1
-                            mov         qword [rbp-32], 1
+Ln_166:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
@@ -3414,8 +3316,7 @@ Ln_166:                     GET_VAR     S_Expr1
                             jmp         Ln_167
 
 ; ======================================================================================================================
-Ln_167:                     GET_VAR     S_Expr2
-                            mov         qword [rbp-32], 1
+Ln_167:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
@@ -3472,8 +3373,7 @@ Ln_167:                     GET_VAR     S_Expr2
                             jmp         Ln_168
 
 ; ======================================================================================================================
-Ln_168:                     GET_VAR     S_Expr3
-                            APPLY_FN_0  S_nPush
+Ln_168:                     APPLY_FN_0  S_nPush
                             STORE_RESULT
 
                             mov         [conc_tmp0_rax], rax
@@ -3515,8 +3415,7 @@ Ln_168:                     GET_VAR     S_Expr3
                             jmp         Ln_169
 
 ; ======================================================================================================================
-Ln_169:                     GET_VAR     S_X3
-                            APPLY_FN_0  S_nInc
+Ln_169:                     APPLY_FN_0  S_nInc
                             STORE_RESULT
 
                             mov         [conc_tmp0_rax], rax
@@ -3574,8 +3473,7 @@ Ln_169:                     GET_VAR     S_X3
                             jmp         Ln_170
 
 ; ======================================================================================================================
-Ln_170:                     GET_VAR     S_Expr4
-                            APPLY_FN_0  S_nPush
+Ln_170:                     APPLY_FN_0  S_nPush
                             STORE_RESULT
 
                             mov         [conc_tmp0_rax], rax
@@ -3617,8 +3515,7 @@ Ln_170:                     GET_VAR     S_Expr4
                             jmp         Ln_171
 
 ; ======================================================================================================================
-Ln_171:                     GET_VAR     S_X4
-                            APPLY_FN_0  S_nInc
+Ln_171:                     APPLY_FN_0  S_nInc
                             STORE_RESULT
 
                             mov         [conc_tmp0_rax], rax
@@ -3676,8 +3573,7 @@ Ln_171:                     GET_VAR     S_X4
                             jmp         Ln_172
 
 ; ======================================================================================================================
-Ln_172:                     GET_VAR     S_Expr5
-                            mov         qword [rbp-32], 1
+Ln_172:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
@@ -3734,8 +3630,7 @@ Ln_172:                     GET_VAR     S_Expr5
                             jmp         Ln_173
 
 ; ======================================================================================================================
-Ln_173:                     GET_VAR     S_Expr6
-                            mov         qword [rbp-32], 1
+Ln_173:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
@@ -3823,8 +3718,7 @@ Ln_173:                     GET_VAR     S_Expr6
                             jmp         Ln_174
 
 ; ======================================================================================================================
-Ln_174:                     GET_VAR     S_Expr7
-                            mov         qword [rbp-32], 1
+Ln_174:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
@@ -3881,8 +3775,7 @@ Ln_174:                     GET_VAR     S_Expr7
                             jmp         Ln_175
 
 ; ======================================================================================================================
-Ln_175:                     GET_VAR     S_Expr8
-                            mov         qword [rbp-32], 1
+Ln_175:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
@@ -3939,8 +3832,7 @@ Ln_175:                     GET_VAR     S_Expr8
                             jmp         Ln_176
 
 ; ======================================================================================================================
-Ln_176:                     GET_VAR     S_Expr9
-                            mov         qword [rbp-32], 1
+Ln_176:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
@@ -3997,8 +3889,7 @@ Ln_176:                     GET_VAR     S_Expr9
                             jmp         Ln_177
 
 ; ======================================================================================================================
-Ln_177:                     GET_VAR     S_Expr10
-                            mov         qword [rbp-32], 1
+Ln_177:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
@@ -4055,8 +3946,7 @@ Ln_177:                     GET_VAR     S_Expr10
                             jmp         Ln_178
 
 ; ======================================================================================================================
-Ln_178:                     GET_VAR     S_Expr11
-                            mov         qword [rbp-32], 1
+Ln_178:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
@@ -4131,8 +4021,7 @@ Ln_178:                     GET_VAR     S_Expr11
                             jmp         Ln_179
 
 ; ======================================================================================================================
-Ln_179:                     GET_VAR     S_Expr12
-                            mov         qword [rbp-32], 1
+Ln_179:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
@@ -4220,8 +4109,7 @@ Ln_179:                     GET_VAR     S_Expr12
                             jmp         Ln_180
 
 ; ======================================================================================================================
-Ln_180:                     GET_VAR     S_Expr13
-                            mov         qword [rbp-32], 1
+Ln_180:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
@@ -4278,8 +4166,7 @@ Ln_180:                     GET_VAR     S_Expr13
                             jmp         Ln_181
 
 ; ======================================================================================================================
-Ln_181:                     GET_VAR     S_Expr14
-                            sub         rsp, 32
+Ln_181:                     sub         rsp, 32
                             sub         rsp, 32
                             sub         rsp, 32
                             sub         rsp, 32
@@ -4754,8 +4641,7 @@ Ln_181:                     GET_VAR     S_Expr14
                             jmp         Ln_182
 
 ; ======================================================================================================================
-Ln_182:                     GET_VAR     S_Expr15
-                            mov         qword [rbp-32], 1
+Ln_182:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
@@ -4825,8 +4711,7 @@ Ln_182:                     GET_VAR     S_Expr15
                             jmp         Ln_183
 
 ; ======================================================================================================================
-Ln_183:                     GET_VAR     S_Expr16
-                            APPLY_FN_0  S_nInc
+Ln_183:                     APPLY_FN_0  S_nInc
                             STORE_RESULT
 
                             mov         [conc_tmp0_rax], rax
@@ -4904,8 +4789,7 @@ Ln_183:                     GET_VAR     S_Expr16
                             jmp         Ln_184
 
 ; ======================================================================================================================
-Ln_184:                     GET_VAR     S_Expr17
-                            sub         rsp, 16
+Ln_184:                     sub         rsp, 16
                             sub         rsp, 32
                             sub         rsp, 32
                             sub         rsp, 32
@@ -5068,24 +4952,21 @@ Ln_184:                     GET_VAR     S_Expr17
                             jmp         Ln_185
 
 ; ======================================================================================================================
-Ln_185:                     GET_VAR     S_SGoto
-                            mov         qword [rbp-32], 1
+Ln_185:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             FAIL_BR     Ln_186
                             SET_VAR     S_SGoto
                             jmp         Ln_186
 
 ; ======================================================================================================================
-Ln_186:                     GET_VAR     S_FGoto
-                            mov         qword [rbp-32], 1
+Ln_186:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             FAIL_BR     Ln_187
                             SET_VAR     S_FGoto
                             jmp         Ln_187
 
 ; ======================================================================================================================
-Ln_187:                     GET_VAR     S_SorF
-                            sub         rsp, 32
+Ln_187:                     sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             STORE_ARG32 0
@@ -5101,8 +4982,7 @@ Ln_187:                     GET_VAR     S_SorF
                             jmp         Ln_188
 
 ; ======================================================================================================================
-Ln_188:                     GET_VAR     S_Target
-                            sub         rsp, 32
+Ln_188:                     sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             mov         [conc_tmp0_rax], rax
@@ -5140,8 +5020,7 @@ Ln_188:                     GET_VAR     S_Target
                             jmp         Ln_189
 
 ; ======================================================================================================================
-Ln_189:                     GET_VAR     S_Goto
-                            mov         qword [rbp-32], 1
+Ln_189:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
@@ -5298,8 +5177,7 @@ Ln_189:                     GET_VAR     S_Goto
                             jmp         Ln_190
 
 ; ======================================================================================================================
-Ln_190:                     GET_VAR     S_Control
-                            LOAD_STR    S_MI
+Ln_190:                     LOAD_STR    S_MI
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
@@ -5321,8 +5199,7 @@ Ln_190:                     GET_VAR     S_Control
                             jmp         Ln_191
 
 ; ======================================================================================================================
-Ln_191:                     GET_VAR     S_Comment
-                            LOAD_STR    S_ST
+Ln_191:                     LOAD_STR    S_ST
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             CALL1_VAR   S_BREAK, S_nl
@@ -5338,16 +5215,14 @@ Ln_191:                     GET_VAR     S_Comment
                             jmp         Ln_192
 
 ; ======================================================================================================================
-Ln_192:                     GET_VAR     S_Label
-                            mov         qword [rbp-32], 1
+Ln_192:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             FAIL_BR     Ln_193
                             SET_VAR     S_Label
                             jmp         Ln_193
 
 ; ======================================================================================================================
-Ln_193:                     GET_VAR     S_Stmt
-                            mov         qword [rbp-32], 1
+Ln_193:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
@@ -5697,8 +5572,7 @@ Ln_193:                     GET_VAR     S_Stmt
                             jmp         Ln_194
 
 ; ======================================================================================================================
-Ln_194:                     GET_VAR     S_Commands
-                            mov         qword [rbp-32], 1
+Ln_194:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
@@ -5733,8 +5607,7 @@ Ln_194:                     GET_VAR     S_Commands
                             jmp         Ln_195
 
 ; ======================================================================================================================
-Ln_195:                     GET_VAR     S_Command
-                            APPLY_FN_0  S_nInc
+Ln_195:                     APPLY_FN_0  S_nInc
                             STORE_RESULT
 
                             mov         [conc_tmp0_rax], rax
@@ -5843,8 +5716,7 @@ Ln_195:                     GET_VAR     S_Command
                             jmp         Ln_196
 
 ; ======================================================================================================================
-Ln_196:                     GET_VAR     S_Parse
-                            APPLY_FN_0  S_nPush
+Ln_196:                     APPLY_FN_0  S_nPush
                             STORE_RESULT
 
                             mov         [conc_tmp0_rax], rax
@@ -5892,8 +5764,7 @@ Ln_196:                     GET_VAR     S_Parse
                             jmp         Ln_197
 
 ; ======================================================================================================================
-Ln_197:                     GET_VAR     S_Compiland
-                            APPLY_FN_0  S_nPush
+Ln_197:                     APPLY_FN_0  S_nPush
                             STORE_RESULT
 
                             mov         [conc_tmp0_rax], rax
@@ -6040,48 +5911,37 @@ Ln_198:
 
 Ln_199:
 ;  pp ==================================================================================================================
-L_pp_29:                    sub         rsp, 16
-                            GET_VAR     S_x
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_DIFFER, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
-                            FAIL_BR16   Lf_200
+L_pp_29:                    CALL1_VAR   S_DIFFER, S_x
+                            FAIL_BR     Lf_200
                             jmp         Ln_200
 Lf_200:                     jmp         [P_pp_ret_γ]     ; RETURN
 
 ; ======================================================================================================================
-Ln_200:                     GET_VAR     S_t
-                            CALL1_VAR   S_t, S_x
+Ln_200:                     CALL1_VAR   S_t, S_x
                             FAIL_BR     Ln_201
                             SET_VAR     S_t
                             jmp         Ln_201
 
 ; ======================================================================================================================
-Ln_201:                     GET_VAR     S_v
-                            CALL1_VAR   S_v, S_x
+Ln_201:                     CALL1_VAR   S_v, S_x
                             FAIL_BR     Ln_202
                             SET_VAR     S_v
                             jmp         Ln_202
 
 ; ======================================================================================================================
-Ln_202:                     GET_VAR     S_n
-                            CALL1_VAR   S_n, S_x
+Ln_202:                     CALL1_VAR   S_n, S_x
                             FAIL_BR     Ln_203
                             SET_VAR     S_n
                             jmp         Ln_203
 
 ; ======================================================================================================================
-Ln_203:                     GET_VAR     S_c
-                            CALL1_VAR   S_c, S_x
+Ln_203:                     CALL1_VAR   S_c, S_x
                             FAIL_BR     Ln_204
                             SET_VAR     S_c
                             jmp         Ln_204
 
 ; ======================================================================================================================
-Ln_204:                     GET_VAR     S_OUTPUT
-                            CONC2_VN    S_GT_279, S_doDebug
+Ln_204:                     CONC2_VN    S_GT_279, S_doDebug
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_pp_LP
@@ -6187,21 +6047,14 @@ Ln_204:                     GET_VAR     S_OUTPUT
                             jmp         Ln_205
 
 ; ======================================================================================================================
-Ln_205:                     sub         rsp, 16
-                            GET_VAR     S_t
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_DIFFER, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
-                            FAIL_BR16   Lf_206
+Ln_205:                     CALL1_VAR   S_DIFFER, S_t
+                            FAIL_BR     Lf_206
                             jmp         L_COMPUTED_pp_t_30
 Lf_206:                     jmp         [P_pp_ret_γ]     ; RETURN
 
 Ln_206:
 ;  pp_Parse ============================================================================================================
-L_pp_Parse_31:              GET_VAR     S_ppWidth
-                            mov         qword [rbp-32], 1
+L_pp_Parse_31:              mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             FAIL_BR     Ln_207
                             SET_VAR     S_ppWidth
@@ -6209,14 +6062,12 @@ L_pp_Parse_31:              GET_VAR     S_ppWidth
 
 Ln_207:
 ;  pp_0 ================================================================================================================
-L_pp_0_32:                  GET_VAR     S_i
-                            ASSIGN_INT  S_i, 0, Ln_208
+L_pp_0_32:                  ASSIGN_INT  S_i, 0, Ln_208
                             jmp         Ln_208
 
 Ln_208:
 ;  pp_1 ================================================================================================================
-L_pp_1_33:                  GET_VAR     S_i
-                            CONC2_VV    S_LT, S_i, S_n
+L_pp_1_33:                  CONC2_VV    S_LT, S_i, S_n
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_i, 1
@@ -6258,304 +6109,208 @@ ucall9_done:
 Ln_210:
 ;  pp_BuiltinVar =======================================================================================================
 L_pp_BuiltinVar_34:         sub         rsp, 16
-                            sub         rsp, 16
-                            GET_VAR     S_x
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_ss, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_ss, S_x
                             STORE_ARG32 0
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_211
+                            FAIL_BR     Lf_211
                             jmp         [P_pp_ret_γ]     ; RETURN
 Lf_211:                     jmp         L_error_35
 
 Ln_211:
 ;  pp_Function =========================================================================================================
 L_pp_Function_36:           sub         rsp, 16
-                            sub         rsp, 16
-                            GET_VAR     S_x
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_ss, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_ss, S_x
                             STORE_ARG32 0
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_212
+                            FAIL_BR     Lf_212
                             jmp         [P_pp_ret_γ]     ; RETURN
 Lf_212:                     jmp         L_error_35
 
 Ln_212:
 ;  pp_Id ===============================================================================================================
 L_pp_Id_37:                 sub         rsp, 16
-                            sub         rsp, 16
-                            GET_VAR     S_x
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_ss, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_ss, S_x
                             STORE_ARG32 0
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_213
+                            FAIL_BR     Lf_213
                             jmp         [P_pp_ret_γ]     ; RETURN
 Lf_213:                     jmp         L_error_35
 
 Ln_213:
 ;  pp_Integer ==========================================================================================================
 L_pp_Integer_38:            sub         rsp, 16
-                            sub         rsp, 16
-                            GET_VAR     S_x
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_ss, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_ss, S_x
                             STORE_ARG32 0
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_214
+                            FAIL_BR     Lf_214
                             jmp         [P_pp_ret_γ]     ; RETURN
 Lf_214:                     jmp         L_error_35
 
 Ln_214:
 ;  pp_Label ============================================================================================================
 L_pp_Label_39:              sub         rsp, 16
-                            sub         rsp, 16
-                            GET_VAR     S_x
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_ss, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_ss, S_x
                             STORE_ARG32 0
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_215
+                            FAIL_BR     Lf_215
                             jmp         [P_pp_ret_γ]     ; RETURN
 Lf_215:                     jmp         L_error_35
 
 Ln_215:
 ;  pp_ProtKwd ==========================================================================================================
 L_pp_ProtKwd_40:            sub         rsp, 16
-                            sub         rsp, 16
-                            GET_VAR     S_x
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_ss, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_ss, S_x
                             STORE_ARG32 0
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_216
+                            FAIL_BR     Lf_216
                             jmp         [P_pp_ret_γ]     ; RETURN
 Lf_216:                     jmp         L_error_35
 
 Ln_216:
 ;  pp_Real =============================================================================================================
 L_pp_Real_41:               sub         rsp, 16
-                            sub         rsp, 16
-                            GET_VAR     S_x
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_ss, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_ss, S_x
                             STORE_ARG32 0
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_217
+                            FAIL_BR     Lf_217
                             jmp         [P_pp_ret_γ]     ; RETURN
 Lf_217:                     jmp         L_error_35
 
 Ln_217:
 ;  pp_SpecialNm ========================================================================================================
 L_pp_SpecialNm_42:          sub         rsp, 16
-                            sub         rsp, 16
-                            GET_VAR     S_x
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_ss, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_ss, S_x
                             STORE_ARG32 0
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_218
+                            FAIL_BR     Lf_218
                             jmp         [P_pp_ret_γ]     ; RETURN
 Lf_218:                     jmp         L_error_35
 
 Ln_218:
 ;  pp_String ===========================================================================================================
 L_pp_String_43:             sub         rsp, 16
-                            sub         rsp, 16
-                            GET_VAR     S_x
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_ss, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_ss, S_x
                             STORE_ARG32 0
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_219
+                            FAIL_BR     Lf_219
                             jmp         [P_pp_ret_γ]     ; RETURN
 Lf_219:                     jmp         L_error_35
 
 Ln_219:
 ;  pp_UnprotKwd ========================================================================================================
 L_pp_UnprotKwd_44:          sub         rsp, 16
-                            sub         rsp, 16
-                            GET_VAR     S_x
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_ss, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_ss, S_x
                             STORE_ARG32 0
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_220
+                            FAIL_BR     Lf_220
                             jmp         [P_pp_ret_γ]     ; RETURN
 Lf_220:                     jmp         L_error_35
 
 Ln_220:
 ;  pp_:() ==============================================================================================================
 L_pp_45:                    sub         rsp, 16
-                            sub         rsp, 16
-                            GET_VAR     S_x
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_ss, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_ss, S_x
                             STORE_ARG32 0
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_221
+                            FAIL_BR     Lf_221
                             jmp         [P_pp_ret_γ]     ; RETURN
 Lf_221:                     jmp         L_error_35
 
 Ln_221:
 ;  pp_:<> ==============================================================================================================
 L_pp_46:                    sub         rsp, 16
-                            sub         rsp, 16
-                            GET_VAR     S_x
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_ss, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_ss, S_x
                             STORE_ARG32 0
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_222
+                            FAIL_BR     Lf_222
                             jmp         [P_pp_ret_γ]     ; RETURN
 Lf_222:                     jmp         L_error_35
 
 Ln_222:
 ;  pp_:S() =============================================================================================================
 L_pp_S_47:                  sub         rsp, 16
-                            sub         rsp, 16
-                            GET_VAR     S_x
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_ss, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_ss, S_x
                             STORE_ARG32 0
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_223
+                            FAIL_BR     Lf_223
                             jmp         [P_pp_ret_γ]     ; RETURN
 Lf_223:                     jmp         L_error_35
 
 Ln_223:
 ;  pp_:S<> =============================================================================================================
 L_pp_S_48:                  sub         rsp, 16
-                            sub         rsp, 16
-                            GET_VAR     S_x
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_ss, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_ss, S_x
                             STORE_ARG32 0
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_224
+                            FAIL_BR     Lf_224
                             jmp         [P_pp_ret_γ]     ; RETURN
 Lf_224:                     jmp         L_error_35
 
 Ln_224:
 ;  pp_:F() =============================================================================================================
 L_pp_F_49:                  sub         rsp, 16
-                            sub         rsp, 16
-                            GET_VAR     S_x
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_ss, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_ss, S_x
                             STORE_ARG32 0
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_225
+                            FAIL_BR     Lf_225
                             jmp         [P_pp_ret_γ]     ; RETURN
 Lf_225:                     jmp         L_error_35
 
 Ln_225:
 ;  pp_:F<> =============================================================================================================
 L_pp_F_50:                  sub         rsp, 16
-                            sub         rsp, 16
-                            GET_VAR     S_x
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_ss, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_ss, S_x
                             STORE_ARG32 0
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_226
+                            FAIL_BR     Lf_226
                             jmp         [P_pp_ret_γ]     ; RETURN
 Lf_226:                     jmp         L_error_35
 
@@ -6563,7 +6318,10 @@ Ln_226:
 ;  ppUnOp ==============================================================================================================
 L_ppUnOp_51:                sub         rsp, 16
                             sub         rsp, 32
-                            GET_VAR     S_x
+                            lea         rdi, [rel S_x]
+                            call        stmt_get
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
                             STORE_ARG32 0
                             sub         rsp, 32
                             lea         rdi, [rel S_ppWidth]
@@ -6589,17 +6347,11 @@ L_ppUnOp_51:                sub         rsp, 16
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Ln_227
+                            FAIL_BR     Ln_227
                             jmp         [P_pp_ret_γ]     ; RETURN
 
 ; ======================================================================================================================
-Ln_227:                     sub         rsp, 16
-                            GET_VAR     S_t
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_227:                     CALL1_VAR   S_Gen, S_t
 
 ; ======================================================================================================================
 Ln_228:                     mov         qword [rbp-32], 1
@@ -6628,7 +6380,10 @@ Ln_229:
 ;  ppBinOp =============================================================================================================
 L_ppBinOp_52:               sub         rsp, 16
                             sub         rsp, 32
-                            GET_VAR     S_x
+                            lea         rdi, [rel S_x]
+                            call        stmt_get
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
                             STORE_ARG32 0
                             sub         rsp, 32
                             lea         rdi, [rel S_ppWidth]
@@ -6654,7 +6409,7 @@ L_ppBinOp_52:               sub         rsp, 16
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Ln_230
+                            FAIL_BR     Ln_230
                             jmp         [P_pp_ret_γ]     ; RETURN
 
 ; ======================================================================================================================
@@ -6680,13 +6435,7 @@ ucall11_ret_o:
 ucall11_done:
 
 ; ======================================================================================================================
-Ln_231:                     sub         rsp, 16
-                            GET_VAR     S_nl
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_231:                     CALL1_VAR   S_Gen, S_nl
 
 ; ======================================================================================================================
 Ln_232:                     APPLY_FN_0  S_DecLevel
@@ -6694,13 +6443,7 @@ Ln_232:                     APPLY_FN_0  S_DecLevel
 
 
 ; ======================================================================================================================
-Ln_233:                     sub         rsp, 16
-                            GET_VAR     S_t
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_233:                     CALL1_VAR   S_Gen, S_t
 
 ; ======================================================================================================================
 Ln_234:                     APPLY_FN_0  S_IncLevel
@@ -6737,184 +6480,176 @@ ucall12_done:
 
 Ln_237:
 ;  pp_! ================================================================================================================
-L_pp_53:                    CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_238
+L_pp_53:                    CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_238
                             jmp         L_ppUnOp_51
 
 Ln_238:
 ;  pp_# ================================================================================================================
-L_pp_54:                    CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_239
+L_pp_54:                    CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_239
                             jmp         L_ppUnOp_51
 
 ; ======================================================================================================================
-Ln_239:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_240
+Ln_239:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_240
                             jmp         L_ppBinOp_52
 Lf_240:                     jmp         L_error_35
 
 Ln_240:
 ;  pp_$ ================================================================================================================
-L_pp_55:                    CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_241
+L_pp_55:                    CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_241
                             jmp         L_ppUnOp_51
 
 ; ======================================================================================================================
-Ln_241:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_242
+Ln_241:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_242
                             jmp         L_ppBinOp_52
 Lf_242:                     jmp         L_error_35
 
 Ln_242:
 ;  pp_% ================================================================================================================
-L_pp_56:                    CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_243
+L_pp_56:                    CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_243
                             jmp         L_ppUnOp_51
 
 ; ======================================================================================================================
-Ln_243:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_244
+Ln_243:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_244
                             jmp         L_ppBinOp_52
 Lf_244:                     jmp         L_error_35
 
 Ln_244:
 ;  pp_& ================================================================================================================
-L_pp_57:                    CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_245
+L_pp_57:                    CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_245
                             jmp         L_ppUnOp_51
 
 ; ======================================================================================================================
-Ln_245:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_246
+Ln_245:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_246
                             jmp         L_ppBinOp_52
 Lf_246:                     jmp         L_error_35
 
 Ln_246:
 ;  pp_* ================================================================================================================
-L_pp_58:                    CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_247
+L_pp_58:                    CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_247
                             jmp         L_ppUnOp_51
 
 ; ======================================================================================================================
-Ln_247:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_248
+Ln_247:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_248
                             jmp         L_ppBinOp_52
 Lf_248:                     jmp         L_error_35
 
 Ln_248:
 ;  pp_+ ================================================================================================================
-L_pp_59:                    CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_249
+L_pp_59:                    CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_249
                             jmp         L_ppUnOp_51
 
 ; ======================================================================================================================
-Ln_249:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_250
+Ln_249:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_250
                             jmp         L_ppBinOp_52
 Lf_250:                     jmp         L_error_35
 
 Ln_250:
 ;  pp_- ================================================================================================================
-L_pp_60:                    CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_251
+L_pp_60:                    CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_251
                             jmp         L_ppUnOp_51
 
 ; ======================================================================================================================
-Ln_251:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_252
+Ln_251:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_252
                             jmp         L_ppBinOp_52
 Lf_252:                     jmp         L_error_35
 
 Ln_252:
 ;  pp_. ================================================================================================================
-L_pp_61:                    CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_253
+L_pp_61:                    CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_253
                             jmp         L_ppUnOp_51
 
 ; ======================================================================================================================
-Ln_253:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_254
+Ln_253:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_254
                             jmp         L_ppBinOp_52
 Lf_254:                     jmp         L_error_35
 
 Ln_254:
 ;  pp_/ ================================================================================================================
-L_pp_62:                    CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_255
+L_pp_62:                    CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_255
                             jmp         L_ppUnOp_51
 
 ; ======================================================================================================================
-Ln_255:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_256
+Ln_255:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_256
                             jmp         L_ppBinOp_52
 Lf_256:                     jmp         L_error_35
 
 Ln_256:
 ;  pp_= ================================================================================================================
-L_pp_63:                    CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_257
+L_pp_63:                    CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_257
                             jmp         L_ppUnOp_51
 
 ; ======================================================================================================================
-Ln_257:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_258
+Ln_257:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_258
                             jmp         L_ppBinOp_52
 Lf_258:                     jmp         L_error_35
 
 Ln_258:
 ;  pp_? ================================================================================================================
-L_pp_64:                    CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_259
+L_pp_64:                    CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_259
                             jmp         L_ppUnOp_51
 
 ; ======================================================================================================================
-Ln_259:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_260
+Ln_259:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_260
                             jmp         L_ppBinOp_52
 Lf_260:                     jmp         L_error_35
 
 Ln_260:
 ;  pp_@ ================================================================================================================
-L_pp_65:                    CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_261
+L_pp_65:                    CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_261
                             jmp         L_ppUnOp_51
 
 ; ======================================================================================================================
-Ln_261:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_262
+Ln_261:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_262
                             jmp         L_ppBinOp_52
 Lf_262:                     jmp         L_error_35
 
 Ln_262:
 ;  pp_^ ================================================================================================================
-L_pp_66:                    CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_263
+L_pp_66:                    CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_263
                             jmp         L_ppBinOp_52
 Lf_263:                     jmp         L_error_35
 
 Ln_263:
 ;  pp_~ ================================================================================================================
-L_pp_67:                    CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_264
+L_pp_67:                    CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_264
                             jmp         L_ppUnOp_51
 
 ; ======================================================================================================================
-Ln_264:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_265
+Ln_264:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_265
                             jmp         L_ppBinOp_52
 Lf_265:                     jmp         L_error_35
 
 Ln_265:
 ;  pp_Comment ==========================================================================================================
-L_pp_Comment_68:            sub         rsp, 16
-                            LOAD_INT    0
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_SetLevel, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+L_pp_Comment_68:            CALL1_INT   S_SetLevel, 0
 
 ; ======================================================================================================================
 Ln_266:                     APPLY_FN_0  S_GenSetCont
@@ -6942,8 +6677,8 @@ Ln_267:                     sub         rsp, 16
                             mov         rdi, [conc_tmp0_rax]
                             mov         rsi, [conc_tmp0_rdx]
                             call        stmt_concat
-                            mov         [rbp-16], rax
-                            mov         [rbp-8], rdx
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
                             STORE_ARG32 0
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
@@ -6953,15 +6688,7 @@ Ln_267:                     sub         rsp, 16
 
 Ln_268:
 ;  pp_Control ==========================================================================================================
-L_pp_Control_69:            sub         rsp, 16
-                            LOAD_INT    0
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_SetLevel, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+L_pp_Control_69:            CALL1_INT   S_SetLevel, 0
 
 ; ======================================================================================================================
 Ln_269:                     APPLY_FN_0  S_GenSetCont
@@ -6989,8 +6716,8 @@ Ln_270:                     sub         rsp, 16
                             mov         rdi, [conc_tmp0_rax]
                             mov         rsi, [conc_tmp0_rdx]
                             call        stmt_concat
-                            mov         [rbp-16], rax
-                            mov         [rbp-8], rdx
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
                             STORE_ARG32 0
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
@@ -7000,38 +6727,20 @@ Ln_270:                     sub         rsp, 16
 
 Ln_271:
 ;  pp_Stmt =============================================================================================================
-L_pp_Stmt_70:               sub         rsp, 16
-                            LOAD_INT    0
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_SetLevel, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+L_pp_Stmt_70:               CALL1_INT   S_SetLevel, 0
 
 ; ======================================================================================================================
-Ln_272:                     sub         rsp, 16
-                            LOAD_STR    S_PL
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_GenSetCont, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_272:                     CALL1_STR   S_GenSetCont, S_PL
 
 ; ======================================================================================================================
-Ln_273:                     GET_VAR     S_ppWidth
-                            mov         qword [rbp-32], 1
+Ln_273:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             FAIL_BR     Ln_274
                             SET_VAR     S_ppWidth
                             jmp         Ln_274
 
 ; ======================================================================================================================
-Ln_274:                     GET_VAR     S_ppLbl
-                            sub         rsp, 16
+Ln_274:                     sub         rsp, 16
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             STORE_ARG32 0
@@ -7044,24 +6753,21 @@ Ln_274:                     GET_VAR     S_ppLbl
                             jmp         Ln_275
 
 ; ======================================================================================================================
-Ln_275:                     GET_VAR     S_ppSubj
-                            mov         qword [rbp-32], 1
+Ln_275:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             FAIL_BR     Ln_276
                             SET_VAR     S_ppSubj
                             jmp         Ln_276
 
 ; ======================================================================================================================
-Ln_276:                     GET_VAR     S_ppPatrn
-                            mov         qword [rbp-32], 1
+Ln_276:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             FAIL_BR     Ln_277
                             SET_VAR     S_ppPatrn
                             jmp         Ln_277
 
 ; ======================================================================================================================
-Ln_277:                     GET_VAR     S_ppAsgn
-                            sub         rsp, 16
+Ln_277:                     sub         rsp, 16
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             STORE_ARG32 0
@@ -7074,71 +6780,48 @@ Ln_277:                     GET_VAR     S_ppAsgn
                             jmp         Ln_278
 
 ; ======================================================================================================================
-Ln_278:                     GET_VAR     S_ppRepl
-                            mov         qword [rbp-32], 1
+Ln_278:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             FAIL_BR     Ln_279
                             SET_VAR     S_ppRepl
                             jmp         Ln_279
 
 ; ======================================================================================================================
-Ln_279:                     GET_VAR     S_ppGo1
-                            mov         qword [rbp-32], 1
+Ln_279:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             FAIL_BR     Ln_280
                             SET_VAR     S_ppGo1
                             jmp         Ln_280
 
 ; ======================================================================================================================
-Ln_280:                     GET_VAR     S_ppGo2
-                            mov         qword [rbp-32], 1
+Ln_280:                     mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             FAIL_BR     Ln_281
                             SET_VAR     S_ppGo2
                             jmp         Ln_281
 
 ; ======================================================================================================================
-Ln_281:                     sub         rsp, 16
-                            GET_VAR     S_ppLbl
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_281:                     CALL1_VAR   S_Gen, S_ppLbl
 
 ; ======================================================================================================================
 Ln_282:                     sub         rsp, 16
-                            sub         rsp, 16
-                            GET_VAR     S_ppSubj
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_t, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_t, S_ppSubj
                             STORE_ARG32 0
                             APPLY_FN_N  S_DIFFER, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_283
+                            FAIL_BR     Lf_283
                             jmp         Ln_283
 Lf_283:                     jmp         L_pp_Stmt7_71
 
 ; ======================================================================================================================
-Ln_283:                     sub         rsp, 16
-                            LOAD_STR    S_SP
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_283:                     CALL1_STR   S_Gen, S_SP
 
 ; ======================================================================================================================
 Ln_284:                     sub         rsp, 16
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 0
                             APPLY_FN_N  S_GenTab, 1
                             add         rsp, 16
@@ -7147,8 +6830,8 @@ Ln_284:                     sub         rsp, 16
 
 ; ======================================================================================================================
 Ln_285:                     sub         rsp, 16
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 0
                             APPLY_FN_N  S_SetLevel, 1
                             add         rsp, 16
@@ -7156,8 +6839,7 @@ Ln_285:                     sub         rsp, 16
 
 
 ; ======================================================================================================================
-Ln_286:                     GET_VAR     S_ppWidth
-                            sub         rsp, 16
+Ln_286:                     sub         rsp, 16
                             CALL1_VAR   S_t, S_ppPatrn
                             STORE_ARG32 0
                             APPLY_FN_N  S_IDENT, 1
@@ -7242,37 +6924,23 @@ ucall13_done:
 
 ; ======================================================================================================================
 Ln_288:                     sub         rsp, 16
-                            sub         rsp, 16
-                            GET_VAR     S_ppPatrn
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_t, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_t, S_ppPatrn
                             STORE_ARG32 0
                             APPLY_FN_N  S_DIFFER, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_289
+                            FAIL_BR     Lf_289
                             jmp         Ln_289
 Lf_289:                     jmp         L_pp_Stmt5_72
 
 ; ======================================================================================================================
-Ln_289:                     sub         rsp, 16
-                            LOAD_STR    S_SP
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_289:                     CALL1_STR   S_Gen, S_SP
 
 ; ======================================================================================================================
 Ln_290:                     sub         rsp, 16
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 0
                             APPLY_FN_N  S_GenTab, 1
                             add         rsp, 16
@@ -7281,8 +6949,8 @@ Ln_290:                     sub         rsp, 16
 
 ; ======================================================================================================================
 Ln_291:                     sub         rsp, 16
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 0
                             APPLY_FN_N  S_SetLevel, 1
                             add         rsp, 16
@@ -7290,8 +6958,7 @@ Ln_291:                     sub         rsp, 16
 
 
 ; ======================================================================================================================
-Ln_292:                     GET_VAR     S_ppWidth
-                            CALL1_VAR   S_IDENT, S_ppAsgn
+Ln_292:                     CALL1_VAR   S_IDENT, S_ppAsgn
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 16
@@ -7359,56 +7026,28 @@ ucall14_ret_o:
 ucall14_done:
 
 ; ======================================================================================================================
-Ln_294:                     sub         rsp, 16
-                            GET_VAR     S_ppAsgn
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_DIFFER, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
-                            FAIL_BR16   Lf_295
+Ln_294:                     CALL1_VAR   S_DIFFER, S_ppAsgn
+                            FAIL_BR     Lf_295
                             jmp         Ln_295
 Lf_295:                     jmp         L_pp_Stmt7_71
 
 ; ======================================================================================================================
-Ln_295:                     sub         rsp, 16
-                            LOAD_STR    S_SP_EQ
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_295:                     CALL1_STR   S_Gen, S_SP_EQ
 
 ; ======================================================================================================================
 Ln_296:                     sub         rsp, 16
-                            sub         rsp, 16
-                            GET_VAR     S_ppRepl
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_t, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_t, S_ppRepl
                             STORE_ARG32 0
                             APPLY_FN_N  S_DIFFER, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_297
+                            FAIL_BR     Lf_297
                             jmp         Ln_297
 Lf_297:                     jmp         L_pp_Stmt7_71
 
 ; ======================================================================================================================
-Ln_297:                     sub         rsp, 16
-                            LOAD_STR    S_SP
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_297:                     CALL1_STR   S_Gen, S_SP
 
 ; ======================================================================================================================
 Ln_298:                     lea         rdi, [rel S_ppRepl]
@@ -7437,32 +7076,18 @@ ucall15_done:
 
 Ln_299:
 ;  pp_Stmt5 ============================================================================================================
-L_pp_Stmt5_72:              sub         rsp, 16
-                            GET_VAR     S_ppAsgn
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_DIFFER, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
-                            FAIL_BR16   Lf_300
+L_pp_Stmt5_72:              CALL1_VAR   S_DIFFER, S_ppAsgn
+                            FAIL_BR     Lf_300
                             jmp         Ln_300
 Lf_300:                     jmp         L_pp_Stmt7_71
 
 ; ======================================================================================================================
-Ln_300:                     sub         rsp, 16
-                            LOAD_STR    S_SP
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_300:                     CALL1_STR   S_Gen, S_SP
 
 ; ======================================================================================================================
 Ln_301:                     sub         rsp, 16
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 0
                             APPLY_FN_N  S_GenTab, 1
                             add         rsp, 16
@@ -7471,8 +7096,8 @@ Ln_301:                     sub         rsp, 16
 
 ; ======================================================================================================================
 Ln_302:                     sub         rsp, 16
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 0
                             APPLY_FN_N  S_SetLevel, 1
                             add         rsp, 16
@@ -7480,49 +7105,27 @@ Ln_302:                     sub         rsp, 16
 
 
 ; ======================================================================================================================
-Ln_303:                     sub         rsp, 16
-                            LOAD_STR    S_EQ
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_303:                     CALL1_STR   S_Gen, S_EQ
 
 ; ======================================================================================================================
 Ln_304:                     sub         rsp, 16
-                            sub         rsp, 16
-                            GET_VAR     S_ppRepl
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_t, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_t, S_ppRepl
                             STORE_ARG32 0
                             APPLY_FN_N  S_DIFFER, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_305
+                            FAIL_BR     Lf_305
                             jmp         Ln_305
 Lf_305:                     jmp         L_pp_Stmt7_71
 
 ; ======================================================================================================================
-Ln_305:                     sub         rsp, 16
-                            LOAD_STR    S_SP
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_305:                     CALL1_STR   S_Gen, S_SP
 
 ; ======================================================================================================================
 Ln_306:                     sub         rsp, 16
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 0
                             APPLY_FN_N  S_GenTab, 1
                             add         rsp, 16
@@ -7531,8 +7134,8 @@ Ln_306:                     sub         rsp, 16
 
 ; ======================================================================================================================
 Ln_307:                     sub         rsp, 16
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 0
                             APPLY_FN_N  S_SetLevel, 1
                             add         rsp, 16
@@ -7540,8 +7143,7 @@ Ln_307:                     sub         rsp, 16
 
 
 ; ======================================================================================================================
-Ln_308:                     GET_VAR     S_ppWidth
-                            sub         rsp, 16
+Ln_308:                     sub         rsp, 16
                             CALL1_VAR   S_t, S_ppGo1
                             STORE_ARG32 0
                             APPLY_FN_N  S_IDENT, 1
@@ -7602,42 +7204,27 @@ ucall16_done:
 Ln_310:
 ;  pp_Stmt7 ============================================================================================================
 L_pp_Stmt7_71:              sub         rsp, 16
-                            sub         rsp, 16
-                            GET_VAR     S_ppGo1
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_t, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_t, S_ppGo1
                             STORE_ARG32 0
                             APPLY_FN_N  S_DIFFER, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_311
+                            FAIL_BR     Lf_311
                             jmp         Ln_311
 Lf_311:                     jmp         L_pp_Stmt9_73
 
 ; ======================================================================================================================
-Ln_311:                     GET_VAR     S_ppWidth
-                            ASSIGN_INT  S_ppWidth, 256, Ln_312
+Ln_311:                     ASSIGN_INT  S_ppWidth, 256, Ln_312
                             jmp         Ln_312
 
 ; ======================================================================================================================
-Ln_312:                     sub         rsp, 16
-                            LOAD_STR    S_SP
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_312:                     CALL1_STR   S_Gen, S_SP
 
 ; ======================================================================================================================
 Ln_313:                     sub         rsp, 16
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 0
                             APPLY_FN_N  S_GenTab, 1
                             add         rsp, 16
@@ -7646,8 +7233,8 @@ Ln_313:                     sub         rsp, 16
 
 ; ======================================================================================================================
 Ln_314:                     sub         rsp, 16
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 0
                             APPLY_FN_N  S_SetLevel, 1
                             add         rsp, 16
@@ -7655,15 +7242,7 @@ Ln_314:                     sub         rsp, 16
 
 
 ; ======================================================================================================================
-Ln_315:                     sub         rsp, 16
-                            LOAD_STR    S_CL
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_315:                     CALL1_STR   S_Gen, S_CL
 
 ; ======================================================================================================================
 Ln_316:                     lea         rdi, [rel S_ppGo1]
@@ -7691,19 +7270,13 @@ ucall17_done:
 
 ; ======================================================================================================================
 Ln_317:                     sub         rsp, 16
-                            sub         rsp, 16
-                            GET_VAR     S_ppGo2
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_t, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_t, S_ppGo2
                             STORE_ARG32 0
                             APPLY_FN_N  S_DIFFER, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_318
+                            FAIL_BR     Lf_318
                             jmp         Ln_318
 Lf_318:                     jmp         L_pp_Stmt9_73
 
@@ -7734,20 +7307,17 @@ ucall18_done:
 
 Ln_319:
 ;  pp_Stmt9 ============================================================================================================
-L_pp_Stmt9_73:              sub         rsp, 16
-                            GET_VAR     S_nl
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+L_pp_Stmt9_73:              CALL1_VAR   S_Gen, S_nl
                             jmp         [P_pp_ret_γ]     ; RETURN
 
 Ln_320:
 ;  pp_ExprList =========================================================================================================
 L_pp_ExprList_74:           sub         rsp, 16
                             sub         rsp, 32
-                            GET_VAR     S_x
+                            lea         rdi, [rel S_x]
+                            call        stmt_get
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
                             STORE_ARG32 0
                             sub         rsp, 32
                             lea         rdi, [rel S_ppWidth]
@@ -7773,7 +7343,7 @@ L_pp_ExprList_74:           sub         rsp, 16
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Ln_321
+                            FAIL_BR     Ln_321
                             jmp         [P_pp_ret_γ]     ; RETURN
 
 ; ======================================================================================================================
@@ -7799,14 +7369,12 @@ ucall19_ret_o:
 ucall19_done:
 
 ; ======================================================================================================================
-Ln_322:                     GET_VAR     S_i
-                            ASSIGN_INT  S_i, 1, Ln_323
+Ln_322:                     ASSIGN_INT  S_i, 1, Ln_323
                             jmp         Ln_323
 
 Ln_323:
 ;  pp_ExprList0 ========================================================================================================
-L_pp_ExprList0_75:          GET_VAR     S_i
-                            CONC2_VV    S_LT, S_i, S_n
+L_pp_ExprList0_75:          CONC2_VV    S_LT, S_i, S_n
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_i, 1
@@ -7823,13 +7391,7 @@ L_pp_ExprList0_75:          GET_VAR     S_i
 Lf_324:                     jmp         [P_pp_ret_γ]     ; RETURN
 
 ; ======================================================================================================================
-Ln_324:                     sub         rsp, 16
-                            GET_VAR     S_nl
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_324:                     CALL1_VAR   S_Gen, S_nl
 
 ; ======================================================================================================================
 Ln_325:                     APPLY_FN_0  S_DecLevel
@@ -7837,15 +7399,7 @@ Ln_325:                     APPLY_FN_0  S_DecLevel
 
 
 ; ======================================================================================================================
-Ln_326:                     sub         rsp, 16
-                            LOAD_STR    S_CM
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_326:                     CALL1_STR   S_Gen, S_CM
 
 ; ======================================================================================================================
 Ln_327:                     APPLY_FN_0  S_IncLevel
@@ -7884,7 +7438,10 @@ Ln_330:
 ;  pp_, ================================================================================================================
 L_pp_76:                    sub         rsp, 16
                             sub         rsp, 32
-                            GET_VAR     S_x
+                            lea         rdi, [rel S_x]
+                            call        stmt_get
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
                             STORE_ARG32 0
                             sub         rsp, 32
                             lea         rdi, [rel S_ppWidth]
@@ -7910,19 +7467,11 @@ L_pp_76:                    sub         rsp, 16
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Ln_331
+                            FAIL_BR     Ln_331
                             jmp         [P_pp_ret_γ]     ; RETURN
 
 ; ======================================================================================================================
-Ln_331:                     sub         rsp, 16
-                            LOAD_STR    S_LP
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_331:                     CALL1_STR   S_Gen, S_LP
 
 ; ======================================================================================================================
 Ln_332:                     APPLY_FN_0  S_IncLevel
@@ -7957,14 +7506,12 @@ ucall21_ret_o:
 ucall21_done:
 
 ; ======================================================================================================================
-Ln_335:                     GET_VAR     S_i
-                            ASSIGN_INT  S_i, 1, Ln_336
+Ln_335:                     ASSIGN_INT  S_i, 1, Ln_336
                             jmp         Ln_336
 
 Ln_336:
 ;  pp_,0 ===============================================================================================================
-L_pp_0_77:                  GET_VAR     S_i
-                            CONC2_VV    S_LT, S_i, S_n
+L_pp_0_77:                  CONC2_VV    S_LT, S_i, S_n
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_i, 1
@@ -7981,13 +7528,7 @@ L_pp_0_77:                  GET_VAR     S_i
 Lf_337:                     jmp         L_COMPUTED_pp_1_78
 
 ; ======================================================================================================================
-Ln_337:                     sub         rsp, 16
-                            GET_VAR     S_nl
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_337:                     CALL1_VAR   S_Gen, S_nl
 
 ; ======================================================================================================================
 Ln_338:                     APPLY_FN_0  S_DecLevel
@@ -7995,15 +7536,7 @@ Ln_338:                     APPLY_FN_0  S_DecLevel
 
 
 ; ======================================================================================================================
-Ln_339:                     sub         rsp, 16
-                            LOAD_STR    S_CM
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_339:                     CALL1_STR   S_Gen, S_CM
 
 ; ======================================================================================================================
 Ln_340:                     APPLY_FN_0  S_IncLevel
@@ -8040,13 +7573,7 @@ ucall22_done:
 
 Ln_343:
 ;  pp_,1 ===============================================================================================================
-L_pp_1_80:                  sub         rsp, 16
-                            GET_VAR     S_nl
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+L_pp_1_80:                  CALL1_VAR   S_Gen, S_nl
 
 ; ======================================================================================================================
 Ln_344:                     APPLY_FN_0  S_DecLevel
@@ -8054,27 +7581,22 @@ Ln_344:                     APPLY_FN_0  S_DecLevel
 
 
 ; ======================================================================================================================
-Ln_345:                     sub         rsp, 16
-                            LOAD_STR    S_RP
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_345:                     CALL1_STR   S_Gen, S_RP
                             jmp         [P_pp_ret_γ]     ; RETURN
 
 Ln_346:
 ;  pp_| ================================================================================================================
-L_pp_81:                    CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_347
+L_pp_81:                    CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_347
                             jmp         L_ppUnOp_51
 
 ; ======================================================================================================================
 Ln_347:                     sub         rsp, 16
                             sub         rsp, 32
-                            GET_VAR     S_x
+                            lea         rdi, [rel S_x]
+                            call        stmt_get
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
                             STORE_ARG32 0
                             sub         rsp, 32
                             lea         rdi, [rel S_ppWidth]
@@ -8100,7 +7622,7 @@ Ln_347:                     sub         rsp, 16
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Ln_348
+                            FAIL_BR     Ln_348
                             jmp         [P_pp_ret_γ]     ; RETURN
 
 ; ======================================================================================================================
@@ -8126,14 +7648,12 @@ ucall23_ret_o:
 ucall23_done:
 
 ; ======================================================================================================================
-Ln_349:                     GET_VAR     S_i
-                            ASSIGN_INT  S_i, 1, Ln_350
+Ln_349:                     ASSIGN_INT  S_i, 1, Ln_350
                             jmp         Ln_350
 
 Ln_350:
 ;  pp_|0 ===============================================================================================================
-L_pp_0_82:                  GET_VAR     S_i
-                            CONC2_VV    S_LT, S_i, S_n
+L_pp_0_82:                  CONC2_VV    S_LT, S_i, S_n
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_i, 1
@@ -8150,13 +7670,7 @@ L_pp_0_82:                  GET_VAR     S_i
 Lf_351:                     jmp         [P_pp_ret_γ]     ; RETURN
 
 ; ======================================================================================================================
-Ln_351:                     sub         rsp, 16
-                            GET_VAR     S_nl
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_351:                     CALL1_VAR   S_Gen, S_nl
 
 ; ======================================================================================================================
 Ln_352:                     APPLY_FN_0  S_DecLevel
@@ -8164,15 +7678,7 @@ Ln_352:                     APPLY_FN_0  S_DecLevel
 
 
 ; ======================================================================================================================
-Ln_353:                     sub         rsp, 16
-                            LOAD_STR    S_OR
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_353:                     CALL1_STR   S_Gen, S_OR
 
 ; ======================================================================================================================
 Ln_354:                     APPLY_FN_0  S_IncLevel
@@ -8211,7 +7717,10 @@ Ln_357:
 ;  pp_.. ===============================================================================================================
 L_pp_84:                    sub         rsp, 16
                             sub         rsp, 32
-                            GET_VAR     S_x
+                            lea         rdi, [rel S_x]
+                            call        stmt_get
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
                             STORE_ARG32 0
                             sub         rsp, 32
                             lea         rdi, [rel S_ppWidth]
@@ -8237,18 +7746,16 @@ L_pp_84:                    sub         rsp, 16
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Ln_358
+                            FAIL_BR     Ln_358
                             jmp         [P_pp_ret_γ]     ; RETURN
 
 ; ======================================================================================================================
-Ln_358:                     GET_VAR     S_i
-                            ASSIGN_INT  S_i, 0, Ln_359
+Ln_358:                     ASSIGN_INT  S_i, 0, Ln_359
                             jmp         Ln_359
 
 Ln_359:
 ;  pp_..0 ==============================================================================================================
-L_pp_0_85:                  GET_VAR     S_i
-                            CONC2_VV    S_LT, S_i, S_n
+L_pp_0_85:                  CONC2_VV    S_LT, S_i, S_n
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_i, 1
@@ -8296,15 +7803,18 @@ Ln_361:                     CONC2_VV    S_LT, S_i, S_n
                             mov         rdi, [conc_tmp0_rax]
                             mov         rsi, [conc_tmp0_rdx]
                             call        stmt_concat
-                            mov         [rbp-16], rax
-                            mov         [rbp-8], rdx
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
                             jmp         L_COMPUTED_pp_0_86
 
 Ln_362:
 ;  pp_[] ===============================================================================================================
 L_pp_87:                    sub         rsp, 16
                             sub         rsp, 32
-                            GET_VAR     S_x
+                            lea         rdi, [rel S_x]
+                            call        stmt_get
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
                             STORE_ARG32 0
                             sub         rsp, 32
                             lea         rdi, [rel S_ppWidth]
@@ -8330,7 +7840,7 @@ L_pp_87:                    sub         rsp, 16
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Ln_363
+                            FAIL_BR     Ln_363
                             jmp         [P_pp_ret_γ]     ; RETURN
 
 ; ======================================================================================================================
@@ -8356,14 +7866,12 @@ ucall26_ret_o:
 ucall26_done:
 
 ; ======================================================================================================================
-Ln_364:                     GET_VAR     S_i
-                            ASSIGN_INT  S_i, 1, Ln_365
+Ln_364:                     ASSIGN_INT  S_i, 1, Ln_365
                             jmp         Ln_365
 
 Ln_365:
 ;  pp_[]0 ==============================================================================================================
-L_pp_0_88:                  GET_VAR     S_i
-                            CONC2_VV    S_LT, S_i, S_n
+L_pp_0_88:                  CONC2_VV    S_LT, S_i, S_n
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_i, 1
@@ -8380,15 +7888,7 @@ L_pp_0_88:                  GET_VAR     S_i
 Lf_366:                     jmp         [P_pp_ret_γ]     ; RETURN
 
 ; ======================================================================================================================
-Ln_366:                     sub         rsp, 16
-                            LOAD_STR    S_LB
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_366:                     CALL1_STR   S_Gen, S_LB
 
 ; ======================================================================================================================
 Ln_367:                     APPLY_FN_0  S_IncLevel
@@ -8423,13 +7923,7 @@ ucall27_ret_o:
 ucall27_done:
 
 ; ======================================================================================================================
-Ln_370:                     sub         rsp, 16
-                            GET_VAR     S_nl
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_370:                     CALL1_VAR   S_Gen, S_nl
 
 ; ======================================================================================================================
 Ln_371:                     APPLY_FN_0  S_DecLevel
@@ -8437,15 +7931,7 @@ Ln_371:                     APPLY_FN_0  S_DecLevel
 
 
 ; ======================================================================================================================
-Ln_372:                     sub         rsp, 16
-                            LOAD_STR    S_RB
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_372:                     CALL1_STR   S_Gen, S_RB
 
 ; ======================================================================================================================
 Ln_373:                     CONC2_VV    S_LT, S_i, S_n
@@ -8457,15 +7943,18 @@ Ln_373:                     CONC2_VV    S_LT, S_i, S_n
                             mov         rdi, [conc_tmp0_rax]
                             mov         rsi, [conc_tmp0_rdx]
                             call        stmt_concat
-                            mov         [rbp-16], rax
-                            mov         [rbp-8], rdx
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
                             jmp         L_COMPUTED_pp_0_89
 
 Ln_374:
 ;  pp_() ===============================================================================================================
 L_pp_90:                    sub         rsp, 16
                             sub         rsp, 32
-                            GET_VAR     S_x
+                            lea         rdi, [rel S_x]
+                            call        stmt_get
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
                             STORE_ARG32 0
                             sub         rsp, 32
                             lea         rdi, [rel S_ppWidth]
@@ -8491,19 +7980,11 @@ L_pp_90:                    sub         rsp, 16
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Ln_375
+                            FAIL_BR     Ln_375
                             jmp         [P_pp_ret_γ]     ; RETURN
 
 ; ======================================================================================================================
-Ln_375:                     sub         rsp, 16
-                            LOAD_STR    S_LP
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_375:                     CALL1_STR   S_Gen, S_LP
 
 ; ======================================================================================================================
 Ln_376:                     APPLY_FN_0  S_IncLevel
@@ -8538,13 +8019,7 @@ ucall28_ret_o:
 ucall28_done:
 
 ; ======================================================================================================================
-Ln_379:                     sub         rsp, 16
-                            GET_VAR     S_nl
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_379:                     CALL1_VAR   S_Gen, S_nl
 
 ; ======================================================================================================================
 Ln_380:                     APPLY_FN_0  S_DecLevel
@@ -8552,22 +8027,17 @@ Ln_380:                     APPLY_FN_0  S_DecLevel
 
 
 ; ======================================================================================================================
-Ln_381:                     sub         rsp, 16
-                            LOAD_STR    S_RP
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_381:                     CALL1_STR   S_Gen, S_RP
                             jmp         [P_pp_ret_γ]     ; RETURN
 
 Ln_382:
 ;  pp_Call =============================================================================================================
 L_pp_Call_91:               sub         rsp, 16
                             sub         rsp, 32
-                            GET_VAR     S_x
+                            lea         rdi, [rel S_x]
+                            call        stmt_get
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
                             STORE_ARG32 0
                             sub         rsp, 32
                             lea         rdi, [rel S_ppWidth]
@@ -8593,7 +8063,7 @@ L_pp_Call_91:               sub         rsp, 16
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Ln_383
+                            FAIL_BR     Ln_383
                             jmp         [P_pp_ret_γ]     ; RETURN
 
 ; ======================================================================================================================
@@ -8620,20 +8090,7 @@ ucall29_done:
 
 ; ======================================================================================================================
 Ln_384:                     sub         rsp, 16
-                            LOAD_STR    S_LP
-                            mov         [conc_tmp0_rax], rax
-                            mov         [conc_tmp0_rdx], rdx
-                            lea         rdi, [rel S_nl]
-                            call        stmt_get
-                            mov         [rbp-32], rax
-                            mov         [rbp-24], rdx
-                            mov         rcx, rdx
-                            mov         rdx, rax
-                            mov         rdi, [conc_tmp0_rax]
-                            mov         rsi, [conc_tmp0_rdx]
-                            call        stmt_concat
-                            mov         [rbp-16], rax
-                            mov         [rbp-8], rdx
+                            CAT2_SV     S_LP, S_nl
                             STORE_ARG32 0
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
@@ -8673,13 +8130,7 @@ ucall30_ret_o:
 ucall30_done:
 
 ; ======================================================================================================================
-Ln_388:                     sub         rsp, 16
-                            GET_VAR     S_nl
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_388:                     CALL1_VAR   S_Gen, S_nl
 
 ; ======================================================================================================================
 Ln_389:                     APPLY_FN_0  S_DecLevel
@@ -8687,15 +8138,7 @@ Ln_389:                     APPLY_FN_0  S_DecLevel
 
 
 ; ======================================================================================================================
-Ln_390:                     sub         rsp, 16
-                            LOAD_STR    S_RP
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_Gen, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+Ln_390:                     CALL1_STR   S_Gen, S_RP
                             jmp         [P_pp_ret_γ]     ; RETURN
 
 Ln_391:
@@ -8709,20 +8152,13 @@ Ln_392:
 
 Ln_393:
 ;  ss ==================================================================================================================
-L_ss_93:                    sub         rsp, 16
-                            GET_VAR     S_x
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_DIFFER, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
-                            FAIL_BR16   Lf_394
+L_ss_93:                    CALL1_VAR   S_DIFFER, S_x
+                            FAIL_BR     Lf_394
                             jmp         Ln_394
 Lf_394:                     jmp         [P_pp_ret_γ]     ; RETURN
 
 ; ======================================================================================================================
-Ln_394:                     GET_VAR     S_len
-                            CALL1_VAR   S_IDENT, S_len
+Ln_394:                     CALL1_VAR   S_IDENT, S_len
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             LOAD_INT    1024
@@ -8738,42 +8174,37 @@ Ln_394:                     GET_VAR     S_len
                             jmp         Ln_395
 
 ; ======================================================================================================================
-Ln_395:                     CONC2_VN16  S_GT_279, S_len
-                            FAIL_BR16   Lf_396
+Ln_395:                     CONC2_VN    S_GT_279, S_len
+                            FAIL_BR     Lf_396
                             jmp         Ln_396
 Lf_396:                     jmp         [P_pp_ret_γ]     ; FRETURN
 
 ; ======================================================================================================================
-Ln_396:                     GET_VAR     S_t
-                            CALL1_VAR   S_t, S_x
+Ln_396:                     CALL1_VAR   S_t, S_x
                             FAIL_BR     Ln_397
                             SET_VAR     S_t
                             jmp         Ln_397
 
 ; ======================================================================================================================
-Ln_397:                     GET_VAR     S_v
-                            CALL1_VAR   S_v, S_x
+Ln_397:                     CALL1_VAR   S_v, S_x
                             FAIL_BR     Ln_398
                             SET_VAR     S_v
                             jmp         Ln_398
 
 ; ======================================================================================================================
-Ln_398:                     GET_VAR     S_n
-                            CALL1_VAR   S_n, S_x
+Ln_398:                     CALL1_VAR   S_n, S_x
                             FAIL_BR     Ln_399
                             SET_VAR     S_n
                             jmp         Ln_399
 
 ; ======================================================================================================================
-Ln_399:                     GET_VAR     S_c
-                            CALL1_VAR   S_c, S_x
+Ln_399:                     CALL1_VAR   S_c, S_x
                             FAIL_BR     Ln_400
                             SET_VAR     S_c
                             jmp         Ln_400
 
 ; ======================================================================================================================
-Ln_400:                     GET_VAR     S_OUTPUT
-                            CONC2_VN    S_GT_279, S_doDebug
+Ln_400:                     CONC2_VN    S_GT_279, S_doDebug
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             LOAD_STR    S_ss_LP
@@ -8879,37 +8310,28 @@ Ln_400:                     GET_VAR     S_OUTPUT
                             jmp         Ln_401
 
 ; ======================================================================================================================
-Ln_401:                     sub         rsp, 16
-                            GET_VAR     S_t
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_DIFFER, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
-                            FAIL_BR16   Lf_402
+Ln_401:                     CALL1_VAR   S_DIFFER, S_t
+                            FAIL_BR     Lf_402
                             jmp         L_COMPUTED_ss_t_94
 Lf_402:                     jmp         [P_pp_ret_γ]     ; RETURN
 
 Ln_402:
 ;  ss_BuiltinVar =======================================================================================================
-L_ss_BuiltinVar_95:         GET_VAR     S_ss
-                            CALL1_VAR   S_upr, S_v
+L_ss_BuiltinVar_95:         CALL1_VAR   S_upr, S_v
                             FAIL_BR     Ln_403
                             SET_VAR     S_ss
                             jmp         L_ss_atomic_96
 
 Ln_403:
 ;  ss_Function =========================================================================================================
-L_ss_Function_97:           GET_VAR     S_ss
-                            CALL1_VAR   S_upr, S_v
+L_ss_Function_97:           CALL1_VAR   S_upr, S_v
                             FAIL_BR     Ln_404
                             SET_VAR     S_ss
                             jmp         L_ss_atomic_96
 
 Ln_404:
 ;  ss_Id ===============================================================================================================
-L_ss_Id_98:                 GET_VAR     S_ss
-                            lea         rdi, [rel S_v]
+L_ss_Id_98:                 lea         rdi, [rel S_v]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
@@ -8919,8 +8341,7 @@ L_ss_Id_98:                 GET_VAR     S_ss
 
 Ln_405:
 ;  ss_Integer ==========================================================================================================
-L_ss_Integer_99:            GET_VAR     S_ss
-                            lea         rdi, [rel S_v]
+L_ss_Integer_99:            lea         rdi, [rel S_v]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
@@ -8990,16 +8411,14 @@ P_407_ω:                    cmp         qword [rel kw_anchor], 0
 
 Ln_407:
 ;  ss_Label0 ===========================================================================================================
-L_ss_Label0_101:            GET_VAR     S_ss
-                            CALL1_VAR   S_upr, S_v
+L_ss_Label0_101:            CALL1_VAR   S_upr, S_v
                             FAIL_BR     Ln_408
                             SET_VAR     S_ss
                             jmp         L_ss_atomic_96
 
 Ln_408:
 ;  ss_Label1 ===========================================================================================================
-L_ss_Label1_102:            GET_VAR     S_ss
-                            lea         rdi, [rel S_v]
+L_ss_Label1_102:            lea         rdi, [rel S_v]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
@@ -9009,16 +8428,14 @@ L_ss_Label1_102:            GET_VAR     S_ss
 
 Ln_409:
 ;  ss_ProtKwd ==========================================================================================================
-L_ss_ProtKwd_103:           GET_VAR     S_ss
-                            CALL1_VAR   S_upr, S_v
+L_ss_ProtKwd_103:           CALL1_VAR   S_upr, S_v
                             FAIL_BR     Ln_410
                             SET_VAR     S_ss
                             jmp         L_ss_atomic_96
 
 Ln_410:
 ;  ss_Real =============================================================================================================
-L_ss_Real_104:              GET_VAR     S_ss
-                            lea         rdi, [rel S_v]
+L_ss_Real_104:              lea         rdi, [rel S_v]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
@@ -9028,16 +8445,14 @@ L_ss_Real_104:              GET_VAR     S_ss
 
 Ln_411:
 ;  ss_SpecialNm ========================================================================================================
-L_ss_SpecialNm_105:         GET_VAR     S_ss
-                            CALL1_VAR   S_upr, S_v
+L_ss_SpecialNm_105:         CALL1_VAR   S_upr, S_v
                             FAIL_BR     Ln_412
                             SET_VAR     S_ss
                             jmp         L_ss_atomic_96
 
 Ln_412:
 ;  ss_String ===========================================================================================================
-L_ss_String_106:            GET_VAR     S_ss
-                            lea         rdi, [rel S_v]
+L_ss_String_106:            lea         rdi, [rel S_v]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
@@ -9047,8 +8462,7 @@ L_ss_String_106:            GET_VAR     S_ss
 
 Ln_413:
 ;  ss_UnprotKwd ========================================================================================================
-L_ss_UnprotKwd_107:         GET_VAR     S_ss
-                            CALL1_VAR   S_upr, S_v
+L_ss_UnprotKwd_107:         CALL1_VAR   S_upr, S_v
                             FAIL_BR     Ln_414
                             SET_VAR     S_ss
                             jmp         L_ss_atomic_96
@@ -9056,28 +8470,24 @@ L_ss_UnprotKwd_107:         GET_VAR     S_ss
 Ln_414:
 ;  ss_atomic ===========================================================================================================
 L_ss_atomic_96:             sub         rsp, 32
-                            sub         rsp, 16
-                            GET_VAR     S_ss
+                            CALL1_VAR   S_SIZE, S_ss
                             STORE_ARG32 0
-                            APPLY_FN_N  S_SIZE, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
-                            STORE_ARG32 0
-                            GET_VAR     S_len
+                            lea         rdi, [rel S_len]
+                            call        stmt_get
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
                             STORE_ARG32 16
                             APPLY_FN_N  S_LE, 2
                             add         rsp, 32
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_415
+                            FAIL_BR     Lf_415
                             jmp         [P_pp_ret_γ]     ; RETURN
 Lf_415:                     jmp         [P_pp_ret_γ]     ; FRETURN
 
 Ln_415:
 ;  ss_:() ==============================================================================================================
-L_ss_108:                   GET_VAR     S_ss
-                            LOAD_STR    S_LP
+L_ss_108:                   LOAD_STR    S_LP
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
@@ -9114,8 +8524,7 @@ Lf_416:                     jmp         L_error_35
 
 Ln_416:
 ;  ss_:<> ==============================================================================================================
-L_ss_109:                   GET_VAR     S_ss
-                            LOAD_STR    S_LT_181
+L_ss_109:                   LOAD_STR    S_LT_181
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
@@ -9152,8 +8561,7 @@ Lf_417:                     jmp         L_error_35
 
 Ln_417:
 ;  ss_:S() =============================================================================================================
-L_ss_S_110:                 GET_VAR     S_ss
-                            LOAD_STR    S_S_LP
+L_ss_S_110:                 LOAD_STR    S_S_LP
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
@@ -9190,8 +8598,7 @@ Lf_418:                     jmp         L_error_35
 
 Ln_418:
 ;  ss_:S<> =============================================================================================================
-L_ss_S_111:                 GET_VAR     S_ss
-                            LOAD_STR    S_S_LT
+L_ss_S_111:                 LOAD_STR    S_S_LT
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
@@ -9228,8 +8635,7 @@ Lf_419:                     jmp         L_error_35
 
 Ln_419:
 ;  ss_:F() =============================================================================================================
-L_ss_F_112:                 GET_VAR     S_ss
-                            LOAD_STR    S_F_LP
+L_ss_F_112:                 LOAD_STR    S_F_LP
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
@@ -9266,8 +8672,7 @@ Lf_420:                     jmp         L_error_35
 
 Ln_420:
 ;  ss_:F<> =============================================================================================================
-L_ss_F_113:                 GET_VAR     S_ss
-                            LOAD_STR    S_F_LT
+L_ss_F_113:                 LOAD_STR    S_F_LT
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
@@ -9304,8 +8709,7 @@ Lf_421:                     jmp         L_error_35
 
 Ln_421:
 ;  ssUnOp ==============================================================================================================
-L_ssUnOp_114:               GET_VAR     S_ss
-                            lea         rdi, [rel S_t]
+L_ssUnOp_114:               lea         rdi, [rel S_t]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
@@ -9346,8 +8750,7 @@ Lf_422:                     jmp         [P_pp_ret_γ]     ; FRETURN
 
 Ln_422:
 ;  ssBinOp =============================================================================================================
-L_ssBinOp_115:              GET_VAR     S_ss
-                            sub         rsp, 32
+L_ssBinOp_115:              sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             STORE_ARG32 0
@@ -9366,8 +8769,7 @@ L_ssBinOp_115:              GET_VAR     S_ss
 Lf_423:                     jmp         [P_pp_ret_γ]     ; FRETURN
 
 ; ======================================================================================================================
-Ln_423:                     GET_VAR     S_ss
-                            CAT2_VS     S_ss, S_SP
+Ln_423:                     CAT2_VS     S_ss, S_SP
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_t]
@@ -9444,177 +8846,176 @@ Lf_424:                     jmp         [P_pp_ret_γ]     ; FRETURN
 
 Ln_424:
 ;  ss_! ================================================================================================================
-L_ss_116:                   CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_425
+L_ss_116:                   CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_425
                             jmp         L_ssUnOp_114
 
 Ln_425:
 ;  ss_# ================================================================================================================
-L_ss_117:                   CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_426
+L_ss_117:                   CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_426
                             jmp         L_ssUnOp_114
 
 ; ======================================================================================================================
-Ln_426:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_427
+Ln_426:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_427
                             jmp         L_ssBinOp_115
 Lf_427:                     jmp         L_error_35
 
 Ln_427:
 ;  ss_$ ================================================================================================================
-L_ss_118:                   CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_428
+L_ss_118:                   CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_428
                             jmp         L_ssUnOp_114
 
 ; ======================================================================================================================
-Ln_428:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_429
+Ln_428:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_429
                             jmp         L_ssBinOp_115
 Lf_429:                     jmp         L_error_35
 
 Ln_429:
 ;  ss_% ================================================================================================================
-L_ss_119:                   CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_430
+L_ss_119:                   CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_430
                             jmp         L_ssUnOp_114
 
 ; ======================================================================================================================
-Ln_430:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_431
+Ln_430:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_431
                             jmp         L_ssBinOp_115
 Lf_431:                     jmp         L_error_35
 
 Ln_431:
 ;  ss_& ================================================================================================================
-L_ss_120:                   CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_432
+L_ss_120:                   CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_432
                             jmp         L_ssUnOp_114
 
 ; ======================================================================================================================
-Ln_432:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_433
+Ln_432:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_433
                             jmp         L_ssBinOp_115
 Lf_433:                     jmp         L_error_35
 
 Ln_433:
 ;  ss_* ================================================================================================================
-L_ss_121:                   CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_434
+L_ss_121:                   CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_434
                             jmp         L_ssUnOp_114
 
 ; ======================================================================================================================
-Ln_434:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_435
+Ln_434:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_435
                             jmp         L_ssBinOp_115
 Lf_435:                     jmp         L_error_35
 
 Ln_435:
 ;  ss_+ ================================================================================================================
-L_ss_122:                   CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_436
+L_ss_122:                   CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_436
                             jmp         L_ssUnOp_114
 
 ; ======================================================================================================================
-Ln_436:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_437
+Ln_436:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_437
                             jmp         L_ssBinOp_115
 Lf_437:                     jmp         L_error_35
 
 Ln_437:
 ;  ss_- ================================================================================================================
-L_ss_123:                   CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_438
+L_ss_123:                   CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_438
                             jmp         L_ssUnOp_114
 
 ; ======================================================================================================================
-Ln_438:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_439
+Ln_438:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_439
                             jmp         L_ssBinOp_115
 Lf_439:                     jmp         L_error_35
 
 Ln_439:
 ;  ss_. ================================================================================================================
-L_ss_124:                   CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_440
+L_ss_124:                   CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_440
                             jmp         L_ssUnOp_114
 
 ; ======================================================================================================================
-Ln_440:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_441
+Ln_440:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_441
                             jmp         L_ssBinOp_115
 Lf_441:                     jmp         L_error_35
 
 Ln_441:
 ;  ss_/ ================================================================================================================
-L_ss_125:                   CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_442
+L_ss_125:                   CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_442
                             jmp         L_ssUnOp_114
 
 ; ======================================================================================================================
-Ln_442:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_443
+Ln_442:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_443
                             jmp         L_ssBinOp_115
 Lf_443:                     jmp         L_error_35
 
 Ln_443:
 ;  ss_= ================================================================================================================
-L_ss_126:                   CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_444
+L_ss_126:                   CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_444
                             jmp         L_ssUnOp_114
 
 ; ======================================================================================================================
-Ln_444:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_445
+Ln_444:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_445
                             jmp         L_ssBinOp_115
 Lf_445:                     jmp         L_error_35
 
 Ln_445:
 ;  ss_? ================================================================================================================
-L_ss_127:                   CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_446
+L_ss_127:                   CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_446
                             jmp         L_ssUnOp_114
 
 ; ======================================================================================================================
-Ln_446:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_447
+Ln_446:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_447
                             jmp         L_ssBinOp_115
 Lf_447:                     jmp         L_error_35
 
 Ln_447:
 ;  ss_@ ================================================================================================================
-L_ss_128:                   CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_448
+L_ss_128:                   CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_448
                             jmp         L_ssUnOp_114
 
 ; ======================================================================================================================
-Ln_448:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_449
+Ln_448:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_449
                             jmp         L_ssBinOp_115
 Lf_449:                     jmp         L_error_35
 
 Ln_449:
 ;  ss_^ ================================================================================================================
-L_ss_129:                   CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_450
+L_ss_129:                   CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_450
                             jmp         L_ssBinOp_115
 Lf_450:                     jmp         L_error_35
 
 Ln_450:
 ;  ss_~ ================================================================================================================
-L_ss_130:                   CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_451
+L_ss_130:                   CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_451
                             jmp         L_ssUnOp_114
 
 ; ======================================================================================================================
-Ln_451:                     CONC2_VI16  S_EQ_311, S_n, 2
-                            FAIL_BR16   Lf_452
+Ln_451:                     CONC2_VI    S_EQ_311, S_n, 2
+                            FAIL_BR     Lf_452
                             jmp         L_ssBinOp_115
 Lf_452:                     jmp         L_error_35
 
 Ln_452:
 ;  ss_ExprList =========================================================================================================
-L_ss_ExprList_131:          GET_VAR     S_ss
-                            sub         rsp, 32
+L_ss_ExprList_131:          sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             STORE_ARG32 0
@@ -9633,14 +9034,12 @@ L_ss_ExprList_131:          GET_VAR     S_ss
 Lf_453:                     jmp         [P_pp_ret_γ]     ; FRETURN
 
 ; ======================================================================================================================
-Ln_453:                     GET_VAR     S_i
-                            ASSIGN_INT  S_i, 1, Ln_454
+Ln_453:                     ASSIGN_INT  S_i, 1, Ln_454
                             jmp         Ln_454
 
 Ln_454:
 ;  ss_ExprList0 ========================================================================================================
-L_ss_ExprList0_132:         GET_VAR     S_i
-                            CONC2_VV    S_LT, S_i, S_n
+L_ss_ExprList0_132:         CONC2_VV    S_LT, S_i, S_n
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_i, 1
@@ -9657,8 +9056,7 @@ L_ss_ExprList0_132:         GET_VAR     S_i
 Lf_455:                     jmp         [P_pp_ret_γ]     ; RETURN
 
 ; ======================================================================================================================
-Ln_455:                     GET_VAR     S_ss
-                            CAT2_VS     S_ss, S_CM_SP
+Ln_455:                     CAT2_VS     S_ss, S_CM_SP
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
@@ -9704,8 +9102,7 @@ Lf_456:                     jmp         [P_pp_ret_γ]     ; FRETURN
 
 Ln_456:
 ;  ss_, ================================================================================================================
-L_ss_133:                   GET_VAR     S_ss
-                            LOAD_STR    S_LP
+L_ss_133:                   LOAD_STR    S_LP
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
@@ -9731,14 +9128,12 @@ L_ss_133:                   GET_VAR     S_ss
 Lf_457:                     jmp         [P_pp_ret_γ]     ; FRETURN
 
 ; ======================================================================================================================
-Ln_457:                     GET_VAR     S_i
-                            ASSIGN_INT  S_i, 1, Ln_458
+Ln_457:                     ASSIGN_INT  S_i, 1, Ln_458
                             jmp         Ln_458
 
 Ln_458:
 ;  ss_,0 ===============================================================================================================
-L_ss_0_134:                 GET_VAR     S_i
-                            CONC2_VV    S_LT, S_i, S_n
+L_ss_0_134:                 CONC2_VV    S_LT, S_i, S_n
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_i, 1
@@ -9755,8 +9150,7 @@ L_ss_0_134:                 GET_VAR     S_i
 Lf_459:                     jmp         L_COMPUTED_ss_1_135
 
 ; ======================================================================================================================
-Ln_459:                     GET_VAR     S_ss
-                            CAT2_VS     S_ss, S_CM_SP
+Ln_459:                     CAT2_VS     S_ss, S_CM_SP
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
@@ -9802,21 +9196,19 @@ Lf_460:                     jmp         [P_pp_ret_γ]     ; FRETURN
 
 Ln_460:
 ;  ss_,1 ===============================================================================================================
-L_ss_1_137:                 GET_VAR     S_ss
-                            CAT2_VS     S_ss, S_RP
+L_ss_1_137:                 CAT2_VS     S_ss, S_RP
                             FAIL_BR     Ln_461
                             SET_VAR     S_ss
                             jmp         [P_pp_ret_γ]     ; RETURN
 
 Ln_461:
 ;  ss_| ================================================================================================================
-L_ss_138:                   CONC2_VI16  S_EQ_311, S_n, 1
-                            FAIL_BR16   Ln_462
+L_ss_138:                   CONC2_VI    S_EQ_311, S_n, 1
+                            FAIL_BR     Ln_462
                             jmp         L_ssUnOp_114
 
 ; ======================================================================================================================
-Ln_462:                     GET_VAR     S_ss
-                            sub         rsp, 32
+Ln_462:                     sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             STORE_ARG32 0
@@ -9835,14 +9227,12 @@ Ln_462:                     GET_VAR     S_ss
 Lf_463:                     jmp         [P_pp_ret_γ]     ; FRETURN
 
 ; ======================================================================================================================
-Ln_463:                     GET_VAR     S_i
-                            ASSIGN_INT  S_i, 1, Ln_464
+Ln_463:                     ASSIGN_INT  S_i, 1, Ln_464
                             jmp         Ln_464
 
 Ln_464:
 ;  ss_|0 ===============================================================================================================
-L_ss_0_139:                 GET_VAR     S_i
-                            CONC2_VV    S_LT, S_i, S_n
+L_ss_0_139:                 CONC2_VV    S_LT, S_i, S_n
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_i, 1
@@ -9859,8 +9249,7 @@ L_ss_0_139:                 GET_VAR     S_i
 Lf_465:                     jmp         [P_pp_ret_γ]     ; RETURN
 
 ; ======================================================================================================================
-Ln_465:                     GET_VAR     S_ss
-                            CAT2_VS     S_ss, S_SP_OR_SP
+Ln_465:                     CAT2_VS     S_ss, S_SP_OR_SP
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
@@ -9906,8 +9295,7 @@ Lf_466:                     jmp         [P_pp_ret_γ]     ; FRETURN
 
 Ln_466:
 ;  ss_.. ===============================================================================================================
-L_ss_141:                   GET_VAR     S_ss
-                            sub         rsp, 32
+L_ss_141:                   sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             STORE_ARG32 0
@@ -9926,14 +9314,12 @@ L_ss_141:                   GET_VAR     S_ss
 Lf_467:                     jmp         [P_pp_ret_γ]     ; FRETURN
 
 ; ======================================================================================================================
-Ln_467:                     GET_VAR     S_i
-                            ASSIGN_INT  S_i, 1, Ln_468
+Ln_467:                     ASSIGN_INT  S_i, 1, Ln_468
                             jmp         Ln_468
 
 Ln_468:
 ;  ss_..0 ==============================================================================================================
-L_ss_0_142:                 GET_VAR     S_i
-                            CONC2_VV    S_LT, S_i, S_n
+L_ss_0_142:                 CONC2_VV    S_LT, S_i, S_n
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_i, 1
@@ -9950,8 +9336,7 @@ L_ss_0_142:                 GET_VAR     S_i
 Lf_469:                     jmp         [P_pp_ret_γ]     ; RETURN
 
 ; ======================================================================================================================
-Ln_469:                     GET_VAR     S_ss
-                            CAT2_VS     S_ss, S_SP
+Ln_469:                     CAT2_VS     S_ss, S_SP
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
@@ -9997,8 +9382,7 @@ Lf_470:                     jmp         [P_pp_ret_γ]     ; FRETURN
 
 Ln_470:
 ;  ss_[] ===============================================================================================================
-L_ss_144:                   GET_VAR     S_ss
-                            sub         rsp, 32
+L_ss_144:                   sub         rsp, 32
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             STORE_ARG32 0
@@ -10017,14 +9401,12 @@ L_ss_144:                   GET_VAR     S_ss
 Lf_471:                     jmp         [P_pp_ret_γ]     ; FRETURN
 
 ; ======================================================================================================================
-Ln_471:                     GET_VAR     S_i
-                            ASSIGN_INT  S_i, 1, Ln_472
+Ln_471:                     ASSIGN_INT  S_i, 1, Ln_472
                             jmp         Ln_472
 
 Ln_472:
 ;  ss_[]0 ==============================================================================================================
-L_ss_0_145:                 GET_VAR     S_i
-                            CONC2_VV    S_LT, S_i, S_n
+L_ss_0_145:                 CONC2_VV    S_LT, S_i, S_n
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             CONC2_VI    S_add, S_i, 1
@@ -10041,8 +9423,7 @@ L_ss_0_145:                 GET_VAR     S_i
 Lf_473:                     jmp         [P_pp_ret_γ]     ; RETURN
 
 ; ======================================================================================================================
-Ln_473:                     GET_VAR     S_ss
-                            CAT2_VS     S_ss, S_LB
+Ln_473:                     CAT2_VS     S_ss, S_LB
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
@@ -10098,8 +9479,7 @@ Lf_474:                     jmp         [P_pp_ret_γ]     ; FRETURN
 
 Ln_474:
 ;  ss_() ===============================================================================================================
-L_ss_147:                   GET_VAR     S_ss
-                            LOAD_STR    S_LP
+L_ss_147:                   LOAD_STR    S_LP
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             sub         rsp, 32
@@ -10136,8 +9516,7 @@ Lf_475:                     jmp         [P_pp_ret_γ]     ; FRETURN
 
 Ln_475:
 ;  ss_Call =============================================================================================================
-L_ss_Call_148:              GET_VAR     S_ss
-                            sub         rsp, 16
+L_ss_Call_148:              sub         rsp, 16
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             STORE_ARG32 0
@@ -10219,20 +9598,18 @@ Ln_477:
 
 Ln_478:
 ;  bVisit_ =============================================================================================================
-L_bVisit_150:               CONC2_VV16  S_APPLY, S_fnc, S_x
-                            FAIL_BR16   Lf_479
+L_bVisit_150:               CONC2_VV    S_APPLY, S_fnc, S_x
+                            FAIL_BR     Lf_479
                             jmp         Ln_479
 Lf_479:                     jmp         [P_pp_ret_γ]     ; RETURN
 
 ; ======================================================================================================================
-Ln_479:                     GET_VAR     S_i
-                            ASSIGN_INT  S_i, 0, Ln_480
+Ln_479:                     ASSIGN_INT  S_i, 0, Ln_480
                             jmp         Ln_480
 
 Ln_480:
 ;  bVisit_1 ============================================================================================================
-L_bVisit_1_151:             GET_VAR     S_i
-                            sub         rsp, 32
+L_bVisit_1_151:             sub         rsp, 32
                             lea         rdi, [rel S_i]
                             call        stmt_get
                             mov         [rbp-32], rax
@@ -10261,10 +9638,13 @@ Lf_481:                     jmp         [P_pp_ret_γ]     ; RETURN
 
 ; ======================================================================================================================
 Ln_481:                     sub         rsp, 32
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 0
-                            GET_VAR     S_fnc
+                            lea         rdi, [rel S_fnc]
+                            call        stmt_get
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
                             STORE_ARG32 16
                             APPLY_FN_N  S_bVisit_421, 2
                             add         rsp, 32
@@ -10282,54 +9662,37 @@ Ln_483:
 ; ======================================================================================================================
 
 ; ======================================================================================================================
-Ln_484:                     GET_VAR     S_Refs
-                            ASSIGN_NULL S_Refs
+Ln_484:                     ASSIGN_NULL S_Refs
                             jmp         L_findRefsEnd_152
 
 Ln_485:
 ;  findRefs ============================================================================================================
-L_findRefs_153:             sub         rsp, 16
-                            GET_VAR     S_x
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_DIFFER, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
-                            FAIL_BR16   Lf_486
+L_findRefs_153:             CALL1_VAR   S_DIFFER, S_x
+                            FAIL_BR     Lf_486
                             jmp         Ln_486
 Lf_486:                     jmp         [P_pp_ret_γ]     ; RETURN
 
 ; ======================================================================================================================
 Ln_486:                     sub         rsp, 32
-                            sub         rsp, 16
-                            GET_VAR     S_x
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_t, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_t, S_x
                             STORE_ARG32 0
                             LOAD_STR    S_Call
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
                             STORE_ARG32 16
                             APPLY_FN_N  S_IDENT, 2
                             add         rsp, 32
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_487
+                            FAIL_BR     Lf_487
                             jmp         Ln_487
 Lf_487:                     jmp         L_findRefs_1_154
 
 ; ======================================================================================================================
-Ln_487:                     GET_VAR     S_n
-                            ASSIGN_INT  S_n, 1, Ln_488
+Ln_487:                     ASSIGN_INT  S_n, 1, Ln_488
                             jmp         Ln_488
 
 Ln_488:
 ;  findRefs_0 ==========================================================================================================
-L_findRefs_0_155:           GET_VAR     S_n
-                            sub         rsp, 32
+L_findRefs_0_155:           sub         rsp, 32
                             lea         rdi, [rel S_n]
                             call        stmt_get
                             mov         [rbp-32], rax
@@ -10358,11 +9721,11 @@ Lf_489:                     jmp         [P_pp_ret_γ]     ; FRETURN
 
 ; ======================================================================================================================
 Ln_489:                     sub         rsp, 32
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 0
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 16
                             APPLY_FN_N  S_bVisit_421, 2
                             add         rsp, 32
@@ -10397,15 +9760,14 @@ L_findRefs_1_154:           sub         rsp, 32
                             mov         rdi, [conc_tmp0_rax]
                             mov         rsi, [conc_tmp0_rdx]
                             call        stmt_concat
-                            mov         [rbp-16], rax
-                            mov         [rbp-8], rdx
-                            FAIL_BR16   Lf_491
+                            mov         [rbp-32], rax
+                            mov         [rbp-24], rdx
+                            FAIL_BR     Lf_491
                             jmp         Ln_491
 Lf_491:                     jmp         L_findRefs_2_156
 
 ; ======================================================================================================================
-Ln_491:                     GET_VAR     S_v
-                            CALL1_VAR   S_ss, S_x
+Ln_491:                     CALL1_VAR   S_ss, S_x
                             FAIL_BR     Ln_492
                             SET_VAR     S_v
                             jmp         L_findRefs_9_157
@@ -10413,29 +9775,20 @@ Ln_491:                     GET_VAR     S_v
 Ln_492:
 ;  findRefs_2 ==========================================================================================================
 L_findRefs_2_156:           sub         rsp, 32
-                            sub         rsp, 16
-                            GET_VAR     S_x
-                            STORE_ARG32 0
-                            APPLY_FN_N  S_t, 1
-                            add         rsp, 16
-                            STORE_RESULT
-
+                            CALL1_VAR   S_t, S_x
                             STORE_ARG32 0
                             LOAD_STR    S_Id
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
                             STORE_ARG32 16
                             APPLY_FN_N  S_IDENT, 2
                             add         rsp, 32
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_493
+                            FAIL_BR     Lf_493
                             jmp         Ln_493
 Lf_493:                     jmp         [P_pp_ret_γ]     ; RETURN
 
 ; ======================================================================================================================
-Ln_493:                     GET_VAR     S_v
-                            CALL1_VAR   S_v, S_x
+Ln_493:                     CALL1_VAR   S_v, S_x
                             FAIL_BR     Ln_494
                             SET_VAR     S_v
                             jmp         L_findRefs_9_157
@@ -10487,8 +9840,7 @@ P_495_ω:                    cmp         qword [rel kw_anchor], 0
                             jmp         [P_pp_ret_γ]     ; FRETURN
 
 ; ======================================================================================================================
-Ln_495:                     GET_VAR     S_Refs
-                            CALL1_VAR   S_DIFFER, S_Refs
+Ln_495:                     CALL1_VAR   S_DIFFER, S_Refs
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_Refs]
@@ -10530,8 +9882,7 @@ Ln_495:                     GET_VAR     S_Refs
                             jmp         [P_pp_ret_γ]     ; FRETURN
 
 ; ======================================================================================================================
-Ln_496:                     GET_VAR     S_Refs
-                            CALL1_VAR   S_IDENT, S_Refs
+Ln_496:                     CALL1_VAR   S_IDENT, S_Refs
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_v]
@@ -10560,21 +9911,18 @@ Ln_498:
 
 Ln_499:
 ;  refs ================================================================================================================
-L_refs_159:                 GET_VAR     S_c
-                            CALL1_VAR   S_c, S_p
+L_refs_159:                 CALL1_VAR   S_c, S_p
                             FAIL_BR     Ln_500
                             SET_VAR     S_c
                             jmp         Ln_500
 
 ; ======================================================================================================================
-Ln_500:                     GET_VAR     S_n
-                            ASSIGN_INT  S_n, 0, Ln_501
+Ln_500:                     ASSIGN_INT  S_n, 0, Ln_501
                             jmp         Ln_501
 
 Ln_501:
 ;  refs_0 ==============================================================================================================
-L_refs_0_160:               GET_VAR     S_n
-                            sub         rsp, 32
+L_refs_0_160:               sub         rsp, 32
                             lea         rdi, [rel S_n]
                             call        stmt_get
                             mov         [rbp-32], rax
@@ -10604,8 +9952,8 @@ Lf_502:                     jmp         [P_pp_ret_γ]     ; RETURN
 ; ======================================================================================================================
 Ln_502:                     sub         rsp, 32
                             sub         rsp, 16
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 0
                             APPLY_FN_N  S_t, 1
                             add         rsp, 16
@@ -10613,20 +9961,17 @@ Ln_502:                     sub         rsp, 32
 
                             STORE_ARG32 0
                             LOAD_STR    S_Stmt
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
                             STORE_ARG32 16
                             APPLY_FN_N  S_IDENT, 2
                             add         rsp, 32
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_503
+                            FAIL_BR     Lf_503
                             jmp         Ln_503
 Lf_503:                     jmp         L_refs_0_160
 
 ; ======================================================================================================================
-Ln_503:                     GET_VAR     S_s
-                            CONC2_VI    S_add, S_s, 1
+Ln_503:                     CONC2_VI    S_add, S_s, 1
                             FAIL_BR     Ln_504
                             SET_VAR     S_s
                             jmp         Ln_504
@@ -10634,8 +9979,8 @@ Ln_503:                     GET_VAR     S_s
 ; ======================================================================================================================
 Ln_504:                     sub         rsp, 16
                             sub         rsp, 16
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 0
                             APPLY_FN_N  S_t, 1
                             add         rsp, 16
@@ -10646,15 +9991,15 @@ Ln_504:                     sub         rsp, 16
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_505
+                            FAIL_BR     Lf_505
                             jmp         Ln_505
 Lf_505:                     jmp         L_refs_0_160
 
 ; ======================================================================================================================
 Ln_505:                     sub         rsp, 32
                             sub         rsp, 16
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 0
                             APPLY_FN_N  S_t, 1
                             add         rsp, 16
@@ -10662,22 +10007,20 @@ Ln_505:                     sub         rsp, 32
 
                             STORE_ARG32 0
                             LOAD_STR    S_EQ
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
                             STORE_ARG32 16
                             APPLY_FN_N  S_IDENT, 2
                             add         rsp, 32
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_506
+                            FAIL_BR     Lf_506
                             jmp         Ln_506
 Lf_506:                     jmp         L_refs_0_160
 
 ; ======================================================================================================================
 Ln_506:                     sub         rsp, 32
                             sub         rsp, 16
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 0
                             APPLY_FN_N  S_t, 1
                             add         rsp, 16
@@ -10685,21 +10028,19 @@ Ln_506:                     sub         rsp, 32
 
                             STORE_ARG32 0
                             LOAD_STR    S_Id
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
                             STORE_ARG32 16
                             APPLY_FN_N  S_IDENT, 2
                             add         rsp, 32
                             STORE_RESULT
 
-                            FAIL_BR16   Ln_507
+                            FAIL_BR     Ln_507
                             jmp         L_refs_1_161
 
 ; ======================================================================================================================
 Ln_507:                     sub         rsp, 32
                             sub         rsp, 16
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 0
                             APPLY_FN_N  S_t, 1
                             add         rsp, 16
@@ -10707,21 +10048,18 @@ Ln_507:                     sub         rsp, 32
 
                             STORE_ARG32 0
                             LOAD_STR    S_DL
-                            mov         [rbp-16], rax
-                            mov         [rbp-8],  rdx
                             STORE_ARG32 16
                             APPLY_FN_N  S_IDENT, 2
                             add         rsp, 32
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_508
+                            FAIL_BR     Lf_508
                             jmp         L_refs_1_161
 Lf_508:                     jmp         L_refs_0_160
 
 Ln_508:
 ;  refs_1 ==============================================================================================================
-L_refs_1_161:               GET_VAR     S_subj
-                            sub         rsp, 16
+L_refs_1_161:               sub         rsp, 16
                             mov         qword [rbp-32], 1
                             mov         qword [rbp-24], 0
                             STORE_ARG32 0
@@ -10734,17 +10072,16 @@ L_refs_1_161:               GET_VAR     S_subj
                             jmp         Ln_509
 
 ; ======================================================================================================================
-Ln_509:                     GET_VAR     S_Refs
-                            ASSIGN_NULL S_Refs
+Ln_509:                     ASSIGN_NULL S_Refs
                             jmp         Ln_510
 
 ; ======================================================================================================================
 Ln_510:                     sub         rsp, 32
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 0
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 16
                             APPLY_FN_N  S_bVisit_421, 2
                             add         rsp, 32
@@ -10752,8 +10089,7 @@ Ln_510:                     sub         rsp, 32
 
 
 ; ======================================================================================================================
-Ln_511:                     GET_VAR     S_OUTPUT
-                            sub         rsp, 48
+Ln_511:                     sub         rsp, 48
                             lea         rdi, [rel S_s]
                             call        stmt_get
                             mov         [rbp-32], rax
@@ -10821,13 +10157,11 @@ L_refsEnd_158:
 ;  refsEnd =============================================================================================================
 
 ; ======================================================================================================================
-Ln_513:                     GET_VAR     S_doDebug
-                            ASSIGN_INT  S_doDebug, 0, Ln_514
+Ln_513:                     ASSIGN_INT  S_doDebug, 0, Ln_514
                             jmp         Ln_514
 
 ; ======================================================================================================================
-Ln_514:                     GET_VAR     S_Space
-                            sub         rsp, 32
+Ln_514:                     sub         rsp, 32
                             sub         rsp, 16
                             CAT2_SV     S_SP, S_tab
                             STORE_ARG32 0
@@ -10851,8 +10185,7 @@ Ln_514:                     GET_VAR     S_Space
 
 Ln_515:
 ;  main00 ==============================================================================================================
-L_main00_162:               GET_VAR     S_Line
-                            lea         rdi, [rel S_INPUT]
+L_main00_162:               lea         rdi, [rel S_INPUT]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
@@ -10863,8 +10196,7 @@ Lf_516:                     GOTO_ALWAYS L_SNO_END     ; END
 
 Ln_516:
 ;  main01 ==============================================================================================================
-L_main01_163:               GET_VAR     S_Src
-                            ASSIGN_NULL S_Src
+L_main01_163:               ASSIGN_NULL S_Src
                             jmp         Ln_517
 
 ; ======================================================================================================================
@@ -10909,8 +10241,7 @@ P_518_ω:                    cmp         qword [rel kw_anchor], 0
                             jmp         L_main02_164
 
 ; ======================================================================================================================
-Ln_518:                     GET_VAR     S_OUTPUT
-                            lea         rdi, [rel S_Line]
+Ln_518:                     lea         rdi, [rel S_Line]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
@@ -10921,8 +10252,7 @@ Ln_518:                     GET_VAR     S_OUTPUT
 
 Ln_519:
 ;  main02 ==============================================================================================================
-L_main02_164:               GET_VAR     S_Src
-                            CAT2_VV     S_Src, S_Line
+L_main02_164:               CAT2_VV     S_Src, S_Line
                             mov         [conc_tmp0_rax], rax
                             mov         [conc_tmp0_rdx], rdx
                             lea         rdi, [rel S_nl]
@@ -10941,8 +10271,7 @@ L_main02_164:               GET_VAR     S_Src
                             jmp         Ln_520
 
 ; ======================================================================================================================
-Ln_520:                     GET_VAR     S_Line
-                            lea         rdi, [rel S_INPUT]
+Ln_520:                     lea         rdi, [rel S_INPUT]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
@@ -11059,14 +10388,14 @@ P_523_ω:                    cmp         qword [rel kw_anchor], 0
 
 ; ======================================================================================================================
 Ln_523:                     sub         rsp, 16
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 0
                             APPLY_FN_N  S_DIFFER, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_524
+                            FAIL_BR     Lf_524
                             jmp         Ln_524
 Lf_524:                     jmp         L_mainErr2_167
 
@@ -11163,14 +10492,14 @@ P_526_ω:                    cmp         qword [rel kw_anchor], 0
 
 ; ======================================================================================================================
 Ln_526:                     sub         rsp, 16
-                            LOAD_NULVCL
-
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
                             STORE_ARG32 0
                             APPLY_FN_N  S_DIFFER, 1
                             add         rsp, 16
                             STORE_RESULT
 
-                            FAIL_BR16   Lf_527
+                            FAIL_BR     Lf_527
                             jmp         Ln_527
 Lf_527:                     jmp         L_mainErr2_167
 
@@ -11201,16 +10530,14 @@ ucall50_done:
 
 Ln_528:
 ;  mainErr1 ============================================================================================================
-L_mainErr1_166:             GET_VAR     S_OUTPUT
-                            LOAD_STR    S_Parse_SP_Error
+L_mainErr1_166:             LOAD_STR    S_Parse_SP_Error
                             FAIL_BR     Ln_529
                             SET_OUTPUT
 
                             jmp         Ln_529
 
 ; ======================================================================================================================
-Ln_529:                     GET_VAR     S_OUTPUT
-                            lea         rdi, [rel S_Src]
+Ln_529:                     lea         rdi, [rel S_Src]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
@@ -11221,16 +10548,14 @@ Ln_529:                     GET_VAR     S_OUTPUT
 
 Ln_530:
 ;  mainErr2 ============================================================================================================
-L_mainErr2_167:             GET_VAR     S_OUTPUT
-                            LOAD_STR    S_Internal_SP_Error
+L_mainErr2_167:             LOAD_STR    S_Internal_SP_Error
                             FAIL_BR     Ln_531
                             SET_OUTPUT
 
                             jmp         Ln_531
 
 ; ======================================================================================================================
-Ln_531:                     GET_VAR     S_OUTPUT
-                            lea         rdi, [rel S_Src]
+Ln_531:                     lea         rdi, [rel S_Src]
                             call        stmt_get
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
@@ -11501,8 +10826,8 @@ patdef_ppI_gamma:
 patdef_ppI_omega:           jmp         [P_ppI_ret_ω]
 
 ; P_Integer_α (α entry)
-P_Integer_α:                SPAN_ALPHA  lit_str_4, 0, span85_saved, cursor, subject_data, subject_len_val, patdef_Integer_gamma, patdef_Integer_omega ; SPAN α
-P_Integer_β:                SPAN_BETA   span85_saved, cursor, patdef_Integer_omega ; SPAN β
+P_Integer_α:                SPAN_ALPHA_VAR S_digits, span_var1_saved, cursor, patdef_Integer_gamma, patdef_Integer_omega ; SPAN_VAR α
+P_Integer_β:                SPAN_BETA_VAR span_var1_saved, cursor, patdef_Integer_omega ; SPAN_VAR β
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Integer_gamma:
                             jmp         [P_Integer_ret_γ]
@@ -11510,16 +10835,16 @@ patdef_Integer_gamma:
 patdef_Integer_omega:       jmp         [P_Integer_ret_ω]
 
 ; P_DQ_α (α entry)
-P_DQ_α:                     jmp         seq_l86_alpha ; SEQ
-P_DQ_β:                     jmp         seq_r86_beta
-seq_l86_alpha:              jmp         seq_l87_alpha ; SEQ
-seq_l86_beta:               jmp         seq_r87_beta
-seq_l87_alpha:              LIT_ALPHA1  34, seq_l87_alpha_saved, cursor, subject_data, subject_len_val, seq_r87_alpha, patdef_DQ_omega ; LIT α
-seq_l87_beta:               LIT_BETA    seq_l87_alpha_saved, cursor, patdef_DQ_omega ; LIT β
-seq_r87_alpha:              BREAK_ALPHA lit_str_4, 0, brk88_saved, cursor, subject_data, subject_len_val, seq_r86_alpha, seq_l87_beta ; BREAK α
-seq_r87_beta:               BREAK_BETA  brk88_saved, cursor, seq_l87_beta ; BREAK β
-seq_r86_alpha:              LIT_ALPHA1  34, seq_r86_alpha_saved, cursor, subject_data, subject_len_val, patdef_DQ_gamma, seq_l86_beta ; LIT α
-seq_r86_beta:               LIT_BETA    seq_r86_alpha_saved, cursor, seq_l86_beta ; LIT β
+P_DQ_α:                     jmp         seq_l85_alpha ; SEQ
+P_DQ_β:                     jmp         seq_r85_beta
+seq_l85_alpha:              jmp         seq_l86_alpha ; SEQ
+seq_l85_beta:               jmp         seq_r86_beta
+seq_l86_alpha:              LIT_ALPHA1  34, seq_l86_alpha_saved, cursor, subject_data, subject_len_val, seq_r86_alpha, patdef_DQ_omega ; LIT α
+seq_l86_beta:               LIT_BETA    seq_l86_alpha_saved, cursor, patdef_DQ_omega ; LIT β
+seq_r86_alpha:              BREAK_ALPHA lit_str_4, 0, brk87_saved, cursor, subject_data, subject_len_val, seq_r85_alpha, seq_l86_beta ; BREAK α
+seq_r86_beta:               BREAK_BETA  brk87_saved, cursor, seq_l86_beta ; BREAK β
+seq_r85_alpha:              LIT_ALPHA1  34, seq_r85_alpha_saved, cursor, subject_data, subject_len_val, patdef_DQ_gamma, seq_l85_beta ; LIT α
+seq_r85_beta:               LIT_BETA    seq_r85_alpha_saved, cursor, seq_l85_beta ; LIT β
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_DQ_gamma:
                             jmp         [P_DQ_ret_γ]
@@ -11527,16 +10852,16 @@ patdef_DQ_gamma:
 patdef_DQ_omega:            jmp         [P_DQ_ret_ω]
 
 ; P_SQ_α (α entry)
-P_SQ_α:                     jmp         seq_l89_alpha ; SEQ
-P_SQ_β:                     jmp         seq_r89_beta
-seq_l89_alpha:              jmp         seq_l90_alpha ; SEQ
-seq_l89_beta:               jmp         seq_r90_beta
-seq_l90_alpha:              LIT_ALPHA1  39, seq_l90_alpha_saved, cursor, subject_data, subject_len_val, seq_r90_alpha, patdef_SQ_omega ; LIT α
-seq_l90_beta:               LIT_BETA    seq_l90_alpha_saved, cursor, patdef_SQ_omega ; LIT β
-seq_r90_alpha:              BREAK_ALPHA lit_str_4, 0, brk91_saved, cursor, subject_data, subject_len_val, seq_r89_alpha, seq_l90_beta ; BREAK α
-seq_r90_beta:               BREAK_BETA  brk91_saved, cursor, seq_l90_beta ; BREAK β
-seq_r89_alpha:              LIT_ALPHA1  39, seq_r89_alpha_saved, cursor, subject_data, subject_len_val, patdef_SQ_gamma, seq_l89_beta ; LIT α
-seq_r89_beta:               LIT_BETA    seq_r89_alpha_saved, cursor, seq_l89_beta ; LIT β
+P_SQ_α:                     jmp         seq_l88_alpha ; SEQ
+P_SQ_β:                     jmp         seq_r88_beta
+seq_l88_alpha:              jmp         seq_l89_alpha ; SEQ
+seq_l88_beta:               jmp         seq_r89_beta
+seq_l89_alpha:              LIT_ALPHA1  39, seq_l89_alpha_saved, cursor, subject_data, subject_len_val, seq_r89_alpha, patdef_SQ_omega ; LIT α
+seq_l89_beta:               LIT_BETA    seq_l89_alpha_saved, cursor, patdef_SQ_omega ; LIT β
+seq_r89_alpha:              BREAK_ALPHA lit_str_4, 0, brk90_saved, cursor, subject_data, subject_len_val, seq_r88_alpha, seq_l89_beta ; BREAK α
+seq_r89_beta:               BREAK_BETA  brk90_saved, cursor, seq_l89_beta ; BREAK β
+seq_r88_alpha:              LIT_ALPHA1  39, seq_r88_alpha_saved, cursor, subject_data, subject_len_val, patdef_SQ_gamma, seq_l88_beta ; LIT α
+seq_r88_beta:               LIT_BETA    seq_r88_alpha_saved, cursor, seq_l88_beta ; LIT β
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_SQ_gamma:
                             jmp         [P_SQ_ret_γ]
@@ -11544,111 +10869,111 @@ patdef_SQ_gamma:
 patdef_SQ_omega:            jmp         [P_SQ_ret_ω]
 
 ; P_String_α (α entry)
-P_String_α:                 ALT_ALPHA   alt92_cur_save, cursor, alt_l92_alpha ; ALT α — save cursor, enter left
-P_String_β:                 SEQ_BETA    alt_r92_beta ; ALT β — resume right
+P_String_α:                 ALT_ALPHA   alt91_cur_save, cursor, alt_l91_alpha ; ALT α — save cursor, enter left
+P_String_β:                 SEQ_BETA    alt_r91_beta ; ALT β — resume right
 
-alt_l92_alpha: ; REF(SQ)
-                            lea         rax, [rel nref93_gamma]
+alt_l91_alpha: ; REF(SQ)
+                            lea         rax, [rel nref92_gamma]
                             mov         [P_SQ_ret_γ], rax
-                            lea         rax, [rel nref93_omega]
+                            lea         rax, [rel nref92_omega]
                             mov         [P_SQ_ret_ω], rax
                             jmp         P_SQ_α
-alt_l92_beta:               lea         rax, [rel nref93_gamma] ; REF(%s)
+alt_l91_beta:               lea         rax, [rel nref92_gamma] ; REF(%s)
                             mov         [P_SQ_ret_γ], rax
-                            lea         rax, [rel nref93_omega]
+                            lea         rax, [rel nref92_omega]
                             mov         [P_SQ_ret_ω], rax
                             jmp         P_SQ_β
 
-nref93_gamma:
+nref92_gamma:
                             jmp         patdef_String_gamma
 ;  String ==============================================================================================================
-nref93_omega:               jmp         alt92_left_omega
-alt92_left_omega:           ALT_OMEGA   alt92_cur_save, cursor, alt_r92_alpha ; ALT left_ω — restore cursor, enter right
+nref92_omega:               jmp         alt91_left_omega
+alt91_left_omega:           ALT_OMEGA   alt91_cur_save, cursor, alt_r91_alpha ; ALT left_ω — restore cursor, enter right
 
-alt_r92_alpha: ; REF(DQ)
-                            lea         rax, [rel nref94_gamma]
+alt_r91_alpha: ; REF(DQ)
+                            lea         rax, [rel nref93_gamma]
                             mov         [P_DQ_ret_γ], rax
-                            lea         rax, [rel nref94_omega]
+                            lea         rax, [rel nref93_omega]
                             mov         [P_DQ_ret_ω], rax
                             jmp         P_DQ_α
-alt_r92_beta:               lea         rax, [rel nref94_gamma] ; REF(%s)
+alt_r91_beta:               lea         rax, [rel nref93_gamma] ; REF(%s)
                             mov         [P_DQ_ret_γ], rax
-                            lea         rax, [rel nref94_omega]
+                            lea         rax, [rel nref93_omega]
                             mov         [P_DQ_ret_ω], rax
                             jmp         P_DQ_β
 
-nref94_gamma:
+nref93_gamma:
                             jmp         patdef_String_gamma
-nref94_omega:               jmp         patdef_String_omega
+nref93_omega:               jmp         patdef_String_omega
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_String_gamma:
                             jmp         [P_String_ret_γ]
 patdef_String_omega:        jmp         [P_String_ret_ω]
 
 ; P_Real_α (α entry)
-P_Real_α:                   ALT_ALPHA   alt95_cur_save, cursor, alt_l95_alpha ; ALT α — save cursor, enter left
-P_Real_β:                   SEQ_BETA    alt_r95_beta ; ALT β — resume right
-alt_l95_alpha:              jmp         seq_l96_alpha ; SEQ
-alt_l95_beta:               jmp         seq_r96_beta
+P_Real_α:                   ALT_ALPHA   alt94_cur_save, cursor, alt_l94_alpha ; ALT α — save cursor, enter left
+P_Real_β:                   SEQ_BETA    alt_r94_beta ; ALT β — resume right
+alt_l94_alpha:              jmp         seq_l95_alpha ; SEQ
+alt_l94_beta:               jmp         seq_r95_beta
+seq_l95_alpha:              jmp         seq_l96_alpha ; SEQ
+seq_l95_beta:               jmp         seq_r96_beta
 seq_l96_alpha:              jmp         seq_l97_alpha ; SEQ
 seq_l96_beta:               jmp         seq_r97_beta
 seq_l97_alpha:              jmp         seq_l98_alpha ; SEQ
 seq_l97_beta:               jmp         seq_r98_beta
-seq_l98_alpha:              jmp         seq_l99_alpha ; SEQ
-seq_l98_beta:               jmp         seq_r99_beta
-seq_l99_alpha:              SPAN_ALPHA  lit_str_4, 0, span100_saved, cursor, subject_data, subject_len_val, seq_r99_alpha, alt95_left_omega ; SPAN α
-seq_l99_beta:               SPAN_BETA   span100_saved, cursor, alt95_left_omega ; SPAN β
-seq_r99_alpha:              ALT_ALPHA   alt101_cur_save, cursor, alt_l101_alpha ; ALT α — save cursor, enter left
-seq_r99_beta:               SEQ_BETA    alt_r101_beta ; ALT β — resume right
-alt_l101_alpha:             jmp         seq_l102_alpha ; SEQ
-alt_l101_beta:              jmp         seq_r102_beta
-seq_l102_alpha:             LIT_ALPHA1  46, seq_l102_alpha_saved, cursor, subject_data, subject_len_val, seq_r102_alpha, alt101_left_omega ; LIT α
-seq_l102_beta:              LIT_BETA    seq_l102_alpha_saved, cursor, alt101_left_omega ; LIT β
+seq_l98_alpha:              SPAN_ALPHA_VAR S_digits, span_var6_saved, cursor, seq_r98_alpha, alt94_left_omega ; SPAN_VAR α
+seq_l98_beta:               SPAN_BETA_VAR span_var6_saved, cursor, alt94_left_omega ; SPAN_VAR β
+seq_r98_alpha:              ALT_ALPHA   alt99_cur_save, cursor, alt_l99_alpha ; ALT α — save cursor, enter left
+seq_r98_beta:               SEQ_BETA    alt_r99_beta ; ALT β — resume right
+alt_l99_alpha:              jmp         seq_l100_alpha ; SEQ
+alt_l99_beta:               jmp         seq_r100_beta
+seq_l100_alpha:             LIT_ALPHA1  46, seq_l100_alpha_saved, cursor, subject_data, subject_len_val, seq_r100_alpha, alt99_left_omega ; LIT α
+seq_l100_beta:              LIT_BETA    seq_l100_alpha_saved, cursor, alt99_left_omega ; LIT β
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r102_alpha:
-seq_r102_beta:              jmp         seq_l102_beta
-alt101_left_omega:          ALT_OMEGA   alt101_cur_save, cursor, alt_r101_alpha ; ALT left_ω — restore cursor, enter right
+seq_r100_alpha:
+seq_r100_beta:              jmp         seq_l100_beta
+alt99_left_omega:           ALT_OMEGA   alt99_cur_save, cursor, alt_r99_alpha ; ALT left_ω — restore cursor, enter right
 
 ; UNRESOLVED named pattern ref: epsilon → ω
-alt_r101_alpha:
-alt_r101_beta:              jmp         seq_l99_beta
-seq_r98_alpha:              ALT_ALPHA   alt103_cur_save, cursor, alt_l103_alpha ; ALT α — save cursor, enter left
-seq_r98_beta:               SEQ_BETA    alt_r103_beta ; ALT β — resume right
-alt_l103_alpha:             LIT_ALPHA1  69, alt_l103_alpha_saved, cursor, subject_data, subject_len_val, seq_r97_alpha, alt103_left_omega ; LIT α
+alt_r99_alpha:
+alt_r99_beta:               jmp         seq_l98_beta
+seq_r97_alpha:              ALT_ALPHA   alt101_cur_save, cursor, alt_l101_alpha ; ALT α — save cursor, enter left
+seq_r97_beta:               SEQ_BETA    alt_r101_beta ; ALT β — resume right
+alt_l101_alpha:             LIT_ALPHA1  69, alt_l101_alpha_saved, cursor, subject_data, subject_len_val, seq_r96_alpha, alt101_left_omega ; LIT α
+alt_l101_beta:              LIT_BETA    alt_l101_alpha_saved, cursor, alt101_left_omega ; LIT β
+alt101_left_omega:          ALT_OMEGA   alt101_cur_save, cursor, alt_r101_alpha ; ALT left_ω — restore cursor, enter right
+alt_r101_alpha:             LIT_ALPHA1  101, alt_r101_alpha_saved, cursor, subject_data, subject_len_val, seq_r96_alpha, seq_l97_beta ; LIT α
+alt_r101_beta:              LIT_BETA    alt_r101_alpha_saved, cursor, seq_l97_beta ; LIT β
+seq_r96_alpha:              ALT_ALPHA   alt102_cur_save, cursor, alt_l102_alpha ; ALT α — save cursor, enter left
+seq_r96_beta:               SEQ_BETA    alt_r102_beta ; ALT β — resume right
+alt_l102_alpha:             ALT_ALPHA   alt103_cur_save, cursor, alt_l103_alpha ; ALT α — save cursor, enter left
+alt_l102_beta:              SEQ_BETA    alt_r103_beta ; ALT β — resume right
+alt_l103_alpha:             LIT_ALPHA1  43, alt_l103_alpha_saved, cursor, subject_data, subject_len_val, seq_r95_alpha, alt103_left_omega ; LIT α
 alt_l103_beta:              LIT_BETA    alt_l103_alpha_saved, cursor, alt103_left_omega ; LIT β
 alt103_left_omega:          ALT_OMEGA   alt103_cur_save, cursor, alt_r103_alpha ; ALT left_ω — restore cursor, enter right
-alt_r103_alpha:             LIT_ALPHA1  101, alt_r103_alpha_saved, cursor, subject_data, subject_len_val, seq_r97_alpha, seq_l98_beta ; LIT α
-alt_r103_beta:              LIT_BETA    alt_r103_alpha_saved, cursor, seq_l98_beta ; LIT β
-seq_r97_alpha:              ALT_ALPHA   alt104_cur_save, cursor, alt_l104_alpha ; ALT α — save cursor, enter left
-seq_r97_beta:               SEQ_BETA    alt_r104_beta ; ALT β — resume right
-alt_l104_alpha:             ALT_ALPHA   alt105_cur_save, cursor, alt_l105_alpha ; ALT α — save cursor, enter left
-alt_l104_beta:              SEQ_BETA    alt_r105_beta ; ALT β — resume right
-alt_l105_alpha:             LIT_ALPHA1  43, alt_l105_alpha_saved, cursor, subject_data, subject_len_val, seq_r96_alpha, alt105_left_omega ; LIT α
-alt_l105_beta:              LIT_BETA    alt_l105_alpha_saved, cursor, alt105_left_omega ; LIT β
-alt105_left_omega:          ALT_OMEGA   alt105_cur_save, cursor, alt_r105_alpha ; ALT left_ω — restore cursor, enter right
-alt_r105_alpha:             LIT_ALPHA1  45, alt_r105_alpha_saved, cursor, subject_data, subject_len_val, seq_r96_alpha, alt104_left_omega ; LIT α
-alt_r105_beta:              LIT_BETA    alt_r105_alpha_saved, cursor, alt104_left_omega ; LIT β
-alt104_left_omega:          ALT_OMEGA   alt104_cur_save, cursor, alt_r104_alpha ; ALT left_ω — restore cursor, enter right
+alt_r103_alpha:             LIT_ALPHA1  45, alt_r103_alpha_saved, cursor, subject_data, subject_len_val, seq_r95_alpha, alt102_left_omega ; LIT α
+alt_r103_beta:              LIT_BETA    alt_r103_alpha_saved, cursor, alt102_left_omega ; LIT β
+alt102_left_omega:          ALT_OMEGA   alt102_cur_save, cursor, alt_r102_alpha ; ALT left_ω — restore cursor, enter right
 
 ; UNRESOLVED named pattern ref: epsilon → ω
-alt_r104_alpha:
-alt_r104_beta:              jmp         seq_l97_beta
-seq_r96_alpha:              SPAN_ALPHA  lit_str_4, 0, span106_saved, cursor, subject_data, subject_len_val, patdef_Real_gamma, seq_l96_beta ; SPAN α
-seq_r96_beta:               SPAN_BETA   span106_saved, cursor, seq_l96_beta ; SPAN β
-alt95_left_omega:           ALT_OMEGA   alt95_cur_save, cursor, alt_r95_alpha ; ALT left_ω — restore cursor, enter right
-alt_r95_alpha:              jmp         seq_l107_alpha ; SEQ
-alt_r95_beta:               jmp         seq_r107_beta
-seq_l107_alpha:             jmp         seq_l108_alpha ; SEQ
-seq_l107_beta:              jmp         seq_r108_beta
-seq_l108_alpha:             SPAN_ALPHA  lit_str_4, 0, span109_saved, cursor, subject_data, subject_len_val, seq_r108_alpha, patdef_Real_omega ; SPAN α
-seq_l108_beta:              SPAN_BETA   span109_saved, cursor, patdef_Real_omega ; SPAN β
-seq_r108_alpha:             LIT_ALPHA1  46, seq_r108_alpha_saved, cursor, subject_data, subject_len_val, seq_r107_alpha, seq_l108_beta ; LIT α
-seq_r108_beta:              LIT_BETA    seq_r108_alpha_saved, cursor, seq_l108_beta ; LIT β
+alt_r102_alpha:
+alt_r102_beta:              jmp         seq_l96_beta
+seq_r95_alpha:              SPAN_ALPHA_VAR S_digits, span_var3_saved, cursor, patdef_Real_gamma, seq_l95_beta ; SPAN_VAR α
+seq_r95_beta:               SPAN_BETA_VAR span_var3_saved, cursor, seq_l95_beta ; SPAN_VAR β
+alt94_left_omega:           ALT_OMEGA   alt94_cur_save, cursor, alt_r94_alpha ; ALT left_ω — restore cursor, enter right
+alt_r94_alpha:              jmp         seq_l104_alpha ; SEQ
+alt_r94_beta:               jmp         seq_r104_beta
+seq_l104_alpha:             jmp         seq_l105_alpha ; SEQ
+seq_l104_beta:              jmp         seq_r105_beta
+seq_l105_alpha:             SPAN_ALPHA_VAR S_digits, span_var4_saved, cursor, seq_r105_alpha, patdef_Real_omega ; SPAN_VAR α
+seq_l105_beta:              SPAN_BETA_VAR span_var4_saved, cursor, patdef_Real_omega ; SPAN_VAR β
+seq_r105_alpha:             LIT_ALPHA1  46, seq_r105_alpha_saved, cursor, subject_data, subject_len_val, seq_r104_alpha, seq_l105_beta ; LIT α
+seq_r105_beta:              LIT_BETA    seq_r105_alpha_saved, cursor, seq_l105_beta ; LIT β
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r107_alpha:
-seq_r107_beta:              jmp         seq_l107_beta
+seq_r104_alpha:
+seq_r104_beta:              jmp         seq_l104_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Real_gamma:
                             jmp         [P_Real_ret_γ]
@@ -11656,14 +10981,14 @@ patdef_Real_gamma:
 patdef_Real_omega:          jmp         [P_Real_ret_ω]
 
 ; P_Id_α (α entry)
-P_Id_α:                     jmp         seq_l110_alpha ; SEQ
-P_Id_β:                     jmp         seq_r110_beta
-seq_l110_alpha:             ANY_ALPHA   lit_str_4, 0, any111_saved, cursor, subject_data, subject_len_val, seq_r110_alpha, patdef_Id_omega ; ANY α
-seq_l110_beta:              ANY_BETA    any111_saved, cursor, patdef_Id_omega ; ANY β
+P_Id_α:                     jmp         seq_l106_alpha ; SEQ
+P_Id_β:                     jmp         seq_r106_beta
+seq_l106_alpha:             ANY_ALPHA   lit_str_4, 0, any107_saved, cursor, subject_data, subject_len_val, seq_r106_alpha, patdef_Id_omega ; ANY α
+seq_l106_beta:              ANY_BETA    any107_saved, cursor, patdef_Id_omega ; ANY β
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r110_alpha:
-seq_r110_beta:              jmp         seq_l110_beta
+seq_r106_alpha:
+seq_r106_beta:              jmp         seq_l106_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Id_gamma:
                             jmp         [P_Id_ret_γ]
@@ -11673,18 +10998,18 @@ patdef_Id_omega:            jmp         [P_Id_ret_ω]
 ; P_Function_α (α entry)
 
 P_Function_α: ; DOL(cap $  cap)
-                            DOL_SAVE    dol_entry_cap, cursor, dol112_child_alpha ; DOL α — save entry cursor
-P_Function_β:               jmp         dol112_child_beta ; DOL β
+                            DOL_SAVE    dol_entry_cap, cursor, dol108_child_alpha ; DOL α — save entry cursor
+P_Function_β:               jmp         dol108_child_beta ; DOL β
 
-dol112_child_alpha: ; DOL(tx $  tx)
-                            DOL_SAVE    dol_entry_tx, cursor, dol113_child_alpha ; DOL α — save entry cursor
-dol112_child_beta:          jmp         dol113_child_beta ; DOL β
-dol113_child_alpha:         SPAN_ALPHA  lit_str_4, 0, span114_saved, cursor, subject_data, subject_len_val, dol113_gamma, dol113_omega ; SPAN α
-dol113_child_beta:          SPAN_BETA   span114_saved, cursor, dol113_omega ; SPAN β
-dol113_gamma:               DOL_CAPTURE dol_entry_tx, cursor, cap_tx_buf, cap_tx_len, subject_data, dol112_gamma ; DOL γ — capture span
-dol113_omega:               jmp         dol112_omega ; DOL ω — child failed
-dol112_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_Function_gamma ; DOL γ — capture span
-dol112_omega:               jmp         patdef_Function_omega ; DOL ω — child failed
+dol108_child_alpha: ; DOL(tx $  tx)
+                            DOL_SAVE    dol_entry_tx, cursor, dol109_child_alpha ; DOL α — save entry cursor
+dol108_child_beta:          jmp         dol109_child_beta ; DOL β
+dol109_child_alpha:         SPAN_ALPHA  lit_str_4, 0, span110_saved, cursor, subject_data, subject_len_val, dol109_gamma, dol109_omega ; SPAN α
+dol109_child_beta:          SPAN_BETA   span110_saved, cursor, dol109_omega ; SPAN β
+dol109_gamma:               DOL_CAPTURE dol_entry_tx, cursor, cap_tx_buf, cap_tx_len, subject_data, dol108_gamma ; DOL γ — capture span
+dol109_omega:               jmp         dol108_omega ; DOL ω — child failed
+dol108_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_Function_gamma ; DOL γ — capture span
+dol108_omega:               jmp         patdef_Function_omega ; DOL ω — child failed
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Function_gamma:
                             jmp         [P_Function_ret_γ]
@@ -11694,18 +11019,18 @@ patdef_Function_omega:      jmp         [P_Function_ret_ω]
 ; P_BuiltinVar_α (α entry)
 
 P_BuiltinVar_α: ; DOL(cap $  cap)
-                            DOL_SAVE    dol_entry_cap, cursor, dol115_child_alpha ; DOL α — save entry cursor
-P_BuiltinVar_β:             jmp         dol115_child_beta ; DOL β
+                            DOL_SAVE    dol_entry_cap, cursor, dol111_child_alpha ; DOL α — save entry cursor
+P_BuiltinVar_β:             jmp         dol111_child_beta ; DOL β
 
-dol115_child_alpha: ; DOL(tx $  tx)
-                            DOL_SAVE    dol_entry_tx, cursor, dol116_child_alpha ; DOL α — save entry cursor
-dol115_child_beta:          jmp         dol116_child_beta ; DOL β
-dol116_child_alpha:         SPAN_ALPHA  lit_str_4, 0, span117_saved, cursor, subject_data, subject_len_val, dol116_gamma, dol116_omega ; SPAN α
-dol116_child_beta:          SPAN_BETA   span117_saved, cursor, dol116_omega ; SPAN β
-dol116_gamma:               DOL_CAPTURE dol_entry_tx, cursor, cap_tx_buf, cap_tx_len, subject_data, dol115_gamma ; DOL γ — capture span
-dol116_omega:               jmp         dol115_omega ; DOL ω — child failed
-dol115_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_BuiltinVar_gamma ; DOL γ — capture span
-dol115_omega:               jmp         patdef_BuiltinVar_omega ; DOL ω — child failed
+dol111_child_alpha: ; DOL(tx $  tx)
+                            DOL_SAVE    dol_entry_tx, cursor, dol112_child_alpha ; DOL α — save entry cursor
+dol111_child_beta:          jmp         dol112_child_beta ; DOL β
+dol112_child_alpha:         SPAN_ALPHA  lit_str_4, 0, span113_saved, cursor, subject_data, subject_len_val, dol112_gamma, dol112_omega ; SPAN α
+dol112_child_beta:          SPAN_BETA   span113_saved, cursor, dol112_omega ; SPAN β
+dol112_gamma:               DOL_CAPTURE dol_entry_tx, cursor, cap_tx_buf, cap_tx_len, subject_data, dol111_gamma ; DOL γ — capture span
+dol112_omega:               jmp         dol111_omega ; DOL ω — child failed
+dol111_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_BuiltinVar_gamma ; DOL γ — capture span
+dol111_omega:               jmp         patdef_BuiltinVar_omega ; DOL ω — child failed
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_BuiltinVar_gamma:
                             jmp         [P_BuiltinVar_ret_γ]
@@ -11715,8 +11040,33 @@ patdef_BuiltinVar_omega:    jmp         [P_BuiltinVar_ret_ω]
 ; P_SpecialNm_α (α entry)
 
 P_SpecialNm_α: ; DOL(cap $  cap)
+                            DOL_SAVE    dol_entry_cap, cursor, dol114_child_alpha ; DOL α — save entry cursor
+P_SpecialNm_β:              jmp         dol114_child_beta ; DOL β
+
+dol114_child_alpha: ; DOL(tx $  tx)
+                            DOL_SAVE    dol_entry_tx, cursor, dol115_child_alpha ; DOL α — save entry cursor
+dol114_child_beta:          jmp         dol115_child_beta ; DOL β
+dol115_child_alpha:         SPAN_ALPHA  lit_str_4, 0, span116_saved, cursor, subject_data, subject_len_val, dol115_gamma, dol115_omega ; SPAN α
+dol115_child_beta:          SPAN_BETA   span116_saved, cursor, dol115_omega ; SPAN β
+dol115_gamma:               DOL_CAPTURE dol_entry_tx, cursor, cap_tx_buf, cap_tx_len, subject_data, dol114_gamma ; DOL γ — capture span
+dol115_omega:               jmp         dol114_omega ; DOL ω — child failed
+dol114_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_SpecialNm_gamma ; DOL γ — capture span
+dol114_omega:               jmp         patdef_SpecialNm_omega ; DOL ω — child failed
+;  γ/ω ---------------------------------------------------------------------------------------------------------------
+patdef_SpecialNm_gamma:
+                            jmp         [P_SpecialNm_ret_γ]
+;  SpecialNm ===========================================================================================================
+patdef_SpecialNm_omega:     jmp         [P_SpecialNm_ret_ω]
+
+; P_ProtKwd_α (α entry)
+P_ProtKwd_α:                jmp         seq_l117_alpha ; SEQ
+P_ProtKwd_β:                jmp         seq_r117_beta
+seq_l117_alpha:             LIT_ALPHA1  38, seq_l117_alpha_saved, cursor, subject_data, subject_len_val, seq_r117_alpha, patdef_ProtKwd_omega ; LIT α
+seq_l117_beta:              LIT_BETA    seq_l117_alpha_saved, cursor, patdef_ProtKwd_omega ; LIT β
+
+seq_r117_alpha: ; DOL(cap $  cap)
                             DOL_SAVE    dol_entry_cap, cursor, dol118_child_alpha ; DOL α — save entry cursor
-P_SpecialNm_β:              jmp         dol118_child_beta ; DOL β
+seq_r117_beta:              jmp         dol118_child_beta ; DOL β
 
 dol118_child_alpha: ; DOL(tx $  tx)
                             DOL_SAVE    dol_entry_tx, cursor, dol119_child_alpha ; DOL α — save entry cursor
@@ -11725,19 +11075,19 @@ dol119_child_alpha:         SPAN_ALPHA  lit_str_4, 0, span120_saved, cursor, sub
 dol119_child_beta:          SPAN_BETA   span120_saved, cursor, dol119_omega ; SPAN β
 dol119_gamma:               DOL_CAPTURE dol_entry_tx, cursor, cap_tx_buf, cap_tx_len, subject_data, dol118_gamma ; DOL γ — capture span
 dol119_omega:               jmp         dol118_omega ; DOL ω — child failed
-dol118_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_SpecialNm_gamma ; DOL γ — capture span
-dol118_omega:               jmp         patdef_SpecialNm_omega ; DOL ω — child failed
+dol118_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_ProtKwd_gamma ; DOL γ — capture span
+dol118_omega:               jmp         seq_l117_beta ; DOL ω — child failed
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
-patdef_SpecialNm_gamma:
-                            jmp         [P_SpecialNm_ret_γ]
-;  SpecialNm ===========================================================================================================
-patdef_SpecialNm_omega:     jmp         [P_SpecialNm_ret_ω]
+patdef_ProtKwd_gamma:
+                            jmp         [P_ProtKwd_ret_γ]
+;  ProtKwd =============================================================================================================
+patdef_ProtKwd_omega:       jmp         [P_ProtKwd_ret_ω]
 
-; P_ProtKwd_α (α entry)
-P_ProtKwd_α:                jmp         seq_l121_alpha ; SEQ
-P_ProtKwd_β:                jmp         seq_r121_beta
-seq_l121_alpha:             LIT_ALPHA1  38, seq_l121_alpha_saved, cursor, subject_data, subject_len_val, seq_r121_alpha, patdef_ProtKwd_omega ; LIT α
-seq_l121_beta:              LIT_BETA    seq_l121_alpha_saved, cursor, patdef_ProtKwd_omega ; LIT β
+; P_UnprotKwd_α (α entry)
+P_UnprotKwd_α:              jmp         seq_l121_alpha ; SEQ
+P_UnprotKwd_β:              jmp         seq_r121_beta
+seq_l121_alpha:             LIT_ALPHA1  38, seq_l121_alpha_saved, cursor, subject_data, subject_len_val, seq_r121_alpha, patdef_UnprotKwd_omega ; LIT α
+seq_l121_beta:              LIT_BETA    seq_l121_alpha_saved, cursor, patdef_UnprotKwd_omega ; LIT β
 
 seq_r121_alpha: ; DOL(cap $  cap)
                             DOL_SAVE    dol_entry_cap, cursor, dol122_child_alpha ; DOL α — save entry cursor
@@ -11750,33 +11100,8 @@ dol123_child_alpha:         SPAN_ALPHA  lit_str_4, 0, span124_saved, cursor, sub
 dol123_child_beta:          SPAN_BETA   span124_saved, cursor, dol123_omega ; SPAN β
 dol123_gamma:               DOL_CAPTURE dol_entry_tx, cursor, cap_tx_buf, cap_tx_len, subject_data, dol122_gamma ; DOL γ — capture span
 dol123_omega:               jmp         dol122_omega ; DOL ω — child failed
-dol122_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_ProtKwd_gamma ; DOL γ — capture span
+dol122_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_UnprotKwd_gamma ; DOL γ — capture span
 dol122_omega:               jmp         seq_l121_beta ; DOL ω — child failed
-;  γ/ω ---------------------------------------------------------------------------------------------------------------
-patdef_ProtKwd_gamma:
-                            jmp         [P_ProtKwd_ret_γ]
-;  ProtKwd =============================================================================================================
-patdef_ProtKwd_omega:       jmp         [P_ProtKwd_ret_ω]
-
-; P_UnprotKwd_α (α entry)
-P_UnprotKwd_α:              jmp         seq_l125_alpha ; SEQ
-P_UnprotKwd_β:              jmp         seq_r125_beta
-seq_l125_alpha:             LIT_ALPHA1  38, seq_l125_alpha_saved, cursor, subject_data, subject_len_val, seq_r125_alpha, patdef_UnprotKwd_omega ; LIT α
-seq_l125_beta:              LIT_BETA    seq_l125_alpha_saved, cursor, patdef_UnprotKwd_omega ; LIT β
-
-seq_r125_alpha: ; DOL(cap $  cap)
-                            DOL_SAVE    dol_entry_cap, cursor, dol126_child_alpha ; DOL α — save entry cursor
-seq_r125_beta:              jmp         dol126_child_beta ; DOL β
-
-dol126_child_alpha: ; DOL(tx $  tx)
-                            DOL_SAVE    dol_entry_tx, cursor, dol127_child_alpha ; DOL α — save entry cursor
-dol126_child_beta:          jmp         dol127_child_beta ; DOL β
-dol127_child_alpha:         SPAN_ALPHA  lit_str_4, 0, span128_saved, cursor, subject_data, subject_len_val, dol127_gamma, dol127_omega ; SPAN α
-dol127_child_beta:          SPAN_BETA   span128_saved, cursor, dol127_omega ; SPAN β
-dol127_gamma:               DOL_CAPTURE dol_entry_tx, cursor, cap_tx_buf, cap_tx_len, subject_data, dol126_gamma ; DOL γ — capture span
-dol127_omega:               jmp         dol126_omega ; DOL ω — child failed
-dol126_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_UnprotKwd_gamma ; DOL γ — capture span
-dol126_omega:               jmp         seq_l125_beta ; DOL ω — child failed
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_UnprotKwd_gamma:
                             jmp         [P_UnprotKwd_ret_γ]
@@ -11784,66 +11109,66 @@ patdef_UnprotKwd_gamma:
 patdef_UnprotKwd_omega:     jmp         [P_UnprotKwd_ret_ω]
 
 ; P_Gray_α (α entry)
-P_Gray_α:                   ALT_ALPHA   alt129_cur_save, cursor, alt_l129_alpha ; ALT α — save cursor, enter left
-P_Gray_β:                   SEQ_BETA    alt_r129_beta ; ALT β — resume right
+P_Gray_α:                   ALT_ALPHA   alt125_cur_save, cursor, alt_l125_alpha ; ALT α — save cursor, enter left
+P_Gray_β:                   SEQ_BETA    alt_r125_beta ; ALT β — resume right
 
-alt_l129_alpha: ; REF(White)
-                            lea         rax, [rel nref130_gamma]
+alt_l125_alpha: ; REF(White)
+                            lea         rax, [rel nref126_gamma]
                             mov         [P_White_ret_γ], rax
-                            lea         rax, [rel nref130_omega]
+                            lea         rax, [rel nref126_omega]
                             mov         [P_White_ret_ω], rax
                             jmp         P_White_α
-alt_l129_beta:              lea         rax, [rel nref130_gamma] ; REF(%s)
+alt_l125_beta:              lea         rax, [rel nref126_gamma] ; REF(%s)
                             mov         [P_White_ret_γ], rax
-                            lea         rax, [rel nref130_omega]
+                            lea         rax, [rel nref126_omega]
                             mov         [P_White_ret_ω], rax
                             jmp         P_White_β
 
-nref130_gamma:
+nref126_gamma:
                             jmp         patdef_Gray_gamma
 ;  Gray ================================================================================================================
-nref130_omega:              jmp         alt129_left_omega
-alt129_left_omega:          ALT_OMEGA   alt129_cur_save, cursor, alt_r129_alpha ; ALT left_ω — restore cursor, enter right
+nref126_omega:              jmp         alt125_left_omega
+alt125_left_omega:          ALT_OMEGA   alt125_cur_save, cursor, alt_r125_alpha ; ALT left_ω — restore cursor, enter right
 
 ; UNRESOLVED named pattern ref: epsilon → ω
-alt_r129_alpha:
-alt_r129_beta:              jmp         patdef_Gray_omega
+alt_r125_alpha:
+alt_r125_beta:              jmp         patdef_Gray_omega
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Gray_gamma:
                             jmp         [P_Gray_ret_γ]
 patdef_Gray_omega:          jmp         [P_Gray_ret_ω]
 
 ; P_White_α (α entry)
-P_White_α:                  ALT_ALPHA   alt131_cur_save, cursor, alt_l131_alpha ; ALT α — save cursor, enter left
-P_White_β:                  SEQ_BETA    alt_r131_beta ; ALT β — resume right
-alt_l131_alpha:             jmp         seq_l132_alpha ; SEQ
-alt_l131_beta:              jmp         seq_r132_beta
-seq_l132_alpha:             SPAN_ALPHA  lit_str_4, 0, span133_saved, cursor, subject_data, subject_len_val, seq_r132_alpha, alt131_left_omega ; SPAN α
-seq_l132_beta:              SPAN_BETA   span133_saved, cursor, alt131_left_omega ; SPAN β
+P_White_α:                  ALT_ALPHA   alt127_cur_save, cursor, alt_l127_alpha ; ALT α — save cursor, enter left
+P_White_β:                  SEQ_BETA    alt_r127_beta ; ALT β — resume right
+alt_l127_alpha:             jmp         seq_l128_alpha ; SEQ
+alt_l127_beta:              jmp         seq_r128_beta
+seq_l128_alpha:             SPAN_ALPHA  lit_str_4, 0, span129_saved, cursor, subject_data, subject_len_val, seq_r128_alpha, alt127_left_omega ; SPAN α
+seq_l128_beta:              SPAN_BETA   span129_saved, cursor, alt127_left_omega ; SPAN β
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r132_alpha:
-seq_r132_beta:              jmp         seq_l132_beta
-alt131_left_omega:          ALT_OMEGA   alt131_cur_save, cursor, alt_r131_alpha ; ALT left_ω — restore cursor, enter right
-alt_r131_alpha:             jmp         seq_l134_alpha ; SEQ
-alt_r131_beta:              jmp         seq_r134_beta
-seq_l134_alpha:             jmp         seq_l135_alpha ; SEQ
-seq_l134_beta:              jmp         seq_r135_beta
+seq_r128_alpha:
+seq_r128_beta:              jmp         seq_l128_beta
+alt127_left_omega:          ALT_OMEGA   alt127_cur_save, cursor, alt_r127_alpha ; ALT left_ω — restore cursor, enter right
+alt_r127_alpha:             jmp         seq_l130_alpha ; SEQ
+alt_r127_beta:              jmp         seq_r130_beta
+seq_l130_alpha:             jmp         seq_l131_alpha ; SEQ
+seq_l130_beta:              jmp         seq_r131_beta
 
 ; UNRESOLVED named pattern ref: nl → ω
-seq_l135_alpha:
-seq_l135_beta:              jmp         patdef_White_omega
-seq_r135_alpha:             ALT_ALPHA   alt136_cur_save, cursor, alt_l136_alpha ; ALT α — save cursor, enter left
-seq_r135_beta:              SEQ_BETA    alt_r136_beta ; ALT β — resume right
-alt_l136_alpha:             LIT_ALPHA1  43, alt_l136_alpha_saved, cursor, subject_data, subject_len_val, seq_r134_alpha, alt136_left_omega ; LIT α
-alt_l136_beta:              LIT_BETA    alt_l136_alpha_saved, cursor, alt136_left_omega ; LIT β
-alt136_left_omega:          ALT_OMEGA   alt136_cur_save, cursor, alt_r136_alpha ; ALT left_ω — restore cursor, enter right
-alt_r136_alpha:             LIT_ALPHA1  46, alt_r136_alpha_saved, cursor, subject_data, subject_len_val, seq_r134_alpha, seq_l135_beta ; LIT α
-alt_r136_beta:              LIT_BETA    alt_r136_alpha_saved, cursor, seq_l135_beta ; LIT β
+seq_l131_alpha:
+seq_l131_beta:              jmp         patdef_White_omega
+seq_r131_alpha:             ALT_ALPHA   alt132_cur_save, cursor, alt_l132_alpha ; ALT α — save cursor, enter left
+seq_r131_beta:              SEQ_BETA    alt_r132_beta ; ALT β — resume right
+alt_l132_alpha:             LIT_ALPHA1  43, alt_l132_alpha_saved, cursor, subject_data, subject_len_val, seq_r130_alpha, alt132_left_omega ; LIT α
+alt_l132_beta:              LIT_BETA    alt_l132_alpha_saved, cursor, alt132_left_omega ; LIT β
+alt132_left_omega:          ALT_OMEGA   alt132_cur_save, cursor, alt_r132_alpha ; ALT left_ω — restore cursor, enter right
+alt_r132_alpha:             LIT_ALPHA1  46, alt_r132_alpha_saved, cursor, subject_data, subject_len_val, seq_r130_alpha, seq_l131_beta ; LIT α
+alt_r132_beta:              LIT_BETA    alt_r132_alpha_saved, cursor, seq_l131_beta ; LIT β
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r134_alpha:
-seq_r134_beta:              jmp         seq_l134_beta
+seq_r130_alpha:
+seq_r130_beta:              jmp         seq_l130_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_White_gamma:
                             jmp         [P_White_ret_γ]
@@ -11851,28 +11176,28 @@ patdef_White_gamma:
 patdef_White_omega:         jmp         [P_White_ret_ω]
 
 ; P_TxInList_α (α entry)
-P_TxInList_α:               jmp         seq_l137_alpha ; SEQ
-P_TxInList_β:               jmp         seq_r137_beta
-seq_l137_alpha:             jmp         seq_l138_alpha ; SEQ
-seq_l137_beta:              jmp         seq_r138_beta
-seq_l138_alpha:             ALT_ALPHA   alt139_cur_save, cursor, alt_l139_alpha ; ALT α — save cursor, enter left
-seq_l138_beta:              SEQ_BETA    alt_r139_beta ; ALT β — resume right
-alt_l139_alpha:             POS_ALPHA   0, cursor, seq_r138_alpha, alt139_left_omega ; POS(%ld)
-alt_l139_beta:              POS_BETA    cursor, alt139_left_omega
-alt139_left_omega:          ALT_OMEGA   alt139_cur_save, cursor, alt_r139_alpha ; ALT left_ω — restore cursor, enter right
-alt_r139_alpha:             LIT_ALPHA1  32, alt_r139_alpha_saved, cursor, subject_data, subject_len_val, seq_r138_alpha, patdef_TxInList_omega ; LIT α
-alt_r139_beta:              LIT_BETA    alt_r139_alpha_saved, cursor, patdef_TxInList_omega ; LIT β
+P_TxInList_α:               jmp         seq_l133_alpha ; SEQ
+P_TxInList_β:               jmp         seq_r133_beta
+seq_l133_alpha:             jmp         seq_l134_alpha ; SEQ
+seq_l133_beta:              jmp         seq_r134_beta
+seq_l134_alpha:             ALT_ALPHA   alt135_cur_save, cursor, alt_l135_alpha ; ALT α — save cursor, enter left
+seq_l134_beta:              SEQ_BETA    alt_r135_beta ; ALT β — resume right
+alt_l135_alpha:             POS_ALPHA   0, cursor, seq_r134_alpha, alt135_left_omega ; POS(%ld)
+alt_l135_beta:              POS_BETA    cursor, alt135_left_omega
+alt135_left_omega:          ALT_OMEGA   alt135_cur_save, cursor, alt_r135_alpha ; ALT left_ω — restore cursor, enter right
+alt_r135_alpha:             LIT_ALPHA1  32, alt_r135_alpha_saved, cursor, subject_data, subject_len_val, seq_r134_alpha, patdef_TxInList_omega ; LIT α
+alt_r135_beta:              LIT_BETA    alt_r135_alpha_saved, cursor, patdef_TxInList_omega ; LIT β
 
 ; E_INDR unresolved: upr → ω
-seq_r138_alpha:
-seq_r138_beta:              jmp         seq_l138_beta
-seq_r137_alpha:             ALT_ALPHA   alt140_cur_save, cursor, alt_l140_alpha ; ALT α — save cursor, enter left
-seq_r137_beta:              SEQ_BETA    alt_r140_beta ; ALT β — resume right
-alt_l140_alpha:             LIT_ALPHA1  32, alt_l140_alpha_saved, cursor, subject_data, subject_len_val, patdef_TxInList_gamma, alt140_left_omega ; LIT α
-alt_l140_beta:              LIT_BETA    alt_l140_alpha_saved, cursor, alt140_left_omega ; LIT β
-alt140_left_omega:          ALT_OMEGA   alt140_cur_save, cursor, alt_r140_alpha ; ALT left_ω — restore cursor, enter right
-alt_r140_alpha:             RPOS_ALPHA  0, cursor, subject_len_val, patdef_TxInList_gamma, seq_l137_beta ; RPOS(%ld)
-alt_r140_beta:              RPOS_BETA   cursor, seq_l137_beta
+seq_r134_alpha:
+seq_r134_beta:              jmp         seq_l134_beta
+seq_r133_alpha:             ALT_ALPHA   alt136_cur_save, cursor, alt_l136_alpha ; ALT α — save cursor, enter left
+seq_r133_beta:              SEQ_BETA    alt_r136_beta ; ALT β — resume right
+alt_l136_alpha:             LIT_ALPHA1  32, alt_l136_alpha_saved, cursor, subject_data, subject_len_val, patdef_TxInList_gamma, alt136_left_omega ; LIT α
+alt_l136_beta:              LIT_BETA    alt_l136_alpha_saved, cursor, alt136_left_omega ; LIT β
+alt136_left_omega:          ALT_OMEGA   alt136_cur_save, cursor, alt_r136_alpha ; ALT left_ω — restore cursor, enter right
+alt_r136_alpha:             RPOS_ALPHA  0, cursor, subject_len_val, patdef_TxInList_gamma, seq_l133_beta ; RPOS(%ld)
+alt_r136_beta:              RPOS_BETA   cursor, seq_l133_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_TxInList_gamma:
                             jmp         [P_TxInList_ret_γ]
@@ -11880,76 +11205,76 @@ patdef_TxInList_gamma:
 patdef_TxInList_omega:      jmp         [P_TxInList_ret_ω]
 
 ; P_ExprList_α (α entry)
-P_ExprList_α:               jmp         seq_l141_alpha ; SEQ
-P_ExprList_β:               jmp         seq_r141_beta
-seq_l141_alpha:             jmp         seq_l142_alpha ; SEQ
-seq_l141_beta:              jmp         seq_r142_beta
-seq_l142_alpha:             jmp         seq_l143_alpha ; SEQ
-seq_l142_beta:              jmp         seq_r143_beta
+P_ExprList_α:               jmp         seq_l137_alpha ; SEQ
+P_ExprList_β:               jmp         seq_r137_beta
+seq_l137_alpha:             jmp         seq_l138_alpha ; SEQ
+seq_l137_beta:              jmp         seq_r138_beta
+seq_l138_alpha:             jmp         seq_l139_alpha ; SEQ
+seq_l138_beta:              jmp         seq_r139_beta
 
 ; UNIMPLEMENTED: nPush() → ω
-seq_l143_alpha:
-seq_l143_beta:              jmp         patdef_ExprList_omega
+seq_l139_alpha:
+seq_l139_beta:              jmp         patdef_ExprList_omega
 
-seq_r143_alpha: ; REF(XList)
-                            lea         rax, [rel nref144_gamma]
+seq_r139_alpha: ; REF(XList)
+                            lea         rax, [rel nref140_gamma]
                             mov         [P_XList_ret_γ], rax
-                            lea         rax, [rel nref144_omega]
+                            lea         rax, [rel nref140_omega]
                             mov         [P_XList_ret_ω], rax
                             jmp         P_XList_α
-seq_r143_beta:              lea         rax, [rel nref144_gamma] ; REF(%s)
+seq_r139_beta:              lea         rax, [rel nref140_gamma] ; REF(%s)
                             mov         [P_XList_ret_γ], rax
-                            lea         rax, [rel nref144_omega]
+                            lea         rax, [rel nref140_omega]
                             mov         [P_XList_ret_ω], rax
                             jmp         P_XList_β
 
-nref144_gamma:
-                            jmp         seq_r142_alpha
+nref140_gamma:
+                            jmp         seq_r138_alpha
 ;  ExprList ============================================================================================================
-nref144_omega:              jmp         seq_l143_beta
+nref140_omega:              jmp         seq_l139_beta
 
 ; UNIMPLEMENTED node kind 14 → ω
-seq_r142_alpha:
-seq_r142_beta:              jmp         seq_l142_beta
+seq_r138_alpha:
+seq_r138_beta:              jmp         seq_l138_beta
 
 ; UNIMPLEMENTED: nPop() → ω
-seq_r141_alpha:
-seq_r141_beta:              jmp         seq_l141_beta
+seq_r137_alpha:
+seq_r137_beta:              jmp         seq_l137_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_ExprList_gamma:
                             jmp         [P_ExprList_ret_γ]
 patdef_ExprList_omega:      jmp         [P_ExprList_ret_ω]
 
 ; P_XList_α (α entry)
-P_XList_α:                  jmp         seq_l145_alpha ; SEQ
-P_XList_β:                  jmp         seq_r145_beta
-seq_l145_alpha:             jmp         seq_l146_alpha ; SEQ
-seq_l145_beta:              jmp         seq_r146_beta
+P_XList_α:                  jmp         seq_l141_alpha ; SEQ
+P_XList_β:                  jmp         seq_r141_beta
+seq_l141_alpha:             jmp         seq_l142_alpha ; SEQ
+seq_l141_beta:              jmp         seq_r142_beta
 
 ; UNIMPLEMENTED: nInc() → ω
-seq_l146_alpha:
-seq_l146_beta:              jmp         patdef_XList_omega
-seq_r146_alpha:             ALT_ALPHA   alt147_cur_save, cursor, alt_l147_alpha ; ALT α — save cursor, enter left
-seq_r146_beta:              SEQ_BETA    alt_r147_beta ; ALT β — resume right
+seq_l142_alpha:
+seq_l142_beta:              jmp         patdef_XList_omega
+seq_r142_alpha:             ALT_ALPHA   alt143_cur_save, cursor, alt_l143_alpha ; ALT α — save cursor, enter left
+seq_r142_beta:              SEQ_BETA    alt_r143_beta ; ALT β — resume right
 
 ; E_INDR unresolved: Expr → ω
-alt_l147_alpha:
-alt_l147_beta:              jmp         alt147_left_omega
-alt147_left_omega:          ALT_OMEGA   alt147_cur_save, cursor, alt_r147_alpha ; ALT left_ω — restore cursor, enter right
+alt_l143_alpha:
+alt_l143_beta:              jmp         alt143_left_omega
+alt143_left_omega:          ALT_OMEGA   alt143_cur_save, cursor, alt_r143_alpha ; ALT left_ω — restore cursor, enter right
 
-alt_r147_alpha: ; DOL( $  v)
-                            DOL_SAVE    dol_entry_v, cursor, dol148_child_alpha ; DOL α — save entry cursor
-alt_r147_beta:              jmp         dol148_child_beta ; DOL β
+alt_r143_alpha: ; DOL( $  v)
+                            DOL_SAVE    dol_entry_v, cursor, dol144_child_alpha ; DOL α — save entry cursor
+alt_r143_beta:              jmp         dol144_child_beta ; DOL β
 
 ; UNRESOLVED named pattern ref: epsilon → ω
-dol148_child_alpha:
-dol148_child_beta:          jmp         dol148_omega
-dol148_gamma:               DOL_CAPTURE dol_entry_v, cursor, cap_v_buf, cap_v_len, subject_data, seq_r145_alpha ; DOL γ — capture span
-dol148_omega:               jmp         seq_l146_beta ; DOL ω — child failed
+dol144_child_alpha:
+dol144_child_beta:          jmp         dol144_omega
+dol144_gamma:               DOL_CAPTURE dol_entry_v, cursor, cap_v_buf, cap_v_len, subject_data, seq_r141_alpha ; DOL γ — capture span
+dol144_omega:               jmp         seq_l142_beta ; DOL ω — child failed
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r145_alpha:
-seq_r145_beta:              jmp         seq_l145_beta
+seq_r141_alpha:
+seq_r141_beta:              jmp         seq_l141_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_XList_gamma:
                             jmp         [P_XList_ret_γ]
@@ -11957,508 +11282,516 @@ patdef_XList_gamma:
 patdef_XList_omega:         jmp         [P_XList_ret_ω]
 
 ; P_Expr0_α (α entry)
-P_Expr0_α:                  jmp         seq_l149_alpha ; SEQ
-P_Expr0_β:                  jmp         seq_r149_beta
+P_Expr0_α:                  jmp         seq_l145_alpha ; SEQ
+P_Expr0_β:                  jmp         seq_r145_beta
 
-seq_l149_alpha: ; REF(Expr1)
-                            lea         rax, [rel nref150_gamma]
+seq_l145_alpha: ; REF(Expr1)
+                            lea         rax, [rel nref146_gamma]
                             mov         [P_Expr1_ret_γ], rax
-                            lea         rax, [rel nref150_omega]
+                            lea         rax, [rel nref146_omega]
                             mov         [P_Expr1_ret_ω], rax
                             jmp         P_Expr1_α
-seq_l149_beta:              lea         rax, [rel nref150_gamma] ; REF(%s)
+seq_l145_beta:              lea         rax, [rel nref146_gamma] ; REF(%s)
                             mov         [P_Expr1_ret_γ], rax
-                            lea         rax, [rel nref150_omega]
+                            lea         rax, [rel nref146_omega]
                             mov         [P_Expr1_ret_ω], rax
                             jmp         P_Expr1_β
 
-nref150_gamma:
-                            jmp         seq_r149_alpha
+nref146_gamma:
+                            jmp         seq_r145_alpha
 ;  Expr0 ===============================================================================================================
-nref150_omega:              jmp         patdef_Expr0_omega
+nref146_omega:              jmp         patdef_Expr0_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r149_alpha:
-seq_r149_beta:              jmp         seq_l149_beta
+seq_r145_alpha:
+seq_r145_beta:              jmp         seq_l145_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr0_gamma:
                             jmp         [P_Expr0_ret_γ]
 patdef_Expr0_omega:         jmp         [P_Expr0_ret_ω]
 
 ; P_Expr1_α (α entry)
-P_Expr1_α:                  jmp         seq_l151_alpha ; SEQ
-P_Expr1_β:                  jmp         seq_r151_beta
+P_Expr1_α:                  jmp         seq_l147_alpha ; SEQ
+P_Expr1_β:                  jmp         seq_r147_beta
 
-seq_l151_alpha: ; REF(Expr2)
-                            lea         rax, [rel nref152_gamma]
+seq_l147_alpha: ; REF(Expr2)
+                            lea         rax, [rel nref148_gamma]
                             mov         [P_Expr2_ret_γ], rax
-                            lea         rax, [rel nref152_omega]
+                            lea         rax, [rel nref148_omega]
                             mov         [P_Expr2_ret_ω], rax
                             jmp         P_Expr2_α
-seq_l151_beta:              lea         rax, [rel nref152_gamma] ; REF(%s)
+seq_l147_beta:              lea         rax, [rel nref148_gamma] ; REF(%s)
                             mov         [P_Expr2_ret_γ], rax
-                            lea         rax, [rel nref152_omega]
+                            lea         rax, [rel nref148_omega]
                             mov         [P_Expr2_ret_ω], rax
                             jmp         P_Expr2_β
 
-nref152_gamma:
-                            jmp         seq_r151_alpha
+nref148_gamma:
+                            jmp         seq_r147_alpha
 ;  Expr1 ===============================================================================================================
-nref152_omega:              jmp         patdef_Expr1_omega
+nref148_omega:              jmp         patdef_Expr1_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r151_alpha:
-seq_r151_beta:              jmp         seq_l151_beta
+seq_r147_alpha:
+seq_r147_beta:              jmp         seq_l147_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr1_gamma:
                             jmp         [P_Expr1_ret_γ]
 patdef_Expr1_omega:         jmp         [P_Expr1_ret_ω]
 
 ; P_Expr2_α (α entry)
-P_Expr2_α:                  jmp         seq_l153_alpha ; SEQ
-P_Expr2_β:                  jmp         seq_r153_beta
+P_Expr2_α:                  jmp         seq_l149_alpha ; SEQ
+P_Expr2_β:                  jmp         seq_r149_beta
 
-seq_l153_alpha: ; REF(Expr3)
-                            lea         rax, [rel nref154_gamma]
+seq_l149_alpha: ; REF(Expr3)
+                            lea         rax, [rel nref150_gamma]
                             mov         [P_Expr3_ret_γ], rax
-                            lea         rax, [rel nref154_omega]
+                            lea         rax, [rel nref150_omega]
                             mov         [P_Expr3_ret_ω], rax
                             jmp         P_Expr3_α
-seq_l153_beta:              lea         rax, [rel nref154_gamma] ; REF(%s)
+seq_l149_beta:              lea         rax, [rel nref150_gamma] ; REF(%s)
                             mov         [P_Expr3_ret_γ], rax
-                            lea         rax, [rel nref154_omega]
+                            lea         rax, [rel nref150_omega]
                             mov         [P_Expr3_ret_ω], rax
                             jmp         P_Expr3_β
 
-nref154_gamma:
-                            jmp         seq_r153_alpha
+nref150_gamma:
+                            jmp         seq_r149_alpha
 ;  Expr2 ===============================================================================================================
-nref154_omega:              jmp         patdef_Expr2_omega
+nref150_omega:              jmp         patdef_Expr2_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r153_alpha:
-seq_r153_beta:              jmp         seq_l153_beta
+seq_r149_alpha:
+seq_r149_beta:              jmp         seq_l149_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr2_gamma:
                             jmp         [P_Expr2_ret_γ]
 patdef_Expr2_omega:         jmp         [P_Expr2_ret_ω]
 
 ; P_Expr3_α (α entry)
-P_Expr3_α:                  jmp         seq_l155_alpha ; SEQ
-P_Expr3_β:                  jmp         seq_r155_beta
-seq_l155_alpha:             jmp         seq_l156_alpha ; SEQ
-seq_l155_beta:              jmp         seq_r156_beta
-seq_l156_alpha:             jmp         seq_l157_alpha ; SEQ
-seq_l156_beta:              jmp         seq_r157_beta
+P_Expr3_α:                  jmp         seq_l151_alpha ; SEQ
+P_Expr3_β:                  jmp         seq_r151_beta
+seq_l151_alpha:             jmp         seq_l152_alpha ; SEQ
+seq_l151_beta:              jmp         seq_r152_beta
+seq_l152_alpha:             jmp         seq_l153_alpha ; SEQ
+seq_l152_beta:              jmp         seq_r153_beta
 
 ; UNIMPLEMENTED: nPush() → ω
-seq_l157_alpha:
-seq_l157_beta:              jmp         patdef_Expr3_omega
+seq_l153_alpha:
+seq_l153_beta:              jmp         patdef_Expr3_omega
 
-seq_r157_alpha: ; REF(X3)
-                            lea         rax, [rel nref158_gamma]
+seq_r153_alpha: ; REF(X3)
+                            lea         rax, [rel nref154_gamma]
                             mov         [P_X3_ret_γ], rax
-                            lea         rax, [rel nref158_omega]
+                            lea         rax, [rel nref154_omega]
                             mov         [P_X3_ret_ω], rax
                             jmp         P_X3_α
-seq_r157_beta:              lea         rax, [rel nref158_gamma] ; REF(%s)
+seq_r153_beta:              lea         rax, [rel nref154_gamma] ; REF(%s)
                             mov         [P_X3_ret_γ], rax
-                            lea         rax, [rel nref158_omega]
+                            lea         rax, [rel nref154_omega]
                             mov         [P_X3_ret_ω], rax
                             jmp         P_X3_β
 
-nref158_gamma:
-                            jmp         seq_r156_alpha
+nref154_gamma:
+                            jmp         seq_r152_alpha
 ;  Expr3 ===============================================================================================================
-nref158_omega:              jmp         seq_l157_beta
+nref154_omega:              jmp         seq_l153_beta
 
 ; UNIMPLEMENTED node kind 14 → ω
-seq_r156_alpha:
-seq_r156_beta:              jmp         seq_l156_beta
+seq_r152_alpha:
+seq_r152_beta:              jmp         seq_l152_beta
 
 ; UNIMPLEMENTED: nPop() → ω
-seq_r155_alpha:
-seq_r155_beta:              jmp         seq_l155_beta
+seq_r151_alpha:
+seq_r151_beta:              jmp         seq_l151_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr3_gamma:
                             jmp         [P_Expr3_ret_γ]
 patdef_Expr3_omega:         jmp         [P_Expr3_ret_ω]
 
 ; P_X3_α (α entry)
-P_X3_α:                     jmp         seq_l159_alpha ; SEQ
-P_X3_β:                     jmp         seq_r159_beta
-seq_l159_alpha:             jmp         seq_l160_alpha ; SEQ
-seq_l159_beta:              jmp         seq_r160_beta
+P_X3_α:                     jmp         seq_l155_alpha ; SEQ
+P_X3_β:                     jmp         seq_r155_beta
+seq_l155_alpha:             jmp         seq_l156_alpha ; SEQ
+seq_l155_beta:              jmp         seq_r156_beta
 
 ; UNIMPLEMENTED: nInc() → ω
-seq_l160_alpha:
-seq_l160_beta:              jmp         patdef_X3_omega
+seq_l156_alpha:
+seq_l156_beta:              jmp         patdef_X3_omega
 
-seq_r160_alpha: ; REF(Expr4)
-                            lea         rax, [rel nref161_gamma]
+seq_r156_alpha: ; REF(Expr4)
+                            lea         rax, [rel nref157_gamma]
                             mov         [P_Expr4_ret_γ], rax
-                            lea         rax, [rel nref161_omega]
+                            lea         rax, [rel nref157_omega]
                             mov         [P_Expr4_ret_ω], rax
                             jmp         P_Expr4_α
-seq_r160_beta:              lea         rax, [rel nref161_gamma] ; REF(%s)
+seq_r156_beta:              lea         rax, [rel nref157_gamma] ; REF(%s)
                             mov         [P_Expr4_ret_γ], rax
-                            lea         rax, [rel nref161_omega]
+                            lea         rax, [rel nref157_omega]
                             mov         [P_Expr4_ret_ω], rax
                             jmp         P_Expr4_β
 
-nref161_gamma:
-                            jmp         seq_r159_alpha
+nref157_gamma:
+                            jmp         seq_r155_alpha
 ;  X3 ==================================================================================================================
-nref161_omega:              jmp         seq_l160_beta
+nref157_omega:              jmp         seq_l156_beta
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r159_alpha:
-seq_r159_beta:              jmp         seq_l159_beta
+seq_r155_alpha:
+seq_r155_beta:              jmp         seq_l155_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_X3_gamma:
                             jmp         [P_X3_ret_γ]
 patdef_X3_omega:            jmp         [P_X3_ret_ω]
 
 ; P_Expr4_α (α entry)
-P_Expr4_α:                  jmp         seq_l162_alpha ; SEQ
-P_Expr4_β:                  jmp         seq_r162_beta
-seq_l162_alpha:             jmp         seq_l163_alpha ; SEQ
-seq_l162_beta:              jmp         seq_r163_beta
-seq_l163_alpha:             jmp         seq_l164_alpha ; SEQ
-seq_l163_beta:              jmp         seq_r164_beta
+P_Expr4_α:                  jmp         seq_l158_alpha ; SEQ
+P_Expr4_β:                  jmp         seq_r158_beta
+seq_l158_alpha:             jmp         seq_l159_alpha ; SEQ
+seq_l158_beta:              jmp         seq_r159_beta
+seq_l159_alpha:             jmp         seq_l160_alpha ; SEQ
+seq_l159_beta:              jmp         seq_r160_beta
 
 ; UNIMPLEMENTED: nPush() → ω
-seq_l164_alpha:
-seq_l164_beta:              jmp         patdef_Expr4_omega
+seq_l160_alpha:
+seq_l160_beta:              jmp         patdef_Expr4_omega
 
-seq_r164_alpha: ; REF(X4)
-                            lea         rax, [rel nref165_gamma]
+seq_r160_alpha: ; REF(X4)
+                            lea         rax, [rel nref161_gamma]
                             mov         [P_X4_ret_γ], rax
-                            lea         rax, [rel nref165_omega]
+                            lea         rax, [rel nref161_omega]
                             mov         [P_X4_ret_ω], rax
                             jmp         P_X4_α
-seq_r164_beta:              lea         rax, [rel nref165_gamma] ; REF(%s)
+seq_r160_beta:              lea         rax, [rel nref161_gamma] ; REF(%s)
                             mov         [P_X4_ret_γ], rax
-                            lea         rax, [rel nref165_omega]
+                            lea         rax, [rel nref161_omega]
                             mov         [P_X4_ret_ω], rax
                             jmp         P_X4_β
 
-nref165_gamma:
-                            jmp         seq_r163_alpha
+nref161_gamma:
+                            jmp         seq_r159_alpha
 ;  Expr4 ===============================================================================================================
-nref165_omega:              jmp         seq_l164_beta
+nref161_omega:              jmp         seq_l160_beta
 
 ; UNIMPLEMENTED node kind 14 → ω
-seq_r163_alpha:
-seq_r163_beta:              jmp         seq_l163_beta
+seq_r159_alpha:
+seq_r159_beta:              jmp         seq_l159_beta
 
 ; UNIMPLEMENTED: nPop() → ω
-seq_r162_alpha:
-seq_r162_beta:              jmp         seq_l162_beta
+seq_r158_alpha:
+seq_r158_beta:              jmp         seq_l158_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr4_gamma:
                             jmp         [P_Expr4_ret_γ]
 patdef_Expr4_omega:         jmp         [P_Expr4_ret_ω]
 
 ; P_X4_α (α entry)
-P_X4_α:                     jmp         seq_l166_alpha ; SEQ
-P_X4_β:                     jmp         seq_r166_beta
-seq_l166_alpha:             jmp         seq_l167_alpha ; SEQ
-seq_l166_beta:              jmp         seq_r167_beta
+P_X4_α:                     jmp         seq_l162_alpha ; SEQ
+P_X4_β:                     jmp         seq_r162_beta
+seq_l162_alpha:             jmp         seq_l163_alpha ; SEQ
+seq_l162_beta:              jmp         seq_r163_beta
 
 ; UNIMPLEMENTED: nInc() → ω
-seq_l167_alpha:
-seq_l167_beta:              jmp         patdef_X4_omega
+seq_l163_alpha:
+seq_l163_beta:              jmp         patdef_X4_omega
 
-seq_r167_alpha: ; REF(Expr5)
-                            lea         rax, [rel nref168_gamma]
+seq_r163_alpha: ; REF(Expr5)
+                            lea         rax, [rel nref164_gamma]
                             mov         [P_Expr5_ret_γ], rax
-                            lea         rax, [rel nref168_omega]
+                            lea         rax, [rel nref164_omega]
                             mov         [P_Expr5_ret_ω], rax
                             jmp         P_Expr5_α
-seq_r167_beta:              lea         rax, [rel nref168_gamma] ; REF(%s)
+seq_r163_beta:              lea         rax, [rel nref164_gamma] ; REF(%s)
                             mov         [P_Expr5_ret_γ], rax
-                            lea         rax, [rel nref168_omega]
+                            lea         rax, [rel nref164_omega]
                             mov         [P_Expr5_ret_ω], rax
                             jmp         P_Expr5_β
 
-nref168_gamma:
-                            jmp         seq_r166_alpha
+nref164_gamma:
+                            jmp         seq_r162_alpha
 ;  X4 ==================================================================================================================
-nref168_omega:              jmp         seq_l167_beta
+nref164_omega:              jmp         seq_l163_beta
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r166_alpha:
-seq_r166_beta:              jmp         seq_l166_beta
+seq_r162_alpha:
+seq_r162_beta:              jmp         seq_l162_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_X4_gamma:
                             jmp         [P_X4_ret_γ]
 patdef_X4_omega:            jmp         [P_X4_ret_ω]
 
 ; P_Expr5_α (α entry)
-P_Expr5_α:                  jmp         seq_l169_alpha ; SEQ
-P_Expr5_β:                  jmp         seq_r169_beta
+P_Expr5_α:                  jmp         seq_l165_alpha ; SEQ
+P_Expr5_β:                  jmp         seq_r165_beta
 
-seq_l169_alpha: ; REF(Expr6)
-                            lea         rax, [rel nref170_gamma]
+seq_l165_alpha: ; REF(Expr6)
+                            lea         rax, [rel nref166_gamma]
                             mov         [P_Expr6_ret_γ], rax
-                            lea         rax, [rel nref170_omega]
+                            lea         rax, [rel nref166_omega]
                             mov         [P_Expr6_ret_ω], rax
                             jmp         P_Expr6_α
-seq_l169_beta:              lea         rax, [rel nref170_gamma] ; REF(%s)
+seq_l165_beta:              lea         rax, [rel nref166_gamma] ; REF(%s)
                             mov         [P_Expr6_ret_γ], rax
-                            lea         rax, [rel nref170_omega]
+                            lea         rax, [rel nref166_omega]
                             mov         [P_Expr6_ret_ω], rax
                             jmp         P_Expr6_β
 
-nref170_gamma:
-                            jmp         seq_r169_alpha
+nref166_gamma:
+                            jmp         seq_r165_alpha
 ;  Expr5 ===============================================================================================================
-nref170_omega:              jmp         patdef_Expr5_omega
+nref166_omega:              jmp         patdef_Expr5_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r169_alpha:
-seq_r169_beta:              jmp         seq_l169_beta
+seq_r165_alpha:
+seq_r165_beta:              jmp         seq_l165_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr5_gamma:
                             jmp         [P_Expr5_ret_γ]
 patdef_Expr5_omega:         jmp         [P_Expr5_ret_ω]
 
 ; P_Expr6_α (α entry)
-P_Expr6_α:                  jmp         seq_l171_alpha ; SEQ
-P_Expr6_β:                  jmp         seq_r171_beta
+P_Expr6_α:                  jmp         seq_l167_alpha ; SEQ
+P_Expr6_β:                  jmp         seq_r167_beta
 
-seq_l171_alpha: ; REF(Expr7)
-                            lea         rax, [rel nref172_gamma]
+seq_l167_alpha: ; REF(Expr7)
+                            lea         rax, [rel nref168_gamma]
                             mov         [P_Expr7_ret_γ], rax
-                            lea         rax, [rel nref172_omega]
+                            lea         rax, [rel nref168_omega]
                             mov         [P_Expr7_ret_ω], rax
                             jmp         P_Expr7_α
-seq_l171_beta:              lea         rax, [rel nref172_gamma] ; REF(%s)
+seq_l167_beta:              lea         rax, [rel nref168_gamma] ; REF(%s)
                             mov         [P_Expr7_ret_γ], rax
-                            lea         rax, [rel nref172_omega]
+                            lea         rax, [rel nref168_omega]
                             mov         [P_Expr7_ret_ω], rax
                             jmp         P_Expr7_β
 
-nref172_gamma:
-                            jmp         seq_r171_alpha
+nref168_gamma:
+                            jmp         seq_r167_alpha
 ;  Expr6 ===============================================================================================================
-nref172_omega:              jmp         patdef_Expr6_omega
+nref168_omega:              jmp         patdef_Expr6_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r171_alpha:
-seq_r171_beta:              jmp         seq_l171_beta
+seq_r167_alpha:
+seq_r167_beta:              jmp         seq_l167_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr6_gamma:
                             jmp         [P_Expr6_ret_γ]
 patdef_Expr6_omega:         jmp         [P_Expr6_ret_ω]
 
 ; P_Expr7_α (α entry)
-P_Expr7_α:                  jmp         seq_l173_alpha ; SEQ
-P_Expr7_β:                  jmp         seq_r173_beta
+P_Expr7_α:                  jmp         seq_l169_alpha ; SEQ
+P_Expr7_β:                  jmp         seq_r169_beta
 
-seq_l173_alpha: ; REF(Expr8)
-                            lea         rax, [rel nref174_gamma]
+seq_l169_alpha: ; REF(Expr8)
+                            lea         rax, [rel nref170_gamma]
                             mov         [P_Expr8_ret_γ], rax
-                            lea         rax, [rel nref174_omega]
+                            lea         rax, [rel nref170_omega]
                             mov         [P_Expr8_ret_ω], rax
                             jmp         P_Expr8_α
-seq_l173_beta:              lea         rax, [rel nref174_gamma] ; REF(%s)
+seq_l169_beta:              lea         rax, [rel nref170_gamma] ; REF(%s)
                             mov         [P_Expr8_ret_γ], rax
-                            lea         rax, [rel nref174_omega]
+                            lea         rax, [rel nref170_omega]
                             mov         [P_Expr8_ret_ω], rax
                             jmp         P_Expr8_β
 
-nref174_gamma:
-                            jmp         seq_r173_alpha
+nref170_gamma:
+                            jmp         seq_r169_alpha
 ;  Expr7 ===============================================================================================================
-nref174_omega:              jmp         patdef_Expr7_omega
+nref170_omega:              jmp         patdef_Expr7_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r173_alpha:
-seq_r173_beta:              jmp         seq_l173_beta
+seq_r169_alpha:
+seq_r169_beta:              jmp         seq_l169_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr7_gamma:
                             jmp         [P_Expr7_ret_γ]
 patdef_Expr7_omega:         jmp         [P_Expr7_ret_ω]
 
 ; P_Expr8_α (α entry)
-P_Expr8_α:                  jmp         seq_l175_alpha ; SEQ
-P_Expr8_β:                  jmp         seq_r175_beta
+P_Expr8_α:                  jmp         seq_l171_alpha ; SEQ
+P_Expr8_β:                  jmp         seq_r171_beta
 
-seq_l175_alpha: ; REF(Expr9)
-                            lea         rax, [rel nref176_gamma]
+seq_l171_alpha: ; REF(Expr9)
+                            lea         rax, [rel nref172_gamma]
                             mov         [P_Expr9_ret_γ], rax
-                            lea         rax, [rel nref176_omega]
+                            lea         rax, [rel nref172_omega]
                             mov         [P_Expr9_ret_ω], rax
                             jmp         P_Expr9_α
-seq_l175_beta:              lea         rax, [rel nref176_gamma] ; REF(%s)
+seq_l171_beta:              lea         rax, [rel nref172_gamma] ; REF(%s)
                             mov         [P_Expr9_ret_γ], rax
-                            lea         rax, [rel nref176_omega]
+                            lea         rax, [rel nref172_omega]
                             mov         [P_Expr9_ret_ω], rax
                             jmp         P_Expr9_β
 
-nref176_gamma:
-                            jmp         seq_r175_alpha
+nref172_gamma:
+                            jmp         seq_r171_alpha
 ;  Expr8 ===============================================================================================================
-nref176_omega:              jmp         patdef_Expr8_omega
+nref172_omega:              jmp         patdef_Expr8_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r175_alpha:
-seq_r175_beta:              jmp         seq_l175_beta
+seq_r171_alpha:
+seq_r171_beta:              jmp         seq_l171_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr8_gamma:
                             jmp         [P_Expr8_ret_γ]
 patdef_Expr8_omega:         jmp         [P_Expr8_ret_ω]
 
 ; P_Expr9_α (α entry)
-P_Expr9_α:                  jmp         seq_l177_alpha ; SEQ
-P_Expr9_β:                  jmp         seq_r177_beta
+P_Expr9_α:                  jmp         seq_l173_alpha ; SEQ
+P_Expr9_β:                  jmp         seq_r173_beta
 
-seq_l177_alpha: ; REF(Expr10)
-                            lea         rax, [rel nref178_gamma]
+seq_l173_alpha: ; REF(Expr10)
+                            lea         rax, [rel nref174_gamma]
                             mov         [P_Expr10_ret_γ], rax
-                            lea         rax, [rel nref178_omega]
+                            lea         rax, [rel nref174_omega]
                             mov         [P_Expr10_ret_ω], rax
                             jmp         P_Expr10_α
-seq_l177_beta:              lea         rax, [rel nref178_gamma] ; REF(%s)
+seq_l173_beta:              lea         rax, [rel nref174_gamma] ; REF(%s)
                             mov         [P_Expr10_ret_γ], rax
-                            lea         rax, [rel nref178_omega]
+                            lea         rax, [rel nref174_omega]
                             mov         [P_Expr10_ret_ω], rax
                             jmp         P_Expr10_β
 
-nref178_gamma:
-                            jmp         seq_r177_alpha
+nref174_gamma:
+                            jmp         seq_r173_alpha
 ;  Expr9 ===============================================================================================================
-nref178_omega:              jmp         patdef_Expr9_omega
+nref174_omega:              jmp         patdef_Expr9_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r177_alpha:
-seq_r177_beta:              jmp         seq_l177_beta
+seq_r173_alpha:
+seq_r173_beta:              jmp         seq_l173_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr9_gamma:
                             jmp         [P_Expr9_ret_γ]
 patdef_Expr9_omega:         jmp         [P_Expr9_ret_ω]
 
 ; P_Expr10_α (α entry)
-P_Expr10_α:                 jmp         seq_l179_alpha ; SEQ
-P_Expr10_β:                 jmp         seq_r179_beta
+P_Expr10_α:                 jmp         seq_l175_alpha ; SEQ
+P_Expr10_β:                 jmp         seq_r175_beta
 
-seq_l179_alpha: ; REF(Expr11)
-                            lea         rax, [rel nref180_gamma]
+seq_l175_alpha: ; REF(Expr11)
+                            lea         rax, [rel nref176_gamma]
                             mov         [P_Expr11_ret_γ], rax
-                            lea         rax, [rel nref180_omega]
+                            lea         rax, [rel nref176_omega]
                             mov         [P_Expr11_ret_ω], rax
                             jmp         P_Expr11_α
-seq_l179_beta:              lea         rax, [rel nref180_gamma] ; REF(%s)
+seq_l175_beta:              lea         rax, [rel nref176_gamma] ; REF(%s)
                             mov         [P_Expr11_ret_γ], rax
-                            lea         rax, [rel nref180_omega]
+                            lea         rax, [rel nref176_omega]
                             mov         [P_Expr11_ret_ω], rax
                             jmp         P_Expr11_β
 
-nref180_gamma:
-                            jmp         seq_r179_alpha
+nref176_gamma:
+                            jmp         seq_r175_alpha
 ;  Expr10 ==============================================================================================================
-nref180_omega:              jmp         patdef_Expr10_omega
+nref176_omega:              jmp         patdef_Expr10_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r179_alpha:
-seq_r179_beta:              jmp         seq_l179_beta
+seq_r175_alpha:
+seq_r175_beta:              jmp         seq_l175_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr10_gamma:
                             jmp         [P_Expr10_ret_γ]
 patdef_Expr10_omega:        jmp         [P_Expr10_ret_ω]
 
 ; P_Expr11_α (α entry)
-P_Expr11_α:                 jmp         seq_l181_alpha ; SEQ
-P_Expr11_β:                 jmp         seq_r181_beta
+P_Expr11_α:                 jmp         seq_l177_alpha ; SEQ
+P_Expr11_β:                 jmp         seq_r177_beta
 
-seq_l181_alpha: ; REF(Expr12)
-                            lea         rax, [rel nref182_gamma]
+seq_l177_alpha: ; REF(Expr12)
+                            lea         rax, [rel nref178_gamma]
                             mov         [P_Expr12_ret_γ], rax
-                            lea         rax, [rel nref182_omega]
+                            lea         rax, [rel nref178_omega]
                             mov         [P_Expr12_ret_ω], rax
                             jmp         P_Expr12_α
-seq_l181_beta:              lea         rax, [rel nref182_gamma] ; REF(%s)
+seq_l177_beta:              lea         rax, [rel nref178_gamma] ; REF(%s)
                             mov         [P_Expr12_ret_γ], rax
-                            lea         rax, [rel nref182_omega]
+                            lea         rax, [rel nref178_omega]
                             mov         [P_Expr12_ret_ω], rax
                             jmp         P_Expr12_β
 
-nref182_gamma:
-                            jmp         seq_r181_alpha
+nref178_gamma:
+                            jmp         seq_r177_alpha
 ;  Expr11 ==============================================================================================================
-nref182_omega:              jmp         patdef_Expr11_omega
+nref178_omega:              jmp         patdef_Expr11_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r181_alpha:
-seq_r181_beta:              jmp         seq_l181_beta
+seq_r177_alpha:
+seq_r177_beta:              jmp         seq_l177_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr11_gamma:
                             jmp         [P_Expr11_ret_γ]
 patdef_Expr11_omega:        jmp         [P_Expr11_ret_ω]
 
 ; P_Expr12_α (α entry)
-P_Expr12_α:                 jmp         seq_l183_alpha ; SEQ
-P_Expr12_β:                 jmp         seq_r183_beta
+P_Expr12_α:                 jmp         seq_l179_alpha ; SEQ
+P_Expr12_β:                 jmp         seq_r179_beta
 
-seq_l183_alpha: ; REF(Expr13)
-                            lea         rax, [rel nref184_gamma]
+seq_l179_alpha: ; REF(Expr13)
+                            lea         rax, [rel nref180_gamma]
                             mov         [P_Expr13_ret_γ], rax
-                            lea         rax, [rel nref184_omega]
+                            lea         rax, [rel nref180_omega]
                             mov         [P_Expr13_ret_ω], rax
                             jmp         P_Expr13_α
-seq_l183_beta:              lea         rax, [rel nref184_gamma] ; REF(%s)
+seq_l179_beta:              lea         rax, [rel nref180_gamma] ; REF(%s)
                             mov         [P_Expr13_ret_γ], rax
-                            lea         rax, [rel nref184_omega]
+                            lea         rax, [rel nref180_omega]
                             mov         [P_Expr13_ret_ω], rax
                             jmp         P_Expr13_β
 
-nref184_gamma:
-                            jmp         seq_r183_alpha
+nref180_gamma:
+                            jmp         seq_r179_alpha
 ;  Expr12 ==============================================================================================================
-nref184_omega:              jmp         patdef_Expr12_omega
+nref180_omega:              jmp         patdef_Expr12_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r183_alpha:
-seq_r183_beta:              jmp         seq_l183_beta
+seq_r179_alpha:
+seq_r179_beta:              jmp         seq_l179_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr12_gamma:
                             jmp         [P_Expr12_ret_γ]
 patdef_Expr12_omega:        jmp         [P_Expr12_ret_ω]
 
 ; P_Expr13_α (α entry)
-P_Expr13_α:                 jmp         seq_l185_alpha ; SEQ
-P_Expr13_β:                 jmp         seq_r185_beta
+P_Expr13_α:                 jmp         seq_l181_alpha ; SEQ
+P_Expr13_β:                 jmp         seq_r181_beta
 
-seq_l185_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref186_gamma]
+seq_l181_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref182_gamma]
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref186_omega]
+                            lea         rax, [rel nref182_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_α
-seq_l185_beta:              lea         rax, [rel nref186_gamma] ; REF(%s)
+seq_l181_beta:              lea         rax, [rel nref182_gamma] ; REF(%s)
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref186_omega]
+                            lea         rax, [rel nref182_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_β
 
-nref186_gamma:
-                            jmp         seq_r185_alpha
+nref182_gamma:
+                            jmp         seq_r181_alpha
 ;  Expr13 ==============================================================================================================
-nref186_omega:              jmp         patdef_Expr13_omega
+nref182_omega:              jmp         patdef_Expr13_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r185_alpha:
-seq_r185_beta:              jmp         seq_l185_beta
+seq_r181_alpha:
+seq_r181_beta:              jmp         seq_l181_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr13_gamma:
                             jmp         [P_Expr13_ret_γ]
 patdef_Expr13_omega:        jmp         [P_Expr13_ret_ω]
 
 ; P_Expr14_α (α entry)
-P_Expr14_α:                 ALT_ALPHA   alt187_cur_save, cursor, alt_l187_alpha ; ALT α — save cursor, enter left
-P_Expr14_β:                 SEQ_BETA    alt_r187_beta ; ALT β — resume right
+P_Expr14_α:                 ALT_ALPHA   alt183_cur_save, cursor, alt_l183_alpha ; ALT α — save cursor, enter left
+P_Expr14_β:                 SEQ_BETA    alt_r183_beta ; ALT β — resume right
+alt_l183_alpha:             ALT_ALPHA   alt184_cur_save, cursor, alt_l184_alpha ; ALT α — save cursor, enter left
+alt_l183_beta:              SEQ_BETA    alt_r184_beta ; ALT β — resume right
+alt_l184_alpha:             ALT_ALPHA   alt185_cur_save, cursor, alt_l185_alpha ; ALT α — save cursor, enter left
+alt_l184_beta:              SEQ_BETA    alt_r185_beta ; ALT β — resume right
+alt_l185_alpha:             ALT_ALPHA   alt186_cur_save, cursor, alt_l186_alpha ; ALT α — save cursor, enter left
+alt_l185_beta:              SEQ_BETA    alt_r186_beta ; ALT β — resume right
+alt_l186_alpha:             ALT_ALPHA   alt187_cur_save, cursor, alt_l187_alpha ; ALT α — save cursor, enter left
+alt_l186_beta:              SEQ_BETA    alt_r187_beta ; ALT β — resume right
 alt_l187_alpha:             ALT_ALPHA   alt188_cur_save, cursor, alt_l188_alpha ; ALT α — save cursor, enter left
 alt_l187_beta:              SEQ_BETA    alt_r188_beta ; ALT β — resume right
 alt_l188_alpha:             ALT_ALPHA   alt189_cur_save, cursor, alt_l189_alpha ; ALT α — save cursor, enter left
@@ -12483,589 +11816,581 @@ alt_l197_alpha:             ALT_ALPHA   alt198_cur_save, cursor, alt_l198_alpha 
 alt_l197_beta:              SEQ_BETA    alt_r198_beta ; ALT β — resume right
 alt_l198_alpha:             ALT_ALPHA   alt199_cur_save, cursor, alt_l199_alpha ; ALT α — save cursor, enter left
 alt_l198_beta:              SEQ_BETA    alt_r199_beta ; ALT β — resume right
-alt_l199_alpha:             ALT_ALPHA   alt200_cur_save, cursor, alt_l200_alpha ; ALT α — save cursor, enter left
-alt_l199_beta:              SEQ_BETA    alt_r200_beta ; ALT β — resume right
-alt_l200_alpha:             ALT_ALPHA   alt201_cur_save, cursor, alt_l201_alpha ; ALT α — save cursor, enter left
-alt_l200_beta:              SEQ_BETA    alt_r201_beta ; ALT β — resume right
-alt_l201_alpha:             ALT_ALPHA   alt202_cur_save, cursor, alt_l202_alpha ; ALT α — save cursor, enter left
-alt_l201_beta:              SEQ_BETA    alt_r202_beta ; ALT β — resume right
-alt_l202_alpha:             ALT_ALPHA   alt203_cur_save, cursor, alt_l203_alpha ; ALT α — save cursor, enter left
-alt_l202_beta:              SEQ_BETA    alt_r203_beta ; ALT β — resume right
-alt_l203_alpha:             jmp         seq_l204_alpha ; SEQ
-alt_l203_beta:              jmp         seq_r204_beta
-seq_l204_alpha:             jmp         seq_l205_alpha ; SEQ
-seq_l204_beta:              jmp         seq_r205_beta
-seq_l205_alpha:             LIT_ALPHA1  64, seq_l205_alpha_saved, cursor, subject_data, subject_len_val, seq_r205_alpha, alt203_left_omega ; LIT α
-seq_l205_beta:              LIT_BETA    seq_l205_alpha_saved, cursor, alt203_left_omega ; LIT β
+alt_l199_alpha:             jmp         seq_l200_alpha ; SEQ
+alt_l199_beta:              jmp         seq_r200_beta
+seq_l200_alpha:             jmp         seq_l201_alpha ; SEQ
+seq_l200_beta:              jmp         seq_r201_beta
+seq_l201_alpha:             LIT_ALPHA1  64, seq_l201_alpha_saved, cursor, subject_data, subject_len_val, seq_r201_alpha, alt199_left_omega ; LIT α
+seq_l201_beta:              LIT_BETA    seq_l201_alpha_saved, cursor, alt199_left_omega ; LIT β
 
-seq_r205_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref206_gamma]
+seq_r201_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref202_gamma]
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref206_omega]
+                            lea         rax, [rel nref202_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_α
-seq_r205_beta:              lea         rax, [rel nref206_gamma] ; REF(%s)
+seq_r201_beta:              lea         rax, [rel nref202_gamma] ; REF(%s)
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref206_omega]
+                            lea         rax, [rel nref202_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_β
 
-nref206_gamma:
-                            jmp         seq_r204_alpha
+nref202_gamma:
+                            jmp         seq_r200_alpha
 ;  Expr14 ==============================================================================================================
-nref206_omega:              jmp         seq_l205_beta
+nref202_omega:              jmp         seq_l201_beta
 
 ; UNIMPLEMENTED node kind 14 → ω
-seq_r204_alpha:
-seq_r204_beta:              jmp         seq_l204_beta
-alt203_left_omega:          ALT_OMEGA   alt203_cur_save, cursor, alt_r203_alpha ; ALT left_ω — restore cursor, enter right
-alt_r203_alpha:             jmp         seq_l207_alpha ; SEQ
-alt_r203_beta:              jmp         seq_r207_beta
-seq_l207_alpha:             jmp         seq_l208_alpha ; SEQ
-seq_l207_beta:              jmp         seq_r208_beta
-seq_l208_alpha:             LIT_ALPHA1  126, seq_l208_alpha_saved, cursor, subject_data, subject_len_val, seq_r208_alpha, alt202_left_omega ; LIT α
-seq_l208_beta:              LIT_BETA    seq_l208_alpha_saved, cursor, alt202_left_omega ; LIT β
+seq_r200_alpha:
+seq_r200_beta:              jmp         seq_l200_beta
+alt199_left_omega:          ALT_OMEGA   alt199_cur_save, cursor, alt_r199_alpha ; ALT left_ω — restore cursor, enter right
+alt_r199_alpha:             jmp         seq_l203_alpha ; SEQ
+alt_r199_beta:              jmp         seq_r203_beta
+seq_l203_alpha:             jmp         seq_l204_alpha ; SEQ
+seq_l203_beta:              jmp         seq_r204_beta
+seq_l204_alpha:             LIT_ALPHA1  126, seq_l204_alpha_saved, cursor, subject_data, subject_len_val, seq_r204_alpha, alt198_left_omega ; LIT α
+seq_l204_beta:              LIT_BETA    seq_l204_alpha_saved, cursor, alt198_left_omega ; LIT β
 
-seq_r208_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref209_gamma]
+seq_r204_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref205_gamma]
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref209_omega]
+                            lea         rax, [rel nref205_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_α
-seq_r208_beta:              lea         rax, [rel nref209_gamma] ; REF(%s)
+seq_r204_beta:              lea         rax, [rel nref205_gamma] ; REF(%s)
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref209_omega]
+                            lea         rax, [rel nref205_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_β
 
-nref209_gamma:
-                            jmp         seq_r207_alpha
-nref209_omega:              jmp         seq_l208_beta
+nref205_gamma:
+                            jmp         seq_r203_alpha
+nref205_omega:              jmp         seq_l204_beta
 
 ; UNIMPLEMENTED node kind 14 → ω
-seq_r207_alpha:
-seq_r207_beta:              jmp         seq_l207_beta
-alt202_left_omega:          ALT_OMEGA   alt202_cur_save, cursor, alt_r202_alpha ; ALT left_ω — restore cursor, enter right
-alt_r202_alpha:             jmp         seq_l210_alpha ; SEQ
-alt_r202_beta:              jmp         seq_r210_beta
-seq_l210_alpha:             jmp         seq_l211_alpha ; SEQ
-seq_l210_beta:              jmp         seq_r211_beta
-seq_l211_alpha:             LIT_ALPHA1  63, seq_l211_alpha_saved, cursor, subject_data, subject_len_val, seq_r211_alpha, alt201_left_omega ; LIT α
-seq_l211_beta:              LIT_BETA    seq_l211_alpha_saved, cursor, alt201_left_omega ; LIT β
+seq_r203_alpha:
+seq_r203_beta:              jmp         seq_l203_beta
+alt198_left_omega:          ALT_OMEGA   alt198_cur_save, cursor, alt_r198_alpha ; ALT left_ω — restore cursor, enter right
+alt_r198_alpha:             jmp         seq_l206_alpha ; SEQ
+alt_r198_beta:              jmp         seq_r206_beta
+seq_l206_alpha:             jmp         seq_l207_alpha ; SEQ
+seq_l206_beta:              jmp         seq_r207_beta
+seq_l207_alpha:             LIT_ALPHA1  63, seq_l207_alpha_saved, cursor, subject_data, subject_len_val, seq_r207_alpha, alt197_left_omega ; LIT α
+seq_l207_beta:              LIT_BETA    seq_l207_alpha_saved, cursor, alt197_left_omega ; LIT β
 
-seq_r211_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref212_gamma]
+seq_r207_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref208_gamma]
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref212_omega]
+                            lea         rax, [rel nref208_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_α
-seq_r211_beta:              lea         rax, [rel nref212_gamma] ; REF(%s)
+seq_r207_beta:              lea         rax, [rel nref208_gamma] ; REF(%s)
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref212_omega]
+                            lea         rax, [rel nref208_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_β
 
-nref212_gamma:
-                            jmp         seq_r210_alpha
-nref212_omega:              jmp         seq_l211_beta
+nref208_gamma:
+                            jmp         seq_r206_alpha
+nref208_omega:              jmp         seq_l207_beta
 
 ; UNIMPLEMENTED node kind 14 → ω
-seq_r210_alpha:
-seq_r210_beta:              jmp         seq_l210_beta
-alt201_left_omega:          ALT_OMEGA   alt201_cur_save, cursor, alt_r201_alpha ; ALT left_ω — restore cursor, enter right
+seq_r206_alpha:
+seq_r206_beta:              jmp         seq_l206_beta
+alt197_left_omega:          ALT_OMEGA   alt197_cur_save, cursor, alt_r197_alpha ; ALT left_ω — restore cursor, enter right
 
-alt_r201_alpha: ; DOL(ProtKwd $  ProtKwd)
-                            DOL_SAVE    dol_entry_ProtKwd, cursor, dol213_child_alpha ; DOL α — save entry cursor
-alt_r201_beta:              jmp         dol213_child_beta ; DOL β
+alt_r197_alpha: ; DOL(ProtKwd $  ProtKwd)
+                            DOL_SAVE    dol_entry_ProtKwd, cursor, dol209_child_alpha ; DOL α — save entry cursor
+alt_r197_beta:              jmp         dol209_child_beta ; DOL β
 
-dol213_child_alpha: ; REF(ProtKwd)
-                            lea         rax, [rel nref214_gamma]
+dol209_child_alpha: ; REF(ProtKwd)
+                            lea         rax, [rel nref210_gamma]
                             mov         [P_ProtKwd_ret_γ], rax
-                            lea         rax, [rel nref214_omega]
+                            lea         rax, [rel nref210_omega]
                             mov         [P_ProtKwd_ret_ω], rax
                             jmp         P_ProtKwd_α
-dol213_child_beta:          lea         rax, [rel nref214_gamma] ; REF(%s)
+dol209_child_beta:          lea         rax, [rel nref210_gamma] ; REF(%s)
                             mov         [P_ProtKwd_ret_γ], rax
-                            lea         rax, [rel nref214_omega]
+                            lea         rax, [rel nref210_omega]
                             mov         [P_ProtKwd_ret_ω], rax
                             jmp         P_ProtKwd_β
 
-nref214_gamma:
-                            jmp         dol213_gamma
-nref214_omega:              jmp         dol213_omega
-dol213_gamma:               DOL_CAPTURE dol_entry_ProtKwd, cursor, cap_ProtKwd_buf, cap_ProtKwd_len, subject_data, patdef_Expr14_gamma ; DOL γ — capture span
-dol213_omega:               jmp         alt200_left_omega ; DOL ω — child failed
-alt200_left_omega:          ALT_OMEGA   alt200_cur_save, cursor, alt_r200_alpha ; ALT left_ω — restore cursor, enter right
+nref210_gamma:
+                            jmp         dol209_gamma
+nref210_omega:              jmp         dol209_omega
+dol209_gamma:               DOL_CAPTURE dol_entry_ProtKwd, cursor, cap_ProtKwd_buf, cap_ProtKwd_len, subject_data, patdef_Expr14_gamma ; DOL γ — capture span
+dol209_omega:               jmp         alt196_left_omega ; DOL ω — child failed
+alt196_left_omega:          ALT_OMEGA   alt196_cur_save, cursor, alt_r196_alpha ; ALT left_ω — restore cursor, enter right
 
-alt_r200_alpha: ; DOL(UnprotKwd $  UnprotKwd)
-                            DOL_SAVE    dol_entry_UnprotKwd, cursor, dol215_child_alpha ; DOL α — save entry cursor
-alt_r200_beta:              jmp         dol215_child_beta ; DOL β
+alt_r196_alpha: ; DOL(UnprotKwd $  UnprotKwd)
+                            DOL_SAVE    dol_entry_UnprotKwd, cursor, dol211_child_alpha ; DOL α — save entry cursor
+alt_r196_beta:              jmp         dol211_child_beta ; DOL β
 
-dol215_child_alpha: ; REF(UnprotKwd)
-                            lea         rax, [rel nref216_gamma]
+dol211_child_alpha: ; REF(UnprotKwd)
+                            lea         rax, [rel nref212_gamma]
                             mov         [P_UnprotKwd_ret_γ], rax
-                            lea         rax, [rel nref216_omega]
+                            lea         rax, [rel nref212_omega]
                             mov         [P_UnprotKwd_ret_ω], rax
                             jmp         P_UnprotKwd_α
-dol215_child_beta:          lea         rax, [rel nref216_gamma] ; REF(%s)
+dol211_child_beta:          lea         rax, [rel nref212_gamma] ; REF(%s)
                             mov         [P_UnprotKwd_ret_γ], rax
-                            lea         rax, [rel nref216_omega]
+                            lea         rax, [rel nref212_omega]
                             mov         [P_UnprotKwd_ret_ω], rax
                             jmp         P_UnprotKwd_β
 
-nref216_gamma:
-                            jmp         dol215_gamma
-nref216_omega:              jmp         dol215_omega
-dol215_gamma:               DOL_CAPTURE dol_entry_UnprotKwd, cursor, cap_UnprotKwd_buf, cap_UnprotKwd_len, subject_data, patdef_Expr14_gamma ; DOL γ — capture span
-dol215_omega:               jmp         alt199_left_omega ; DOL ω — child failed
-alt199_left_omega:          ALT_OMEGA   alt199_cur_save, cursor, alt_r199_alpha ; ALT left_ω — restore cursor, enter right
-alt_r199_alpha:             jmp         seq_l217_alpha ; SEQ
-alt_r199_beta:              jmp         seq_r217_beta
-seq_l217_alpha:             jmp         seq_l218_alpha ; SEQ
-seq_l217_beta:              jmp         seq_r218_beta
-seq_l218_alpha:             LIT_ALPHA1  38, seq_l218_alpha_saved, cursor, subject_data, subject_len_val, seq_r218_alpha, alt198_left_omega ; LIT α
-seq_l218_beta:              LIT_BETA    seq_l218_alpha_saved, cursor, alt198_left_omega ; LIT β
-
-seq_r218_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref219_gamma]
-                            mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref219_omega]
-                            mov         [P_Expr14_ret_ω], rax
-                            jmp         P_Expr14_α
-seq_r218_beta:              lea         rax, [rel nref219_gamma] ; REF(%s)
-                            mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref219_omega]
-                            mov         [P_Expr14_ret_ω], rax
-                            jmp         P_Expr14_β
-
-nref219_gamma:
-                            jmp         seq_r217_alpha
-nref219_omega:              jmp         seq_l218_beta
-
-; UNIMPLEMENTED node kind 14 → ω
-seq_r217_alpha:
-seq_r217_beta:              jmp         seq_l217_beta
-alt198_left_omega:          ALT_OMEGA   alt198_cur_save, cursor, alt_r198_alpha ; ALT left_ω — restore cursor, enter right
-alt_r198_alpha:             jmp         seq_l220_alpha ; SEQ
-alt_r198_beta:              jmp         seq_r220_beta
-seq_l220_alpha:             jmp         seq_l221_alpha ; SEQ
-seq_l220_beta:              jmp         seq_r221_beta
-seq_l221_alpha:             LIT_ALPHA1  43, seq_l221_alpha_saved, cursor, subject_data, subject_len_val, seq_r221_alpha, alt197_left_omega ; LIT α
-seq_l221_beta:              LIT_BETA    seq_l221_alpha_saved, cursor, alt197_left_omega ; LIT β
-
-seq_r221_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref222_gamma]
-                            mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref222_omega]
-                            mov         [P_Expr14_ret_ω], rax
-                            jmp         P_Expr14_α
-seq_r221_beta:              lea         rax, [rel nref222_gamma] ; REF(%s)
-                            mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref222_omega]
-                            mov         [P_Expr14_ret_ω], rax
-                            jmp         P_Expr14_β
-
-nref222_gamma:
-                            jmp         seq_r220_alpha
-nref222_omega:              jmp         seq_l221_beta
-
-; UNIMPLEMENTED node kind 14 → ω
-seq_r220_alpha:
-seq_r220_beta:              jmp         seq_l220_beta
-alt197_left_omega:          ALT_OMEGA   alt197_cur_save, cursor, alt_r197_alpha ; ALT left_ω — restore cursor, enter right
-alt_r197_alpha:             jmp         seq_l223_alpha ; SEQ
-alt_r197_beta:              jmp         seq_r223_beta
-seq_l223_alpha:             jmp         seq_l224_alpha ; SEQ
-seq_l223_beta:              jmp         seq_r224_beta
-seq_l224_alpha:             LIT_ALPHA1  45, seq_l224_alpha_saved, cursor, subject_data, subject_len_val, seq_r224_alpha, alt196_left_omega ; LIT α
-seq_l224_beta:              LIT_BETA    seq_l224_alpha_saved, cursor, alt196_left_omega ; LIT β
-
-seq_r224_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref225_gamma]
-                            mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref225_omega]
-                            mov         [P_Expr14_ret_ω], rax
-                            jmp         P_Expr14_α
-seq_r224_beta:              lea         rax, [rel nref225_gamma] ; REF(%s)
-                            mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref225_omega]
-                            mov         [P_Expr14_ret_ω], rax
-                            jmp         P_Expr14_β
-
-nref225_gamma:
-                            jmp         seq_r223_alpha
-nref225_omega:              jmp         seq_l224_beta
-
-; UNIMPLEMENTED node kind 14 → ω
-seq_r223_alpha:
-seq_r223_beta:              jmp         seq_l223_beta
-alt196_left_omega:          ALT_OMEGA   alt196_cur_save, cursor, alt_r196_alpha ; ALT left_ω — restore cursor, enter right
-alt_r196_alpha:             jmp         seq_l226_alpha ; SEQ
-alt_r196_beta:              jmp         seq_r226_beta
-seq_l226_alpha:             jmp         seq_l227_alpha ; SEQ
-seq_l226_beta:              jmp         seq_r227_beta
-seq_l227_alpha:             LIT_ALPHA1  42, seq_l227_alpha_saved, cursor, subject_data, subject_len_val, seq_r227_alpha, alt195_left_omega ; LIT α
-seq_l227_beta:              LIT_BETA    seq_l227_alpha_saved, cursor, alt195_left_omega ; LIT β
-
-seq_r227_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref228_gamma]
-                            mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref228_omega]
-                            mov         [P_Expr14_ret_ω], rax
-                            jmp         P_Expr14_α
-seq_r227_beta:              lea         rax, [rel nref228_gamma] ; REF(%s)
-                            mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref228_omega]
-                            mov         [P_Expr14_ret_ω], rax
-                            jmp         P_Expr14_β
-
-nref228_gamma:
-                            jmp         seq_r226_alpha
-nref228_omega:              jmp         seq_l227_beta
-
-; UNIMPLEMENTED node kind 14 → ω
-seq_r226_alpha:
-seq_r226_beta:              jmp         seq_l226_beta
+nref212_gamma:
+                            jmp         dol211_gamma
+nref212_omega:              jmp         dol211_omega
+dol211_gamma:               DOL_CAPTURE dol_entry_UnprotKwd, cursor, cap_UnprotKwd_buf, cap_UnprotKwd_len, subject_data, patdef_Expr14_gamma ; DOL γ — capture span
+dol211_omega:               jmp         alt195_left_omega ; DOL ω — child failed
 alt195_left_omega:          ALT_OMEGA   alt195_cur_save, cursor, alt_r195_alpha ; ALT left_ω — restore cursor, enter right
-alt_r195_alpha:             jmp         seq_l229_alpha ; SEQ
-alt_r195_beta:              jmp         seq_r229_beta
-seq_l229_alpha:             jmp         seq_l230_alpha ; SEQ
-seq_l229_beta:              jmp         seq_r230_beta
-seq_l230_alpha:             LIT_ALPHA1  36, seq_l230_alpha_saved, cursor, subject_data, subject_len_val, seq_r230_alpha, alt194_left_omega ; LIT α
-seq_l230_beta:              LIT_BETA    seq_l230_alpha_saved, cursor, alt194_left_omega ; LIT β
+alt_r195_alpha:             jmp         seq_l213_alpha ; SEQ
+alt_r195_beta:              jmp         seq_r213_beta
+seq_l213_alpha:             jmp         seq_l214_alpha ; SEQ
+seq_l213_beta:              jmp         seq_r214_beta
+seq_l214_alpha:             LIT_ALPHA1  38, seq_l214_alpha_saved, cursor, subject_data, subject_len_val, seq_r214_alpha, alt194_left_omega ; LIT α
+seq_l214_beta:              LIT_BETA    seq_l214_alpha_saved, cursor, alt194_left_omega ; LIT β
 
-seq_r230_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref231_gamma]
+seq_r214_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref215_gamma]
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref231_omega]
+                            lea         rax, [rel nref215_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_α
-seq_r230_beta:              lea         rax, [rel nref231_gamma] ; REF(%s)
+seq_r214_beta:              lea         rax, [rel nref215_gamma] ; REF(%s)
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref231_omega]
+                            lea         rax, [rel nref215_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_β
 
-nref231_gamma:
-                            jmp         seq_r229_alpha
-nref231_omega:              jmp         seq_l230_beta
+nref215_gamma:
+                            jmp         seq_r213_alpha
+nref215_omega:              jmp         seq_l214_beta
 
 ; UNIMPLEMENTED node kind 14 → ω
-seq_r229_alpha:
-seq_r229_beta:              jmp         seq_l229_beta
+seq_r213_alpha:
+seq_r213_beta:              jmp         seq_l213_beta
 alt194_left_omega:          ALT_OMEGA   alt194_cur_save, cursor, alt_r194_alpha ; ALT left_ω — restore cursor, enter right
-alt_r194_alpha:             jmp         seq_l232_alpha ; SEQ
-alt_r194_beta:              jmp         seq_r232_beta
-seq_l232_alpha:             jmp         seq_l233_alpha ; SEQ
-seq_l232_beta:              jmp         seq_r233_beta
-seq_l233_alpha:             LIT_ALPHA1  46, seq_l233_alpha_saved, cursor, subject_data, subject_len_val, seq_r233_alpha, alt193_left_omega ; LIT α
-seq_l233_beta:              LIT_BETA    seq_l233_alpha_saved, cursor, alt193_left_omega ; LIT β
+alt_r194_alpha:             jmp         seq_l216_alpha ; SEQ
+alt_r194_beta:              jmp         seq_r216_beta
+seq_l216_alpha:             jmp         seq_l217_alpha ; SEQ
+seq_l216_beta:              jmp         seq_r217_beta
+seq_l217_alpha:             LIT_ALPHA1  43, seq_l217_alpha_saved, cursor, subject_data, subject_len_val, seq_r217_alpha, alt193_left_omega ; LIT α
+seq_l217_beta:              LIT_BETA    seq_l217_alpha_saved, cursor, alt193_left_omega ; LIT β
 
-seq_r233_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref234_gamma]
+seq_r217_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref218_gamma]
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref234_omega]
+                            lea         rax, [rel nref218_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_α
-seq_r233_beta:              lea         rax, [rel nref234_gamma] ; REF(%s)
+seq_r217_beta:              lea         rax, [rel nref218_gamma] ; REF(%s)
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref234_omega]
+                            lea         rax, [rel nref218_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_β
 
-nref234_gamma:
-                            jmp         seq_r232_alpha
-nref234_omega:              jmp         seq_l233_beta
+nref218_gamma:
+                            jmp         seq_r216_alpha
+nref218_omega:              jmp         seq_l217_beta
 
 ; UNIMPLEMENTED node kind 14 → ω
-seq_r232_alpha:
-seq_r232_beta:              jmp         seq_l232_beta
+seq_r216_alpha:
+seq_r216_beta:              jmp         seq_l216_beta
 alt193_left_omega:          ALT_OMEGA   alt193_cur_save, cursor, alt_r193_alpha ; ALT left_ω — restore cursor, enter right
-alt_r193_alpha:             jmp         seq_l235_alpha ; SEQ
-alt_r193_beta:              jmp         seq_r235_beta
-seq_l235_alpha:             jmp         seq_l236_alpha ; SEQ
-seq_l235_beta:              jmp         seq_r236_beta
-seq_l236_alpha:             LIT_ALPHA1  33, seq_l236_alpha_saved, cursor, subject_data, subject_len_val, seq_r236_alpha, alt192_left_omega ; LIT α
-seq_l236_beta:              LIT_BETA    seq_l236_alpha_saved, cursor, alt192_left_omega ; LIT β
+alt_r193_alpha:             jmp         seq_l219_alpha ; SEQ
+alt_r193_beta:              jmp         seq_r219_beta
+seq_l219_alpha:             jmp         seq_l220_alpha ; SEQ
+seq_l219_beta:              jmp         seq_r220_beta
+seq_l220_alpha:             LIT_ALPHA1  45, seq_l220_alpha_saved, cursor, subject_data, subject_len_val, seq_r220_alpha, alt192_left_omega ; LIT α
+seq_l220_beta:              LIT_BETA    seq_l220_alpha_saved, cursor, alt192_left_omega ; LIT β
 
-seq_r236_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref237_gamma]
+seq_r220_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref221_gamma]
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref237_omega]
+                            lea         rax, [rel nref221_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_α
-seq_r236_beta:              lea         rax, [rel nref237_gamma] ; REF(%s)
+seq_r220_beta:              lea         rax, [rel nref221_gamma] ; REF(%s)
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref237_omega]
+                            lea         rax, [rel nref221_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_β
 
-nref237_gamma:
-                            jmp         seq_r235_alpha
-nref237_omega:              jmp         seq_l236_beta
+nref221_gamma:
+                            jmp         seq_r219_alpha
+nref221_omega:              jmp         seq_l220_beta
 
 ; UNIMPLEMENTED node kind 14 → ω
-seq_r235_alpha:
-seq_r235_beta:              jmp         seq_l235_beta
+seq_r219_alpha:
+seq_r219_beta:              jmp         seq_l219_beta
 alt192_left_omega:          ALT_OMEGA   alt192_cur_save, cursor, alt_r192_alpha ; ALT left_ω — restore cursor, enter right
-alt_r192_alpha:             jmp         seq_l238_alpha ; SEQ
-alt_r192_beta:              jmp         seq_r238_beta
-seq_l238_alpha:             jmp         seq_l239_alpha ; SEQ
-seq_l238_beta:              jmp         seq_r239_beta
-seq_l239_alpha:             LIT_ALPHA1  37, seq_l239_alpha_saved, cursor, subject_data, subject_len_val, seq_r239_alpha, alt191_left_omega ; LIT α
-seq_l239_beta:              LIT_BETA    seq_l239_alpha_saved, cursor, alt191_left_omega ; LIT β
+alt_r192_alpha:             jmp         seq_l222_alpha ; SEQ
+alt_r192_beta:              jmp         seq_r222_beta
+seq_l222_alpha:             jmp         seq_l223_alpha ; SEQ
+seq_l222_beta:              jmp         seq_r223_beta
+seq_l223_alpha:             LIT_ALPHA1  42, seq_l223_alpha_saved, cursor, subject_data, subject_len_val, seq_r223_alpha, alt191_left_omega ; LIT α
+seq_l223_beta:              LIT_BETA    seq_l223_alpha_saved, cursor, alt191_left_omega ; LIT β
 
-seq_r239_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref240_gamma]
+seq_r223_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref224_gamma]
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref240_omega]
+                            lea         rax, [rel nref224_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_α
-seq_r239_beta:              lea         rax, [rel nref240_gamma] ; REF(%s)
+seq_r223_beta:              lea         rax, [rel nref224_gamma] ; REF(%s)
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref240_omega]
+                            lea         rax, [rel nref224_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_β
 
-nref240_gamma:
-                            jmp         seq_r238_alpha
-nref240_omega:              jmp         seq_l239_beta
+nref224_gamma:
+                            jmp         seq_r222_alpha
+nref224_omega:              jmp         seq_l223_beta
 
 ; UNIMPLEMENTED node kind 14 → ω
-seq_r238_alpha:
-seq_r238_beta:              jmp         seq_l238_beta
+seq_r222_alpha:
+seq_r222_beta:              jmp         seq_l222_beta
 alt191_left_omega:          ALT_OMEGA   alt191_cur_save, cursor, alt_r191_alpha ; ALT left_ω — restore cursor, enter right
-alt_r191_alpha:             jmp         seq_l241_alpha ; SEQ
-alt_r191_beta:              jmp         seq_r241_beta
-seq_l241_alpha:             jmp         seq_l242_alpha ; SEQ
-seq_l241_beta:              jmp         seq_r242_beta
-seq_l242_alpha:             LIT_ALPHA1  47, seq_l242_alpha_saved, cursor, subject_data, subject_len_val, seq_r242_alpha, alt190_left_omega ; LIT α
-seq_l242_beta:              LIT_BETA    seq_l242_alpha_saved, cursor, alt190_left_omega ; LIT β
+alt_r191_alpha:             jmp         seq_l225_alpha ; SEQ
+alt_r191_beta:              jmp         seq_r225_beta
+seq_l225_alpha:             jmp         seq_l226_alpha ; SEQ
+seq_l225_beta:              jmp         seq_r226_beta
+seq_l226_alpha:             LIT_ALPHA1  36, seq_l226_alpha_saved, cursor, subject_data, subject_len_val, seq_r226_alpha, alt190_left_omega ; LIT α
+seq_l226_beta:              LIT_BETA    seq_l226_alpha_saved, cursor, alt190_left_omega ; LIT β
 
-seq_r242_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref243_gamma]
+seq_r226_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref227_gamma]
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref243_omega]
+                            lea         rax, [rel nref227_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_α
-seq_r242_beta:              lea         rax, [rel nref243_gamma] ; REF(%s)
+seq_r226_beta:              lea         rax, [rel nref227_gamma] ; REF(%s)
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref243_omega]
+                            lea         rax, [rel nref227_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_β
 
-nref243_gamma:
-                            jmp         seq_r241_alpha
-nref243_omega:              jmp         seq_l242_beta
+nref227_gamma:
+                            jmp         seq_r225_alpha
+nref227_omega:              jmp         seq_l226_beta
 
 ; UNIMPLEMENTED node kind 14 → ω
-seq_r241_alpha:
-seq_r241_beta:              jmp         seq_l241_beta
+seq_r225_alpha:
+seq_r225_beta:              jmp         seq_l225_beta
 alt190_left_omega:          ALT_OMEGA   alt190_cur_save, cursor, alt_r190_alpha ; ALT left_ω — restore cursor, enter right
-alt_r190_alpha:             jmp         seq_l244_alpha ; SEQ
-alt_r190_beta:              jmp         seq_r244_beta
-seq_l244_alpha:             jmp         seq_l245_alpha ; SEQ
-seq_l244_beta:              jmp         seq_r245_beta
-seq_l245_alpha:             LIT_ALPHA1  35, seq_l245_alpha_saved, cursor, subject_data, subject_len_val, seq_r245_alpha, alt189_left_omega ; LIT α
-seq_l245_beta:              LIT_BETA    seq_l245_alpha_saved, cursor, alt189_left_omega ; LIT β
+alt_r190_alpha:             jmp         seq_l228_alpha ; SEQ
+alt_r190_beta:              jmp         seq_r228_beta
+seq_l228_alpha:             jmp         seq_l229_alpha ; SEQ
+seq_l228_beta:              jmp         seq_r229_beta
+seq_l229_alpha:             LIT_ALPHA1  46, seq_l229_alpha_saved, cursor, subject_data, subject_len_val, seq_r229_alpha, alt189_left_omega ; LIT α
+seq_l229_beta:              LIT_BETA    seq_l229_alpha_saved, cursor, alt189_left_omega ; LIT β
 
-seq_r245_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref246_gamma]
+seq_r229_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref230_gamma]
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref246_omega]
+                            lea         rax, [rel nref230_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_α
-seq_r245_beta:              lea         rax, [rel nref246_gamma] ; REF(%s)
+seq_r229_beta:              lea         rax, [rel nref230_gamma] ; REF(%s)
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref246_omega]
+                            lea         rax, [rel nref230_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_β
 
-nref246_gamma:
-                            jmp         seq_r244_alpha
-nref246_omega:              jmp         seq_l245_beta
+nref230_gamma:
+                            jmp         seq_r228_alpha
+nref230_omega:              jmp         seq_l229_beta
 
 ; UNIMPLEMENTED node kind 14 → ω
-seq_r244_alpha:
-seq_r244_beta:              jmp         seq_l244_beta
+seq_r228_alpha:
+seq_r228_beta:              jmp         seq_l228_beta
 alt189_left_omega:          ALT_OMEGA   alt189_cur_save, cursor, alt_r189_alpha ; ALT left_ω — restore cursor, enter right
-alt_r189_alpha:             jmp         seq_l247_alpha ; SEQ
-alt_r189_beta:              jmp         seq_r247_beta
-seq_l247_alpha:             jmp         seq_l248_alpha ; SEQ
-seq_l247_beta:              jmp         seq_r248_beta
-seq_l248_alpha:             LIT_ALPHA1  61, seq_l248_alpha_saved, cursor, subject_data, subject_len_val, seq_r248_alpha, alt188_left_omega ; LIT α
-seq_l248_beta:              LIT_BETA    seq_l248_alpha_saved, cursor, alt188_left_omega ; LIT β
+alt_r189_alpha:             jmp         seq_l231_alpha ; SEQ
+alt_r189_beta:              jmp         seq_r231_beta
+seq_l231_alpha:             jmp         seq_l232_alpha ; SEQ
+seq_l231_beta:              jmp         seq_r232_beta
+seq_l232_alpha:             LIT_ALPHA1  33, seq_l232_alpha_saved, cursor, subject_data, subject_len_val, seq_r232_alpha, alt188_left_omega ; LIT α
+seq_l232_beta:              LIT_BETA    seq_l232_alpha_saved, cursor, alt188_left_omega ; LIT β
 
-seq_r248_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref249_gamma]
+seq_r232_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref233_gamma]
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref249_omega]
+                            lea         rax, [rel nref233_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_α
-seq_r248_beta:              lea         rax, [rel nref249_gamma] ; REF(%s)
+seq_r232_beta:              lea         rax, [rel nref233_gamma] ; REF(%s)
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref249_omega]
+                            lea         rax, [rel nref233_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_β
 
-nref249_gamma:
-                            jmp         seq_r247_alpha
-nref249_omega:              jmp         seq_l248_beta
+nref233_gamma:
+                            jmp         seq_r231_alpha
+nref233_omega:              jmp         seq_l232_beta
 
 ; UNIMPLEMENTED node kind 14 → ω
-seq_r247_alpha:
-seq_r247_beta:              jmp         seq_l247_beta
+seq_r231_alpha:
+seq_r231_beta:              jmp         seq_l231_beta
 alt188_left_omega:          ALT_OMEGA   alt188_cur_save, cursor, alt_r188_alpha ; ALT left_ω — restore cursor, enter right
-alt_r188_alpha:             jmp         seq_l250_alpha ; SEQ
-alt_r188_beta:              jmp         seq_r250_beta
-seq_l250_alpha:             jmp         seq_l251_alpha ; SEQ
-seq_l250_beta:              jmp         seq_r251_beta
-seq_l251_alpha:             LIT_ALPHA1  124, seq_l251_alpha_saved, cursor, subject_data, subject_len_val, seq_r251_alpha, alt187_left_omega ; LIT α
-seq_l251_beta:              LIT_BETA    seq_l251_alpha_saved, cursor, alt187_left_omega ; LIT β
+alt_r188_alpha:             jmp         seq_l234_alpha ; SEQ
+alt_r188_beta:              jmp         seq_r234_beta
+seq_l234_alpha:             jmp         seq_l235_alpha ; SEQ
+seq_l234_beta:              jmp         seq_r235_beta
+seq_l235_alpha:             LIT_ALPHA1  37, seq_l235_alpha_saved, cursor, subject_data, subject_len_val, seq_r235_alpha, alt187_left_omega ; LIT α
+seq_l235_beta:              LIT_BETA    seq_l235_alpha_saved, cursor, alt187_left_omega ; LIT β
 
-seq_r251_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref252_gamma]
+seq_r235_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref236_gamma]
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref252_omega]
+                            lea         rax, [rel nref236_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_α
-seq_r251_beta:              lea         rax, [rel nref252_gamma] ; REF(%s)
+seq_r235_beta:              lea         rax, [rel nref236_gamma] ; REF(%s)
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref252_omega]
+                            lea         rax, [rel nref236_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_β
 
-nref252_gamma:
-                            jmp         seq_r250_alpha
-nref252_omega:              jmp         seq_l251_beta
+nref236_gamma:
+                            jmp         seq_r234_alpha
+nref236_omega:              jmp         seq_l235_beta
 
 ; UNIMPLEMENTED node kind 14 → ω
-seq_r250_alpha:
-seq_r250_beta:              jmp         seq_l250_beta
+seq_r234_alpha:
+seq_r234_beta:              jmp         seq_l234_beta
 alt187_left_omega:          ALT_OMEGA   alt187_cur_save, cursor, alt_r187_alpha ; ALT left_ω — restore cursor, enter right
+alt_r187_alpha:             jmp         seq_l237_alpha ; SEQ
+alt_r187_beta:              jmp         seq_r237_beta
+seq_l237_alpha:             jmp         seq_l238_alpha ; SEQ
+seq_l237_beta:              jmp         seq_r238_beta
+seq_l238_alpha:             LIT_ALPHA1  47, seq_l238_alpha_saved, cursor, subject_data, subject_len_val, seq_r238_alpha, alt186_left_omega ; LIT α
+seq_l238_beta:              LIT_BETA    seq_l238_alpha_saved, cursor, alt186_left_omega ; LIT β
 
-alt_r187_alpha: ; REF(Expr15)
-                            lea         rax, [rel nref253_gamma]
+seq_r238_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref239_gamma]
+                            mov         [P_Expr14_ret_γ], rax
+                            lea         rax, [rel nref239_omega]
+                            mov         [P_Expr14_ret_ω], rax
+                            jmp         P_Expr14_α
+seq_r238_beta:              lea         rax, [rel nref239_gamma] ; REF(%s)
+                            mov         [P_Expr14_ret_γ], rax
+                            lea         rax, [rel nref239_omega]
+                            mov         [P_Expr14_ret_ω], rax
+                            jmp         P_Expr14_β
+
+nref239_gamma:
+                            jmp         seq_r237_alpha
+nref239_omega:              jmp         seq_l238_beta
+
+; UNIMPLEMENTED node kind 14 → ω
+seq_r237_alpha:
+seq_r237_beta:              jmp         seq_l237_beta
+alt186_left_omega:          ALT_OMEGA   alt186_cur_save, cursor, alt_r186_alpha ; ALT left_ω — restore cursor, enter right
+alt_r186_alpha:             jmp         seq_l240_alpha ; SEQ
+alt_r186_beta:              jmp         seq_r240_beta
+seq_l240_alpha:             jmp         seq_l241_alpha ; SEQ
+seq_l240_beta:              jmp         seq_r241_beta
+seq_l241_alpha:             LIT_ALPHA1  35, seq_l241_alpha_saved, cursor, subject_data, subject_len_val, seq_r241_alpha, alt185_left_omega ; LIT α
+seq_l241_beta:              LIT_BETA    seq_l241_alpha_saved, cursor, alt185_left_omega ; LIT β
+
+seq_r241_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref242_gamma]
+                            mov         [P_Expr14_ret_γ], rax
+                            lea         rax, [rel nref242_omega]
+                            mov         [P_Expr14_ret_ω], rax
+                            jmp         P_Expr14_α
+seq_r241_beta:              lea         rax, [rel nref242_gamma] ; REF(%s)
+                            mov         [P_Expr14_ret_γ], rax
+                            lea         rax, [rel nref242_omega]
+                            mov         [P_Expr14_ret_ω], rax
+                            jmp         P_Expr14_β
+
+nref242_gamma:
+                            jmp         seq_r240_alpha
+nref242_omega:              jmp         seq_l241_beta
+
+; UNIMPLEMENTED node kind 14 → ω
+seq_r240_alpha:
+seq_r240_beta:              jmp         seq_l240_beta
+alt185_left_omega:          ALT_OMEGA   alt185_cur_save, cursor, alt_r185_alpha ; ALT left_ω — restore cursor, enter right
+alt_r185_alpha:             jmp         seq_l243_alpha ; SEQ
+alt_r185_beta:              jmp         seq_r243_beta
+seq_l243_alpha:             jmp         seq_l244_alpha ; SEQ
+seq_l243_beta:              jmp         seq_r244_beta
+seq_l244_alpha:             LIT_ALPHA1  61, seq_l244_alpha_saved, cursor, subject_data, subject_len_val, seq_r244_alpha, alt184_left_omega ; LIT α
+seq_l244_beta:              LIT_BETA    seq_l244_alpha_saved, cursor, alt184_left_omega ; LIT β
+
+seq_r244_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref245_gamma]
+                            mov         [P_Expr14_ret_γ], rax
+                            lea         rax, [rel nref245_omega]
+                            mov         [P_Expr14_ret_ω], rax
+                            jmp         P_Expr14_α
+seq_r244_beta:              lea         rax, [rel nref245_gamma] ; REF(%s)
+                            mov         [P_Expr14_ret_γ], rax
+                            lea         rax, [rel nref245_omega]
+                            mov         [P_Expr14_ret_ω], rax
+                            jmp         P_Expr14_β
+
+nref245_gamma:
+                            jmp         seq_r243_alpha
+nref245_omega:              jmp         seq_l244_beta
+
+; UNIMPLEMENTED node kind 14 → ω
+seq_r243_alpha:
+seq_r243_beta:              jmp         seq_l243_beta
+alt184_left_omega:          ALT_OMEGA   alt184_cur_save, cursor, alt_r184_alpha ; ALT left_ω — restore cursor, enter right
+alt_r184_alpha:             jmp         seq_l246_alpha ; SEQ
+alt_r184_beta:              jmp         seq_r246_beta
+seq_l246_alpha:             jmp         seq_l247_alpha ; SEQ
+seq_l246_beta:              jmp         seq_r247_beta
+seq_l247_alpha:             LIT_ALPHA1  124, seq_l247_alpha_saved, cursor, subject_data, subject_len_val, seq_r247_alpha, alt183_left_omega ; LIT α
+seq_l247_beta:              LIT_BETA    seq_l247_alpha_saved, cursor, alt183_left_omega ; LIT β
+
+seq_r247_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref248_gamma]
+                            mov         [P_Expr14_ret_γ], rax
+                            lea         rax, [rel nref248_omega]
+                            mov         [P_Expr14_ret_ω], rax
+                            jmp         P_Expr14_α
+seq_r247_beta:              lea         rax, [rel nref248_gamma] ; REF(%s)
+                            mov         [P_Expr14_ret_γ], rax
+                            lea         rax, [rel nref248_omega]
+                            mov         [P_Expr14_ret_ω], rax
+                            jmp         P_Expr14_β
+
+nref248_gamma:
+                            jmp         seq_r246_alpha
+nref248_omega:              jmp         seq_l247_beta
+
+; UNIMPLEMENTED node kind 14 → ω
+seq_r246_alpha:
+seq_r246_beta:              jmp         seq_l246_beta
+alt183_left_omega:          ALT_OMEGA   alt183_cur_save, cursor, alt_r183_alpha ; ALT left_ω — restore cursor, enter right
+
+alt_r183_alpha: ; REF(Expr15)
+                            lea         rax, [rel nref249_gamma]
                             mov         [P_Expr15_ret_γ], rax
-                            lea         rax, [rel nref253_omega]
+                            lea         rax, [rel nref249_omega]
                             mov         [P_Expr15_ret_ω], rax
                             jmp         P_Expr15_α
-alt_r187_beta:              lea         rax, [rel nref253_gamma] ; REF(%s)
+alt_r183_beta:              lea         rax, [rel nref249_gamma] ; REF(%s)
                             mov         [P_Expr15_ret_γ], rax
-                            lea         rax, [rel nref253_omega]
+                            lea         rax, [rel nref249_omega]
                             mov         [P_Expr15_ret_ω], rax
                             jmp         P_Expr15_β
 
-nref253_gamma:
+nref249_gamma:
                             jmp         patdef_Expr14_gamma
-nref253_omega:              jmp         patdef_Expr14_omega
+nref249_omega:              jmp         patdef_Expr14_omega
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr14_gamma:
                             jmp         [P_Expr14_ret_γ]
 patdef_Expr14_omega:        jmp         [P_Expr14_ret_ω]
 
 ; P_Expr15_α (α entry)
-P_Expr15_α:                 jmp         seq_l254_alpha ; SEQ
-P_Expr15_β:                 jmp         seq_r254_beta
+P_Expr15_α:                 jmp         seq_l250_alpha ; SEQ
+P_Expr15_β:                 jmp         seq_r250_beta
 
-seq_l254_alpha: ; REF(Expr17)
-                            lea         rax, [rel nref255_gamma]
+seq_l250_alpha: ; REF(Expr17)
+                            lea         rax, [rel nref251_gamma]
                             mov         [P_Expr17_ret_γ], rax
-                            lea         rax, [rel nref255_omega]
+                            lea         rax, [rel nref251_omega]
                             mov         [P_Expr17_ret_ω], rax
                             jmp         P_Expr17_α
-seq_l254_beta:              lea         rax, [rel nref255_gamma] ; REF(%s)
+seq_l250_beta:              lea         rax, [rel nref251_gamma] ; REF(%s)
                             mov         [P_Expr17_ret_γ], rax
-                            lea         rax, [rel nref255_omega]
+                            lea         rax, [rel nref251_omega]
                             mov         [P_Expr17_ret_ω], rax
                             jmp         P_Expr17_β
 
-nref255_gamma:
-                            jmp         seq_r254_alpha
+nref251_gamma:
+                            jmp         seq_r250_alpha
 ;  Expr15 ==============================================================================================================
-nref255_omega:              jmp         patdef_Expr15_omega
+nref251_omega:              jmp         patdef_Expr15_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r254_alpha:
-seq_r254_beta:              jmp         seq_l254_beta
+seq_r250_alpha:
+seq_r250_beta:              jmp         seq_l250_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr15_gamma:
                             jmp         [P_Expr15_ret_γ]
 patdef_Expr15_omega:        jmp         [P_Expr15_ret_ω]
 
 ; P_Expr16_α (α entry)
-P_Expr16_α:                 jmp         seq_l256_alpha ; SEQ
-P_Expr16_β:                 jmp         seq_r256_beta
-seq_l256_alpha:             jmp         seq_l257_alpha ; SEQ
-seq_l256_beta:              jmp         seq_r257_beta
+P_Expr16_α:                 jmp         seq_l252_alpha ; SEQ
+P_Expr16_β:                 jmp         seq_r252_beta
+seq_l252_alpha:             jmp         seq_l253_alpha ; SEQ
+seq_l252_beta:              jmp         seq_r253_beta
 
 ; UNIMPLEMENTED: nInc() → ω
-seq_l257_alpha:
-seq_l257_beta:              jmp         patdef_Expr16_omega
-seq_r257_alpha:             ALT_ALPHA   alt258_cur_save, cursor, alt_l258_alpha ; ALT α — save cursor, enter left
-seq_r257_beta:              SEQ_BETA    alt_r258_beta ; ALT β — resume right
-alt_l258_alpha:             jmp         seq_l259_alpha ; SEQ
-alt_l258_beta:              jmp         seq_r259_beta
+seq_l253_alpha:
+seq_l253_beta:              jmp         patdef_Expr16_omega
+seq_r253_alpha:             ALT_ALPHA   alt254_cur_save, cursor, alt_l254_alpha ; ALT α — save cursor, enter left
+seq_r253_beta:              SEQ_BETA    alt_r254_beta ; ALT β — resume right
+alt_l254_alpha:             jmp         seq_l255_alpha ; SEQ
+alt_l254_beta:              jmp         seq_r255_beta
 
 ; E_INDR no varname → ω
-seq_l259_alpha:
-seq_l259_beta:              jmp         alt258_left_omega
+seq_l255_alpha:
+seq_l255_beta:              jmp         alt254_left_omega
 
-seq_r259_alpha: ; DOL(] $  RB)
-                            DOL_SAVE    dol_entry_RB, cursor, dol260_child_alpha ; DOL α — save entry cursor
-seq_r259_beta:              jmp         dol260_child_beta ; DOL β
+seq_r255_alpha: ; DOL(] $  RB)
+                            DOL_SAVE    dol_entry_RB, cursor, dol256_child_alpha ; DOL α — save entry cursor
+seq_r255_beta:              jmp         dol256_child_beta ; DOL β
 
-dol260_child_alpha: ; REF(ExprList)
-                            lea         rax, [rel nref261_gamma]
+dol256_child_alpha: ; REF(ExprList)
+                            lea         rax, [rel nref257_gamma]
                             mov         [P_ExprList_ret_γ], rax
-                            lea         rax, [rel nref261_omega]
+                            lea         rax, [rel nref257_omega]
                             mov         [P_ExprList_ret_ω], rax
                             jmp         P_ExprList_α
-dol260_child_beta:          lea         rax, [rel nref261_gamma] ; REF(%s)
+dol256_child_beta:          lea         rax, [rel nref257_gamma] ; REF(%s)
                             mov         [P_ExprList_ret_γ], rax
-                            lea         rax, [rel nref261_omega]
+                            lea         rax, [rel nref257_omega]
                             mov         [P_ExprList_ret_ω], rax
                             jmp         P_ExprList_β
 
-nref261_gamma:
-                            jmp         dol260_gamma
+nref257_gamma:
+                            jmp         dol256_gamma
 ;  Expr16 ==============================================================================================================
-nref261_omega:              jmp         dol260_omega
-dol260_gamma:               DOL_CAPTURE dol_entry_RB, cursor, cap_RB_buf, cap_RB_len, subject_data, seq_r256_alpha ; DOL γ — capture span
-dol260_omega:               jmp         seq_l259_beta ; DOL ω — child failed
-alt258_left_omega:          ALT_OMEGA   alt258_cur_save, cursor, alt_r258_alpha ; ALT left_ω — restore cursor, enter right
-alt_r258_alpha:             jmp         seq_l262_alpha ; SEQ
-alt_r258_beta:              jmp         seq_r262_beta
+nref257_omega:              jmp         dol256_omega
+dol256_gamma:               DOL_CAPTURE dol_entry_RB, cursor, cap_RB_buf, cap_RB_len, subject_data, seq_r252_alpha ; DOL γ — capture span
+dol256_omega:               jmp         seq_l255_beta ; DOL ω — child failed
+alt254_left_omega:          ALT_OMEGA   alt254_cur_save, cursor, alt_r254_alpha ; ALT left_ω — restore cursor, enter right
+alt_r254_alpha:             jmp         seq_l258_alpha ; SEQ
+alt_r254_beta:              jmp         seq_r258_beta
 
 ; E_INDR no varname → ω
-seq_l262_alpha:
-seq_l262_beta:              jmp         seq_l257_beta
+seq_l258_alpha:
+seq_l258_beta:              jmp         seq_l253_beta
 
-seq_r262_alpha: ; DOL(> $  GT)
-                            DOL_SAVE    dol_entry_GT, cursor, dol263_child_alpha ; DOL α — save entry cursor
-seq_r262_beta:              jmp         dol263_child_beta ; DOL β
+seq_r258_alpha: ; DOL(> $  GT)
+                            DOL_SAVE    dol_entry_GT, cursor, dol259_child_alpha ; DOL α — save entry cursor
+seq_r258_beta:              jmp         dol259_child_beta ; DOL β
 
-dol263_child_alpha: ; REF(ExprList)
-                            lea         rax, [rel nref264_gamma]
+dol259_child_alpha: ; REF(ExprList)
+                            lea         rax, [rel nref260_gamma]
                             mov         [P_ExprList_ret_γ], rax
-                            lea         rax, [rel nref264_omega]
+                            lea         rax, [rel nref260_omega]
                             mov         [P_ExprList_ret_ω], rax
                             jmp         P_ExprList_α
-dol263_child_beta:          lea         rax, [rel nref264_gamma] ; REF(%s)
+dol259_child_beta:          lea         rax, [rel nref260_gamma] ; REF(%s)
                             mov         [P_ExprList_ret_γ], rax
-                            lea         rax, [rel nref264_omega]
+                            lea         rax, [rel nref260_omega]
                             mov         [P_ExprList_ret_ω], rax
                             jmp         P_ExprList_β
 
-nref264_gamma:
-                            jmp         dol263_gamma
-nref264_omega:              jmp         dol263_omega
-dol263_gamma:               DOL_CAPTURE dol_entry_GT, cursor, cap_GT_buf, cap_GT_len, subject_data, seq_r256_alpha ; DOL γ — capture span
-dol263_omega:               jmp         seq_l262_beta ; DOL ω — child failed
+nref260_gamma:
+                            jmp         dol259_gamma
+nref260_omega:              jmp         dol259_omega
+dol259_gamma:               DOL_CAPTURE dol_entry_GT, cursor, cap_GT_buf, cap_GT_len, subject_data, seq_r252_alpha ; DOL γ — capture span
+dol259_omega:               jmp         seq_l258_beta ; DOL ω — child failed
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r256_alpha:
-seq_r256_beta:              jmp         seq_l256_beta
+seq_r252_alpha:
+seq_r252_beta:              jmp         seq_l252_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Expr16_gamma:
                             jmp         [P_Expr16_ret_γ]
@@ -13085,17 +12410,17 @@ patdef_Expr17_omega:        jmp         [P_Expr17_ret_ω]
 ; P_SGoto_α (α entry)
 
 P_SGoto_α: ; DOL(cap $  cap)
-                            DOL_SAVE    dol_entry_cap, cursor, dol265_child_alpha ; DOL α — save entry cursor
-P_SGoto_β:                  jmp         dol265_child_beta ; DOL β
-dol265_child_alpha:         ALT_ALPHA   alt266_cur_save, cursor, alt_l266_alpha ; ALT α — save cursor, enter left
-dol265_child_beta:          SEQ_BETA    alt_r266_beta ; ALT β — resume right
-alt_l266_alpha:             LIT_ALPHA1  83, alt_l266_alpha_saved, cursor, subject_data, subject_len_val, dol265_gamma, alt266_left_omega ; LIT α
-alt_l266_beta:              LIT_BETA    alt_l266_alpha_saved, cursor, alt266_left_omega ; LIT β
-alt266_left_omega:          ALT_OMEGA   alt266_cur_save, cursor, alt_r266_alpha ; ALT left_ω — restore cursor, enter right
-alt_r266_alpha:             LIT_ALPHA1  115, alt_r266_alpha_saved, cursor, subject_data, subject_len_val, dol265_gamma, dol265_omega ; LIT α
-alt_r266_beta:              LIT_BETA    alt_r266_alpha_saved, cursor, dol265_omega ; LIT β
-dol265_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_SGoto_gamma ; DOL γ — capture span
-dol265_omega:               jmp         patdef_SGoto_omega ; DOL ω — child failed
+                            DOL_SAVE    dol_entry_cap, cursor, dol261_child_alpha ; DOL α — save entry cursor
+P_SGoto_β:                  jmp         dol261_child_beta ; DOL β
+dol261_child_alpha:         ALT_ALPHA   alt262_cur_save, cursor, alt_l262_alpha ; ALT α — save cursor, enter left
+dol261_child_beta:          SEQ_BETA    alt_r262_beta ; ALT β — resume right
+alt_l262_alpha:             LIT_ALPHA1  83, alt_l262_alpha_saved, cursor, subject_data, subject_len_val, dol261_gamma, alt262_left_omega ; LIT α
+alt_l262_beta:              LIT_BETA    alt_l262_alpha_saved, cursor, alt262_left_omega ; LIT β
+alt262_left_omega:          ALT_OMEGA   alt262_cur_save, cursor, alt_r262_alpha ; ALT left_ω — restore cursor, enter right
+alt_r262_alpha:             LIT_ALPHA1  115, alt_r262_alpha_saved, cursor, subject_data, subject_len_val, dol261_gamma, dol261_omega ; LIT α
+alt_r262_beta:              LIT_BETA    alt_r262_alpha_saved, cursor, dol261_omega ; LIT β
+dol261_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_SGoto_gamma ; DOL γ — capture span
+dol261_omega:               jmp         patdef_SGoto_omega ; DOL ω — child failed
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_SGoto_gamma:
                             jmp         [P_SGoto_ret_γ]
@@ -13105,17 +12430,17 @@ patdef_SGoto_omega:         jmp         [P_SGoto_ret_ω]
 ; P_FGoto_α (α entry)
 
 P_FGoto_α: ; DOL(cap $  cap)
-                            DOL_SAVE    dol_entry_cap, cursor, dol267_child_alpha ; DOL α — save entry cursor
-P_FGoto_β:                  jmp         dol267_child_beta ; DOL β
-dol267_child_alpha:         ALT_ALPHA   alt268_cur_save, cursor, alt_l268_alpha ; ALT α — save cursor, enter left
-dol267_child_beta:          SEQ_BETA    alt_r268_beta ; ALT β — resume right
-alt_l268_alpha:             LIT_ALPHA1  70, alt_l268_alpha_saved, cursor, subject_data, subject_len_val, dol267_gamma, alt268_left_omega ; LIT α
-alt_l268_beta:              LIT_BETA    alt_l268_alpha_saved, cursor, alt268_left_omega ; LIT β
-alt268_left_omega:          ALT_OMEGA   alt268_cur_save, cursor, alt_r268_alpha ; ALT left_ω — restore cursor, enter right
-alt_r268_alpha:             LIT_ALPHA1  102, alt_r268_alpha_saved, cursor, subject_data, subject_len_val, dol267_gamma, dol267_omega ; LIT α
-alt_r268_beta:              LIT_BETA    alt_r268_alpha_saved, cursor, dol267_omega ; LIT β
-dol267_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_FGoto_gamma ; DOL γ — capture span
-dol267_omega:               jmp         patdef_FGoto_omega ; DOL ω — child failed
+                            DOL_SAVE    dol_entry_cap, cursor, dol263_child_alpha ; DOL α — save entry cursor
+P_FGoto_β:                  jmp         dol263_child_beta ; DOL β
+dol263_child_alpha:         ALT_ALPHA   alt264_cur_save, cursor, alt_l264_alpha ; ALT α — save cursor, enter left
+dol263_child_beta:          SEQ_BETA    alt_r264_beta ; ALT β — resume right
+alt_l264_alpha:             LIT_ALPHA1  70, alt_l264_alpha_saved, cursor, subject_data, subject_len_val, dol263_gamma, alt264_left_omega ; LIT α
+alt_l264_beta:              LIT_BETA    alt_l264_alpha_saved, cursor, alt264_left_omega ; LIT β
+alt264_left_omega:          ALT_OMEGA   alt264_cur_save, cursor, alt_r264_alpha ; ALT left_ω — restore cursor, enter right
+alt_r264_alpha:             LIT_ALPHA1  102, alt_r264_alpha_saved, cursor, subject_data, subject_len_val, dol263_gamma, dol263_omega ; LIT α
+alt_r264_beta:              LIT_BETA    alt_r264_alpha_saved, cursor, dol263_omega ; LIT β
+dol263_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, patdef_FGoto_gamma ; DOL γ — capture span
+dol263_omega:               jmp         patdef_FGoto_omega ; DOL ω — child failed
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_FGoto_gamma:
                             jmp         [P_FGoto_ret_γ]
@@ -13123,95 +12448,95 @@ patdef_FGoto_gamma:
 patdef_FGoto_omega:         jmp         [P_FGoto_ret_ω]
 
 ; P_SorF_α (α entry)
-P_SorF_α:                   ALT_ALPHA   alt269_cur_save, cursor, alt_l269_alpha ; ALT α — save cursor, enter left
-P_SorF_β:                   SEQ_BETA    alt_r269_beta ; ALT β — resume right
+P_SorF_α:                   ALT_ALPHA   alt265_cur_save, cursor, alt_l265_alpha ; ALT α — save cursor, enter left
+P_SorF_β:                   SEQ_BETA    alt_r265_beta ; ALT β — resume right
 
-alt_l269_alpha: ; REF(SGoto)
-                            lea         rax, [rel nref270_gamma]
+alt_l265_alpha: ; REF(SGoto)
+                            lea         rax, [rel nref266_gamma]
                             mov         [P_SGoto_ret_γ], rax
-                            lea         rax, [rel nref270_omega]
+                            lea         rax, [rel nref266_omega]
                             mov         [P_SGoto_ret_ω], rax
                             jmp         P_SGoto_α
-alt_l269_beta:              lea         rax, [rel nref270_gamma] ; REF(%s)
+alt_l265_beta:              lea         rax, [rel nref266_gamma] ; REF(%s)
                             mov         [P_SGoto_ret_γ], rax
-                            lea         rax, [rel nref270_omega]
+                            lea         rax, [rel nref266_omega]
                             mov         [P_SGoto_ret_ω], rax
                             jmp         P_SGoto_β
 
-nref270_gamma:
+nref266_gamma:
                             jmp         patdef_SorF_gamma
 ;  SorF ================================================================================================================
-nref270_omega:              jmp         alt269_left_omega
-alt269_left_omega:          ALT_OMEGA   alt269_cur_save, cursor, alt_r269_alpha ; ALT left_ω — restore cursor, enter right
+nref266_omega:              jmp         alt265_left_omega
+alt265_left_omega:          ALT_OMEGA   alt265_cur_save, cursor, alt_r265_alpha ; ALT left_ω — restore cursor, enter right
 
-alt_r269_alpha: ; REF(FGoto)
-                            lea         rax, [rel nref271_gamma]
+alt_r265_alpha: ; REF(FGoto)
+                            lea         rax, [rel nref267_gamma]
                             mov         [P_FGoto_ret_γ], rax
-                            lea         rax, [rel nref271_omega]
+                            lea         rax, [rel nref267_omega]
                             mov         [P_FGoto_ret_ω], rax
                             jmp         P_FGoto_α
-alt_r269_beta:              lea         rax, [rel nref271_gamma] ; REF(%s)
+alt_r265_beta:              lea         rax, [rel nref267_gamma] ; REF(%s)
                             mov         [P_FGoto_ret_γ], rax
-                            lea         rax, [rel nref271_omega]
+                            lea         rax, [rel nref267_omega]
                             mov         [P_FGoto_ret_ω], rax
                             jmp         P_FGoto_β
 
-nref271_gamma:
+nref267_gamma:
                             jmp         patdef_SorF_gamma
-nref271_omega:              jmp         patdef_SorF_omega
+nref267_omega:              jmp         patdef_SorF_omega
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_SorF_gamma:
                             jmp         [P_SorF_ret_γ]
 patdef_SorF_omega:          jmp         [P_SorF_ret_ω]
 
 ; P_Target_α (α entry)
-P_Target_α:                 ALT_ALPHA   alt272_cur_save, cursor, alt_l272_alpha ; ALT α — save cursor, enter left
-P_Target_β:                 SEQ_BETA    alt_r272_beta ; ALT β — resume right
-alt_l272_alpha:             jmp         seq_l273_alpha ; SEQ
-alt_l272_beta:              jmp         seq_r273_beta
+P_Target_α:                 ALT_ALPHA   alt268_cur_save, cursor, alt_l268_alpha ; ALT α — save cursor, enter left
+P_Target_β:                 SEQ_BETA    alt_r268_beta ; ALT β — resume right
+alt_l268_alpha:             jmp         seq_l269_alpha ; SEQ
+alt_l268_beta:              jmp         seq_r269_beta
 
-seq_l273_alpha: ; DOL(cap $  cap)
-                            DOL_SAVE    dol_entry_cap, cursor, dol274_child_alpha ; DOL α — save entry cursor
-seq_l273_beta:              jmp         dol274_child_beta ; DOL β
+seq_l269_alpha: ; DOL(cap $  cap)
+                            DOL_SAVE    dol_entry_cap, cursor, dol270_child_alpha ; DOL α — save entry cursor
+seq_l269_beta:              jmp         dol270_child_beta ; DOL β
 
 ; E_INDR no varname → ω
+dol270_child_alpha:
+dol270_child_beta:          jmp         dol270_omega
+dol270_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, seq_r269_alpha ; DOL γ — capture span
+dol270_omega:               jmp         alt268_left_omega ; DOL ω — child failed
+
+seq_r269_alpha: ; DOL() $  RP)
+                            DOL_SAVE    dol_entry_RP, cursor, dol271_child_alpha ; DOL α — save entry cursor
+seq_r269_beta:              jmp         dol271_child_beta ; DOL β
+
+; E_INDR unresolved: Expr → ω
+dol271_child_alpha:
+dol271_child_beta:          jmp         dol271_omega
+dol271_gamma:               DOL_CAPTURE dol_entry_RP, cursor, cap_RP_buf, cap_RP_len, subject_data, patdef_Target_gamma ; DOL γ — capture span
+dol271_omega:               jmp         seq_l269_beta ; DOL ω — child failed
+alt268_left_omega:          ALT_OMEGA   alt268_cur_save, cursor, alt_r268_alpha ; ALT left_ω — restore cursor, enter right
+alt_r268_alpha:             jmp         seq_l272_alpha ; SEQ
+alt_r268_beta:              jmp         seq_r272_beta
+
+seq_l272_alpha: ; DOL(cap $  cap)
+                            DOL_SAVE    dol_entry_cap, cursor, dol273_child_alpha ; DOL α — save entry cursor
+seq_l272_beta:              jmp         dol273_child_beta ; DOL β
+
+; E_INDR no varname → ω
+dol273_child_alpha:
+dol273_child_beta:          jmp         dol273_omega
+dol273_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, seq_r272_alpha ; DOL γ — capture span
+dol273_omega:               jmp         patdef_Target_omega ; DOL ω — child failed
+
+seq_r272_alpha: ; DOL(> $  GT)
+                            DOL_SAVE    dol_entry_GT, cursor, dol274_child_alpha ; DOL α — save entry cursor
+seq_r272_beta:              jmp         dol274_child_beta ; DOL β
+
+; E_INDR unresolved: Expr → ω
 dol274_child_alpha:
 dol274_child_beta:          jmp         dol274_omega
-dol274_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, seq_r273_alpha ; DOL γ — capture span
-dol274_omega:               jmp         alt272_left_omega ; DOL ω — child failed
-
-seq_r273_alpha: ; DOL() $  RP)
-                            DOL_SAVE    dol_entry_RP, cursor, dol275_child_alpha ; DOL α — save entry cursor
-seq_r273_beta:              jmp         dol275_child_beta ; DOL β
-
-; E_INDR unresolved: Expr → ω
-dol275_child_alpha:
-dol275_child_beta:          jmp         dol275_omega
-dol275_gamma:               DOL_CAPTURE dol_entry_RP, cursor, cap_RP_buf, cap_RP_len, subject_data, patdef_Target_gamma ; DOL γ — capture span
-dol275_omega:               jmp         seq_l273_beta ; DOL ω — child failed
-alt272_left_omega:          ALT_OMEGA   alt272_cur_save, cursor, alt_r272_alpha ; ALT left_ω — restore cursor, enter right
-alt_r272_alpha:             jmp         seq_l276_alpha ; SEQ
-alt_r272_beta:              jmp         seq_r276_beta
-
-seq_l276_alpha: ; DOL(cap $  cap)
-                            DOL_SAVE    dol_entry_cap, cursor, dol277_child_alpha ; DOL α — save entry cursor
-seq_l276_beta:              jmp         dol277_child_beta ; DOL β
-
-; E_INDR no varname → ω
-dol277_child_alpha:
-dol277_child_beta:          jmp         dol277_omega
-dol277_gamma:               DOL_CAPTURE dol_entry_cap, cursor, cap_cap_buf, cap_cap_len, subject_data, seq_r276_alpha ; DOL γ — capture span
-dol277_omega:               jmp         patdef_Target_omega ; DOL ω — child failed
-
-seq_r276_alpha: ; DOL(> $  GT)
-                            DOL_SAVE    dol_entry_GT, cursor, dol278_child_alpha ; DOL α — save entry cursor
-seq_r276_beta:              jmp         dol278_child_beta ; DOL β
-
-; E_INDR unresolved: Expr → ω
-dol278_child_alpha:
-dol278_child_beta:          jmp         dol278_omega
-dol278_gamma:               DOL_CAPTURE dol_entry_GT, cursor, cap_GT_buf, cap_GT_len, subject_data, patdef_Target_gamma ; DOL γ — capture span
-dol278_omega:               jmp         seq_l276_beta ; DOL ω — child failed
+dol274_gamma:               DOL_CAPTURE dol_entry_GT, cursor, cap_GT_buf, cap_GT_len, subject_data, patdef_Target_gamma ; DOL γ — capture span
+dol274_omega:               jmp         seq_l272_beta ; DOL ω — child failed
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Target_gamma:
                             jmp         [P_Target_ret_γ]
@@ -13219,63 +12544,63 @@ patdef_Target_gamma:
 patdef_Target_omega:        jmp         [P_Target_ret_ω]
 
 ; P_Goto_α (α entry)
-P_Goto_α:                   jmp         seq_l279_alpha ; SEQ
-P_Goto_β:                   jmp         seq_r279_beta
-seq_l279_alpha:             jmp         seq_l280_alpha ; SEQ
-seq_l279_beta:              jmp         seq_r280_beta
-seq_l280_alpha:             jmp         seq_l281_alpha ; SEQ
-seq_l280_beta:              jmp         seq_r281_beta
+P_Goto_α:                   jmp         seq_l275_alpha ; SEQ
+P_Goto_β:                   jmp         seq_r275_beta
+seq_l275_alpha:             jmp         seq_l276_alpha ; SEQ
+seq_l275_beta:              jmp         seq_r276_beta
+seq_l276_alpha:             jmp         seq_l277_alpha ; SEQ
+seq_l276_beta:              jmp         seq_r277_beta
 
-seq_l281_alpha: ; REF(Gray)
-                            lea         rax, [rel nref282_gamma]
+seq_l277_alpha: ; REF(Gray)
+                            lea         rax, [rel nref278_gamma]
                             mov         [P_Gray_ret_γ], rax
-                            lea         rax, [rel nref282_omega]
+                            lea         rax, [rel nref278_omega]
                             mov         [P_Gray_ret_ω], rax
                             jmp         P_Gray_α
-seq_l281_beta:              lea         rax, [rel nref282_gamma] ; REF(%s)
+seq_l277_beta:              lea         rax, [rel nref278_gamma] ; REF(%s)
                             mov         [P_Gray_ret_γ], rax
-                            lea         rax, [rel nref282_omega]
+                            lea         rax, [rel nref278_omega]
                             mov         [P_Gray_ret_ω], rax
                             jmp         P_Gray_β
 
-nref282_gamma:
-                            jmp         seq_r281_alpha
+nref278_gamma:
+                            jmp         seq_r277_alpha
 ;  Goto ================================================================================================================
-nref282_omega:              jmp         patdef_Goto_omega
-seq_r281_alpha:             LIT_ALPHA1  58, seq_r281_alpha_saved, cursor, subject_data, subject_len_val, seq_r280_alpha, seq_l281_beta ; LIT α
-seq_r281_beta:              LIT_BETA    seq_r281_alpha_saved, cursor, seq_l281_beta ; LIT β
+nref278_omega:              jmp         patdef_Goto_omega
+seq_r277_alpha:             LIT_ALPHA1  58, seq_r277_alpha_saved, cursor, subject_data, subject_len_val, seq_r276_alpha, seq_l277_beta ; LIT α
+seq_r277_beta:              LIT_BETA    seq_r277_alpha_saved, cursor, seq_l277_beta ; LIT β
 
-seq_r280_alpha: ; REF(Gray)
-                            lea         rax, [rel nref283_gamma]
+seq_r276_alpha: ; REF(Gray)
+                            lea         rax, [rel nref279_gamma]
                             mov         [P_Gray_ret_γ], rax
-                            lea         rax, [rel nref283_omega]
+                            lea         rax, [rel nref279_omega]
                             mov         [P_Gray_ret_ω], rax
                             jmp         P_Gray_α
-seq_r280_beta:              lea         rax, [rel nref283_gamma] ; REF(%s)
+seq_r276_beta:              lea         rax, [rel nref279_gamma] ; REF(%s)
                             mov         [P_Gray_ret_γ], rax
-                            lea         rax, [rel nref283_omega]
+                            lea         rax, [rel nref279_omega]
                             mov         [P_Gray_ret_ω], rax
                             jmp         P_Gray_β
 
-nref283_gamma:
-                            jmp         seq_r279_alpha
-nref283_omega:              jmp         seq_l280_beta
+nref279_gamma:
+                            jmp         seq_r275_alpha
+nref279_omega:              jmp         seq_l276_beta
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r279_alpha:
-seq_r279_beta:              jmp         seq_l279_beta
+seq_r275_alpha:
+seq_r275_beta:              jmp         seq_l275_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Goto_gamma:
                             jmp         [P_Goto_ret_γ]
 patdef_Goto_omega:          jmp         [P_Goto_ret_ω]
 
 ; P_Control_α (α entry)
-P_Control_α:                jmp         seq_l284_alpha ; SEQ
-P_Control_β:                jmp         seq_r284_beta
-seq_l284_alpha:             LIT_ALPHA1  45, seq_l284_alpha_saved, cursor, subject_data, subject_len_val, seq_r284_alpha, patdef_Control_omega ; LIT α
-seq_l284_beta:              LIT_BETA    seq_l284_alpha_saved, cursor, patdef_Control_omega ; LIT β
-seq_r284_alpha:             BREAK_ALPHA lit_str_4, 0, brk285_saved, cursor, subject_data, subject_len_val, patdef_Control_gamma, seq_l284_beta ; BREAK α
-seq_r284_beta:              BREAK_BETA  brk285_saved, cursor, seq_l284_beta ; BREAK β
+P_Control_α:                jmp         seq_l280_alpha ; SEQ
+P_Control_β:                jmp         seq_r280_beta
+seq_l280_alpha:             LIT_ALPHA1  45, seq_l280_alpha_saved, cursor, subject_data, subject_len_val, seq_r280_alpha, patdef_Control_omega ; LIT α
+seq_l280_beta:              LIT_BETA    seq_l280_alpha_saved, cursor, patdef_Control_omega ; LIT β
+seq_r280_alpha:             BREAK_ALPHA lit_str_4, 0, brk281_saved, cursor, subject_data, subject_len_val, patdef_Control_gamma, seq_l280_beta ; BREAK α
+seq_r280_beta:              BREAK_BETA  brk281_saved, cursor, seq_l280_beta ; BREAK β
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Control_gamma:
                             jmp         [P_Control_ret_γ]
@@ -13283,12 +12608,12 @@ patdef_Control_gamma:
 patdef_Control_omega:       jmp         [P_Control_ret_ω]
 
 ; P_Comment_α (α entry)
-P_Comment_α:                jmp         seq_l286_alpha ; SEQ
-P_Comment_β:                jmp         seq_r286_beta
-seq_l286_alpha:             LIT_ALPHA1  42, seq_l286_alpha_saved, cursor, subject_data, subject_len_val, seq_r286_alpha, patdef_Comment_omega ; LIT α
-seq_l286_beta:              LIT_BETA    seq_l286_alpha_saved, cursor, patdef_Comment_omega ; LIT β
-seq_r286_alpha:             BREAK_ALPHA lit_str_4, 0, brk287_saved, cursor, subject_data, subject_len_val, patdef_Comment_gamma, seq_l286_beta ; BREAK α
-seq_r286_beta:              BREAK_BETA  brk287_saved, cursor, seq_l286_beta ; BREAK β
+P_Comment_α:                jmp         seq_l282_alpha ; SEQ
+P_Comment_β:                jmp         seq_r282_beta
+seq_l282_alpha:             LIT_ALPHA1  42, seq_l282_alpha_saved, cursor, subject_data, subject_len_val, seq_r282_alpha, patdef_Comment_omega ; LIT α
+seq_l282_beta:              LIT_BETA    seq_l282_alpha_saved, cursor, patdef_Comment_omega ; LIT β
+seq_r282_alpha:             BREAK_ALPHA_VAR S_nl, brk_var2_saved, cursor, patdef_Comment_gamma, seq_l282_beta ; BREAK_VAR α
+seq_r282_beta:              BREAK_BETA_VAR brk_var2_saved, cursor, seq_l282_beta ; BREAK_VAR β
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Comment_gamma:
                             jmp         [P_Comment_ret_γ]
@@ -13298,12 +12623,12 @@ patdef_Comment_omega:       jmp         [P_Comment_ret_ω]
 ; P_Label_α (α entry)
 
 P_Label_α: ; DOL(Label $  Label)
-                            DOL_SAVE    dol_entry_Label, cursor, dol288_child_alpha ; DOL α — save entry cursor
-P_Label_β:                  jmp         dol288_child_beta ; DOL β
-dol288_child_alpha:         BREAK_ALPHA lit_str_4, 0, brk289_saved, cursor, subject_data, subject_len_val, dol288_gamma, dol288_omega ; BREAK α
-dol288_child_beta:          BREAK_BETA  brk289_saved, cursor, dol288_omega ; BREAK β
-dol288_gamma:               DOL_CAPTURE dol_entry_Label, cursor, cap_Label_buf, cap_Label_len, subject_data, patdef_Label_gamma ; DOL γ — capture span
-dol288_omega:               jmp         patdef_Label_omega ; DOL ω — child failed
+                            DOL_SAVE    dol_entry_Label, cursor, dol283_child_alpha ; DOL α — save entry cursor
+P_Label_β:                  jmp         dol283_child_beta ; DOL β
+dol283_child_alpha:         BREAK_ALPHA lit_str_4, 0, brk284_saved, cursor, subject_data, subject_len_val, dol283_gamma, dol283_omega ; BREAK α
+dol283_child_beta:          BREAK_BETA  brk284_saved, cursor, dol283_omega ; BREAK β
+dol283_gamma:               DOL_CAPTURE dol_entry_Label, cursor, cap_Label_buf, cap_Label_len, subject_data, patdef_Label_gamma ; DOL γ — capture span
+dol283_omega:               jmp         patdef_Label_omega ; DOL ω — child failed
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Label_gamma:
                             jmp         [P_Label_ret_γ]
@@ -13311,183 +12636,183 @@ patdef_Label_gamma:
 patdef_Label_omega:         jmp         [P_Label_ret_ω]
 
 ; P_Stmt_α (α entry)
-P_Stmt_α:                   jmp         seq_l290_alpha ; SEQ
-P_Stmt_β:                   jmp         seq_r290_beta
-seq_l290_alpha:             jmp         seq_l291_alpha ; SEQ
-seq_l290_beta:              jmp         seq_r291_beta
-seq_l291_alpha:             jmp         seq_l292_alpha ; SEQ
-seq_l291_beta:              jmp         seq_r292_beta
+P_Stmt_α:                   jmp         seq_l285_alpha ; SEQ
+P_Stmt_β:                   jmp         seq_r285_beta
+seq_l285_alpha:             jmp         seq_l286_alpha ; SEQ
+seq_l285_beta:              jmp         seq_r286_beta
+seq_l286_alpha:             jmp         seq_l287_alpha ; SEQ
+seq_l286_beta:              jmp         seq_r287_beta
 
-seq_l292_alpha: ; REF(Label)
-                            lea         rax, [rel nref293_gamma]
+seq_l287_alpha: ; REF(Label)
+                            lea         rax, [rel nref288_gamma]
                             mov         [P_Label_ret_γ], rax
-                            lea         rax, [rel nref293_omega]
+                            lea         rax, [rel nref288_omega]
                             mov         [P_Label_ret_ω], rax
                             jmp         P_Label_α
-seq_l292_beta:              lea         rax, [rel nref293_gamma] ; REF(%s)
+seq_l287_beta:              lea         rax, [rel nref288_gamma] ; REF(%s)
                             mov         [P_Label_ret_γ], rax
-                            lea         rax, [rel nref293_omega]
+                            lea         rax, [rel nref288_omega]
                             mov         [P_Label_ret_ω], rax
                             jmp         P_Label_β
 
-nref293_gamma:
-                            jmp         seq_r292_alpha
+nref288_gamma:
+                            jmp         seq_r287_alpha
 ;  Stmt ================================================================================================================
-nref293_omega:              jmp         patdef_Stmt_omega
-seq_r292_alpha:             ALT_ALPHA   alt294_cur_save, cursor, alt_l294_alpha ; ALT α — save cursor, enter left
-seq_r292_beta:              SEQ_BETA    alt_r294_beta ; ALT β — resume right
-alt_l294_alpha:             jmp         seq_l295_alpha ; SEQ
-alt_l294_beta:              jmp         seq_r295_beta
-seq_l295_alpha:             jmp         seq_l296_alpha ; SEQ
-seq_l295_beta:              jmp         seq_r296_beta
+nref288_omega:              jmp         patdef_Stmt_omega
+seq_r287_alpha:             ALT_ALPHA   alt289_cur_save, cursor, alt_l289_alpha ; ALT α — save cursor, enter left
+seq_r287_beta:              SEQ_BETA    alt_r289_beta ; ALT β — resume right
+alt_l289_alpha:             jmp         seq_l290_alpha ; SEQ
+alt_l289_beta:              jmp         seq_r290_beta
+seq_l290_alpha:             jmp         seq_l291_alpha ; SEQ
+seq_l290_beta:              jmp         seq_r291_beta
 
-seq_l296_alpha: ; REF(White)
-                            lea         rax, [rel nref297_gamma]
+seq_l291_alpha: ; REF(White)
+                            lea         rax, [rel nref292_gamma]
                             mov         [P_White_ret_γ], rax
-                            lea         rax, [rel nref297_omega]
+                            lea         rax, [rel nref292_omega]
                             mov         [P_White_ret_ω], rax
                             jmp         P_White_α
-seq_l296_beta:              lea         rax, [rel nref297_gamma] ; REF(%s)
+seq_l291_beta:              lea         rax, [rel nref292_gamma] ; REF(%s)
                             mov         [P_White_ret_γ], rax
-                            lea         rax, [rel nref297_omega]
+                            lea         rax, [rel nref292_omega]
                             mov         [P_White_ret_ω], rax
                             jmp         P_White_β
 
-nref297_gamma:
-                            jmp         seq_r296_alpha
-nref297_omega:              jmp         alt294_left_omega
+nref292_gamma:
+                            jmp         seq_r291_alpha
+nref292_omega:              jmp         alt289_left_omega
 
-seq_r296_alpha: ; REF(Expr14)
-                            lea         rax, [rel nref298_gamma]
+seq_r291_alpha: ; REF(Expr14)
+                            lea         rax, [rel nref293_gamma]
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref298_omega]
+                            lea         rax, [rel nref293_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_α
-seq_r296_beta:              lea         rax, [rel nref298_gamma] ; REF(%s)
+seq_r291_beta:              lea         rax, [rel nref293_gamma] ; REF(%s)
                             mov         [P_Expr14_ret_γ], rax
-                            lea         rax, [rel nref298_omega]
+                            lea         rax, [rel nref293_omega]
                             mov         [P_Expr14_ret_ω], rax
                             jmp         P_Expr14_β
 
-nref298_gamma:
-                            jmp         seq_r295_alpha
-nref298_omega:              jmp         seq_l296_beta
+nref293_gamma:
+                            jmp         seq_r290_alpha
+nref293_omega:              jmp         seq_l291_beta
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r295_alpha:
-seq_r295_beta:              jmp         seq_l295_beta
-alt294_left_omega:          ALT_OMEGA   alt294_cur_save, cursor, alt_r294_alpha ; ALT left_ω — restore cursor, enter right
-alt_r294_alpha:             jmp         seq_l299_alpha ; SEQ
-alt_r294_beta:              jmp         seq_r299_beta
-seq_l299_alpha:             jmp         seq_l300_alpha ; SEQ
-seq_l299_beta:              jmp         seq_r300_beta
-seq_l300_alpha:             jmp         seq_l301_alpha ; SEQ
-seq_l300_beta:              jmp         seq_r301_beta
+seq_r290_alpha:
+seq_r290_beta:              jmp         seq_l290_beta
+alt289_left_omega:          ALT_OMEGA   alt289_cur_save, cursor, alt_r289_alpha ; ALT left_ω — restore cursor, enter right
+alt_r289_alpha:             jmp         seq_l294_alpha ; SEQ
+alt_r289_beta:              jmp         seq_r294_beta
+seq_l294_alpha:             jmp         seq_l295_alpha ; SEQ
+seq_l294_beta:              jmp         seq_r295_beta
+seq_l295_alpha:             jmp         seq_l296_alpha ; SEQ
+seq_l295_beta:              jmp         seq_r296_beta
 
-seq_l301_alpha: ; DOL( $  v)
-                            DOL_SAVE    dol_entry_v, cursor, dol302_child_alpha ; DOL α — save entry cursor
-seq_l301_beta:              jmp         dol302_child_beta ; DOL β
-
-; UNRESOLVED named pattern ref: epsilon → ω
-dol302_child_alpha:
-dol302_child_beta:          jmp         dol302_omega
-dol302_gamma:               DOL_CAPTURE dol_entry_v, cursor, cap_v_buf, cap_v_len, subject_data, seq_r301_alpha ; DOL γ — capture span
-dol302_omega:               jmp         seq_l292_beta ; DOL ω — child failed
-
-seq_r301_alpha: ; DOL( $  v)
-                            DOL_SAVE    dol_entry_v, cursor, dol303_child_alpha ; DOL α — save entry cursor
-seq_r301_beta:              jmp         dol303_child_beta ; DOL β
+seq_l296_alpha: ; DOL( $  v)
+                            DOL_SAVE    dol_entry_v, cursor, dol297_child_alpha ; DOL α — save entry cursor
+seq_l296_beta:              jmp         dol297_child_beta ; DOL β
 
 ; UNRESOLVED named pattern ref: epsilon → ω
-dol303_child_alpha:
-dol303_child_beta:          jmp         dol303_omega
-dol303_gamma:               DOL_CAPTURE dol_entry_v, cursor, cap_v_buf, cap_v_len, subject_data, seq_r300_alpha ; DOL γ — capture span
-dol303_omega:               jmp         seq_l301_beta ; DOL ω — child failed
+dol297_child_alpha:
+dol297_child_beta:          jmp         dol297_omega
+dol297_gamma:               DOL_CAPTURE dol_entry_v, cursor, cap_v_buf, cap_v_len, subject_data, seq_r296_alpha ; DOL γ — capture span
+dol297_omega:               jmp         seq_l287_beta ; DOL ω — child failed
 
-seq_r300_alpha: ; DOL( $  v)
-                            DOL_SAVE    dol_entry_v, cursor, dol304_child_alpha ; DOL α — save entry cursor
-seq_r300_beta:              jmp         dol304_child_beta ; DOL β
-
-; UNRESOLVED named pattern ref: epsilon → ω
-dol304_child_alpha:
-dol304_child_beta:          jmp         dol304_omega
-dol304_gamma:               DOL_CAPTURE dol_entry_v, cursor, cap_v_buf, cap_v_len, subject_data, seq_r299_alpha ; DOL γ — capture span
-dol304_omega:               jmp         seq_l300_beta ; DOL ω — child failed
-
-seq_r299_alpha: ; DOL( $  v)
-                            DOL_SAVE    dol_entry_v, cursor, dol305_child_alpha ; DOL α — save entry cursor
-seq_r299_beta:              jmp         dol305_child_beta ; DOL β
+seq_r296_alpha: ; DOL( $  v)
+                            DOL_SAVE    dol_entry_v, cursor, dol298_child_alpha ; DOL α — save entry cursor
+seq_r296_beta:              jmp         dol298_child_beta ; DOL β
 
 ; UNRESOLVED named pattern ref: epsilon → ω
-dol305_child_alpha:
-dol305_child_beta:          jmp         dol305_omega
-dol305_gamma:               DOL_CAPTURE dol_entry_v, cursor, cap_v_buf, cap_v_len, subject_data, seq_r291_alpha ; DOL γ — capture span
-dol305_omega:               jmp         seq_l299_beta ; DOL ω — child failed
+dol298_child_alpha:
+dol298_child_beta:          jmp         dol298_omega
+dol298_gamma:               DOL_CAPTURE dol_entry_v, cursor, cap_v_buf, cap_v_len, subject_data, seq_r295_alpha ; DOL γ — capture span
+dol298_omega:               jmp         seq_l296_beta ; DOL ω — child failed
+
+seq_r295_alpha: ; DOL( $  v)
+                            DOL_SAVE    dol_entry_v, cursor, dol299_child_alpha ; DOL α — save entry cursor
+seq_r295_beta:              jmp         dol299_child_beta ; DOL β
+
+; UNRESOLVED named pattern ref: epsilon → ω
+dol299_child_alpha:
+dol299_child_beta:          jmp         dol299_omega
+dol299_gamma:               DOL_CAPTURE dol_entry_v, cursor, cap_v_buf, cap_v_len, subject_data, seq_r294_alpha ; DOL γ — capture span
+dol299_omega:               jmp         seq_l295_beta ; DOL ω — child failed
+
+seq_r294_alpha: ; DOL( $  v)
+                            DOL_SAVE    dol_entry_v, cursor, dol300_child_alpha ; DOL α — save entry cursor
+seq_r294_beta:              jmp         dol300_child_beta ; DOL β
+
+; UNRESOLVED named pattern ref: epsilon → ω
+dol300_child_alpha:
+dol300_child_beta:          jmp         dol300_omega
+dol300_gamma:               DOL_CAPTURE dol_entry_v, cursor, cap_v_buf, cap_v_len, subject_data, seq_r286_alpha ; DOL γ — capture span
+dol300_omega:               jmp         seq_l294_beta ; DOL ω — child failed
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r291_alpha:
-seq_r291_beta:              jmp         seq_l291_beta
+seq_r286_alpha:
+seq_r286_beta:              jmp         seq_l286_beta
 
-seq_r290_alpha: ; REF(Gray)
-                            lea         rax, [rel nref306_gamma]
+seq_r285_alpha: ; REF(Gray)
+                            lea         rax, [rel nref301_gamma]
                             mov         [P_Gray_ret_γ], rax
-                            lea         rax, [rel nref306_omega]
+                            lea         rax, [rel nref301_omega]
                             mov         [P_Gray_ret_ω], rax
                             jmp         P_Gray_α
-seq_r290_beta:              lea         rax, [rel nref306_gamma] ; REF(%s)
+seq_r285_beta:              lea         rax, [rel nref301_gamma] ; REF(%s)
                             mov         [P_Gray_ret_γ], rax
-                            lea         rax, [rel nref306_omega]
+                            lea         rax, [rel nref301_omega]
                             mov         [P_Gray_ret_ω], rax
                             jmp         P_Gray_β
 
-nref306_gamma:
+nref301_gamma:
                             jmp         patdef_Stmt_gamma
-nref306_omega:              jmp         seq_l290_beta
+nref301_omega:              jmp         seq_l285_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Stmt_gamma:
                             jmp         [P_Stmt_ret_γ]
 patdef_Stmt_omega:          jmp         [P_Stmt_ret_ω]
 
 ; P_Commands_α (α entry)
-P_Commands_α:               jmp         seq_l307_alpha ; SEQ
-P_Commands_β:               jmp         seq_r307_beta
+P_Commands_α:               jmp         seq_l302_alpha ; SEQ
+P_Commands_β:               jmp         seq_r302_beta
 
-seq_l307_alpha: ; REF(Command)
-                            lea         rax, [rel nref308_gamma]
+seq_l302_alpha: ; REF(Command)
+                            lea         rax, [rel nref303_gamma]
                             mov         [P_Command_ret_γ], rax
-                            lea         rax, [rel nref308_omega]
+                            lea         rax, [rel nref303_omega]
                             mov         [P_Command_ret_ω], rax
                             jmp         P_Command_α
-seq_l307_beta:              lea         rax, [rel nref308_gamma] ; REF(%s)
+seq_l302_beta:              lea         rax, [rel nref303_gamma] ; REF(%s)
                             mov         [P_Command_ret_γ], rax
-                            lea         rax, [rel nref308_omega]
+                            lea         rax, [rel nref303_omega]
                             mov         [P_Command_ret_ω], rax
                             jmp         P_Command_β
 
-nref308_gamma:
-                            jmp         seq_r307_alpha
+nref303_gamma:
+                            jmp         seq_r302_alpha
 ;  Commands ============================================================================================================
-nref308_omega:              jmp         patdef_Commands_omega
+nref303_omega:              jmp         patdef_Commands_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r307_alpha:
-seq_r307_beta:              jmp         seq_l307_beta
+seq_r302_alpha:
+seq_r302_beta:              jmp         seq_l302_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Commands_gamma:
                             jmp         [P_Commands_ret_γ]
 patdef_Commands_omega:      jmp         [P_Commands_ret_ω]
 
 ; P_Command_α (α entry)
-P_Command_α:                jmp         seq_l309_alpha ; SEQ
-P_Command_β:                jmp         seq_r309_beta
+P_Command_α:                jmp         seq_l304_alpha ; SEQ
+P_Command_β:                jmp         seq_r304_beta
 
 ; UNIMPLEMENTED: nInc() → ω
-seq_l309_alpha:
-seq_l309_beta:              jmp         patdef_Command_omega
+seq_l304_alpha:
+seq_l304_beta:              jmp         patdef_Command_omega
 
 ; UNIMPLEMENTED: FENCE() → ω
-seq_r309_alpha:
-seq_r309_beta:              jmp         seq_l309_beta
+seq_r304_alpha:
+seq_r304_beta:              jmp         seq_l304_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Command_gamma:
                             jmp         [P_Command_ret_γ]
@@ -13495,210 +12820,210 @@ patdef_Command_gamma:
 patdef_Command_omega:       jmp         [P_Command_ret_ω]
 
 ; P_Parse_α (α entry)
-P_Parse_α:                  jmp         seq_l310_alpha ; SEQ
-P_Parse_β:                  jmp         seq_r310_beta
-seq_l310_alpha:             jmp         seq_l311_alpha ; SEQ
-seq_l310_beta:              jmp         seq_r311_beta
-seq_l311_alpha:             jmp         seq_l312_alpha ; SEQ
-seq_l311_beta:              jmp         seq_r312_beta
+P_Parse_α:                  jmp         seq_l305_alpha ; SEQ
+P_Parse_β:                  jmp         seq_r305_beta
+seq_l305_alpha:             jmp         seq_l306_alpha ; SEQ
+seq_l305_beta:              jmp         seq_r306_beta
+seq_l306_alpha:             jmp         seq_l307_alpha ; SEQ
+seq_l306_beta:              jmp         seq_r307_beta
 
 ; UNIMPLEMENTED: nPush() → ω
-seq_l312_alpha:
-seq_l312_beta:              jmp         patdef_Parse_omega
+seq_l307_alpha:
+seq_l307_beta:              jmp         patdef_Parse_omega
 
-seq_r312_alpha: ; ARBNO
-                            mov         qword [arb313_depth], 0
-                            lea         rbx, [rel arb313_stack]
+seq_r307_alpha: ; ARBNO
+                            mov         qword [arb308_depth], 0
+                            lea         rbx, [rel arb308_stack]
                             mov         rax, [cursor]
                             mov         [rbx], rax
-                            mov         qword [arb313_depth], 1
-                            jmp         seq_r311_alpha
-seq_r312_beta:              mov         rax, [arb313_depth] ; ARBNO
+                            mov         qword [arb308_depth], 1
+                            jmp         seq_r306_alpha
+seq_r307_beta:              mov         rax, [arb308_depth] ; ARBNO
                             test        rax, rax
-                            je          seq_l312_beta
+                            je          seq_l307_beta
                             dec         rax
-                            mov         [arb313_depth], rax
-                            lea         rbx, [rel arb313_stack]
+                            mov         [arb308_depth], rax
+                            lea         rbx, [rel arb308_stack]
                             mov         rcx, [rbx + rax*8]
                             mov         [cursor], rcx
-                            mov         [arb313_cur_before], rcx
-                            jmp         arb313_child_alpha
-arb313_child_ok:            mov         rax, [cursor] ; ARBNO child_ok
-                            mov         rbx, [arb313_cur_before]
+                            mov         [arb308_cur_before], rcx
+                            jmp         arb308_child_alpha
+arb308_child_ok:            mov         rax, [cursor] ; ARBNO child_ok
+                            mov         rbx, [arb308_cur_before]
                             cmp         rax, rbx
-                            je          seq_l312_beta
-                            mov         rdx, [arb313_depth]
-                            lea         rbx, [rel arb313_stack]
+                            je          seq_l307_beta
+                            mov         rdx, [arb308_depth]
+                            lea         rbx, [rel arb308_stack]
                             mov         [rbx + rdx*8], rax
-                            inc         qword [arb313_depth]
-                            jmp         seq_r311_alpha
-arb313_child_fail:          jmp         seq_l312_beta ; ARBNO child_fail
+                            inc         qword [arb308_depth]
+                            jmp         seq_r306_alpha
+arb308_child_fail:          jmp         seq_l307_beta ; ARBNO child_fail
 
-arb313_child_alpha: ; REF(Command)
-                            lea         rax, [rel nref314_gamma]
+arb308_child_alpha: ; REF(Command)
+                            lea         rax, [rel nref309_gamma]
                             mov         [P_Command_ret_γ], rax
-                            lea         rax, [rel nref314_omega]
+                            lea         rax, [rel nref309_omega]
                             mov         [P_Command_ret_ω], rax
                             jmp         P_Command_α
-arb313_child_beta:          lea         rax, [rel nref314_gamma] ; REF(%s)
+arb308_child_beta:          lea         rax, [rel nref309_gamma] ; REF(%s)
                             mov         [P_Command_ret_γ], rax
-                            lea         rax, [rel nref314_omega]
+                            lea         rax, [rel nref309_omega]
                             mov         [P_Command_ret_ω], rax
                             jmp         P_Command_β
 
-nref314_gamma:
-                            jmp         arb313_child_ok
+nref309_gamma:
+                            jmp         arb308_child_ok
 ;  Parse ===============================================================================================================
-nref314_omega:              jmp         arb313_child_fail
+nref309_omega:              jmp         arb308_child_fail
 
 ; UNIMPLEMENTED node kind 14 → ω
-seq_r311_alpha:
-seq_r311_beta:              jmp         seq_l311_beta
+seq_r306_alpha:
+seq_r306_beta:              jmp         seq_l306_beta
 
 ; UNIMPLEMENTED: nPop() → ω
-seq_r310_alpha:
-seq_r310_beta:              jmp         seq_l310_beta
+seq_r305_alpha:
+seq_r305_beta:              jmp         seq_l305_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Parse_gamma:
                             jmp         [P_Parse_ret_γ]
 patdef_Parse_omega:         jmp         [P_Parse_ret_ω]
 
 ; P_Compiland_α (α entry)
-P_Compiland_α:              jmp         seq_l315_alpha ; SEQ
-P_Compiland_β:              jmp         seq_r315_beta
-seq_l315_alpha:             jmp         seq_l316_alpha ; SEQ
-seq_l315_beta:              jmp         seq_r316_beta
-seq_l316_alpha:             jmp         seq_l317_alpha ; SEQ
-seq_l316_beta:              jmp         seq_r317_beta
-seq_l317_alpha:             jmp         seq_l318_alpha ; SEQ
-seq_l317_beta:              jmp         seq_r318_beta
+P_Compiland_α:              jmp         seq_l310_alpha ; SEQ
+P_Compiland_β:              jmp         seq_r310_beta
+seq_l310_alpha:             jmp         seq_l311_alpha ; SEQ
+seq_l310_beta:              jmp         seq_r311_beta
+seq_l311_alpha:             jmp         seq_l312_alpha ; SEQ
+seq_l311_beta:              jmp         seq_r312_beta
+seq_l312_alpha:             jmp         seq_l313_alpha ; SEQ
+seq_l312_beta:              jmp         seq_r313_beta
 
 ; UNIMPLEMENTED: nPush() → ω
-seq_l318_alpha:
-seq_l318_beta:              jmp         patdef_Compiland_omega
+seq_l313_alpha:
+seq_l313_beta:              jmp         patdef_Compiland_omega
 
-seq_r318_alpha: ; ARBNO
-                            mov         qword [arb319_depth], 0
-                            lea         rbx, [rel arb319_stack]
+seq_r313_alpha: ; ARBNO
+                            mov         qword [arb314_depth], 0
+                            lea         rbx, [rel arb314_stack]
                             mov         rax, [cursor]
                             mov         [rbx], rax
-                            mov         qword [arb319_depth], 1
-                            jmp         seq_r317_alpha
-seq_r318_beta:              mov         rax, [arb319_depth] ; ARBNO
+                            mov         qword [arb314_depth], 1
+                            jmp         seq_r312_alpha
+seq_r313_beta:              mov         rax, [arb314_depth] ; ARBNO
                             test        rax, rax
-                            je          seq_l318_beta
+                            je          seq_l313_beta
                             dec         rax
-                            mov         [arb319_depth], rax
-                            lea         rbx, [rel arb319_stack]
+                            mov         [arb314_depth], rax
+                            lea         rbx, [rel arb314_stack]
                             mov         rcx, [rbx + rax*8]
                             mov         [cursor], rcx
-                            mov         [arb319_cur_before], rcx
-                            jmp         arb319_child_alpha
-arb319_child_ok:            mov         rax, [cursor] ; ARBNO child_ok
-                            mov         rbx, [arb319_cur_before]
+                            mov         [arb314_cur_before], rcx
+                            jmp         arb314_child_alpha
+arb314_child_ok:            mov         rax, [cursor] ; ARBNO child_ok
+                            mov         rbx, [arb314_cur_before]
                             cmp         rax, rbx
-                            je          seq_l318_beta
-                            mov         rdx, [arb319_depth]
-                            lea         rbx, [rel arb319_stack]
+                            je          seq_l313_beta
+                            mov         rdx, [arb314_depth]
+                            lea         rbx, [rel arb314_stack]
                             mov         [rbx + rdx*8], rax
-                            inc         qword [arb319_depth]
-                            jmp         seq_r317_alpha
-arb319_child_fail:          jmp         seq_l318_beta ; ARBNO child_fail
+                            inc         qword [arb314_depth]
+                            jmp         seq_r312_alpha
+arb314_child_fail:          jmp         seq_l313_beta ; ARBNO child_fail
 
-arb319_child_alpha: ; REF(Command)
-                            lea         rax, [rel nref320_gamma]
+arb314_child_alpha: ; REF(Command)
+                            lea         rax, [rel nref315_gamma]
                             mov         [P_Command_ret_γ], rax
-                            lea         rax, [rel nref320_omega]
+                            lea         rax, [rel nref315_omega]
                             mov         [P_Command_ret_ω], rax
                             jmp         P_Command_α
-arb319_child_beta:          lea         rax, [rel nref320_gamma] ; REF(%s)
+arb314_child_beta:          lea         rax, [rel nref315_gamma] ; REF(%s)
                             mov         [P_Command_ret_γ], rax
-                            lea         rax, [rel nref320_omega]
+                            lea         rax, [rel nref315_omega]
                             mov         [P_Command_ret_ω], rax
                             jmp         P_Command_β
 
-nref320_gamma:
-                            jmp         arb319_child_ok
+nref315_gamma:
+                            jmp         arb314_child_ok
 ;  Compiland ===========================================================================================================
-nref320_omega:              jmp         arb319_child_fail
+nref315_omega:              jmp         arb314_child_fail
 
 ; UNIMPLEMENTED node kind 14 → ω
-seq_r317_alpha:
-seq_r317_beta:              jmp         seq_l317_beta
-seq_r316_alpha:             ALT_ALPHA   alt321_cur_save, cursor, alt_l321_alpha ; ALT α — save cursor, enter left
-seq_r316_beta:              SEQ_BETA    alt_r321_beta ; ALT β — resume right
-alt_l321_alpha:             jmp         seq_l322_alpha ; SEQ
-alt_l321_beta:              jmp         seq_r322_beta
-seq_l322_alpha:             jmp         seq_l323_alpha ; SEQ
-seq_l322_beta:              jmp         seq_r323_beta
+seq_r312_alpha:
+seq_r312_beta:              jmp         seq_l312_beta
+seq_r311_alpha:             ALT_ALPHA   alt316_cur_save, cursor, alt_l316_alpha ; ALT α — save cursor, enter left
+seq_r311_beta:              SEQ_BETA    alt_r316_beta ; ALT β — resume right
+alt_l316_alpha:             jmp         seq_l317_alpha ; SEQ
+alt_l316_beta:              jmp         seq_r317_beta
+seq_l317_alpha:             jmp         seq_l318_alpha ; SEQ
+seq_l317_beta:              jmp         seq_r318_beta
 
 ; UNIMPLEMENTED: icase() → ω
-seq_l323_alpha:
-seq_l323_beta:              jmp         alt321_left_omega
-seq_r323_alpha:             ALT_ALPHA   alt324_cur_save, cursor, alt_l324_alpha ; ALT α — save cursor, enter left
-seq_r323_beta:              SEQ_BETA    alt_r324_beta ; ALT β — resume right
-alt_l324_alpha:             jmp         seq_l325_alpha ; SEQ
-alt_l324_beta:              jmp         seq_r325_beta
-seq_l325_alpha:             jmp         seq_l326_alpha ; SEQ
-seq_l325_beta:              jmp         seq_r326_beta
-seq_l326_alpha:             LIT_ALPHA1  32, seq_l326_alpha_saved, cursor, subject_data, subject_len_val, seq_r326_alpha, alt324_left_omega ; LIT α
-seq_l326_beta:              LIT_BETA    seq_l326_alpha_saved, cursor, alt324_left_omega ; LIT β
-seq_r326_alpha:             BREAK_ALPHA lit_str_4, 0, brk327_saved, cursor, subject_data, subject_len_val, seq_r325_alpha, seq_l326_beta ; BREAK α
-seq_r326_beta:              BREAK_BETA  brk327_saved, cursor, seq_l326_beta ; BREAK β
+seq_l318_alpha:
+seq_l318_beta:              jmp         alt316_left_omega
+seq_r318_alpha:             ALT_ALPHA   alt319_cur_save, cursor, alt_l319_alpha ; ALT α — save cursor, enter left
+seq_r318_beta:              SEQ_BETA    alt_r319_beta ; ALT β — resume right
+alt_l319_alpha:             jmp         seq_l320_alpha ; SEQ
+alt_l319_beta:              jmp         seq_r320_beta
+seq_l320_alpha:             jmp         seq_l321_alpha ; SEQ
+seq_l320_beta:              jmp         seq_r321_beta
+seq_l321_alpha:             LIT_ALPHA1  32, seq_l321_alpha_saved, cursor, subject_data, subject_len_val, seq_r321_alpha, alt319_left_omega ; LIT α
+seq_l321_beta:              LIT_BETA    seq_l321_alpha_saved, cursor, alt319_left_omega ; LIT β
+seq_r321_alpha:             BREAK_ALPHA_VAR S_nl, brk_var9_saved, cursor, seq_r320_alpha, seq_l321_beta ; BREAK_VAR α
+seq_r321_beta:              BREAK_BETA_VAR brk_var9_saved, cursor, seq_l321_beta ; BREAK_VAR β
 
 ; UNRESOLVED named pattern ref: nl → ω
-seq_r325_alpha:
-seq_r325_beta:              jmp         seq_l325_beta
-alt324_left_omega:          ALT_OMEGA   alt324_cur_save, cursor, alt_r324_alpha ; ALT left_ω — restore cursor, enter right
+seq_r320_alpha:
+seq_r320_beta:              jmp         seq_l320_beta
+alt319_left_omega:          ALT_OMEGA   alt319_cur_save, cursor, alt_r319_alpha ; ALT left_ω — restore cursor, enter right
 
 ; UNRESOLVED named pattern ref: nl → ω
-alt_r324_alpha:
-alt_r324_beta:              jmp         seq_l323_beta
+alt_r319_alpha:
+alt_r319_beta:              jmp         seq_l318_beta
 
-seq_r322_alpha: ; ARBNO
-                            mov         qword [arb328_depth], 0
-                            lea         rbx, [rel arb328_stack]
+seq_r317_alpha: ; ARBNO
+                            mov         qword [arb322_depth], 0
+                            lea         rbx, [rel arb322_stack]
                             mov         rax, [cursor]
                             mov         [rbx], rax
-                            mov         qword [arb328_depth], 1
-                            jmp         seq_r315_alpha
-seq_r322_beta:              mov         rax, [arb328_depth] ; ARBNO
+                            mov         qword [arb322_depth], 1
+                            jmp         seq_r310_alpha
+seq_r317_beta:              mov         rax, [arb322_depth] ; ARBNO
                             test        rax, rax
-                            je          seq_l322_beta
+                            je          seq_l317_beta
                             dec         rax
-                            mov         [arb328_depth], rax
-                            lea         rbx, [rel arb328_stack]
+                            mov         [arb322_depth], rax
+                            lea         rbx, [rel arb322_stack]
                             mov         rcx, [rbx + rax*8]
                             mov         [cursor], rcx
-                            mov         [arb328_cur_before], rcx
-                            jmp         arb328_child_alpha
-arb328_child_ok:            mov         rax, [cursor] ; ARBNO child_ok
-                            mov         rbx, [arb328_cur_before]
+                            mov         [arb322_cur_before], rcx
+                            jmp         arb322_child_alpha
+arb322_child_ok:            mov         rax, [cursor] ; ARBNO child_ok
+                            mov         rbx, [arb322_cur_before]
                             cmp         rax, rbx
-                            je          seq_l322_beta
-                            mov         rdx, [arb328_depth]
-                            lea         rbx, [rel arb328_stack]
+                            je          seq_l317_beta
+                            mov         rdx, [arb322_depth]
+                            lea         rbx, [rel arb322_stack]
                             mov         [rbx + rdx*8], rax
-                            inc         qword [arb328_depth]
-                            jmp         seq_r315_alpha
-arb328_child_fail:          jmp         seq_l322_beta ; ARBNO child_fail
-arb328_child_alpha:         jmp         seq_l329_alpha ; SEQ
-arb328_child_beta:          jmp         seq_r329_beta
-seq_l329_alpha:             BREAK_ALPHA lit_str_4, 0, brk330_saved, cursor, subject_data, subject_len_val, seq_r329_alpha, arb328_child_fail ; BREAK α
-seq_l329_beta:              BREAK_BETA  brk330_saved, cursor, arb328_child_fail ; BREAK β
+                            inc         qword [arb322_depth]
+                            jmp         seq_r310_alpha
+arb322_child_fail:          jmp         seq_l317_beta ; ARBNO child_fail
+arb322_child_alpha:         jmp         seq_l323_alpha ; SEQ
+arb322_child_beta:          jmp         seq_r323_beta
+seq_l323_alpha:             BREAK_ALPHA_VAR S_nl, brk_var7_saved, cursor, seq_r323_alpha, arb322_child_fail ; BREAK_VAR α
+seq_l323_beta:              BREAK_BETA_VAR brk_var7_saved, cursor, arb322_child_fail ; BREAK_VAR β
 
 ; UNRESOLVED named pattern ref: nl → ω
-seq_r329_alpha:
-seq_r329_beta:              jmp         seq_l329_beta
-alt321_left_omega:          ALT_OMEGA   alt321_cur_save, cursor, alt_r321_alpha ; ALT left_ω — restore cursor, enter right
+seq_r323_alpha:
+seq_r323_beta:              jmp         seq_l323_beta
+alt316_left_omega:          ALT_OMEGA   alt316_cur_save, cursor, alt_r316_alpha ; ALT left_ω — restore cursor, enter right
 
 ; UNRESOLVED named pattern ref: epsilon → ω
-alt_r321_alpha:
-alt_r321_beta:              jmp         seq_l316_beta
+alt_r316_alpha:
+alt_r316_beta:              jmp         seq_l311_beta
 
 ; UNIMPLEMENTED: nPop() → ω
-seq_r315_alpha:
-seq_r315_beta:              jmp         seq_l315_beta
+seq_r310_alpha:
+seq_r310_beta:              jmp         seq_l310_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_Compiland_gamma:
                             jmp         [P_Compiland_ret_γ]
@@ -13751,16 +13076,16 @@ patdef_v_gamma:
 patdef_v_omega:             jmp         [P_v_ret_ω]
 
 ; P_n_α (α entry)
-P_n_α:                      jmp         seq_l331_alpha ; SEQ
-P_n_β:                      jmp         seq_r331_beta
+P_n_α:                      jmp         seq_l324_alpha ; SEQ
+P_n_β:                      jmp         seq_r324_beta
 
 ; UNIMPLEMENTED: LT() → ω
-seq_l331_alpha:
-seq_l331_beta:              jmp         patdef_n_omega
+seq_l324_alpha:
+seq_l324_beta:              jmp         patdef_n_omega
 
 ; UNIMPLEMENTED node kind 8 → ω
-seq_r331_alpha:
-seq_r331_beta:              jmp         seq_l331_beta
+seq_r324_alpha:
+seq_r324_beta:              jmp         seq_l324_beta
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 patdef_n_gamma:
                             jmp         [P_n_ret_γ]
@@ -14259,8 +13584,6 @@ S_mainErr1           db 109, 97, 105, 110, 69, 114, 114, 49, 0  ; "mainErr1"
 S_Parse_SP_Error     db 80, 97, 114, 115, 101, 32, 69, 114, 114, 111, 114, 0  ; "Parse Error"
 S_mainErr2           db 109, 97, 105, 110, 69, 114, 114, 50, 0  ; "mainErr2"
 S_Internal_SP_Error  db 73, 110, 116, 101, 114, 110, 97, 108, 32, 69, 114, 114, 111, 114, 0  ; "Internal Error"
-S_AM_FULLSCAN        db 38, 70, 85, 76, 76, 83, 67, 65, 78, 0  ; "&FULLSCAN"
-S_AM_MAXLNGTH        db 38, 77, 65, 88, 76, 78, 71, 84, 72, 0  ; "&MAXLNGTH"
 S_ALT                db 65, 76, 84, 0  ; "ALT"
 S_cap                db 99, 97, 112, 0  ; "cap"
 S_add                db 97, 100, 100, 0  ; "add"
