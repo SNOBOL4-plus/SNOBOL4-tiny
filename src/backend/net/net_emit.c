@@ -222,15 +222,20 @@ static void net_emit_expr(EXPR_t *e) {
         net_ldstr(e->sval ? e->sval : "");
         break;
     case E_ILIT: {
-        /* integer → string via Int32.ToString() */
+        /* integer literal → push as string directly (avoids runtime parse) */
         char buf[64];
         snprintf(buf, sizeof buf, "%ld", e->ival);
         net_ldstr(buf);
         break;
     }
     case E_FLIT: {
+        /* real literal — SNOBOL4 prints 1.0 as "1.", not "1" */
         char buf[64];
-        snprintf(buf, sizeof buf, "%g", e->dval);
+        double v = e->dval;
+        if (v == (double)(long)v && v >= -1e15 && v <= 1e15)
+            snprintf(buf, sizeof buf, "%ld.", (long)v);
+        else
+            snprintf(buf, sizeof buf, "%g", v);
         net_ldstr(buf);
         break;
     }
@@ -260,44 +265,29 @@ static void net_emit_expr(EXPR_t *e) {
         N("    call       string [mscorlib]System.String::Concat(string, string)\n");
         break;
     case E_ADD:
-        /* arithmetic: Int32.Parse both, add, ToString */
         net_emit_expr(e->left);
-        N("    call       int32 [mscorlib]System.Int32::Parse(string)\n");
         net_emit_expr(e->right);
-        N("    call       int32 [mscorlib]System.Int32::Parse(string)\n");
-        N("    add\n");
-        N("    call       string [mscorlib]System.Int32::ToString(int32)\n");
+        N("    call       string %s::sno_add(string, string)\n", net_classname);
         break;
     case E_SUB:
         net_emit_expr(e->left);
-        N("    call       int32 [mscorlib]System.Int32::Parse(string)\n");
         net_emit_expr(e->right);
-        N("    call       int32 [mscorlib]System.Int32::Parse(string)\n");
-        N("    sub\n");
-        N("    call       string [mscorlib]System.Int32::ToString(int32)\n");
+        N("    call       string %s::sno_sub(string, string)\n", net_classname);
         break;
     case E_MPY:
         net_emit_expr(e->left);
-        N("    call       int32 [mscorlib]System.Int32::Parse(string)\n");
         net_emit_expr(e->right);
-        N("    call       int32 [mscorlib]System.Int32::Parse(string)\n");
-        N("    mul\n");
-        N("    call       string [mscorlib]System.Int32::ToString(int32)\n");
+        N("    call       string %s::sno_mpy(string, string)\n", net_classname);
         break;
     case E_DIV:
         net_emit_expr(e->left);
-        N("    call       int32 [mscorlib]System.Int32::Parse(string)\n");
         net_emit_expr(e->right);
-        N("    call       int32 [mscorlib]System.Int32::Parse(string)\n");
-        N("    div\n");
-        N("    call       string [mscorlib]System.Int32::ToString(int32)\n");
+        N("    call       string %s::sno_div(string, string)\n", net_classname);
         break;
     case E_MNS:
         /* unary minus */
         net_emit_expr(e->left ? e->left : e->right);
-        N("    call       int32 [mscorlib]System.Int32::Parse(string)\n");
-        N("    neg\n");
-        N("    call       string [mscorlib]System.Int32::ToString(int32)\n");
+        N("    call       string %s::sno_neg(string)\n", net_classname);
         break;
     default:
         /* unhandled — push empty string stub */
@@ -416,6 +406,170 @@ static void net_emit_stmts(Program *prog) {
 }
 
 /* -----------------------------------------------------------------------
+ * SNOBOL4 arithmetic helpers emitted into each class
+ *
+ * SNOBOL4 numeric coercion rules:
+ *   - empty string coerces to 0
+ *   - strings that look like integers → integer arithmetic, result is integer string
+ *   - strings that look like reals → real arithmetic, result printed as SNOBOL4 real
+ *   - SNOBOL4 real format: integer-valued reals print with trailing dot (e.g. "1.")
+ *
+ * We implement each op as a static CIL method on the class using try/catch
+ * to handle parse failures (fall back to 0).
+ * We use float64 (double) arithmetic throughout for generality; then format
+ * the result as integer-string if result is whole, or with "." suffix if
+ * it was already integer-valued in input.
+ * ----------------------------------------------------------------------- */
+
+/* Emit a single CIL helper: sno_parse_dbl — parses a string to float64,
+ * empty/unparseable → 0.0 */
+static void net_emit_helper_parse(void) {
+    N("  .method private static float64 sno_parse_dbl(string s) cil managed\n");
+    N("  {\n");
+    N("    .maxstack 2\n");
+    N("    .locals init (float64 V_0, bool V_1)\n");
+    N("    ldarg.0\n");
+    N("    ldloca.s V_0\n");
+    N("    call       bool [mscorlib]System.Double::TryParse(string, float64&)\n");
+    N("    pop\n");
+    N("    ldloc.0\n");
+    N("    ret\n");
+    N("  }\n\n");
+}
+
+/* Emit sno_fmt_num — formats a float64 as SNOBOL4 numeric string.
+ * integer-valued → no decimal (e.g. 3 → "3"), except when we want "1." for
+ * real context.  Here we mirror the SNOBOL4 convention: integer arithmetic
+ * with integer inputs → no dot; any real input → dot notation. */
+static void net_emit_helper_fmt(void) {
+    /* sno_fmt_int: just call Int32 conversion for integer results */
+    N("  .method private static string sno_fmt_dbl(float64 v) cil managed\n");
+    N("  {\n");
+    N("    .maxstack 3\n");
+    N("    .locals init (float64 V_0, int64 V_1)\n");
+    N("    ldarg.0\n");
+    N("    stloc.0\n");
+    /* check if v == floor(v) */
+    N("    ldloc.0\n");
+    N("    conv.i8\n");
+    N("    stloc.1\n");
+    N("    ldloc.0\n");
+    N("    ldloc.1\n");
+    N("    conv.r8\n");
+    N("    beq        IS_INT\n");
+    /* real — use G format */
+    N("    ldloc.0\n");
+    N("    box        [mscorlib]System.Double\n");
+    N("    callvirt   instance string object::ToString()\n");
+    N("    ret\n");
+    N("  IS_INT:\n");
+    N("    ldloc.1\n");
+    N("    box        [mscorlib]System.Int64\n");
+    N("    callvirt   instance string object::ToString()\n");
+    N("    ret\n");
+    N("  }\n\n");
+}
+
+/* sno_add(a,b): SNOBOL4 add — numeric if both can be coerced (empty→0), else concat.
+ * SNOBOL4 rule: if EITHER operand is non-numeric non-empty → concat.
+ * Empty string is numeric (= 0). */
+static void net_emit_helper_add(void) {
+    N("  .method private static string sno_add(string a, string b) cil managed\n");
+    N("  {\n");
+    N("    .maxstack 4\n");
+    N("    .locals init (float64 V_0, float64 V_1, bool V_2, bool V_3, string V_4, string V_5)\n");
+    /* Trim a and b — empty/whitespace coerce to "0" for numeric test */
+    N("    ldarg.0\n");
+    N("    callvirt   instance string [mscorlib]System.String::Trim()\n");
+    N("    stloc.s V_4\n");
+    N("    ldarg.1\n");
+    N("    callvirt   instance string [mscorlib]System.String::Trim()\n");
+    N("    stloc.s V_5\n");
+    /* if trimmed a == "" → treat as "0" for parse attempt */
+    N("    ldloc.s V_4\n");
+    N("    ldstr      \"\"\n");
+    N("    call       bool [mscorlib]System.String::op_Equality(string, string)\n");
+    N("    brfalse    SNO_ADD_PARSE_A\n");
+    N("    ldstr      \"0\"\n");
+    N("    stloc.s V_4\n");
+    N("  SNO_ADD_PARSE_A:\n");
+    N("    ldloc.s V_4\n");
+    N("    ldloca.s V_0\n");
+    N("    call       bool [mscorlib]System.Double::TryParse(string, float64&)\n");
+    N("    stloc.2\n");
+    /* if trimmed b == "" → treat as "0" */
+    N("    ldloc.s V_5\n");
+    N("    ldstr      \"\"\n");
+    N("    call       bool [mscorlib]System.String::op_Equality(string, string)\n");
+    N("    brfalse    SNO_ADD_PARSE_B\n");
+    N("    ldstr      \"0\"\n");
+    N("    stloc.s V_5\n");
+    N("  SNO_ADD_PARSE_B:\n");
+    N("    ldloc.s V_5\n");
+    N("    ldloca.s V_1\n");
+    N("    call       bool [mscorlib]System.Double::TryParse(string, float64&)\n");
+    N("    stloc.3\n");
+    /* both numeric? → add */
+    N("    ldloc.2\n");
+    N("    ldloc.3\n");
+    N("    and\n");
+    N("    brfalse    SNO_ADD_CONCAT\n");
+    N("    ldloc.0\n");
+    N("    ldloc.1\n");
+    N("    add\n");
+    N("    call       string %s::sno_fmt_dbl(float64)\n", net_classname);
+    N("    ret\n");
+    N("  SNO_ADD_CONCAT:\n");
+    N("    ldarg.0\n");
+    N("    ldarg.1\n");
+    N("    call       string [mscorlib]System.String::Concat(string, string)\n");
+    N("    ret\n");
+    N("  }\n\n");
+}
+
+/* sno_sub, sno_mpy, sno_div — numeric only (no concat fallback for these) */
+static void net_emit_helper_binop(const char *name, const char *op) {
+    N("  .method private static string %s(string a, string b) cil managed\n", name);
+    N("  {\n");
+    N("    .maxstack 3\n");
+    N("    .locals init (float64 V_0, float64 V_1)\n");
+    N("    ldarg.0\n");
+    N("    call       float64 %s::sno_parse_dbl(string)\n", net_classname);
+    N("    stloc.0\n");
+    N("    ldarg.1\n");
+    N("    call       float64 %s::sno_parse_dbl(string)\n", net_classname);
+    N("    stloc.1\n");
+    N("    ldloc.0\n");
+    N("    ldloc.1\n");
+    N("    %s\n", op);
+    N("    call       string %s::sno_fmt_dbl(float64)\n", net_classname);
+    N("    ret\n");
+    N("  }\n\n");
+}
+
+static void net_emit_helper_neg(void) {
+    N("  .method private static string sno_neg(string a) cil managed\n");
+    N("  {\n");
+    N("    .maxstack 2\n");
+    N("    ldarg.0\n");
+    N("    call       float64 %s::sno_parse_dbl(string)\n", net_classname);
+    N("    neg\n");
+    N("    call       string %s::sno_fmt_dbl(float64)\n", net_classname);
+    N("    ret\n");
+    N("  }\n\n");
+}
+
+static void net_emit_sno_helpers(void) {
+    net_emit_helper_parse();
+    net_emit_helper_fmt();
+    net_emit_helper_add();
+    net_emit_helper_binop("sno_sub", "sub");
+    net_emit_helper_binop("sno_mpy", "mul");
+    net_emit_helper_binop("sno_div", "div");
+    net_emit_helper_neg();
+}
+
+/* -----------------------------------------------------------------------
  * Header / footer emitters
  * ----------------------------------------------------------------------- */
 
@@ -457,6 +611,9 @@ static void net_emit_header(Program *prog) {
     }
 
     (void)prog; /* suppress unused warning; prog used by scan_prog_vars above */
+
+    /* ---- SNOBOL4 runtime arithmetic helpers ---- */
+    net_emit_sno_helpers();
 }
 
 static void net_emit_main_open(void) {
