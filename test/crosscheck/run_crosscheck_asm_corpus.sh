@@ -111,7 +111,7 @@ for dir in $DIRS; do
     echo "── $dir ──"
     for sno in "$full"/*.sno; do
         [[ -f "$sno" ]] || continue
-        run_test "$sno"
+        run_test "$sno" || true
     done
     echo ""
 done
