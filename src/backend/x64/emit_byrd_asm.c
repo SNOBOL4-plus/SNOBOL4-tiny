@@ -353,11 +353,18 @@ static void bss_emit(void) {
 }
 
 /* -----------------------------------------------------------------------
+ * Buffer size constants — defined early, used throughout
+ * ----------------------------------------------------------------------- */
+#define LBUF 320                 /* single label/name buffer */
+#define LBUF2 (LBUF * 2)        /* compound label: prefix + safe + suffix + safe */
+#define ASM_NAMED_NAMELEN 320    /* max expanded SNOBOL4 identifier length */
+
+/* -----------------------------------------------------------------------
  * .data string literals registry
  * ----------------------------------------------------------------------- */
 
 #define MAX_LITS 128
-typedef struct { char label[64]; char *val; int len; } LitEntry;
+typedef struct { char label[LBUF + 16]; char *val; int len; } LitEntry;
 static LitEntry lit_table[MAX_LITS];
 static int lit_count = 0;
 
@@ -372,7 +379,8 @@ static const char *lit_intern(const char *s, int n) {
     snprintf(e->label, sizeof e->label, "lit_str_%d", lit_count);
     e->val = malloc(n + 1); memcpy(e->val, s, n); e->val[n] = 0;
     e->len = n;
-    return e->label;
+    const char *lbl = e->label;
+    return lbl;
 }
 
 static void lit_emit_data(void) {
@@ -397,8 +405,6 @@ static void lit_emit_data(void) {
 /* -----------------------------------------------------------------------
  * NASM label helpers
  * ----------------------------------------------------------------------- */
-
-#define LBUF 320
 
 static void asmL(const char *lbl) {
     flush_pending_label();
@@ -436,7 +442,7 @@ static char _alf_ibuf[1024];
 } while(0)
 
 /* ALFC — emit "label:  instruction ; comment\n" — three columns, snug */
-static char _alfc_ibuf[768];
+static char _alfc_ibuf[2048];
 #define ALFC(lbl, comment, fmt, ...) do { \
     snprintf(_alfc_ibuf, sizeof _alfc_ibuf, fmt, ##__VA_ARGS__); \
     /* strip trailing newline from instruction */ \
@@ -574,16 +580,16 @@ static CaptureVar *cap_var_register(const char *varname);
 struct AsmNamedPat {
     char varname[ASM_NAMED_NAMELEN];
     char safe[ASM_NAMED_NAMELEN];
-    char alpha_lbl[ASM_NAMED_NAMELEN];
-    char beta_lbl[ASM_NAMED_NAMELEN];
-    char ret_gamma[ASM_NAMED_NAMELEN];
-    char ret_omega[ASM_NAMED_NAMELEN];
+    char alpha_lbl[ASM_NAMED_NAMELEN + 16];
+    char beta_lbl[ASM_NAMED_NAMELEN + 16];
+    char ret_gamma[ASM_NAMED_NAMELEN + 16];
+    char ret_omega[ASM_NAMED_NAMELEN + 16];
     EXPR_t *pat;
     /* User-defined function fields (is_fn == 1) */
     int  is_fn;                              /* 1 = user Snocone procedure */
     int  nparams;
     char param_names[ASM_NAMED_MAXPARAMS][64]; /* parameter variable names */
-    char body_label[ASM_NAMED_NAMELEN];      /* NASM label of function body entry */
+    char body_label[ASM_NAMED_NAMELEN + 16]; /* NASM label of function body entry */
 };
 
 static const AsmNamedPat *asm_named_lookup(const char *varname);
@@ -724,10 +730,10 @@ static void emit_asm_arbno(EXPR_t *child,
     bss_add(cur_before);
     /* stk: emit as resq 64 — we track this separately */
     /* We'll add it to a special multi-slot list */
-    static char arbno_stack_decls[512][LBUF];
+    static char arbno_stack_decls[512][LBUF + 16];
     static int  arbno_stack_count = 0;
     if (arbno_stack_count < 512) {
-        snprintf(arbno_stack_decls[arbno_stack_count], LBUF,
+        snprintf(arbno_stack_decls[arbno_stack_count], sizeof arbno_stack_decls[0],
                  "%-24s resq 64", stk);
         arbno_stack_count++;
     }
@@ -777,10 +783,10 @@ static void emit_asm_arbno(EXPR_t *child,
      * We use a hack: emit it as a comment-tagged entry so bss_emit
      * can handle it. We store it directly since bss_add only does resq 1. */
     /* Replace the bss_add approach: use a global extra-bss list */
-    extern char asm_extra_bss[][LBUF];
+    extern char asm_extra_bss[][LBUF + 16];
     extern int  asm_extra_bss_count;
     if (asm_extra_bss_count < 64) {
-        snprintf(asm_extra_bss[asm_extra_bss_count++], LBUF,
+        snprintf(asm_extra_bss[asm_extra_bss_count++], sizeof asm_extra_bss[0],
                  "%-24s resq 64", stk);
     }
 }
@@ -1399,7 +1405,7 @@ static void emit_asm_node(EXPR_t *pat,
  * Extra .bss entries for ARBNO stacks (resq 64 each)
  * ----------------------------------------------------------------------- */
 
-char asm_extra_bss[64][LBUF];
+char asm_extra_bss[64][LBUF + 16];
 int  asm_extra_bss_count = 0;
 
 static void extra_bss_emit(void) {
@@ -1504,7 +1510,6 @@ static void cap_vars_emit_data_section(void) {
  * ----------------------------------------------------------------------- */
 
 #define ASM_NAMED_MAX 64
-#define ASM_NAMED_NAMELEN 320
 
 static AsmNamedPat asm_named[ASM_NAMED_MAX];
 static int         asm_named_count = 0;
@@ -1559,10 +1564,10 @@ static AsmNamedPat *asm_named_register(const char *varname, EXPR_t *pat) {
     /* copy safe to temp to avoid GCC -Wrestrict false-positive (distinct fields) */
     char _ns[ASM_NAMED_NAMELEN];
     memcpy(_ns, e->safe, ASM_NAMED_NAMELEN);
-    snprintf(e->alpha_lbl, ASM_NAMED_NAMELEN, "P_%s_α", _ns);
-    snprintf(e->beta_lbl,  ASM_NAMED_NAMELEN, "P_%s_β", _ns);
-    snprintf(e->ret_gamma, ASM_NAMED_NAMELEN, "P_%s_ret_γ", _ns);
-    snprintf(e->ret_omega, ASM_NAMED_NAMELEN, "P_%s_ret_ω", _ns);
+    snprintf(e->alpha_lbl, sizeof e->alpha_lbl, "P_%s_α", _ns);
+    snprintf(e->beta_lbl,  sizeof e->beta_lbl,  "P_%s_β", _ns);
+    snprintf(e->ret_gamma, sizeof e->ret_gamma, "P_%s_ret_γ", _ns);
+    snprintf(e->ret_omega, sizeof e->ret_omega, "P_%s_ret_ω", _ns);
     e->pat = pat;
     e->is_fn = 0;
     e->nparams = 0;
@@ -1670,10 +1675,10 @@ static void emit_asm_named_def(const AsmNamedPat *np,
         for (int i = 0; i < np->nparams; i++) {
             char pname_safe[ASM_NAMED_NAMELEN]; asm_expand_name(np->param_names[i], pname_safe, sizeof pname_safe);
             if (!pname_safe[0]) snprintf(pname_safe, sizeof pname_safe, "p%d", i);
-            char save_slot_t[LBUF], save_slot_p[LBUF];
+            char save_slot_t[LBUF2 + 16], save_slot_p[LBUF2 + 16];
             snprintf(save_slot_t, sizeof save_slot_t, "fn_%s_save_%s_t", safe, pname_safe);
             snprintf(save_slot_p, sizeof save_slot_p, "fn_%s_save_%s_p", safe, pname_safe);
-            char arg_slot_t[LBUF], arg_slot_p[LBUF];
+            char arg_slot_t[LBUF2 + 16], arg_slot_p[LBUF2 + 16];
             snprintf(arg_slot_t, sizeof arg_slot_t, "fn_%s_arg_%d_t", safe, i);
             snprintf(arg_slot_p, sizeof arg_slot_p, "fn_%s_arg_%d_p", safe, i);
             const char *plab = prog_str_intern(np->param_names[i]);
@@ -1697,14 +1702,14 @@ static void emit_asm_named_def(const AsmNamedPat *np,
         emit_sep_minor("γ/ω");
 
         /* γ: restore params, jump via ret_γ (RETURN path) */
-        char gamma_lbl[LBUF], omega_lbl[LBUF];
-        snprintf(gamma_lbl, LBUF, "fn_%s_gamma", safe);
-        snprintf(omega_lbl, LBUF, "fn_%s_omega", safe);
+        char gamma_lbl[LBUF2], omega_lbl[LBUF2];
+        snprintf(gamma_lbl, sizeof gamma_lbl, "fn_%s_gamma", safe);
+        snprintf(omega_lbl, sizeof omega_lbl, "fn_%s_omega", safe);
         asmL(gamma_lbl);
         for (int i = np->nparams - 1; i >= 0; i--) {
             char pname_safe[ASM_NAMED_NAMELEN]; asm_expand_name(np->param_names[i], pname_safe, sizeof pname_safe);
             if (!pname_safe[0]) snprintf(pname_safe, sizeof pname_safe, "p%d", i);
-            char save_slot_t[LBUF], save_slot_p[LBUF];
+            char save_slot_t[LBUF2 + 16], save_slot_p[LBUF2 + 16];
             snprintf(save_slot_t, sizeof save_slot_t, "fn_%s_save_%s_t", safe, pname_safe);
             snprintf(save_slot_p, sizeof save_slot_p, "fn_%s_save_%s_p", safe, pname_safe);
             const char *plab = prog_str_intern(np->param_names[i]);
@@ -1720,7 +1725,7 @@ static void emit_asm_named_def(const AsmNamedPat *np,
         for (int i = np->nparams - 1; i >= 0; i--) {
             char pname_safe[ASM_NAMED_NAMELEN]; asm_expand_name(np->param_names[i], pname_safe, sizeof pname_safe);
             if (!pname_safe[0]) snprintf(pname_safe, sizeof pname_safe, "p%d", i);
-            char save_slot_t[LBUF], save_slot_p[LBUF];
+            char save_slot_t[LBUF2 + 16], save_slot_p[LBUF2 + 16];
             snprintf(save_slot_t, sizeof save_slot_t, "fn_%s_save_%s_t", safe, pname_safe);
             snprintf(save_slot_p, sizeof save_slot_p, "fn_%s_save_%s_p", safe, pname_safe);
             const char *plab = prog_str_intern(np->param_names[i]);
@@ -1742,9 +1747,9 @@ static void emit_asm_named_def(const AsmNamedPat *np,
     }
 
     /* The named pattern's inner γ and ω connect back via the ret_ slots */
-    char inner_gamma[LBUF], inner_omega[LBUF];
-    snprintf(inner_gamma, LBUF, "patdef_%s_gamma", np->safe);
-    snprintf(inner_omega, LBUF, "patdef_%s_omega", np->safe);
+    char inner_gamma[LBUF2], inner_omega[LBUF2];
+    snprintf(inner_gamma, sizeof inner_gamma, "patdef_%s_gamma", np->safe);
+    snprintf(inner_omega, sizeof inner_omega, "patdef_%s_omega", np->safe);
 
     /* Major separator: named pattern header */
     emit_sep_major(np->varname);
@@ -2215,7 +2220,7 @@ static void prog_safe(const char *src, char *dst, int dstlen) {
 
 /* ---- data section string registry ---- */
 #define MAX_PROG_STRS 2048
-typedef struct { char label[64]; char *val; } ProgStr;
+typedef struct { char label[LBUF + 16]; char *val; } ProgStr;
 static ProgStr prog_strs[MAX_PROG_STRS];
 static int     prog_str_count = 0;
 
@@ -2230,7 +2235,7 @@ static const char *prog_str_intern(const char *s) {
      * _ passes through (common word-separator — keep readable).
      * On collision (two distinct source names expand identically),
      * append _N uid to the second — rare, visible, honest. */
-    char exp[128];
+    char exp[LBUF];
     asm_expand_name(s, exp, sizeof exp);
     if (exp[0]) {
         snprintf(e->label, sizeof e->label, "S_%s", exp);
@@ -2404,7 +2409,7 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
                 char pname_safe[ASM_NAMED_NAMELEN];
                 asm_expand_name(ufn->param_names[ai], pname_safe, sizeof pname_safe);
                 if (!pname_safe[0]) snprintf(pname_safe, sizeof pname_safe, "p%d", ai);
-                char arg_slot_t[LBUF], arg_slot_p[LBUF];
+                char arg_slot_t[LBUF2 + 16], arg_slot_p[LBUF2 + 16];
                 snprintf(arg_slot_t, sizeof arg_slot_t, "fn_%s_arg_%d_t", ufn->safe, ai);
                 snprintf(arg_slot_p, sizeof arg_slot_p, "fn_%s_arg_%d_p", ufn->safe, ai);
                 /* Evaluate arg into [rbp-32/24] */
@@ -3056,19 +3061,19 @@ static void asm_emit_program(Program *prog) {
                 char pname_safe[ASM_NAMED_NAMELEN];
                 asm_expand_name(asm_named[i].param_names[pi], pname_safe, sizeof pname_safe);
                 if (!pname_safe[0]) snprintf(pname_safe, sizeof pname_safe, "p%d", pi);
-                char save_slot[256], arg_slot[256];
+                char save_slot[LBUF2 + 16], arg_slot[LBUF2 + 16];
                 snprintf(save_slot, sizeof save_slot, "fn_%s_save_%s",
                          asm_named[i].safe, pname_safe);
                 snprintf(arg_slot,  sizeof arg_slot,  "fn_%s_arg_%d",
                          asm_named[i].safe, pi);
                 /* save_slot holds a DESCR_t (2 qwords): _t = type, _p = ptr */
-                char save_slot_t[LBUF], save_slot_p[LBUF];
+                char save_slot_t[LBUF2 + 32], save_slot_p[LBUF2 + 32];
                 snprintf(save_slot_t, sizeof save_slot_t, "%s_t", save_slot);
                 snprintf(save_slot_p, sizeof save_slot_p, "%s_p", save_slot);
                 bss_add(save_slot_t);
                 bss_add(save_slot_p);
                 /* arg_slot holds a DESCR_t (2 qwords): _t = type, _p = ptr */
-                char arg_slot_t[LBUF], arg_slot_p[LBUF];
+                char arg_slot_t[LBUF2 + 32], arg_slot_p[LBUF2 + 32];
                 snprintf(arg_slot_t, sizeof arg_slot_t, "%s_t", arg_slot);
                 snprintf(arg_slot_p, sizeof arg_slot_p, "%s_p", arg_slot);
                 bss_add(arg_slot_t);
@@ -3222,7 +3227,7 @@ static void asm_emit_program(Program *prog) {
             }
             /* Leaving a user function body: label ends with ".END" */
             if (current_fn) {
-                char end_lbl[256];
+                char end_lbl[LBUF + 16];
                 snprintf(end_lbl, sizeof end_lbl, "%s.END", current_fn->varname);
                 if (strcasecmp(s->label, end_lbl) == 0)
                     current_fn = NULL;

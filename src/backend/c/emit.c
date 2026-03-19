@@ -31,7 +31,6 @@ static int cur_stmt_next_uid = 0;  /* set by snoc_emit before each emit_stmt */
  * Controlled by -trampoline flag on the sno2c command line.
  */
 int trampoline_mode = 0;         /* set by main.c when -trampoline passed */
-static int tramp_stmt_id = 0;    /* sequential stmt ID within current scope */
 
 static FILE *out;
 static int   uid_ctr = 0;
@@ -324,7 +323,7 @@ static void emit_expr(EXPR_t *e) {
         } else {
             E("APPLY_fn(\"%s\",(DESCR_t[]){", e->sval);
             for (int i=0; i<e->nargs; i++) {
-                if (i) E(","); emit_expr(e->args[i]);
+                if (i) { E(","); } emit_expr(e->args[i]);
             }
             E("},%d)", e->nargs);
         }
@@ -333,7 +332,7 @@ static void emit_expr(EXPR_t *e) {
     case E_ARY:
         E("aref(%s,(DESCR_t[]){", cs(e->sval));
         for (int i=0; i<e->nargs; i++) {
-            if (i) E(","); emit_expr(e->args[i]);
+            if (i) { E(","); } emit_expr(e->args[i]);
         }
         E("},%d)", e->nargs);
         break;
@@ -342,7 +341,7 @@ static void emit_expr(EXPR_t *e) {
         /* postfix subscript: expr[i] — e.g. c(x)[i] */
         E("INDEX_fn("); emit_expr(e->left); E(",(DESCR_t[]){");
         for (int i=0; i<e->nargs; i++) {
-            if (i) E(","); emit_expr(e->args[i]);
+            if (i) { E(","); } emit_expr(e->args[i]);
         }
         E("},%d)", e->nargs);
         break;
@@ -542,7 +541,7 @@ static void emit_assign_target(EXPR_t *lhs, const char *rhs_str) {
     } else if (lhs->kind == E_ARY) {
         E("aset(%s,(DESCR_t[]){", cs(lhs->sval));
         for (int i=0; i<lhs->nargs; i++) {
-            if (i) E(","); emit_expr(lhs->args[i]);
+            if (i) { E(","); } emit_expr(lhs->args[i]);
         }
         E("},%d,%s);\n", lhs->nargs, rhs_str);
     } else if (lhs->kind == E_KW) {
@@ -553,7 +552,7 @@ static void emit_assign_target(EXPR_t *lhs, const char *rhs_str) {
         emit_expr(lhs->left);
         E(",(DESCR_t[]){");
         for (int i=0; i<lhs->nargs; i++) {
-            if (i) E(","); emit_expr(lhs->args[i]);
+            if (i) { E(","); } emit_expr(lhs->args[i]);
         }
         E("},%d,%s);\n", lhs->nargs, rhs_str);
     } else if (lhs->kind == E_INDR) {
@@ -1031,7 +1030,6 @@ static void emit_stmt(STMT_t *s, const char *fn) {
 
     /* ---- null assign: subject = (empty RHS) — clears variable to null ---- */
     if (!s->pattern && !s->replacement && s->has_eq && s->subject) {
-        int u=uid();
         E("{ /* null assign */\n");
         emit_assign_target_io(s->subject, "NULVCL");
         E("}\n");

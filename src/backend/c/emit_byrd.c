@@ -94,7 +94,7 @@ static void byrd_uid_reset(void) { byrd_uid_ctr = 0; }
 static int  byrd_uid(void)       { return ++byrd_uid_ctr; }
 
 /* Format a label into a static buffer — caller copies if needed */
-#define LBUF 128
+#define LBUF 320
 typedef char Label[LBUF];
 
 static void label_fmt(Label out_l, const char *role, int uid, const char *port) {
@@ -127,7 +127,8 @@ static void byrd_emit(EXPR_t *pat,
  * ----------------------------------------------------------------------- */
 
 #define NAMED_PAT_MAX 128
-#define NAMED_PAT_NAMELEN 128
+#define NAMED_PAT_NAMELEN 320
+#define NAMED_PAT_LBUF2 (NAMED_PAT_NAMELEN * 2 + 32)  /* compound: prefix+name+suffix+name */
 
 typedef struct {
     char varname[NAMED_PAT_NAMELEN];
@@ -181,7 +182,7 @@ void byrd_cond_emit_assigns(FILE *fp, int stmt_u) {
                     ca->tmpvar, ca->varname, ca->tmpvar);
             if (ca->has_cstatic) {
                 /* sync C static too — use byrd_cs logic inline */
-                char cs[NAMED_PAT_NAMELEN];
+                char cs[NAMED_PAT_LBUF2];
                 snprintf(cs, sizeof cs, "_%s", ca->varname);
                 fprintf(fp, " %s = STRVAL(%s);", cs, ca->tmpvar);
             }
@@ -206,13 +207,13 @@ static void named_pat_register(const char *varname,
 /* Pre-register a name without emitting anything — so all names are known
  * before any function body is emitted (handles forward/mutual references). */
 void byrd_preregister_named_pattern(const char *varname) {
-    char safe[NAMED_PAT_NAMELEN];
+    char safe[NAMED_PAT_LBUF2];
     const char *s = varname;
     int i = 0;
     for (; *s && i < (int)(sizeof safe)-1; s++, i++)
         safe[i] = (isalnum((unsigned char)*s) || *s=='_') ? *s : '_';
     safe[i] = '\0';
-    char fnname[NAMED_PAT_NAMELEN], tyname[NAMED_PAT_NAMELEN];
+    char fnname[NAMED_PAT_NAMELEN + 16], tyname[NAMED_PAT_NAMELEN + 16];
     snprintf(fnname, sizeof fnname, "pat_%s", safe);
     snprintf(tyname, sizeof tyname, "pat_%s_t", safe);
     named_pat_register(varname, tyname, fnname);
@@ -272,7 +273,7 @@ static const NamedPat *named_pat_lookup(const char *varname) {
  * ----------------------------------------------------------------------- */
 
 #define DECL_BUF_MAX  256
-#define DECL_LINE_MAX 256
+#define DECL_LINE_MAX (NAMED_PAT_NAMELEN + 32)
 
 static char decl_buf[DECL_BUF_MAX][DECL_LINE_MAX];
 static int  decl_count;
@@ -1334,7 +1335,7 @@ static void emit_imm(EXPR_t *child, const char *varname,
      * text (e.g. "=", "Label", ":()") and must reach Shift() verbatim.
      * Only sanitize for C-identifier use (label/static names), not for the
      * STRVAL tag passed to Shift(). */
-    char safe_varname[NAMED_PAT_NAMELEN];
+    char safe_varname[NAMED_PAT_LBUF2];
     if (!do_shift && !is_literal_tok) {
         int i = 0; const char *s = varname;
         for (; *s && i < (int)(sizeof safe_varname)-1; s++, i++)
@@ -1480,7 +1481,7 @@ static void emit_cond(EXPR_t *child, const char *varname,
     int uid = byrd_uid();
 
     /* Sanitize varname for C identifier */
-    char safe_varname[NAMED_PAT_NAMELEN];
+    char safe_varname[NAMED_PAT_LBUF2];
     { int i = 0; const char *s = varname;
       for (; *s && i < (int)(sizeof safe_varname)-1; s++, i++)
           safe_varname[i] = (isalnum((unsigned char)*s) || *s=='_') ? *s : '_';
@@ -1994,7 +1995,7 @@ static void byrd_emit(EXPR_t *pat,
         const char *varname =
             (pat->left  && pat->left->sval)  ? pat->left->sval  :
             (pat->right && pat->right->sval) ? pat->right->sval : "_";
-        char safe[NAMED_PAT_NAMELEN];
+        char safe[NAMED_PAT_LBUF2];
         { int i=0; const char *s=varname;
           for(;*s&&i<(int)sizeof(safe)-1;s++,i++)
               safe[i]=(isalnum((unsigned char)*s)||*s=='_')?*s:'_';
@@ -2500,7 +2501,7 @@ void byrd_emit_pattern(EXPR_t *pat, FILE *out_file,
 
 void byrd_emit_named_pattern(const char *varname, EXPR_t *pat, FILE *out_file) {
     /* C-safe name */
-    char safe[NAMED_PAT_NAMELEN];
+    char safe[NAMED_PAT_LBUF2];
     {
         const char *s = varname;
         int i = 0;
@@ -2509,8 +2510,8 @@ void byrd_emit_named_pattern(const char *varname, EXPR_t *pat, FILE *out_file) {
         safe[i] = '\0';
     }
 
-    char fnname[NAMED_PAT_NAMELEN];
-    char tyname[NAMED_PAT_NAMELEN];
+    char fnname[NAMED_PAT_LBUF2];
+    char tyname[NAMED_PAT_LBUF2];
     snprintf(fnname, sizeof fnname, "pat_%s", safe);
     snprintf(tyname, sizeof tyname, "pat_%s_t", safe);
 

@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <limits.h>
+#include <ctype.h>
 
 /* =====================================================================
  * Arena allocator

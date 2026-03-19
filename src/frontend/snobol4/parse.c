@@ -153,7 +153,7 @@ static EXPR_t *parse_expr17(Lex *lx) {
     /* String literal */
     if (t.kind == T_STR) {
         lex_next(lx);
-        EXPR_t *e = expr_new(E_QLIT); e->sval = t.sval; return e;
+        EXPR_t *e = expr_new(E_QLIT); (e)->sval = (char *)(t.sval); return e;
     }
 
     /* Real literal */
@@ -171,7 +171,7 @@ static EXPR_t *parse_expr17(Lex *lx) {
     /* Keyword variable &NAME */
     if (t.kind == T_KEYWORD) {
         lex_next(lx);
-        EXPR_t *e = expr_new(E_KW); e->sval = t.sval; return e;
+        EXPR_t *e = expr_new(E_KW); (e)->sval = (char *)(t.sval); return e;
     }
 
     /* Identifier: bare name, or function call NAME(...) */
@@ -183,10 +183,10 @@ static EXPR_t *parse_expr17(Lex *lx) {
             parse_arglist(lx, &args, &nargs);
             if (lex_peek(lx).kind==T_RPAREN) lex_next(lx);
             EXPR_t *e = expr_new(E_FNC);
-            e->sval=t.sval; e->args=args; e->nargs=nargs;
+            e->sval=(char *)(t.sval); e->args=args; e->nargs=nargs;
             return e;
         }
-        EXPR_t *e = expr_new(E_VART); e->sval = t.sval; return e;
+        EXPR_t *e = expr_new(E_VART); (e)->sval = (char *)(t.sval); return e;
     }
 
     /* Nothing matched */

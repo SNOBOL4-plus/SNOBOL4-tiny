@@ -417,7 +417,7 @@ static void do_procedure(CfState *st) {
     /* Emit DEFINE call as a statement: DEFINE('fname(args)locals') */
     /* We model this as E_FNC("DEFINE", E_QLIT("fname(args)locals")) */
     {
-        char def_buf[512];
+        char def_buf[256 + 256 + 256 + 4]; /* fname + args_buf + locals_buf + "()" + NUL */
         snprintf(def_buf, sizeof def_buf, "%s(%s)%s", fname, args_buf, locals_buf);
         EXPR_t *arg = expr_new(E_QLIT);
         arg->sval = strdup(def_buf);
