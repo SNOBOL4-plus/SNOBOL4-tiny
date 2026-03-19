@@ -111,6 +111,11 @@ static void JSep(const char *tag) {
 
 static char jvm_classname[256];
 
+/* Module-level label globals — set per-statement, used by emit_expr */
+static char jvm_cur_pat_abort_label_early[128]; /* placeholder — real decl below */
+static char jvm_cur_stmt_fail_label[128];  /* INPUT EOF in expr → jump here */
+static int  jvm_expr_depth = 0;            /* nesting depth; INPUT null-check only at depth==0 */
+
 static void jvm_set_classname(const char *filename) {
     if (!filename || strcmp(filename, "<stdin>") == 0) {
         strcpy(jvm_classname, "SnobolProg");
@@ -260,9 +265,11 @@ static void jvm_l2sno(void) {
 }
 
 static void jvm_emit_expr(EXPR_t *e) {
+    jvm_expr_depth++;
     if (!e) {
         /* null = unset */
         JI("ldc", "\"\"");
+        jvm_expr_depth--;
         return;
     }
     switch (e->kind) {
@@ -314,12 +321,31 @@ static void jvm_emit_expr(EXPR_t *e) {
         /* Variable reference — load from sno_vars HashMap (supports indirect write) */
         if (!e->sval) { JI("ldc", "\"\""); break; }
         if (strcasecmp(e->sval, "INPUT") == 0) {
-            /* INPUT — reads one line from stdin; returns null on EOF (→ failure) */
+            /* INPUT — reads one line from stdin; null on EOF.
+             * The statement-level emitter pre-hoists INPUT to local 5 when
+             * INPUT appears nested in an expression. At depth==1 (direct RHS),
+             * jvm_cur_stmt_fail_label is set and we check inline. */
             char irdesc[512];
             snprintf(irdesc, sizeof irdesc,
                 "%s/sno_input_read()Ljava/lang/String;", jvm_classname);
-            JI("invokestatic", irdesc);
             jvm_need_input_helper = 1;
+            if (jvm_expr_depth > 1) {
+                /* Nested: use pre-hoisted local 5 (set by stmt emitter) */
+                J("    aload 5\n");
+            } else {
+                /* Top-level: emit call + null check */
+                JI("invokestatic", irdesc);
+                if (jvm_cur_stmt_fail_label[0]) {
+                    static int inp_uid_ctr = 0;
+                    char inp_ok[64];
+                    snprintf(inp_ok, sizeof inp_ok, "Jinp%d_ok", inp_uid_ctr++);
+                    JI("dup", "");
+                    JI("ifnonnull", inp_ok);
+                    JI("pop", "");
+                    JI("goto", jvm_cur_stmt_fail_label);
+                    J("%s:\n", inp_ok);
+                }
+            }
             break;
         }
         /* Read via sno_indr_get(name) — HashMap is always authoritative */
@@ -596,6 +622,45 @@ static void jvm_emit_expr(EXPR_t *e) {
             J("%s:\n", ddone);
             break;
         }
+        /* EQ/NE/LT/LE/GT/GE — numeric comparisons
+         * EQ(a,b): succeeds (returns b) if a == b numerically, else null
+         * NE/LT/LE/GT/GE: similar                                        */
+        {
+            static int _cmplbl = 0;
+            const char *cmpop = NULL;
+            int cmp_invert = 0; /* if 1: success when dcmpl != 0 */
+            /* dcmpl returns: 0 if a==b, -1 if a<b, 1 if a>b */
+            /* We branch to fail when condition is NOT met */
+            /* ifXX jumps to fail: */
+            const char *jmp_to_fail = NULL;
+            if      (strcasecmp(fname,"EQ")==0) jmp_to_fail = "ifne";
+            else if (strcasecmp(fname,"NE")==0) jmp_to_fail = "ifeq";
+            else if (strcasecmp(fname,"LT")==0) jmp_to_fail = "ifge";
+            else if (strcasecmp(fname,"LE")==0) jmp_to_fail = "ifgt";
+            else if (strcasecmp(fname,"GT")==0) jmp_to_fail = "ifle";
+            else if (strcasecmp(fname,"GE")==0) jmp_to_fail = "iflt";
+
+            if (jmp_to_fail) {
+                char cfail[40], cdone[40];
+                snprintf(cfail, sizeof cfail, "Lcmp_f_%d", _cmplbl);
+                snprintf(cdone, sizeof cdone, "Lcmp_d_%d", _cmplbl++);
+                EXPR_t *a0 = (e->args && e->args[0]) ? e->args[0] : NULL;
+                EXPR_t *a1 = (e->args && e->args[1]) ? e->args[1] : NULL;
+                if (a0) jvm_emit_expr(a0); else JI("ldc", "\"0\"");
+                jvm_emit_to_double();
+                if (a1) jvm_emit_expr(a1); else JI("ldc", "\"0\"");
+                jvm_emit_to_double();
+                JI("dcmpl", "");
+                J("    %s %s\n", jmp_to_fail, cfail);
+                /* success: return empty string (EQ/NE/LT etc. are predicates) */
+                JI("ldc", "\"\"");
+                JI("goto", cdone);
+                J("%s:\n", cfail);
+                JI("aconst_null", "");
+                J("%s:\n", cdone);
+                break;
+            }
+        }
         /* Unrecognised function — stub as empty string */
         JI("ldc", "\"\"");
         break;
@@ -605,6 +670,7 @@ static void jvm_emit_expr(EXPR_t *e) {
         JI("ldc", "\"\"");
         break;
     }
+    jvm_expr_depth--;
 }
 
 /* -----------------------------------------------------------------------
@@ -1345,9 +1411,29 @@ static void jvm_emit_pat_node(EXPR_t *pat,
  * Statement emitter
  * ----------------------------------------------------------------------- */
 
+/* Returns 1 if expr tree contains INPUT reference */
+static int expr_contains_input(EXPR_t *e) {
+    if (!e) return 0;
+    if (e->kind == E_VART && e->sval && strcasecmp(e->sval, "INPUT") == 0) return 1;
+    if (expr_contains_input(e->left))  return 1;
+    if (expr_contains_input(e->right)) return 1;
+    if (e->args) {
+        for (int i = 0; e->args[i]; i++)
+            if (expr_contains_input(e->args[i])) return 1;
+    }
+    return 0;
+}
+
 static void jvm_emit_stmt(STMT_t *s, int stmt_idx) {
     char next_lbl[64];
     snprintf(next_lbl, sizeof next_lbl, "Ln_%d", stmt_idx);
+
+    /* Set module-level stmt fail label for INPUT EOF propagation in expressions */
+    jvm_cur_stmt_fail_label[0] = '\0';
+    if (s->go && s->go->onfailure && s->go->onfailure[0]) {
+        snprintf(jvm_cur_stmt_fail_label, sizeof jvm_cur_stmt_fail_label,
+                 "L_%s", s->go->onfailure);
+    }
 
     /* Label */
     if (s->label) {
@@ -1378,17 +1464,65 @@ static void jvm_emit_stmt(STMT_t *s, int stmt_idx) {
         int is_output = strcasecmp(subj, "OUTPUT") == 0;
         int is_kw     = (s->subject->kind == E_KW);
 
+        /* Pre-hoist: if INPUT is nested inside the RHS expression (not direct),
+         * read it into local slot 5 now with a null check, before any stack buildup. */
+        int input_nested = (s->replacement &&
+                            s->replacement->kind != E_VART &&  /* not direct INPUT */
+                            expr_contains_input(s->replacement) &&
+                            jvm_cur_stmt_fail_label[0]);
+        if (input_nested) {
+            static int _hoist_uid = 0;
+            char hoist_ok[64];
+            snprintf(hoist_ok, sizeof hoist_ok, "Jhoist%d_ok", _hoist_uid++);
+            char irdesc[512];
+            snprintf(irdesc, sizeof irdesc,
+                "%s/sno_input_read()Ljava/lang/String;", jvm_classname);
+            jvm_need_input_helper = 1;
+            JI("invokestatic", irdesc);
+            JI("dup", "");
+            JI("ifnonnull", hoist_ok);
+            JI("pop", "");
+            JI("goto", jvm_cur_stmt_fail_label);
+            J("%s:\n", hoist_ok);
+            J("    astore 5\n");   /* local 5 = hoisted INPUT value */
+        }
+
         if (is_output) {
-            /* OUTPUT = expr → System.out.println(expr) */
+            /* OUTPUT = expr → System.out.println(expr)
+             * If expr returns null (failure), skip output and go to :F */
             char desc[512];
             snprintf(desc, sizeof desc, "%s/sno_stdout Ljava/io/PrintStream;", jvm_classname);
-            JI("getstatic", desc);
             if (!s->replacement || s->replacement->kind == E_NULV) {
+                JI("getstatic", desc);
                 JI("ldc", "\"\"");
+                JI("invokevirtual", "java/io/PrintStream/println(Ljava/lang/String;)V");
             } else {
+                /* Evaluate RHS first; check for null (statement failure) */
                 jvm_emit_expr(s->replacement);
+                /* null check: if null → statement fails (skip output) */
+                {
+                    static int _outnull = 0;
+                    char onok[48], onfail[64];
+                    snprintf(onok,   sizeof onok,   "Lout_ok_%d",   _outnull);
+                    snprintf(onfail, sizeof onfail,  "Lout_fail_%d", _outnull++);
+                    JI("dup", "");
+                    JI("ifnonnull", onok);
+                    JI("pop", "");
+                    /* jump to explicit :F or skip to after */
+                    if (s->go && s->go->onfailure && s->go->onfailure[0]) {
+                        char flbl[128]; snprintf(flbl, sizeof flbl, "L_%s", s->go->onfailure);
+                        JI("goto", flbl);
+                    } else {
+                        JI("goto", onfail);
+                    }
+                    J("%s:\n", onok);
+                    /* stack: non-null String — println it */
+                    JI("getstatic", desc);
+                    JI("swap", "");
+                    JI("invokevirtual", "java/io/PrintStream/println(Ljava/lang/String;)V");
+                    J("%s:\n", onfail);
+                }
             }
-            JI("invokevirtual", "java/io/PrintStream/println(Ljava/lang/String;)V");
         } else if (is_kw) {
             /* &KEYWORD = expr → sno_kw_set(name, val) */
             char kwesc[128];
@@ -1414,8 +1548,13 @@ static void jvm_emit_stmt(STMT_t *s, int stmt_idx) {
                                 strcasecmp(s->replacement->sval, "INPUT") == 0);
 
             if (rhs_is_input && s->go && s->go->onfailure && s->go->onfailure[0]) {
-                /* Emit INPUT call first, dup, ifnull → :F, then store */
+                /* Emit INPUT call first, dup, ifnull → :F, then store.
+                 * Clear stmt_fail_label so jvm_emit_expr doesn't double-emit. */
+                char saved_fail[128];
+                snprintf(saved_fail, sizeof saved_fail, "%s", jvm_cur_stmt_fail_label);
+                jvm_cur_stmt_fail_label[0] = '\0';
                 jvm_emit_expr(s->replacement);   /* → String | null */
+                snprintf(jvm_cur_stmt_fail_label, sizeof jvm_cur_stmt_fail_label, "%s", saved_fail);
                 JI("dup", "");
                 char flbl[128]; snprintf(flbl, sizeof flbl, "L_%s", s->go->onfailure);
                 JI("ifnull", flbl);
@@ -1427,15 +1566,39 @@ static void jvm_emit_stmt(STMT_t *s, int stmt_idx) {
                 snprintf(vpdesc2, sizeof vpdesc2, "%s/sno_var_put(Ljava/lang/String;Ljava/lang/String;)V", jvm_classname);
                 JI("invokestatic", vpdesc2);
             } else {
-                JI("ldc", nameesc);
+                /* General VAR = expr: evaluate RHS, check for null (= failure) */
                 if (!s->replacement || s->replacement->kind == E_NULV) {
+                    /* null/empty assignment — always succeeds, store "" */
+                    JI("ldc", nameesc);
                     JI("ldc", "\"\"");
+                    char vpdesc0[512];
+                    snprintf(vpdesc0, sizeof vpdesc0, "%s/sno_var_put(Ljava/lang/String;Ljava/lang/String;)V", jvm_classname);
+                    JI("invokestatic", vpdesc0);
                 } else {
-                    jvm_emit_expr(s->replacement);
+                    jvm_emit_expr(s->replacement);   /* → String | null */
+                    static int _varnull = 0;
+                    char vnok[48], vnfail[64];
+                    snprintf(vnok,   sizeof vnok,   "Lvar_ok_%d",   _varnull);
+                    snprintf(vnfail, sizeof vnfail,  "Lvar_fail_%d", _varnull++);
+                    JI("dup", "");
+                    JI("ifnonnull", vnok);
+                    /* null → failure: pop and branch */
+                    JI("pop", "");
+                    if (s->go && s->go->onfailure && s->go->onfailure[0]) {
+                        char flbl[128]; snprintf(flbl, sizeof flbl, "L_%s", s->go->onfailure);
+                        JI("goto", flbl);
+                    } else {
+                        JI("goto", vnfail);
+                    }
+                    J("%s:\n", vnok);
+                    /* non-null: store — stack has val, need (name, val) */
+                    JI("ldc", nameesc);
+                    JI("swap", "");
+                    char vpdesc[512];
+                    snprintf(vpdesc, sizeof vpdesc, "%s/sno_var_put(Ljava/lang/String;Ljava/lang/String;)V", jvm_classname);
+                    JI("invokestatic", vpdesc);
+                    J("%s:\n", vnfail);
                 }
-                char vpdesc[512];
-                snprintf(vpdesc, sizeof vpdesc, "%s/sno_var_put(Ljava/lang/String;Ljava/lang/String;)V", jvm_classname);
-                JI("invokestatic", vpdesc);
             }
         }
 
