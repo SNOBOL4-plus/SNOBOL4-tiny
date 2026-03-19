@@ -608,6 +608,740 @@ static void jvm_emit_expr(EXPR_t *e) {
 }
 
 /* -----------------------------------------------------------------------
+ * Byrd box pattern node emitter — Sprint J4
+ *
+ * jvm_emit_pat_node(pat, gamma, omega, loc_subj, loc_cursor, loc_len,
+ *                   p_cap_local, out, classname)
+ *
+ * Emits Jasmin bytecode for one pattern node.
+ * On match success:  falls through to / jumps to  gamma
+ * On match failure:  jumps to  omega
+ *
+ * All pattern state lives in JVM locals:
+ *   loc_subj   (aload) — String   subject
+ *   loc_cursor (iload) — int      current cursor position
+ *   loc_len    (iload) — int      subject.length()
+ *
+ * Capture locals (*p_cap_local)++ allocates a new String slot per capture.
+ *
+ * Label naming: Jn<uid>_<role>  — globally unique via static counter.
+ * ----------------------------------------------------------------------- */
+
+static int jvm_pat_node_uid = 0;  /* global label counter for pattern nodes */
+static char jvm_cur_pat_abort_label[128]; /* set per-statement: FAIL jumps here */
+
+/* Forward declaration for recursive calls */
+static void jvm_emit_pat_node(EXPR_t *pat,
+                               const char *gamma, const char *omega,
+                               int loc_subj, int loc_cursor, int loc_len,
+                               int *p_cap_local,
+                               FILE *out, const char *classname);
+
+static void jvm_emit_pat_node(EXPR_t *pat,
+                               const char *gamma, const char *omega,
+                               int loc_subj, int loc_cursor, int loc_len,
+                               int *p_cap_local,
+                               FILE *out, const char *classname) {
+    if (!pat) {
+        /* empty pattern — always succeeds */
+        fprintf(out, "    goto %s\n", gamma);
+        return;
+    }
+
+    int uid = jvm_pat_node_uid++;
+
+#define PN(fmt,...) fprintf(out, "    " fmt "\n", ##__VA_ARGS__)
+#define PNL(lbl,fmt,...) fprintf(out, "%s:\n    " fmt "\n", lbl, ##__VA_ARGS__)
+#define PNLABEL(lbl) fprintf(out, "%s:\n", lbl)
+
+    switch (pat->kind) {
+
+    /* ------------------------------------------------------------------ */
+    case E_QLIT: {
+        /* LIT node: match literal string at cursor
+         * subject.regionMatches(cursor, lit, 0, lit.length())
+         * On success: cursor += lit.length(); goto gamma
+         * On failure: goto omega                                          */
+        const char *s   = pat->sval ? pat->sval : "";
+        int         slen = (int)strlen(s);
+
+        char lbl_ok[64];
+        snprintf(lbl_ok, sizeof lbl_ok, "Jn%d_lit_ok", uid);
+
+        char litesc[4096];
+        /* escape for Jasmin ldc */
+        {
+            int o = 0; litesc[o++] = '"';
+            for (const char *p = s; *p && o < (int)sizeof litesc - 4; p++) {
+                unsigned char c = (unsigned char)*p;
+                if      (c == '"')  { litesc[o++]='\\'; litesc[o++]='"';  }
+                else if (c == '\\') { litesc[o++]='\\'; litesc[o++]='\\'; }
+                else if (c == '\n') { litesc[o++]='\\'; litesc[o++]='n';  }
+                else if (c == '\r') { litesc[o++]='\\'; litesc[o++]='r';  }
+                else if (c == '\t') { litesc[o++]='\\'; litesc[o++]='t';  }
+                else                { litesc[o++]=(char)c; }
+            }
+            litesc[o++]='"'; litesc[o]='\0';
+        }
+
+        /* subject.regionMatches(cursor, lit, 0, litlen) */
+        PN("aload %d", loc_subj);
+        PN("iload %d", loc_cursor);
+        PN("ldc %s", litesc);
+        PN("iconst_0");
+        PN("ldc %d", slen);
+        PN("invokevirtual java/lang/String/regionMatches(ILjava/lang/String;II)Z");
+        PN("ifeq %s", omega);    /* false → fail */
+        /* success: advance cursor */
+        PN("iinc %d %d", loc_cursor, slen);
+        PN("goto %s", gamma);
+        break;
+    }
+
+    /* ------------------------------------------------------------------ */
+    case E_CONC: {
+        /* SEQ node: left then right
+         * Wiring (matches emit_asm_seq):
+         *   alpha → left_alpha
+         *   left_gamma  → right_alpha
+         *   left_omega  → omega          (left failed, overall fail)
+         *   right_gamma → gamma          (both succeeded)
+         *   right_omega → left_beta      (right failed, backtrack left)
+         *
+         * JVM: no explicit beta ports needed — backtracking is handled
+         * by the cursor being a local int that we can save/restore.
+         * For J4 we implement non-backtracking SEQ (left must succeed,
+         * then right must succeed; on right failure we fail overall).
+         * Full backtracking SEQ requires a cursor save slot per level.    */
+        char lmid[64];
+        snprintf(lmid, sizeof lmid, "Jn%d_seq_mid", uid);
+
+        jvm_emit_pat_node(pat->left,  lmid,  omega,
+                          loc_subj, loc_cursor, loc_len, p_cap_local, out, classname);
+        PNLABEL(lmid);
+        jvm_emit_pat_node(pat->right, gamma, omega,
+                          loc_subj, loc_cursor, loc_len, p_cap_local, out, classname);
+        break;
+    }
+
+    /* ------------------------------------------------------------------ */
+    case E_OR: {
+        /* ALT node: try left; on failure restore cursor and try right
+         * Wiring:
+         *   save cursor_save
+         *   left: gamma → gamma, omega → restore+right_alpha
+         *   right: gamma → gamma, omega → omega                          */
+        int loc_save = (*p_cap_local)++;   /* allocate a local int for saved cursor */
+
+        char lbl_try_right[64], lbl_restore[64];
+        snprintf(lbl_try_right, sizeof lbl_try_right, "Jn%d_alt_right", uid);
+        snprintf(lbl_restore,   sizeof lbl_restore,   "Jn%d_alt_rst",   uid);
+
+        /* save cursor */
+        PN("iload %d", loc_cursor);
+        PN("istore %d", loc_save);
+
+        jvm_emit_pat_node(pat->left, gamma, lbl_try_right,
+                          loc_subj, loc_cursor, loc_len, p_cap_local, out, classname);
+
+        PNLABEL(lbl_try_right);
+        /* restore cursor */
+        PN("iload %d", loc_save);
+        PN("istore %d", loc_cursor);
+
+        jvm_emit_pat_node(pat->right, gamma, omega,
+                          loc_subj, loc_cursor, loc_len, p_cap_local, out, classname);
+        break;
+    }
+
+    /* ------------------------------------------------------------------ */
+    case E_NAM: {
+        /* Conditional assign:  pat . var
+         * Match pat; on success capture matched substring into var.
+         * cursor_before saved, on gamma: var = subject.substring(cursor_before, cursor) */
+        int loc_before = (*p_cap_local)++;
+
+        char lbl_inner_ok[64];
+        snprintf(lbl_inner_ok, sizeof lbl_inner_ok, "Jn%d_nam_ok", uid);
+
+        /* save cursor before child */
+        PN("iload %d", loc_cursor);
+        PN("istore %d", loc_before);
+
+        jvm_emit_pat_node(pat->left, lbl_inner_ok, omega,
+                          loc_subj, loc_cursor, loc_len, p_cap_local, out, classname);
+
+        PNLABEL(lbl_inner_ok);
+        /* var = subject.substring(cursor_before, cursor) */
+        const char *varname = (pat->right && pat->right->sval) ? pat->right->sval : "";
+        /* push name for sno_var_put */
+        char nameesc[256];
+        {
+            int o=0; nameesc[o++]='"';
+            for (const char *p=varname; *p && o<(int)sizeof nameesc-4; p++) {
+                unsigned char c=(unsigned char)*p;
+                if (c=='"') { nameesc[o++]='\\'; nameesc[o++]='"'; }
+                else nameesc[o++]=(char)c;
+            }
+            nameesc[o++]='"'; nameesc[o]='\0';
+        }
+        PN("ldc %s", nameesc);
+        PN("aload %d", loc_subj);
+        PN("iload %d", loc_before);
+        PN("iload %d", loc_cursor);
+        PN("invokevirtual java/lang/String/substring(II)Ljava/lang/String;");
+        /* call sno_var_put(name, substring) */
+        char vpdesc[512];
+        snprintf(vpdesc, sizeof vpdesc,
+                 "%s/sno_var_put(Ljava/lang/String;Ljava/lang/String;)V", classname);
+        PN("invokestatic %s", vpdesc);
+        PN("goto %s", gamma);
+        break;
+    }
+
+    /* ------------------------------------------------------------------ */
+    case E_DOL: {
+        /* Immediate assign:  pat $ var  — same as E_NAM for J4 */
+        int loc_before = (*p_cap_local)++;
+        char lbl_inner_ok[64];
+        snprintf(lbl_inner_ok, sizeof lbl_inner_ok, "Jn%d_dol_ok", uid);
+
+        PN("iload %d", loc_cursor);
+        PN("istore %d", loc_before);
+
+        jvm_emit_pat_node(pat->left, lbl_inner_ok, omega,
+                          loc_subj, loc_cursor, loc_len, p_cap_local, out, classname);
+
+        PNLABEL(lbl_inner_ok);
+        const char *varname = (pat->right && pat->right->sval) ? pat->right->sval : "";
+        char nameesc[256];
+        {
+            int o=0; nameesc[o++]='"';
+            for (const char *p=varname; *p && o<(int)sizeof nameesc-4; p++) {
+                unsigned char c=(unsigned char)*p;
+                if (c=='"') { nameesc[o++]='\\'; nameesc[o++]='"'; }
+                else nameesc[o++]=(char)c;
+            }
+            nameesc[o++]='"'; nameesc[o]='\0';
+        }
+        PN("ldc %s", nameesc);
+        PN("aload %d", loc_subj);
+        PN("iload %d", loc_before);
+        PN("iload %d", loc_cursor);
+        PN("invokevirtual java/lang/String/substring(II)Ljava/lang/String;");
+        char vpdesc[512];
+        snprintf(vpdesc, sizeof vpdesc,
+                 "%s/sno_var_put(Ljava/lang/String;Ljava/lang/String;)V", classname);
+        PN("invokestatic %s", vpdesc);
+        PN("goto %s", gamma);
+        break;
+    }
+
+    /* ------------------------------------------------------------------ */
+    case E_FNC: {
+        const char *fname = pat->sval ? pat->sval : "";
+
+        /* ---- ARBNO(child) ---- */
+        if (strcasecmp(fname, "ARBNO") == 0) {
+            /* Greedy ARBNO: keep matching child as long as it succeeds
+             * and cursor advances. This handles the common case correctly
+             * without full backtracking support.
+             *
+             * α: save cursor; try child repeatedly until fail or no-advance
+             * On loop exit: proceed to gamma with cursor at end of matched span */
+            int loc_save = (*p_cap_local)++;   /* cursor before each attempt */
+
+            char lbl_loop[64], lbl_done[64];
+            snprintf(lbl_loop, sizeof lbl_loop, "Jn%d_arb_loop", uid);
+            snprintf(lbl_done, sizeof lbl_done, "Jn%d_arb_done", uid);
+
+            /* inner child success → back to loop top; failure → done */
+            char lbl_child_ok[64], lbl_child_fail[64];
+            snprintf(lbl_child_ok,   sizeof lbl_child_ok,   "Jn%d_arb_cok",  uid);
+            snprintf(lbl_child_fail, sizeof lbl_child_fail, "Jn%d_arb_cfail",uid);
+
+            EXPR_t *child = (pat->args && pat->args[0]) ? pat->args[0] : NULL;
+
+            /* loop: save cursor, try child */
+            PNLABEL(lbl_loop);
+            PN("iload %d", loc_cursor);
+            PN("istore %d", loc_save);
+
+            jvm_emit_pat_node(child, lbl_child_ok, lbl_child_fail,
+                              loc_subj, loc_cursor, loc_len, p_cap_local, out, classname);
+
+            PNLABEL(lbl_child_ok);
+            /* zero-advance guard */
+            PN("iload %d", loc_cursor);
+            PN("iload %d", loc_save);
+            PN("if_icmpeq %s", lbl_done);   /* no progress → stop */
+            PN("goto %s", lbl_loop);         /* progress → try again */
+
+            PNLABEL(lbl_child_fail);
+            /* child failed — restore cursor to pre-attempt position */
+            PN("iload %d", loc_save);
+            PN("istore %d", loc_cursor);
+
+            PNLABEL(lbl_done);
+            /* ARBNO always succeeds (zero or more) */
+            PN("goto %s", gamma);
+            break;
+        }
+
+        /* ---- ANY(charset) ---- */
+        if (strcasecmp(fname, "ANY") == 0) {
+            /* cursor < len AND subject.charAt(cursor) in charset */
+            EXPR_t *cs_arg = (pat->args && pat->args[0]) ? pat->args[0] : NULL;
+            char lbl_ok[64];
+            snprintf(lbl_ok, sizeof lbl_ok, "Jn%d_any_ok", uid);
+
+            /* bounds check: cursor < len */
+            PN("iload %d", loc_cursor);
+            PN("iload %d", loc_len);
+            PN("if_icmpge %s", omega);
+
+            /* ch = subject.charAt(cursor) */
+            PN("aload %d", loc_subj);
+            PN("iload %d", loc_cursor);
+            PN("invokevirtual java/lang/String/charAt(I)C");
+            /* convert to 1-char string */
+            PN("invokestatic java/lang/String/valueOf(C)Ljava/lang/String;");
+            /* charset.contains(ch_string) */
+            /* push charset string */
+            if (cs_arg) {
+                /* inline the charset expr as a string, then use indexOf */
+                /* We need the charset on the stack; push it, swap, then check */
+                /* Stack after: ch_string on top */
+                /* Use: charset.indexOf(ch_string) >= 0 */
+                /* Temporarily store ch in a local */
+                int loc_ch = (*p_cap_local)++;
+                PN("astore %d", loc_ch);
+                /* Evaluate charset expression */
+                /* We have access to jvm_out globally; emit via jvm_emit_expr */
+                /* But we need to use the module-level jvm_emit_expr.
+                 * jvm_out is the module-level FILE* — save and restore. */
+                FILE *saved_out = jvm_out;
+                jvm_out = out;
+                jvm_emit_expr(cs_arg);
+                jvm_out = saved_out;
+                PN("aload %d", loc_ch);
+                PN("invokevirtual java/lang/String/contains(Ljava/lang/CharSequence;)Z");
+                PN("ifeq %s", omega);
+            } else {
+                /* no charset — always fail */
+                PN("pop");
+                PN("goto %s", omega);
+                break;
+            }
+            /* success: advance cursor */
+            PN("iinc %d 1", loc_cursor);
+            PN("goto %s", gamma);
+            break;
+        }
+
+        /* ---- NOTANY(charset) ---- */
+        if (strcasecmp(fname, "NOTANY") == 0) {
+            EXPR_t *cs_arg = (pat->args && pat->args[0]) ? pat->args[0] : NULL;
+            char lbl_ok[64];
+            snprintf(lbl_ok, sizeof lbl_ok, "Jn%d_notany_ok", uid);
+
+            PN("iload %d", loc_cursor);
+            PN("iload %d", loc_len);
+            PN("if_icmpge %s", omega);
+
+            PN("aload %d", loc_subj);
+            PN("iload %d", loc_cursor);
+            PN("invokevirtual java/lang/String/charAt(I)C");
+            PN("invokestatic java/lang/String/valueOf(C)Ljava/lang/String;");
+            if (cs_arg) {
+                int loc_ch = (*p_cap_local)++;
+                PN("astore %d", loc_ch);
+                FILE *saved_out = jvm_out; jvm_out = out;
+                jvm_emit_expr(cs_arg);
+                jvm_out = saved_out;
+                PN("aload %d", loc_ch);
+                PN("invokevirtual java/lang/String/contains(Ljava/lang/CharSequence;)Z");
+                PN("ifne %s", omega);   /* in charset → fail */
+            } else {
+                PN("pop");
+            }
+            PN("iinc %d 1", loc_cursor);
+            PN("goto %s", gamma);
+            break;
+        }
+
+        /* ---- SPAN(charset) ---- */
+        if (strcasecmp(fname, "SPAN") == 0) {
+            /* consume longest run of chars in charset (at least 1) */
+            EXPR_t *cs_arg = (pat->args && pat->args[0]) ? pat->args[0] : NULL;
+            int loc_cs = (*p_cap_local)++;
+            char lbl_loop[64], lbl_done[64];
+            snprintf(lbl_loop, sizeof lbl_loop, "Jn%d_span_lp", uid);
+            snprintf(lbl_done, sizeof lbl_done, "Jn%d_span_dn", uid);
+
+            /* evaluate charset once */
+            FILE *saved_out = jvm_out; jvm_out = out;
+            if (cs_arg) jvm_emit_expr(cs_arg); else PN("ldc \"\"");
+            jvm_out = saved_out;
+            PN("astore %d", loc_cs);
+
+            /* must match at least 1 */
+            PN("iload %d", loc_cursor);
+            PN("iload %d", loc_len);
+            PN("if_icmpge %s", omega);
+            PN("aload %d", loc_subj);
+            PN("iload %d", loc_cursor);
+            PN("invokevirtual java/lang/String/charAt(I)C");
+            PN("invokestatic java/lang/String/valueOf(C)Ljava/lang/String;");
+            {
+                int loc_ch = (*p_cap_local)++;
+                PN("astore %d", loc_ch);
+                PN("aload %d", loc_cs);
+                PN("aload %d", loc_ch);
+                PN("invokevirtual java/lang/String/contains(Ljava/lang/CharSequence;)Z");
+                PN("ifeq %s", omega);
+                PN("iinc %d 1", loc_cursor);
+
+                /* loop for rest */
+                PNLABEL(lbl_loop);
+                PN("iload %d", loc_cursor);
+                PN("iload %d", loc_len);
+                PN("if_icmpge %s", lbl_done);
+                PN("aload %d", loc_subj);
+                PN("iload %d", loc_cursor);
+                PN("invokevirtual java/lang/String/charAt(I)C");
+                PN("invokestatic java/lang/String/valueOf(C)Ljava/lang/String;");
+                PN("astore %d", loc_ch);
+                PN("aload %d", loc_cs);
+                PN("aload %d", loc_ch);
+                PN("invokevirtual java/lang/String/contains(Ljava/lang/CharSequence;)Z");
+                PN("ifeq %s", lbl_done);
+                PN("iinc %d 1", loc_cursor);
+                PN("goto %s", lbl_loop);
+            }
+            PNLABEL(lbl_done);
+            PN("goto %s", gamma);
+            break;
+        }
+
+        /* ---- BREAK(charset) ---- */
+        if (strcasecmp(fname, "BREAK") == 0) {
+            /* consume chars NOT in charset until one IS in charset */
+            EXPR_t *cs_arg = (pat->args && pat->args[0]) ? pat->args[0] : NULL;
+            int loc_cs = (*p_cap_local)++;
+            char lbl_loop[64], lbl_done[64];
+            snprintf(lbl_loop, sizeof lbl_loop, "Jn%d_brk_lp", uid);
+            snprintf(lbl_done, sizeof lbl_done, "Jn%d_brk_dn", uid);
+
+            FILE *saved_out = jvm_out; jvm_out = out;
+            if (cs_arg) jvm_emit_expr(cs_arg); else PN("ldc \"\"");
+            jvm_out = saved_out;
+            PN("astore %d", loc_cs);
+
+            PNLABEL(lbl_loop);
+            PN("iload %d", loc_cursor);
+            PN("iload %d", loc_len);
+            PN("if_icmpge %s", omega);
+            {
+                int loc_ch = (*p_cap_local)++;
+                PN("aload %d", loc_subj);
+                PN("iload %d", loc_cursor);
+                PN("invokevirtual java/lang/String/charAt(I)C");
+                PN("invokestatic java/lang/String/valueOf(C)Ljava/lang/String;");
+                PN("astore %d", loc_ch);
+                PN("aload %d", loc_cs);
+                PN("aload %d", loc_ch);
+                PN("invokevirtual java/lang/String/contains(Ljava/lang/CharSequence;)Z");
+                PN("ifne %s", lbl_done);   /* found break char → stop */
+                PN("iinc %d 1", loc_cursor);
+                PN("goto %s", lbl_loop);
+            }
+            PNLABEL(lbl_done);
+            PN("goto %s", gamma);
+            break;
+        }
+
+        /* ---- LEN(n) ---- */
+        if (strcasecmp(fname, "LEN") == 0) {
+            EXPR_t *n_arg = (pat->args && pat->args[0]) ? pat->args[0] : NULL;
+            int loc_n = (*p_cap_local)++;
+            /* evaluate n, convert to int */
+            FILE *saved_out = jvm_out; jvm_out = out;
+            if (n_arg) jvm_emit_expr(n_arg); else PN("ldc \"0\"");
+            jvm_out = saved_out;
+            PN("invokestatic java/lang/Integer/parseInt(Ljava/lang/String;)I");
+            PN("istore %d", loc_n);
+            /* cursor + n <= len? */
+            PN("iload %d", loc_cursor);
+            PN("iload %d", loc_n);
+            PN("iadd");
+            PN("iload %d", loc_len);
+            PN("if_icmpgt %s", omega);
+            PN("iload %d", loc_cursor);
+            PN("iload %d", loc_n);
+            PN("iadd");
+            PN("istore %d", loc_cursor);
+            PN("goto %s", gamma);
+            break;
+        }
+
+        /* ---- POS(n) ---- */
+        if (strcasecmp(fname, "POS") == 0) {
+            EXPR_t *n_arg = (pat->args && pat->args[0]) ? pat->args[0] : NULL;
+            int loc_n = (*p_cap_local)++;
+            FILE *saved_out = jvm_out; jvm_out = out;
+            if (n_arg) jvm_emit_expr(n_arg); else PN("ldc \"0\"");
+            jvm_out = saved_out;
+            PN("invokestatic java/lang/Integer/parseInt(Ljava/lang/String;)I");
+            PN("istore %d", loc_n);
+            /* cursor == n? */
+            PN("iload %d", loc_cursor);
+            PN("iload %d", loc_n);
+            PN("if_icmpne %s", omega);
+            PN("goto %s", gamma);
+            break;
+        }
+
+        /* ---- RPOS(n) ---- */
+        if (strcasecmp(fname, "RPOS") == 0) {
+            EXPR_t *n_arg = (pat->args && pat->args[0]) ? pat->args[0] : NULL;
+            int loc_n = (*p_cap_local)++;
+            FILE *saved_out = jvm_out; jvm_out = out;
+            if (n_arg) jvm_emit_expr(n_arg); else PN("ldc \"0\"");
+            jvm_out = saved_out;
+            PN("invokestatic java/lang/Integer/parseInt(Ljava/lang/String;)I");
+            PN("istore %d", loc_n);
+            /* cursor == len - n? */
+            PN("iload %d", loc_len);
+            PN("iload %d", loc_n);
+            PN("isub");
+            PN("iload %d", loc_cursor);
+            PN("if_icmpne %s", omega);
+            PN("goto %s", gamma);
+            break;
+        }
+
+        /* ---- TAB(n) ---- */
+        if (strcasecmp(fname, "TAB") == 0) {
+            EXPR_t *n_arg = (pat->args && pat->args[0]) ? pat->args[0] : NULL;
+            int loc_n = (*p_cap_local)++;
+            FILE *saved_out = jvm_out; jvm_out = out;
+            if (n_arg) jvm_emit_expr(n_arg); else PN("ldc \"0\"");
+            jvm_out = saved_out;
+            PN("invokestatic java/lang/Integer/parseInt(Ljava/lang/String;)I");
+            PN("istore %d", loc_n);
+            /* cursor <= n <= len? */
+            PN("iload %d", loc_cursor);
+            PN("iload %d", loc_n);
+            PN("if_icmpgt %s", omega);
+            PN("iload %d", loc_n);
+            PN("iload %d", loc_len);
+            PN("if_icmpgt %s", omega);
+            PN("iload %d", loc_n);
+            PN("istore %d", loc_cursor);
+            PN("goto %s", gamma);
+            break;
+        }
+
+        /* ---- RTAB(n) ---- */
+        if (strcasecmp(fname, "RTAB") == 0) {
+            EXPR_t *n_arg = (pat->args && pat->args[0]) ? pat->args[0] : NULL;
+            int loc_n = (*p_cap_local)++;
+            FILE *saved_out = jvm_out; jvm_out = out;
+            if (n_arg) jvm_emit_expr(n_arg); else PN("ldc \"0\"");
+            jvm_out = saved_out;
+            PN("invokestatic java/lang/Integer/parseInt(Ljava/lang/String;)I");
+            PN("istore %d", loc_n);
+            /* target = len - n; cursor <= target? */
+            PN("iload %d", loc_len);
+            PN("iload %d", loc_n);
+            PN("isub");
+            {
+                int loc_tgt = (*p_cap_local)++;
+                PN("istore %d", loc_tgt);
+                PN("iload %d", loc_cursor);
+                PN("iload %d", loc_tgt);
+                PN("if_icmpgt %s", omega);
+                PN("iload %d", loc_tgt);
+                PN("istore %d", loc_cursor);
+            }
+            PN("goto %s", gamma);
+            break;
+        }
+
+        /* ---- REM ---- */
+        if (strcasecmp(fname, "REM") == 0) {
+            /* always succeeds, cursor → len */
+            PN("iload %d", loc_len);
+            PN("istore %d", loc_cursor);
+            PN("goto %s", gamma);
+            break;
+        }
+
+        /* ---- ARB ---- */
+        if (strcasecmp(fname, "ARB") == 0) {
+            /* ARB: match minimum (0 chars) first; backtrack to extend.
+             * For J4 non-backtracking: just succeed with 0 chars. */
+            PN("goto %s", gamma);
+            break;
+        }
+
+        /* ---- FAIL ---- */
+        if (strcasecmp(fname, "FAIL") == 0) {
+            /* FAIL forces the entire match to fail — jump past retry loop */
+            PN("goto %s", jvm_cur_pat_abort_label[0] ? jvm_cur_pat_abort_label : omega);
+            break;
+        }
+
+        /* ---- SUCCEED ---- */
+        if (strcasecmp(fname, "SUCCEED") == 0) {
+            PN("goto %s", gamma);
+            break;
+        }
+
+        /* ---- FENCE ---- */
+        if (strcasecmp(fname, "FENCE") == 0) {
+            PN("goto %s", gamma);
+            break;
+        }
+
+        /* ---- ABORT ---- */
+        if (strcasecmp(fname, "ABORT") == 0) {
+            PN("goto %s", jvm_cur_pat_abort_label[0] ? jvm_cur_pat_abort_label : omega);
+            break;
+        }
+
+        /* ---- Unknown function — stub as success ---- */
+        fprintf(out, "    ; STUB: unknown pattern function %s\n", fname);
+        PN("goto %s", gamma);
+        break;
+    }
+
+    /* ------------------------------------------------------------------ */
+    case E_VART: {
+        /* Variable reference in pattern context.
+         * First check if it's a zero-arg builtin pattern name (REM, ARB, FAIL,
+         * SUCCEED, FENCE, ABORT) — the parser emits these as E_VART when
+         * they appear without parentheses. */
+        const char *vname = pat->sval ? pat->sval : "";
+        if (strcasecmp(vname, "REM") == 0) {
+            PN("iload %d", loc_len);
+            PN("istore %d", loc_cursor);
+            PN("goto %s", gamma);
+            break;
+        }
+        if (strcasecmp(vname, "FAIL") == 0) {
+            PN("goto %s", jvm_cur_pat_abort_label[0] ? jvm_cur_pat_abort_label : omega);
+            break;
+        }
+        if (strcasecmp(vname, "SUCCEED") == 0) { PN("goto %s", gamma); break; }
+        if (strcasecmp(vname, "FENCE") == 0)   { PN("goto %s", gamma); break; }
+        if (strcasecmp(vname, "ABORT") == 0)   {
+            PN("goto %s", jvm_cur_pat_abort_label[0] ? jvm_cur_pat_abort_label : omega);
+            break;
+        }
+        if (strcasecmp(vname, "ARB") == 0)     { PN("goto %s", gamma); break; }
+
+        /* Otherwise: indirect pattern reference — look up value and match as literal */
+        char lbl_ok[64];
+        snprintf(lbl_ok, sizeof lbl_ok, "Jn%d_var_ok", uid);
+        int loc_lit = (*p_cap_local)++;
+        int loc_llen = (*p_cap_local)++;
+
+        char nameesc[256];
+        {
+            int o=0; nameesc[o++]='"';
+            for (const char *p=vname; *p && o<(int)sizeof nameesc-4; p++) {
+                unsigned char c=(unsigned char)*p;
+                if (c=='"') { nameesc[o++]='\\'; nameesc[o++]='"'; }
+                else nameesc[o++]=(char)c;
+            }
+            nameesc[o++]='"'; nameesc[o]='\0';
+        }
+        PN("ldc %s", nameesc);
+        char igdesc[512];
+        snprintf(igdesc, sizeof igdesc,
+                 "%s/sno_indr_get(Ljava/lang/String;)Ljava/lang/String;", classname);
+        PN("invokestatic %s", igdesc);
+        PN("astore %d", loc_lit);
+        PN("aload %d", loc_lit);
+        PN("invokevirtual java/lang/String/length()I");
+        PN("istore %d", loc_llen);
+        PN("aload %d", loc_subj);
+        PN("iload %d", loc_cursor);
+        PN("aload %d", loc_lit);
+        PN("iconst_0");
+        PN("iload %d", loc_llen);
+        PN("invokevirtual java/lang/String/regionMatches(ILjava/lang/String;II)Z");
+        PN("ifeq %s", omega);
+        PN("iload %d", loc_cursor);
+        PN("iload %d", loc_llen);
+        PN("iadd");
+        PN("istore %d", loc_cursor);
+        PN("goto %s", gamma);
+        break;
+    }
+
+    /* ------------------------------------------------------------------ */
+    case E_INDR: {
+        /* *VAR — indirect pattern reference: evaluate inner expr to get
+         * the variable NAME, look up its value, match as literal.
+         * The inner expr for *PAT is E_VART("PAT") — we need its name
+         * as a string, NOT its value.  So push the sval directly.        */
+        int loc_lit  = (*p_cap_local)++;
+        int loc_llen = (*p_cap_local)++;
+        EXPR_t *inner = pat->right ? pat->right : pat->left;
+
+        /* Push the variable name as a literal string (not its value) */
+        const char *vname = (inner && inner->sval) ? inner->sval : "";
+        char nameesc[256];
+        {
+            int o=0; nameesc[o++]='"';
+            for (const char *p=vname; *p && o<(int)sizeof nameesc-4; p++) {
+                unsigned char c=(unsigned char)*p;
+                if (c=='"') { nameesc[o++]='\\'; nameesc[o++]='"'; }
+                else nameesc[o++]=(char)c;
+            }
+            nameesc[o++]='"'; nameesc[o]='\0';
+        }
+        PN("ldc %s", nameesc);
+        /* Look up value of that variable */
+        char igdesc[512];
+        snprintf(igdesc, sizeof igdesc,
+                 "%s/sno_indr_get(Ljava/lang/String;)Ljava/lang/String;", classname);
+        PN("invokestatic %s", igdesc);
+        PN("astore %d", loc_lit);
+        PN("aload %d", loc_lit);
+        PN("invokevirtual java/lang/String/length()I");
+        PN("istore %d", loc_llen);
+        /* regionMatches(cursor, lit, 0, llen) */
+        PN("aload %d", loc_subj);
+        PN("iload %d", loc_cursor);
+        PN("aload %d", loc_lit);
+        PN("iconst_0");
+        PN("iload %d", loc_llen);
+        PN("invokevirtual java/lang/String/regionMatches(ILjava/lang/String;II)Z");
+        PN("ifeq %s", omega);
+        PN("iload %d", loc_cursor);
+        PN("iload %d", loc_llen);
+        PN("iadd");
+        PN("istore %d", loc_cursor);
+        PN("goto %s", gamma);
+        break;
+    }
+
+    /* ------------------------------------------------------------------ */
+        fprintf(out, "    ; STUB: unhandled pattern node kind %d\n", (int)pat->kind);
+        PN("goto %s", gamma);
+        break;
+    }
+
+#undef PN
+#undef PNL
+#undef PNLABEL
+}
+
+/* -----------------------------------------------------------------------
  * Statement emitter
  * ----------------------------------------------------------------------- */
 
@@ -625,7 +1359,10 @@ static void jvm_emit_stmt(STMT_t *s, int stmt_idx) {
 
     /* Label-only statement (no subject, no body) — just fall through */
     if (!s->subject && !s->has_eq && !s->pattern) {
-        if (s->go && s->go->onsuccess && s->go->onsuccess[0]) {
+        if (s->go && s->go->uncond && s->go->uncond[0]) {
+            char glbl[128]; snprintf(glbl, sizeof glbl, "L_%s", s->go->uncond);
+            JI("goto", glbl);
+        } else if (s->go && s->go->onsuccess && s->go->onsuccess[0]) {
             char glbl[128]; snprintf(glbl, sizeof glbl, "L_%s", s->go->onsuccess);
             JI("goto", glbl);
         }
@@ -703,7 +1440,10 @@ static void jvm_emit_stmt(STMT_t *s, int stmt_idx) {
         }
 
         /* :S goto (always unconditional for non-INPUT assigns) */
-        if (s->go && s->go->onsuccess && s->go->onsuccess[0]) {
+        if (s->go && s->go->uncond && s->go->uncond[0]) {
+            char glbl[128]; snprintf(glbl, sizeof glbl, "L_%s", s->go->uncond);
+            JI("goto", glbl);
+        } else if (s->go && s->go->onsuccess && s->go->onsuccess[0]) {
             char glbl[128]; snprintf(glbl, sizeof glbl, "L_%s", s->go->onsuccess);
             JI("goto", glbl);
         }
@@ -727,7 +1467,10 @@ static void jvm_emit_stmt(STMT_t *s, int stmt_idx) {
         snprintf(isdesc, sizeof isdesc, "%s/sno_indr_set(Ljava/lang/String;Ljava/lang/String;)V", jvm_classname);
         JI("invokestatic", isdesc);
 
-        if (s->go && s->go->onsuccess && s->go->onsuccess[0]) {
+        if (s->go && s->go->uncond && s->go->uncond[0]) {
+            char glbl[128]; snprintf(glbl, sizeof glbl, "L_%s", s->go->uncond);
+            JI("goto", glbl);
+        } else if (s->go && s->go->onsuccess && s->go->onsuccess[0]) {
             char glbl[128]; snprintf(glbl, sizeof glbl, "L_%s", s->go->onsuccess);
             JI("goto", glbl);
         }
@@ -753,15 +1496,148 @@ static void jvm_emit_stmt(STMT_t *s, int stmt_idx) {
         } else {
             JI("pop", "");  /* discard result (no :F needed) */
         }
-        if (s->go && s->go->onsuccess && s->go->onsuccess[0]) {
+        if (s->go && s->go->uncond && s->go->uncond[0]) {
+            char glbl[128]; snprintf(glbl, sizeof glbl, "L_%s", s->go->uncond);
+            JI("goto", glbl);
+        } else if (s->go && s->go->onsuccess && s->go->onsuccess[0]) {
             char glbl[128]; snprintf(glbl, sizeof glbl, "L_%s", s->go->onsuccess);
             JI("goto", glbl);
         }
         return;
     }
 
-    /* Stub for unhandled statement forms (pattern match etc.) — J3+ */
-    JC("stub — unhandled stmt form (J3+)");
+    /* -----------------------------------------------------------------------
+     * Case 4: Pattern match statement  subject  pattern  [= replacement]  :S/:F
+     *
+     * Strategy (Sprint J4 — Byrd boxes in JVM):
+     *   1. Load subject string into a local var (cursor_local = local slot 6)
+     *   2. cursor starts at 0 (local slot 7 = int)
+     *   3. Walk the pattern tree, emitting one Jasmin label per Byrd port (α/β/γ/ω)
+     *   4. On γ (overall match success): run replacement (if any), goto :S
+     *   5. On ω (overall fail): if ANCHOR=0, advance cursor by 1 and retry from top;
+     *      if exhausted, goto :F
+     *
+     * Local variable layout (per-statement):
+     *   L6  : subject String
+     *   L7  : cursor int
+     *   L8  : subject length int
+     *   L9+ : scratch (capture captures use higher slots via capture_local counter)
+     *
+     * Label naming: jvmN_xxx  where N = stmt_idx (unique per statement)
+     * ----------------------------------------------------------------------- */
+
+    if (s->pattern) {
+        static int jvm_pat_uid_counter = 0;
+        int uid = jvm_pat_uid_counter++;
+
+        /* Local slots for subject/cursor/length */
+        int loc_subj   = 6;
+        int loc_cursor = 7;
+        int loc_len    = 8;
+        /* capture locals start at 9, allocated per capture node */
+        int loc_cap_base = 9;
+
+        /* The outer retry loop label (scan mode: try each cursor position) */
+        char lbl_retry[64], lbl_success[64], lbl_fail[64];
+        snprintf(lbl_retry,   sizeof lbl_retry,   "Jpat%d_retry",   uid);
+        snprintf(lbl_success, sizeof lbl_success, "Jpat%d_success", uid);
+        snprintf(lbl_fail,    sizeof lbl_fail,    "Jpat%d_fail",    uid);
+
+        JC("--- pattern match statement ---");
+
+        /* Load subject into local 6 */
+        jvm_emit_expr(s->subject);
+        J("    astore %d\n", loc_subj);
+
+        /* cursor = 0 */
+        JI("iconst_0", "");
+        J("    istore %d\n", loc_cursor);
+
+        /* len = subject.length() */
+        J("    aload %d\n", loc_subj);
+        JI("invokevirtual", "java/lang/String/length()I");
+        J("    istore %d\n", loc_len);
+
+        /* --- RETRY LOOP: try match at current cursor position --- */
+        J("%s:\n", lbl_retry);
+
+        /* Emit the pattern tree.  On tree-level success → lbl_success.
+         * On tree-level failure → advance cursor or goto lbl_fail. */
+        char lbl_tree_ok[64], lbl_tree_fail[64];
+        snprintf(lbl_tree_ok,   sizeof lbl_tree_ok,   "Jpat%d_tok",  uid);
+        snprintf(lbl_tree_fail, sizeof lbl_tree_fail, "Jpat%d_tfail", uid);
+
+        /* We need capture-local counter accessible across recursive calls. */
+        static int jvm_cap_local_counter;
+        jvm_cap_local_counter = loc_cap_base;
+
+        /* Set module-level abort label so FAIL/ABORT can jump past retry loop */
+        snprintf(jvm_cur_pat_abort_label, sizeof jvm_cur_pat_abort_label, "%s", lbl_fail);
+
+        jvm_emit_pat_node(s->pattern,
+                          lbl_tree_ok, lbl_tree_fail,
+                          loc_subj, loc_cursor, loc_len,
+                          &jvm_cap_local_counter,
+                          jvm_out, jvm_classname);
+
+        /* --- tree OK: match succeeded at this cursor position --- */
+        J("%s:\n", lbl_tree_ok);
+        /* Replacement (if any) — subject[cursor_start..cursor_end] = replacement.
+         * For J4 we do not yet implement in-place replacement; we handle
+         * OUTPUT = subject in a later sprint.  The captures (. and $) are
+         * already stored.  Just goto :S. */
+        if (s->has_eq && s->replacement) {
+            /* Subject replacement: rebuild subject with matched region replaced.
+             * Use String.substring(0,cursor_start) + replacement + String.substring(cursor,end)
+             * We stored cursor_start in a BSS slot; for J4 we approximate:
+             * full replacement not yet implemented — emit a TODO comment and skip. */
+            JC("TODO J5: subject replacement (= rhs) — Sprint J5");
+        }
+        JI("goto", lbl_success);
+
+        /* --- tree FAIL: try next cursor position (scan mode) --- */
+        J("%s:\n", lbl_tree_fail);
+        /* if &ANCHOR, no scan — immediate failure */
+        {
+            char lbl_anchor_skip[64];
+            snprintf(lbl_anchor_skip, sizeof lbl_anchor_skip, "Jpat%d_askip", uid);
+            char anchor_desc[512];
+            snprintf(anchor_desc, sizeof anchor_desc, "%s/sno_kw_ANCHOR I", jvm_classname);
+            JI("getstatic", anchor_desc);
+            JI("ifeq", lbl_anchor_skip);
+            JI("goto", lbl_fail);
+            J("%s:\n", lbl_anchor_skip);
+        }
+        /* cursor++ */
+        J("    iinc %d 1\n", loc_cursor);
+        /* if cursor <= len, retry */
+        J("    iload %d\n", loc_cursor);
+        J("    iload %d\n", loc_len);
+        JI("if_icmple", lbl_retry);
+        JI("goto", lbl_fail);
+
+        /* --- SUCCESS --- */
+        J("%s:\n", lbl_success);
+        if (s->go && s->go->uncond && s->go->uncond[0]) {
+            char glbl[128]; snprintf(glbl, sizeof glbl, "L_%s", s->go->uncond);
+            JI("goto", glbl);
+        } else if (s->go && s->go->onsuccess && s->go->onsuccess[0]) {
+            char glbl[128]; snprintf(glbl, sizeof glbl, "L_%s", s->go->onsuccess);
+            JI("goto", glbl);
+        }
+        /* fall through if no :S */
+
+        /* --- FAIL --- */
+        J("%s:\n", lbl_fail);
+        if (s->go && s->go->onfailure && s->go->onfailure[0]) {
+            char flbl[128]; snprintf(flbl, sizeof flbl, "L_%s", s->go->onfailure);
+            JI("goto", flbl);
+        }
+        return;
+    }
+
+    /* Fallthrough: unhandled stmt form */
+    JC("unhandled stmt form");
     JI("nop", "");
 }
 
