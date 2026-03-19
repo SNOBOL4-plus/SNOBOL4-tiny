@@ -2973,6 +2973,7 @@ static void asm_emit_program(Program *prog) {
     A("    extern  stmt_realval, stmt_set_null, stmt_set_indirect\n");
     A("    extern  stmt_apply, stmt_goto_dispatch\n");
     A("    extern  stmt_setup_subject, stmt_apply_replacement\n");
+    A("    extern  stmt_apply_replacement_splice\n");
     A("    extern  stmt_set_capture, stmt_match_var\n");
     A("    extern  kw_anchor\n");
     A("    global  cursor, subject_data, subject_len_val\n");
@@ -3232,12 +3233,17 @@ static void asm_emit_program(Program *prog) {
             A("    SET_CAPTURE %s, %s, %s\n",
               vnlab, cap_vars[ci].buf_sym, cap_vars[ci].len_sym);
         }
-        if (s->has_eq && s->replacement && s->subject &&
-            s->subject->kind == E_VART) {
-            /* apply replacement → subject variable */
-            prog_emit_expr(s->replacement, -32);
+        if (s->has_eq && s->subject && s->subject->kind == E_VART) {
+            /* apply replacement → subject variable (splice: prefix+repl+suffix) */
             const char *vlab = prog_str_intern(s->subject->sval);
-            A("    APPLY_REPL  %s\n", vlab);
+            if (!s->replacement || s->replacement->kind == E_NULV) {
+                /* null replacement: delete matched span — emit NULVCL */
+                A("    mov     qword [rbp-32], 1\n"); /* DT_SNUL */
+                A("    mov     qword [rbp-24], 0\n");
+            } else {
+                prog_emit_expr(s->replacement, -32);
+            }
+            A("    APPLY_REPL_SPLICE  %s, %s\n", vlab, scan_start);
         }
         emit_jmp(tgt_s, next_lbl);
 

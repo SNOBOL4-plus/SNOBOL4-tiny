@@ -238,7 +238,48 @@ void stmt_apply_replacement(const char *varname, DESCR_t repl) {
         NV_SET_fn(varname, repl);
 }
 
+/* stmt_apply_replacement_splice: SNOBOL4 subject replacement semantics.
+ * Reconstructs the full subject as: subject[0..match_start] + repl + subject[match_end..end]
+ * and writes the result back into the subject variable.
+ * match_start = position where the scan attempt began (scan_start_N bss slot).
+ * match_end   = cursor (position after successful match).
+ * Called from APPLY_REPL_SPLICE macro in the pattern γ path. */
+void stmt_apply_replacement_splice(const char *varname, DESCR_t repl,
+                                   uint64_t match_start, uint64_t match_end) {
+    if (!varname || !*varname) return;
+    /* Collect replacement string */
+    const char *rstr = "";
+    size_t rlen = 0;
+    if (repl.v == DT_S && repl.s) { rstr = repl.s; rlen = strlen(rstr); }
+    else if (repl.v == DT_I) {
+        static char ibuf[64];
+        snprintf(ibuf, sizeof ibuf, "%ld", (long)repl.i);
+        rstr = ibuf; rlen = strlen(rstr);
+    } else if (repl.v == DT_R) {
+        static char rbuf[64];
+        snprintf(rbuf, sizeof rbuf, "%g", repl.r);
+        rstr = rbuf; rlen = strlen(rstr);
+    } else if (repl.v == DT_SNUL) {
+        rstr = ""; rlen = 0;
+    }
+    /* Bounds-check */
+    if (match_start > subject_len_val) match_start = subject_len_val;
+    if (match_end   > subject_len_val) match_end   = subject_len_val;
+    if (match_end   < match_start)     match_end   = match_start;
+    size_t prefix_len = (size_t)match_start;
+    size_t suffix_len = (size_t)(subject_len_val - match_end);
+    size_t total = prefix_len + rlen + suffix_len;
+    char *out = GC_MALLOC_ATOMIC(total + 1);
+    if (!out) return;
+    memcpy(out, subject_data, prefix_len);
+    memcpy(out + prefix_len, rstr, rlen);
+    memcpy(out + prefix_len + rlen, subject_data + match_end, suffix_len);
+    out[total] = '\0';
+    NV_SET_fn(varname, STRVAL(out));
+}
+
 /* stmt_match_var: dynamic indirect pattern match (*VAR).
+
  * Fetches the string value of SNOBOL4 variable 'varname', then tries to match
  * it as a literal at the current cursor position in subject_data.
  * Returns 1 on success (cursor advanced), 0 on failure.

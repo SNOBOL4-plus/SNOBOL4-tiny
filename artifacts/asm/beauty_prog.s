@@ -10,6 +10,7 @@ extern  stmt_concat, stmt_is_fail, stmt_finish
 extern  stmt_realval, stmt_set_null, stmt_set_indirect
 extern  stmt_apply, stmt_goto_dispatch
 extern  stmt_setup_subject, stmt_apply_replacement
+extern  stmt_apply_replacement_splice
 extern  stmt_set_capture, stmt_match_var
 extern  kw_anchor
 global  cursor, subject_data, subject_len_val
@@ -476,6 +477,9 @@ P_12_γ:                     SET_CAPTURE S_ppTokName, cap_ppTokName_buf, cap_ppT
                             SET_CAPTURE S_GT, cap_GT_buf, cap_GT_len
                             SET_CAPTURE S_RP, cap_RP_buf, cap_RP_len
                             SET_CAPTURE S_Label, cap_Label_buf, cap_Label_len
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            APPLY_REPL_SPLICE S_ppArgs, scan_start_12
                             jmp         Ln_12
 P_12_ω:                     cmp         qword [rel kw_anchor], 0
                             jne         Ln_12
@@ -539,6 +543,9 @@ P_14_γ:                     SET_CAPTURE S_ppTokName, cap_ppTokName_buf, cap_ppT
                             SET_CAPTURE S_GT, cap_GT_buf, cap_GT_len
                             SET_CAPTURE S_RP, cap_RP_buf, cap_RP_len
                             SET_CAPTURE S_Label, cap_Label_buf, cap_Label_len
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            APPLY_REPL_SPLICE S_ppArgs, scan_start_14
                             jmp         Ln_14
 P_14_ω:                     cmp         qword [rel kw_anchor], 0
                             jne         L_ppArgDone_2
@@ -1226,6 +1233,9 @@ P_82_γ:                     SET_CAPTURE S_ppTokName, cap_ppTokName_buf, cap_ppT
                             SET_CAPTURE S_GT, cap_GT_buf, cap_GT_len
                             SET_CAPTURE S_RP, cap_RP_buf, cap_RP_len
                             SET_CAPTURE S_Label, cap_Label_buf, cap_Label_len
+                            mov         qword [rbp-32], 1
+                            mov         qword [rbp-24], 0
+                            APPLY_REPL_SPLICE S_ppGConT, scan_start_82
                             jmp         Ln_82
 P_82_ω:                     cmp         qword [rel kw_anchor], 0
                             jne         Ln_82

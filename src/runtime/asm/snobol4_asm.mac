@@ -180,6 +180,20 @@
     call    stmt_apply_replacement
 %endmacro
 
+; APPLY_REPL_SPLICE varlab, scan_start_sym
+; Splice replacement into subject: prefix + repl + suffix.
+; repl DESCR_t is in [rbp-32/24]; match_start in scan_start_sym bss slot;
+; match_end is current cursor value.
+; Calls stmt_apply_replacement_splice(varname, repl, match_start, match_end).
+%macro APPLY_REPL_SPLICE 2
+    lea     rdi, [rel %1]       ; varname
+    mov     rsi, [rbp-32]       ; repl.v
+    mov     rdx, [rbp-24]       ; repl.s
+    mov     rcx, [%2]           ; match_start
+    mov     r8,  [cursor]       ; match_end (= cursor after match)
+    call    stmt_apply_replacement_splice
+%endmacro
+
 ; =============================================================================
 ; PATTERN NODE MACROS
 ; Each macro corresponds to one Byrd box primitive.
