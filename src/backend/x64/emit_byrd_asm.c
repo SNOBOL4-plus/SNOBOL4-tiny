@@ -352,9 +352,9 @@ static int ucall_uid(void) { return ucall_uid_ctr++; }
  * Converts a SNOBOL4 source name to a valid, readable ASM label fragment.
  * Each special char expands to a named token surrounded by underscores.
  * The mapping is injective: distinct source names produce distinct labels.
- * asm_expand_name(src, dst, dstlen) — fills dst, always NUL-terminates.
+ * expand_name(src, dst, dstlen) — fills dst, always NUL-terminates.
  * ----------------------------------------------------------------------- */
-static void asm_expand_name(const char *src, char *dst, int dstlen) {
+static void expand_name(const char *src, char *dst, int dstlen) {
     static const struct { char ch; const char *nm; } tbl[] = {
         {'>', "GT"}, {'<', "LT"}, {'=', "EQ"}, {'+', "PL"}, {'-', "MI"},
         {'*', "ST"}, {'/', "SL"}, {'(', "LP"}, {')', "RP"}, {'$', "DL"},
@@ -621,7 +621,7 @@ static void emit_asm_rpos_var(const char *varlab,
  * (full definitions are after emit_pat_node, which uses them)
  * ----------------------------------------------------------------------- */
 
-typedef struct AsmNamedPat AsmNamedPat;
+typedef struct NamedPat NamedPat;
 
 /* Forward declarations for capture variable registry (defined after named-pat section) */
 #define MAX_CAP_VARS 64
@@ -635,7 +635,7 @@ static CaptureVar *cap_var_register(const char *varname);
 /* ASM_NAMED_MAXPARAMS — max args for a user-defined Snocone procedure */
 #define ASM_NAMED_MAXPARAMS 8
 
-struct AsmNamedPat {
+struct NamedPat {
     char varname[ASM_NAMED_NAMELEN];
     char safe[ASM_NAMED_NAMELEN];
     char alpha_lbl[ASM_NAMED_NAMELEN + 16];
@@ -652,15 +652,15 @@ struct AsmNamedPat {
     char body_label[ASM_NAMED_NAMELEN + 16]; /* NASM label of function body entry */
 };
 
-static const AsmNamedPat *named_pat_lookup(const char *varname);
-static const AsmNamedPat *named_pat_lookup_fn(const char *varname);
-static void emit_asm_named_ref(const AsmNamedPat *np,
+static const NamedPat *named_pat_lookup(const char *varname);
+static const NamedPat *named_pat_lookup_fn(const char *varname);
+static void emit_asm_named_ref(const NamedPat *np,
                                 const char *alpha, const char *beta,
                                 const char *gamma, const char *omega);
 
 /* Forward declaration for plain-string variable registry (VAR = 'literal') */
-typedef struct { char varname[ASM_NAMED_NAMELEN]; const char *sval; } AsmStrVar;
-static const AsmStrVar *asm_str_var_lookup(const char *varname);
+typedef struct { char varname[ASM_NAMED_NAMELEN]; const char *sval; } StrVar;
+static const StrVar *str_var_lookup(const char *varname);
 
 /* Forward declarations for program-mode helpers used by emit_asm_named_def */
 static const char *prog_str_intern(const char *s);
@@ -844,10 +844,10 @@ static void emit_asm_arbno(EXPR_t *child,
      * We use a hack: emit it as a comment-tagged entry so bss_emit
      * can handle it. We store it directly since var_register only does resq 1. */
     /* Replace the var_register approach: use a global extra-bss list */
-    extern char asm_extra_bss[][LBUF + 16];
-    extern int  asm_extra_bss_count;
-    if (asm_extra_bss_count < 64) {
-        snprintf(asm_extra_bss[asm_extra_bss_count++], sizeof asm_extra_bss[0],
+    extern char extra_bss[][LBUF + 16];
+    extern int  extra_bss_count;
+    if (extra_bss_count < 64) {
+        snprintf(extra_bss[extra_bss_count++], sizeof extra_bss[0],
                  "%-24s resq 64", stk);
     }
 }
@@ -1143,7 +1143,7 @@ static void emit_asm_arb(const char *alpha, const char *beta,
  *                          cap_<varname>_N_len  (resq 1)
  *                          dol_<N>_entry        (resq 1)
  *
- * The buffer is emitted via asm_extra_bss (like ARBNO stacks).
+ * The buffer is emitted via extra_bss (like ARBNO stacks).
  * ----------------------------------------------------------------------- */
 
 static void emit_asm_assign(EXPR_t *child, const char *varname,
@@ -1159,7 +1159,7 @@ static void emit_asm_assign(EXPR_t *child, const char *varname,
 
     /* derive safe varname prefix (expand special chars) */
     char safe[64];
-    asm_expand_name(varname ? varname : "", safe, sizeof safe);
+    expand_name(varname ? varname : "", safe, sizeof safe);
     if (!safe[0]) { safe[0]='v'; safe[1]='\0'; }
 
     snprintf(cα,        LBUF, "dol%d_child_alpha", uid);
@@ -1301,12 +1301,12 @@ static void emit_pat_node(EXPR_t *pat,
             break;
         }
         /* Look up in the named-pattern registry */
-        const AsmNamedPat *np = named_pat_lookup(varname);
+        const NamedPat *np = named_pat_lookup(varname);
         if (np) {
             emit_asm_named_ref(np, alpha, beta, gamma, omega);
         } else {
             /* Fall back to plain-string variable registry (PAT = 'literal') */
-            const AsmStrVar *sv = asm_str_var_lookup(varname);
+            const StrVar *sv = str_var_lookup(varname);
             if (sv && sv->sval) {
                 A("\n; E_VART *%s → inline LIT '%s'\n", varname, sv->sval);
                 emit_asm_lit(sv->sval, (int)strlen(sv->sval),
@@ -1354,18 +1354,18 @@ static void emit_pat_node(EXPR_t *pat,
         /* *VAR — indirect pattern reference.
          * pat->children[0] is E_VART holding the variable name.
          * Look it up in the named-pattern registry and call it.
-         * If not a named pattern, try asm_str_vars for plain-string vars
+         * If not a named pattern, try str_vars for plain-string vars
          * (e.g. PAT = 'hello' → *PAT emitted as inline LIT). */
         const char *varname = (pat->children[0] && pat->children[0]->sval)
                               ? pat->children[0]->sval
                               : (pat->sval ? pat->sval : NULL);
         if (varname) {
-            const AsmNamedPat *np = named_pat_lookup(varname);
+            const NamedPat *np = named_pat_lookup(varname);
             if (np) {
                 emit_asm_named_ref(np, alpha, beta, gamma, omega);
             } else {
                 /* Try plain-string variable registry */
-                const AsmStrVar *sv = asm_str_var_lookup(varname);
+                const StrVar *sv = str_var_lookup(varname);
                 if (sv && sv->sval) {
                     A("\n; E_INDR *%s → inline LIT '%s'\n", varname, sv->sval);
                     emit_asm_lit(sv->sval, (int)strlen(sv->sval),
@@ -1504,12 +1504,12 @@ static void emit_pat_node(EXPR_t *pat,
  * Extra .bss entries for ARBNO stacks (resq 64 each)
  * ----------------------------------------------------------------------- */
 
-char asm_extra_bss[64][LBUF + 16];
-int  asm_extra_bss_count = 0;
+char extra_bss[64][LBUF + 16];
+int  extra_bss_count = 0;
 
 static void extra_bss_emit(void) {
-    for (int i = 0; i < asm_extra_bss_count; i++)
-        A("%s\n", asm_extra_bss[i]);
+    for (int i = 0; i < extra_bss_count; i++)
+        A("%s\n", extra_bss[i]);
 }
 
 /* Per-call-uid .bss slots — declared here, emitted as part of .bss section */
@@ -1529,10 +1529,10 @@ static void ucall_bss_emit(void) {
         A("%-24s resq 1\n", ucall_bss_slots[i]);
 }
 
-static void asm_prescan_ucall_expr(EXPR_t *e) {
+static void prescan_ucall_expr(EXPR_t *e) {
     if (!e) return;
     if (e->kind == E_FNC && e->sval) {
-        const AsmNamedPat *ufn = named_pat_lookup_fn(e->sval);
+        const NamedPat *ufn = named_pat_lookup_fn(e->sval);
         if (ufn) {
             int uid = ucall_uid();
             int na = e->nchildren;
@@ -1549,23 +1549,23 @@ static void asm_prescan_ucall_expr(EXPR_t *e) {
             ucall_bss_add(rsv_g); ucall_bss_add(rsv_o);
             /* recurse into args */
             for (int i = 0; i < e->nchildren; i++)
-                asm_prescan_ucall_expr(e->children[i]);
+                prescan_ucall_expr(e->children[i]);
             return;
         }
     }
 
     for (int i = 0; i < e->nchildren; i++)
-        asm_prescan_ucall_expr(e->children[i]);
+        prescan_ucall_expr(e->children[i]);
 }
 
-static void asm_prescan_ucall(Program *prog) {
+static void prescan_ucall(Program *prog) {
     ucall_uid_ctr = 0;
     ucall_bss_count = 0;
     if (!prog) { ucall_uid_ctr = 0; return; }
     for (STMT_t *s = prog->head; s; s = s->next) {
-        asm_prescan_ucall_expr(s->subject);
-        asm_prescan_ucall_expr(s->pattern);
-        asm_prescan_ucall_expr(s->replacement);
+        prescan_ucall_expr(s->subject);
+        prescan_ucall_expr(s->pattern);
+        prescan_ucall_expr(s->replacement);
     }
     ucall_uid_ctr = 0;  /* reset for real emission pass */
 }
@@ -1595,7 +1595,7 @@ static CaptureVar *cap_var_register(const char *varname) {
     strncpy(cv->varname, varname, sizeof cv->varname - 1);
     cv->varname[sizeof cv->varname - 1] = '\0';
     /* build safe label fragment using expansion table */
-    asm_expand_name(varname, cv->safe, sizeof cv->safe);
+    expand_name(varname, cv->safe, sizeof cv->safe);
     if (!cv->safe[0]) { cv->safe[0] = 'v'; cv->safe[1] = '\0'; }
     /* copy safe to temp to avoid GCC -Wrestrict false-positive (distinct fields) */
     char _safe_tmp[sizeof cv->safe];
@@ -1663,51 +1663,51 @@ static void cap_vars_emit_data_section(void) {
  * and two .bss continuation slots:
  *   pat_NAME_ret_gamma  — caller fills with γ address before jmp
  *   pat_NAME_ret_omega  — caller fills with ω address before jmp
- * (AsmNamedPat struct defined above as forward decl)
+ * (NamedPat struct defined above as forward decl)
  * ----------------------------------------------------------------------- */
 
 #define NAMED_PAT_MAX 64
 
-static AsmNamedPat named_pats[NAMED_PAT_MAX];
+static NamedPat named_pats[NAMED_PAT_MAX];
 static int         named_pat_count = 0;
 
 static void named_pat_reset(void) { named_pat_count = 0; }
 
-/* asm_str_vars — registry for plain-string variable assignments (VAR = 'literal').
+/* str_vars — registry for plain-string variable assignments (VAR = 'literal').
  * Used by E_INDR (*VAR) when the variable holds a string, not a named pattern.
  * At compile time we know the literal value, so we emit an inline LIT. */
-#define ASM_STR_VARS_MAX 64
-static AsmStrVar asm_str_vars[ASM_STR_VARS_MAX];
-static int       asm_str_vars_count = 0;
+#define STR_VARS_MAX 64
+static StrVar str_vars[STR_VARS_MAX];
+static int       str_vars_count = 0;
 
-static void asm_str_vars_reset(void) { asm_str_vars_count = 0; }
+static void str_vars_reset(void) { str_vars_count = 0; }
 
-static void asm_str_var_register(const char *varname, const char *sval) {
-    for (int i = 0; i < asm_str_vars_count; i++)
-        if (strcasecmp(asm_str_vars[i].varname, varname) == 0) {
-            asm_str_vars[i].sval = sval; return;
+static void str_var_register(const char *varname, const char *sval) {
+    for (int i = 0; i < str_vars_count; i++)
+        if (strcasecmp(str_vars[i].varname, varname) == 0) {
+            str_vars[i].sval = sval; return;
         }
-    if (asm_str_vars_count >= ASM_STR_VARS_MAX) return;
-    AsmStrVar *e = &asm_str_vars[asm_str_vars_count++];
+    if (str_vars_count >= STR_VARS_MAX) return;
+    StrVar *e = &str_vars[str_vars_count++];
     snprintf(e->varname, ASM_NAMED_NAMELEN, "%s", varname);
     e->sval = sval;
 }
 
-static const AsmStrVar *asm_str_var_lookup(const char *varname) {
-    for (int i = 0; i < asm_str_vars_count; i++)
-        if (strcasecmp(asm_str_vars[i].varname, varname) == 0)
-            return &asm_str_vars[i];
+static const StrVar *str_var_lookup(const char *varname) {
+    for (int i = 0; i < str_vars_count; i++)
+        if (strcasecmp(str_vars[i].varname, varname) == 0)
+            return &str_vars[i];
     return NULL;
 }
 
 /* Make a label-safe version of a SNOBOL4 variable name — use expansion table */
-static void asm_safe_name(const char *src, char *dst, int dstlen) {
-    asm_expand_name(src, dst, dstlen);
+static void safe_name(const char *src, char *dst, int dstlen) {
+    expand_name(src, dst, dstlen);
     if (!dst[0]) { dst[0] = 'v'; dst[1] = '\0'; }
 }
 
 /* Register a named pattern — called during program scan */
-static AsmNamedPat *named_pat_register(const char *varname, EXPR_t *pat) {
+static NamedPat *named_pat_register(const char *varname, EXPR_t *pat) {
     /* dedup */
     for (int i = 0; i < named_pat_count; i++)
         if (strcmp(named_pats[i].varname, varname) == 0) {
@@ -1715,9 +1715,9 @@ static AsmNamedPat *named_pat_register(const char *varname, EXPR_t *pat) {
             return &named_pats[i];
         }
     if (named_pat_count >= NAMED_PAT_MAX) return NULL;
-    AsmNamedPat *e = &named_pats[named_pat_count++];
+    NamedPat *e = &named_pats[named_pat_count++];
     snprintf(e->varname, ASM_NAMED_NAMELEN, "%s", varname);
-    asm_safe_name(varname, e->safe, ASM_NAMED_NAMELEN);
+    safe_name(varname, e->safe, ASM_NAMED_NAMELEN);
     /* copy safe to temp to avoid GCC -Wrestrict false-positive (distinct fields) */
     char _ns[ASM_NAMED_NAMELEN];
     memcpy(_ns, e->safe, ASM_NAMED_NAMELEN);
@@ -1735,14 +1735,14 @@ static AsmNamedPat *named_pat_register(const char *varname, EXPR_t *pat) {
     return e;
 }
 
-static const AsmNamedPat *named_pat_lookup(const char *varname) {
+static const NamedPat *named_pat_lookup(const char *varname) {
     for (int i = 0; i < named_pat_count; i++)
         if (strcasecmp(named_pats[i].varname, varname) == 0)
             return &named_pats[i];
     return NULL;
 }
 
-static const AsmNamedPat *named_pat_lookup_fn(const char *varname) {
+static const NamedPat *named_pat_lookup_fn(const char *varname) {
     for (int i = 0; i < named_pat_count; i++)
         if (named_pats[i].is_fn && strcasecmp(named_pats[i].varname, varname) == 0)
             return &named_pats[i];
@@ -1759,7 +1759,7 @@ static const AsmNamedPat *named_pat_lookup_fn(const char *varname) {
  *           jmp pat_NAME_beta
  * ----------------------------------------------------------------------- */
 
-static void emit_asm_named_ref(const AsmNamedPat *np,
+static void emit_asm_named_ref(const NamedPat *np,
                                 const char *alpha, const char *beta,
                                 const char *gamma, const char *omega) {
     int uid = next_uid();
@@ -1806,7 +1806,7 @@ static void emit_asm_named_ref(const AsmNamedPat *np,
  *   pat_NAME_beta:   <same, backtrack entry>
  * ----------------------------------------------------------------------- */
 
-static void emit_asm_named_def(const AsmNamedPat *np,
+static void emit_asm_named_def(const NamedPat *np,
                                 const char *cursor,
                                 const char *subj,
                                 const char *subj_len_sym) {
@@ -1934,10 +1934,10 @@ static void emit_asm_named_def(const AsmNamedPat *np,
 }
 
 /* -----------------------------------------------------------------------
- * asm_emit_null_program — Sprint A0 fallback
+ * emit_null_program — Sprint A0 fallback
  * ----------------------------------------------------------------------- */
 
-static void asm_emit_null_program(void) {
+static void emit_null_program(void) {
     A("; generated by sno2c -asm\n");
     A("    global _start\n");
     flush_pending_label();
@@ -1989,7 +1989,7 @@ static int expr_is_pattern_expr(EXPR_t *e) {
     return expr_has_pattern_fn(e);
 }
 
-/* asm_scan_named_patterns — walk the program and register all
+/* scan_named_patterns — walk the program and register all
  * pattern assignments (VAR = <pattern-expr>) before emitting.
  * Also detects Snocone sc_cf-generated DEFINE stmts and registers
  * user-defined procedures as is_fn=1 entries.
@@ -2055,9 +2055,9 @@ static int parse_define_str(const char *def,
     return 1;
 }
 
-static void asm_scan_named_patterns(Program *prog) {
+static void scan_named_patterns(Program *prog) {
     named_pat_reset();
-    asm_str_vars_reset();
+    str_vars_reset();
     if (!prog) return;
     for (STMT_t *s = prog->head; s; s = s->next) {
         /* Detect Snocone sc_cf DEFINE statement:
@@ -2076,7 +2076,7 @@ static void asm_scan_named_patterns(Program *prog) {
             char locals[ASM_NAMED_MAXPARAMS][64];
             int nlocals = 0;
             if (parse_define_str(def_str, fname, sizeof fname, params, &nparams, locals, &nlocals)) {
-                AsmNamedPat *e = named_pat_register(fname, NULL);
+                NamedPat *e = named_pat_register(fname, NULL);
                 if (e) {
                     e->is_fn = 1;
                     e->nparams = nparams;
@@ -2118,14 +2118,14 @@ static void asm_scan_named_patterns(Program *prog) {
                 named_pat_register(s->subject->sval, s->replacement);
             } else if (s->replacement->kind == E_QLIT && s->replacement->sval) {
                 /* Plain string assignment — register for *VAR indirect use */
-                asm_str_var_register(s->subject->sval, s->replacement->sval);
+                str_var_register(s->subject->sval, s->replacement->sval);
             }
         }
     }
 }
 
 /* -----------------------------------------------------------------------
- * asm_emit_pattern — emit a single statement's pattern as a standalone
+ * emit_pattern — emit a single statement's pattern as a standalone
  * match program (for crosscheck testing).
  *
  * Emits:
@@ -2134,16 +2134,16 @@ static void asm_scan_named_patterns(Program *prog) {
  *   section .text  — _start + root pattern + named pattern bodies
  * ----------------------------------------------------------------------- */
 
-static void asm_emit_pattern(STMT_t *stmt) {
+static void emit_pattern(STMT_t *stmt) {
     if (!stmt || !stmt->pattern) {
-        asm_emit_null_program();
+        emit_null_program();
         return;
     }
 
     /* Reset state */
     var_reset();
     lit_reset();
-    asm_extra_bss_count = 0;
+    extra_bss_count = 0;
 
     /* Fixed names */
     const char *cursor_sym   = "cursor";
@@ -2161,7 +2161,7 @@ static void asm_emit_pattern(STMT_t *stmt) {
     /* Collect root pattern code + named pattern bodies into a temp buffer */
     char *code_buf = NULL; size_t code_size = 0;
     FILE *code_f = open_memstream(&code_buf, &code_size);
-    if (!code_f) { asm_emit_null_program(); return; }
+    if (!code_f) { emit_null_program(); return; }
 
     FILE *real_out = out;
     out = code_f;
@@ -2249,7 +2249,7 @@ static void asm_emit_pattern(STMT_t *stmt) {
 }
 
 /* -----------------------------------------------------------------------
- * asm_emit_body — body-only mode (-asm-body flag)
+ * emit_body — body-only mode (-asm-body flag)
  *
  * Emits the pattern code for linking with snobol4_asm_harness.c.
  * Instead of _start / match_success / match_fail:
@@ -2259,12 +2259,12 @@ static void asm_emit_pattern(STMT_t *stmt) {
  * ----------------------------------------------------------------------- */
 
 /* -----------------------------------------------------------------------
- * asm_scan_capture_vars — pre-pass: walk pattern tree and register every
+ * scan_capture_vars — pre-pass: walk pattern tree and register every
  * DOL/NAM capture variable so cap_vars[] is fully populated before we
  * emit any sections.  Eliminates the need for a two-pass memstream.
  * ----------------------------------------------------------------------- */
 
-static void asm_scan_expr_for_caps(EXPR_t *e) {
+static void scan_expr_for_caps(EXPR_t *e) {
     if (!e) return;
     if (e->kind == E_DOL || e->kind == E_NAM) {
         const char *vn = (e->children[1] && e->children[1]->sval) ? e->children[1]->sval : "cap";
@@ -2273,33 +2273,33 @@ static void asm_scan_expr_for_caps(EXPR_t *e) {
     /* recurse into all children */
 
     for (int i = 0; i < e->nchildren; i++)
-        asm_scan_expr_for_caps(e->children[i]);
+        scan_expr_for_caps(e->children[i]);
 }
 
-static void asm_scan_capture_vars(STMT_t *stmt) {
+static void scan_capture_vars(STMT_t *stmt) {
     cap_vars_reset();
     if (!stmt || !stmt->pattern) return;
-    asm_scan_expr_for_caps(stmt->pattern);
+    scan_expr_for_caps(stmt->pattern);
     /* Also scan named pattern bodies */
     for (int i = 0; i < named_pat_count; i++)
-        asm_scan_expr_for_caps(named_pats[i].pat);
+        scan_expr_for_caps(named_pats[i].pat);
 }
 
 /* -----------------------------------------------------------------------
- * asm_emit_body — body-only mode (-asm-body flag)
+ * emit_body — body-only mode (-asm-body flag)
  *
  * Single-pass: pre-scan registers all caps + named patterns first,
  * then emit header → .data → .bss → .text in one forward pass.
  * No open_memstream / two-pass needed.
  * ----------------------------------------------------------------------- */
 
-static void asm_emit_body(STMT_t *stmt) {
+static void emit_body(STMT_t *stmt) {
     if (!stmt || !stmt->pattern) return;
 
     var_reset();
     lit_reset();
     cap_vars_reset();
-    asm_extra_bss_count = 0;
+    extra_bss_count = 0;
 
     const char *cursor_sym   = "cursor";
     const char *subj_sym     = "subject_data";
@@ -2370,7 +2370,7 @@ static void asm_emit_body(STMT_t *stmt) {
     }
 
     /* .bss — all slots collected during dry run */
-    int has_bss = nvar > 0 || asm_extra_bss_count > 0 || cap_var_count > 0;
+    int has_bss = nvar > 0 || extra_bss_count > 0 || cap_var_count > 0;
     if (has_bss) {
         A("\nsection .bss\n");
         for (int i = 0; i < nvar; i++)
@@ -2399,7 +2399,7 @@ static void asm_emit_body(STMT_t *stmt) {
 int asm_body_mode = 0; /* set by -asm-body flag */
 
 /* -----------------------------------------------------------------------
- * asm_emit_program — full-program mode (-asm flag without -asm-body)
+ * emit_program — full-program mode (-asm flag without -asm-body)
  *
  * Walks ALL statements and emits a complete NASM program that:
  *   - calls stmt_init() at startup
@@ -2443,7 +2443,7 @@ static const char *prog_str_intern(const char *s) {
      * On collision (two distinct source names expand identically),
      * append _N uid to the second — rare, visible, honest. */
     char exp[LBUF];
-    asm_expand_name(s, exp, sizeof exp);
+    expand_name(s, exp, sizeof exp);
     if (exp[0]) {
         snprintf(e->label, sizeof e->label, "S_%s", exp);
         for (int i = 0; i < prog_str_count - 1; i++) {
@@ -2595,7 +2595,7 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
         const char *fnlab = prog_str_intern(e->sval);
 
         /* Check if this is a user-defined Snocone function */
-        const AsmNamedPat *ufn = named_pat_lookup(e->sval);
+        const NamedPat *ufn = named_pat_lookup(e->sval);
         if (ufn && ufn->is_fn) {
             /* User function call-site:
              *   1. Evaluate each arg → store into fn_FNAME_arg_N_t/p .bss slots
@@ -3265,10 +3265,10 @@ static int is_special_goto(const char *t) {
 }
 
 /* Emit a jmp to a goto target, handling special targets. */
-/* current_fn — set to the AsmNamedPat* of the user function being emitted.
+/* current_fn — set to the NamedPat* of the user function being emitted.
  * NULL when outside any user function body.
  * Used by emit_jmp / prog_emit_goto to route RETURN → [fn_ret_γ]. */
-static const AsmNamedPat *current_fn = NULL;
+static const NamedPat *current_fn = NULL;
 
 static void emit_jmp(const char *tgt, const char *fallthrough) {
     if (!tgt || !*tgt) {
@@ -3379,8 +3379,8 @@ static void prog_label_register(const char *lbl) {
     prog_label_id(lbl); /* ensure registered; discard return value */
 }
 
-static void asm_emit_program(Program *prog) {
-    if (!prog || !prog->head) { asm_emit_null_program(); return; }
+static void emit_program(Program *prog) {
+    if (!prog || !prog->head) { emit_null_program(); return; }
 
     current_fn = NULL;
 
@@ -3389,7 +3389,7 @@ static void asm_emit_program(Program *prog) {
     prog_labels_reset();
     var_reset();
     lit_reset();
-    asm_extra_bss_count = 0;
+    extra_bss_count = 0;
 
     /* Pass 1: collect all labels + string literals (recursive expr walk) */
     /* Recursive helper: intern all string/var names reachable from an expr */
@@ -3440,7 +3440,7 @@ static void asm_emit_program(Program *prog) {
             /* Per-param save slots (old value backup) and arg slots (call-site input) */
             for (int pi = 0; pi < named_pats[i].nparams; pi++) {
                 char pname_safe[ASM_NAMED_NAMELEN];
-                asm_expand_name(named_pats[i].param_names[pi], pname_safe, sizeof pname_safe);
+                expand_name(named_pats[i].param_names[pi], pname_safe, sizeof pname_safe);
                 if (!pname_safe[0]) snprintf(pname_safe, sizeof pname_safe, "p%d", pi);
                 char save_slot[LBUF2 + 16], arg_slot[LBUF2 + 16];
                 snprintf(save_slot, sizeof save_slot, "fn_%s_save_%s",
@@ -3486,7 +3486,7 @@ static void asm_emit_program(Program *prog) {
     }
 
     /* ---- Pass 3: dry-run all pattern emissions to collect bss/lit slots ----
-     * Mirrors asm_emit_body dry-run. Redirects output to /dev/null,
+     * Mirrors emit_body dry-run. Redirects output to /dev/null,
      * runs emit_pat_node for every pattern stmt, then restores.
      * This ensures span_saved/lit_str slots are registered before .bss/.data. */
     {
@@ -3606,7 +3606,7 @@ static void asm_emit_program(Program *prog) {
               if (_id >= 0) prog_label_defined[_id] = 1; }
 
             /* current_fn tracking: entering a user function body */
-            const AsmNamedPat *fn_entry = named_pat_lookup(s->label);
+            const NamedPat *fn_entry = named_pat_lookup(s->label);
             if (fn_entry && fn_entry->is_fn) {
                 current_fn = fn_entry;
             }
@@ -4137,10 +4137,10 @@ void asm_emit(Program *prog, FILE *f) {
     out = f;
 
     /* Pass 1: scan for named pattern assignments */
-    asm_scan_named_patterns(prog);
+    scan_named_patterns(prog);
 
     /* Pass 1b: pre-scan user-function call sites → register per-call .bss slots */
-    asm_prescan_ucall(prog);
+    prescan_ucall(prog);
 
     /* Pass 2: find first statement with a pattern field (needed for body mode) */
     STMT_t *s = prog ? prog->head : NULL;
@@ -4148,10 +4148,10 @@ void asm_emit(Program *prog, FILE *f) {
 
     if (asm_body_mode) {
         /* -asm-body: emit pattern-only body for harness linking */
-        if (!s) { asm_emit_null_program(); return; }
-        asm_emit_body(s);
+        if (!s) { emit_null_program(); return; }
+        emit_body(s);
     } else {
         /* -asm: full program mode — walk all statements */
-        asm_emit_program(prog);
+        emit_program(prog);
     }
 }
