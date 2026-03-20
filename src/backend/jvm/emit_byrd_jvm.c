@@ -2078,16 +2078,28 @@ static int expr_contains_input(EXPR_t *e) {
 /* Emit a goto to a SNOBOL4 label, intercepting RETURN/FRETURN when in a fn body */
 static void jvm_emit_goto(const char *label) {
     if (!label || !label[0]) return;
-    if (jvm_cur_fn) {
-        int fn_idx = (int)(jvm_cur_fn - jvm_fn_table_fwd);
-        if (strcasecmp(label,"RETURN")==0 || strcasecmp(label,"NRETURN")==0) {
-            char lbl[64]; snprintf(lbl, sizeof lbl, "Jfn%d_return", fn_idx);
-            J("    goto %s\n", lbl); return;
+    /* RETURN/FRETURN/NRETURN: route to function exit labels, or L_END if in main */
+    if (strcasecmp(label,"RETURN")==0 || strcasecmp(label,"NRETURN")==0 ||
+        strcasecmp(label,"FRETURN")==0) {
+        if (jvm_cur_fn) {
+            int fn_idx = (int)(jvm_cur_fn - jvm_fn_table_fwd);
+            if (strcasecmp(label,"FRETURN")==0) {
+                char lbl[64]; snprintf(lbl, sizeof lbl, "Jfn%d_freturn", fn_idx);
+                J("    goto %s\n", lbl);
+            } else {
+                char lbl[64]; snprintf(lbl, sizeof lbl, "Jfn%d_return", fn_idx);
+                J("    goto %s\n", lbl);
+            }
+        } else {
+            /* Outside any function: RETURN/FRETURN in main body -> program end */
+            J("    goto L_END\n");
         }
-        if (strcasecmp(label,"FRETURN")==0) {
-            char lbl[64]; snprintf(lbl, sizeof lbl, "Jfn%d_freturn", fn_idx);
-            J("    goto %s\n", lbl); return;
-        }
+        return;
+    }
+    /* END -> program termination */
+    if (strcasecmp(label,"END")==0) {
+        J("    goto L_END\n");
+        return;
     }
     char glbl[128]; snprintf(glbl, sizeof glbl, "L_%s", label);
     JI("goto", glbl);
@@ -2618,8 +2630,7 @@ static void jvm_emit_stmt(STMT_t *s, int stmt_idx) {
 
             /* --- FAIL --- */
             J("%s:\n", lbl_fail);
-            char flbl[128]; snprintf(flbl, sizeof flbl, "L_%s", s->go->onfailure);
-            JI("goto", flbl);
+            jvm_emit_goto(s->go->onfailure);
 
             J("%s:\n", lbl_after);
             return;
@@ -2629,8 +2640,7 @@ static void jvm_emit_stmt(STMT_t *s, int stmt_idx) {
         /* --- FAIL --- */
         J("%s:\n", lbl_fail);
         if (s->go && s->go->onfailure && s->go->onfailure[0]) {
-            char flbl[128]; snprintf(flbl, sizeof flbl, "L_%s", s->go->onfailure);
-            JI("goto", flbl);
+            jvm_emit_goto(s->go->onfailure);
         }
         return;
     }
