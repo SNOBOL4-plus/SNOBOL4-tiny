@@ -228,6 +228,33 @@ static int jvm_need_lpad_helper      = 0;
 static int jvm_need_rpad_helper      = 0;
 static int jvm_need_integer_helper   = 0;
 static int jvm_need_datatype_helper  = 0;
+static int jvm_need_array_helpers    = 0;
+static int jvm_need_data_helpers     = 0;
+
+/* Forward declarations for user-function support (defined after jvm_emit_header) */
+#define JVM_FN_MAX_FWD  128
+#define JVM_ARG_MAX_FWD  32
+typedef struct JvmFnDef_s {
+    char  *name;
+    char  *args[JVM_ARG_MAX_FWD];
+    int    nargs;
+    char  *locals[JVM_ARG_MAX_FWD];
+    int    nlocals;
+    char  *end_label;
+    char  *entry_label;
+} JvmFnDef;
+static JvmFnDef jvm_fn_table_fwd[JVM_FN_MAX_FWD];
+static int       jvm_fn_count_fwd = 0;
+static const JvmFnDef *jvm_cur_fn = NULL;
+static const JvmFnDef *jvm_find_fn(const char *name);  /* fwd decl */
+
+/* DATA type registry */
+#define JVM_DATA_MAX 32
+typedef struct { char *type_name; char *fields[JVM_ARG_MAX_FWD]; int nfields; } JvmDataType;
+static JvmDataType jvm_data_types[JVM_DATA_MAX];
+static int jvm_data_type_count = 0;
+static const JvmDataType *jvm_find_data_type(const char *name);   /* fwd decl */
+static const JvmDataType *jvm_find_data_field(const char *field); /* fwd decl — returns type if field found */
 
 static void jvm_emit_to_double(void) {
     /* Stack: String → double.  Empty/null → 0.0 */
@@ -838,8 +865,100 @@ static void jvm_emit_expr(EXPR_t *e) {
                 break;
             }
         }
+        /* DEFINE('proto') — evaluated at runtime but a no-op in expression context
+         * (function registration happens at compile time via jvm_collect_functions) */
+        if (strcasecmp(fname, "DEFINE") == 0) {
+            JI("ldc", "\"\"");
+            break;
+        }
+        /* ARRAY(n) — create indexed array, return an array-id string */
+        if (strcasecmp(fname, "ARRAY") == 0) {
+            jvm_need_array_helpers = 1;
+            EXPR_t *a0 = (e->args && e->args[0]) ? e->args[0] : NULL;
+            if (a0) jvm_emit_expr(a0); else JI("ldc", "\"1\"");
+            char ardesc[512];
+            snprintf(ardesc, sizeof ardesc,
+                "%s/sno_array_new(Ljava/lang/String;)Ljava/lang/String;", jvm_classname);
+            JI("invokestatic", ardesc);
+            break;
+        }
+        /* TABLE([n]) — create table (HashMap), return a table-id string */
+        if (strcasecmp(fname, "TABLE") == 0) {
+            jvm_need_array_helpers = 1;
+            char tdesc[512];
+            snprintf(tdesc, sizeof tdesc,
+                "%s/sno_table_new()Ljava/lang/String;", jvm_classname);
+            JI("invokestatic", tdesc);
+            break;
+        }
+        /* DATA('proto') — register a data type, return "" */
+        if (strcasecmp(fname, "DATA") == 0) {
+            jvm_need_data_helpers = 1;
+            EXPR_t *a0 = (e->args && e->args[0]) ? e->args[0] : NULL;
+            if (a0) jvm_emit_expr(a0); else JI("ldc", "\"\"");
+            char ddesc[512];
+            snprintf(ddesc, sizeof ddesc,
+                "%s/sno_data_define(Ljava/lang/String;)V", jvm_classname);
+            JI("invokestatic", ddesc);
+            JI("ldc", "\"\"");
+            break;
+        }
+        /* User-defined function call */
+        {
+            const JvmFnDef *ufn = jvm_find_fn(fname);
+            if (ufn) {
+                /* Push args */
+                for (int i = 0; i < ufn->nargs; i++) {
+                    if (e->args && e->args[i]) jvm_emit_expr(e->args[i]);
+                    else JI("ldc", "\"\"");
+                }
+                /* Build descriptor */
+                char udesc[1024]; int dp2 = 0;
+                udesc[dp2++] = '(';
+                for (int i = 0; i < ufn->nargs; i++) {
+                    const char *s2 = "Ljava/lang/String;";
+                    for (const char *p = s2; *p; p++) udesc[dp2++] = *p;
+                }
+                udesc[dp2++] = ')';
+                const char *rs = "Ljava/lang/String;";
+                for (const char *p = rs; *p; p++) udesc[dp2++] = *p;
+                udesc[dp2] = '\0';
+                char umdesc[512];
+                snprintf(umdesc, sizeof umdesc, "%s/sno_userfn_%s%s",
+                         jvm_classname, ufn->name, udesc);
+                JI("invokestatic", umdesc);
+                break;
+            }
+        }
         /* Unrecognised function — stub as empty string */
         JI("ldc", "\"\"");
+        break;
+    }
+    case E_ARY: {
+        /* a[subscript] — array/table subscript read */
+        jvm_need_array_helpers = 1;
+        char nameesc_ary[256]; jvm_escape_string(e->sval ? e->sval : "", nameesc_ary, sizeof nameesc_ary);
+        JI("ldc", nameesc_ary);
+        char igdesc_ary[512]; snprintf(igdesc_ary, sizeof igdesc_ary,
+            "%s/sno_indr_get(Ljava/lang/String;)Ljava/lang/String;", jvm_classname);
+        JI("invokestatic", igdesc_ary);
+        if (e->args && e->args[0]) jvm_emit_expr(e->args[0]);
+        else JI("ldc", "\"1\"");
+        char agdesc_ary[512]; snprintf(agdesc_ary, sizeof agdesc_ary,
+            "%s/sno_array_get(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", jvm_classname);
+        JI("invokestatic", agdesc_ary);
+        break;
+    }
+    case E_IDX: {
+        /* expr[subscript] — subscript on expression (TABLE or DATA) */
+        jvm_need_array_helpers = 1;
+        jvm_emit_expr(e->left);
+        if (e->right) jvm_emit_expr(e->right);
+        else if (e->args && e->args[0]) jvm_emit_expr(e->args[0]);
+        else JI("ldc", "\"0\"");
+        char agdesc_idx[512]; snprintf(agdesc_idx, sizeof agdesc_idx,
+            "%s/sno_array_get(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", jvm_classname);
+        JI("invokestatic", agdesc_idx);
         break;
     }
     default:
@@ -1601,6 +1720,24 @@ static int expr_contains_input(EXPR_t *e) {
     return 0;
 }
 
+/* Emit a goto to a SNOBOL4 label, intercepting RETURN/FRETURN when in a fn body */
+static void jvm_emit_goto(const char *label) {
+    if (!label || !label[0]) return;
+    if (jvm_cur_fn) {
+        int fn_idx = (int)(jvm_cur_fn - jvm_fn_table_fwd);
+        if (strcasecmp(label,"RETURN")==0 || strcasecmp(label,"NRETURN")==0) {
+            char lbl[64]; snprintf(lbl, sizeof lbl, "Jfn%d_return", fn_idx);
+            J("    goto %s\n", lbl); return;
+        }
+        if (strcasecmp(label,"FRETURN")==0) {
+            char lbl[64]; snprintf(lbl, sizeof lbl, "Jfn%d_freturn", fn_idx);
+            J("    goto %s\n", lbl); return;
+        }
+    }
+    char glbl[128]; snprintf(glbl, sizeof glbl, "L_%s", label);
+    JI("goto", glbl);
+}
+
 static void jvm_emit_stmt(STMT_t *s, int stmt_idx) {
     char next_lbl[64];
     snprintf(next_lbl, sizeof next_lbl, "Ln_%d", stmt_idx);
@@ -1623,11 +1760,9 @@ static void jvm_emit_stmt(STMT_t *s, int stmt_idx) {
     /* Label-only statement (no subject, no body) — just fall through */
     if (!s->subject && !s->has_eq && !s->pattern) {
         if (s->go && s->go->uncond && s->go->uncond[0]) {
-            char glbl[128]; snprintf(glbl, sizeof glbl, "L_%s", s->go->uncond);
-            JI("goto", glbl);
+            jvm_emit_goto(s->go->uncond);
         } else if (s->go && s->go->onsuccess && s->go->onsuccess[0]) {
-            char glbl[128]; snprintf(glbl, sizeof glbl, "L_%s", s->go->onsuccess);
-            JI("goto", glbl);
+            jvm_emit_goto(s->go->onsuccess);
         }
         return;
     }
@@ -1640,6 +1775,41 @@ static void jvm_emit_stmt(STMT_t *s, int stmt_idx) {
         J("    iconst_1\n");
         J("    iadd\n");
         J("    putstatic %s\n", stnodesc);
+    }
+
+    /* If inside a user function, intercept RETURN/FRETURN/NRETURN gotos */
+    /* (handled per-goto in jvm_emit_goto_target below) */
+
+    /* Case 1b: array/table subscript assignment — A<I> = expr or T['key'] = expr */
+    if (s->has_eq && s->subject &&
+        (s->subject->kind == E_ARY || s->subject->kind == E_IDX) &&
+        !s->pattern) {
+        jvm_need_array_helpers = 1;
+        /* Push array-id */
+        if (s->subject->kind == E_ARY) {
+            char nameesc[256]; jvm_escape_string(s->subject->sval ? s->subject->sval : "", nameesc, sizeof nameesc);
+            JI("ldc", nameesc);
+            char igdesc[512]; snprintf(igdesc, sizeof igdesc,
+                "%s/sno_indr_get(Ljava/lang/String;)Ljava/lang/String;", jvm_classname);
+            JI("invokestatic", igdesc);
+            /* subscript */
+            if (s->subject->args && s->subject->args[0]) jvm_emit_expr(s->subject->args[0]);
+            else JI("ldc", "\"1\"");
+        } else { /* E_IDX */
+            jvm_emit_expr(s->subject->left);
+            if (s->subject->right) jvm_emit_expr(s->subject->right);
+            else if (s->subject->args && s->subject->args[0]) jvm_emit_expr(s->subject->args[0]);
+            else JI("ldc", "\"0\"");
+        }
+        /* value */
+        if (!s->replacement || s->replacement->kind == E_NULV) JI("ldc", "\"\"");
+        else jvm_emit_expr(s->replacement);
+        char apdesc[512]; snprintf(apdesc, sizeof apdesc,
+            "%s/sno_array_put(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V", jvm_classname);
+        JI("invokestatic", apdesc);
+        if (s->go && s->go->uncond && s->go->uncond[0]) jvm_emit_goto(s->go->uncond);
+        else if (s->go && s->go->onsuccess && s->go->onsuccess[0]) jvm_emit_goto(s->go->onsuccess);
+        return;
     }
 
     /* Case 1: pure assignment — no pattern */
@@ -1791,11 +1961,9 @@ static void jvm_emit_stmt(STMT_t *s, int stmt_idx) {
 
         /* :S goto (always unconditional for non-INPUT assigns) */
         if (s->go && s->go->uncond && s->go->uncond[0]) {
-            char glbl[128]; snprintf(glbl, sizeof glbl, "L_%s", s->go->uncond);
-            JI("goto", glbl);
+            jvm_emit_goto(s->go->uncond);
         } else if (s->go && s->go->onsuccess && s->go->onsuccess[0]) {
-            char glbl[128]; snprintf(glbl, sizeof glbl, "L_%s", s->go->onsuccess);
-            JI("goto", glbl);
+            jvm_emit_goto(s->go->onsuccess);
         }
         /* :F fallthrough (no-op — already jumped or falling through) */
         return;
@@ -1818,11 +1986,9 @@ static void jvm_emit_stmt(STMT_t *s, int stmt_idx) {
         JI("invokestatic", isdesc);
 
         if (s->go && s->go->uncond && s->go->uncond[0]) {
-            char glbl[128]; snprintf(glbl, sizeof glbl, "L_%s", s->go->uncond);
-            JI("goto", glbl);
+            jvm_emit_goto(s->go->uncond);
         } else if (s->go && s->go->onsuccess && s->go->onsuccess[0]) {
-            char glbl[128]; snprintf(glbl, sizeof glbl, "L_%s", s->go->onsuccess);
-            JI("goto", glbl);
+            jvm_emit_goto(s->go->onsuccess);
         }
         return;
     }
@@ -1847,11 +2013,9 @@ static void jvm_emit_stmt(STMT_t *s, int stmt_idx) {
             JI("pop", "");  /* discard result (no :F needed) */
         }
         if (s->go && s->go->uncond && s->go->uncond[0]) {
-            char glbl[128]; snprintf(glbl, sizeof glbl, "L_%s", s->go->uncond);
-            JI("goto", glbl);
+            jvm_emit_goto(s->go->uncond);
         } else if (s->go && s->go->onsuccess && s->go->onsuccess[0]) {
-            char glbl[128]; snprintf(glbl, sizeof glbl, "L_%s", s->go->onsuccess);
-            JI("goto", glbl);
+            jvm_emit_goto(s->go->onsuccess);
         }
         return;
     }
@@ -2022,11 +2186,9 @@ static void jvm_emit_stmt(STMT_t *s, int stmt_idx) {
         /* --- SUCCESS --- */
         J("%s:\n", lbl_success);
         if (s->go && s->go->uncond && s->go->uncond[0]) {
-            char glbl[128]; snprintf(glbl, sizeof glbl, "L_%s", s->go->uncond);
-            JI("goto", glbl);
+            jvm_emit_goto(s->go->uncond);
         } else if (s->go && s->go->onsuccess && s->go->onsuccess[0]) {
-            char glbl[128]; snprintf(glbl, sizeof glbl, "L_%s", s->go->onsuccess);
-            JI("goto", glbl);
+            jvm_emit_goto(s->go->onsuccess);
         } else if (s->go && s->go->onfailure && s->go->onfailure[0]) {
             /* No :S but there IS a :F — must jump past the fail block so
              * success falls through to the next statement, not into :F goto */
@@ -2470,6 +2632,501 @@ static void jvm_emit_runtime_helpers(void) {
         J(".end method\n\n");
         jvm_need_datatype_helper = 0;
     }
+
+    /* Array/Table helpers */
+    if (jvm_need_array_helpers) {
+        char am[512]; snprintf(am, sizeof am, "%s/sno_arrays Ljava/util/HashMap;", jvm_classname);
+        /* sno_array_new(String size) → String (array-id) */
+        J(".method static sno_array_new(Ljava/lang/String;)Ljava/lang/String;\n");
+        J("    .limit stack 6\n");
+        J("    .limit locals 2\n");
+        J("    new java/util/HashMap\n");
+        J("    dup\n");
+        J("    invokespecial java/util/HashMap/<init>()V\n");
+        J("    astore_1\n");
+        /* Generate unique id: System.identityHashCode as string */
+        J("    aload_1\n");
+        J("    invokestatic java/lang/System/identityHashCode(Ljava/lang/Object;)I\n");
+        J("    invokestatic java/lang/Integer/toString(I)Ljava/lang/String;\n");
+        /* Store in sno_arrays: sno_arrays.put(id, map) */
+        J("    dup\n");  /* id on stack twice */
+        J("    getstatic %s\n", am);
+        J("    swap\n");  /* sno_arrays, id */
+        J("    aload_1\n");  /* map */
+        J("    invokevirtual java/util/HashMap/put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;\n");
+        J("    pop\n");
+        J("    areturn\n");
+        J(".end method\n\n");
+
+        /* sno_table_new() → String (table-id) */
+        J(".method static sno_table_new()Ljava/lang/String;\n");
+        J("    .limit stack 6\n");
+        J("    .limit locals 2\n");
+        J("    new java/util/HashMap\n");
+        J("    dup\n");
+        J("    invokespecial java/util/HashMap/<init>()V\n");
+        J("    astore_0\n");
+        J("    aload_0\n");
+        J("    invokestatic java/lang/System/identityHashCode(Ljava/lang/Object;)I\n");
+        J("    invokestatic java/lang/Integer/toString(I)Ljava/lang/String;\n");
+        J("    dup\n");
+        J("    getstatic %s\n", am);
+        J("    swap\n");
+        J("    aload_0\n");
+        J("    invokevirtual java/util/HashMap/put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;\n");
+        J("    pop\n");
+        J("    areturn\n");
+        J(".end method\n\n");
+
+        /* sno_array_get(String array_id, String key) → String */
+        J(".method static sno_array_get(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;\n");
+        J("    .limit stack 4\n");
+        J("    .limit locals 3\n");
+        J("    getstatic %s\n", am);
+        J("    aload_0\n");
+        J("    invokevirtual java/util/HashMap/get(Ljava/lang/Object;)Ljava/lang/Object;\n");
+        J("    checkcast java/util/HashMap\n");
+        J("    astore_2\n");
+        J("    aload_2\n");
+        J("    ifnull Lag_null\n");
+        J("    aload_2\n");
+        J("    aload_1\n");
+        J("    invokevirtual java/util/HashMap/get(Ljava/lang/Object;)Ljava/lang/Object;\n");
+        J("    checkcast java/lang/String\n");
+        J("    dup\n");
+        J("    ifnonnull Lag_done\n");
+        J("    pop\n");
+        J("Lag_null:\n");
+        J("    ldc \"\"\n");
+        J("Lag_done:\n");
+        J("    areturn\n");
+        J(".end method\n\n");
+
+        /* sno_array_put(String array_id, String key, String val) → void */
+        J(".method static sno_array_put(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n");
+        J("    .limit stack 4\n");
+        J("    .limit locals 4\n");
+        J("    getstatic %s\n", am);
+        J("    aload_0\n");
+        J("    invokevirtual java/util/HashMap/get(Ljava/lang/Object;)Ljava/lang/Object;\n");
+        J("    checkcast java/util/HashMap\n");
+        J("    astore_3\n");
+        J("    aload_3\n");
+        J("    ifnull Lap_done\n");
+        J("    aload_3\n");
+        J("    aload_1\n");
+        J("    aload_2\n");
+        J("    invokevirtual java/util/HashMap/put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;\n");
+        J("    pop\n");
+        J("Lap_done:\n");
+        J("    return\n");
+        J(".end method\n\n");
+
+        jvm_need_array_helpers = 0;
+    }
+
+    /* DATA type helpers */
+    if (jvm_need_data_helpers) {
+        char dm[512]; snprintf(dm, sizeof dm, "%s/sno_data_types Ljava/util/HashMap;", jvm_classname);
+        /* sno_data_define(String proto) → void
+         * proto = "typename(field1,field2,...)" — registers fields */
+        J(".method static sno_data_define(Ljava/lang/String;)V\n");
+        J("    .limit stack 6\n");
+        J("    .limit locals 4\n");
+        /* parse: find '(' ')' to extract type name and field list */
+        /* For simplicity, store proto string itself in sno_data_types keyed by type name */
+        /* Extract type name up to '(' */
+        J("    aload_0\n");
+        J("    ldc \"(\"\n");
+        J("    invokevirtual java/lang/String/indexOf(Ljava/lang/String;)I\n");
+        J("    istore_1\n");  /* idx of '(' */
+        J("    iload_1\n");
+        J("    iflt Ldd_done\n");
+        J("    aload_0\n");
+        J("    iconst_0\n");
+        J("    iload_1\n");
+        J("    invokevirtual java/lang/String/substring(II)Ljava/lang/String;\n");
+        J("    astore_2\n");  /* type name */
+        /* fields: from '(' to ')' */
+        J("    aload_0\n");
+        J("    iload_1\n");
+        J("    iconst_1\n");
+        J("    iadd\n");
+        J("    aload_0\n");
+        J("    invokevirtual java/lang/String/length()I\n");
+        J("    iconst_1\n");
+        J("    isub\n");
+        J("    invokevirtual java/lang/String/substring(II)Ljava/lang/String;\n");
+        J("    astore_3\n");  /* field list */
+        J("    getstatic %s\n", dm);
+        J("    aload_2\n");
+        J("    aload_3\n");
+        J("    invokevirtual java/util/HashMap/put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;\n");
+        J("    pop\n");
+        J("Ldd_done:\n");
+        J("    return\n");
+        J(".end method\n\n");
+
+        /* sno_data_new(String type_name, String[] field_values) → String (instance-id)
+         * Implemented as sno_array_new with __type__ key set */
+        /* sno_data_get_field(String instance_id, String field_name) → String */
+        J(".method static sno_data_get_field(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;\n");
+        J("    .limit stack 4\n");
+        J("    .limit locals 2\n");
+        char am2[512]; snprintf(am2, sizeof am2, "%s/sno_arrays Ljava/util/HashMap;", jvm_classname);
+        J("    getstatic %s\n", am2);
+        J("    aload_0\n");
+        J("    invokevirtual java/util/HashMap/get(Ljava/lang/Object;)Ljava/lang/Object;\n");
+        J("    checkcast java/util/HashMap\n");
+        J("    dup\n");
+        J("    ifnull Ldgf_null\n");
+        J("    aload_1\n");
+        J("    invokevirtual java/util/HashMap/get(Ljava/lang/Object;)Ljava/lang/Object;\n");
+        J("    checkcast java/lang/String\n");
+        J("    dup\n");
+        J("    ifnonnull Ldgf_done\n");
+        J("    pop\n");
+        J("Ldgf_null:\n");
+        J("    pop\n");
+        J("    ldc \"\"\n");
+        J("Ldgf_done:\n");
+        J("    areturn\n");
+        J(".end method\n\n");
+
+        /* sno_data_get_type(String instance_id) → String type_name */
+        J(".method static sno_data_get_type(Ljava/lang/String;)Ljava/lang/String;\n");
+        J("    .limit stack 4\n");
+        J("    .limit locals 1\n");
+        J("    getstatic %s\n", am2);
+        J("    aload_0\n");
+        J("    invokevirtual java/util/HashMap/get(Ljava/lang/Object;)Ljava/lang/Object;\n");
+        J("    checkcast java/util/HashMap\n");
+        J("    dup\n");
+        J("    ifnull Ldgt_null\n");
+        J("    ldc \"__type__\"\n");
+        J("    invokevirtual java/util/HashMap/get(Ljava/lang/Object;)Ljava/lang/Object;\n");
+        J("    checkcast java/lang/String\n");
+        J("    dup\n");
+        J("    ifnonnull Ldgt_done\n");
+        J("    pop\n");
+        J("Ldgt_null:\n");
+        J("    pop\n");
+        J("    ldc \"\"\n");
+        J("Ldgt_done:\n");
+        J("    areturn\n");
+        J(".end method\n\n");
+
+        jvm_need_data_helpers = 0;
+    }
+}
+
+/* -----------------------------------------------------------------------
+ * User-defined function support (Sprint J-R4) — implementation
+ * (JvmFnDef struct and jvm_fn_table_fwd/jvm_fn_count_fwd declared at top)
+ * ----------------------------------------------------------------------- */
+
+#define JVM_FN_MAX  JVM_FN_MAX_FWD
+#define JVM_ARG_MAX JVM_ARG_MAX_FWD
+#define jvm_fn_table jvm_fn_table_fwd
+#define jvm_fn_count jvm_fn_count_fwd
+
+static void jvm_parse_proto(const char *proto, JvmFnDef *fn) {
+    int i=0; char buf[256]; int j=0;
+    while (proto[i] && proto[i]!='(' && proto[i]!=')') buf[j++]=proto[i++];
+    buf[j]='\0';
+    while (j>0 && buf[j-1]==' ') buf[--j]='\0';
+    fn->name = strdup(buf); fn->nargs = 0; fn->nlocals = 0;
+    if (proto[i]=='(') {
+        i++;
+        while (proto[i] && proto[i]!=')') {
+            j=0;
+            while (proto[i] && proto[i]!=',' && proto[i]!=')') buf[j++]=proto[i++];
+            buf[j]='\0';
+            while (j>0&&(buf[j-1]==' '||buf[j-1]=='\t')) buf[--j]='\0';
+            int k=0; while(buf[k]==' '||buf[k]=='\t') k++;
+            if (buf[k] && fn->nargs < JVM_ARG_MAX) fn->args[fn->nargs++]=strdup(buf+k);
+            if (proto[i]==',') i++;
+        }
+        if (proto[i]==')') i++;
+    }
+    while (proto[i]) {
+        j=0;
+        while (proto[i] && proto[i]!=',') buf[j++]=proto[i++];
+        buf[j]='\0';
+        int k=0; while(buf[k]==' '||buf[k]=='\t') k++;
+        while (j>0&&(buf[j-1]==' '||buf[j-1]=='\t')) buf[--j]='\0';
+        if (buf[k] && fn->nlocals < JVM_ARG_MAX) fn->locals[fn->nlocals++]=strdup(buf+k);
+        if (proto[i]==',') i++;
+    }
+}
+
+static const char *jvm_flatten_str(EXPR_t *e, char *buf, int bufsz) {
+    if (!e) return NULL;
+    if (e->kind == E_QLIT) { strncpy(buf, e->sval ? e->sval : "", bufsz-1); return buf; }
+    if (e->kind == E_CONC) {
+        char lb[2048], rb[2048];
+        const char *l = jvm_flatten_str(e->left, lb, sizeof lb);
+        const char *r = jvm_flatten_str(e->right, rb, sizeof rb);
+        if (!l || !r) return NULL;
+        snprintf(buf, bufsz, "%s%s", l, r); return buf;
+    }
+    return NULL;
+}
+
+static void jvm_collect_functions(Program *prog) {
+    jvm_fn_count = 0;
+    jvm_data_type_count = 0;
+    char pbuf[4096];
+    for (STMT_t *s = prog->head; s; s = s->next) {
+        if (!s->subject || s->subject->kind != E_FNC) continue;
+        if (strcasecmp(s->subject->sval ? s->subject->sval : "", "DEFINE") != 0) continue;
+        if (!s->subject->args || !s->subject->args[0]) continue;
+        const char *proto = jvm_flatten_str(s->subject->args[0], pbuf, sizeof pbuf);
+        if (!proto) continue;
+        if (jvm_fn_count >= JVM_FN_MAX) break;
+        JvmFnDef *fn = &jvm_fn_table[jvm_fn_count];
+        memset(fn, 0, sizeof *fn);
+        jvm_parse_proto(proto, fn);
+        /* entry label: 2nd arg of DEFINE if present */
+        if (s->subject->nargs >= 2) {
+            char ebuf[256];
+            const char *el = jvm_flatten_str(s->subject->args[1], ebuf, sizeof ebuf);
+            if (el && el[0]) fn->entry_label = strdup(el);
+        }
+        /* end label: from goto on DEFINE stmt */
+        fn->end_label = NULL;
+        if (s->go) {
+            if (s->go->uncond) fn->end_label = strdup(s->go->uncond);
+            else if (s->go->onsuccess) fn->end_label = strdup(s->go->onsuccess);
+        }
+        jvm_fn_count++;
+    }
+}
+
+/* Return FnDef if name matches a user function, else NULL */
+static const JvmFnDef *jvm_find_fn(const char *name) {
+    for (int i = 0; i < jvm_fn_count; i++)
+        if (jvm_fn_table[i].name && strcasecmp(jvm_fn_table[i].name, name) == 0)
+            return &jvm_fn_table[i];
+    return NULL;
+}
+
+static const JvmDataType *jvm_find_data_type(const char *name) {
+    for (int i = 0; i < jvm_data_type_count; i++)
+        if (jvm_data_types[i].type_name && strcasecmp(jvm_data_types[i].type_name, name) == 0)
+            return &jvm_data_types[i];
+    return NULL;
+}
+
+static const JvmDataType *jvm_find_data_field(const char *field) {
+    for (int i = 0; i < jvm_data_type_count; i++)
+        for (int j = 0; j < jvm_data_types[i].nfields; j++)
+            if (jvm_data_types[i].fields[j] && strcasecmp(jvm_data_types[i].fields[j], field) == 0)
+                return &jvm_data_types[i];
+    return NULL;
+}
+
+/* Return 1 if stmt is inside function fn's body (between entry label and end_label) */
+static int jvm_stmt_in_fn(STMT_t *s, const JvmFnDef *fn, Program *prog) {
+    const char *entry = fn->entry_label ? fn->entry_label : fn->name;
+    int in_body = 0;
+    for (STMT_t *t = prog->head; t; t = t->next) {
+        if (t->label && strcasecmp(t->label, entry) == 0) in_body = 1;
+        if (in_body && fn->end_label && t->label && strcasecmp(t->label, fn->end_label) == 0) in_body = 0;
+        if (t == s) return in_body;
+    }
+    return 0;
+}
+
+/* Emit a single user-defined function as a static JVM method.
+ * Strategy:
+ *   - Method signature: static String sno_userfn_NAME(String arg0, String arg1, ...)
+ *   - On entry: save old values of args/locals from sno_vars, bind new args
+ *   - Body: inline all statements between entry label and end_label
+ *   - RETURN / FRETURN: restore and areturn fn_name var / aconst_null areturn
+ */
+static void jvm_emit_fn_method(const JvmFnDef *fn, Program *prog, int fn_idx) {
+    /* Build method descriptor: (Ljava/lang/String;...)Ljava/lang/String; */
+    char desc[1024]; int dp = 0;
+    desc[dp++] = '(';
+    for (int i = 0; i < fn->nargs; i++) {
+        const char *s2 = "Ljava/lang/String;";
+        for (const char *p = s2; *p; p++) desc[dp++] = *p;
+    }
+    desc[dp++] = ')'; const char *ret = "Ljava/lang/String;";
+    for (const char *p = ret; *p; p++) desc[dp++] = *p;
+    desc[dp] = '\0';
+
+    char mname[256]; snprintf(mname, sizeof mname, "sno_userfn_%s", fn->name);
+    J(".method static %s%s\n", mname, desc);
+    J("    .limit stack 16\n");
+    J("    .limit locals 64\n");
+    J("\n");
+
+    /* Save old values of args+locals into local JVM vars, bind new args */
+    int total = fn->nargs + fn->nlocals + 1; /* +1 for fn return-value var */
+    /* JVM locals:
+     *   0 .. nargs-1    : incoming argument strings (JVM params)
+     *   nargs           : reserved (padding)
+     *   locals start at nargs (old values of args[0], args[1], ..., locals[0]...):
+     *   We'll use a flat save-array strategy: save old val of each arg/local
+     *   into local JVM slot (nargs + index). Then restore on all exit paths.
+     *
+     * Simpler: use the sno_vars HashMap directly.
+     * On entry: for each arg/local, save sno_vars[name] → JVM local, then put new value.
+     * On exit: restore saved values.
+     */
+    int save_base = fn->nargs; /* first save slot (each occupies one JVM local) */
+    /* save_base + fn->nargs = saves for args */
+    /* save_base + fn->nargs + fn->nlocals = save for fn-return var */
+    int save_fnret = save_base + fn->nargs + fn->nlocals;
+    char vmdesc[512]; snprintf(vmdesc, sizeof vmdesc, "%s/sno_vars Ljava/util/HashMap;", jvm_classname);
+
+    /* Save arg values from sno_vars */
+    for (int i = 0; i < fn->nargs; i++) {
+        char nameesc[256]; jvm_escape_string(fn->args[i], nameesc, sizeof nameesc);
+        J("    ldc %s\n", nameesc);
+        char igdesc[512]; snprintf(igdesc, sizeof igdesc,
+            "%s/sno_indr_get(Ljava/lang/String;)Ljava/lang/String;", jvm_classname);
+        J("    invokestatic %s\n", igdesc);
+        J("    astore %d\n", save_base + i);
+    }
+    /* Save local values from sno_vars */
+    for (int i = 0; i < fn->nlocals; i++) {
+        char nameesc[256]; jvm_escape_string(fn->locals[i], nameesc, sizeof nameesc);
+        J("    ldc %s\n", nameesc);
+        char igdesc[512]; snprintf(igdesc, sizeof igdesc,
+            "%s/sno_indr_get(Ljava/lang/String;)Ljava/lang/String;", jvm_classname);
+        J("    invokestatic %s\n", igdesc);
+        J("    astore %d\n", save_base + fn->nargs + i);
+    }
+    /* Save fn return-value var (fn->name itself) */
+    {
+        char nameesc[256]; jvm_escape_string(fn->name, nameesc, sizeof nameesc);
+        J("    ldc %s\n", nameesc);
+        char igdesc[512]; snprintf(igdesc, sizeof igdesc,
+            "%s/sno_indr_get(Ljava/lang/String;)Ljava/lang/String;", jvm_classname);
+        J("    invokestatic %s\n", igdesc);
+        J("    astore %d\n", save_fnret);
+    }
+
+    /* Bind incoming args: put each arg into sno_vars */
+    for (int i = 0; i < fn->nargs; i++) {
+        char nameesc[256]; jvm_escape_string(fn->args[i], nameesc, sizeof nameesc);
+        J("    ldc %s\n", nameesc);
+        J("    aload %d\n", i);  /* incoming arg */
+        char vpdesc[512]; snprintf(vpdesc, sizeof vpdesc,
+            "%s/sno_var_put(Ljava/lang/String;Ljava/lang/String;)V", jvm_classname);
+        J("    invokestatic %s\n", vpdesc);
+    }
+    /* Init locals to "" */
+    for (int i = 0; i < fn->nlocals; i++) {
+        char nameesc[256]; jvm_escape_string(fn->locals[i], nameesc, sizeof nameesc);
+        J("    ldc %s\n", nameesc);
+        J("    ldc \"\"\n");
+        char vpdesc[512]; snprintf(vpdesc, sizeof vpdesc,
+            "%s/sno_var_put(Ljava/lang/String;Ljava/lang/String;)V", jvm_classname);
+        J("    invokestatic %s\n", vpdesc);
+    }
+    /* Init fn return-value var to "" */
+    {
+        char nameesc[256]; jvm_escape_string(fn->name, nameesc, sizeof nameesc);
+        J("    ldc %s\n", nameesc);
+        J("    ldc \"\"\n");
+        char vpdesc[512]; snprintf(vpdesc, sizeof vpdesc,
+            "%s/sno_var_put(Ljava/lang/String;Ljava/lang/String;)V", jvm_classname);
+        J("    invokestatic %s\n", vpdesc);
+    }
+
+    /* Helper labels */
+    char lbl_return[64], lbl_freturn[64];
+    snprintf(lbl_return,  sizeof lbl_return,  "Jfn%d_return",  fn_idx);
+    snprintf(lbl_freturn, sizeof lbl_freturn, "Jfn%d_freturn", fn_idx);
+
+    /* Emit function body statements */
+    const char *entry = fn->entry_label ? fn->entry_label : fn->name;
+    int in_body = 0;
+    int stmt_idx = 0;
+    const JvmFnDef *saved_cur_fn = jvm_cur_fn;
+    jvm_cur_fn = fn;
+
+    for (STMT_t *s = prog->head; s; s = s->next) {
+        if (s->label && strcasecmp(s->label, entry) == 0) in_body = 1;
+        if (in_body && fn->end_label && s->label && strcasecmp(s->label, fn->end_label) == 0) { in_body = 0; break; }
+        if (!in_body) continue;
+        if (s->is_end) break;
+        /* Rewrite RETURN/FRETURN gotos to our local labels */
+        /* We call jvm_emit_stmt but intercept RETURN/FRETURN in it via jvm_cur_fn */
+        jvm_emit_stmt(s, 10000 + fn_idx * 1000 + stmt_idx++);
+    }
+
+    jvm_cur_fn = saved_cur_fn;
+
+    /* RETURN path: restore saved vars, return fn->name value */
+    J("%s:\n", lbl_return);
+    /* restore */
+    for (int i = 0; i < fn->nargs; i++) {
+        char nameesc[256]; jvm_escape_string(fn->args[i], nameesc, sizeof nameesc);
+        J("    ldc %s\n", nameesc);
+        J("    aload %d\n", save_base + i);
+        char vpdesc[512]; snprintf(vpdesc, sizeof vpdesc,
+            "%s/sno_var_put(Ljava/lang/String;Ljava/lang/String;)V", jvm_classname);
+        J("    invokestatic %s\n", vpdesc);
+    }
+    for (int i = 0; i < fn->nlocals; i++) {
+        char nameesc[256]; jvm_escape_string(fn->locals[i], nameesc, sizeof nameesc);
+        J("    ldc %s\n", nameesc);
+        J("    aload %d\n", save_base + fn->nargs + i);
+        char vpdesc[512]; snprintf(vpdesc, sizeof vpdesc,
+            "%s/sno_var_put(Ljava/lang/String;Ljava/lang/String;)V", jvm_classname);
+        J("    invokestatic %s\n", vpdesc);
+    }
+    /* get return value before restoring fn name slot */
+    {
+        char nameesc[256]; jvm_escape_string(fn->name, nameesc, sizeof nameesc);
+        J("    ldc %s\n", nameesc);
+        char igdesc[512]; snprintf(igdesc, sizeof igdesc,
+            "%s/sno_indr_get(Ljava/lang/String;)Ljava/lang/String;", jvm_classname);
+        J("    invokestatic %s\n", igdesc);
+        /* restore fn name slot */
+        J("    ldc %s\n", nameesc);
+        J("    aload %d\n", save_fnret);
+        char vpdesc[512]; snprintf(vpdesc, sizeof vpdesc,
+            "%s/sno_var_put(Ljava/lang/String;Ljava/lang/String;)V", jvm_classname);
+        J("    invokestatic %s\n", vpdesc);
+    }
+    J("    areturn\n");
+
+    /* FRETURN path: restore, return null */
+    J("%s:\n", lbl_freturn);
+    for (int i = 0; i < fn->nargs; i++) {
+        char nameesc[256]; jvm_escape_string(fn->args[i], nameesc, sizeof nameesc);
+        J("    ldc %s\n", nameesc);
+        J("    aload %d\n", save_base + i);
+        char vpdesc[512]; snprintf(vpdesc, sizeof vpdesc,
+            "%s/sno_var_put(Ljava/lang/String;Ljava/lang/String;)V", jvm_classname);
+        J("    invokestatic %s\n", vpdesc);
+    }
+    for (int i = 0; i < fn->nlocals; i++) {
+        char nameesc[256]; jvm_escape_string(fn->locals[i], nameesc, sizeof nameesc);
+        J("    ldc %s\n", nameesc);
+        J("    aload %d\n", save_base + fn->nargs + i);
+        char vpdesc[512]; snprintf(vpdesc, sizeof vpdesc,
+            "%s/sno_var_put(Ljava/lang/String;Ljava/lang/String;)V", jvm_classname);
+        J("    invokestatic %s\n", vpdesc);
+    }
+    {
+        char nameesc[256]; jvm_escape_string(fn->name, nameesc, sizeof nameesc);
+        J("    ldc %s\n", nameesc);
+        J("    aload %d\n", save_fnret);
+        char vpdesc[512]; snprintf(vpdesc, sizeof vpdesc,
+            "%s/sno_var_put(Ljava/lang/String;Ljava/lang/String;)V", jvm_classname);
+        J("    invokestatic %s\n", vpdesc);
+    }
+    J("    aconst_null\n");
+    J("    areturn\n");
+
+    J(".end method\n\n");
 }
 
 static void jvm_emit_header(Program *prog) {
@@ -2489,6 +3146,10 @@ static void jvm_emit_header(Program *prog) {
 
     /* Dynamic variable map for indirect assignment (J2) */
     J(".field static sno_vars Ljava/util/HashMap;\n");
+    /* Array/Table storage: maps array-id-string → HashMap */
+    J(".field static sno_arrays Ljava/util/HashMap;\n");
+    /* DATA type registry: maps type-name → comma-separated field list */
+    J(".field static sno_data_types Ljava/util/HashMap;\n");
 
     /* static fields for SNOBOL4 variables */
     for (int i = 0; i < jvm_nvar; i++) {
@@ -2519,6 +3180,14 @@ static void jvm_emit_header(Program *prog) {
     J("    dup\n");
     J("    invokespecial java/util/HashMap/<init>()V\n");
     J("    putstatic       %s/sno_vars Ljava/util/HashMap;\n", jvm_classname);
+    J("    new java/util/HashMap\n");
+    J("    dup\n");
+    J("    invokespecial java/util/HashMap/<init>()V\n");
+    J("    putstatic       %s/sno_arrays Ljava/util/HashMap;\n", jvm_classname);
+    J("    new java/util/HashMap\n");
+    J("    dup\n");
+    J("    invokespecial java/util/HashMap/<init>()V\n");
+    J("    putstatic       %s/sno_data_types Ljava/util/HashMap;\n", jvm_classname);
     /* init variables to empty string and pre-populate map */
     for (int i = 0; i < jvm_nvar; i++) {
         char fld[256];
@@ -2566,10 +3235,14 @@ void jvm_emit(Program *prog, FILE *out, const char *filename) {
     jvm_need_rpad_helper     = 0;
     jvm_need_integer_helper  = 0;
     jvm_need_datatype_helper = 0;
+    jvm_need_array_helpers   = 0;
+    jvm_need_data_helpers    = 0;
     jvm_set_classname(filename);
 
-    if (prog && prog->head)
+    if (prog && prog->head) {
         jvm_collect_vars(prog);
+        jvm_collect_functions(prog);
+    }
 
     JC("Generated by sno2c -jvm");
     JC("Assemble: java -jar jasmin.jar <file>.j -d .");
@@ -2594,6 +3267,11 @@ void jvm_emit(Program *prog, FILE *out, const char *filename) {
     }
 
     jvm_emit_main_close();
+
+    /* Emit user-defined function methods */
+    for (int i = 0; i < jvm_fn_count; i++)
+        jvm_emit_fn_method(&jvm_fn_table[i], prog, i);
+
     jvm_emit_parse_helper();
     jvm_emit_runtime_helpers();
 
