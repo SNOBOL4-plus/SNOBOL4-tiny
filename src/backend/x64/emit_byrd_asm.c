@@ -4001,8 +4001,6 @@ static void asm_emit_program(Program *prog) {
                         }
                     }
                 }
-                if (e->children[0]  && top < 511) stk[top++] = e->children[0];
-                if (e->nchildren > 1 && e->children[1] && top < 511) stk[top++] = e->children[1];
                 for (int _i = 0; _i < e->nchildren && top < 510; _i++)
                     if (e->children[_i]) stk[top++] = e->children[_i];
             }
