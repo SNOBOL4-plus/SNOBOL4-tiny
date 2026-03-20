@@ -74,16 +74,16 @@
 
 /* Function support (DEFINE/RETURN/FRETURN) */
 #define NET_FN_MAX      32
-#define NET_FN_NAMELEN  128
+#define NAME_LEN  128
 #define NET_FN_ARGMAX   16
 typedef struct {
-    char name[NET_FN_NAMELEN];
-    char args[NET_FN_ARGMAX][NET_FN_NAMELEN];
+    char name[NAME_LEN];
+    char args[NET_FN_ARGMAX][NAME_LEN];
     int  nargs;
-    char locals[NET_FN_ARGMAX][NET_FN_NAMELEN];
+    char locals[NET_FN_ARGMAX][NAME_LEN];
     int  nlocals;
-    char entry_label[NET_FN_NAMELEN];
-    char end_label[NET_FN_NAMELEN];
+    char entry_label[NAME_LEN];
+    char end_label[NAME_LEN];
 } FnDef;
 static FnDef  fn_table[NET_FN_MAX];
 static int       fn_count = 0;
@@ -185,9 +185,9 @@ static void var_register(const char *name) {
  * Named pattern registry — VAR = <pattern-expr> assignments.
  * When E_VART appears in pattern context, inline-expand stored pattern tree.
  * ----------------------------------------------------------------------- */
-#define NET_NAMED_PAT_MAX 64
+#define NAMED_PAT_MAX 64
 typedef struct { char varname[128]; EXPR_t *pat; } NamedPat;
-static NamedPat named_pats[NET_NAMED_PAT_MAX];
+static NamedPat named_pats[NAMED_PAT_MAX];
 static int         named_pat_count = 0;
 
 static void named_pat_reset(void) { named_pat_count = 0; }
@@ -199,7 +199,7 @@ static void named_pat_register(const char *varname, EXPR_t *pat) {
             return;
         }
     }
-    if (named_pat_count >= NET_NAMED_PAT_MAX) return;
+    if (named_pat_count >= NAMED_PAT_MAX) return;
     NamedPat *e = &named_pats[named_pat_count++];
     snprintf(e->varname, sizeof e->varname, "%s", varname);
     e->pat = pat;
@@ -1672,21 +1672,21 @@ static int parse_proto(const char *proto, FnDef *fn) {
     fn->nargs = 0; fn->nlocals = 0;
     const char *p = proto;
     int ni = 0;
-    while (*p && *p != '(' && ni < NET_FN_NAMELEN - 1)
+    while (*p && *p != '(' && ni < NAME_LEN - 1)
         fn->name[ni++] = *p++;
     fn->name[ni] = '\0';
     /* trim whitespace */
     while (ni > 0 && (fn->name[ni-1]==' '||fn->name[ni-1]=='\t')) fn->name[--ni] = '\0';
     if (!ni) return 0;
     /* default entry label = name */
-    snprintf(fn->entry_label, NET_FN_NAMELEN, "%s", fn->name);
+    snprintf(fn->entry_label, NAME_LEN, "%s", fn->name);
     if (*p != '(') return 1;
     p++; /* skip '(' */
     while (*p && *p != ')') {
         while (*p==' '||*p=='\t') p++;
         if (*p==')'||!*p) break;
         int ai=0;
-        while (*p && *p!=',' && *p!=')' && ai < NET_FN_NAMELEN-1)
+        while (*p && *p!=',' && *p!=')' && ai < NAME_LEN-1)
             fn->args[fn->nargs][ai++] = *p++;
         while (ai>0 && (fn->args[fn->nargs][ai-1]==' '||fn->args[fn->nargs][ai-1]=='\t')) ai--;
         fn->args[fn->nargs][ai] = '\0';
@@ -1699,7 +1699,7 @@ static int parse_proto(const char *proto, FnDef *fn) {
         while (*p==' '||*p=='\t'||*p==',') p++;
         if (!*p) break;
         int li=0;
-        while (*p && *p!=',' && li < NET_FN_NAMELEN-1)
+        while (*p && *p!=',' && li < NAME_LEN-1)
             fn->locals[fn->nlocals][li++] = *p++;
         while (li>0 && (fn->locals[fn->nlocals][li-1]==' '||fn->locals[fn->nlocals][li-1]=='\t')) li--;
         fn->locals[fn->nlocals][li] = '\0';
@@ -1734,14 +1734,14 @@ static void scan_fndefs(Program *prog) {
         if (expr_nargs(s->subject) >= 2) {
             char ebuf[128];
             const char *el = flatten_str(expr_arg(s->subject, 1), ebuf, sizeof ebuf);
-            if (el && el[0]) snprintf(fn->entry_label, NET_FN_NAMELEN, "%s", el);
+            if (el && el[0]) snprintf(fn->entry_label, NAME_LEN, "%s", el);
         }
         /* end_label from goto on DEFINE stmt */
         fn->end_label[0] = '\0';
         if (s->go) {
             const char *gl = s->go->uncond ? s->go->uncond
                            : s->go->onsuccess ? s->go->onsuccess : NULL;
-            if (gl) snprintf(fn->end_label, NET_FN_NAMELEN, "%s", gl);
+            if (gl) snprintf(fn->end_label, NAME_LEN, "%s", gl);
         }
         /* Register fn name, args, locals as SNOBOL4 variables (need static fields) */
         var_register(fn->name);

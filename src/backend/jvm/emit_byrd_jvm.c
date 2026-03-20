@@ -255,13 +255,13 @@ static const FnDef *find_fn(const char *name);  /* fwd decl */
  * Mirrors ASM backend's AsmNamedPat/asm_named[] mechanism.
  * When E_VART("P") appears in a pattern context, we look up P here and
  * inline-expand its stored pattern tree via emit_pat_node. */
-#define JVM_NAMED_PAT_MAX  64
-#define JVM_NAMED_NAMELEN  128
+#define NAMED_PAT_MAX  64
+#define NAME_LEN  128
 typedef struct {
-    char    varname[JVM_NAMED_NAMELEN];
+    char    varname[NAME_LEN];
     EXPR_t *pat;        /* pattern expression tree */
 } NamedPat;
-static NamedPat named_pats[JVM_NAMED_PAT_MAX];
+static NamedPat named_pats[NAMED_PAT_MAX];
 static int         named_pat_count = 0;
 
 static void named_pat_reset(void) { named_pat_count = 0; }
@@ -273,9 +273,9 @@ static void named_pat_register(const char *varname, EXPR_t *pat) {
             return;
         }
     }
-    if (named_pat_count >= JVM_NAMED_PAT_MAX) return;
+    if (named_pat_count >= NAMED_PAT_MAX) return;
     NamedPat *e = &named_pats[named_pat_count++];
-    snprintf(e->varname, JVM_NAMED_NAMELEN, "%s", varname);
+    snprintf(e->varname, NAME_LEN, "%s", varname);
     e->pat = pat;
 }
 
@@ -2461,8 +2461,8 @@ static void emit_stmt(STMT_t *s, int stmt_idx) {
      * ----------------------------------------------------------------------- */
 
     if (s->pattern) {
-        static int pat_uid_counter = 0;
-        int uid = pat_uid_counter++;
+        static int pat_uid_ctr = 0;
+        int uid = pat_uid_ctr++;
 
         /* Local slots for subject/cursor/length */
         int loc_subj   = 6;
@@ -2507,8 +2507,8 @@ static void emit_stmt(STMT_t *s, int stmt_idx) {
         snprintf(lbl_tree_fail, sizeof lbl_tree_fail, "Jpat%d_tfail", uid);
 
         /* We need capture-local counter accessible across recursive calls. */
-        static int cap_local_counter;
-        cap_local_counter = loc_cap_base;
+        static int cap_uid_ctr;
+        cap_uid_ctr = loc_cap_base;
 
         /* Set module-level abort label so FAIL/ABORT can jump past retry loop */
         snprintf(cur_pat_abort_label, sizeof cur_pat_abort_label, "%s", lbl_fail);
@@ -2516,7 +2516,7 @@ static void emit_stmt(STMT_t *s, int stmt_idx) {
         emit_pat_node(s->pattern,
                           lbl_tree_ok, lbl_tree_fail,
                           loc_subj, loc_cursor, loc_len,
-                          &cap_local_counter,
+                          &cap_uid_ctr,
                           out, classname);
 
         /* --- tree OK: match succeeded at this cursor position --- */
@@ -2568,7 +2568,7 @@ static void emit_stmt(STMT_t *s, int stmt_idx) {
                     }
                     nameesc[o++]='"'; nameesc[o]='\0';
                 }
-                int loc_tmp = cap_local_counter++;
+                int loc_tmp = cap_uid_ctr++;
                 J("    astore %d\n", loc_tmp);
                 J("    ldc %s\n", nameesc);
                 J("    aload %d\n", loc_tmp);

@@ -127,13 +127,13 @@ static void emit_pat_node(EXPR_t *pat,
  * ----------------------------------------------------------------------- */
 
 #define NAMED_PAT_MAX 128
-#define NAMED_PAT_NAMELEN 320
-#define NAMED_PAT_LBUF2 (NAMED_PAT_NAMELEN * 2 + 32)  /* compound: prefix+name+suffix+name */
+#define NAME_LEN 320
+#define NAMED_PAT_LBUF2 (NAME_LEN * 2 + 32)  /* compound: prefix+name+suffix+name */
 
 typedef struct {
-    char varname[NAMED_PAT_NAMELEN];
-    char typename[NAMED_PAT_NAMELEN];
-    char fnname[NAMED_PAT_NAMELEN];
+    char varname[NAME_LEN];
+    char typename[NAME_LEN];
+    char fnname[NAME_LEN];
     int  emitted;   /* 1 after byrd_emit_named_pattern has run for this name */
 } NamedPat;
 
@@ -151,8 +151,8 @@ void byrd_named_pat_reset(void) { named_pat_count = 0; }
  * ----------------------------------------------------------------------- */
 #define COND_ASSIGN_MAX 32
 typedef struct {
-    char varname[NAMED_PAT_NAMELEN];  /* SNOBOL4 var, e.g. "OUTPUT" */
-    char tmpvar[NAMED_PAT_NAMELEN];   /* C temp var holding captured string */
+    char varname[NAME_LEN];  /* SNOBOL4 var, e.g. "OUTPUT" */
+    char tmpvar[NAME_LEN];   /* C temp var holding captured string */
     int  has_cstatic;                 /* 1 if a C static exists for varname */
 } CondAssign;
 static CondAssign cond_assigns[COND_ASSIGN_MAX];
@@ -164,8 +164,8 @@ void byrd_cond_reset(void) { cond_assign_count = 0; }
 static void cond_register(const char *varname, const char *tmpvar, int has_cs) {
     if (cond_assign_count >= COND_ASSIGN_MAX) return;
     CondAssign *ca = &cond_assigns[cond_assign_count++];
-    snprintf(ca->varname, NAMED_PAT_NAMELEN, "%s", varname);
-    snprintf(ca->tmpvar,  NAMED_PAT_NAMELEN, "%s", tmpvar);
+    snprintf(ca->varname, NAME_LEN, "%s", varname);
+    snprintf(ca->tmpvar,  NAME_LEN, "%s", tmpvar);
     ca->has_cstatic = has_cs;
 }
 
@@ -199,9 +199,9 @@ static void named_pat_register(const char *varname,
         if (strcmp(named_pats[i].varname, varname) == 0) return;
     if (named_pat_count >= NAMED_PAT_MAX) return;
     NamedPat *e = &named_pats[named_pat_count++];
-    snprintf(e->varname,  NAMED_PAT_NAMELEN, "%s", varname);
-    snprintf(e->typename, NAMED_PAT_NAMELEN, "%s", typename);
-    snprintf(e->fnname,   NAMED_PAT_NAMELEN, "%s", fnname);
+    snprintf(e->varname,  NAME_LEN, "%s", varname);
+    snprintf(e->typename, NAME_LEN, "%s", typename);
+    snprintf(e->fnname,   NAME_LEN, "%s", fnname);
 }
 
 /* Pre-register a name without emitting anything — so all names are known
@@ -213,7 +213,7 @@ void byrd_preregister_named_pattern(const char *varname) {
     for (; *s && i < (int)(sizeof safe)-1; s++, i++)
         safe[i] = (isalnum((unsigned char)*s) || *s=='_') ? *s : '_';
     safe[i] = '\0';
-    char fnname[NAMED_PAT_NAMELEN + 16], tyname[NAMED_PAT_NAMELEN + 16];
+    char fnname[NAME_LEN + 16], tyname[NAME_LEN + 16];
     snprintf(fnname, sizeof fnname, "pat_%s", safe);
     snprintf(tyname, sizeof tyname, "pat_%s_t", safe);
     named_pat_register(varname, tyname, fnname);
@@ -273,7 +273,7 @@ static const NamedPat *named_pat_lookup(const char *varname) {
  * ----------------------------------------------------------------------- */
 
 #define DECL_BUF_MAX  256
-#define DECL_LINE_MAX (NAMED_PAT_NAMELEN + 32)
+#define DECL_LINE_MAX (NAME_LEN + 32)
 
 static char decl_buf[DECL_BUF_MAX][DECL_LINE_MAX];
 static int  decl_count;

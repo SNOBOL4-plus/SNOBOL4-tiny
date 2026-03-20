@@ -40,9 +40,9 @@
 static FILE *out;
 
 /* Column alignment — every instruction starts at COL_W.
- * out_col tracks the current column (0 = start of line).
- * emit_to_col(n) pads with spaces until out_col == n.
- * If out_col >= n already (long label case), emit newline first.
+ * col tracks the current column (0 = start of line).
+ * emit_to_col(n) pads with spaces until col == n.
+ * If col >= n already (long label case), emit newline first.
  *
  * Three-column layout:
  *   col1: label:        — starts at 0, ends at COL_W
@@ -62,7 +62,7 @@ static FILE *out;
  * 80 is the classic terminal width; 120 suits wide monitors. */
 #define SEP_W 120
 
-static int out_col = 0;
+static int col = 0;
 
 /* emit_sep_major — strong horizontal rule: ; ====...  (SEP_W chars total)
  * Embeds optional tag: ";  tag ===..."
@@ -82,7 +82,7 @@ static void emit_sep_major(const char *tag) {
     /* flush any existing pending_sep that was never consumed */
     if (pending_sep[0]) {
         fprintf(out, "\n; %s\n", pending_sep);
-        out_col = 0;
+        col = 0;
         pending_sep[0] = '\0';
     }
     /* build new sep line in pending_sep as plain text (no leading "; ") */
@@ -96,7 +96,7 @@ static void emit_sep_major(const char *tag) {
     *p = '\0';
     /* Emit leading blank line immediately */
     fprintf(out, "\n");
-    out_col = 0;
+    col = 0;
     /* NOTE: no second \n here — sep line itself provides the visual break,
      * and asmL will emit the label immediately after pending_sep is consumed. */
 }
@@ -105,7 +105,7 @@ static void emit_sep_major(const char *tag) {
 static void flush_pending_sep(void) {
     if (pending_sep[0]) {
         fprintf(out, "; %s\n", pending_sep);
-        out_col = 0;
+        col = 0;
         pending_sep[0] = '\0';
     }
 }
@@ -120,14 +120,14 @@ static void emit_sep_minor(const char *tag) {
     }
     for (int i = used; i < SEP_W; i++) fputc('-', out);
     fputc('\n', out);
-    out_col = 0;
+    col = 0;
 }
 
 static void oc_char(char c) {
     fputc(c, out);
-    if (c == '\n') out_col = 0;
+    if (c == '\n') col = 0;
     /* Count only non-continuation UTF-8 bytes as display columns */
-    else if ((c & 0xC0) != 0x80) out_col++;
+    else if ((c & 0xC0) != 0x80) col++;
 }
 
 static void oc_str(const char *s) {
@@ -135,8 +135,8 @@ static void oc_str(const char *s) {
 }
 
 static void emit_to_col(int n) {
-    if (out_col >= n) { oc_char('\n'); }
-    while (out_col < n) oc_char(' ');
+    if (col >= n) { oc_char('\n'); }
+    while (col < n) oc_char(' ');
 }
 
 /* emit_instr — emit opcode + operands with col3 alignment.
@@ -155,7 +155,7 @@ static void emit_instr(const char *instr) {
     if (*sp) {
         /* pad to COL3 for operands */
         int col3 = COL_W + COL2_W;
-        if (out_col < col3) emit_to_col(col3);
+        if (col < col3) emit_to_col(col3);
         else oc_char(' ');
         oc_str(sp);
     } else {
@@ -228,7 +228,7 @@ static void emit3(const char *label, const char *opcode, const char *operands) {
     /* Pad to COL3, emit operands */
     if (operands && *operands) {
         int col3 = COL_W + COL2_W;
-        if (out_col < col3) emit_to_col(col3);
+        if (col < col3) emit_to_col(col3);
         else oc_char(' ');
         oc_str(operands);
     }
@@ -344,8 +344,8 @@ static int next_uid(void) { return uid_ctr++; }
 
 /* Separate counter for user-function call sites — independent of main uid stream.
  * This allows pre-scanning all ucall slots before .bss is emitted. */
-static int ucall_uid_ctr = 0;
-static int ucall_uid(void) { return ucall_uid_ctr++; }
+static int call_uid_ctr = 0;
+static int call_uid(void) { return call_uid_ctr++; }
 
 /* -----------------------------------------------------------------------
  * M-ASM-READABLE: special-char expansion table.
@@ -389,8 +389,8 @@ static void expand_name(const char *src, char *dst, int dstlen) {
  * .bss slot registry
  * ----------------------------------------------------------------------- */
 
-#define MAX_BSS 512
-static char *vars[MAX_BSS];
+#define MAX_VARS 512
+static char *vars[MAX_VARS];
 static int   nvar = 0;
 
 static void var_reset(void) { nvar = 0; }
@@ -399,7 +399,7 @@ static void var_register(const char *name) {
     /* deduplicate */
     for (int i = 0; i < nvar; i++)
         if (strcmp(vars[i], name) == 0) return;
-    if (nvar < MAX_BSS)
+    if (nvar < MAX_VARS)
         vars[nvar++] = strdup(name);
 }
 
@@ -415,7 +415,7 @@ static void bss_emit(void) {
  * ----------------------------------------------------------------------- */
 #define LBUF 320                 /* single label/name buffer */
 #define LBUF2 (LBUF * 2)        /* compound label: prefix + safe + suffix + safe */
-#define ASM_NAMED_NAMELEN 320    /* max expanded SNOBOL4 identifier length */
+#define NAME_LEN 320    /* max expanded SNOBOL4 identifier length */
 
 /* -----------------------------------------------------------------------
  * .data string literals registry
@@ -521,7 +521,7 @@ static char _alfc_ibuf[2048];
         while (*_sp == ' ' || *_sp == '\t') _sp++; \
         if (*_sp) { \
             int _col3 = COL_W + COL2_W; \
-            if (out_col < _col3) emit_to_col(_col3); else oc_char(' '); \
+            if (col < _col3) emit_to_col(_col3); else oc_char(' '); \
             oc_str(_sp); \
         } \
     } \
@@ -632,24 +632,24 @@ typedef struct {
     char len_sym[128];
 } CaptureVar;
 static CaptureVar *cap_var_register(const char *varname);
-/* ASM_NAMED_MAXPARAMS — max args for a user-defined Snocone procedure */
-#define ASM_NAMED_MAXPARAMS 8
+/* MAX_PARAMS — max args for a user-defined Snocone procedure */
+#define MAX_PARAMS 8
 
 struct NamedPat {
-    char varname[ASM_NAMED_NAMELEN];
-    char safe[ASM_NAMED_NAMELEN];
-    char alpha_lbl[ASM_NAMED_NAMELEN + 16];
-    char beta_lbl[ASM_NAMED_NAMELEN + 16];
-    char ret_gamma[ASM_NAMED_NAMELEN + 16];
-    char ret_omega[ASM_NAMED_NAMELEN + 16];
+    char varname[NAME_LEN];
+    char safe[NAME_LEN];
+    char alpha_lbl[NAME_LEN + 16];
+    char beta_lbl[NAME_LEN + 16];
+    char ret_gamma[NAME_LEN + 16];
+    char ret_omega[NAME_LEN + 16];
     EXPR_t *pat;
     /* User-defined function fields (is_fn == 1) */
     int  is_fn;                              /* 1 = user Snocone procedure */
     int  nparams;
-    char param_names[ASM_NAMED_MAXPARAMS][64]; /* parameter variable names */
+    char param_names[MAX_PARAMS][64]; /* parameter variable names */
     int  nlocals;
-    char local_names[ASM_NAMED_MAXPARAMS][64]; /* local variable names (after ')' in prototype) */
-    char body_label[ASM_NAMED_NAMELEN + 16]; /* NASM label of function body entry */
+    char local_names[MAX_PARAMS][64]; /* local variable names (after ')' in prototype) */
+    char body_label[NAME_LEN + 16]; /* NASM label of function body entry */
 };
 
 static const NamedPat *named_pat_lookup(const char *varname);
@@ -659,12 +659,12 @@ static void emit_asm_named_ref(const NamedPat *np,
                                 const char *gamma, const char *omega);
 
 /* Forward declaration for plain-string variable registry (VAR = 'literal') */
-typedef struct { char varname[ASM_NAMED_NAMELEN]; const char *sval; } StrVar;
+typedef struct { char varname[NAME_LEN]; const char *sval; } StrVar;
 static const StrVar *str_var_lookup(const char *varname);
 
 /* Forward declarations for program-mode helpers used by emit_asm_named_def */
-static const char *prog_str_intern(const char *s);
-static const char *prog_label_nasm(const char *lbl);
+static const char *str_intern(const char *s);
+static const char *label_nasm(const char *lbl);
 
 /* -----------------------------------------------------------------------
  * Forward declaration for recursive emit_pat_node
@@ -844,10 +844,10 @@ static void emit_asm_arbno(EXPR_t *child,
      * We use a hack: emit it as a comment-tagged entry so bss_emit
      * can handle it. We store it directly since var_register only does resq 1. */
     /* Replace the var_register approach: use a global extra-bss list */
-    extern char extra_bss[][LBUF + 16];
-    extern int  extra_bss_count;
-    if (extra_bss_count < 64) {
-        snprintf(extra_bss[extra_bss_count++], sizeof extra_bss[0],
+    extern char extra_slots[][LBUF + 16];
+    extern int  extra_slot_count;
+    if (extra_slot_count < 64) {
+        snprintf(extra_slots[extra_slot_count++], sizeof extra_slots[0],
                  "%-24s resq 64", stk);
     }
 }
@@ -1143,7 +1143,7 @@ static void emit_asm_arb(const char *alpha, const char *beta,
  *                          cap_<varname>_N_len  (resq 1)
  *                          dol_<N>_entry        (resq 1)
  *
- * The buffer is emitted via extra_bss (like ARBNO stacks).
+ * The buffer is emitted via extra_slots (like ARBNO stacks).
  * ----------------------------------------------------------------------- */
 
 static void emit_asm_assign(EXPR_t *child, const char *varname,
@@ -1318,7 +1318,7 @@ static void emit_pat_node(EXPR_t *pat,
                 int vuid = next_uid();
                 char saved[64]; snprintf(saved, sizeof saved, "litvar%d_saved", vuid);
                 var_register(saved);
-                const char *vlab = prog_str_intern(varname);
+                const char *vlab = str_intern(varname);
                 A("\n; E_VART %s → LIT_VAR (stmt_match_var)\n", varname);
                 ALF(alpha, "LIT_VAR_ALPHA %s, %s, %s, %s, %s\n",
                     vlab, saved, cursor, gamma, omega);
@@ -1387,7 +1387,7 @@ static void emit_pat_node(EXPR_t *pat,
         if (pat->sval && strcasecmp(pat->sval, "POS") == 0 && pat->nchildren == 1) {
             EXPR_t *arg = pat->children[0];
             if (arg->kind == E_VART && arg->sval) {
-                const char *varlab = prog_str_intern(arg->sval);
+                const char *varlab = str_intern(arg->sval);
                 emit_asm_pos_var(varlab, alpha, beta, gamma, omega, cursor);
             } else {
                 long n = (arg->kind == E_ILIT) ? arg->ival : 0;
@@ -1396,7 +1396,7 @@ static void emit_pat_node(EXPR_t *pat,
         } else if (pat->sval && strcasecmp(pat->sval, "RPOS") == 0 && pat->nchildren == 1) {
             EXPR_t *arg = pat->children[0];
             if (arg->kind == E_VART && arg->sval) {
-                const char *varlab = prog_str_intern(arg->sval);
+                const char *varlab = str_intern(arg->sval);
                 emit_asm_rpos_var(varlab, alpha, beta, gamma, omega, cursor, subj_len_sym);
             } else {
                 long n = (arg->kind == E_ILIT) ? arg->ival : 0;
@@ -1409,7 +1409,7 @@ static void emit_pat_node(EXPR_t *pat,
         } else if (pat->sval && strcasecmp(pat->sval, "ANY") == 0 && pat->nchildren == 1) {
             EXPR_t *arg = pat->children[0];
             if (arg->kind == E_VART && arg->sval) {
-                emit_asm_any_var(prog_str_intern(arg->sval), alpha, beta, gamma, omega, cursor, subj, subj_len_sym);
+                emit_asm_any_var(str_intern(arg->sval), alpha, beta, gamma, omega, cursor, subj, subj_len_sym);
             } else {
                 const char *cs = (arg->kind == E_QLIT && arg->sval) ? arg->sval : "";
                 int cslen = (arg->kind == E_QLIT && arg->sval) ? (int)strlen(arg->sval) : 0;
@@ -1418,7 +1418,7 @@ static void emit_pat_node(EXPR_t *pat,
         } else if (pat->sval && strcasecmp(pat->sval, "NOTANY") == 0 && pat->nchildren == 1) {
             EXPR_t *arg = pat->children[0];
             if (arg->kind == E_VART && arg->sval) {
-                emit_asm_notany_var(prog_str_intern(arg->sval), alpha, beta, gamma, omega, cursor, subj, subj_len_sym);
+                emit_asm_notany_var(str_intern(arg->sval), alpha, beta, gamma, omega, cursor, subj, subj_len_sym);
             } else {
                 const char *cs = (arg->kind == E_QLIT && arg->sval) ? arg->sval : "";
                 int cslen = (arg->kind == E_QLIT && arg->sval) ? (int)strlen(arg->sval) : 0;
@@ -1427,7 +1427,7 @@ static void emit_pat_node(EXPR_t *pat,
         } else if (pat->sval && strcasecmp(pat->sval, "SPAN") == 0 && pat->nchildren == 1) {
             EXPR_t *arg = pat->children[0];
             if (arg->kind == E_VART && arg->sval) {
-                emit_asm_span_var(prog_str_intern(arg->sval), alpha, beta, gamma, omega, cursor, subj, subj_len_sym);
+                emit_asm_span_var(str_intern(arg->sval), alpha, beta, gamma, omega, cursor, subj, subj_len_sym);
             } else {
                 const char *cs = (arg->kind == E_QLIT && arg->sval) ? arg->sval : "";
                 int cslen = (arg->kind == E_QLIT && arg->sval) ? (int)strlen(arg->sval) : 0;
@@ -1436,7 +1436,7 @@ static void emit_pat_node(EXPR_t *pat,
         } else if (pat->sval && strcasecmp(pat->sval, "BREAK") == 0 && pat->nchildren == 1) {
             EXPR_t *arg = pat->children[0];
             if (arg->kind == E_VART && arg->sval) {
-                emit_asm_break_var(prog_str_intern(arg->sval), alpha, beta, gamma, omega, cursor, subj, subj_len_sym);
+                emit_asm_break_var(str_intern(arg->sval), alpha, beta, gamma, omega, cursor, subj, subj_len_sym);
             } else {
                 const char *cs = (arg->kind == E_QLIT && arg->sval) ? arg->sval : "";
                 int cslen = (arg->kind == E_QLIT && arg->sval) ? (int)strlen(arg->sval) : 0;
@@ -1445,7 +1445,7 @@ static void emit_pat_node(EXPR_t *pat,
         } else if (pat->sval && strcasecmp(pat->sval, "BREAKX") == 0 && pat->nchildren == 1) {
             EXPR_t *arg = pat->children[0];
             if (arg->kind == E_VART && arg->sval) {
-                emit_asm_breakx_var(prog_str_intern(arg->sval), alpha, beta, gamma, omega, cursor, subj, subj_len_sym);
+                emit_asm_breakx_var(str_intern(arg->sval), alpha, beta, gamma, omega, cursor, subj, subj_len_sym);
             } else {
                 const char *cs = (arg->kind == E_QLIT && arg->sval) ? arg->sval : "";
                 int cslen = (arg->kind == E_QLIT && arg->sval) ? (int)strlen(arg->sval) : 0;
@@ -1485,7 +1485,7 @@ static void emit_pat_node(EXPR_t *pat,
          * Parser builds @VAR as unop(E_ATP, E_VART("VAR")), so varname is in left->sval. */
         const char *varname = (pat->children[0] && pat->children[0]->sval) ? pat->children[0]->sval
                             : (pat->sval ? pat->sval : "");
-        const char *varlab  = prog_str_intern(varname);
+        const char *varlab  = str_intern(varname);
         ALFC(alpha, "@VAR α", "AT_ALPHA        %s, %s, %s, %s\n",
              varlab, cursor, gamma, omega);
         ALFC(beta,  "@VAR β", "AT_BETA         %s\n", omega);
@@ -1504,29 +1504,29 @@ static void emit_pat_node(EXPR_t *pat,
  * Extra .bss entries for ARBNO stacks (resq 64 each)
  * ----------------------------------------------------------------------- */
 
-char extra_bss[64][LBUF + 16];
-int  extra_bss_count = 0;
+char extra_slots[64][LBUF + 16];
+int  extra_slot_count = 0;
 
 static void extra_bss_emit(void) {
-    for (int i = 0; i < extra_bss_count; i++)
-        A("%s\n", extra_bss[i]);
+    for (int i = 0; i < extra_slot_count; i++)
+        A("%s\n", extra_slots[i]);
 }
 
 /* Per-call-uid .bss slots — declared here, emitted as part of .bss section */
-static char ucall_bss_slots[256][LBUF];
-static int  ucall_bss_count = 0;
+static char call_slots[256][LBUF];
+static int  call_slot_count = 0;
 
-static void ucall_bss_add(const char *name) {
-    if (ucall_bss_count >= 256) return;
+static void call_slot_add(const char *name) {
+    if (call_slot_count >= 256) return;
     /* deduplicate */
-    for (int i = 0; i < ucall_bss_count; i++)
-        if (strcmp(ucall_bss_slots[i], name) == 0) return;
-    snprintf(ucall_bss_slots[ucall_bss_count++], LBUF, "%s", name);
+    for (int i = 0; i < call_slot_count; i++)
+        if (strcmp(call_slots[i], name) == 0) return;
+    snprintf(call_slots[call_slot_count++], LBUF, "%s", name);
 }
 
-static void ucall_bss_emit(void) {
-    for (int i = 0; i < ucall_bss_count; i++)
-        A("%-24s resq 1\n", ucall_bss_slots[i]);
+static void call_slot_emit(void) {
+    for (int i = 0; i < call_slot_count; i++)
+        A("%-24s resq 1\n", call_slots[i]);
 }
 
 static void prescan_ucall_expr(EXPR_t *e) {
@@ -1534,19 +1534,19 @@ static void prescan_ucall_expr(EXPR_t *e) {
     if (e->kind == E_FNC && e->sval) {
         const NamedPat *ufn = named_pat_lookup_fn(e->sval);
         if (ufn) {
-            int uid = ucall_uid();
+            int uid = call_uid();
             int na = e->nchildren;
             int actual_args = (na < ufn->nparams) ? na : ufn->nparams;
             for (int ai = 0; ai < actual_args; ai++) {
                 char sv_t[LBUF], sv_p[LBUF];
                 snprintf(sv_t, LBUF, "ucall%d_sv_%d_t", uid, ai);
                 snprintf(sv_p, LBUF, "ucall%d_sv_%d_p", uid, ai);
-                ucall_bss_add(sv_t); ucall_bss_add(sv_p);
+                call_slot_add(sv_t); call_slot_add(sv_p);
             }
             char rsv_g[LBUF], rsv_o[LBUF];
             snprintf(rsv_g, LBUF, "ucall%d_rsv_g", uid);
             snprintf(rsv_o, LBUF, "ucall%d_rsv_o", uid);
-            ucall_bss_add(rsv_g); ucall_bss_add(rsv_o);
+            call_slot_add(rsv_g); call_slot_add(rsv_o);
             /* recurse into args */
             for (int i = 0; i < e->nchildren; i++)
                 prescan_ucall_expr(e->children[i]);
@@ -1559,15 +1559,15 @@ static void prescan_ucall_expr(EXPR_t *e) {
 }
 
 static void prescan_ucall(Program *prog) {
-    ucall_uid_ctr = 0;
-    ucall_bss_count = 0;
-    if (!prog) { ucall_uid_ctr = 0; return; }
+    call_uid_ctr = 0;
+    call_slot_count = 0;
+    if (!prog) { call_uid_ctr = 0; return; }
     for (STMT_t *s = prog->head; s; s = s->next) {
         prescan_ucall_expr(s->subject);
         prescan_ucall_expr(s->pattern);
         prescan_ucall_expr(s->replacement);
     }
-    ucall_uid_ctr = 0;  /* reset for real emission pass */
+    call_uid_ctr = 0;  /* reset for real emission pass */
 }
 
 /* -----------------------------------------------------------------------
@@ -1689,7 +1689,7 @@ static void str_var_register(const char *varname, const char *sval) {
         }
     if (str_vars_count >= STR_VARS_MAX) return;
     StrVar *e = &str_vars[str_vars_count++];
-    snprintf(e->varname, ASM_NAMED_NAMELEN, "%s", varname);
+    snprintf(e->varname, NAME_LEN, "%s", varname);
     e->sval = sval;
 }
 
@@ -1716,11 +1716,11 @@ static NamedPat *named_pat_register(const char *varname, EXPR_t *pat) {
         }
     if (named_pat_count >= NAMED_PAT_MAX) return NULL;
     NamedPat *e = &named_pats[named_pat_count++];
-    snprintf(e->varname, ASM_NAMED_NAMELEN, "%s", varname);
-    safe_name(varname, e->safe, ASM_NAMED_NAMELEN);
+    snprintf(e->varname, NAME_LEN, "%s", varname);
+    safe_name(varname, e->safe, NAME_LEN);
     /* copy safe to temp to avoid GCC -Wrestrict false-positive (distinct fields) */
-    char _ns[ASM_NAMED_NAMELEN];
-    memcpy(_ns, e->safe, ASM_NAMED_NAMELEN);
+    char _ns[NAME_LEN];
+    memcpy(_ns, e->safe, NAME_LEN);
     snprintf(e->alpha_lbl, sizeof e->alpha_lbl, "P_%s_α", _ns);
     snprintf(e->beta_lbl,  sizeof e->beta_lbl,  "P_%s_β", _ns);
     snprintf(e->ret_gamma, sizeof e->ret_gamma, "P_%s_ret_γ", _ns);
@@ -1817,9 +1817,9 @@ static void emit_asm_named_def(const NamedPat *np,
      * γ port: restore param vars from save slots, jmp [ret_γ].
      * ω port: same restore, jmp [ret_ω] (for FRETURN path).
      * The RETURN inside the body is already routed to jmp [ret_γ]
-     * by emit_jmp/prog_emit_goto when current_fn != NULL. */
+     * by emit_jmp/prog_emit_goto when cur_fn != NULL. */
     if (np->is_fn) {
-        char safe[ASM_NAMED_NAMELEN];
+        char safe[NAME_LEN];
         snprintf(safe, sizeof safe, "%s", np->safe);
 
         emit_sep_major(np->varname);
@@ -1848,7 +1848,7 @@ static void emit_asm_named_def(const NamedPat *np,
             char arg_slot_t[LBUF2 + 16], arg_slot_p[LBUF2 + 16];
             snprintf(arg_slot_t, sizeof arg_slot_t, "fn_%s_arg_%d_t", safe, i);
             snprintf(arg_slot_p, sizeof arg_slot_p, "fn_%s_arg_%d_p", safe, i);
-            const char *plab = prog_str_intern(np->param_names[i]);
+            const char *plab = str_intern(np->param_names[i]);
             A("    lea     rdi, [rel %s]\n", plab);
             A("    mov     rsi, [%s]\n", arg_slot_t);
             A("    mov     rdx, [%s]\n", arg_slot_p);
@@ -1860,21 +1860,21 @@ static void emit_asm_named_def(const NamedPat *np,
         A("    LOAD_NULVCL\n");   /* sets [rbp-16]=type, [rbp-8]=ptr once */
         {
             /* Clear return-value variable (function name) */
-            const char *fnlab_clr = prog_str_intern(np->varname);
+            const char *fnlab_clr = str_intern(np->varname);
             A("    lea     rdi, [rel %s]\n", fnlab_clr);
             A("    mov     rsi, [rbp-16]\n");
             A("    mov     rdx, [rbp-8]\n");
             A("    call    stmt_set\n");
         }
         for (int i = 0; i < np->nlocals; i++) {
-            const char *llab = prog_str_intern(np->local_names[i]);
+            const char *llab = str_intern(np->local_names[i]);
             A("    lea     rdi, [rel %s]\n", llab);
             A("    mov     rsi, [rbp-16]\n");
             A("    mov     rdx, [rbp-8]\n");
             A("    call    stmt_set\n");
         }
         /* Jump to function body */
-        A("    jmp     %s\n", prog_label_nasm(np->body_label));
+        A("    jmp     %s\n", label_nasm(np->body_label));
 
         emit_sep_minor("γ/ω");
 
@@ -2003,9 +2003,9 @@ static int expr_is_pattern_expr(EXPR_t *e) {
  * Returns 1 on success, 0 on parse failure. */
 static int parse_define_str(const char *def,
                              char *fname_out, int fname_max,
-                             char params[ASM_NAMED_MAXPARAMS][64],
+                             char params[MAX_PARAMS][64],
                              int *nparams_out,
-                             char locals[ASM_NAMED_MAXPARAMS][64],
+                             char locals[MAX_PARAMS][64],
                              int *nlocals_out) {
     *nparams_out = 0;
     *nlocals_out = 0;
@@ -2032,7 +2032,7 @@ static int parse_define_str(const char *def,
         params[*nparams_out][pi] = '\0';
         if (pi > 0) {
             (*nparams_out)++;
-            if (*nparams_out >= ASM_NAMED_MAXPARAMS) break;
+            if (*nparams_out >= MAX_PARAMS) break;
         }
         if (*p == ',') p++;
     }
@@ -2049,7 +2049,7 @@ static int parse_define_str(const char *def,
         locals[*nlocals_out][li] = '\0';
         if (li > 0) {
             (*nlocals_out)++;
-            if (*nlocals_out >= ASM_NAMED_MAXPARAMS) break;
+            if (*nlocals_out >= MAX_PARAMS) break;
         }
     }
     return 1;
@@ -2071,9 +2071,9 @@ static void scan_named_patterns(Program *prog) {
             s->subject->children[0]->sval) {
             const char *def_str = s->subject->children[0]->sval;
             char fname[128];
-            char params[ASM_NAMED_MAXPARAMS][64];
+            char params[MAX_PARAMS][64];
             int nparams = 0;
-            char locals[ASM_NAMED_MAXPARAMS][64];
+            char locals[MAX_PARAMS][64];
             int nlocals = 0;
             if (parse_define_str(def_str, fname, sizeof fname, params, &nparams, locals, &nlocals)) {
                 NamedPat *e = named_pat_register(fname, NULL);
@@ -2143,7 +2143,7 @@ static void emit_pattern(STMT_t *stmt) {
     /* Reset state */
     var_reset();
     lit_reset();
-    extra_bss_count = 0;
+    extra_slot_count = 0;
 
     /* Fixed names */
     const char *cursor_sym   = "cursor";
@@ -2299,7 +2299,7 @@ static void emit_body(STMT_t *stmt) {
     var_reset();
     lit_reset();
     cap_vars_reset();
-    extra_bss_count = 0;
+    extra_slot_count = 0;
 
     const char *cursor_sym   = "cursor";
     const char *subj_sym     = "subject_data";
@@ -2370,7 +2370,7 @@ static void emit_body(STMT_t *stmt) {
     }
 
     /* .bss — all slots collected during dry run */
-    int has_bss = nvar > 0 || extra_bss_count > 0 || cap_var_count > 0;
+    int has_bss = nvar > 0 || extra_slot_count > 0 || cap_var_count > 0;
     if (has_bss) {
         A("\nsection .bss\n");
         for (int i = 0; i < nvar; i++)
@@ -2411,33 +2411,21 @@ int asm_body_mode = 0; /* set by -asm-body flag */
  * Generated .s links against snobol4_stmt_rt.o + the runtime .a.
  * ----------------------------------------------------------------------- */
 
-/* ---- string-safe variable name for NASM labels ---- */
-static void prog_safe(const char *src, char *dst, int dstlen) {
-    int j = 0;
-    for (int i = 0; src[i] && j < dstlen-1; i++) {
-        char c = src[i];
-        if ((c>='a'&&c<='z')||(c>='A'&&c<='Z')||(c>='0'&&c<='9')||c=='_')
-            dst[j++] = c;
-        else
-            dst[j++] = '_';
-    }
-    dst[j] = '\0';
-}
 
 /* ---- data section string registry ---- */
-#define MAX_PROG_STRS 2048
-typedef struct { char label[LBUF + 16]; char *val; } ProgStr;
-static ProgStr prog_strs[MAX_PROG_STRS];
-static int     prog_str_count = 0;
+#define MAX_STRS 2048
+typedef struct { char label[LBUF + 16]; char *val; } StrEntry;
+static StrEntry str_table[MAX_STRS];
+static int     str_count = 0;
 
-static void prog_str_reset(void) { prog_str_count = 0; }
+static void str_reset(void) { str_count = 0; }
 
-static const char *prog_str_intern(const char *s) {
+static const char *str_intern(const char *s) {
     if (!s) s = "";  /* guard against NULL sval */
-    for (int i = 0; i < prog_str_count; i++)
-        if (strcmp(prog_strs[i].val, s) == 0) return prog_strs[i].label;
-    if (prog_str_count >= MAX_PROG_STRS) return "S_overflow";
-    ProgStr *e = &prog_strs[prog_str_count++];
+    for (int i = 0; i < str_count; i++)
+        if (strcmp(str_table[i].val, s) == 0) return str_table[i].label;
+    if (str_count >= MAX_STRS) return "S_overflow";
+    StrEntry *e = &str_table[str_count++];
     /* M-ASM-READABLE-A: expand special chars for readability.
      * _ passes through (common word-separator — keep readable).
      * On collision (two distinct source names expand identically),
@@ -2446,28 +2434,28 @@ static const char *prog_str_intern(const char *s) {
     expand_name(s, exp, sizeof exp);
     if (exp[0]) {
         snprintf(e->label, sizeof e->label, "S_%s", exp);
-        for (int i = 0; i < prog_str_count - 1; i++) {
-            if (strcmp(prog_strs[i].label, e->label) == 0) {
-                snprintf(e->label, sizeof e->label, "S_%s_%d", exp, prog_str_count);
+        for (int i = 0; i < str_count - 1; i++) {
+            if (strcmp(str_table[i].label, e->label) == 0) {
+                snprintf(e->label, sizeof e->label, "S_%s_%d", exp, str_count);
                 break;
             }
         }
     } else {
-        snprintf(e->label, sizeof e->label, "S_%d", prog_str_count);
+        snprintf(e->label, sizeof e->label, "S_%d", str_count);
     }
     e->val = strdup(s);
     return e->label;
 }
 
-static void prog_str_emit_data(void) {
-    for (int i = 0; i < prog_str_count; i++) {
-        const char *v = prog_strs[i].val;
+static void str_emit(void) {
+    for (int i = 0; i < str_count; i++) {
+        const char *v = str_table[i].val;
         int len = (int)strlen(v);
         if (len == 0) {
             /* empty string — just null terminator */
-            A("%-20s db 0  ; ""\n", prog_strs[i].label);
+            A("%-20s db 0  ; ""\n", str_table[i].label);
         } else {
-            A("%-20s db ", prog_strs[i].label);
+            A("%-20s db ", str_table[i].label);
             for (int j = 0; j < len; j++) {
                 if (j) A(", ");
                 A("%d", (unsigned char)v[j]);
@@ -2478,31 +2466,31 @@ static void prog_str_emit_data(void) {
 }
 
 /* ---- float literal registry ---- */
-#define MAX_PROG_FLTS 256
-typedef struct { char label[32]; double val; } ProgFlt;
-static ProgFlt prog_flts[MAX_PROG_FLTS];
-static int     prog_flt_count = 0;
+#define MAX_FLTS 256
+typedef struct { char label[32]; double val; } FltEntry;
+static FltEntry flt_table[MAX_FLTS];
+static int     flt_count = 0;
 
-static void prog_flt_reset(void) { prog_flt_count = 0; }
+static void flt_reset(void) { flt_count = 0; }
 
-static const char *prog_flt_intern(double d) {
+static const char *flt_intern(double d) {
     uint64_t b; memcpy(&b, &d, 8);
-    for (int i = 0; i < prog_flt_count; i++) {
-        uint64_t a; memcpy(&a, &prog_flts[i].val, 8);
-        if (a == b) return prog_flts[i].label;
+    for (int i = 0; i < flt_count; i++) {
+        uint64_t a; memcpy(&a, &flt_table[i].val, 8);
+        if (a == b) return flt_table[i].label;
     }
-    if (prog_flt_count >= MAX_PROG_FLTS) return "F_overflow";
-    ProgFlt *e = &prog_flts[prog_flt_count++];
-    snprintf(e->label, sizeof e->label, "F_%d", prog_flt_count);
+    if (flt_count >= MAX_FLTS) return "F_overflow";
+    FltEntry *e = &flt_table[flt_count++];
+    snprintf(e->label, sizeof e->label, "F_%d", flt_count);
     e->val = d;
     return e->label;
 }
 
-static void prog_flt_emit_data(void) {
-    for (int i = 0; i < prog_flt_count; i++) {
-        uint64_t bits; memcpy(&bits, &prog_flts[i].val, 8);
+static void flt_emit(void) {
+    for (int i = 0; i < flt_count; i++) {
+        uint64_t bits; memcpy(&bits, &flt_table[i].val, 8);
         A("%-20s dq 0x%016llx  ; %g\n",
-          prog_flts[i].label, (unsigned long long)bits, prog_flts[i].val);
+          flt_table[i].label, (unsigned long long)bits, flt_table[i].val);
     }
 }
 
@@ -2520,7 +2508,7 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
     }
     switch (e->kind) {
     case E_QLIT: {
-        const char *lab = prog_str_intern(e->sval);
+        const char *lab = str_intern(e->sval);
         A("    LOAD_STR    %s\n", lab);
         /* LOAD_STR already writes rax/rdx → [rbp-32/24]; skip redundant mov */
         if (rbp_off == -16) {
@@ -2544,7 +2532,7 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
         }
         return 0;
     case E_FLIT: {
-        const char *flab = prog_flt_intern(e->dval);
+        const char *flab = flt_intern(e->dval);
         A("    LOAD_REAL   %s\n", flab);
         if (rbp_off == -16) {
             A("    mov     [rbp-16], rax\n");
@@ -2556,7 +2544,7 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
         return 0;
     }
     case E_VART: {
-        const char *lab = prog_str_intern(e->sval);
+        const char *lab = str_intern(e->sval);
         if (rbp_off == -16) {
             A("    GET_VAR     %s\n", lab);
         } else {
@@ -2577,7 +2565,7 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
         for (; src[ki] && ki < (int)sizeof(kwbuf)-1; ki++)
             kwbuf[ki] = (char)toupper((unsigned char)src[ki]);
         kwbuf[ki] = '\0';
-        const char *lab = prog_str_intern(kwbuf);
+        const char *lab = str_intern(kwbuf);
         if (rbp_off == -16) {
             A("    GET_VAR     %s\n", lab);
         } else {
@@ -2592,7 +2580,7 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
         if (!e->sval) goto fallback;
         int na = e->nchildren;
         if (na > 8) na = 8;
-        const char *fnlab = prog_str_intern(e->sval);
+        const char *fnlab = str_intern(e->sval);
 
         /* Check if this is a user-defined Snocone function */
         const NamedPat *ufn = named_pat_lookup(e->sval);
@@ -2611,10 +2599,10 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
              *   The γ/ω restore code already runs stmt_set to restore params,
              *   then jumps here — the function must have set fn_retval before
              *   jumping to [ret_γ]. */
-            int call_uid = ucall_uid();
+            int cuid = call_uid();
             char ret_gamma_lbl[LBUF], ret_omega_lbl[LBUF];
-            snprintf(ret_gamma_lbl, LBUF, "ucall%d_ret_g", call_uid);
-            snprintf(ret_omega_lbl, LBUF, "ucall%d_ret_o", call_uid);
+            snprintf(ret_gamma_lbl, LBUF, "ucall%d_ret_g", cuid);
+            snprintf(ret_omega_lbl, LBUF, "ucall%d_ret_o", cuid);
 
             int actual_args = (na < ufn->nparams) ? na : ufn->nparams;
             int actual_locals = ufn->nlocals;
@@ -2629,7 +2617,7 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
 
             /* Step 1: save old param variable values onto the stack (reverse order) */
             for (int ai = actual_args - 1; ai >= 0; ai--) {
-                const char *plab = prog_str_intern(ufn->param_names[ai]);
+                const char *plab = str_intern(ufn->param_names[ai]);
                 A("    GET_VAR     %s\n", plab);
                 A("    push    qword [rbp-8]\n");
                 A("    push    qword [rbp-16]\n");
@@ -2640,7 +2628,7 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
              * variables — they must be saved/restored exactly like params so that
              * recursive calls don't clobber the caller's locals. */
             for (int li = actual_locals - 1; li >= 0; li--) {
-                const char *llab = prog_str_intern(ufn->local_names[li]);
+                const char *llab = str_intern(ufn->local_names[li]);
                 A("    GET_VAR     %s\n", llab);
                 A("    push    qword [rbp-8]\n");
                 A("    push    qword [rbp-16]\n");
@@ -2693,7 +2681,7 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
             A("    pop     qword [%s]\n", ufn->ret_omega);
             /* Restore old local values from stack (forward order — pushed in reverse) */
             for (int li = 0; li < actual_locals; li++) {
-                const char *llab = prog_str_intern(ufn->local_names[li]);
+                const char *llab = str_intern(ufn->local_names[li]);
                 A("    pop     rsi\n");
                 A("    pop     rdx\n");
                 A("    lea     rdi, [rel %s]\n", llab);
@@ -2701,7 +2689,7 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
             }
             /* Restore old param values from stack */
             for (int ai = 0; ai < actual_args; ai++) {
-                const char *plab = prog_str_intern(ufn->param_names[ai]);
+                const char *plab = str_intern(ufn->param_names[ai]);
                 A("    pop     rsi\n");
                 A("    pop     rdx\n");
                 A("    lea     rdi, [rel %s]\n", plab);
@@ -2714,15 +2702,15 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
             A("    mov     rdx, [rbp-8]\n");
             A("    call    stmt_is_fail\n");
             A("    test    eax, eax\n");
-            A("    jz      ucall%d_has_val\n", call_uid);
+            A("    jz      ucall%d_has_val\n", cuid);
             A("    LOAD_NULVCL32\n");
-            A("    jmp     ucall%d_done\n", call_uid);
-            A("ucall%d_has_val:\n", call_uid);
+            A("    jmp     ucall%d_done\n", cuid);
+            A("ucall%d_has_val:\n", cuid);
             A("    mov     rax, [rbp-16]\n");
             A("    mov     rdx, [rbp-8]\n");
             A("    mov     [rbp-32], rax\n");
             A("    mov     [rbp-24], rdx\n");
-            A("    jmp     ucall%d_done\n", call_uid);
+            A("    jmp     ucall%d_done\n", cuid);
 
             /* Step 5b: omega return (FRETURN) */
             A("%s:\n", ret_omega_lbl);
@@ -2730,14 +2718,14 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
             A("    pop     qword [%s]\n", ufn->ret_omega);
             /* Restore old local values from stack */
             for (int li = 0; li < actual_locals; li++) {
-                const char *llab = prog_str_intern(ufn->local_names[li]);
+                const char *llab = str_intern(ufn->local_names[li]);
                 A("    pop     rsi\n");
                 A("    pop     rdx\n");
                 A("    lea     rdi, [rel %s]\n", llab);
                 A("    call    stmt_set\n");
             }
             for (int ai = 0; ai < actual_args; ai++) {
-                const char *plab = prog_str_intern(ufn->param_names[ai]);
+                const char *plab = str_intern(ufn->param_names[ai]);
                 A("    pop     rsi\n");
                 A("    pop     rdx\n");
                 A("    lea     rdi, [rel %s]\n", plab);
@@ -2746,7 +2734,7 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
             if (extra_align) A("    add     rsp, 8          ; remove align pad\n");
             /* FRETURN: signal failure to caller via FAILDESCR */
             A("    LOAD_FAILDESCR32\n");
-            A("ucall%d_done:\n", call_uid);
+            A("ucall%d_done:\n", cuid);
             return 1;
         }
         /* Fast path: 1-arg call with simple literal arg → CALL1_INT / CALL1_STR */
@@ -2757,12 +2745,12 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
                 return 1;
             }
             if (arg0->kind == E_QLIT) {
-                const char *alab = prog_str_intern(arg0->sval);
+                const char *alab = str_intern(arg0->sval);
                 A("    CALL1_STR   %s, %s\n", fnlab, alab);
                 return 1;
             }
             if (arg0->kind == E_VART) {
-                const char *alab = prog_str_intern(arg0->sval);
+                const char *alab = str_intern(arg0->sval);
                 A("    CALL1_VAR   %s, %s\n", fnlab, alab);
                 return 1;
             }
@@ -2790,26 +2778,26 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
             const char *m_vn = r16 ? "CONC2_VN16" : "CONC2_VN";
             const char *m_vv = r16 ? "CONC2_VV16" : "CONC2_VV";
             if (a0s && a1n) {
-                A("    %s %s, %s\n", m_sn, fnlab, prog_str_intern(a0->sval));
+                A("    %s %s, %s\n", m_sn, fnlab, str_intern(a0->sval));
                 return 1;
             }
             if (a0s && a1s) {
                 A("    %s %s, %s, %s\n", m_ss, fnlab,
-                  prog_str_intern(a0->sval), prog_str_intern(a1->sval));
+                  str_intern(a0->sval), str_intern(a1->sval));
                 return 1;
             }
             if (a0s && a1v) {
                 A("    %s %s, %s, %s\n", m_sv, fnlab,
-                  prog_str_intern(a0->sval), prog_str_intern(a1->sval));
+                  str_intern(a0->sval), str_intern(a1->sval));
                 return 1;
             }
             if (a0v && a1s) {
                 A("    %s %s, %s, %s\n", m_vs, fnlab,
-                  prog_str_intern(a0->sval), prog_str_intern(a1->sval));
+                  str_intern(a0->sval), str_intern(a1->sval));
                 return 1;
             }
             if (a0v && a1n) {
-                A("    %s %s, %s\n", m_vn, fnlab, prog_str_intern(a0->sval));
+                A("    %s %s, %s\n", m_vn, fnlab, str_intern(a0->sval));
                 return 1;
             }
             int a0n = (a0->kind == E_NULV);
@@ -2819,7 +2807,7 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
             }
             if (a0v && a1v) {
                 A("    %s %s, %s, %s\n", m_vv, fnlab,
-                  prog_str_intern(a0->sval), prog_str_intern(a1->sval));
+                  str_intern(a0->sval), str_intern(a1->sval));
                 return 1;
             }
             /* Integer-literal fast paths (rbp_off==-32 only) */
@@ -2828,12 +2816,12 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
             if (!r16) {
                 if (a0v && a1i) {
                     A("    CONC2_VI %s, %s, %ld\n", fnlab,
-                      prog_str_intern(a0->sval), (long)a1->ival);
+                      str_intern(a0->sval), (long)a1->ival);
                     return 1;
                 }
                 if (a0i && a1v) {
                     A("    CONC2_IV %s, %ld, %s\n", fnlab,
-                      (long)a0->ival, prog_str_intern(a1->sval));
+                      (long)a0->ival, str_intern(a1->sval));
                     return 1;
                 }
                 if (a0i && a1i) {
@@ -2847,24 +2835,24 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
                 }
                 if (a0s && a1i) {
                     A("    CONC2_SI %s, %s, %ld\n", fnlab,
-                      prog_str_intern(a0->sval), (long)a1->ival);
+                      str_intern(a0->sval), (long)a1->ival);
                     return 1;
                 }
                 if (a0i && a1s) {
                     A("    CONC2_IS %s, %ld, %s\n", fnlab,
-                      (long)a0->ival, prog_str_intern(a1->sval));
+                      (long)a0->ival, str_intern(a1->sval));
                     return 1;
                 }
             } else {
                 /* rbp_off == -16 integer fast paths */
                 if (a0v && a1i) {
                     A("    CONC2_VI16 %s, %s, %ld\n", fnlab,
-                      prog_str_intern(a0->sval), (long)a1->ival);
+                      str_intern(a0->sval), (long)a1->ival);
                     return 1;
                 }
                 if (a0i && a1v) {
                     A("    CONC2_IV16 %s, %ld, %s\n", fnlab,
-                      (long)a0->ival, prog_str_intern(a1->sval));
+                      (long)a0->ival, str_intern(a1->sval));
                     return 1;
                 }
                 if (a0i && a1i) {
@@ -2878,12 +2866,12 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
                 }
                 if (a0s && a1i) {
                     A("    CONC2_SI16 %s, %s, %ld\n", fnlab,
-                      prog_str_intern(a0->sval), (long)a1->ival);
+                      str_intern(a0->sval), (long)a1->ival);
                     return 1;
                 }
                 if (a0i && a1s) {
                     A("    CONC2_IS16 %s, %ld, %s\n", fnlab,
-                      (long)a0->ival, prog_str_intern(a1->sval));
+                      (long)a0->ival, str_intern(a1->sval));
                     return 1;
                 }
             }
@@ -2987,34 +2975,34 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
             if (rbp_off == -32) {
                 if (left_is_str && right_is_str) {
                     A("    CAT2_SS  %s, %s\n",
-                      prog_str_intern(e->children[0]->sval),
-                      prog_str_intern(e->children[1]->sval));
+                      str_intern(e->children[0]->sval),
+                      str_intern(e->children[1]->sval));
                     return 1;
                 }
                 if (left_is_str && right_is_nul) {
-                    A("    CAT2_SN  %s\n", prog_str_intern(e->children[0]->sval));
+                    A("    CAT2_SN  %s\n", str_intern(e->children[0]->sval));
                     return 1;
                 }
                 if (left_is_str && right_is_var) {
                     A("    CAT2_SV  %s, %s\n",
-                      prog_str_intern(e->children[0]->sval),
-                      prog_str_intern(e->children[1]->sval));
+                      str_intern(e->children[0]->sval),
+                      str_intern(e->children[1]->sval));
                     return 1;
                 }
                 if (left_is_var && right_is_str) {
                     A("    CAT2_VS  %s, %s\n",
-                      prog_str_intern(e->children[0]->sval),
-                      prog_str_intern(e->children[1]->sval));
+                      str_intern(e->children[0]->sval),
+                      str_intern(e->children[1]->sval));
                     return 1;
                 }
                 if (left_is_var && right_is_nul) {
-                    A("    CAT2_VN  %s\n", prog_str_intern(e->children[0]->sval));
+                    A("    CAT2_VN  %s\n", str_intern(e->children[0]->sval));
                     return 1;
                 }
                 if (left_is_var && right_is_var) {
                     A("    CAT2_VV  %s, %s\n",
-                      prog_str_intern(e->children[0]->sval),
-                      prog_str_intern(e->children[1]->sval));
+                      str_intern(e->children[0]->sval),
+                      str_intern(e->children[1]->sval));
                     return 1;
                 }
             }
@@ -3047,73 +3035,73 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
         const char *mac_vs16 = "ALT2_VS16 ";
         const char *mac_vn16 = "ALT2_VN16 ";
         const char *mac_vv16 = "ALT2_VV16 ";
-        const char *fnlab  = prog_str_intern(opname);
+        const char *fnlab  = str_intern(opname);
 
         if (left_is_str && right_is_nul && rbp_off == -32) {
-            const char *slab = prog_str_intern(e->children[0]->sval);
+            const char *slab = str_intern(e->children[0]->sval);
             A("    %s%s, %s\n", mac_sn, fnlab, slab);
             return 1;
         }
         if (left_is_str && right_is_str && rbp_off == -32) {
-            const char *s1 = prog_str_intern(e->children[0]->sval);
-            const char *s2 = prog_str_intern(e->children[1]->sval);
+            const char *s1 = str_intern(e->children[0]->sval);
+            const char *s2 = str_intern(e->children[1]->sval);
             A("    %s%s, %s, %s\n", mac_ss, fnlab, s1, s2);
             return 1;
         }
         if (left_is_str && right_is_var && rbp_off == -32) {
-            const char *slab = prog_str_intern(e->children[0]->sval);
-            const char *vlab = prog_str_intern(e->children[1]->sval);
+            const char *slab = str_intern(e->children[0]->sval);
+            const char *vlab = str_intern(e->children[1]->sval);
             A("    %s %s, %s, %s\n", mac_sv, fnlab, slab, vlab);
             return 1;
         }
         if (left_is_var && right_is_str && rbp_off == -32) {
-            const char *vlab = prog_str_intern(e->children[0]->sval);
-            const char *slab = prog_str_intern(e->children[1]->sval);
+            const char *vlab = str_intern(e->children[0]->sval);
+            const char *slab = str_intern(e->children[1]->sval);
             A("    %s %s, %s, %s\n", mac_vs, fnlab, vlab, slab);
             return 1;
         }
         if (left_is_var && right_is_nul && rbp_off == -32) {
-            const char *vlab = prog_str_intern(e->children[0]->sval);
+            const char *vlab = str_intern(e->children[0]->sval);
             A("    %s %s, %s\n", mac_vn, fnlab, vlab);
             return 1;
         }
         if (left_is_var && right_is_var && rbp_off == -32) {
-            const char *v1 = prog_str_intern(e->children[0]->sval);
-            const char *v2 = prog_str_intern(e->children[1]->sval);
+            const char *v1 = str_intern(e->children[0]->sval);
+            const char *v2 = str_intern(e->children[1]->sval);
             A("    %s %s, %s, %s\n", mac_vv, fnlab, v1, v2);
             return 1;
         }
         if (left_is_str && right_is_nul && rbp_off == -16) {
-            const char *slab = prog_str_intern(e->children[0]->sval);
+            const char *slab = str_intern(e->children[0]->sval);
             A("    %s%s, %s\n", mac_sn16, fnlab, slab);
             return 1;
         }
         if (left_is_str && right_is_str && rbp_off == -16) {
-            const char *s1 = prog_str_intern(e->children[0]->sval);
-            const char *s2 = prog_str_intern(e->children[1]->sval);
+            const char *s1 = str_intern(e->children[0]->sval);
+            const char *s2 = str_intern(e->children[1]->sval);
             A("    %s%s, %s, %s\n", mac_ss16, fnlab, s1, s2);
             return 1;
         }
         if (left_is_str && right_is_var && rbp_off == -16) {
-            const char *slab = prog_str_intern(e->children[0]->sval);
-            const char *vlab = prog_str_intern(e->children[1]->sval);
+            const char *slab = str_intern(e->children[0]->sval);
+            const char *vlab = str_intern(e->children[1]->sval);
             A("    %s %s, %s, %s\n", mac_sv16, fnlab, slab, vlab);
             return 1;
         }
         if (left_is_var && right_is_str && rbp_off == -16) {
-            const char *vlab = prog_str_intern(e->children[0]->sval);
-            const char *slab = prog_str_intern(e->children[1]->sval);
+            const char *vlab = str_intern(e->children[0]->sval);
+            const char *slab = str_intern(e->children[1]->sval);
             A("    %s %s, %s, %s\n", mac_vs16, fnlab, vlab, slab);
             return 1;
         }
         if (left_is_var && right_is_nul && rbp_off == -16) {
-            const char *vlab = prog_str_intern(e->children[0]->sval);
+            const char *vlab = str_intern(e->children[0]->sval);
             A("    %s %s, %s\n", mac_vn16, fnlab, vlab);
             return 1;
         }
         if (left_is_var && right_is_var && rbp_off == -16) {
-            const char *v1 = prog_str_intern(e->children[0]->sval);
-            const char *v2 = prog_str_intern(e->children[1]->sval);
+            const char *v1 = str_intern(e->children[0]->sval);
+            const char *v2 = str_intern(e->children[1]->sval);
             A("    %s %s, %s, %s\n", mac_vv16, fnlab, v1, v2);
             return 1;
         }
@@ -3141,7 +3129,7 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
                          (e->kind == E_MPY)   ? "mul"       :
                          (e->kind == E_DIV)   ? "DIVIDE_fn" :
                                                 "POWER_fn";
-        const char *fnlab = prog_str_intern(fn);
+        const char *fnlab = str_intern(fn);
         EXPR_t *l = e->children[0], *r = e->children[1];
         int ls = (l && l->kind == E_QLIT);
         int lv = (l && l->kind == E_VART);
@@ -3154,17 +3142,17 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
         if (rbp_off == -32) {
             if (lv && rv) {
                 A("    CONC2_VV %s, %s, %s\n", fnlab,
-                  prog_str_intern(l->sval), prog_str_intern(r->sval));
+                  str_intern(l->sval), str_intern(r->sval));
                 return 1;
             }
             if (lv && ri) {
                 A("    CONC2_VI %s, %s, %ld\n", fnlab,
-                  prog_str_intern(l->sval), (long)r->ival);
+                  str_intern(l->sval), (long)r->ival);
                 return 1;
             }
             if (li && rv) {
                 A("    CONC2_IV %s, %ld, %s\n", fnlab,
-                  (long)l->ival, prog_str_intern(r->sval));
+                  (long)l->ival, str_intern(r->sval));
                 return 1;
             }
             if (li && ri) {
@@ -3174,16 +3162,16 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
             }
             if (lv && rs) {
                 A("    CONC2_VS %s, %s, %s\n", fnlab,
-                  prog_str_intern(l->sval), prog_str_intern(r->sval));
+                  str_intern(l->sval), str_intern(r->sval));
                 return 1;
             }
             if (ls && rv) {
                 A("    CONC2_SV %s, %s, %s\n", fnlab,
-                  prog_str_intern(l->sval), prog_str_intern(r->sval));
+                  str_intern(l->sval), str_intern(r->sval));
                 return 1;
             }
             if (lv && rn) {
-                A("    CONC2_VN %s, %s\n", fnlab, prog_str_intern(l->sval));
+                A("    CONC2_VN %s, %s\n", fnlab, str_intern(l->sval));
                 return 1;
             }
         }
@@ -3205,7 +3193,7 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
     }
     /* ---- unary minus ---- */
     case E_MNS: {
-        const char *fnlab = prog_str_intern("neg");
+        const char *fnlab = str_intern("neg");
         EXPR_t *operand = e->children[0];   /* unop() puts operand in left */
         if (!operand) goto fallback;
         if (rbp_off == -32) {
@@ -3215,12 +3203,12 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
             }
             if (operand->kind == E_VART) {
                 A("    CALL1_VAR   %s, %s\n", fnlab,
-                  prog_str_intern(operand->sval));
+                  str_intern(operand->sval));
                 return 1;
             }
             if (operand->kind == E_QLIT) {
                 A("    CALL1_STR   %s, %s\n", fnlab,
-                  prog_str_intern(operand->sval));
+                  str_intern(operand->sval));
                 return 1;
             }
         }
@@ -3253,7 +3241,7 @@ static int prog_emit_expr(EXPR_t *e, int rbp_off) {
 }
 
 /* ---- emit goto target (resolves label to NASM label) ---- */
-static const char *prog_label_nasm(const char *lbl); /* forward */
+static const char *label_nasm(const char *lbl); /* forward */
 
 /* Returns 1 if target is a SNOBOL4 special goto (RETURN/FRETURN/END etc.)
  * that should map to _SNO_END rather than a user label. */
@@ -3265,10 +3253,10 @@ static int is_special_goto(const char *t) {
 }
 
 /* Emit a jmp to a goto target, handling special targets. */
-/* current_fn — set to the NamedPat* of the user function being emitted.
+/* cur_fn — set to the NamedPat* of the user function being emitted.
  * NULL when outside any user function body.
  * Used by emit_jmp / prog_emit_goto to route RETURN → [fn_ret_γ]. */
-static const NamedPat *current_fn = NULL;
+static const NamedPat *cur_fn = NULL;
 
 static void emit_jmp(const char *tgt, const char *fallthrough) {
     if (!tgt || !*tgt) {
@@ -3280,19 +3268,19 @@ static void emit_jmp(const char *tgt, const char *fallthrough) {
      * Must go via the named gamma/omega labels — not directly to [ret_slot] —
      * so the per-invocation stack frame (push rbp/sub rsp,56 at α) is torn down
      * before the call-site's ucall_ret_g pop sequence runs. */
-    if (current_fn && (strcasecmp(tgt,"RETURN")==0 ||
+    if (cur_fn && (strcasecmp(tgt,"RETURN")==0 ||
                        strcasecmp(tgt,"FRETURN")==0 ||
                        strcasecmp(tgt,"NRETURN")==0)) {
-        char lbl[ASM_NAMED_NAMELEN + 32];
+        char lbl[NAME_LEN + 32];
         if (strcasecmp(tgt,"RETURN")==0)
-            snprintf(lbl, sizeof lbl, "fn_%s_gamma", current_fn->safe);
+            snprintf(lbl, sizeof lbl, "fn_%s_gamma", cur_fn->safe);
         else
-            snprintf(lbl, sizeof lbl, "fn_%s_omega", current_fn->safe);
+            snprintf(lbl, sizeof lbl, "fn_%s_omega", cur_fn->safe);
         A("    jmp     %s     ; %s\n", lbl, tgt);
         return;
     }
     if (is_special_goto(tgt)) { A("    GOTO_ALWAYS  L_SNO_END     ; %s\n", tgt); return; }
-    A("    jmp     %s\n", prog_label_nasm(tgt));
+    A("    jmp     %s\n", label_nasm(tgt));
 }
 
 static void prog_emit_goto(const char *target, const char *fallthrough) {
@@ -3307,34 +3295,34 @@ static void prog_emit_goto(const char *target, const char *fallthrough) {
     }
     if (strcasecmp(target,"RETURN")==0 || strcasecmp(target,"FRETURN")==0 ||
         strcasecmp(target,"NRETURN")==0 || strcasecmp(target,"SRETURN")==0) {
-        if (current_fn) {
-            char lbl[ASM_NAMED_NAMELEN + 32];
+        if (cur_fn) {
+            char lbl[NAME_LEN + 32];
             if (strcasecmp(target,"RETURN")==0 || strcasecmp(target,"SRETURN")==0)
-                snprintf(lbl, sizeof lbl, "fn_%s_gamma", current_fn->safe);
+                snprintf(lbl, sizeof lbl, "fn_%s_gamma", cur_fn->safe);
             else
-                snprintf(lbl, sizeof lbl, "fn_%s_omega", current_fn->safe);
+                snprintf(lbl, sizeof lbl, "fn_%s_omega", cur_fn->safe);
             A("    jmp     %s     ; %s\n", lbl, target);
         } else {
             A("    GOTO_ALWAYS  L_SNO_END     ; %s\n", target);
         }
         return;
     }
-    A("    jmp     %s\n", prog_label_nasm(target));
+    A("    jmp     %s\n", label_nasm(target));
 }
 /* ---- scan all labels in program for the jump table ---- */
-#define MAX_PROG_LABELS 1024
+#define MAX_LABELS 1024
 /* Numeric label registry: each unique SNOBOL4 label name gets an integer ID.
  * Emitted as _L_<base>_N in NASM — number guarantees uniqueness, base aids readability.
  * TODO M-ASM-READABLE: named expansion (pp_>= → pp_GT_EQ_N) post M-ASM-BEAUTY. */
-static char *prog_labels[MAX_PROG_LABELS];
-static int   prog_label_defined[MAX_PROG_LABELS]; /* 1 if _L_X: was emitted */
-static int   prog_label_count = 0;
-static void prog_labels_reset(void) {
-    prog_label_count = 0;
-    memset(prog_label_defined, 0, sizeof prog_label_defined);
+static char *label_table[MAX_LABELS];
+static int   label_defined[MAX_LABELS]; /* 1 if _L_X: was emitted */
+static int   label_count = 0;
+static void label_reset(void) {
+    label_count = 0;
+    memset(label_defined, 0, sizeof label_defined);
 }
 
-static int prog_label_id(const char *lbl) {
+static int label_id(const char *lbl) {
     if (!lbl || !*lbl) return -1;
     /* Special SNOBOL4 goto targets are handled by emit_jmp/prog_emit_goto directly.
      * Never register them as program labels — they must not become stubs. */
@@ -3342,11 +3330,11 @@ static int prog_label_id(const char *lbl) {
         strcasecmp(lbl,"NRETURN")==0 || strcasecmp(lbl,"SRETURN")==0 ||
         strcasecmp(lbl,"END")==0)
         return -1;
-    for (int i = 0; i < prog_label_count; i++)
-        if (strcmp(prog_labels[i], lbl) == 0) return i;
-    if (prog_label_count >= MAX_PROG_LABELS) return -1;
-    prog_labels[prog_label_count++] = strdup(lbl);
-    return prog_label_count - 1;
+    for (int i = 0; i < label_count; i++)
+        if (strcmp(label_table[i], lbl) == 0) return i;
+    if (label_count >= MAX_LABELS) return -1;
+    label_table[label_count++] = strdup(lbl);
+    return label_count - 1;
 }
 
 /* Returns a collision-free NASM label: _L_<clean_base>_<N>
@@ -3354,9 +3342,9 @@ static int prog_label_id(const char *lbl) {
  * strip leading/trailing underscores.  Number N alone guarantees uniqueness —
  * the base is pure decoration for readability.
  * TODO M-ASM-READABLE: post M-ASM-BEAUTY sprint to improve base quality. */
-static const char *prog_label_nasm(const char *lbl) {
+static const char *label_nasm(const char *lbl) {
     static char buf[256];
-    int uid = prog_label_id(lbl);
+    int uid = label_id(lbl);
     if (uid < 0) { snprintf(buf, sizeof buf, "L_unk_%d", uid); return buf; }
     /* Build clean base: alnum only, runs of others → single _ */
     char base[128]; int bi = 0; int in_sep = 0;
@@ -3375,28 +3363,28 @@ static const char *prog_label_nasm(const char *lbl) {
     return buf;
 }
 
-static void prog_label_register(const char *lbl) {
-    prog_label_id(lbl); /* ensure registered; discard return value */
+static void label_register(const char *lbl) {
+    label_id(lbl); /* ensure registered; discard return value */
 }
 
 static void emit_program(Program *prog) {
     if (!prog || !prog->head) { emit_null_program(); return; }
 
-    current_fn = NULL;
+    cur_fn = NULL;
 
-    prog_str_reset();
-    prog_flt_reset();
-    prog_labels_reset();
+    str_reset();
+    flt_reset();
+    label_reset();
     var_reset();
     lit_reset();
-    extra_bss_count = 0;
+    extra_slot_count = 0;
 
     /* Pass 1: collect all labels + string literals (recursive expr walk) */
     /* Recursive helper: intern all string/var names reachable from an expr */
-    #define WALK_EXPR(root) do {         EXPR_t *_stk[256]; int _top = 0;         if (root) _stk[_top++] = (root);         while (_top > 0) {             EXPR_t *_e = _stk[--_top];             if (!_e) continue;             if (_e->kind == E_QLIT && _e->sval) prog_str_intern(_e->sval);             if (_e->kind == E_VART && _e->sval) prog_str_intern(_e->sval);             if (_e->kind == E_KW   && _e->sval) prog_str_intern(_e->sval);             if (_e->kind == E_FNC  && _e->sval) prog_str_intern(_e->sval);             for (int _i = 0; _i < _e->nchildren && _top < 254; _i++)                 if (_e->children[_i]) _stk[_top++] = _e->children[_i];         }     } while(0)
+    #define WALK_EXPR(root) do {         EXPR_t *_stk[256]; int _top = 0;         if (root) _stk[_top++] = (root);         while (_top > 0) {             EXPR_t *_e = _stk[--_top];             if (!_e) continue;             if (_e->kind == E_QLIT && _e->sval) str_intern(_e->sval);             if (_e->kind == E_VART && _e->sval) str_intern(_e->sval);             if (_e->kind == E_KW   && _e->sval) str_intern(_e->sval);             if (_e->kind == E_FNC  && _e->sval) str_intern(_e->sval);             for (int _i = 0; _i < _e->nchildren && _top < 254; _i++)                 if (_e->children[_i]) _stk[_top++] = _e->children[_i];         }     } while(0)
 
     for (STMT_t *s = prog->head; s; s = s->next) {
-        if (s->label) { prog_label_register(s->label); prog_str_intern(s->label); }
+        if (s->label) { label_register(s->label); str_intern(s->label); }
         if (s->go) {
             /* Special SNOBOL4 goto targets — handled at emit time, not as labels */
             const char *special[] = {"RETURN","FRETURN","NRETURN","SRETURN","END",NULL};
@@ -3404,19 +3392,19 @@ static void emit_program(Program *prog) {
                 int sp = 0;
                 for (int i = 0; special[i]; i++)
                     if (strcasecmp(s->go->onsuccess, special[i]) == 0) { sp=1; break; }
-                if (!sp) prog_label_register(s->go->onsuccess);
+                if (!sp) label_register(s->go->onsuccess);
             }
             if (s->go->onfailure) {
                 int sp = 0;
                 for (int i = 0; special[i]; i++)
                     if (strcasecmp(s->go->onfailure, special[i]) == 0) { sp=1; break; }
-                if (!sp) prog_label_register(s->go->onfailure);
+                if (!sp) label_register(s->go->onfailure);
             }
             if (s->go->uncond) {
                 int sp = 0;
                 for (int i = 0; special[i]; i++)
                     if (strcasecmp(s->go->uncond, special[i]) == 0) { sp=1; break; }
-                if (!sp) prog_label_register(s->go->uncond);
+                if (!sp) label_register(s->go->uncond);
             }
         }
         WALK_EXPR(s->subject);
@@ -3439,7 +3427,7 @@ static void emit_program(Program *prog) {
             var_register(named_pats[i].ret_omega);
             /* Per-param save slots (old value backup) and arg slots (call-site input) */
             for (int pi = 0; pi < named_pats[i].nparams; pi++) {
-                char pname_safe[ASM_NAMED_NAMELEN];
+                char pname_safe[NAME_LEN];
                 expand_name(named_pats[i].param_names[pi], pname_safe, sizeof pname_safe);
                 if (!pname_safe[0]) snprintf(pname_safe, sizeof pname_safe, "p%d", pi);
                 char save_slot[LBUF2 + 16], arg_slot[LBUF2 + 16];
@@ -3548,8 +3536,8 @@ static void emit_program(Program *prog) {
     /* subject_data/subject_len_val/cursor: defined here, exported for stmt_rt.c */
 
 
-    /* .data emitted at end of file (after .text) so late prog_str_intern()
-     * calls from emit time are captured. See prog_str_emit_data() below. */
+    /* .data emitted at end of file (after .text) so late str_intern()
+     * calls from emit time are captured. See str_emit() below. */
 
     /* ---- .note.GNU-stack ---- */
     flush_pending_label();
@@ -3564,7 +3552,7 @@ static void emit_program(Program *prog) {
     /* Byrd box scratch slots (saved_cursor, arbno stack, etc.) */
     extra_bss_emit();
     /* Per-call-uid user-function save slots (recursion-safe) */
-    ucall_bss_emit();
+    call_slot_emit();
     /* DOL $ capture buffers (cap_VAR_buf/cap_VAR_len) */
     cap_vars_emit_bss();
     /* Result-temp scratch pair for complex-child CONC2/ALT2 generic path */
@@ -3601,21 +3589,21 @@ static void emit_program(Program *prog) {
          * Then queue the generated label to fold onto the first instruction. */
         emit_sep_major(s->label ? s->label : NULL);
         if (s->label) {
-            asmL(prog_label_nasm(s->label));
-            { int _id = prog_label_id(s->label);
-              if (_id >= 0) prog_label_defined[_id] = 1; }
+            asmL(label_nasm(s->label));
+            { int _id = label_id(s->label);
+              if (_id >= 0) label_defined[_id] = 1; }
 
-            /* current_fn tracking: entering a user function body */
+            /* cur_fn tracking: entering a user function body */
             const NamedPat *fn_entry = named_pat_lookup(s->label);
             if (fn_entry && fn_entry->is_fn) {
-                current_fn = fn_entry;
+                cur_fn = fn_entry;
             }
             /* Leaving a user function body: label ends with ".END" */
-            if (current_fn) {
+            if (cur_fn) {
                 char end_lbl[LBUF + 16];
-                snprintf(end_lbl, sizeof end_lbl, "%s.END", current_fn->varname);
+                snprintf(end_lbl, sizeof end_lbl, "%s.END", cur_fn->varname);
                 if (strcasecmp(s->label, end_lbl) == 0)
-                    current_fn = NULL;
+                    cur_fn = NULL;
             }
         }
 
@@ -3624,9 +3612,9 @@ static void emit_program(Program *prog) {
         const char *tgt_f = s->go ? s->go->onfailure : NULL;
         const char *tgt_u = s->go ? s->go->uncond    : NULL;
 
-        int id_s = tgt_s ? prog_label_id(tgt_s) : -1;
-        int id_f = tgt_f ? prog_label_id(tgt_f) : -1;
-        int id_u = tgt_u ? prog_label_id(tgt_u) : -1;
+        int id_s = tgt_s ? label_id(tgt_s) : -1;
+        int id_f = tgt_f ? label_id(tgt_f) : -1;
+        int id_u = tgt_u ? label_id(tgt_u) : -1;
 
         /* Increment &STCOUNT / &STNO: call comm_stno(lineno) at top of every stmt.
          * Mirrors trampoline_stno() in the C backend. */
@@ -3640,7 +3628,7 @@ static void emit_program(Program *prog) {
             if (s->subject && s->subject->kind == E_FNC &&
                 s->subject->sval && strcasecmp(s->subject->sval, "DEFINE") == 0) {
                 asmL(next_lbl);
-                if (tgt_u) { A("    GOTO_ALWAYS  %s\n", prog_label_nasm(tgt_u)); }
+                if (tgt_u) { A("    GOTO_ALWAYS  %s\n", label_nasm(tgt_u)); }
                 continue;
             }
             /* Evaluate subject (the LHS or expression).
@@ -3692,17 +3680,17 @@ static void emit_program(Program *prog) {
                         A("    LOAD_NULVCL32\n");
                         A("    SET_OUTPUT\n");
                     } else {
-                        const char *vlab = prog_str_intern(subj_name);
+                        const char *vlab = str_intern(subj_name);
                         A("    ASSIGN_NULL %s\n", vlab);
                     }
                 /* Fast path: simple literal RHS + non-OUTPUT target → ASSIGN_INT/ASSIGN_STR */
                 } else if (!is_output && s->replacement->kind == E_ILIT) {
-                    const char *vlab = prog_str_intern(subj_name);
+                    const char *vlab = str_intern(subj_name);
                     A("    ASSIGN_INT  %s, %ld, %s\n", vlab,
                       (long)s->replacement->ival, fail_target);
                 } else if (!is_output && s->replacement->kind == E_QLIT) {
-                    const char *vlab = prog_str_intern(subj_name);
-                    const char *rlab = prog_str_intern(s->replacement->sval);
+                    const char *vlab = str_intern(subj_name);
+                    const char *rlab = str_intern(s->replacement->sval);
                     A("    ASSIGN_STR  %s, %s, %s\n", vlab, rlab, fail_target);
                 } else {
                     /* General path */
@@ -3713,7 +3701,7 @@ static void emit_program(Program *prog) {
                     if (is_output) {
                         A("    SET_OUTPUT\n");
                     } else {
-                        const char *vlab = prog_str_intern(subj_name);
+                        const char *vlab = str_intern(subj_name);
                         A("    SET_VAR     %s\n", vlab);
                     }
                 }
@@ -3833,7 +3821,7 @@ static void emit_program(Program *prog) {
                  *   val:   rcx=type, r8=ptr
                  */
                 const char *fail_target = id_f >= 0 ? sfail_lbl : next_lbl;
-                const char *flab = prog_str_intern(s->subject->sval);
+                const char *flab = str_intern(s->subject->sval);
 
                 /* Evaluate obj → push onto stack */
                 prog_emit_expr(s->subject->children[0], -16);
@@ -4021,14 +4009,14 @@ static void emit_program(Program *prog) {
                 if (strcasecmp(cap_vars[ci].varname, stmt_cap_names[si]) == 0)
                     { found = 1; break; }
             if (!found) continue;
-            const char *vnlab = prog_str_intern(cap_vars[ci].varname);
+            const char *vnlab = str_intern(cap_vars[ci].varname);
             A("    SET_CAPTURE %s, %s, %s\n",
               vnlab, cap_vars[ci].buf_sym, cap_vars[ci].len_sym);
         }
         #undef MAX_STMT_CAPS
         if (s->has_eq && s->subject && s->subject->kind == E_VART) {
             /* apply replacement → subject variable (splice: prefix+repl+suffix) */
-            const char *vlab = prog_str_intern(s->subject->sval);
+            const char *vlab = str_intern(s->subject->sval);
             if (!s->replacement || s->replacement->kind == E_NULV) {
                 /* null replacement: delete matched span — emit NULVCL */
                 A("    mov     qword [rbp-32], 1\n"); /* DT_SNUL */
@@ -4049,7 +4037,7 @@ static void emit_program(Program *prog) {
             const char *scan_fail_tgt = tgt_f ? tgt_f : tgt_u;
             const char *scan_fail;
             char tramp[LBUF];
-            int need_tramp = (current_fn && scan_fail_tgt
+            int need_tramp = (cur_fn && scan_fail_tgt
                               && is_special_goto(scan_fail_tgt)
                               && strcasecmp(scan_fail_tgt,"END") != 0);
             if (need_tramp) {
@@ -4057,7 +4045,7 @@ static void emit_program(Program *prog) {
                 snprintf(tramp, sizeof tramp, "scan_fail_tramp_%d", tramp_uid++);
                 scan_fail = tramp;
             } else {
-                scan_fail = scan_fail_tgt ? prog_label_nasm(scan_fail_tgt) : next_lbl;
+                scan_fail = scan_fail_tgt ? label_nasm(scan_fail_tgt) : next_lbl;
             }
             A("    cmp     qword [rel kw_anchor], 0\n");
             A("    jne     %s\n", scan_fail);
@@ -4118,19 +4106,19 @@ static void emit_program(Program *prog) {
      * These are dangling gotos (e.g. :F(error) with no "error" label defined,
      * or computed goto dispatch labels not yet implemented).
      * Map them to _SNO_END so the program assembles and terminates cleanly. */
-    for (int i = 0; i < prog_label_count; i++) {
-        if (!prog_label_defined[i]) {
+    for (int i = 0; i < label_count; i++) {
+        if (!label_defined[i]) {
             A("%s:  ; STUB → _SNO_END (dangling or computed goto)\n",
-              prog_label_nasm(prog_labels[i]));
+              label_nasm(label_table[i]));
             A("    GOTO_ALWAYS  L_SNO_END\n");
         }
     }
 
-    /* ---- .data emitted last so all prog_str_intern() calls are captured ---- */
+    /* ---- .data emitted last so all str_intern() calls are captured ---- */
     flush_pending_sep(); emit_sep_major("STRING TABLE");
     A("section .data\n");
-    prog_str_emit_data();
-    prog_flt_emit_data();
+    str_emit();
+    flt_emit();
 }
 
 void asm_emit(Program *prog, FILE *f) {
