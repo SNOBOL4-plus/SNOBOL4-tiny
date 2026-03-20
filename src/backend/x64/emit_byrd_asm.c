@@ -3507,13 +3507,21 @@ static void asm_emit_program(Program *prog) {
                 !(s->has_eq && s->subject->kind == E_IDX) &&
                 !(s->has_eq && s->subject->kind == E_FNC && s->subject->nargs == 1)) {
                 int may_fail = prog_emit_expr(s->subject, -32);
-                /* If subject may fail AND there are S/F targets, dispatch */
-                if (may_fail && !s->has_eq && (id_s >= 0 || id_f >= 0)) {
-                    A("    FAIL_BR     %s\n", id_f >= 0 ? sfail_lbl : next_lbl);
+                /* If subject may fail AND there are S/F targets, dispatch.
+                 * id_s/id_f == -1 for special targets (RETURN/FRETURN/END) —
+                 * they are not in the label registry but emit_jmp handles them
+                 * correctly (routes through fn_NAME_gamma/omega when inside a fn). */
+                int has_sf = (id_s >= 0 || id_f >= 0 ||
+                              (tgt_s && is_special_goto(tgt_s)) ||
+                              (tgt_f && is_special_goto(tgt_f)));
+                if (may_fail && !s->has_eq && has_sf) {
+                    int need_fail_lbl = (id_f >= 0 ||
+                                        (tgt_f && is_special_goto(tgt_f)));
+                    A("    FAIL_BR     %s\n", need_fail_lbl ? sfail_lbl : next_lbl);
                     /* success path */
                     emit_jmp(tgt_s ? tgt_s : tgt_u, next_lbl);
                     /* failure path */
-                    if (id_f >= 0) {
+                    if (need_fail_lbl) {
                         asmL(sfail_lbl);
                         emit_jmp(tgt_f, next_lbl);
                     }

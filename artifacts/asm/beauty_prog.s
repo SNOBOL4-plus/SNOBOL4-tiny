@@ -6962,6 +6962,9 @@ Ln_199:                     GOTO_ALWAYS L_ppEnd_28
 L_pp_29:                    mov         edi, 427
                             call        comm_stno
                             CALL1_VAR   S_DIFFER, S_x
+                            FAIL_BR     Lf_200
+                            jmp         Ln_200
+Lf_200:                     jmp         fn_pp_gamma     ; RETURN
 
 ; ======================================================================================================================
 Ln_200:                     mov         edi, 428
@@ -7106,8 +7109,9 @@ Ln_204:                     mov         edi, 432
 Ln_205:                     mov         edi, 433
                             call        comm_stno
                             CALL1_VAR   S_DIFFER, S_t
-                            FAIL_BR     Ln_206
+                            FAIL_BR     Lf_206
                             jmp         L_COMPUTED_pp_t_30
+Lf_206:                     jmp         fn_pp_gamma     ; RETURN
 
 Ln_206:
 ;  pp_Parse ============================================================================================================
@@ -7468,6 +7472,8 @@ L_ppUnOp_51:                mov         edi, 458
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
                             STORE_RESULT
+                            FAIL_BR     Ln_227
+                            jmp         fn_pp_gamma     ; RETURN
 
 ; ======================================================================================================================
 Ln_227:                     mov         edi, 459
@@ -7562,6 +7568,8 @@ L_ppBinOp_52:               mov         edi, 461
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
                             STORE_RESULT
+                            FAIL_BR     Ln_230
+                            jmp         fn_pp_gamma     ; RETURN
 
 ; ======================================================================================================================
 Ln_230:                     mov         edi, 462
@@ -9017,6 +9025,8 @@ L_pp_ExprList_74:           mov         edi, 557
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
                             STORE_RESULT
+                            FAIL_BR     Ln_321
+                            jmp         fn_pp_gamma     ; RETURN
 
 ; ======================================================================================================================
 Ln_321:                     mov         edi, 558
@@ -9220,6 +9230,8 @@ L_pp_76:                    mov         edi, 568
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
                             STORE_RESULT
+                            FAIL_BR     Ln_331
+                            jmp         fn_pp_gamma     ; RETURN
 
 ; ======================================================================================================================
 Ln_331:                     mov         edi, 569
@@ -9465,6 +9477,8 @@ Ln_347:                     mov         edi, 586
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
                             STORE_RESULT
+                            FAIL_BR     Ln_348
+                            jmp         fn_pp_gamma     ; RETURN
 
 ; ======================================================================================================================
 Ln_348:                     mov         edi, 587
@@ -9668,6 +9682,8 @@ L_pp_84:                    mov         edi, 597
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
                             STORE_RESULT
+                            FAIL_BR     Ln_358
+                            jmp         fn_pp_gamma     ; RETURN
 
 ; ======================================================================================================================
 Ln_358:                     mov         edi, 598
@@ -9801,6 +9817,8 @@ L_pp_87:                    mov         edi, 603
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
                             STORE_RESULT
+                            FAIL_BR     Ln_363
+                            jmp         fn_pp_gamma     ; RETURN
 
 ; ======================================================================================================================
 Ln_363:                     mov         edi, 604
@@ -10024,6 +10042,8 @@ L_pp_90:                    mov         edi, 616
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
                             STORE_RESULT
+                            FAIL_BR     Ln_375
+                            jmp         fn_pp_gamma     ; RETURN
 
 ; ======================================================================================================================
 Ln_375:                     mov         edi, 617
@@ -10146,6 +10166,8 @@ L_pp_Call_91:               mov         edi, 625
                             APPLY_FN_N  S_Gen, 1
                             add         rsp, 16
                             STORE_RESULT
+                            FAIL_BR     Ln_383
+                            jmp         fn_pp_gamma     ; RETURN
 
 ; ======================================================================================================================
 Ln_383:                     mov         edi, 626
@@ -10313,6 +10335,9 @@ Ln_393:                     GOTO_ALWAYS L_ssEnd_92
 L_ss_93:                    mov         edi, 641
                             call        comm_stno
                             CALL1_VAR   S_DIFFER, S_x
+                            FAIL_BR     Lf_394
+                            jmp         Ln_394
+Lf_394:                     jmp         fn_pp_gamma     ; RETURN
 
 ; ======================================================================================================================
 Ln_394:                     mov         edi, 642
@@ -10336,6 +10361,9 @@ Ln_394:                     mov         edi, 642
 Ln_395:                     mov         edi, 643
                             call        comm_stno
                             CONC2_VI    S_GT_279, S_len, 0
+                            FAIL_BR     Lf_396
+                            jmp         Ln_396
+Lf_396:                     jmp         fn_pp_omega     ; FRETURN
 
 ; ======================================================================================================================
 Ln_396:                     mov         edi, 644
@@ -10480,8 +10508,9 @@ Ln_400:                     mov         edi, 648
 Ln_401:                     mov         edi, 649
                             call        comm_stno
                             CALL1_VAR   S_DIFFER, S_t
-                            FAIL_BR     Ln_402
+                            FAIL_BR     Lf_402
                             jmp         L_COMPUTED_ss_t_94
+Lf_402:                     jmp         fn_pp_gamma     ; RETURN
 
 Ln_402:
 ;  ss_BuiltinVar =======================================================================================================
@@ -10661,6 +10690,9 @@ L_ss_atomic_96:             mov         edi, 663
                             APPLY_FN_N  S_LE, 2
                             add         rsp, 32
                             STORE_RESULT
+                            FAIL_BR     Lf_415
+                            jmp         fn_pp_gamma     ; RETURN
+Lf_415:                     jmp         fn_pp_omega     ; FRETURN
 
 Ln_415:
 ;  ss_:() ==============================================================================================================
@@ -12012,6 +12044,9 @@ Ln_478:                     GOTO_ALWAYS L_bVisitEnd_149
 L_bVisit_150:               mov         edi, 738
                             call        comm_stno
                             CONC2_VV    S_APPLY, S_fnc, S_x
+                            FAIL_BR     Lf_479
+                            jmp         Ln_479
+Lf_479:                     jmp         fn_pp_gamma     ; RETURN
 
 ; ======================================================================================================================
 Ln_479:                     mov         edi, 739
@@ -12100,6 +12135,9 @@ Ln_485:
 L_findRefs_153:             mov         edi, 746
                             call        comm_stno
                             CALL1_VAR   S_DIFFER, S_x
+                            FAIL_BR     Lf_486
+                            jmp         Ln_486
+Lf_486:                     jmp         fn_pp_gamma     ; RETURN
 
 ; ======================================================================================================================
 Ln_486:                     mov         edi, 747
@@ -12234,6 +12272,9 @@ L_findRefs_2_156:           mov         edi, 753
                             APPLY_FN_N  S_IDENT, 2
                             add         rsp, 32
                             STORE_RESULT
+                            FAIL_BR     Lf_493
+                            jmp         Ln_493
+Lf_493:                     jmp         fn_pp_gamma     ; RETURN
 
 ; ======================================================================================================================
 Ln_493:                     mov         edi, 754
