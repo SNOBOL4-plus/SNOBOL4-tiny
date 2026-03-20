@@ -54,18 +54,18 @@
  * Output helpers
  * ----------------------------------------------------------------------- */
 
-static FILE *byrd_out;
+static FILE *out;
 
 static void B(const char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
-    vfprintf(byrd_out, fmt, ap);
+    vfprintf(out, fmt, ap);
     va_end(ap);
 }
 
-/* byrd_cs — C static name for a SNOBOL4 variable (mirrors cs() in emit.c).
+/* cs — C static name for a SNOBOL4 variable (mirrors cs() in emit.c).
  * Prepends '_', replaces non-alnum/_ with '_'. Static buffer — use before next call. */
-static const char *byrd_cs(const char *s) {
+static const char *cs(const char *s) {
     static char buf[520];
     int i = 0, j = 0;
     buf[j++] = '_';
@@ -78,7 +78,7 @@ static const char *byrd_cs(const char *s) {
 }
 
 /* Three-column pretty printer — shared with emit.c via emit_pretty.h */
-#define PRETTY_OUT byrd_out
+#define PRETTY_OUT out
 #include "emit_pretty.h"
 
 /* -----------------------------------------------------------------------
@@ -88,10 +88,10 @@ static const char *byrd_cs(const char *s) {
  * e.g.  lit_7_α   cat_12_β   arbno_3_child_fail
  * ----------------------------------------------------------------------- */
 
-static int byrd_uid_ctr = 0;
+static int uid_ctr = 0;
 
-static void byrd_uid_reset(void) { byrd_uid_ctr = 0; }
-static int  byrd_uid(void)       { return ++byrd_uid_ctr; }
+static void uid_reset(void) { uid_ctr = 0; }
+static int  next_uid(void)       { return ++uid_ctr; }
 
 /* Format a label into a static buffer — caller copies if needed */
 #define LBUF 320
@@ -105,7 +105,7 @@ static void label_fmt(Label out_l, const char *role, int uid, const char *port) 
  * Forward declaration — byrd_emit is mutually recursive
  * ----------------------------------------------------------------------- */
 
-static void byrd_emit(EXPR_t *pat,
+static void emit_pat_node(EXPR_t *pat,
                       const char *alpha, const char *beta,
                       const char *gamma, const char *omega,
                       const char *subj, const char *subj_len,
@@ -137,7 +137,7 @@ typedef struct {
     int  emitted;   /* 1 after byrd_emit_named_pattern has run for this name */
 } NamedPat;
 
-static NamedPat named_pat_registry[NAMED_PAT_MAX];
+static NamedPat named_pats[NAMED_PAT_MAX];
 static int      named_pat_count = 0;
 
 void byrd_named_pat_reset(void) { named_pat_count = 0; }
@@ -181,7 +181,7 @@ void byrd_cond_emit_assigns(FILE *fp, int stmt_u) {
             fprintf(fp, "if (%s) { NV_SET_fn(\"%s\", STRVAL(%s));",
                     ca->tmpvar, ca->varname, ca->tmpvar);
             if (ca->has_cstatic) {
-                /* sync C static too — use byrd_cs logic inline */
+                /* sync C static too — use cs logic inline */
                 char cs[NAMED_PAT_LBUF2];
                 snprintf(cs, sizeof cs, "_%s", ca->varname);
                 fprintf(fp, " %s = STRVAL(%s);", cs, ca->tmpvar);
@@ -196,9 +196,9 @@ static void named_pat_register(const char *varname,
                                 const char *fnname) {
     /* Deduplicate */
     for (int i = 0; i < named_pat_count; i++)
-        if (strcmp(named_pat_registry[i].varname, varname) == 0) return;
+        if (strcmp(named_pats[i].varname, varname) == 0) return;
     if (named_pat_count >= NAMED_PAT_MAX) return;
-    NamedPat *e = &named_pat_registry[named_pat_count++];
+    NamedPat *e = &named_pats[named_pat_count++];
     snprintf(e->varname,  NAMED_PAT_NAMELEN, "%s", varname);
     snprintf(e->typename, NAMED_PAT_NAMELEN, "%s", typename);
     snprintf(e->fnname,   NAMED_PAT_NAMELEN, "%s", fnname);
@@ -228,8 +228,8 @@ void byrd_emit_named_typedecls(FILE *out_file) {
     for (int i = 0; i < named_pat_count; i++) {
         fprintf(out_file,
             "typedef struct %s %s;\n",
-            named_pat_registry[i].typename,
-            named_pat_registry[i].typename);
+            named_pats[i].typename,
+            named_pats[i].typename);
     }
     /* Bug5: one file-scope static for cross-pattern nInc frame threading.
      * pat_Expr4 (or any pattern with saved_frame) sets this before calling
@@ -247,16 +247,16 @@ void byrd_emit_named_fwdecls(FILE *out_file) {
     for (int i = 0; i < named_pat_count; i++) {
         fprintf(out_file,
             "static DESCR_t %s(const char *, int64_t, int64_t *, %s **, int);\n",
-            named_pat_registry[i].fnname,
-            named_pat_registry[i].typename);
+            named_pats[i].fnname,
+            named_pats[i].typename);
     }
     if (named_pat_count > 0) fprintf(out_file, "\n");
 }
 
 static const NamedPat *named_pat_lookup(const char *varname) {
     for (int i = 0; i < named_pat_count; i++)
-        if (strcmp(named_pat_registry[i].varname, varname) == 0)
-            return &named_pat_registry[i];
+        if (strcmp(named_pats[i].varname, varname) == 0)
+            return &named_pats[i];
     return NULL;
 }
 
@@ -396,7 +396,7 @@ static void decl_flush(void) {
 
 /* Emit struct typedef + field #defines for named pattern struct mode.
  * tyname = "pat_X_t", safe = "X"
- * Writes to out_file (not byrd_out — called before code body is spliced). */
+ * Writes to out_file (not out — called before code body is spliced). */
 static void decl_flush_as_struct(FILE *out_file, const char *tyname) {
     /* Struct typedef */
     fprintf(out_file, "typedef struct %s {\n", tyname);
@@ -448,14 +448,14 @@ static void decl_emit_undefs(FILE *out_file) {
  * ----------------------------------------------------------------------- */
 
 static void emit_cstr(const char *s) {
-    fputc('"', byrd_out);
+    fputc('"', out);
     for (; *s; s++) {
-        if (*s == '"' || *s == '\\') fputc('\\', byrd_out);
-        else if (*s == '\n') { fputs("\\n", byrd_out); continue; }
-        else if (*s == '\t') { fputs("\\t", byrd_out); continue; }
-        fputc(*s, byrd_out);
+        if (*s == '"' || *s == '\\') fputc('\\', out);
+        else if (*s == '\n') { fputs("\\n", out); continue; }
+        else if (*s == '\t') { fputs("\\t", out); continue; }
+        fputc(*s, out);
     }
-    fputc('"', byrd_out);
+    fputc('"', out);
 }
 
 /* -----------------------------------------------------------------------
@@ -1012,7 +1012,7 @@ static void emit_seq(EXPR_t *left, EXPR_t *right,
                      const char *gamma, const char *omega,
                      const char *subj, const char *subj_len,
                      const char *cursor, int depth) {
-    int uid = byrd_uid();
+    int uid = next_uid();
 
     Label left_α, left_β, right_α, right_β;
     label_fmt(left_α,  "cat_l", uid, "α");
@@ -1049,12 +1049,12 @@ static void emit_seq(EXPR_t *left, EXPR_t *right,
         PLG(beta, right_β);
     }
 
-    byrd_emit(left,
+    emit_pat_node(left,
               left_α, left_β,
               right_α, omega,
               subj, subj_len, cursor, depth + 1);
 
-    byrd_emit(right,
+    emit_pat_node(right,
               right_α, right_β,
               gamma, left_β,
               subj, subj_len, cursor, depth + 1);
@@ -1096,7 +1096,7 @@ static void emit_alt(EXPR_t *left, EXPR_t *right,
                      const char *gamma, const char *omega,
                      const char *subj, const char *subj_len,
                      const char *cursor, int depth) {
-    int uid = byrd_uid();
+    int uid = next_uid();
 
     Label left_α, left_β, right_α, right_β;
     label_fmt(left_α,  "alt_l", uid, "α");
@@ -1107,12 +1107,12 @@ static void emit_alt(EXPR_t *left, EXPR_t *right,
     PLG(alpha, left_α);   /* α → left_α  (ALT — try left) */
     PLG(beta,  right_β);  /* β → right_β (backtrack right arm) */
 
-    byrd_emit(left,
+    emit_pat_node(left,
               left_α, left_β,
               gamma, right_α,
               subj, subj_len, cursor, depth + 1);
 
-    byrd_emit(right,
+    emit_pat_node(right,
               right_α, right_β,
               gamma, omega,
               subj, subj_len, cursor, depth + 1);
@@ -1151,7 +1151,7 @@ static void emit_arbno(EXPR_t *child,
                        const char *gamma, const char *omega,
                        const char *subj, const char *subj_len,
                        const char *cursor, int depth) {
-    int uid = byrd_uid();
+    int uid = next_uid();
 
     Label child_α, child_β, child_ok, child_fail;
     label_fmt(child_α, "arbno_c", uid, "α");
@@ -1192,7 +1192,7 @@ static void emit_arbno(EXPR_t *child,
     PLG(child_fail, NULL);
     PS(omega,   "%s = %s[%s]; %s--;", cursor, stack_var, depth_var, depth_var);
 
-    byrd_emit(child,
+    emit_pat_node(child,
               child_α, child_β,
               child_ok, child_fail,
               subj, subj_len, cursor, depth + 1);
@@ -1255,7 +1255,7 @@ static void emit_imm(EXPR_t *child, const char *varname,
                      const char *gamma, const char *omega,
                      const char *subj, const char *subj_len,
                      const char *cursor, int depth, int do_shift) {
-    int uid = byrd_uid();
+    int uid = next_uid();
 
     /* -------------------------------------------------------------------
      * Special case: nPush() $'(' — side-effect call + literal capture.
@@ -1273,7 +1273,7 @@ static void emit_imm(EXPR_t *child, const char *varname,
          * like '(' or ')') — if it IS a valid identifier, it could be a
          * genuine capture variable paired with a side-effect, which we
          * handle the same way (side-effect fires, then match literal). */
-        int uid2 = byrd_uid();
+        int uid2 = next_uid();
         Label lit_α, lit_β;
         label_fmt(lit_α, "imm_se_lit", uid2, "α");
         label_fmt(lit_β, "imm_se_lit", uid2, "β");
@@ -1360,7 +1360,7 @@ static void emit_imm(EXPR_t *child, const char *varname,
      * Route child's gamma to a literal-check label, not directly to do_assign. */
     if (is_literal_tok) {
         Label lit_check, lit_check_β;
-        label_fmt(lit_check,   "dlit", byrd_uid(), "α");
+        label_fmt(lit_check,   "dlit", next_uid(), "α");
         label_fmt(lit_check_β, "dlit", uid,        "β");
         /* saved cursor for the literal match backtrack */
         char lit_saved[LBUF];
@@ -1377,7 +1377,7 @@ static void emit_imm(EXPR_t *child, const char *varname,
         PS(NULL,    "%s = %s;", start_var, cursor);
         PS(child_α, "goto %s;", child_α);
 
-        byrd_emit(child,
+        emit_pat_node(child,
                   child_α, child_β,
                   lit_check, omega,
                   subj, subj_len, cursor, depth + 1);
@@ -1418,7 +1418,7 @@ static void emit_imm(EXPR_t *child, const char *varname,
     /* α: record start, enter child (non-literal-tok normal path) */
     PL(alpha, child_α, "%s = %s;", start_var, cursor);
 
-    byrd_emit(child,
+    emit_pat_node(child,
               child_α, child_β,
               do_assign, omega,
               subj, subj_len, cursor, depth + 1);
@@ -1451,7 +1451,7 @@ static void emit_imm(EXPR_t *child, const char *varname,
             PS(NULL,  "  NV_SET_fn(\"%s\", STRVAL(_os));", varname);
         } else {
             PS(NULL,  "  NV_SET_fn(\"%s\", STRVAL(_os));", varname);
-            PS(NULL,  "  %s = STRVAL(_os);", byrd_cs(varname));
+            PS(NULL,  "  %s = STRVAL(_os);", cs(varname));
         }
         if (do_shift) {
             /* ~ operator: PUSH_fn tree node onto shift-reduce stack via Shift(type, value) */
@@ -1478,7 +1478,7 @@ static void emit_cond(EXPR_t *child, const char *varname,
                       const char *gamma, const char *omega,
                       const char *subj, const char *subj_len,
                       const char *cursor, int depth) {
-    int uid = byrd_uid();
+    int uid = next_uid();
 
     /* Sanitize varname for C identifier */
     char safe_varname[NAMED_PAT_LBUF2];
@@ -1509,7 +1509,7 @@ static void emit_cond(EXPR_t *child, const char *varname,
     PS(NULL,     "%s = NULL;",      tmp_var);
     PS(child_α,  "%s = %s;",        start_var, cursor);
 
-    byrd_emit(child,
+    emit_pat_node(child,
               child_α, child_β,
               do_capture, omega,
               subj, subj_len, cursor, depth + 1);
@@ -1635,7 +1635,7 @@ static void emit_simple_val(EXPR_t *e) {
  * depth is used for recursion guard only.
  * ----------------------------------------------------------------------- */
 
-static void byrd_emit(EXPR_t *pat,
+static void emit_pat_node(EXPR_t *pat,
                       const char *alpha, const char *beta,
                       const char *gamma, const char *omega,
                       const char *subj, const char *subj_len,
@@ -1783,7 +1783,7 @@ static void byrd_emit(EXPR_t *pat,
         }
         /* FENCE(pat) — with argument: match pat, then cut */
         if (strcasecmp(n, "FENCE") == 0 && pat->nchildren >= 1) {
-            int uid = byrd_uid();
+            int uid = next_uid();
             Label ca, cb;
             label_fmt(ca, "fence_p", uid, "α");
             label_fmt(cb, "fence_p", uid, "β");
@@ -1791,7 +1791,7 @@ static void byrd_emit(EXPR_t *pat,
             snprintf(fence_after, LBUF, "fence_after_%d", uid);
 
             PLG(alpha, ca);   /* FENCE(p): enter child */
-            byrd_emit(pat->children[0],
+            emit_pat_node(pat->children[0],
                       ca, cb,
                       fence_after, omega,
                       subj, subj_len, cursor, depth + 1);
@@ -1863,7 +1863,7 @@ static void byrd_emit(EXPR_t *pat,
          * If it returns any non-fail value → pattern succeeds (goto γ), cursor unchanged.
          * β → ω: function calls are non-resumable (no backtrack alternative). */
         {
-            int uid = byrd_uid();
+            int uid = next_uid();
             PLG(alpha, NULL);
             /* Build args array */
             int nargs = pat->nchildren;
@@ -1894,7 +1894,7 @@ static void byrd_emit(EXPR_t *pat,
     case E_CONC: {
         int _nc = pat->nchildren;
         if (_nc == 0) { PLG(alpha, gamma); return; }
-        if (_nc == 1) { byrd_emit(pat->children[0], alpha, beta, gamma, omega, subj, subj_len, cursor, depth); return; }
+        if (_nc == 1) { emit_pat_node(pat->children[0], alpha, beta, gamma, omega, subj, subj_len, cursor, depth); return; }
         if (_nc == 2) {
             emit_seq(pat->children[0], pat->children[1], alpha, beta, gamma, omega, subj, subj_len, cursor, depth);
             return;
@@ -1913,7 +1913,7 @@ static void byrd_emit(EXPR_t *pat,
             _nodes[_n]->nchildren = 2;
             _right = _nodes[_n];
         }
-        byrd_emit(_right, alpha, beta, gamma, omega, subj, subj_len, cursor, depth);
+        emit_pat_node(_right, alpha, beta, gamma, omega, subj, subj_len, cursor, depth);
         for (int _i = 0; _i < _nc - 1; _i++) free(_nodes[_i]);
         free(_nodes); free(_kids);
         return;
@@ -1923,7 +1923,7 @@ static void byrd_emit(EXPR_t *pat,
     case E_OR: {
         int _nc = pat->nchildren;
         if (_nc == 0) { PLG(alpha, omega); return; }
-        if (_nc == 1) { byrd_emit(pat->children[0], alpha, beta, gamma, omega, subj, subj_len, cursor, depth); return; }
+        if (_nc == 1) { emit_pat_node(pat->children[0], alpha, beta, gamma, omega, subj, subj_len, cursor, depth); return; }
         if (_nc == 2) {
             emit_alt(pat->children[0], pat->children[1], alpha, beta, gamma, omega, subj, subj_len, cursor, depth);
             return;
@@ -1942,7 +1942,7 @@ static void byrd_emit(EXPR_t *pat,
             _nodes[_n]->nchildren = 2;
             _right = _nodes[_n];
         }
-        byrd_emit(_right, alpha, beta, gamma, omega, subj, subj_len, cursor, depth);
+        emit_pat_node(_right, alpha, beta, gamma, omega, subj, subj_len, cursor, depth);
         for (int _i = 0; _i < _nc - 1; _i++) free(_nodes[_i]);
         free(_nodes); free(_kids);
         return;
@@ -1972,8 +1972,8 @@ static void byrd_emit(EXPR_t *pat,
          * Label discipline (learned from emit_seq):
          *   PLG(beta, right_b)  -- define beta BEFORE recursion, points to right_b
          *   PLG(alpha, left_a)  -- define alpha BEFORE recursion, points to left_a
-         *   byrd_emit(left,  left_a, left_b,  mid_ok, omega)
-         *   byrd_emit(right, mid_ok, right_b, gamma,  omega)
+         *   emit_pat_node(left,  left_a, left_b,  mid_ok, omega)
+         *   emit_pat_node(right, mid_ok, right_b, gamma,  omega)
          *
          * beta:   defined once here (goto right_b).
          * left_a, left_b, right_b: each defined exactly once by their recursion.
@@ -1985,7 +1985,7 @@ static void byrd_emit(EXPR_t *pat,
          *   Right arm fails: goes to omega (no further backtrack).
          *   Left arm fails: goes to omega.
          */
-        int uid = byrd_uid();
+        int uid = next_uid();
         Label left_a, left_b, right_b, mid_ok;
         label_fmt(left_a,  "dolc", uid, "la");
         label_fmt(left_b,  "dolc", uid, "lb");
@@ -1995,12 +1995,12 @@ static void byrd_emit(EXPR_t *pat,
         PLG(alpha, left_a);
         PLG(beta,  right_b);
 
-        byrd_emit(pat->children[0],
+        emit_pat_node(pat->children[0],
                   left_a, left_b,
                   mid_ok, omega,
                   subj, subj_len, cursor, depth + 1);
 
-        byrd_emit(pat->children[1],
+        emit_pat_node(pat->children[1],
                   mid_ok, right_b,
                   gamma, omega,
                   subj, subj_len, cursor, depth + 1);
@@ -2049,7 +2049,7 @@ static void byrd_emit(EXPR_t *pat,
         PS(NULL, "{ NV_SET_fn(\"%s\", INTVAL_fn((int64_t)%s));", varname, cursor);
         int skip_cs = (strcmp(safe,"_")==0||safe[0]=='\0');
         if (!skip_cs)
-            PS(NULL, "  %s = INTVAL_fn((int64_t)%s);", byrd_cs(varname), cursor);
+            PS(NULL, "  %s = INTVAL_fn((int64_t)%s);", cs(varname), cursor);
         PS(gamma, "}");
         /* β → ω: @VAR is zero-width (no state to restore) but non-resumable.
          * On backtrack, propagate failure upward — do NOT re-enter γ. */
@@ -2097,7 +2097,7 @@ static void byrd_emit(EXPR_t *pat,
         const NamedPat *np_v = named_pat_lookup(varname);
         if (np_v) {
             /* Compiled named pattern — direct call */
-            int uid = byrd_uid();
+            int uid = next_uid();
             char saved_cur[LBUF];
             snprintf(saved_cur, LBUF, "deref_%d_saved_cur", uid);
             decl_add("int64_t %s", saved_cur);
@@ -2158,7 +2158,7 @@ static void byrd_emit(EXPR_t *pat,
         } else {
             /* String/dynamic pattern — match_pattern_at fallback */
             char saved[LBUF];
-            snprintf(saved, LBUF, "deref_%d_saved_cursor", byrd_uid());
+            snprintf(saved, LBUF, "deref_%d_saved_cursor", next_uid());
             decl_add("int64_t %s", saved);
             B("%s: {\n", alpha);
             B("    DESCR_t _deref_pat = NV_GET_fn(\"%s\");\n", varname);
@@ -2197,7 +2197,7 @@ static void byrd_emit(EXPR_t *pat,
          * ------------------------------------------------------------------- */
         if (!pat->children[0] && pat->children[1] && pat->children[1]->kind == E_QLIT && pat->children[1]->sval) {
             const char *lit = pat->children[1]->sval;
-            int uid2 = byrd_uid();
+            int uid2 = next_uid();
             Label lit_α, lit_β;
             label_fmt(lit_α, "dlit", uid2, "α");
             label_fmt(lit_β, "dlit", uid2, "β");
@@ -2251,7 +2251,7 @@ static void byrd_emit(EXPR_t *pat,
             EXPR_t *fn = pat->children[0];
             const char *fname = fn->sval ? fn->sval : "";
             int nargs = fn->nchildren;
-            int uid = byrd_uid();
+            int uid = next_uid();
             char saved[LBUF];
             snprintf(saved, LBUF, "deref_fnc_%d_saved_cursor", uid);
             decl_add("int64_t %s", saved);
@@ -2290,7 +2290,7 @@ static void byrd_emit(EXPR_t *pat,
 
         if (np) {
             /* Compiled path: direct function call — no engine.c */
-            int uid = byrd_uid();
+            int uid = next_uid();
             char saved_cur[LBUF];
             snprintf(saved_cur, LBUF, "deref_%d_saved_cur", uid);
             decl_add("int64_t %s", saved_cur);
@@ -2330,7 +2330,7 @@ static void byrd_emit(EXPR_t *pat,
 
         /* Interpreter fallback for dynamic/EVAL patterns */
         char saved[LBUF];
-        snprintf(saved, LBUF, "deref_%d_saved_cursor", byrd_uid());
+        snprintf(saved, LBUF, "deref_%d_saved_cursor", next_uid());
         decl_add("int64_t %s", saved);
 
         B("%s: {\n", alpha);
@@ -2466,11 +2466,11 @@ void byrd_emit_pattern(EXPR_t *pat, FILE *out_file,
                        const char *cursor_var,
                        const char *gamma_label,
                        const char *omega_label) {
-    byrd_out = out_file;
+    out = out_file;
     /* Save counter before first (declaration) pass so second (code) pass
      * uses the same uid sequence — never reset to 0 so multiple patterns
      * in the same compilation unit never collide. */
-    int byrd_uid_saved = byrd_uid_ctr;
+    int uid_saved = uid_ctr;
     decl_reset();
 
     /* Root labels */
@@ -2496,15 +2496,15 @@ void byrd_emit_pattern(EXPR_t *pat, FILE *out_file,
         return;
     }
 
-    byrd_out = code_file;
-    byrd_uid_ctr = byrd_uid_saved;  /* rewind to same start for code pass */
+    out = code_file;
+    uid_ctr = uid_saved;  /* rewind to same start for code pass */
     decl_reset();
 
     /* Emit root entry */
     fprintf(code_file, "\n/* ===== pattern: %s ===== */\n", root_name);
 
     /* Lower the pattern — byrd_emit emits both alpha and beta labels */
-    byrd_emit(pat,
+    emit_pat_node(pat,
               root_α, root_β,
               gamma_label, omega_label,
               subject_var, subj_len_var, cursor_var,
@@ -2519,7 +2519,7 @@ void byrd_emit_pattern(EXPR_t *pat, FILE *out_file,
     /* Now emit to out_file: declarations FIRST, then goto, then code.
      * C99 forbids jumping over variable-length declarations, so all
      * static decls must appear before the first goto in the function. */
-    byrd_out = out_file;
+    out = out_file;
     decl_flush();            /* static declarations — before any goto */
     B("    goto %s;\n", root_α);
 
@@ -2566,8 +2566,8 @@ void byrd_emit_named_pattern(const char *varname, EXPR_t *pat, FILE *out_file) {
      * we compile the first occurrence and ignore subsequent ones. */
     NamedPat *np_entry = NULL;
     for (int i = 0; i < named_pat_count; i++) {
-        if (strcmp(named_pat_registry[i].varname, varname) == 0) {
-            np_entry = &named_pat_registry[i];
+        if (strcmp(named_pats[i].varname, varname) == 0) {
+            np_entry = &named_pats[i];
             break;
         }
     }
@@ -2589,7 +2589,7 @@ void byrd_emit_named_pattern(const char *varname, EXPR_t *pat, FILE *out_file) {
         return;
     }
 
-    int uid_saved = byrd_uid_ctr;
+    int uid_saved = uid_ctr;
     decl_reset();
 
     char γ_lbl[LBUF], ω_lbl[LBUF];
@@ -2604,8 +2604,8 @@ void byrd_emit_named_pattern(const char *varname, EXPR_t *pat, FILE *out_file) {
     in_named_pat = 1;
     current_named_pat_name = varname;
 
-    byrd_out = code_file;
-    byrd_uid_ctr = uid_saved;
+    out = code_file;
+    uid_ctr = uid_saved;
     decl_reset();
     byrd_cond_reset();   /* clear any pending conditionals from prior pattern */
 
@@ -2614,7 +2614,7 @@ void byrd_emit_named_pattern(const char *varname, EXPR_t *pat, FILE *out_file) {
      * even when this pattern is called from inside a nested NPUSH context. */
     decl_add("int _parent_frame");
 
-    byrd_emit(pat,
+    emit_pat_node(pat,
               root_α, root_β,
               γ_lbl, ω_lbl,
               "_subj_np", "_slen_np", "_cur_np",
