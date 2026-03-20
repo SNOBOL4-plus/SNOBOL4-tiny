@@ -783,7 +783,7 @@ static void emit_pat_node(EXPR_t *pat,
         char **mids = malloc(nkids * sizeof(char *));
         for (int i = 0; i < nkids - 1; i++) {
             mids[i] = malloc(64);
-            snprintf(mids[i], 64, "Nn%d_seq_m%d", uid, i);
+            snprintf(mids[i], 64, "Nn%d_seq_γ%d", uid, i);
         }
         const char *seq_omega = omega;  /* may be overridden after ARB */
         for (int i = 0; i < nkids; i++) {
@@ -819,7 +819,7 @@ static void emit_pat_node(EXPR_t *pat,
             const char *kid_omega;
             char lbl_next[64];
             if (i < nkids - 1) {
-                snprintf(lbl_next, sizeof lbl_next, "Nn%d_alt_n%d", uid, i);
+                snprintf(lbl_next, sizeof lbl_next, "Nn%d_alt_β%d", uid, i);
                 kid_omega = lbl_next;
             } else {
                 kid_omega = omega;
@@ -836,7 +836,7 @@ static void emit_pat_node(EXPR_t *pat,
 
     case E_NAM: {
         int loc_before = (*p_next_int)++;  /* int32: cursor before capture */
-        char lbl_ok[64]; snprintf(lbl_ok, sizeof lbl_ok, "Nn%d_nam_ok", uid);
+        char lbl_ok[64]; snprintf(lbl_ok, sizeof lbl_ok, "Nn%d_nam_γ", uid);
         ldloc_i(loc_cursor); stloc_i(loc_before);
         emit_pat_node(expr_left(pat), lbl_ok, omega, loc_subj, loc_cursor, loc_len, p_next_int, p_next_str);
         N("  %s:\n", lbl_ok);
@@ -856,7 +856,7 @@ static void emit_pat_node(EXPR_t *pat,
 
     case E_DOL: {
         int loc_before = (*p_next_int)++;
-        char lbl_ok[64]; snprintf(lbl_ok, sizeof lbl_ok, "Nn%d_dol_ok", uid);
+        char lbl_ok[64]; snprintf(lbl_ok, sizeof lbl_ok, "Nn%d_dol_γ", uid);
         ldloc_i(loc_cursor); stloc_i(loc_before);
         emit_pat_node(expr_left(pat), lbl_ok, omega, loc_subj, loc_cursor, loc_len, p_next_int, p_next_str);
         N("  %s:\n", lbl_ok);
@@ -881,10 +881,10 @@ static void emit_pat_node(EXPR_t *pat,
         if (strcasecmp(fname, "ARBNO") == 0) {
             int loc_save = (*p_next_int)++;
             char lbl_loop[64], lbl_done[64], lbl_cok[64], lbl_cfail[64];
-            snprintf(lbl_loop,  sizeof lbl_loop,  "Nn%d_arb_loop", uid);
-            snprintf(lbl_done,  sizeof lbl_done,  "Nn%d_arb_done", uid);
-            snprintf(lbl_cok,   sizeof lbl_cok,   "Nn%d_arb_cok",  uid);
-            snprintf(lbl_cfail, sizeof lbl_cfail,  "Nn%d_arb_cf",   uid);
+            snprintf(lbl_loop,  sizeof lbl_loop,  "Nn%d_arb_β", uid);
+            snprintf(lbl_done,  sizeof lbl_done,  "Nn%d_arb_γ", uid);
+            snprintf(lbl_cok,   sizeof lbl_cok,   "Nn%d_arb_child_γ",  uid);
+            snprintf(lbl_cfail, sizeof lbl_cfail,  "Nn%d_arb_child_ω",   uid);
             EXPR_t *child = arg0;
             N("  %s:\n", lbl_loop);
             ldloc_i(loc_cursor); stloc_i(loc_save);
@@ -936,8 +936,8 @@ static void emit_pat_node(EXPR_t *pat,
             int loc_cs = (*p_next_str)++;   /* string: charset */
             int loc_ch = (*p_next_str)++;   /* string: char */
             char lbl_loop[64], lbl_done[64];
-            snprintf(lbl_loop, sizeof lbl_loop, "Nn%d_spn_lp", uid);
-            snprintf(lbl_done, sizeof lbl_done, "Nn%d_spn_dn", uid);
+            snprintf(lbl_loop, sizeof lbl_loop, "Nn%d_span_loop", uid);
+            snprintf(lbl_done, sizeof lbl_done, "Nn%d_span_γ", uid);
             if (arg0) pat_emit_expr(arg0); else N("    ldstr      \"\"\n");
             stloc_s(loc_cs);
             /* must match at least 1 */
@@ -970,8 +970,8 @@ static void emit_pat_node(EXPR_t *pat,
             int loc_cs = (*p_next_str)++;
             int loc_ch = (*p_next_str)++;
             char lbl_loop[64], lbl_done[64];
-            snprintf(lbl_loop, sizeof lbl_loop, "Nn%d_brk_lp", uid);
-            snprintf(lbl_done, sizeof lbl_done, "Nn%d_brk_dn", uid);
+            snprintf(lbl_loop, sizeof lbl_loop, "Nn%d_break_loop", uid);
+            snprintf(lbl_done, sizeof lbl_done, "Nn%d_break_γ", uid);
             if (arg0) pat_emit_expr(arg0); else N("    ldstr      \"\"\n");
             stloc_s(loc_cs);
             N("  %s:\n", lbl_loop);
@@ -1064,9 +1064,9 @@ static void emit_pat_node(EXPR_t *pat,
             int loc_arb_save = (*p_next_int)++;
             int loc_arb_try  = (*p_next_int)++;
             char arb_loop[64], arb_incr[64], arb_fail[64];
-            snprintf(arb_loop, sizeof arb_loop, "Nn%d_arb_lp",  uid);
-            snprintf(arb_incr, sizeof arb_incr, "Nn%d_arb_inc", uid);
-            snprintf(arb_fail, sizeof arb_fail, "Nn%d_arb_fx",  uid);
+            snprintf(arb_loop, sizeof arb_loop, "Nn%d_arb_β",  uid);
+            snprintf(arb_incr, sizeof arb_incr, "Nn%d_arb_β_inc", uid);
+            snprintf(arb_fail, sizeof arb_fail, "Nn%d_arb_ω",  uid);
             ldloc_i(loc_cursor); stloc_i(loc_arb_save);
             N("    ldc.i4.0\n"); stloc_i(loc_arb_try);
             N("  %s:\n", arb_loop);
@@ -1112,9 +1112,9 @@ static void emit_pat_node(EXPR_t *pat,
             int loc_arb_save = (*p_next_int)++;
             int loc_arb_try  = (*p_next_int)++;
             char arb_loop[64], arb_incr[64], arb_fail[64];
-            snprintf(arb_loop, sizeof arb_loop, "Nn%d_varb_lp",  uid);
-            snprintf(arb_incr, sizeof arb_incr, "Nn%d_varb_inc", uid);
-            snprintf(arb_fail, sizeof arb_fail, "Nn%d_varb_fx",  uid);
+            snprintf(arb_loop, sizeof arb_loop, "Nn%d_varb_β",  uid);
+            snprintf(arb_incr, sizeof arb_incr, "Nn%d_varb_β_inc", uid);
+            snprintf(arb_fail, sizeof arb_fail, "Nn%d_varb_ω",  uid);
             ldloc_i(loc_cursor); stloc_i(loc_arb_save);
             N("    ldc.i4.0\n"); stloc_i(loc_arb_try);
             N("  %s:\n", arb_loop);
@@ -1287,10 +1287,10 @@ static void emit_stmt(STMT_t *s, const char *next_lbl) {
         int suid = prepl_uid++;
 
         char lbl_tok[64], lbl_tfail[64], lbl_retry[64], lbl_end[64];
-        snprintf(lbl_tok,   sizeof lbl_tok,   "Npr%d_tok",   suid);
-        snprintf(lbl_tfail, sizeof lbl_tfail,  "Npr%d_fail",  suid);
-        snprintf(lbl_retry, sizeof lbl_retry,  "Npr%d_retry", suid);
-        snprintf(lbl_end,   sizeof lbl_end,    "Npr%d_end",   suid);
+        snprintf(lbl_tok,   sizeof lbl_tok,   "Npr%d_tree_γ",   suid);
+        snprintf(lbl_tfail, sizeof lbl_tfail,  "Npr%d_ω",  suid);
+        snprintf(lbl_retry, sizeof lbl_retry,  "Npr%d_β", suid);
+        snprintf(lbl_end,   sizeof lbl_end,    "Npr%d_γ",   suid);
         snprintf(pat_abort_label, sizeof pat_abort_label, "Npr%d_abort", suid);
 
         int loc_subj   = 2;
@@ -1379,9 +1379,9 @@ static void emit_stmt(STMT_t *s, const char *next_lbl) {
         int suid = pat_stmt_uid++;
 
         char lbl_tok[64], lbl_tfail[64], lbl_retry[64];
-        snprintf(lbl_tok,   sizeof lbl_tok,   "Npat%d_tok",   suid);
-        snprintf(lbl_tfail, sizeof lbl_tfail,  "Npat%d_fail",  suid);
-        snprintf(lbl_retry, sizeof lbl_retry,  "Npat%d_retry", suid);
+        snprintf(lbl_tok,   sizeof lbl_tok,   "Npat%d_tree_γ",   suid);
+        snprintf(lbl_tfail, sizeof lbl_tfail,  "Npat%d_ω",  suid);
+        snprintf(lbl_retry, sizeof lbl_retry,  "Npat%d_β", suid);
         snprintf(pat_abort_label, sizeof pat_abort_label, "Npat%d_abort", suid);
 
         /* locals: V_0=success, V_1=unused,
@@ -1433,7 +1433,7 @@ static void emit_stmt(STMT_t *s, const char *next_lbl) {
         /* fall through on fail */
         /* jump past success block */
         {
-            char lbl_end[64]; snprintf(lbl_end, sizeof lbl_end, "Npat%d_end", suid);
+            char lbl_end[64]; snprintf(lbl_end, sizeof lbl_end, "Npat%d_γ", suid);
             N("    br         %s\n", lbl_end);
             N("  %s:\n", lbl_tok);
             N("    ldc.i4.1\n");
@@ -1819,8 +1819,8 @@ static void emit_fn_method(const FnDef *fn, Program *prog, int fn_idx) {
     N("    call       void %s::net_indr_set(string, string)\n", classname);
 
     /* Return/freturn labels */
-    snprintf(fn_return_lbl,  sizeof fn_return_lbl,  "Nfn%d_return",  fn_idx);
-    snprintf(fn_freturn_lbl, sizeof fn_freturn_lbl, "Nfn%d_freturn", fn_idx);
+    snprintf(fn_return_lbl,  sizeof fn_return_lbl,  "Nfn%d_γ",  fn_idx);
+    snprintf(fn_freturn_lbl, sizeof fn_freturn_lbl, "Nfn%d_ω", fn_idx);
 
     /* Emit function body statements */
     const char *entry = fn->entry_label[0] ? fn->entry_label : fn->name;

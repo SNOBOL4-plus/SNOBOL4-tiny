@@ -1177,7 +1177,7 @@ static void emit_pat_node(EXPR_t *pat,
         int         slen = (int)strlen(s);
 
         char lbl_ok[64];
-        snprintf(lbl_ok, sizeof lbl_ok, "Jn%d_lit_ok", uid);
+        snprintf(lbl_ok, sizeof lbl_ok, "Jn%d_lit_γ", uid);
 
         char litesc[4096];
         /* escape for Jasmin ldc */
@@ -1232,8 +1232,8 @@ static void emit_pat_node(EXPR_t *pat,
             int loc_arb_start = (*p_cap_local)++;
             int loc_arb_len   = (*p_cap_local)++;
             char lbl_arb_loop[64], lbl_arb_decr[64];
-            snprintf(lbl_arb_loop, sizeof lbl_arb_loop, "Jn%d_arb_loop", uid);
-            snprintf(lbl_arb_decr, sizeof lbl_arb_decr, "Jn%d_arb_decr", uid);
+            snprintf(lbl_arb_loop, sizeof lbl_arb_loop, "Jn%d_arb_β", uid);
+            snprintf(lbl_arb_decr, sizeof lbl_arb_decr, "Jn%d_arb_β_inc", uid);
 
             /* Emit prefix: all of pat->children[0] except the trailing arb_nam node */
             {
@@ -1273,7 +1273,7 @@ static void emit_pat_node(EXPR_t *pat,
 
             /* arb_retry: bounds check + set cursor */
             char lbl_arb_retry[64];
-            snprintf(lbl_arb_retry, sizeof lbl_arb_retry, "Jn%d_arb_retry", uid);
+            snprintf(lbl_arb_retry, sizeof lbl_arb_retry, "Jn%d_arb_β_retry", uid);
             PNLABEL(lbl_arb_retry);
             /* fail if arb_start + arb_len > len */
             PN("iload %d", loc_arb_start);
@@ -1311,7 +1311,7 @@ static void emit_pat_node(EXPR_t *pat,
 
                 /* Emit right child; on success → commit label; on fail → arb_decr */
                 char lbl_arb_commit[64];
-                snprintf(lbl_arb_commit, sizeof lbl_arb_commit, "Jn%d_arb_commit", uid);
+                snprintf(lbl_arb_commit, sizeof lbl_arb_commit, "Jn%d_arb_γ", uid);
 
                 emit_pat_node(pat->children[1], lbl_arb_commit, lbl_arb_decr,
                                   loc_subj, loc_cursor, loc_len, p_cap_local, out, classname);
@@ -1357,7 +1357,7 @@ static void emit_pat_node(EXPR_t *pat,
         }
                 /* Normal SEQ */
         char lmid[64];
-        snprintf(lmid, sizeof lmid, "Jn%d_seq_mid", uid);
+        snprintf(lmid, sizeof lmid, "Jn%d_seq_γ", uid);
         emit_pat_node(pat->children[0],  lmid,  omega,
                           loc_subj, loc_cursor, loc_len, p_cap_local, out, classname);
         PNLABEL(lmid);
@@ -1393,8 +1393,8 @@ static void emit_pat_node(EXPR_t *pat,
                 int loc_save = (*p_cap_local)++;   /* allocate a local int for saved cursor */
 
         char lbl_try_right[64], lbl_restore[64];
-        snprintf(lbl_try_right, sizeof lbl_try_right, "Jn%d_alt_right", uid);
-        snprintf(lbl_restore,   sizeof lbl_restore,   "Jn%d_alt_rst",   uid);
+        snprintf(lbl_try_right, sizeof lbl_try_right, "Jn%d_alt_β", uid);
+        snprintf(lbl_restore,   sizeof lbl_restore,   "Jn%d_alt_β_rst",   uid);
 
         /* save cursor */
         PN("iload %d", loc_cursor);
@@ -1447,7 +1447,7 @@ static void emit_pat_node(EXPR_t *pat,
         int loc_before = (*p_cap_local)++;
 
         char lbl_inner_ok[64];
-        snprintf(lbl_inner_ok, sizeof lbl_inner_ok, "Jn%d_nam_ok", uid);
+        snprintf(lbl_inner_ok, sizeof lbl_inner_ok, "Jn%d_nam_γ", uid);
 
         /* save cursor before child */
         PN("iload %d", loc_cursor);
@@ -1489,7 +1489,7 @@ static void emit_pat_node(EXPR_t *pat,
         /* Immediate assign:  pat $ var  — same as E_NAM for J4 */
         int loc_before = (*p_cap_local)++;
         char lbl_inner_ok[64];
-        snprintf(lbl_inner_ok, sizeof lbl_inner_ok, "Jn%d_dol_ok", uid);
+        snprintf(lbl_inner_ok, sizeof lbl_inner_ok, "Jn%d_dol_γ", uid);
 
         PN("iload %d", loc_cursor);
         PN("istore %d", loc_before);
@@ -1537,13 +1537,13 @@ static void emit_pat_node(EXPR_t *pat,
             int loc_save = (*p_cap_local)++;   /* cursor before each attempt */
 
             char lbl_loop[64], lbl_done[64];
-            snprintf(lbl_loop, sizeof lbl_loop, "Jn%d_arb_loop", uid);
-            snprintf(lbl_done, sizeof lbl_done, "Jn%d_arb_done", uid);
+            snprintf(lbl_loop, sizeof lbl_loop, "Jn%d_arb_β", uid);
+            snprintf(lbl_done, sizeof lbl_done, "Jn%d_arb_γ", uid);
 
             /* inner child success → back to loop top; failure → done */
             char lbl_child_ok[64], lbl_child_fail[64];
-            snprintf(lbl_child_ok,   sizeof lbl_child_ok,   "Jn%d_arb_cok",  uid);
-            snprintf(lbl_child_fail, sizeof lbl_child_fail, "Jn%d_arb_cfail",uid);
+            snprintf(lbl_child_ok,   sizeof lbl_child_ok,   "Jn%d_arb_child_γ",  uid);
+            snprintf(lbl_child_fail, sizeof lbl_child_fail, "Jn%d_arb_child_ω",uid);
 
             EXPR_t *child = (pat->children && pat->children[0]) ? pat->children[0] : NULL;
 
@@ -1578,7 +1578,7 @@ static void emit_pat_node(EXPR_t *pat,
             /* cursor < len AND subject.charAt(cursor) in charset */
             EXPR_t *cs_arg = (pat->children && pat->children[0]) ? pat->children[0] : NULL;
             char lbl_ok[64];
-            snprintf(lbl_ok, sizeof lbl_ok, "Jn%d_any_ok", uid);
+            snprintf(lbl_ok, sizeof lbl_ok, "Jn%d_any_γ", uid);
 
             /* bounds check: cursor < len */
             PN("iload %d", loc_cursor);
@@ -1628,7 +1628,7 @@ static void emit_pat_node(EXPR_t *pat,
         if (strcasecmp(fname, "NOTANY") == 0) {
             EXPR_t *cs_arg = (pat->children && pat->children[0]) ? pat->children[0] : NULL;
             char lbl_ok[64];
-            snprintf(lbl_ok, sizeof lbl_ok, "Jn%d_notany_ok", uid);
+            snprintf(lbl_ok, sizeof lbl_ok, "Jn%d_notany_γ", uid);
 
             PN("iload %d", loc_cursor);
             PN("iload %d", loc_len);
@@ -1661,8 +1661,8 @@ static void emit_pat_node(EXPR_t *pat,
             EXPR_t *cs_arg = (pat->children && pat->children[0]) ? pat->children[0] : NULL;
             int loc_cs = (*p_cap_local)++;
             char lbl_loop[64], lbl_done[64];
-            snprintf(lbl_loop, sizeof lbl_loop, "Jn%d_span_lp", uid);
-            snprintf(lbl_done, sizeof lbl_done, "Jn%d_span_dn", uid);
+            snprintf(lbl_loop, sizeof lbl_loop, "Jn%d_span_loop", uid);
+            snprintf(lbl_done, sizeof lbl_done, "Jn%d_span_γ", uid);
 
             /* evaluate charset once */
             FILE *saved_out = out; out = out;
@@ -1717,8 +1717,8 @@ static void emit_pat_node(EXPR_t *pat,
             EXPR_t *cs_arg = (pat->children && pat->children[0]) ? pat->children[0] : NULL;
             int loc_cs = (*p_cap_local)++;
             char lbl_loop[64], lbl_done[64];
-            snprintf(lbl_loop, sizeof lbl_loop, "Jn%d_brk_lp", uid);
-            snprintf(lbl_done, sizeof lbl_done, "Jn%d_brk_dn", uid);
+            snprintf(lbl_loop, sizeof lbl_loop, "Jn%d_break_loop", uid);
+            snprintf(lbl_done, sizeof lbl_done, "Jn%d_break_γ", uid);
 
             FILE *saved_out = out; out = out;
             if (cs_arg) emit_expr(cs_arg); else PN("ldc \"\"");
@@ -2083,11 +2083,11 @@ static void emit_goto(const char *label) {
     if (cur_fn) {
         int fn_idx = (int)(cur_fn - fn_table);
         if (strcasecmp(label,"RETURN")==0 || strcasecmp(label,"NRETURN")==0) {
-            char lbl[64]; snprintf(lbl, sizeof lbl, "Jfn%d_return", fn_idx);
+            char lbl[64]; snprintf(lbl, sizeof lbl, "Jfn%d_γ", fn_idx);
             J("    goto %s\n", lbl); return;
         }
         if (strcasecmp(label,"FRETURN")==0) {
-            char lbl[64]; snprintf(lbl, sizeof lbl, "Jfn%d_freturn", fn_idx);
+            char lbl[64]; snprintf(lbl, sizeof lbl, "Jfn%d_ω", fn_idx);
             J("    goto %s\n", lbl); return;
         }
     }
@@ -2477,9 +2477,9 @@ static void emit_stmt(STMT_t *s, int stmt_idx) {
 
         /* The outer retry loop label (scan mode: try each cursor position) */
         char lbl_retry[64], lbl_success[64], lbl_fail[64];
-        snprintf(lbl_retry,   sizeof lbl_retry,   "Jpat%d_retry",   uid);
-        snprintf(lbl_success, sizeof lbl_success, "Jpat%d_success", uid);
-        snprintf(lbl_fail,    sizeof lbl_fail,    "Jpat%d_fail",    uid);
+        snprintf(lbl_retry,   sizeof lbl_retry,   "Jpat%d_β",   uid);
+        snprintf(lbl_success, sizeof lbl_success, "Jpat%d_γ", uid);
+        snprintf(lbl_fail,    sizeof lbl_fail,    "Jpat%d_ω",    uid);
 
         J("; --- pattern match statement ---\n");
 
@@ -2505,8 +2505,8 @@ static void emit_stmt(STMT_t *s, int stmt_idx) {
         /* Emit the pattern tree.  On tree-level success → lbl_success.
          * On tree-level failure → advance cursor or goto lbl_fail. */
         char lbl_tree_ok[64], lbl_tree_fail[64];
-        snprintf(lbl_tree_ok,   sizeof lbl_tree_ok,   "Jpat%d_tok",  uid);
-        snprintf(lbl_tree_fail, sizeof lbl_tree_fail, "Jpat%d_tfail", uid);
+        snprintf(lbl_tree_ok,   sizeof lbl_tree_ok,   "Jpat%d_tree_γ",  uid);
+        snprintf(lbl_tree_fail, sizeof lbl_tree_fail, "Jpat%d_tree_ω", uid);
 
         /* We need capture-local counter accessible across recursive calls. */
         static int cap_uid_ctr;
@@ -3543,8 +3543,8 @@ static void emit_fn_method(const FnDef *fn, Program *prog, int fn_idx) {
 
     /* Helper labels */
     char lbl_return[64], lbl_freturn[64];
-    snprintf(lbl_return,  sizeof lbl_return,  "Jfn%d_return",  fn_idx);
-    snprintf(lbl_freturn, sizeof lbl_freturn, "Jfn%d_freturn", fn_idx);
+    snprintf(lbl_return,  sizeof lbl_return,  "Jfn%d_γ",  fn_idx);
+    snprintf(lbl_freturn, sizeof lbl_freturn, "Jfn%d_ω", fn_idx);
 
     /* Emit function body statements */
     const char *entry = fn->entry_label ? fn->entry_label : fn->name;
