@@ -113,8 +113,11 @@ static char jvm_classname[256];
 
 /* Module-level label globals — set per-statement, used by emit_expr */
 static char jvm_cur_pat_abort_label_early[128]; /* placeholder — real decl below */
-static char jvm_cur_stmt_fail_label[128];  /* INPUT EOF in expr → jump here */
+static char jvm_cur_stmt_fail_label[128];  /* INPUT EOF in expr → jump here (raw SNOBOL4 label) */
 static int  jvm_expr_depth = 0;            /* nesting depth; INPUT null-check only at depth==0 */
+
+/* Forward declaration — defined after pattern emitter */
+static void jvm_emit_goto(const char *label);
 
 static void jvm_set_classname(const char *filename) {
     if (!filename || strcmp(filename, "<stdin>") == 0) {
@@ -444,7 +447,7 @@ static void jvm_emit_expr(EXPR_t *e) {
                     JI("dup", "");
                     JI("ifnonnull", inp_ok);
                     JI("pop", "");
-                    JI("goto", jvm_cur_stmt_fail_label);
+                    jvm_emit_goto(jvm_cur_stmt_fail_label);
                     J("%s:\n", inp_ok);
                 }
             }
@@ -2113,7 +2116,7 @@ static void jvm_emit_stmt(STMT_t *s, int stmt_idx) {
     jvm_cur_stmt_fail_label[0] = '\0';
     if (s->go && s->go->onfailure && s->go->onfailure[0]) {
         snprintf(jvm_cur_stmt_fail_label, sizeof jvm_cur_stmt_fail_label,
-                 "L_%s", s->go->onfailure);
+                 "%s", s->go->onfailure);
     }
 
     /* Label */
@@ -2233,7 +2236,7 @@ static void jvm_emit_stmt(STMT_t *s, int stmt_idx) {
             JI("dup", "");
             JI("ifnonnull", hoist_ok);
             JI("pop", "");
-            JI("goto", jvm_cur_stmt_fail_label);
+            jvm_emit_goto(jvm_cur_stmt_fail_label);
             J("%s:\n", hoist_ok);
             J("    astore 5\n");   /* local 5 = hoisted INPUT value */
         }
@@ -2261,8 +2264,7 @@ static void jvm_emit_stmt(STMT_t *s, int stmt_idx) {
                     JI("pop", "");
                     /* jump to explicit :F or skip to after */
                     if (s->go && s->go->onfailure && s->go->onfailure[0]) {
-                        char flbl[128]; snprintf(flbl, sizeof flbl, "L_%s", s->go->onfailure);
-                        JI("goto", flbl);
+                        jvm_emit_goto(s->go->onfailure);
                     } else {
                         JI("goto", onfail);
                     }
@@ -2317,8 +2319,7 @@ static void jvm_emit_stmt(STMT_t *s, int stmt_idx) {
                 jvm_emit_expr(s->replacement);   /* → String | null */
                 snprintf(jvm_cur_stmt_fail_label, sizeof jvm_cur_stmt_fail_label, "%s", saved_fail);
                 JI("dup", "");
-                char flbl[128]; snprintf(flbl, sizeof flbl, "L_%s", s->go->onfailure);
-                /* ifnull would leave 1 item on stack at flbl; use ifnonnull+pop+goto
+                /* ifnull would leave 1 item on stack at :F target; use ifnonnull+pop+goto
                  * so :F target always receives empty stack (consistent with other :F paths) */
                 {
                     static int _inp_ok_uid = 0;
@@ -2326,7 +2327,7 @@ static void jvm_emit_stmt(STMT_t *s, int stmt_idx) {
                     snprintf(inp_ok_lbl, sizeof inp_ok_lbl, "Linp_ok_%d", _inp_ok_uid++);
                     JI("ifnonnull", inp_ok_lbl);
                     JI("pop", "");    /* discard null — stack now empty */
-                    JI("goto", flbl);
+                    jvm_emit_goto(s->go->onfailure);
                     J("%s:\n", inp_ok_lbl);
                 }
                 /* non-null: store via sno_var_put(name, val) */
@@ -2356,8 +2357,7 @@ static void jvm_emit_stmt(STMT_t *s, int stmt_idx) {
                     /* null → failure: pop and branch */
                     JI("pop", "");
                     if (s->go && s->go->onfailure && s->go->onfailure[0]) {
-                        char flbl[128]; snprintf(flbl, sizeof flbl, "L_%s", s->go->onfailure);
-                        JI("goto", flbl);
+                        jvm_emit_goto(s->go->onfailure);
                     } else {
                         JI("goto", vnfail);
                     }
