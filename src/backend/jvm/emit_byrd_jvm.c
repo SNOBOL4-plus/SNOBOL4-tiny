@@ -2229,6 +2229,43 @@ static void jvm_emit_goto(const char *label) {
     }
     char safe[128]; jvm_expand_label(label, safe, sizeof safe);
     char glbl[256]; snprintf(glbl, sizeof glbl, "L_%s", safe);
+
+    /* Cross-scope check: if we are inside a function method, verify that
+     * the target label actually exists within this function's body range.
+     * If not (e.g. ":F(error)" jumping to a main-level label), SNOBOL4
+     * semantics treat it as FRETURN — the function fails.
+     * See JVM.md J-212 sprint notes. */
+    if (jvm_cur_fn && jvm_cur_prog) {
+        const char *entry = jvm_cur_fn->entry_label
+                            ? jvm_cur_fn->entry_label
+                            : jvm_cur_fn->name;
+        int in_body = 0;
+        int found_in_fn = 0;
+        for (STMT_t *t = jvm_cur_prog->head; t; t = t->next) {
+            /* Start of this function's body */
+            if (!in_body && t->label && entry &&
+                strcasecmp(t->label, entry) == 0)
+                in_body = 1;
+            /* End of this function's body */
+            if (in_body && jvm_cur_fn->end_label && t->label &&
+                strcasecmp(t->label, jvm_cur_fn->end_label) == 0)
+                break;
+            if (in_body && t->label) {
+                char ts[128];
+                jvm_expand_label(t->label, ts, sizeof ts);
+                if (strcmp(ts, safe) == 0) { found_in_fn = 1; break; }
+            }
+        }
+        if (!found_in_fn) {
+            /* Out-of-scope: SNOBOL4 semantics = FRETURN */
+            int fn_idx = (int)(jvm_cur_fn - jvm_fn_table_fwd);
+            char lbl_fr[64];
+            snprintf(lbl_fr, sizeof lbl_fr, "Jfn%d_freturn", fn_idx);
+            J("    goto %s\n", lbl_fr);
+            return;
+        }
+    }
+
     JI("goto", glbl);
 }
 
