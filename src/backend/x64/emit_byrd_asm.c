@@ -2938,6 +2938,23 @@ static int emit_expr(EXPR_t *e, int rbp_off) {
 
     case E_OR:
     case E_CONC: {
+        /* Unary | in value context — OPSYN dispatch: opsyn('|',.size,1) → APPLY_fn("|",arg,1).
+         * Parser creates E_OR with 1 child for prefix |expr. */
+        if (e->kind == E_OR && e->nchildren == 1 && e->children[0]) {
+            const char *fnlab = str_intern("|");
+            A("    sub     rsp, 16\n");
+            emit_expr(e->children[0], -32);
+            A("    STORE_ARG32 0\n");
+            A("    APPLY_FN_N  %s, 1\n", fnlab);
+            A("    add     rsp, 16\n");
+            if (rbp_off == -32 || rbp_off == -16) {
+                A("    STORE_RESULT\n");
+            } else {
+                A("    mov     [rbp%+d], rax\n", rbp_off);
+                A("    mov     [rbp%+d], rdx\n", rbp_off+8);
+            }
+            return 1;
+        }
         /* n-ary: if >2 children, right-fold into heap-allocated binary nodes */
         if (e->nchildren > 2) {
             int _nc = e->nchildren;
@@ -3224,6 +3241,73 @@ static int emit_expr(EXPR_t *e, int rbp_off) {
         } else {
             A("    mov     [rbp%+d], rax\n", rbp_off);
             A("    mov     [rbp%+d], rdx\n", rbp_off+8);
+        }
+        return 1;
+    }
+
+    /* ---- E_ATP: unary @VAR (cursor capture) or binary @ (OPSYN dispatch) ---- */
+    case E_ATP: {
+        if (e->nchildren >= 2 && e->children[0] && e->children[1]) {
+            /* Binary @ — OPSYN: dispatch via APPLY_fn("@", args, 2) at runtime.
+             * The runtime's opsyn() registered "@" → whatever the user bound.
+             * E.g. opsyn('@', .dupl, 2) → APPLY_fn("@", ['a', 4], 2) → dupl('a',4). */
+            const char *fnlab = str_intern("@");
+            EXPR_t *l = e->children[0], *r = e->children[1];
+            A("    sub     rsp, 32\n");
+            emit_expr(l, -32);
+            A("    STORE_ARG32 0\n");
+            emit_expr(r, -32);
+            A("    STORE_ARG32 16\n");
+            A("    APPLY_FN_N  %s, 2\n", fnlab);
+            A("    add     rsp, 32\n");
+            if (rbp_off == -32 || rbp_off == -16) {
+                A("    STORE_RESULT\n");
+            } else {
+                A("    mov     [rbp%+d], rax\n", rbp_off);
+                A("    mov     [rbp%+d], rdx\n", rbp_off+8);
+            }
+            return 1;
+        }
+        /* Unary @VAR — cursor capture: load cursor as integer into variable.
+         * In value-expression context (outside pattern), returns cursor value. */
+        {
+            const char *varname = (e->children[0] && e->children[0]->sval) ? e->children[0]->sval
+                                : (e->sval ? e->sval : "");
+            const char *varlab = str_intern(varname);
+            /* Store cursor as integer into variable; result = cursor value */
+            A("    mov     rax, [cursor]\n");
+            if (*varname) {
+                A("    ASSIGN_INT_RAX  %s\n", varlab);
+            }
+            if (rbp_off == -32 || rbp_off == -16) {
+                A("    mov     qword [rbp-16], 2\n");  /* DT_I */
+                A("    mov     [rbp-8], rax\n");
+            } else {
+                A("    mov     qword [rbp%+d], 2\n", rbp_off);
+                A("    mov     [rbp%+d], rax\n", rbp_off+8);
+            }
+            return 1;
+        }
+    }
+
+    /* ---- Unary | — OPSYN dispatch via APPLY_fn("|", args, 1) ---- */
+    /* Handled inside E_OR above when nchildren == 1 */
+
+    /* ---- E_NAM in value context: .VAR yields the name as a string value ---- */
+    case E_NAM: {
+        /* .dupl → STRVAL("dupl"). Used by OPSYN(.facto,'fact'), APPLY(.eq,…),
+         * NRETURN (.a), and any other place a name-value is passed as an arg.
+         * In value (non-pattern) context E_NAM(child=E_VART("varname")) → name string. */
+        const char *varname = (e->children[0] && e->children[0]->sval)
+                              ? e->children[0]->sval
+                              : (e->sval ? e->sval : "");
+        const char *vlab = str_intern(varname);
+        if (rbp_off == -32 || rbp_off == -16) {
+            A("    LOAD_STR    %s\n", vlab);
+        } else {
+            A("    mov     qword [rbp%+d], 1\n", rbp_off);   /* DT_S */
+            A("    lea     rax, [rel %s]\n", vlab);
+            A("    mov     [rbp%+d], rax\n", rbp_off+8);
         }
         return 1;
     }
