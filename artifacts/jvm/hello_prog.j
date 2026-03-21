@@ -51,6 +51,22 @@ L_END:
 ; program end
     return
 .end method
+.method static sno_str_eq(Ljava/lang/String;Ljava/lang/String;)Z
+    .limit stack 4
+    .limit locals 2
+    aload_0
+    ifnull Lstreq_false
+    aload_1
+    ifnull Lstreq_false
+    aload_0
+    aload_1
+    invokevirtual java/lang/String/equalsIgnoreCase(Ljava/lang/String;)Z
+    ireturn
+Lstreq_false:
+    iconst_0
+    ireturn
+.end method
+
 .method static sno_kw_get(Ljava/lang/String;)Ljava/lang/String;
     .limit stack 4
     .limit locals 3
