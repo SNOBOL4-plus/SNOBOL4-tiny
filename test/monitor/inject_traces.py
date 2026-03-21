@@ -127,6 +127,7 @@ MONITOR_PREAMBLE = """\
 *     IPC mode: trace events -> named FIFO via monitor_ipc.so
 *     MONITOR_FIFO env var = FIFO path; MONITOR_SO env var = .so path
         &TRACE         =  16000000
+        &STLIMIT       =  5000000
 *
 *     Read FIFO path and .so path from environment via HOST(4,name)
         MON_FIFO_      =  HOST(4,'MONITOR_FIFO')
