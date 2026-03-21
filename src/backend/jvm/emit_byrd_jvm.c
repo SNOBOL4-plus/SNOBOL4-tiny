@@ -2802,6 +2802,15 @@ static void emit_runtime_helpers(void) {
         J("    getstatic %s\n", stdesc);
         J("    aload_1\n");
         J("    invokevirtual java/io/PrintStream/println(Ljava/lang/String;)V\n");
+        /* monitor: also trace OUTPUT assignments */
+        {
+            char smwdesc2[512];
+            snprintf(smwdesc2, sizeof smwdesc2,
+                "%s/sno_monitor_write(Ljava/lang/String;Ljava/lang/String;)V", classname);
+            J("    aload_0\n");
+            J("    aload_1\n");
+            J("    invokestatic %s\n", smwdesc2);
+        }
         J("    return\n");
         J("Lsvp_not_output:\n");
         char vmdesc[512];
@@ -2811,11 +2820,63 @@ static void emit_runtime_helpers(void) {
         J("    aload_1\n");
         J("    invokevirtual java/util/HashMap/put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;\n");
         J("    pop\n");
+        /* monitor: write VAR event via sno_monitor_write helper */
+        {
+            char smwdesc[512];
+            snprintf(smwdesc, sizeof smwdesc,
+                "%s/sno_monitor_write(Ljava/lang/String;Ljava/lang/String;)V", classname);
+            J("    aload_0\n");
+            J("    aload_1\n");
+            J("    invokestatic %s\n", smwdesc);
+        }
         J("    return\n");
         J(".end method\n\n");
 
         /* sno_indr_get(String name) → String
          * Look up variable whose name is the string value of name. */
+        /* sno_monitor_write(String name, String val) — write "VAR name \"val\"\n" to monitor.
+         * Uses bipush 34 + Character.toString. Stores PS in local 0 to avoid stack confusion. */
+        J(".method static sno_monitor_write(Ljava/lang/String;Ljava/lang/String;)V\n");
+        J("    .limit stack 6\n");
+        J("    .limit locals 3\n");  /* 0=name, 1=val, 2=PS */
+        {
+            char mondesc4[512];
+            snprintf(mondesc4, sizeof mondesc4, "%s/sno_monitor_out Ljava/io/PrintStream;", classname);
+            J("    getstatic %s\n", mondesc4);
+            J("    dup\n");
+            J("    ifnull Lsmw_skip\n");
+            J("    astore_2\n");  /* store PS in local 2 */
+            J("    new java/lang/StringBuilder\n");
+            J("    dup\n");
+            J("    invokespecial java/lang/StringBuilder/<init>()V\n");
+            J("    ldc \"VAR \"\n");
+            J("    invokevirtual java/lang/StringBuilder/append(Ljava/lang/String;)Ljava/lang/StringBuilder;\n");
+            J("    aload_0\n");
+            J("    invokevirtual java/lang/StringBuilder/append(Ljava/lang/String;)Ljava/lang/StringBuilder;\n");
+            J("    bipush 32\n");
+            J("    invokestatic java/lang/Character/toString(C)Ljava/lang/String;\n");
+            J("    invokevirtual java/lang/StringBuilder/append(Ljava/lang/String;)Ljava/lang/StringBuilder;\n");
+            J("    bipush 34\n");
+            J("    invokestatic java/lang/Character/toString(C)Ljava/lang/String;\n");
+            J("    invokevirtual java/lang/StringBuilder/append(Ljava/lang/String;)Ljava/lang/StringBuilder;\n");
+            J("    aload_1\n");
+            J("    invokevirtual java/lang/StringBuilder/append(Ljava/lang/String;)Ljava/lang/StringBuilder;\n");
+            J("    bipush 34\n");
+            J("    invokestatic java/lang/Character/toString(C)Ljava/lang/String;\n");
+            J("    invokevirtual java/lang/StringBuilder/append(Ljava/lang/String;)Ljava/lang/StringBuilder;\n");
+            J("    invokevirtual java/lang/StringBuilder/toString()Ljava/lang/String;\n");
+            J("    astore_2\n");  /* temporarily store result */
+            J("    getstatic %s\n", mondesc4);  /* reload PS */
+            J("    aload_2\n");   /* load string result */
+            J("    invokevirtual java/io/PrintStream/println(Ljava/lang/String;)V\n");
+            J("    goto Lsmw_done\n");
+            J("Lsmw_skip:\n");
+            J("    pop\n");
+            J("Lsmw_done:\n");
+        }
+        J("    return\n");
+        J(".end method\n\n");
+
         J(".method static sno_indr_get(Ljava/lang/String;)Ljava/lang/String;\n");
         J("    .limit stack 4\n");
         J("    .limit locals 1\n");
@@ -3653,6 +3714,7 @@ static void emit_header(Program *prog) {
     J("; Runtime fields\n");
     J(".field static sno_stdout Ljava/io/PrintStream;\n");
     J(".field static sno_input_br Ljava/io/BufferedReader;\n");
+    J(".field static sno_monitor_out Ljava/io/PrintStream;\n");
 
     /* Keyword int fields (J2) */
     J(".field static sno_kw_TRIM I\n");
@@ -3677,12 +3739,35 @@ static void emit_header(Program *prog) {
     /* static initialiser: cache System.out, init vars to "", init map */
     J(".method static <clinit>()V\n");
     /* stack: need 4 for HashMap init + put operations */
-    int clinit_stack = 4 + nvar * 3;
+    int clinit_stack = 8 + nvar * 3;
     if (clinit_stack < 4) clinit_stack = 4;
     J("    .limit stack %d\n", clinit_stack);
-    J("    .limit locals 0\n");
+    J("    .limit locals 2\n");
     J("    getstatic       java/lang/System/out Ljava/io/PrintStream;\n");
     J("    putstatic       %s/sno_stdout Ljava/io/PrintStream;\n", classname);
+    /* init monitor: open MONITOR_FIFO env var as append PrintStream (null if unset) */
+    J("    ldc             \"MONITOR_FIFO\"\n");
+    J("    invokestatic    java/lang/System/getenv(Ljava/lang/String;)Ljava/lang/String;\n");
+    J("    astore_0\n");
+    J("    aload_0\n");
+    J("    ifnull          Lclinit_mon_skip\n");
+    J("    new             java/io/FileOutputStream\n");
+    J("    dup\n");
+    J("    aload_0\n");
+    J("    iconst_1\n");
+    J("    invokespecial   java/io/FileOutputStream/<init>(Ljava/lang/String;Z)V\n");
+    J("    astore_1\n");
+    J("    new             java/io/PrintStream\n");
+    J("    dup\n");
+    J("    aload_1\n");
+    J("    iconst_1\n");
+    J("    invokespecial   java/io/PrintStream/<init>(Ljava/io/OutputStream;Z)V\n");
+    J("    putstatic       %s/sno_monitor_out Ljava/io/PrintStream;\n", classname);
+    J("    goto            Lclinit_mon_done\n");
+    J("Lclinit_mon_skip:\n");
+    J("    aconst_null\n");
+    J("    putstatic       %s/sno_monitor_out Ljava/io/PrintStream;\n", classname);
+    J("Lclinit_mon_done:\n");
     /* init keyword ints to 0 */
     J("    iconst_0\n");
     J("    putstatic       %s/sno_kw_TRIM I\n", classname);

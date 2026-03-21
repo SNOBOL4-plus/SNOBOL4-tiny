@@ -2,7 +2,7 @@
 # run_monitor.sh <sno_file> [tracepoints_conf]
 # Five-way IPC monitor: CSNOBOL4 + SPITBOL + ASM + JVM + NET
 # Exit 0 = all backends match oracle. Exit 1 = divergence.
-set -euo pipefail
+set -uo pipefail
 
 SNO=${1:?Usage: run_monitor.sh <sno_file> [tracepoints_conf]}
 CONF=${2:-$(dirname "$0")/tracepoints.conf}
@@ -30,8 +30,8 @@ MONITOR_FIFO="$TMP/csn.fifo" MONITOR_SO="$SO" \
     snobol4 -f -P256k -I"$INC" "$TMP/instr.sno" \
     < /dev/null > "$TMP/csn.out" 2>"$TMP/csn.stderr" || true
 
-# Step 4: SPITBOL
-SNOLIB="$X64_DIR" MONITOR_FIFO="$TMP/spl.fifo" \
+# Step 4: SPITBOL (uses monitor_ipc_spitbol.so — SPITBOL scblk ABI, not CSNOBOL4)
+SNOLIB="$X64_DIR" MONITOR_FIFO="$TMP/spl.fifo" MONITOR_SO="$X64_DIR/monitor_ipc_spitbol.so" \
     "$X64_DIR/bootsbl" "$TMP/instr.sno" \
     < /dev/null > "$TMP/spl.out" 2>"$TMP/spl.stderr" || true
 

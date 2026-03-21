@@ -9,7 +9,7 @@ Strategy:
   - Injects three SNOBOL4 callback functions (MONCALL, MONRET, MONVAL) that
     write trace events via MON_SEND() to a named FIFO.
   - FIFO path read from env var MONITOR_FIFO; .so path from MONITOR_SO.
-  - Sets &TRACE = 999999999 so TRACE events fire.
+  - Sets &TRACE = 16000000 (SPITBOL max ~16M; CSNOBOL4 accepts any) so TRACE events fire (INT_MAX: SPITBOL rejects 999999999).
   - Injects TRACE() registration calls for all included functions/variables.
   - Output is a valid .sno file on stdout.
 
@@ -124,9 +124,9 @@ def scan_sno(lines, include_rules, exclude_rules):
 
 MONITOR_PREAMBLE = """\
 * --- MONITOR PREAMBLE: injected by inject_traces.py ---
-*     IPC mode: trace events → named FIFO via monitor_ipc.so
+*     IPC mode: trace events -> named FIFO via monitor_ipc.so
 *     MONITOR_FIFO env var = FIFO path; MONITOR_SO env var = .so path
-        &TRACE         =  999999999
+        &TRACE         =  16000000
 *
 *     Read FIFO path and .so path from environment via HOST(4,name)
         MON_FIFO_      =  HOST(4,'MONITOR_FIFO')
@@ -153,7 +153,7 @@ MONCALL_T
 MONCALL_END
 *
         DEFINE('MONRET(MONN,MONT)MONV')                   :(MONRET_END)
-MONRET  MONV           =  CONVERT(VALUE(MONN),'STRING')   :F(MONRET_NR)
+MONRET  MONV           =  CONVERT($MONN,'STRING')   :F(MONRET_NR)
         IDENT(MON_IPC_,'1')                               :F(MONRET_T)
         MON_SEND('RETURN',MONN ' = ' MONV)               :(RETURN)
 MONRET_T
@@ -166,7 +166,7 @@ MONRET_NT
 MONRET_END
 *
         DEFINE('MONVAL(MONN,MONT)MONV')                   :(MONVAL_END)
-MONVAL  MONV           =  CONVERT(VALUE(MONN),'STRING')   :F(MONVAL_U)
+MONVAL  MONV           =  CONVERT($MONN,'STRING')   :F(MONVAL_U)
         IDENT(MON_IPC_,'1')                               :F(MONVAL_T)
         MON_SEND('VALUE',MONN ' = ' MONV)                :(RETURN)
 MONVAL_T
