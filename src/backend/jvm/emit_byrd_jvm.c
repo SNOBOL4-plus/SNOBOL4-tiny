@@ -3737,8 +3737,8 @@ static void emit_main_close(void) {
  * Public entry point
  * ----------------------------------------------------------------------- */
 
-void jvm_emit(Program *prog, FILE *out, const char *filename) {
-    out = out;
+void jvm_emit(Program *prog, FILE *jvm_out, const char *filename) {
+    out = jvm_out;
     nvar = 0;
     need_sno_parse_helper = 0;
     need_input_helper = 0;
