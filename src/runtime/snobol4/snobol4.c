@@ -156,9 +156,9 @@ static DESCR_t _b_REAL(DESCR_t *a, int n) {
 }
 static DESCR_t _b_SIZE(DESCR_t *a, int n) {
     if (n < 1) return INTVAL(0);
-    /* Special case: &ALPHABET is a 256-char binary string starting with NUL.
-     * strlen would return 0. Check pointer identity against the alphabet buffer. */
-    if (a[0].v == DT_S && a[0].s == alphabet) return INTVAL(256);
+    /* Binary string (e.g. &ALPHABET-derived): use slen field directly. */
+    if (a[0].v == DT_S && a[0].slen) return INTVAL((int64_t)a[0].slen);
+    /* Normal case: convert to string, measure with strlen. */
     const char *s = VARVAL_fn(a[0]);
     return INTVAL((int64_t)(s ? strlen(s) : 0));
 }
@@ -735,7 +735,7 @@ void SNO_INIT_fn(void) {
     for (int i = 0; i < 256; i++) alphabet[i] = (char)i;
     alphabet[256] = '\0';
     /* Register as NV keyword — pointer identity used by SIZE for correct length */
-    NV_SET_fn("ALPHABET", STRVAL(alphabet));
+    NV_SET_fn("ALPHABET", BSTRVAL(alphabet, 256));
     /* Enable monitor if MONITOR=1 (writes to stderr) */
     const char *mon = getenv("MONITOR");
     if (mon && mon[0] == '1') monitor_fd = 2;
@@ -1670,29 +1670,35 @@ DESCR_t DUPL_fn(DESCR_t s, DESCR_t n) {
 }
 
 DESCR_t REPLACE_fn(DESCR_t s, DESCR_t from, DESCR_t to) {
-    /* REPLACE(s, from, to): for each char in from, REPLACE_fn with corresponding
-     * char in to. Like tr command. */
-    const char *STRVAL_fn  = VARVAL_fn(s);
-    const char *f    = VARVAL_fn(from);
-    const char *t    = VARVAL_fn(to);
-    size_t slen = strlen(STRVAL_fn);
-    char *r = GC_malloc(slen + 1);
-    /* Build translation table */
+    /* REPLACE(s, from, to): for each char in from, map to corresponding char in to.
+     * Like tr command. Uses descr_slen() to support binary strings (e.g. &ALPHABET). */
+    const char *sp   = s.v == DT_S ? s.s : VARVAL_fn(s);
+    const char *fp   = from.v == DT_S ? from.s : VARVAL_fn(from);
+    const char *tp   = to.v == DT_S ? to.s : VARVAL_fn(to);
+    size_t slen_val  = descr_slen(s);
+    /* Build translation table: identity by default */
     unsigned char xlat[256];
     for (int i = 0; i < 256; i++) xlat[i] = (unsigned char)i;
-    size_t flen = strlen(f), tlen = strlen(t);
+    size_t flen = descr_slen(from), tlen = descr_slen(to);
     for (size_t i = 0; i < flen; i++) {
-        unsigned char fc = (unsigned char)f[i];
-        unsigned char tc = (i < tlen) ? (unsigned char)t[i] : 0;
+        unsigned char fc = (unsigned char)fp[i];
+        unsigned char tc = (i < tlen) ? (unsigned char)tp[i] : 0;
         xlat[fc] = tc;
     }
+    /* Apply translation.
+     * binary_mode: from/to/subject is a binary string (slen>0) — preserve NULs
+     * in result so positional alignment is maintained (&ALPHABET use-case).
+     * Normal mode: drop NUL-mapped chars (traditional SNOBOL4 REPLACE). */
+    int binary_mode = (from.v == DT_S && from.slen) || (to.v == DT_S && to.slen)
+                   || (s.v == DT_S && s.slen);
+    char *r = GC_malloc(slen_val + 1);
     size_t rlen = 0;
-    for (size_t i = 0; i < slen; i++) {
-        unsigned char c = xlat[(unsigned char)STRVAL_fn[i]];
-        if (c) r[rlen++] = (char)c;
+    for (size_t i = 0; i < slen_val; i++) {
+        unsigned char c = xlat[(unsigned char)sp[i]];
+        if (binary_mode || c) r[rlen++] = (char)c;
     }
     r[rlen] = '\0';
-    return STRVAL(r);
+    return binary_mode ? BSTRVAL(r, rlen) : STRVAL(r);
 }
 
 DESCR_t SUBSTR_fn(DESCR_t s, DESCR_t i, DESCR_t n) {
