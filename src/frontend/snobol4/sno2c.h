@@ -42,6 +42,13 @@ typedef enum {
     E_IDX,           /* expr[subs] — postfix: children[0]=expr, children[1..]=indices */
     E_ATP,           /* @var — cursor position capture */
     E_ASGN,          /* var = expr inside expression context */
+    /* ---- Prolog frontend (prolog_lower.c) ---- */
+    E_UNIFY,         /* =/2 — unify two terms; needs trail; ω on failure  */
+    E_CLAUSE,        /* one Horn clause — head term + body goals + EnvLayout */
+    E_CHOICE,        /* all clauses for one functor/arity — α/β chain     */
+    E_CUT,           /* ! — seals β of enclosing choice point (= FENCE)   */
+    E_TRAIL_MARK,    /* save trail.top into env slot                       */
+    E_TRAIL_UNWIND,  /* restore trail to saved mark                        */
 } EKind;
 
 /*
