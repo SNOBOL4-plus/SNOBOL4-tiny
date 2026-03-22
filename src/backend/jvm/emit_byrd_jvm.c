@@ -2880,7 +2880,10 @@ static void jvm_emit_stmt(STMT_t *s, int stmt_idx) {
 
         /* --- FAIL --- */
         J("%s:\n", lbl_fail);
-        if (s->go && s->go->onfailure && s->go->onfailure[0]) {
+        if (s->go && s->go->uncond && s->go->uncond[0]) {
+            /* Unconditional goto fires on failure too */
+            jvm_emit_goto(s->go->uncond);
+        } else if (s->go && s->go->onfailure && s->go->onfailure[0]) {
             jvm_emit_goto(s->go->onfailure);
         }
         return;
