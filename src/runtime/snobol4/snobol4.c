@@ -31,6 +31,47 @@
 
 int monitor_fd  = -1;
 int monitor_ack_fd = -1;
+int monitor_ready = 0;  /* set to 1 after pre-init constants are installed */
+
+/* Trace-registration set: only variables registered via TRACE(name,'VALUE')
+ * are sent to the monitor.  Simple open-addressed hash set of C strings.
+ * Capacity must be a power of two; 64 slots is ample for typical programs. */
+#define TRACE_SET_CAP 64
+static const char *trace_set[TRACE_SET_CAP];  /* NULL = empty slot */
+
+static void trace_register(const char *name) {
+    if (!name || !*name) return;
+    unsigned h = 5381;
+    for (const char *p = name; *p; p++) h = h * 33 ^ (unsigned char)*p;
+    for (int i = 0; i < TRACE_SET_CAP; i++) {
+        int slot = (h + i) & (TRACE_SET_CAP - 1);
+        if (!trace_set[slot]) { trace_set[slot] = GC_strdup(name); return; }
+        if (strcmp(trace_set[slot], name) == 0) return; /* already registered */
+    }
+}
+
+static void trace_unregister(const char *name) {
+    if (!name || !*name) return;
+    unsigned h = 5381;
+    for (const char *p = name; *p; p++) h = h * 33 ^ (unsigned char)*p;
+    for (int i = 0; i < TRACE_SET_CAP; i++) {
+        int slot = (h + i) & (TRACE_SET_CAP - 1);
+        if (!trace_set[slot]) return;
+        if (strcmp(trace_set[slot], name) == 0) { trace_set[slot] = NULL; return; }
+    }
+}
+
+static int trace_registered(const char *name) {
+    if (!name || !*name) return 0;
+    unsigned h = 5381;
+    for (const char *p = name; *p; p++) h = h * 33 ^ (unsigned char)*p;
+    for (int i = 0; i < TRACE_SET_CAP; i++) {
+        int slot = (h + i) & (TRACE_SET_CAP - 1);
+        if (!trace_set[slot]) return 0;
+        if (strcmp(trace_set[slot], name) == 0) return 1;
+    }
+    return 0;
+}
 
 int64_t kw_stcount = 0;
 
@@ -64,7 +105,9 @@ void comm_stno(int n) {
 
 void comm_var(const char *name, DESCR_t val) {
     if (monitor_fd < 0) return;
+    if (!monitor_ready) return;
     if (!name || name[0] == '_') return;
+    if (!trace_registered(name)) return;
     const char *s = VARVAL_fn(val);
     mon_send("VALUE", name, s ? s : "(undef)");
 }
@@ -421,6 +464,31 @@ static DESCR_t _b_DUMP(DESCR_t *a, int n) {
     (void)a; (void)n;
     var_dump();
     return NULVCL;
+}
+
+/* TRACE(varname, type [, label, fn]) — register variable for VALUE tracing.
+ * Only 'VALUE' type supported; other types accepted but silently ignored.
+ * Returns varname on success (SNOBOL4 spec). */
+static DESCR_t _b_TRACE(DESCR_t *a, int n) {
+    if (n < 1) return FAILDESCR;
+    const char *varname = VARVAL_fn(a[0]);
+    if (!varname || !*varname) return FAILDESCR;
+    /* arg[1] = type string; default to 'VALUE' if omitted */
+    const char *type = (n >= 2) ? VARVAL_fn(a[1]) : "VALUE";
+    if (type && (strcmp(type,"VALUE")==0 || strcmp(type,"value")==0))
+        trace_register(varname);
+    /* return the variable name (SNOBOL4 spec: TRACE returns first arg) */
+    return STRVAL(GC_strdup(varname));
+}
+
+/* STOPTR(varname [, type]) — remove variable from trace set.
+ * Returns varname on success. */
+static DESCR_t _b_STOPTR(DESCR_t *a, int n) {
+    if (n < 1) return FAILDESCR;
+    const char *varname = VARVAL_fn(a[0]);
+    if (!varname || !*varname) return FAILDESCR;
+    trace_unregister(varname);
+    return STRVAL(GC_strdup(varname));
 }
 
 /* Forward declarations needed by _b_DATA trampolines */
@@ -835,6 +903,8 @@ void SNO_INIT_fn(void) {
     register_fn("value",    _b_field_value, 1, 1);
     register_fn("next",     _b_field_next,  1, 1);
     register_fn("DUMP",     _b_DUMP,        0, 1);
+    register_fn("TRACE",    _b_TRACE,       1, 4);
+    register_fn("STOPTR",   _b_STOPTR,      1, 2);
     /* Pattern builtins callable via APPLY_fn (when inside arglist parens) */
     register_fn("SPAN",    _b_PAT_SPAN,    1, 1);
     register_fn("BREAK",   _b_PAT_BREAK,   1, 1);
@@ -895,6 +965,7 @@ void SNO_INIT_fn(void) {
         NV_SET_fn("LCASE",  STRVAL(lcase));
         NV_SET_fn("digits", STRVAL("0123456789"));
     }
+    monitor_ready = 1;  /* pre-init constants installed; monitor may now fire */
     /* Register tree DT_DATA type, then override field accessors.
      * DEFDAT_fn("tree(t,v,n,c)") installs coercing accessors for each
      * field name, which would overwrite the _b_tree_* registered above.
