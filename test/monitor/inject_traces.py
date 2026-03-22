@@ -124,22 +124,25 @@ def scan_sno(lines, include_rules, exclude_rules):
 
 MONITOR_PREAMBLE = """\
 * --- MONITOR PREAMBLE: injected by inject_traces.py ---
-*     IPC mode: trace events -> named FIFO via monitor_ipc.so
-*     MONITOR_FIFO env var = FIFO path; MONITOR_SO env var = .so path
+*     Sync-step IPC: each MON_SEND blocks for GO/STOP ack from controller.
+*     MONITOR_FIFO     env var = event FIFO path (participant writes)
+*     MONITOR_ACK_FIFO env var = ack   FIFO path (participant reads)
+*     MONITOR_SO       env var = monitor_ipc_sync.so path
         &TRACE         =  16000000
         &STLIMIT       =  5000000
 *
-*     Read FIFO path and .so path from environment via HOST(4,name)
+*     Read paths from environment via HOST(4,name)
         MON_FIFO_      =  HOST(4,'MONITOR_FIFO')
+        MON_ACK_FIFO_  =  HOST(4,'MONITOR_ACK_FIFO')
         MON_SO_        =  HOST(4,'MONITOR_SO')
 *
-*     Load IPC functions (fail silently if not set — fallback to TERMINAL=)
+*     Load IPC functions (fail silently if not set — no-op mode)
         IDENT(MON_SO_)                                    :S(MON_NOTERMINAL_)
-        LOAD('MON_OPEN(STRING)STRING',      MON_SO_)      :F(MON_NOTERMINAL_)
-        LOAD('MON_SEND(STRING,STRING)STRING',MON_SO_)     :F(MON_NOTERMINAL_)
-        LOAD('MON_CLOSE()STRING',           MON_SO_)      :F(MON_NOTERMINAL_)
+        LOAD('MON_OPEN(STRING,STRING)STRING', MON_SO_)    :F(MON_NOTERMINAL_)
+        LOAD('MON_SEND(STRING,STRING)STRING', MON_SO_)    :F(MON_NOTERMINAL_)
+        LOAD('MON_CLOSE()STRING',             MON_SO_)    :F(MON_NOTERMINAL_)
         IDENT(MON_FIFO_)                                  :S(MON_NOTERMINAL_)
-        MON_OPEN(MON_FIFO_)                               :F(MON_NOTERMINAL_)
+        MON_OPEN(MON_FIFO_, MON_ACK_FIFO_)               :F(MON_NOTERMINAL_)
         MON_IPC_        =  '1'
         :(MON_DEFS_)
 MON_NOTERMINAL_

@@ -29,7 +29,8 @@
  *   STNO <n>
  *   VAR <name> <quoted-value>
  * ============================================================ */
-int monitor_fd = -1;   /* -1 = disabled; set to 2 for stderr */
+int monitor_fd  = -1;   /* -1 = disabled; write end of event FIFO */
+int monitor_ack_fd = -1; /* -1 = async mode; read end of ack FIFO (sync-step) */
 
 /* &STCOUNT — incremented every statement; checked against &STLIMIT */
 int64_t kw_stcount = 0;
@@ -54,6 +55,13 @@ void comm_var(const char *name, DESCR_t val) {
     if (name[0] == '_') return;          /* internal scratch vars */
     const char *s = VARVAL_fn(val);
     dprintf(monitor_fd, "VAR %s \"%s\"\n", name, s ? s : "<null>");
+    /* sync-step: block waiting for GO/STOP ack from controller */
+    if (monitor_ack_fd >= 0) {
+        char ack[1];
+        ssize_t r = read(monitor_ack_fd, ack, 1);
+        /* 'S' (stop) or read error → exit cleanly */
+        if (r != 1 || ack[0] == 'S') exit(0);
+    }
 }
 
 /* ============================================================
@@ -747,7 +755,10 @@ void SNO_INIT_fn(void) {
     if (mon_fifo && mon_fifo[0]) {
         monitor_fd = open(mon_fifo, O_WRONLY | O_NONBLOCK);
         if (monitor_fd < 0) monitor_fd = open(mon_fifo, O_WRONLY);
-        /* if open fails, monitor stays disabled — don't crash on missing FIFO */
+        /* sync-step ack FIFO */
+        const char *ack_fifo = getenv("MONITOR_ACK_FIFO");
+        if (ack_fifo && ack_fifo[0])
+            monitor_ack_fd = open(ack_fifo, O_RDONLY);
     } else {
         const char *mon = getenv("MONITOR");
         if (mon && mon[0] == '1') monitor_fd = 2;
