@@ -952,11 +952,11 @@ static void emit_arbno(EXPR_t *child,
 
     /* child_ok: zero-advance guard, push new cursor, re-succeed */
     ALFC(child_ok, "ARBNO child_ok",
-         "ARBNO_CHILD_OK %s, %s, %s, %s, %s, %s\n",
+         "ARBNO_α1 %s, %s, %s, %s, %s, %s\n",
          bref(dep), stk, bref(cur_before), cursor, gamma, omega);
 
     /* child_fail: ω */
-    ALFC(child_fail, "ARBNO child_fail", "ARBNO_CHILD_FAIL %s\n", omega);
+    ALFC(child_fail, "ARBNO β1", "ARBNO_β1 %s\n", omega);
 
     emit_pat_node(child, cα, cβ, child_ok, child_fail,
                   cursor, subj, subj_len, depth+1);
@@ -2013,7 +2013,6 @@ static void emit_named_def(const NamedPat *np,
         snprintf(omega_lbl, sizeof omega_lbl, "fn_%s_ω", safe);
         ALFC(gamma_lbl, "fn γ", "FN_γ %s\n", np->ret_gamma);
         ALFC(omega_lbl, "fn ω", "FN_ω %s\n", np->ret_omega);
-
         box_ctx_end();
         return;
     }
@@ -2748,8 +2747,9 @@ static int emit_expr(EXPR_t *e, int rbp_off) {
             /* Recursion-safe calling convention using the C stack.
              * Saves params AND locals before jmp, restores at both return labels.
              * n_pushed = 2 (ret addrs) + (actual_args + actual_locals) * 2 qwords.
+             * +1 for push r12 (T2 caller DATA ptr save).
              */
-            int n_pushed = 2 + (actual_args + actual_locals) * 2;
+            int n_pushed = 2 + (actual_args + actual_locals) * 2 + 1;
             int extra_align = (n_pushed % 2) ? 1 : 0;
             if (extra_align) A("    sub     rsp, 8          ; align pad\n");
 
@@ -2772,6 +2772,9 @@ static int emit_expr(EXPR_t *e, int rbp_off) {
                 A("    push    qword [rbp-16]\n");
             }
 
+            /* T2: push callee DATA ptr (popped as rdi at return for t2_free) */
+            A("    push    r12\n");
+
             /* Step 2: save old ret addresses onto the stack */
             A("    push    qword [%s]\n", ufn->ret_omega);
             A("    push    qword [%s]\n", ufn->ret_gamma);
@@ -2789,6 +2792,14 @@ static int emit_expr(EXPR_t *e, int rbp_off) {
             }
 
             /* Step 4: install new return addresses and jump */
+            /* T2: alloc fresh DATA copy for this invocation */
+            A("    mov     rdi, [rel box_%s_data_size]\n", ufn->safe);
+            A("    call    t2_alloc\n");
+            A("    mov     rdi, rax\n");  /* dst = new DATA block */
+            A("    lea     rsi, [rel box_%s_data_template]\n", ufn->safe);
+            A("    mov     rdx, [rel box_%s_data_size]\n", ufn->safe);
+            A("    call    memcpy\n");
+            A("    mov     r12, rax\n");  /* r12 = new DATA ptr */
             A("    lea     rax, [rel %s]\n", ret_gamma_lbl);
             A("    mov     [%s], rax\n", ufn->ret_gamma);
             A("    lea     rax, [rel %s]\n", ret_omega_lbl);
@@ -2817,6 +2828,10 @@ static int emit_expr(EXPR_t *e, int rbp_off) {
             A("%s:\n", ret_gamma_lbl);
             A("    pop     qword [%s]\n", ufn->ret_gamma);
             A("    pop     qword [%s]\n", ufn->ret_omega);
+            /* T2: pop callee DATA ptr, free it */
+            A("    pop     rdi\n");
+            A("    mov     rsi, [rel box_%s_data_size]\n", ufn->safe);
+            A("    call    t2_free\n");
             /* Restore old local values from stack (forward order — pushed in reverse) */
             for (int li = 0; li < actual_locals; li++) {
                 const char *llab = str_intern(ufn->local_names[li]);
@@ -2854,6 +2869,10 @@ static int emit_expr(EXPR_t *e, int rbp_off) {
             A("%s:\n", ret_omega_lbl);
             A("    pop     qword [%s]\n", ufn->ret_gamma);
             A("    pop     qword [%s]\n", ufn->ret_omega);
+            /* T2: pop callee DATA ptr, free it */
+            A("    pop     rdi\n");
+            A("    mov     rsi, [rel box_%s_data_size]\n", ufn->safe);
+            A("    call    t2_free\n");
             /* Restore old local values from stack */
             for (int li = 0; li < actual_locals; li++) {
                 const char *llab = str_intern(ufn->local_names[li]);
@@ -3781,6 +3800,7 @@ static void emit_program(Program *prog) {
     A("    extern  kw_anchor\n");
     A("    extern  stmt_aref, stmt_aset, stmt_field_set\n");
     A("    extern  comm_stno\n");
+    A("    extern  t2_alloc, t2_free, memcpy  ; T2 runtime\n");
     A("    global  cursor, subject_data, subject_len_val\n");
     A("\n");
     /* subject_data/subject_len_val/cursor: defined here, exported for stmt_rt.c */

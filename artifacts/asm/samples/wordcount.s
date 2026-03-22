@@ -20,6 +20,7 @@ extern  stmt_at_capture
 extern  kw_anchor
 extern  stmt_aref, stmt_aset, stmt_field_set
 extern  comm_stno
+extern  t2_alloc, t2_free, memcpy  ; T2 runtime
 global  cursor, subject_data, subject_len_val
 
 section .note.GNU-stack noalloc noexec nowrite progbits

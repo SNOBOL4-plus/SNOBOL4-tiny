@@ -882,12 +882,12 @@
     cmp     rax, [%6]
     jge     %8
     mov     [%3], rax
-    mov     r12, rax
+    mov     r13, rax
 %%span_outer:
-    cmp     r12, [%6]
+    cmp     r13, [%6]
     jge     %%span_done
     lea     rbx, [rel %5]
-    movzx   ecx, byte [rbx + r12]
+    movzx   ecx, byte [rbx + r13]
     lea     rsi, [rel %1]
     mov     rdx, %2
 %%span_scan:
@@ -900,13 +900,13 @@
     dec     rdx
     jmp     %%span_scan
 %%span_hit:
-    inc     r12
+    inc     r13
     jmp     %%span_outer
 %%span_done:
     mov     rbx, [%3]
-    cmp     r12, rbx
+    cmp     r13, rbx
     je      %8
-    mov     [%4], r12
+    mov     [%4], r13
     jmp     %7
 %endmacro
 
@@ -923,12 +923,12 @@
 %macro BREAK_α 8          ; cslab, cslen, saved, cursor, subj, subj_len, γ, ω
     mov     rax, [%4]
     mov     [%3], rax
-    mov     r12, rax
+    mov     r13, rax
 %%brk_outer:
-    cmp     r12, [%6]
+    cmp     r13, [%6]
     jge     %8
     lea     rbx, [rel %5]
-    movzx   ecx, byte [rbx + r12]
+    movzx   ecx, byte [rbx + r13]
     lea     rsi, [rel %1]
     mov     rdx, %2
 %%brk_scan:
@@ -941,10 +941,10 @@
     dec     rdx
     jmp     %%brk_scan
 %%brk_advance:
-    inc     r12
+    inc     r13
     jmp     %%brk_outer
 %%brk_hit:
-    mov     [%4], r12
+    mov     [%4], r13
     jmp     %7
 %endmacro
 
@@ -1920,10 +1920,10 @@
 ; ARBNO_β  dep, stk, cur_before, cursor, child_α, ω
 ;   β port: pop stack; save cursor-before-rep; jump to child α (or ω if empty)
 ;
-; ARBNO_CHILD_OK  dep, stk, cur_before, cursor, γ, ω
+; ARBNO_α1  dep, stk, cur_before, cursor, γ, ω
 ;   child_ok port: zero-advance guard; push new cursor; re-succeed (or ω if stalled)
 ;
-; ARBNO_CHILD_FAIL  ω
+; ARBNO_β1  ω
 ;   child_fail port: unconditional jump to ω
 ;
 ; All memory args are bare refs (no brackets) — macros add [brackets] themselves,
@@ -1952,7 +1952,7 @@
     jmp     %5
 %endmacro
 
-%macro ARBNO_CHILD_OK 6       ; dep, stk, cur_before, cursor, γ, ω
+%macro ARBNO_α1 6       ; dep, stk, cur_before, cursor, γ, ω
     mov     rax, [%4]
     mov     rbx, [%3]
     cmp     rax, rbx
@@ -1964,7 +1964,7 @@
     jmp     %5
 %endmacro
 
-%macro ARBNO_CHILD_FAIL 1     ; ω
+%macro ARBNO_β1 1     ; ω
     jmp     %1
 %endmacro
 
@@ -2029,8 +2029,7 @@
     jmp     [%1]
 %endmacro
 
-%macro FN_α_INIT 1        ; box_safe_name  (symbol prefix for data template)
-    lea     r12, [rel box_%1_data_template]
+%macro FN_α_INIT 1        ; box_safe_name  (no-op: T2 alloc+memcpy done at call site)
 %endmacro
 
 %macro FN_SET_PARAM 1         ; param_varlab  (rdi=varlab, rsi/rdx=arg from arg slots)

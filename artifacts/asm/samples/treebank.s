@@ -20,6 +20,7 @@ extern  stmt_at_capture
 extern  kw_anchor
 extern  stmt_aref, stmt_aset, stmt_field_set
 extern  comm_stno
+extern  t2_alloc, t2_free, memcpy  ; T2 runtime
 global  cursor, subject_data, subject_len_val
 
 section .note.GNU-stack noalloc noexec nowrite progbits
@@ -752,9 +753,11 @@ scan_fail_tramp_1:
 ; ======================================================================================================================
 Ln_57:                      mov         edi, 93
                             call        comm_stno
+                            sub         rsp, 8          ; align pad
                             GET_VAR     S_v
                             push        qword [rbp-8]
                             push        qword [rbp-16]
+                            push        r12
                             push        qword [P_do_push_list_ret_ω]
                             push        qword [P_do_push_list_ret_γ]
                             lea         rdi, [rel S_tag]
@@ -765,6 +768,13 @@ Ln_57:                      mov         edi, 93
                             mov         rcx, [rbp-24]
                             mov         [fn_do_push_list_arg_0_t], rax
                             mov         [fn_do_push_list_arg_0_p], rcx
+                            mov         rdi, [rel box_do_push_list_data_size]
+                            call        t2_alloc
+                            mov         rdi, rax
+                            lea         rsi, [rel box_do_push_list_data_template]
+                            mov         rdx, [rel box_do_push_list_data_size]
+                            call        memcpy
+                            mov         r12, rax
                             lea         rax, [rel ucall0_ret_g]
                             mov         [P_do_push_list_ret_γ], rax
                             lea         rax, [rel ucall0_ret_o]
@@ -773,10 +783,14 @@ Ln_57:                      mov         edi, 93
 ucall0_ret_g:
                             pop         qword [P_do_push_list_ret_γ]
                             pop         qword [P_do_push_list_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_do_push_list_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_v]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             GET_VAR     S_do_push_list
                             mov         rax, [rbp-16]
                             mov         rdx, [rbp-8]
@@ -794,10 +808,14 @@ ucall0_has_val:
 ucall0_ret_o:
                             pop         qword [P_do_push_list_ret_γ]
                             pop         qword [P_do_push_list_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_do_push_list_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_v]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             LOAD_FAILDESCR32
 ucall0_done:
                             FAIL_BR     Ln_58
@@ -922,9 +940,11 @@ P_61_ω:                     cmp         qword [rel kw_anchor], 0
 ; ======================================================================================================================
 Ln_61:                      mov         edi, 97
                             call        comm_stno
+                            sub         rsp, 8          ; align pad
                             GET_VAR     S_v
                             push        qword [rbp-8]
                             push        qword [rbp-16]
+                            push        r12
                             push        qword [P_do_push_item_ret_ω]
                             push        qword [P_do_push_item_ret_γ]
                             lea         rdi, [rel S_wrd]
@@ -935,6 +955,13 @@ Ln_61:                      mov         edi, 97
                             mov         rcx, [rbp-24]
                             mov         [fn_do_push_item_arg_0_t], rax
                             mov         [fn_do_push_item_arg_0_p], rcx
+                            mov         rdi, [rel box_do_push_item_data_size]
+                            call        t2_alloc
+                            mov         rdi, rax
+                            lea         rsi, [rel box_do_push_item_data_template]
+                            mov         rdx, [rel box_do_push_item_data_size]
+                            call        memcpy
+                            mov         r12, rax
                             lea         rax, [rel ucall1_ret_g]
                             mov         [P_do_push_item_ret_γ], rax
                             lea         rax, [rel ucall1_ret_o]
@@ -943,10 +970,14 @@ Ln_61:                      mov         edi, 97
 ucall1_ret_g:
                             pop         qword [P_do_push_item_ret_γ]
                             pop         qword [P_do_push_item_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_do_push_item_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_v]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             GET_VAR     S_do_push_item
                             mov         rax, [rbp-16]
                             mov         rdx, [rbp-8]
@@ -964,10 +995,14 @@ ucall1_has_val:
 ucall1_ret_o:
                             pop         qword [P_do_push_item_ret_γ]
                             pop         qword [P_do_push_item_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_do_push_item_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_v]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             LOAD_FAILDESCR32
 ucall1_done:
                             FAIL_BR     Ln_62
@@ -978,14 +1013,23 @@ Ln_62:
 ;  group_recurse =======================================================================================================
 L_group_recurse_20:         mov         edi, 98
                             call        comm_stno
+                            sub         rsp, 8          ; align pad
                             GET_VAR     S_wrd
                             push        qword [rbp-8]
                             push        qword [rbp-16]
                             GET_VAR     S_tag
                             push        qword [rbp-8]
                             push        qword [rbp-16]
+                            push        r12
                             push        qword [P_group_ret_ω]
                             push        qword [P_group_ret_γ]
+                            mov         rdi, [rel box_group_data_size]
+                            call        t2_alloc
+                            mov         rdi, rax
+                            lea         rsi, [rel box_group_data_template]
+                            mov         rdx, [rel box_group_data_size]
+                            call        memcpy
+                            mov         r12, rax
                             lea         rax, [rel ucall2_ret_g]
                             mov         [P_group_ret_γ], rax
                             lea         rax, [rel ucall2_ret_o]
@@ -994,6 +1038,9 @@ L_group_recurse_20:         mov         edi, 98
 ucall2_ret_g:
                             pop         qword [P_group_ret_γ]
                             pop         qword [P_group_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_group_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_tag]
@@ -1002,6 +1049,7 @@ ucall2_ret_g:
                             pop         rdx
                             lea         rdi, [rel S_wrd]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             GET_VAR     S_group
                             mov         rax, [rbp-16]
                             mov         rdx, [rbp-8]
@@ -1019,6 +1067,9 @@ ucall2_has_val:
 ucall2_ret_o:
                             pop         qword [P_group_ret_γ]
                             pop         qword [P_group_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_group_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_tag]
@@ -1027,6 +1078,7 @@ ucall2_ret_o:
                             pop         rdx
                             lea         rdi, [rel S_wrd]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             LOAD_FAILDESCR32
 ucall2_done:
                             FAIL_BR     Lf_63
@@ -1071,6 +1123,7 @@ scan_fail_tramp_2:
 ; ======================================================================================================================
 Ln_64:                      mov         edi, 100
                             call        comm_stno
+                            sub         rsp, 8          ; align pad
                             GET_VAR     S_a
                             push        qword [rbp-8]
                             push        qword [rbp-16]
@@ -1083,8 +1136,16 @@ Ln_64:                      mov         edi, 100
                             GET_VAR     S_p
                             push        qword [rbp-8]
                             push        qword [rbp-16]
+                            push        r12
                             push        qword [P_do_pop_list_ret_ω]
                             push        qword [P_do_pop_list_ret_γ]
+                            mov         rdi, [rel box_do_pop_list_data_size]
+                            call        t2_alloc
+                            mov         rdi, rax
+                            lea         rsi, [rel box_do_pop_list_data_template]
+                            mov         rdx, [rel box_do_pop_list_data_size]
+                            call        memcpy
+                            mov         r12, rax
                             lea         rax, [rel ucall3_ret_g]
                             mov         [P_do_pop_list_ret_γ], rax
                             lea         rax, [rel ucall3_ret_o]
@@ -1093,6 +1154,9 @@ Ln_64:                      mov         edi, 100
 ucall3_ret_g:
                             pop         qword [P_do_pop_list_ret_γ]
                             pop         qword [P_do_pop_list_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_do_pop_list_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_p]
@@ -1109,6 +1173,7 @@ ucall3_ret_g:
                             pop         rdx
                             lea         rdi, [rel S_a]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             GET_VAR     S_do_pop_list
                             mov         rax, [rbp-16]
                             mov         rdx, [rbp-8]
@@ -1126,6 +1191,9 @@ ucall3_has_val:
 ucall3_ret_o:
                             pop         qword [P_do_pop_list_ret_γ]
                             pop         qword [P_do_pop_list_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_do_pop_list_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_p]
@@ -1142,6 +1210,7 @@ ucall3_ret_o:
                             pop         rdx
                             lea         rdi, [rel S_a]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             LOAD_FAILDESCR32
 ucall3_done:
                             FAIL_BR     Ln_65
@@ -1272,6 +1341,7 @@ Lf_73:                      jmp         L_print_node_cl_25
 ; ======================================================================================================================
 Ln_73:                      mov         edi, 112
                             call        comm_stno
+                            sub         rsp, 8          ; align pad
                             GET_VAR     S_depth
                             push        qword [rbp-8]
                             push        qword [rbp-16]
@@ -1284,6 +1354,7 @@ Ln_73:                      mov         edi, 112
                             GET_VAR     S_i
                             push        qword [rbp-8]
                             push        qword [rbp-16]
+                            push        r12
                             push        qword [P_print_node_ret_ω]
                             push        qword [P_print_node_ret_γ]
                             lea         rdi, [rel S_ch]
@@ -1299,6 +1370,13 @@ Ln_73:                      mov         edi, 112
                             mov         rcx, [rbp-24]
                             mov         [fn_print_node_arg_1_t], rax
                             mov         [fn_print_node_arg_1_p], rcx
+                            mov         rdi, [rel box_print_node_data_size]
+                            call        t2_alloc
+                            mov         rdi, rax
+                            lea         rsi, [rel box_print_node_data_template]
+                            mov         rdx, [rel box_print_node_data_size]
+                            call        memcpy
+                            mov         r12, rax
                             lea         rax, [rel ucall4_ret_g]
                             mov         [P_print_node_ret_γ], rax
                             lea         rax, [rel ucall4_ret_o]
@@ -1307,6 +1385,9 @@ Ln_73:                      mov         edi, 112
 ucall4_ret_g:
                             pop         qword [P_print_node_ret_γ]
                             pop         qword [P_print_node_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_print_node_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_i]
@@ -1323,6 +1404,7 @@ ucall4_ret_g:
                             pop         rdx
                             lea         rdi, [rel S_depth]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             GET_VAR     S_print_node
                             mov         rax, [rbp-16]
                             mov         rdx, [rbp-8]
@@ -1340,6 +1422,9 @@ ucall4_has_val:
 ucall4_ret_o:
                             pop         qword [P_print_node_ret_γ]
                             pop         qword [P_print_node_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_print_node_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_i]
@@ -1356,6 +1441,7 @@ ucall4_ret_o:
                             pop         rdx
                             lea         rdi, [rel S_depth]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             LOAD_FAILDESCR32
 ucall4_done:
                             FAIL_BR     Ln_74
@@ -1514,9 +1600,11 @@ Ln_82:                      mov         edi, 131
 ; ======================================================================================================================
 Ln_83:                      mov         edi, 132
                             call        comm_stno
+                            sub         rsp, 8          ; align pad
                             GET_VAR     S_v
                             push        qword [rbp-8]
                             push        qword [rbp-16]
+                            push        r12
                             push        qword [P_do_push_list_ret_ω]
                             push        qword [P_do_push_list_ret_γ]
                             LOAD_STR    S_BANK
@@ -1524,6 +1612,13 @@ Ln_83:                      mov         edi, 132
                             mov         rcx, [rbp-24]
                             mov         [fn_do_push_list_arg_0_t], rax
                             mov         [fn_do_push_list_arg_0_p], rcx
+                            mov         rdi, [rel box_do_push_list_data_size]
+                            call        t2_alloc
+                            mov         rdi, rax
+                            lea         rsi, [rel box_do_push_list_data_template]
+                            mov         rdx, [rel box_do_push_list_data_size]
+                            call        memcpy
+                            mov         r12, rax
                             lea         rax, [rel ucall5_ret_g]
                             mov         [P_do_push_list_ret_γ], rax
                             lea         rax, [rel ucall5_ret_o]
@@ -1532,10 +1627,14 @@ Ln_83:                      mov         edi, 132
 ucall5_ret_g:
                             pop         qword [P_do_push_list_ret_γ]
                             pop         qword [P_do_push_list_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_do_push_list_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_v]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             GET_VAR     S_do_push_list
                             mov         rax, [rbp-16]
                             mov         rdx, [rbp-8]
@@ -1553,10 +1652,14 @@ ucall5_has_val:
 ucall5_ret_o:
                             pop         qword [P_do_push_list_ret_γ]
                             pop         qword [P_do_push_list_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_do_push_list_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_v]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             LOAD_FAILDESCR32
 ucall5_done:
                             FAIL_BR     Ln_84
@@ -1628,9 +1731,11 @@ P_86_ω:                     cmp         qword [rel kw_anchor], 0
 ; ======================================================================================================================
 Ln_86:                      mov         edi, 136
                             call        comm_stno
+                            sub         rsp, 8          ; align pad
                             GET_VAR     S_v
                             push        qword [rbp-8]
                             push        qword [rbp-16]
+                            push        r12
                             push        qword [P_do_push_list_ret_ω]
                             push        qword [P_do_push_list_ret_γ]
                             LOAD_STR    S_ROOT
@@ -1638,6 +1743,13 @@ Ln_86:                      mov         edi, 136
                             mov         rcx, [rbp-24]
                             mov         [fn_do_push_list_arg_0_t], rax
                             mov         [fn_do_push_list_arg_0_p], rcx
+                            mov         rdi, [rel box_do_push_list_data_size]
+                            call        t2_alloc
+                            mov         rdi, rax
+                            lea         rsi, [rel box_do_push_list_data_template]
+                            mov         rdx, [rel box_do_push_list_data_size]
+                            call        memcpy
+                            mov         r12, rax
                             lea         rax, [rel ucall6_ret_g]
                             mov         [P_do_push_list_ret_γ], rax
                             lea         rax, [rel ucall6_ret_o]
@@ -1646,10 +1758,14 @@ Ln_86:                      mov         edi, 136
 ucall6_ret_g:
                             pop         qword [P_do_push_list_ret_γ]
                             pop         qword [P_do_push_list_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_do_push_list_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_v]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             GET_VAR     S_do_push_list
                             mov         rax, [rbp-16]
                             mov         rdx, [rbp-8]
@@ -1667,10 +1783,14 @@ ucall6_has_val:
 ucall6_ret_o:
                             pop         qword [P_do_push_list_ret_γ]
                             pop         qword [P_do_push_list_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_do_push_list_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_v]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             LOAD_FAILDESCR32
 ucall6_done:
                             FAIL_BR     Ln_87
@@ -1680,14 +1800,23 @@ ucall6_done:
 ; ======================================================================================================================
 Ln_87:                      mov         edi, 137
                             call        comm_stno
+                            sub         rsp, 8          ; align pad
                             GET_VAR     S_wrd
                             push        qword [rbp-8]
                             push        qword [rbp-16]
                             GET_VAR     S_tag
                             push        qword [rbp-8]
                             push        qword [rbp-16]
+                            push        r12
                             push        qword [P_group_ret_ω]
                             push        qword [P_group_ret_γ]
+                            mov         rdi, [rel box_group_data_size]
+                            call        t2_alloc
+                            mov         rdi, rax
+                            lea         rsi, [rel box_group_data_template]
+                            mov         rdx, [rel box_group_data_size]
+                            call        memcpy
+                            mov         r12, rax
                             lea         rax, [rel ucall7_ret_g]
                             mov         [P_group_ret_γ], rax
                             lea         rax, [rel ucall7_ret_o]
@@ -1696,6 +1825,9 @@ Ln_87:                      mov         edi, 137
 ucall7_ret_g:
                             pop         qword [P_group_ret_γ]
                             pop         qword [P_group_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_group_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_tag]
@@ -1704,6 +1836,7 @@ ucall7_ret_g:
                             pop         rdx
                             lea         rdi, [rel S_wrd]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             GET_VAR     S_group
                             mov         rax, [rbp-16]
                             mov         rdx, [rbp-8]
@@ -1721,6 +1854,9 @@ ucall7_has_val:
 ucall7_ret_o:
                             pop         qword [P_group_ret_γ]
                             pop         qword [P_group_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_group_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_tag]
@@ -1729,6 +1865,7 @@ ucall7_ret_o:
                             pop         rdx
                             lea         rdi, [rel S_wrd]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             LOAD_FAILDESCR32
 ucall7_done:
                             FAIL_BR     Lf_88
@@ -1738,6 +1875,7 @@ Lf_88:                      jmp         L_parse_err_30
 ; ======================================================================================================================
 Ln_88:                      mov         edi, 138
                             call        comm_stno
+                            sub         rsp, 8          ; align pad
                             GET_VAR     S_a
                             push        qword [rbp-8]
                             push        qword [rbp-16]
@@ -1750,8 +1888,16 @@ Ln_88:                      mov         edi, 138
                             GET_VAR     S_p
                             push        qword [rbp-8]
                             push        qword [rbp-16]
+                            push        r12
                             push        qword [P_do_pop_list_ret_ω]
                             push        qword [P_do_pop_list_ret_γ]
+                            mov         rdi, [rel box_do_pop_list_data_size]
+                            call        t2_alloc
+                            mov         rdi, rax
+                            lea         rsi, [rel box_do_pop_list_data_template]
+                            mov         rdx, [rel box_do_pop_list_data_size]
+                            call        memcpy
+                            mov         r12, rax
                             lea         rax, [rel ucall8_ret_g]
                             mov         [P_do_pop_list_ret_γ], rax
                             lea         rax, [rel ucall8_ret_o]
@@ -1760,6 +1906,9 @@ Ln_88:                      mov         edi, 138
 ucall8_ret_g:
                             pop         qword [P_do_pop_list_ret_γ]
                             pop         qword [P_do_pop_list_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_do_pop_list_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_p]
@@ -1776,6 +1925,7 @@ ucall8_ret_g:
                             pop         rdx
                             lea         rdi, [rel S_a]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             GET_VAR     S_do_pop_list
                             mov         rax, [rbp-16]
                             mov         rdx, [rbp-8]
@@ -1793,6 +1943,9 @@ ucall8_has_val:
 ucall8_ret_o:
                             pop         qword [P_do_pop_list_ret_γ]
                             pop         qword [P_do_pop_list_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_do_pop_list_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_p]
@@ -1809,6 +1962,7 @@ ucall8_ret_o:
                             pop         rdx
                             lea         rdi, [rel S_a]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             LOAD_FAILDESCR32
 ucall8_done:
                             FAIL_BR     Ln_89
@@ -1819,6 +1973,7 @@ Ln_89:
 ;  parse_done ==========================================================================================================
 L_parse_done_29:            mov         edi, 140
                             call        comm_stno
+                            sub         rsp, 8          ; align pad
                             GET_VAR     S_v
                             push        qword [rbp-8]
                             push        qword [rbp-16]
@@ -1834,6 +1989,7 @@ L_parse_done_29:            mov         edi, 140
                             GET_VAR     S_p
                             push        qword [rbp-8]
                             push        qword [rbp-16]
+                            push        r12
                             push        qword [P_do_pop_final_ret_ω]
                             push        qword [P_do_pop_final_ret_γ]
                             LOAD_STR    S_bank
@@ -1841,6 +1997,13 @@ L_parse_done_29:            mov         edi, 140
                             mov         rcx, [rbp-24]
                             mov         [fn_do_pop_final_arg_0_t], rax
                             mov         [fn_do_pop_final_arg_0_p], rcx
+                            mov         rdi, [rel box_do_pop_final_data_size]
+                            call        t2_alloc
+                            mov         rdi, rax
+                            lea         rsi, [rel box_do_pop_final_data_template]
+                            mov         rdx, [rel box_do_pop_final_data_size]
+                            call        memcpy
+                            mov         r12, rax
                             lea         rax, [rel ucall9_ret_g]
                             mov         [P_do_pop_final_ret_γ], rax
                             lea         rax, [rel ucall9_ret_o]
@@ -1849,6 +2012,9 @@ L_parse_done_29:            mov         edi, 140
 ucall9_ret_g:
                             pop         qword [P_do_pop_final_ret_γ]
                             pop         qword [P_do_pop_final_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_do_pop_final_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_p]
@@ -1869,6 +2035,7 @@ ucall9_ret_g:
                             pop         rdx
                             lea         rdi, [rel S_v]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             GET_VAR     S_do_pop_final
                             mov         rax, [rbp-16]
                             mov         rdx, [rbp-8]
@@ -1886,6 +2053,9 @@ ucall9_has_val:
 ucall9_ret_o:
                             pop         qword [P_do_pop_final_ret_γ]
                             pop         qword [P_do_pop_final_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_do_pop_final_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_p]
@@ -1906,6 +2076,7 @@ ucall9_ret_o:
                             pop         rdx
                             lea         rdi, [rel S_v]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             LOAD_FAILDESCR32
 ucall9_done:
                             FAIL_BR     Ln_90
@@ -1969,6 +2140,7 @@ Ln_93:                      mov         edi, 145
 ; ======================================================================================================================
 Ln_94:                      mov         edi, 146
                             call        comm_stno
+                            sub         rsp, 8          ; align pad
                             GET_VAR     S_depth
                             push        qword [rbp-8]
                             push        qword [rbp-16]
@@ -1981,6 +2153,7 @@ Ln_94:                      mov         edi, 146
                             GET_VAR     S_i
                             push        qword [rbp-8]
                             push        qword [rbp-16]
+                            push        r12
                             push        qword [P_print_node_ret_ω]
                             push        qword [P_print_node_ret_γ]
                             lea         rdi, [rel S_r]
@@ -1996,6 +2169,13 @@ Ln_94:                      mov         edi, 146
                             mov         rcx, [rbp-24]
                             mov         [fn_print_node_arg_1_t], rax
                             mov         [fn_print_node_arg_1_p], rcx
+                            mov         rdi, [rel box_print_node_data_size]
+                            call        t2_alloc
+                            mov         rdi, rax
+                            lea         rsi, [rel box_print_node_data_template]
+                            mov         rdx, [rel box_print_node_data_size]
+                            call        memcpy
+                            mov         r12, rax
                             lea         rax, [rel ucall10_ret_g]
                             mov         [P_print_node_ret_γ], rax
                             lea         rax, [rel ucall10_ret_o]
@@ -2004,6 +2184,9 @@ Ln_94:                      mov         edi, 146
 ucall10_ret_g:
                             pop         qword [P_print_node_ret_γ]
                             pop         qword [P_print_node_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_print_node_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_i]
@@ -2020,6 +2203,7 @@ ucall10_ret_g:
                             pop         rdx
                             lea         rdi, [rel S_depth]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             GET_VAR     S_print_node
                             mov         rax, [rbp-16]
                             mov         rdx, [rbp-8]
@@ -2037,6 +2221,9 @@ ucall10_has_val:
 ucall10_ret_o:
                             pop         qword [P_print_node_ret_γ]
                             pop         qword [P_print_node_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_print_node_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_i]
@@ -2053,6 +2240,7 @@ ucall10_ret_o:
                             pop         rdx
                             lea         rdi, [rel S_depth]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             LOAD_FAILDESCR32
 ucall10_done:
                             FAIL_BR     Ln_95

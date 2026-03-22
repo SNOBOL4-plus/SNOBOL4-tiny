@@ -20,6 +20,7 @@ extern  stmt_at_capture
 extern  kw_anchor
 extern  stmt_aref, stmt_aset, stmt_field_set
 extern  comm_stno
+extern  t2_alloc, t2_free, memcpy  ; T2 runtime
 global  cursor, subject_data, subject_len_val
 
 section .note.GNU-stack noalloc noexec nowrite progbits
@@ -162,12 +163,14 @@ scan_fail_tramp_1:
 Ln_4:                       mov         edi, 10
                             call        comm_stno
                             sub         rsp, 48
+                            sub         rsp, 8          ; align pad
                             GET_VAR     S_N
                             push        qword [rbp-8]
                             push        qword [rbp-16]
                             GET_VAR     S_T
                             push        qword [rbp-8]
                             push        qword [rbp-16]
+                            push        r12
                             push        qword [P_ROMAN_ret_ω]
                             push        qword [P_ROMAN_ret_γ]
                             lea         rdi, [rel S_N]
@@ -178,6 +181,13 @@ Ln_4:                       mov         edi, 10
                             mov         rcx, [rbp-24]
                             mov         [fn_ROMAN_arg_0_t], rax
                             mov         [fn_ROMAN_arg_0_p], rcx
+                            mov         rdi, [rel box_ROMAN_data_size]
+                            call        t2_alloc
+                            mov         rdi, rax
+                            lea         rsi, [rel box_ROMAN_data_template]
+                            mov         rdx, [rel box_ROMAN_data_size]
+                            call        memcpy
+                            mov         r12, rax
                             lea         rax, [rel ucall0_ret_g]
                             mov         [P_ROMAN_ret_γ], rax
                             lea         rax, [rel ucall0_ret_o]
@@ -186,6 +196,9 @@ Ln_4:                       mov         edi, 10
 ucall0_ret_g:
                             pop         qword [P_ROMAN_ret_γ]
                             pop         qword [P_ROMAN_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_ROMAN_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_T]
@@ -194,6 +207,7 @@ ucall0_ret_g:
                             pop         rdx
                             lea         rdi, [rel S_N]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             GET_VAR     S_ROMAN
                             mov         rax, [rbp-16]
                             mov         rdx, [rbp-8]
@@ -211,6 +225,9 @@ ucall0_has_val:
 ucall0_ret_o:
                             pop         qword [P_ROMAN_ret_γ]
                             pop         qword [P_ROMAN_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_ROMAN_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_T]
@@ -219,6 +236,7 @@ ucall0_ret_o:
                             pop         rdx
                             lea         rdi, [rel S_N]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             LOAD_FAILDESCR32
 ucall0_done:
                             STORE_ARG32 0
@@ -270,12 +288,14 @@ Ln_8:
 ;  LOOP ================================================================================================================
 L_LOOP_2:                   mov         edi, 15
                             call        comm_stno
+                            sub         rsp, 8          ; align pad
                             GET_VAR     S_N
                             push        qword [rbp-8]
                             push        qword [rbp-16]
                             GET_VAR     S_T
                             push        qword [rbp-8]
                             push        qword [rbp-16]
+                            push        r12
                             push        qword [P_ROMAN_ret_ω]
                             push        qword [P_ROMAN_ret_γ]
                             LOAD_STR    S_1776
@@ -283,6 +303,13 @@ L_LOOP_2:                   mov         edi, 15
                             mov         rcx, [rbp-24]
                             mov         [fn_ROMAN_arg_0_t], rax
                             mov         [fn_ROMAN_arg_0_p], rcx
+                            mov         rdi, [rel box_ROMAN_data_size]
+                            call        t2_alloc
+                            mov         rdi, rax
+                            lea         rsi, [rel box_ROMAN_data_template]
+                            mov         rdx, [rel box_ROMAN_data_size]
+                            call        memcpy
+                            mov         r12, rax
                             lea         rax, [rel ucall1_ret_g]
                             mov         [P_ROMAN_ret_γ], rax
                             lea         rax, [rel ucall1_ret_o]
@@ -291,6 +318,9 @@ L_LOOP_2:                   mov         edi, 15
 ucall1_ret_g:
                             pop         qword [P_ROMAN_ret_γ]
                             pop         qword [P_ROMAN_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_ROMAN_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_T]
@@ -299,6 +329,7 @@ ucall1_ret_g:
                             pop         rdx
                             lea         rdi, [rel S_N]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             GET_VAR     S_ROMAN
                             mov         rax, [rbp-16]
                             mov         rdx, [rbp-8]
@@ -316,6 +347,9 @@ ucall1_has_val:
 ucall1_ret_o:
                             pop         qword [P_ROMAN_ret_γ]
                             pop         qword [P_ROMAN_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_ROMAN_data_size]
+                            call        t2_free
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_T]
@@ -324,6 +358,7 @@ ucall1_ret_o:
                             pop         rdx
                             lea         rdi, [rel S_N]
                             call        stmt_set
+                            add         rsp, 8          ; remove align pad
                             LOAD_FAILDESCR32
 ucall1_done:
                             FAIL_BR     Ln_9

@@ -20,6 +20,7 @@ extern  stmt_at_capture
 extern  kw_anchor
 extern  stmt_aref, stmt_aset, stmt_field_set
 extern  comm_stno
+extern  t2_alloc, t2_free, memcpy  ; T2 runtime
 global  cursor, subject_data, subject_len_val
 
 section .note.GNU-stack noalloc noexec nowrite progbits
@@ -1143,8 +1144,17 @@ Ln_63:                      mov         edi, 106
 ; ======================================================================================================================
 Ln_64:                      mov         edi, 123
                             call        comm_stno
+                            sub         rsp, 8          ; align pad
+                            push        r12
                             push        qword [P_InitStack_ret_ω]
                             push        qword [P_InitStack_ret_γ]
+                            mov         rdi, [rel box_InitStack_data_size]
+                            call        t2_alloc
+                            mov         rdi, rax
+                            lea         rsi, [rel box_InitStack_data_template]
+                            mov         rdx, [rel box_InitStack_data_size]
+                            call        memcpy
+                            mov         r12, rax
                             lea         rax, [rel ucall0_ret_g]
                             mov         [P_InitStack_ret_γ], rax
                             lea         rax, [rel ucall0_ret_o]
@@ -1153,6 +1163,10 @@ Ln_64:                      mov         edi, 123
 ucall0_ret_g:
                             pop         qword [P_InitStack_ret_γ]
                             pop         qword [P_InitStack_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_InitStack_data_size]
+                            call        t2_free
+                            add         rsp, 8          ; remove align pad
                             GET_VAR     S_InitStack
                             mov         rax, [rbp-16]
                             mov         rdx, [rbp-8]
@@ -1170,6 +1184,10 @@ ucall0_has_val:
 ucall0_ret_o:
                             pop         qword [P_InitStack_ret_γ]
                             pop         qword [P_InitStack_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_InitStack_data_size]
+                            call        t2_free
+                            add         rsp, 8          ; remove align pad
                             LOAD_FAILDESCR32
 ucall0_done:
                             FAIL_BR     Ln_65
@@ -1179,8 +1197,17 @@ ucall0_done:
 ; ======================================================================================================================
 Ln_65:                      mov         edi, 124
                             call        comm_stno
+                            sub         rsp, 8          ; align pad
+                            push        r12
                             push        qword [P_InitCounter_ret_ω]
                             push        qword [P_InitCounter_ret_γ]
+                            mov         rdi, [rel box_InitCounter_data_size]
+                            call        t2_alloc
+                            mov         rdi, rax
+                            lea         rsi, [rel box_InitCounter_data_template]
+                            mov         rdx, [rel box_InitCounter_data_size]
+                            call        memcpy
+                            mov         r12, rax
                             lea         rax, [rel ucall1_ret_g]
                             mov         [P_InitCounter_ret_γ], rax
                             lea         rax, [rel ucall1_ret_o]
@@ -1189,6 +1216,10 @@ Ln_65:                      mov         edi, 124
 ucall1_ret_g:
                             pop         qword [P_InitCounter_ret_γ]
                             pop         qword [P_InitCounter_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_InitCounter_data_size]
+                            call        t2_free
+                            add         rsp, 8          ; remove align pad
                             GET_VAR     S_InitCounter
                             mov         rax, [rbp-16]
                             mov         rdx, [rbp-8]
@@ -1206,6 +1237,10 @@ ucall1_has_val:
 ucall1_ret_o:
                             pop         qword [P_InitCounter_ret_γ]
                             pop         qword [P_InitCounter_ret_ω]
+                            pop         rdi
+                            mov         rsi, [rel box_InitCounter_data_size]
+                            call        t2_free
+                            add         rsp, 8          ; remove align pad
                             LOAD_FAILDESCR32
 ucall1_done:
                             FAIL_BR     Ln_66
@@ -1520,8 +1555,8 @@ seq_r2_β:                   jmp         seq_r4_β
 
 seq_l4_α:                   ARBNO_α     r12+16, arb5_stack, cursor, seq_r4_α ; ARBNO α
 seq_l4_β:                   ARBNO_β     r12+16, arb5_stack, r12+16, cursor, arb5_child_α, seq_l2_β ; ARBNO β
-arb5_child_ok:              ARBNO_CHILD_OK r12+16, arb5_stack, r12+16, cursor, seq_r4_α, seq_l2_β ; ARBNO child_ok
-arb5_child_fail:            ARBNO_CHILD_FAIL seq_l2_β ; ARBNO child_fail
+arb5_child_ok:              ARBNO_α1    r12+16, arb5_stack, r12+16, cursor, seq_r4_α, seq_l2_β ; ARBNO child_ok
+arb5_child_fail:            ARBNO_β1    seq_l2_β ; ARBNO β1
 arb5_child_α:               jmp         seq_l6_α ; SEQ
 arb5_child_β:               jmp         seq_r6_β
 seq_l6_α:                   ALT_α       r12+32, cursor, alt_l7_α ; ALT α — save cursor, enter left
