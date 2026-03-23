@@ -4,8 +4,10 @@
 * Node fields: t=type, v=value, n=nchildren, c=children ARRAY (1..n)
 * Field accessors t(), v(), n(), c() registered by DATA().
 * Constructor functions: MakeNode(t,v,n,c)  MakeLeaf(t,v)
+* Also defines DATA('tree(t,v,n,c)') for ShiftReduce.sno compatibility.
 *---------------------------------------------------------------------------------------------------
                DATA('treeNode(t,v,n,c)')
+               DATA('tree(t,v,n,c)')
                DEFINE('MakeNode(nodeT,nodeV,nodeN,nodeC)')
                DEFINE('MakeLeaf(nodeT,nodeV)')                                      :(treeEnd)
 *
