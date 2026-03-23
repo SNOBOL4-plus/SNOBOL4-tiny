@@ -5,10 +5,10 @@
  *   "Simple Translation of Goal-Directed Evaluation" (Todd A. Proebsting, 1996)
  *
  * Each IR node kind gets four labeled code chunks: α β γ ω
- *   α  (alpha / start)  — initial entry, try-head
- *   β  (beta  / resume) — re-entry after backtrack, try next clause
- *   γ  (gamma / succeed)— departure on success
- *   ω  (omega / fail)   — departure on failure / all clauses exhausted
+ *   α  (α / start)  — initial entry, try-head
+ *   β  (β  / resume) — re-entry after backtrack, try next clause
+ *   γ  (γ / succeed)— departure on success
+ *   ω  (ω / fail)   — departure on failure / all clauses exhausted
  *
  * Byrd Box wiring for clause selection (per FRONTEND-PROLOG.md):
  *
@@ -90,9 +90,9 @@ static char *safe_name(const char *s) {
  * Forward declarations
  * ======================================================================= */
 static void emit_goal(EXPR_t *goal, int uid,
-                      const char *gamma, const char *omega);
+                      const char *γ, const char *ω);
 static void emit_body(EXPR_t **goals, int ngoals, int base_uid,
-                      const char *gamma, const char *omega);
+                      const char *γ, const char *ω);
 static void emit_choice(EXPR_t *choice);
 static void emit_term_val(EXPR_t *e);   /* emit a Term* value expression */
 
@@ -205,7 +205,7 @@ static void emit_term_val(EXPR_t *e) {
  * Each goal gets a uid-stamped γ label (goal_N_γ) and shares the
  * caller's ω (backtrack to invoker on failure).
  *
- * Proebsting template: goal succeeds → fall to gamma, fails → jump omega.
+ * Proebsting template: goal succeeds → fall to γ, fails → jump ω.
  * ======================================================================= */
 
 /* Emit arithmetic evaluation: walk the rhs E_FNC("is") tree */
@@ -232,8 +232,8 @@ static void emit_arith_expr(EXPR_t *e) {
 }
 
 static void emit_goal(EXPR_t *goal, int uid,
-                      const char *gamma, const char *omega) {
-    if (!goal) { PG(gamma); return; }
+                      const char *γ, const char *ω) {
+    if (!goal) { PG(γ); return; }
 
     char lbl[LBUF];
 
@@ -253,8 +253,8 @@ static void emit_goal(EXPR_t *goal, int uid,
             PL_C(", ");
             emit_term_val(goal->children[1]);
             PL_C(", &_trail)) { trail_unwind(&_trail, _um%d); goto %s; }\n",
-                 mark_uid, omega);
-            PG(gamma);
+                 mark_uid, ω);
+            PG(γ);
             return;
         }
 
@@ -267,7 +267,7 @@ static void emit_goal(EXPR_t *goal, int uid,
             snprintf(lbl, LBUF, "cut%d_α", uid);
             PLG(lbl, NULL);
             PS(NULL, "_cut = 1;");
-            PG(gamma);
+            PG(γ);
             return;
         }
 
@@ -282,11 +282,11 @@ static void emit_goal(EXPR_t *goal, int uid,
 
             /* true/0 */
             if (strcmp(fn, "true") == 0 && arity == 0) {
-                PG(gamma); return;
+                PG(γ); return;
             }
             /* fail/0 — always fails */
             if (strcmp(fn, "fail") == 0 && arity == 0) {
-                PG(omega); return;
+                PG(ω); return;
             }
             /* halt/0 */
             if (strcmp(fn, "halt") == 0 && arity == 0) {
@@ -302,21 +302,21 @@ static void emit_goal(EXPR_t *goal, int uid,
             /* nl/0 */
             if (strcmp(fn, "nl") == 0 && arity == 0) {
                 PS(NULL, "putchar('\\n');");
-                PG(gamma); return;
+                PG(γ); return;
             }
             /* write/1 */
             if (strcmp(fn, "write") == 0 && arity == 1) {
                 PL_C("    pl_write(");
                 emit_term_val(goal->children[0]);
                 PL_C(");\n");
-                PG(gamma); return;
+                PG(γ); return;
             }
             /* writeln/1 */
             if (strcmp(fn, "writeln") == 0 && arity == 1) {
                 PL_C("    pl_write(");
                 emit_term_val(goal->children[0]);
                 PL_C("); putchar('\\n');\n");
-                PG(gamma); return;
+                PG(γ); return;
             }
             /* is/2  — arithmetic evaluation */
             if (strcmp(fn, "is") == 0 && arity == 2) {
@@ -330,9 +330,9 @@ static void emit_goal(EXPR_t *goal, int uid,
                 PL_C("      if (!unify(");
                 emit_term_val(goal->children[0]);
                 PL_C(", _isval%d, &_trail)) { trail_unwind(&_trail, _im%d); goto %s; }\n",
-                     uid, mark_uid2, omega);
+                     uid, mark_uid2, ω);
                 PL_C("    }\n");
-                PG(gamma); return;
+                PG(γ); return;
             }
             /* Comparison operators via is-style: < > =< >= =:= =\= */
             {
@@ -350,8 +350,8 @@ static void emit_goal(EXPR_t *goal, int uid,
                         emit_arith_expr(goal->children[0]);
                         PL_C(" %s ", cmps[ci].cop);
                         emit_arith_expr(goal->children[1]);
-                        PL_C(")) goto %s;\n", omega);
-                        PG(gamma); return;
+                        PL_C(")) goto %s;\n", ω);
+                        PG(γ); return;
                     }
                 }
             }
@@ -365,8 +365,8 @@ static void emit_goal(EXPR_t *goal, int uid,
                 emit_term_val(goal->children[0]);
                 PL_C(", ");
                 emit_term_val(goal->children[1]);
-                PL_C(", &_trail)) { trail_unwind(&_trail, _em%d); goto %s; }\n", mu, omega);
-                PG(gamma); return;
+                PL_C(", &_trail)) { trail_unwind(&_trail, _em%d); goto %s; }\n", mu, ω);
+                PG(γ); return;
             }
             /* \=/2 — not unifiable */
             if (strcmp(fn, "\\=") == 0 && arity == 2) {
@@ -380,8 +380,8 @@ static void emit_goal(EXPR_t *goal, int uid,
                 emit_term_val(goal->children[1]);
                 PL_C(", &_trail);\n");
                 PL_C("      trail_unwind(&_trail, _nm%d);\n", mu);
-                PL_C("      if (_nr%d) goto %s; }\n", mu, omega);
-                PG(gamma); return;
+                PL_C("      if (_nr%d) goto %s; }\n", mu, ω);
+                PG(γ); return;
             }
             /* var/1, nonvar/1, atom/1, integer/1, compound/1 type tests */
             {
@@ -403,12 +403,12 @@ static void emit_goal(EXPR_t *goal, int uid,
                         PL_C(");\n");
                         if (strncmp(tests[ti].test, "!", 1) == 0) {
                             PL_C("      if (_t%d && _t%d->tag == %s) goto %s; }\n",
-                                 uid, uid, tests[ti].test + 1, omega);
+                                 uid, uid, tests[ti].test + 1, ω);
                         } else {
                             PL_C("      if (!_t%d || _t%d->tag != %s) goto %s; }\n",
-                                 uid, uid, tests[ti].test, omega);
+                                 uid, uid, tests[ti].test, ω);
                         }
-                        PG(gamma); return;
+                        PG(γ); return;
                     }
                 }
             }
@@ -425,7 +425,7 @@ static void emit_goal(EXPR_t *goal, int uid,
                     cur = cur->children[1];
                 }
                 if (cur && nflat < 256) flat[nflat++] = cur;
-                emit_body(flat, nflat, pl_next_uid(), gamma, omega);
+                emit_body(flat, nflat, pl_next_uid(), γ, ω);
                 return;
             }
 
@@ -444,32 +444,32 @@ static void emit_goal(EXPR_t *goal, int uid,
                     snprintf(done_lbl, LBUF, "disj%d_done", uid);
                     /* try Cond; if fails jump to else */
                     emit_goal(left->children[0], uid * 10 + 1, "", else_lbl);
-                    /* Cond succeeded: run Then -> gamma */
-                    emit_goal(left->children[1], uid * 10 + 2, gamma, omega);
+                    /* Cond succeeded: run Then -> γ */
+                    emit_goal(left->children[1], uid * 10 + 2, γ, ω);
                     PL_C("    goto %s;\n", done_lbl);
                     /* else branch */
                     PL_C("%s:\n", else_lbl);
-                    emit_goal(right, uid * 10 + 3, gamma, omega);
+                    emit_goal(right, uid * 10 + 3, γ, ω);
                     PL_C("%s:;\n", done_lbl);
                 } else {
                     /* Simple A ; B */
                     char else_lbl[LBUF], done_lbl[LBUF];
                     snprintf(else_lbl, LBUF, "disj%d_b", uid);
                     snprintf(done_lbl, LBUF, "disj%d_done", uid);
-                    emit_goal(left,  uid * 10 + 1, gamma, else_lbl);
+                    emit_goal(left,  uid * 10 + 1, γ, else_lbl);
                     PL_C("    goto %s;\n", done_lbl);
                     PL_C("%s:\n", else_lbl);
-                    emit_goal(right, uid * 10 + 2, gamma, omega);
+                    emit_goal(right, uid * 10 + 2, γ, ω);
                     PL_C("%s:;\n", done_lbl);
                 }
                 return;
             }
 
             /* ->/2 alone (if-then without else): Cond -> Then
-             * If Cond fails → omega. Cut Cond after first solution. */
+             * If Cond fails → ω. Cut Cond after first solution. */
             if (strcmp(fn, "->") == 0 && arity == 2) {
-                emit_goal(goal->children[0], uid * 10 + 1, "", omega);
-                emit_goal(goal->children[1], uid * 10 + 2, gamma, omega);
+                emit_goal(goal->children[0], uid * 10 + 1, "", ω);
+                emit_goal(goal->children[1], uid * 10 + 2, γ, ω);
                 return;
             }
 
@@ -480,7 +480,7 @@ static void emit_goal(EXPR_t *goal, int uid,
                 snprintf(naf_fail, LBUF, "naf%d_f", uid);
                 int mu = pl_next_uid();
                 PL_C("    { int _naf%d = trail_mark(&_trail);\n", mu);
-                /* try goal in a sub-trail; if it succeeds → outer omega */
+                /* try goal in a sub-trail; if it succeeds → outer ω */
                 /* We implement via a temporary copy of trail */
                 PL_C("      Trail _naf_tr%d = _trail;\n", mu);
                 PL_C("      int _naf_ok%d = 0;\n", mu);
@@ -491,7 +491,7 @@ static void emit_goal(EXPR_t *goal, int uid,
                 PL_C("      /* \\+ inline not yet fully supported - treat as opaque */\n");
                 PL_C("      (void)_naf_ok%d;\n", mu);
                 PL_C("    }\n");
-                PG(gamma); return;
+                PG(γ); return;
             }
 
             /* functor/3 — term decomposition/construction */
@@ -505,8 +505,8 @@ static void emit_goal(EXPR_t *goal, int uid,
                 emit_term_val(goal->children[1]); PL_C(", ");
                 emit_term_val(goal->children[2]);
                 PL_C(", &_trail)) { trail_unwind(&_trail, _fm%d); goto %s; } }\n",
-                     mu, omega);
-                PG(gamma); return;
+                     mu, ω);
+                PG(γ); return;
             }
             /* arg/3 */
             if (strcmp(fn, "arg") == 0 && arity == 3) {
@@ -519,8 +519,8 @@ static void emit_goal(EXPR_t *goal, int uid,
                 emit_term_val(goal->children[1]); PL_C(", ");
                 emit_term_val(goal->children[2]);
                 PL_C(", &_trail)) { trail_unwind(&_trail, _am%d); goto %s; } }\n",
-                     mu, omega);
-                PG(gamma); return;
+                     mu, ω);
+                PG(γ); return;
             }
             /* =../2 — univ */
             if (strcmp(fn, "=..") == 0 && arity == 2) {
@@ -532,8 +532,8 @@ static void emit_goal(EXPR_t *goal, int uid,
                 emit_term_val(goal->children[0]); PL_C(", ");
                 emit_term_val(goal->children[1]);
                 PL_C(", &_trail)) { trail_unwind(&_trail, _uvm%d); goto %s; } }\n",
-                     mu, omega);
-                PG(gamma); return;
+                     mu, ω);
+                PG(γ); return;
             }
 
             /* --- user-defined predicate call (resumable via _r) --- */
@@ -552,10 +552,10 @@ static void emit_goal(EXPR_t *goal, int uid,
                 }
                 PL_C("&_trail, _cs%d);\n", cmu);
                 PL_C("      if (_cr%d < 0) { trail_unwind(&_trail, _cm%d); goto %s; }\n",
-                     cmu, cmu, omega);
+                     cmu, cmu, ω);
                 PL_C("      _cs%d = _cr%d + 1;\n", cmu, cmu);  /* advance for next retry */
                 PL_C("    }\n");
-                PG(gamma); return;
+                PG(γ); return;
             }
         }
 
@@ -564,14 +564,14 @@ static void emit_goal(EXPR_t *goal, int uid,
          * ---------------------------------------------------------------- */
         case E_TRAIL_MARK:
             PL_C("    _mark = trail_mark(&_trail);\n");
-            PG(gamma); return;
+            PG(γ); return;
         case E_TRAIL_UNWIND:
             PL_C("    trail_unwind(&_trail, _mark);\n");
-            PG(gamma); return;
+            PG(γ); return;
 
         default:
             /* unknown node — skip */
-            PG(gamma); return;
+            PG(γ); return;
     }
 }
 
@@ -599,11 +599,11 @@ static int is_user_call(EXPR_t *goal) {
  *
  * For user-defined predicates: wrap call + suffix in for(;;) retry loop.
  *   suffix.fail → retry_top  (Proebsting: E2.fail → E1.resume)
- * For deterministic goals: linear chain, fail → outer omega.
+ * For deterministic goals: linear chain, fail → outer ω.
  * ======================================================================= */
 static void emit_body(EXPR_t **goals, int ngoals, int base_uid,
-                      const char *gamma, const char *omega) {
-    if (ngoals == 0) { PG(gamma); return; }
+                      const char *γ, const char *ω) {
+    if (ngoals == 0) { PG(γ); return; }
 
     for (int i = 0; i < ngoals; i++) {
         EXPR_t *g = goals[i];
@@ -628,14 +628,14 @@ static void emit_body(EXPR_t **goals, int ngoals, int base_uid,
                 emit_term_val(g->children[j]); PL_C(", ");
             }
             PL_C("&_trail, _cs%d);\n", cmu);
-            PL_C("    if (_cr%d < 0) goto %s;\n", cmu, omega);
+            PL_C("    if (_cr%d < 0) goto %s;\n", cmu, ω);
             PL_C("    _cs%d = _cr%d + 1;\n", cmu, cmu);
 
             if (i + 1 < ngoals) {
                 emit_body(goals + i + 1, ngoals - i - 1,
-                          pl_next_uid(), gamma, retry_lbl);
+                          pl_next_uid(), γ, retry_lbl);
             } else {
-                PG(gamma);
+                PG(γ);
             }
             return;
         }
@@ -645,9 +645,9 @@ static void emit_body(EXPR_t **goals, int ngoals, int base_uid,
         if (i + 1 < ngoals)
             snprintf(next_lbl, LBUF, "g%d_γ", pl_next_uid());
         else
-            snprintf(next_lbl, LBUF, "%s", gamma);
+            snprintf(next_lbl, LBUF, "%s", γ);
 
-        emit_goal(g, pl_next_uid(), next_lbl, omega);
+        emit_goal(g, pl_next_uid(), next_lbl, ω);
         if (i + 1 < ngoals) PL_C("%s:\n", next_lbl);
     }
 }
@@ -664,19 +664,19 @@ static void emit_body(EXPR_t **goals, int ngoals, int base_uid,
  *       unify arg0 with head_arg0; failure → next_label
  *       unify arg1 with head_arg1; failure → next_label
  *       ...body goals...
- *       goto outer_gamma
+ *       goto outer_γ
  *   (fall through → next_label)
  * ======================================================================= */
 static void emit_clause(EXPR_t *ec, int clause_idx,
-                        const char *pred_alpha,  /* label for this clause's α */
+                        const char *pred_α,  /* label for this clause's α */
                         const char *next_label,  /* β of this clause = α of next */
-                        const char *gamma,       /* success destination */
-                        const char *omega,       /* failure after all clauses */
+                        const char *γ,       /* success destination */
+                        const char *ω,       /* failure after all clauses */
                         int n_args) {
     int uid = pl_next_uid();
 
     /* α entry label */
-    PLG(pred_alpha, NULL);
+    PLG(pred_α, NULL);
 
     /* Unify each head argument.
      * ec->children[0..n_args-1] are the head arg patterns.
@@ -704,14 +704,14 @@ static void emit_clause(EXPR_t *ec, int clause_idx,
         if (body[i] && body[i]->kind == E_CUT) { has_cut = 1; break; }
     (void)has_cut;
 
-    char body_gamma[LBUF], body_omega[LBUF];
-    snprintf(body_gamma, LBUF, "%s", gamma);
-    snprintf(body_omega, LBUF, "%s", omega);
+    char body_γ[LBUF], body_ω[LBUF];
+    snprintf(body_γ, LBUF, "%s", γ);
+    snprintf(body_ω, LBUF, "%s", ω);
 
     if (nbody == 0) {
-        PG(gamma);
+        PG(γ);
     } else {
-        emit_body(body, nbody, uid * 1000 + clause_idx, body_gamma, body_omega);
+        emit_body(body, nbody, uid * 1000 + clause_idx, body_γ, body_ω);
     }
 }
 
@@ -802,20 +802,20 @@ static void emit_choice(EXPR_t *choice) {
     PL_C("    switch (_start) {\n");
 
     /* Build per-clause labels */
-    char **c_alpha = malloc(nclauses * sizeof(char *));
+    char **c_α = malloc(nclauses * sizeof(char *));
     for (int ci = 0; ci < nclauses; ci++) {
-        c_alpha[ci] = malloc(LBUF);
-        snprintf(c_alpha[ci], LBUF, "cl%d_%d_α", pl_uid_ctr + 1, ci);
+        c_α[ci] = malloc(LBUF);
+        snprintf(c_α[ci], LBUF, "cl%d_%d_α", pl_uid_ctr + 1, ci);
     }
-    char omega_lbl[LBUF], gamma_lbl_base[LBUF];
-    snprintf(omega_lbl,      LBUF, "pred_%d_ω", pl_uid_ctr + 1);
-    snprintf(gamma_lbl_base, LBUF, "pred_%d_γ", pl_uid_ctr + 1);
+    char ω_lbl[LBUF], γ_lbl_base[LBUF];
+    snprintf(ω_lbl,      LBUF, "pred_%d_ω", pl_uid_ctr + 1);
+    snprintf(γ_lbl_base, LBUF, "pred_%d_γ", pl_uid_ctr + 1);
 
     /* Per-clause γ labels that return the clause index */
-    char **c_gamma = malloc(nclauses * sizeof(char *));
+    char **c_γ = malloc(nclauses * sizeof(char *));
     for (int ci = 0; ci < nclauses; ci++) {
-        c_gamma[ci] = malloc(LBUF);
-        snprintf(c_gamma[ci], LBUF, "pred_%d_γ%d", pl_uid_ctr + 1, ci);
+        c_γ[ci] = malloc(LBUF);
+        snprintf(c_γ[ci], LBUF, "pred_%d_γ%d", pl_uid_ctr + 1, ci);
     }
 
     PL_C("    _mark = trail_mark(&_trail);\n");
@@ -825,31 +825,31 @@ static void emit_choice(EXPR_t *choice) {
         EXPR_t *ec = choice->children[ci];
         if (!ec) continue;
 
-        const char *next = (ci + 1 < nclauses) ? c_alpha[ci + 1] : omega_lbl;
+        const char *next = (ci + 1 < nclauses) ? c_α[ci + 1] : ω_lbl;
 
         if (ci > 0) {
-            PL_C("%s:\n", c_alpha[ci]);
+            PL_C("%s:\n", c_α[ci]);
             PL_C("    case %d:;\n", ci);
-            PL_C("    if (_cut) goto %s;\n", omega_lbl);
+            PL_C("    if (_cut) goto %s;\n", ω_lbl);
             PL_C("    trail_unwind(&_trail, _mark);\n");
             if (max_vars > 0)
                 PL_C("    for (int _i=0;_i<%d;_i++) _env[_i]=term_new_var(_i);\n", max_vars);
         }
 
         emit_clause(ec, ci,
-                    ci == 0 ? c_alpha[ci] : "",
-                    next, c_gamma[ci], omega_lbl, arity);
+                    ci == 0 ? c_α[ci] : "",
+                    next, c_γ[ci], ω_lbl, arity);
     }
     PL_C("    }\n");
 
     /* ω */
-    PL_C("%s:\n", omega_lbl);
+    PL_C("%s:\n", ω_lbl);
     PL_C("    trail_unwind(&_trail, _mark);\n");
     PL_C("    *_tr = _trail; return -1;\n");
 
     /* Per-clause γ — return clause index so caller knows where to retry from */
     for (int ci = 0; ci < nclauses; ci++) {
-        PL_C("%s:\n", c_gamma[ci]);
+        PL_C("%s:\n", c_γ[ci]);
         PL_C("    *_tr = _trail; return %d;\n", ci);
     }
     PL_C("}\n");
@@ -862,8 +862,8 @@ static void emit_choice(EXPR_t *choice) {
     for (int i = 0; i < arity; i++) PL_C("_arg%d, ", i);
     PL_C("_tr, 0) >= 0;\n}\n");
 
-    for (int ci = 0; ci < nclauses; ci++) { free(c_alpha[ci]); free(c_gamma[ci]); }
-    free(c_alpha); free(c_gamma);
+    for (int ci = 0; ci < nclauses; ci++) { free(c_α[ci]); free(c_γ[ci]); }
+    free(c_α); free(c_γ);
 }
 
 /* =========================================================================
