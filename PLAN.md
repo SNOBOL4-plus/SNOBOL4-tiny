@@ -2,6 +2,51 @@
 
 ---
 
+## §START — Session Bootstrap (ALWAYS DO THIS FIRST)
+
+Every session, before anything else:
+
+```bash
+git clone https://github.com/snobol4ever/snobol4x
+git clone https://github.com/snobol4ever/x64
+bash /home/claude/snobol4x/setup.sh   # installs libgc-dev, nasm, m4, CSNOBOL4, SPITBOL, sno2c
+```
+
+`setup.sh` is idempotent. Never skip it. Missing packages (nasm, libgc-dev, etc.)
+are always the cause when builds fail with "not found" errors.
+
+### Current milestone
+
+**BEAUTY session:** `M-BEAUTY-CASE`
+- driver + ref already committed at `test/beauty/case/`
+- run: `bash test/beauty/run_beauty_subsystem.sh case`
+- on pass: commit `B-263: M-BEAUTY-CASE ✅`, advance to `M-BEAUTY-ASSIGN`
+
+### Beauty subsystem sequence (18 total)
+
+| # | Subsystem | Status |
+|---|-----------|--------|
+| 1 | global | ✅ |
+| 2 | is | ✅ |
+| 3 | FENCE | ✅ |
+| 4 | io | ✅ |
+| 5 | **case** | ← next |
+| 6 | assign | |
+| 7 | match | |
+| 8 | counter | |
+| 9 | stack | |
+| 10 | tree | |
+| 11 | ShiftReduce | |
+| 12 | TDump | |
+| 13 | Gen | |
+| 14 | Qize | |
+| 15 | ReadWrite | |
+| 16 | XDump | |
+| 17 | semantic | |
+| 18 | omega | |
+
+---
+
 ## §0 — PROJECT VISION (Session 43, 2026-03-12)
 
 > **SNOBOL4 everywhere. SNOBOL4 for all. SNOBOL4 for now. SNOBOL4 forever.**
