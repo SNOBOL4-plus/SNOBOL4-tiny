@@ -1605,3 +1605,101 @@ Fire milestones: M-PROLOG-BUILTINS ✅ M-PROLOG-R10 ✅ M-PROLOG-CORPUS ✅
 ### Invariant check before commit
 - Run `bash test/crosscheck/run_crosscheck_asm_rung.sh` on a few SNOBOL4 rungs to
   confirm SNOBOL4 backend not regressed by BSS stub addition
+
+---
+
+## §25 — Session Handoff F-224 (2026-03-23): Greek-letter consistency pass ✅
+
+### What was done this session
+
+**No functional code changed.** Pure naming consistency pass across three emitter files to align the Prolog frontend with the rest of the codebase.
+
+**Files changed:**
+
+| File | Changes |
+|------|---------|
+| `src/backend/x64/emit_byrd_asm.c` | ~340 spellings renamed |
+| `src/backend/c/emit_byrd_c.c` | ~461 spellings renamed |
+| `src/frontend/prolog/prolog_emit.c` | ~50 spellings renamed |
+
+**Naming rules now enforced consistently:**
+
+| Port | C identifier | NASM label suffix | Comment |
+|------|-------------|-------------------|---------|
+| proceed | `α` | `_α` | normal entry |
+| recede  | `β` | `_β` | re-entry after backtrack |
+| concede | `γ` | `_γ` | success exit |
+| fail    | `ω` | `_ω` | failure exit |
+
+**Renamed categories:**
+- All C function parameter names: `alpha`→`α`, `beta`→`β`, `gamma`→`γ`, `omega`→`ω`
+- All compound locals: `ret_gamma`→`ret_γ`, `alpha_lbl`→`α_lbl`, `pat_alpha`→`pat_α`, `inner_gamma`→`inner_γ`, `dol_gamma`→`dol_γ`, `gamma_lbl`→`γ_lbl`, `omega_lbl`→`ω_lbl`, etc.
+- Prolog NASM label format strings: `bfail%d`→`β%d`, `bsucc%d`→`γ%d`, `ucres%d`→`α%d`, `hfail%d`→`hω%d`, `hok%d`→`hγ%d`
+- Head-unif local var renamed `β_lbl`→`hω_lbl` (holds `hω` label, not a `β` port)
+- All comment references to generated label shapes updated to match
+- `alphabet` and `alphanumeric` preserved throughout
+
+**One legitimate ASCII exception:** `root_α_saved` — a generated NASM `.bss` symbol; NASM cannot use unicode in identifiers.
+
+**Build result:** `make` clean, zero errors. (`nasm` installed this session for future test runs.)
+
+### §START update
+
+| Session | Sprint | HEAD | Next milestone |
+|---------|--------|------|----------------|
+| **TINY frontend** | `main` F-224 — greek consistency pass; zero functional changes; build clean | `e24e962`+WIP (uncommitted) | M-PROLOG-R10 |
+
+### Uncommitted state
+
+Fix 4 from F-223 (`trail_unwind` in `bfailN`) plus the greek rename are both uncommitted.  
+Commit together after rung10 passes:
+
+```
+git add src/backend/x64/emit_byrd_asm.c src/frontend/prolog/prolog_emit.c src/backend/c/emit_byrd_c.c PLAN.md
+git commit -m "F-224: greek-letter consistency pass (α/β/γ/ω everywhere); F-223 fix4 trail_unwind in bfailN"
+```
+
+### Next session action plan (F-225)
+
+1. `bash setup.sh`
+2. `cd src && make` — verify clean build
+3. Test mini cross-product (same as §24 plan):
+
+```prolog
+% /tmp/mini.pro
+:- initialization(main).
+color(red). color(green). color(blue).
+main :- color(X), color(Y), write(X), write('-'), write(Y), nl, fail.
+main.
+```
+
+Expected: 9 lines `red-red` through `blue-blue`.
+
+If only `red-red`: trail_unwind in `bfailN` may be over-unwinding.
+Key question: does `ucresN` need to re-call `term_new_var` on retry, or does
+`trail_unwind` correctly reset existing `Term*` to unbound?
+Check `prolog_unify.c` — `trail_unwind` must set `term->tag = TT_VAR` for each
+trailed binding (not just clear the trail stack entry).
+
+4. If mini passes → run rung10:
+
+```bash
+for d in test/frontend/prolog/corpus/rung10_programs/*.pro; do
+    base=$(basename $d .pro)
+    out=$(./sno2c -pl -asm "$d" -o /tmp/pl_$base.s 2>/dev/null \
+          && nasm -f elf64 /tmp/pl_$base.s -o /tmp/pl_$base.o \
+          && gcc /tmp/pl_$base.o ... -o /tmp/pl_$base \
+          && /tmp/pl_$base)
+    echo "$base: $out"
+done
+```
+
+Expected:
+- `puzzle_01`: `Cashier=smith Manager=brown Teller=jones`
+- `puzzle_02`: `Carpenter=clark Painter=daw Plumber=fuller`
+- `puzzle_06`: `Clark=druggist Jones=grocer Morgan=butcher Smith=policeman`
+
+5. On rung10 PASS: run rung01–09 regression, then commit and push both repos.
+
+### Next session trigger phrase
+**"playing with Prolog frontend"** → F-225 session → pick up at snobol4x PLAN.md §25.
