@@ -554,6 +554,15 @@ static void var_register(const char *name) {
         vars[nvar++] = strdup(name);
 }
 
+/* Always register in flat .bss (never routed to box DATA).
+ * Use for CALL_PAT slots which CALL_PAT_α/β macros address as absolute labels. */
+static void flat_bss_register(const char *name) {
+    for (int i = 0; i < nvar; i++)
+        if (strcmp(vars[i], name) == 0) return;
+    if (nvar < MAX_VARS)
+        vars[nvar++] = strdup(name);
+}
+
 static void bss_emit(void) {
     if (nvar == 0) return;
     A("\nsection .bss\n");
@@ -1635,9 +1644,9 @@ static void emit_pat_node(EXPR_t *pat,
             snprintf(dt_slot,    sizeof dt_slot,    "cpat%d_t", cuid2);
             snprintf(dp_slot,    sizeof dp_slot,    "cpat%d_p", cuid2);
             snprintf(saved_slot, sizeof saved_slot, "cpat%d_saved", cuid2);
-            var_register(dt_slot);
-            var_register(dp_slot);
-            var_register(saved_slot);
+            flat_bss_register(dt_slot);
+            flat_bss_register(dp_slot);
+            flat_bss_register(saved_slot);
 
             /* Emit the function call evaluation BEFORE α (at stmt init time).
              * We use a pre-eval label so the call happens once when first entered.

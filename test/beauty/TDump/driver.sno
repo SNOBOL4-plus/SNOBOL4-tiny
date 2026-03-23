@@ -1,0 +1,71 @@
+*  driver.sno — test driver for TDump subsystem
+*  Oracle: snobol4 -f -P256k -I$INC driver.sno
+*  Run via: bash test/beauty/run_beauty_subsystem.sh TDump
+*
+*  Exercises: TLump(x,len) / TDump(x) / TValue(x) tree pretty-printer
+*  Depends on: global.sno (nl,digits,&UCASE,&LCASE), tree.sno (tree DATA), Gen.sno
+*  Note: TLump leaf detection uses NULL *IDENT(n(x)) which in CSNOBOL4 FAILS for
+*        tree() objects where n=''. All nodes go through TLump0 (internal path).
+*        A leaf (n='', no children) renders as '(TypeName)'.
+*  Note: assignments to $'#L'/$'$B'/$'$X'/$'$C' must be on separate lines.
+
+-INCLUDE 'global.sno'
+-INCLUDE 'is.sno'
+        DATA('tree(t,v,n,c)')
+        epsilon =
+        $'#L'  = 0
+        $'$B'  =
+        $'$X'  =
+        $'$C'  =
+-INCLUDE 'Gen.sno'
+-INCLUDE 'TDump.sno'
+
+        &STLIMIT = 1000000
+        xTrace = 0
+
+*  1: TLump of leaf — renders as '(TypeName)' since n='' not truly-unset
+        leaf = tree('Name', 'foo', , )
+        lump1 = TLump(leaf, 80)
+        IDENT(lump1, '(Name)')                          :S(P1)
+        OUTPUT = 'FAIL: 1 TLump leaf got: ' lump1       :(T1)
+P1      OUTPUT = 'PASS: 1 TLump leaf'
+T1
+
+*  2: TLump of 2-child node
+        ch1  = tree('Name', 'x', , )
+        ch2  = tree('Name', '42', , )
+        kids = ARRAY('1:2')
+        kids[1] = ch1
+        kids[2] = ch2
+        nd   = tree('BinOp', '', 2, kids)
+        lump2 = TLump(nd, 80)
+        IDENT(lump2, '(BinOp (Name) (Name))')           :S(P2)
+        OUTPUT = 'FAIL: 2 TLump node got: ' lump2       :(T2)
+P2      OUTPUT = 'PASS: 2 TLump node'
+T2
+
+*  3: TLump len=0 fails (FRETURN)
+        TLump(leaf, 0)                                  :F(P3)
+        OUTPUT = 'FAIL: 3 TLump len=0 should FRETURN'  :(T3)
+P3      OUTPUT = 'PASS: 3 TLump len=0 fails'
+T3
+
+*  4: TDump leaf — outputs one line
+        $'#L' = 0
+        $'$B' =
+        $'$X' =
+        $'$C' =
+        TDump(leaf)
+        OUTPUT = 'PASS: 4 TDump leaf'
+T4
+
+*  5: TDump internal node — outputs one line (fits in 140 chars)
+        $'#L' = 0
+        $'$B' =
+        $'$X' =
+        $'$C' =
+        TDump(nd)
+        OUTPUT = 'PASS: 5 TDump node'
+T5
+
+END
