@@ -1527,10 +1527,27 @@ static void emit_pat_node(EXPR_t *pat,
             EXPR_t *arg = pat->children[0];
             if (arg->kind == E_VART && arg->sval) {
                 emit_any_var(str_intern(arg->sval), alpha, beta, gamma, omega, cursor, subj, subj_len);
-            } else {
-                const char *cs = (arg->kind == E_QLIT && arg->sval) ? arg->sval : "";
-                int cslen = (arg->kind == E_QLIT && arg->sval) ? (int)strlen(arg->sval) : 0;
+            } else if (arg->kind == E_QLIT && arg->sval) {
+                const char *cs = arg->sval;
+                int cslen = (int)strlen(arg->sval);
                 emit_any(cs, cslen, alpha, beta, gamma, omega, cursor, subj, subj_len);
+            } else {
+                /* Runtime expression (e.g. E_CONC of vars like &UCASE &LCASE):
+                 * evaluate into a temp .bss slot and use ANY_α_VAR at match time. */
+                char tmplab[LBUF];
+                snprintf(tmplab, LBUF, "any_expr_tmp_%d", next_uid());
+                A("section .bss\n");
+                A("%s_t resq 1\n", tmplab);
+                A("%s_p resq 1\n", tmplab);
+                A("section .text\n");
+                /* Emit expression evaluation code — result lands in [rbp-32/24] */
+                emit_expr(arg, -32);
+                /* Store result into temp slot */
+                A("    mov     [rel %s_t], rax\n", tmplab);
+                A("    mov     [rel %s_p], rdx\n", tmplab);
+                /* Register temp as a named variable so ANY_α_VAR can look it up */
+                var_register(str_intern(tmplab));
+                emit_any_var(str_intern(tmplab), alpha, beta, gamma, omega, cursor, subj, subj_len);
             }
         } else if (pat->sval && strcasecmp(pat->sval, "NOTANY") == 0 && pat->nchildren == 1) {
             EXPR_t *arg = pat->children[0];
