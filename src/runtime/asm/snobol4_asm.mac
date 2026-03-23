@@ -354,18 +354,23 @@
 %endmacro
 
 ; -----------------------------------------------------------------------------
-; LOAD_NULVCL — load null/void descriptor into [rbp-16]/[rbp-8]
+; LOAD_NULVCL — load null/void descriptor into [rbp-16]/[rbp-8] AND rax/rdx
+; DT_SNUL=0, slen=0, ptr=0.  Callers that do "mov [r12+N], rax" after this
+; macro get the correct zero type tag; do NOT use value 1 (that is DT_S).
 ; -----------------------------------------------------------------------------
 %macro LOAD_NULVCL 0
-    mov     qword [rbp-16], 1
-    mov     qword [rbp-8],  0
+    xor     eax, eax
+    xor     edx, edx
+    mov     qword [rbp-16], rax
+    mov     qword [rbp-8],  rdx
 %endmacro
 
 ; -----------------------------------------------------------------------------
 ; LOAD_NULVCL32 — load null/void descriptor into [rbp-32]/[rbp-24]
+; DT_SNUL=0.  Mirrors LOAD_NULVCL fix — never use 1 (DT_S) here.
 ; -----------------------------------------------------------------------------
 %macro LOAD_NULVCL32 0
-    mov     qword [rbp-32], 1
+    mov     qword [rbp-32], 0
     mov     qword [rbp-24], 0
 %endmacro
 
