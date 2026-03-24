@@ -3914,10 +3914,15 @@ static int emit_expr(EXPR_t *e, int rbp_off) {
                               ? child->sval
                               : (e->sval ? e->sval : "");
         const char *vlab = str_intern(varname);
+        /* B-282: .VAR must emit DT_N (NAME, type=9), not DT_S (STRING, type=1).
+         * stmt_nreturn_deref checks DT_S only, so DT_S was passed through as the
+         * string "dummy" instead of being resolved to dummy's value (empty string). */
         if (rbp_off == -32 || rbp_off == -16) {
-            A("    LOAD_STR    %s\n", vlab);
+            A("    mov     qword [rbp%+d], 9\n", rbp_off);   /* DT_N */
+            A("    lea     rax, [rel %s]\n", vlab);
+            A("    mov     [rbp%+d], rax\n", rbp_off+8);
         } else {
-            A("    mov     qword [rbp%+d], 1\n", rbp_off);   /* DT_S */
+            A("    mov     qword [rbp%+d], 9\n", rbp_off);   /* DT_N */
             A("    lea     rax, [rel %s]\n", vlab);
             A("    mov     [rbp%+d], rax\n", rbp_off+8);
         }
@@ -4927,8 +4932,11 @@ static void emit_program(Program *prog) {
 
         /* -- subject eval -- */
         emit_expr(s->subject, -16);
-        /* stmt_setup_subject — copies into subject_data[], resets cursor=0 */
+        /* stmt_setup_subject — copies into subject_data[], resets cursor=0.
+         * B-282: returns 1 if subject is FAILDESCR → fail the whole statement. */
         A("    SUBJ_FROM16\n");
+        A("    test    eax, eax\n");
+        A("    jnz     %s\n", pat_ω);
 
         /* Unanchored scan: try pattern at positions 0..subject_len.
          * scan_start_N tracks the current attempt start position.

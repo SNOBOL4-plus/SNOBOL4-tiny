@@ -110,11 +110,18 @@ DESCR_t stmt_get_indirect(DESCR_t name_val) {
  *      Needed because E_NAM+E_FNC resolves .field(obj) to the actual value
  *      at assignment time, while .varname still stores the name string. ---- */
 DESCR_t stmt_nreturn_deref(DESCR_t retval) {
-    if (retval.v != DT_S) return retval;   /* already a value — pass through */
-    const char *s = VARVAL_fn(retval);
+    const char *s = NULL;
+    if (retval.v == DT_N) {
+        /* B-282: .VAR now emits DT_N — dereference NAME to its variable's value */
+        s = retval.s ? retval.s : NULL;
+    } else if (retval.v == DT_S) {
+        s = VARVAL_fn(retval);
+    } else {
+        return retval;   /* already a value — pass through */
+    }
     if (!s || !*s) return retval;          /* empty string — keep as-is */
     DESCR_t v = NV_GET_fn(s);
-    if (v.v == DT_SNUL) return retval;     /* unknown variable — keep string */
+    if (v.v == DT_SNUL) return NULVCL;    /* known unset var → return null value */
     return v;
 }
 
@@ -427,6 +434,10 @@ extern char     subject_data[65536];
  * Called from ASM before jmp root_alpha for each pattern-match statement.
  * Returns 0 on success, 1 if subject is FAIL/null (skip the match). */
 int stmt_setup_subject(DESCR_t subj) {
+    /* B-282: if subject expression failed (FAILDESCR), fail the whole statement.
+     * Zero subject_len_val so scan-advance in P_ω terminates immediately (1 > 0),
+     * not stale from the previous statement. */
+    if (IS_FAIL_fn(subj)) { subject_len_val = 0; return 1; }
     const char *s = VARVAL_fn(subj);
     if (!s) s = "";
     size_t len = descr_slen(subj);
@@ -549,6 +560,9 @@ int stmt_match_var(const char *varname) {
  * Used for function-call results in pattern position (e.g. icase('hello')). */
 int stmt_match_descr(uint64_t vtype, void *vptr) {
     DESCR_t val = { .v = (DTYPE_t)vtype, .slen = 0, .ptr = vptr };
+    /* B-282: a failed function call (FAILDESCR) used as a pattern must fail the match,
+     * not silently coerce to an empty string (which matches everywhere). */
+    if (IS_FAIL_fn(val)) return 0;
     if (getenv("SNO_CALLDEBUG"))
         fprintf(stderr, "[stmt_match_descr] vtype=%llu DT_P=%d cursor=%llu subj_len=%llu\n",
                 (unsigned long long)vtype, (int)DT_P,

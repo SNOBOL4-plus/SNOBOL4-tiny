@@ -4,21 +4,24 @@
 %include "snobol4_asm.mac"
 global  main
 extern  stmt_init, stmt_strval, stmt_intval
-extern  stmt_realval, stmt_set_null, stmt_set_indirect
+extern  stmt_realval, stmt_set_null, stmt_set_indirect, stmt_get_indirect, stmt_nreturn_deref
 extern  stmt_get, stmt_set, stmt_output, stmt_input
 extern  stmt_concat, stmt_is_fail, stmt_finish
 extern  stmt_realval, stmt_set_null, stmt_set_indirect
 extern  stmt_apply, stmt_goto_dispatch
 extern  stmt_setup_subject, stmt_apply_replacement
 extern  stmt_apply_replacement_splice
-extern  stmt_set_capture, stmt_match_var
+extern  stmt_set_capture, stmt_match_var, stmt_match_descr
 extern  stmt_pos_var, stmt_rpos_var
+extern  stmt_save_subject, stmt_restore_subject
 extern  stmt_span_var, stmt_break_var
 extern  stmt_breakx_var, stmt_breakx_lit
-extern  stmt_any_var, stmt_notany_var
+extern  stmt_any_var, stmt_notany_var, stmt_any_ptr
+extern  stmt_break_ptr, stmt_span_ptr
 extern  stmt_at_capture
 extern  kw_anchor
 extern  stmt_aref, stmt_aset, stmt_field_set
+extern  stmt_aref2, stmt_aset2
 extern  comm_stno
 extern  blk_alloc, blk_free, memcpy  ; per-invocation DATA block runtime
 global  cursor, subject_data, subject_len_val
@@ -62,6 +65,8 @@ P_do_add_tok_ret_ω      resq 1
 P_claws_info_ret_γ      resq 1
 P_claws_info_ret_ω      resq 1
 scan_start_70            resq 1
+spn_expr_tmp_23_t        resq 1
+spn_expr_tmp_23_p        resq 1
 arb5_stack               resq 64
 ucall0_rsv_g             resq 1
 ucall0_rsv_o             resq 1
@@ -160,6 +165,7 @@ L_InitStack_1:              mov         edi, 41
                             mov         qword [rbp-24], 0
                             SET_VAR_INDIR
                             jmp         fn_InitStack_γ     ; RETURN
+Lf_11:                      jmp         fn_InitStack_γ     ; RETURN
 
 Ln_11:
 ;  Push ================================================================================================================
@@ -169,8 +175,13 @@ L_Push_2:                   mov         edi, 42
                             mov         [rbp-16], rax
                             mov         [rbp-8],  rdx
                             sub         rsp, 32
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
+                            sub         rsp, 16
+                            LOAD_STR    S_AT_S
+                            mov         rdi, [rbp-32]
+                            mov         rsi, [rbp-24]
+                            call        stmt_get_indirect
+                            add         rsp, 16
+                            STORE_RESULT
                             STORE_ARG32 0
                             lea         rdi, [rel S_x]
                             call        stmt_get
@@ -187,26 +198,32 @@ L_Push_2:                   mov         edi, 42
 ; ======================================================================================================================
 Ln_12:                      mov         edi, 43
                             call        comm_stno
-                            LOAD_STR    S_IDENT
+                            CALL1_VAR   S_IDENT, S_x
                             FAIL_BR     Ln_13
                             SET_VAR     S_Push
-                            jmp         fn_Push_ω     ; NRETURN
+                            jmp         fn_Push_γ     ; NRETURN
 
 ; ======================================================================================================================
 Ln_13:                      mov         edi, 44
                             call        comm_stno
-                            LOAD_STR    S_DIFFER
-                            FAIL_BR     Ln_14
+                            CALL1_VAR   S_DIFFER, S_x
+                            FAIL_BR     Lf_14
                             SET_VAR     S_Push
-                            jmp         fn_Push_ω     ; NRETURN
+                            jmp         fn_Push_γ     ; NRETURN
+Lf_14:                      jmp         fn_Push_γ     ; NRETURN
 
 Ln_14:
 ;  Pop =================================================================================================================
 L_Pop_3:                    mov         edi, 45
                             call        comm_stno
                             sub         rsp, 16
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
+                            sub         rsp, 16
+                            LOAD_STR    S_AT_S
+                            mov         rdi, [rbp-32]
+                            mov         rsi, [rbp-24]
+                            call        stmt_get_indirect
+                            add         rsp, 16
+                            STORE_RESULT
                             STORE_ARG32 0
                             APPLY_FN_N  S_DIFFER, 1
                             add         rsp, 16
@@ -227,8 +244,13 @@ Lf_16:                      jmp         L_Pop1_4
 Ln_16:                      mov         edi, 47
                             call        comm_stno
                             sub         rsp, 16
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
+                            sub         rsp, 16
+                            LOAD_STR    S_AT_S
+                            mov         rdi, [rbp-32]
+                            mov         rsi, [rbp-24]
+                            call        stmt_get_indirect
+                            add         rsp, 16
+                            STORE_RESULT
                             STORE_ARG32 0
                             APPLY_FN_N  S_value, 1
                             add         rsp, 16
@@ -244,21 +266,29 @@ Ln_17:                      mov         edi, 48
                             mov         [rbp-16], rax
                             mov         [rbp-8],  rdx
                             sub         rsp, 16
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
+                            sub         rsp, 16
+                            LOAD_STR    S_AT_S
+                            mov         rdi, [rbp-32]
+                            mov         rsi, [rbp-24]
+                            call        stmt_get_indirect
+                            add         rsp, 16
+                            STORE_RESULT
                             STORE_ARG32 0
                             APPLY_FN_N  S_next, 1
                             add         rsp, 16
                             STORE_RESULT
-                            FAIL_BR     Ln_18
+                            FAIL_BR     Lf_18
                             SET_VAR_INDIR
                             jmp         fn_Pop_γ     ; RETURN
+Lf_18:                      jmp         fn_Pop_γ     ; RETURN
 
 Ln_18:
 ;  Pop1 ================================================================================================================
 L_Pop1_4:                   mov         edi, 49
                             call        comm_stno
-                            LOAD_STR    S_dummy
+                            mov         qword [rbp-32], 9
+                            lea         rax, [rel S_dummy]
+                            mov         [rbp-24], rax
                             FAIL_BR     Ln_19
                             SET_VAR     S_Pop
                             jmp         Ln_19
@@ -268,8 +298,13 @@ Ln_19:                      mov         edi, 50
                             call        comm_stno
                             GET_VAR     S_var
                             sub         rsp, 16
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
+                            sub         rsp, 16
+                            LOAD_STR    S_AT_S
+                            mov         rdi, [rbp-32]
+                            mov         rsi, [rbp-24]
+                            call        stmt_get_indirect
+                            add         rsp, 16
+                            STORE_RESULT
                             STORE_ARG32 0
                             APPLY_FN_N  S_value, 1
                             add         rsp, 16
@@ -285,23 +320,34 @@ Ln_20:                      mov         edi, 51
                             mov         [rbp-16], rax
                             mov         [rbp-8],  rdx
                             sub         rsp, 16
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
+                            sub         rsp, 16
+                            LOAD_STR    S_AT_S
+                            mov         rdi, [rbp-32]
+                            mov         rsi, [rbp-24]
+                            call        stmt_get_indirect
+                            add         rsp, 16
+                            STORE_RESULT
                             STORE_ARG32 0
                             APPLY_FN_N  S_next, 1
                             add         rsp, 16
                             STORE_RESULT
-                            FAIL_BR     Ln_21
+                            FAIL_BR     Lf_21
                             SET_VAR_INDIR
-                            jmp         fn_Pop_ω     ; NRETURN
+                            jmp         fn_Pop_γ     ; NRETURN
+Lf_21:                      jmp         fn_Pop_γ     ; NRETURN
 
 Ln_21:
 ;  Top =================================================================================================================
 L_Top_5:                    mov         edi, 52
                             call        comm_stno
                             sub         rsp, 16
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
+                            sub         rsp, 16
+                            LOAD_STR    S_AT_S
+                            mov         rdi, [rbp-32]
+                            mov         rsi, [rbp-24]
+                            call        stmt_get_indirect
+                            add         rsp, 16
+                            STORE_RESULT
                             STORE_ARG32 0
                             APPLY_FN_N  S_DIFFER, 1
                             add         rsp, 16
@@ -313,10 +359,22 @@ Lf_22:                      jmp         fn_Top_ω     ; FRETURN
 ; ======================================================================================================================
 Ln_22:                      mov         edi, 53
                             call        comm_stno
-                            LOAD_STR    S_value
-                            FAIL_BR     Ln_23
+                            sub         rsp, 16
+                            sub         rsp, 16
+                            LOAD_STR    S_AT_S
+                            mov         rdi, [rbp-32]
+                            mov         rsi, [rbp-24]
+                            call        stmt_get_indirect
+                            add         rsp, 16
+                            STORE_RESULT
+                            STORE_ARG32 0
+                            APPLY_FN_N  S_value, 1
+                            add         rsp, 16
+                            STORE_RESULT
+                            FAIL_BR     Lf_23
                             SET_VAR     S_Top
-                            jmp         fn_Top_ω     ; NRETURN
+                            jmp         fn_Top_γ     ; NRETURN
+Lf_23:                      jmp         fn_Top_γ     ; NRETURN
 
 Ln_23:
 ;  StackEnd ============================================================================================================
@@ -360,6 +418,7 @@ L_InitCounter_7:            mov         edi, 64
                             mov         qword [rbp-24], 0
                             SET_VAR_INDIR
                             jmp         fn_InitCounter_γ     ; RETURN
+Lf_31:                      jmp         fn_InitCounter_γ     ; RETURN
 
 Ln_31:
 ;  PushCounter =========================================================================================================
@@ -369,8 +428,13 @@ L_PushCounter_8:            mov         edi, 65
                             mov         [rbp-16], rax
                             mov         [rbp-8],  rdx
                             sub         rsp, 32
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
+                            sub         rsp, 16
+                            LOAD_STR    S_HS_N
+                            mov         rdi, [rbp-32]
+                            mov         rsi, [rbp-24]
+                            call        stmt_get_indirect
+                            add         rsp, 16
+                            STORE_RESULT
                             STORE_ARG32 0
                             LOAD_INT    0
                             STORE_ARG32 16
@@ -384,22 +448,36 @@ L_PushCounter_8:            mov         edi, 65
 ; ======================================================================================================================
 Ln_32:                      mov         edi, 66
                             call        comm_stno
-                            LOAD_STR    S_dummy
-                            FAIL_BR     Ln_33
+                            mov         qword [rbp-32], 9
+                            lea         rax, [rel S_dummy]
+                            mov         [rbp-24], rax
+                            FAIL_BR     Lf_33
                             SET_VAR     S_PushCounter
-                            jmp         fn_PushCounter_ω     ; NRETURN
+                            jmp         fn_PushCounter_γ     ; NRETURN
+Lf_33:                      jmp         fn_PushCounter_γ     ; NRETURN
 
 Ln_33:
 ;  IncCounter ==========================================================================================================
 L_IncCounter_9:             mov         edi, 67
                             call        comm_stno
-                            LOAD_NULVCL
+                            sub         rsp, 16
+                            LOAD_STR    S_HS_N
+                            mov         rdi, [rbp-32]
+                            mov         rsi, [rbp-24]
+                            call        stmt_get_indirect
+                            add         rsp, 16
+                            STORE_RESULT16
                             push        qword [rbp-8]
                             push        qword [rbp-16]
                             sub         rsp, 32
                             sub         rsp, 16
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
+                            sub         rsp, 16
+                            LOAD_STR    S_HS_N
+                            mov         rdi, [rbp-32]
+                            mov         rsi, [rbp-24]
+                            call        stmt_get_indirect
+                            add         rsp, 16
+                            STORE_RESULT
                             STORE_ARG32 0
                             APPLY_FN_N  S_value, 1
                             add         rsp, 16
@@ -423,18 +501,26 @@ L_IncCounter_9:             mov         edi, 67
 ; ======================================================================================================================
 Ln_34:                      mov         edi, 68
                             call        comm_stno
-                            LOAD_STR    S_dummy
-                            FAIL_BR     Ln_35
+                            mov         qword [rbp-32], 9
+                            lea         rax, [rel S_dummy]
+                            mov         [rbp-24], rax
+                            FAIL_BR     Lf_35
                             SET_VAR     S_IncCounter
-                            jmp         fn_IncCounter_ω     ; NRETURN
+                            jmp         fn_IncCounter_γ     ; NRETURN
+Lf_35:                      jmp         fn_IncCounter_γ     ; NRETURN
 
 Ln_35:
 ;  TopCounter ==========================================================================================================
 L_TopCounter_10:            mov         edi, 69
                             call        comm_stno
                             sub         rsp, 16
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
+                            sub         rsp, 16
+                            LOAD_STR    S_HS_N
+                            mov         rdi, [rbp-32]
+                            mov         rsi, [rbp-24]
+                            call        stmt_get_indirect
+                            add         rsp, 16
+                            STORE_RESULT
                             STORE_ARG32 0
                             APPLY_FN_N  S_DIFFER, 1
                             add         rsp, 16
@@ -442,8 +528,13 @@ L_TopCounter_10:            mov         edi, 69
                             push        rdx
                             push        rax
                             sub         rsp, 16
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
+                            sub         rsp, 16
+                            LOAD_STR    S_HS_N
+                            mov         rdi, [rbp-32]
+                            mov         rsi, [rbp-24]
+                            call        stmt_get_indirect
+                            add         rsp, 16
+                            STORE_RESULT
                             STORE_ARG32 0
                             APPLY_FN_N  S_value, 1
                             add         rsp, 16
@@ -495,9 +586,10 @@ Ln_36:                      mov         edi, 70
                             call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            FAIL_BR     Ln_37
+                            FAIL_BR     Lf_37
                             SET_OUTPUT
                             jmp         fn_TopCounter_γ     ; RETURN
+Lf_37:                      jmp         fn_TopCounter_γ     ; RETURN
 
 Ln_37:
 ;  PopCounter ==========================================================================================================
@@ -507,8 +599,13 @@ L_PopCounter_11:            mov         edi, 71
                             mov         [rbp-16], rax
                             mov         [rbp-8],  rdx
                             sub         rsp, 16
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
+                            sub         rsp, 16
+                            LOAD_STR    S_HS_N
+                            mov         rdi, [rbp-32]
+                            mov         rsi, [rbp-24]
+                            call        stmt_get_indirect
+                            add         rsp, 16
+                            STORE_RESULT
                             STORE_ARG32 0
                             APPLY_FN_N  S_DIFFER, 1
                             add         rsp, 16
@@ -516,8 +613,13 @@ L_PopCounter_11:            mov         edi, 71
                             push        rdx
                             push        rax
                             sub         rsp, 16
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
+                            sub         rsp, 16
+                            LOAD_STR    S_HS_N
+                            mov         rdi, [rbp-32]
+                            mov         rsi, [rbp-24]
+                            call        stmt_get_indirect
+                            add         rsp, 16
+                            STORE_RESULT
                             STORE_ARG32 0
                             APPLY_FN_N  S_next, 1
                             add         rsp, 16
@@ -537,10 +639,13 @@ Lf_38:                      jmp         fn_PopCounter_ω     ; FRETURN
 ; ======================================================================================================================
 Ln_38:                      mov         edi, 72
                             call        comm_stno
-                            LOAD_STR    S_dummy
-                            FAIL_BR     Ln_39
+                            mov         qword [rbp-32], 9
+                            lea         rax, [rel S_dummy]
+                            mov         [rbp-24], rax
+                            FAIL_BR     Lf_39
                             SET_VAR     S_PopCounter
-                            jmp         fn_PopCounter_ω     ; NRETURN
+                            jmp         fn_PopCounter_γ     ; NRETURN
+Lf_39:                      jmp         fn_PopCounter_γ     ; NRETURN
 
 Ln_39:
 ;  CounterEnd ==========================================================================================================
@@ -570,10 +675,13 @@ Ln_42:                      mov         edi, 80
 ; ======================================================================================================================
 Ln_43:                      mov         edi, 81
                             call        comm_stno
-                            LOAD_STR    S_dummy
-                            FAIL_BR     Ln_44
+                            mov         qword [rbp-32], 9
+                            lea         rax, [rel S_dummy]
+                            mov         [rbp-24], rax
+                            FAIL_BR     Lf_44
                             SET_VAR     S_do_mem_init
-                            jmp         fn_do_mem_init_ω     ; NRETURN
+                            jmp         fn_do_mem_init_γ     ; NRETURN
+Lf_44:                      jmp         fn_do_mem_init_γ     ; NRETURN
 
 Ln_44:
 ;  do_mem_init_end =====================================================================================================
@@ -621,10 +729,13 @@ Ln_47:                      mov         edi, 86
 ; ======================================================================================================================
 Ln_48:                      mov         edi, 87
                             call        comm_stno
-                            LOAD_STR    S_dummy
-                            FAIL_BR     Ln_49
+                            mov         qword [rbp-32], 9
+                            lea         rax, [rel S_dummy]
+                            mov         [rbp-24], rax
+                            FAIL_BR     Lf_49
                             SET_VAR     S_do_new_sent
-                            jmp         fn_do_new_sent_ω     ; NRETURN
+                            jmp         fn_do_new_sent_γ     ; NRETURN
+Lf_49:                      jmp         fn_do_new_sent_γ     ; NRETURN
 
 Ln_49:
 ;  do_new_sent_end =====================================================================================================
@@ -860,7 +971,7 @@ Ln_54:                      mov         edi, 94
                             APPLY_FN_N  S_add, 2
                             add         rsp, 32
                             STORE_RESULT
-                            FAIL_BR     Ln_55
+                            FAIL_BR     Lf_55
                             mov         r8,  [rbp-32]
                             mov         r9,  [rbp-24]
                             mov         rdx, [rsp]
@@ -870,6 +981,7 @@ Ln_54:                      mov         edi, 94
                             add         rsp, 32
                             call        stmt_aset
                             jmp         L_do_add_tok_out_18
+Lf_55:                      jmp         L_do_add_tok_out_18
 
 Ln_55:
 ;  do_add_tok_new ======================================================================================================
@@ -1040,10 +1152,13 @@ Ln_60:                      mov         edi, 100
 ; ======================================================================================================================
 Ln_61:                      mov         edi, 101
                             call        comm_stno
-                            LOAD_STR    S_dummy
-                            FAIL_BR     Ln_62
+                            mov         qword [rbp-32], 9
+                            lea         rax, [rel S_dummy]
+                            mov         [rbp-24], rax
+                            FAIL_BR     Lf_62
                             SET_VAR     S_do_add_tok
-                            jmp         fn_do_add_tok_ω     ; NRETURN
+                            jmp         fn_do_add_tok_γ     ; NRETURN
+Lf_62:                      jmp         fn_do_add_tok_γ     ; NRETURN
 
 Ln_62:
 ;  do_add_tok_end ======================================================================================================
@@ -1056,8 +1171,9 @@ Ln_63:                      mov         edi, 106
                             CALL1_INT   S_POS, 0
                             push        rdx
                             push        rax
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
+                            lea         rdi, [rel S_do_mem_init]
+                            call        stmt_get
+                            STORE_RESULT
                             mov         rcx, rdx
                             mov         rdx, rax
                             pop         rdi
@@ -1067,7 +1183,7 @@ Ln_63:                      mov         edi, 106
                             push        rax
                             sub         rsp, 16
                             sub         rsp, 32
-                            LOAD_STR    S_SPAN
+                            CALL1_VAR   S_SPAN, S_DIGITS
                             push        rdx
                             push        rax
                             LOAD_STR    S__CRD_SP_CL__PUN
@@ -1078,8 +1194,9 @@ Ln_63:                      mov         edi, 106
                             call        stmt_concat
                             push        rdx
                             push        rax
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
+                            lea         rdi, [rel S_do_new_sent]
+                            call        stmt_get
+                            STORE_RESULT
                             mov         rcx, rdx
                             mov         rdx, rax
                             pop         rdi
@@ -1088,7 +1205,9 @@ Ln_63:                      mov         edi, 106
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
                             STORE_ARG32 0
-                            LOAD_STR    S_81
+                            mov         qword [rbp-32], 9
+                            lea         rax, [rel S_81]
+                            mov         [rbp-24], rax
                             push        rdx
                             push        rax
                             LOAD_STR    S_75
@@ -1099,7 +1218,9 @@ Ln_63:                      mov         edi, 106
                             call        stmt_concat
                             push        rdx
                             push        rax
-                            LOAD_STR    S_81
+                            mov         qword [rbp-32], 9
+                            lea         rax, [rel S_81]
+                            mov         [rbp-24], rax
                             mov         rcx, rdx
                             mov         rdx, rax
                             pop         rdi
@@ -1107,8 +1228,9 @@ Ln_63:                      mov         edi, 106
                             call        stmt_concat
                             push        rdx
                             push        rax
-                            mov         qword [rbp-32], 1
-                            mov         qword [rbp-24], 0
+                            lea         rdi, [rel S_do_add_tok]
+                            call        stmt_get
+                            STORE_RESULT
                             mov         rcx, rdx
                             mov         rdx, rax
                             pop         rdi
@@ -1172,6 +1294,7 @@ Ln_64:                      mov         edi, 123
                             mov         [P_InitStack_ret_γ], rax
                             lea         rax, [rel ucall0_ret_o]
                             mov         [P_InitStack_ret_ω], rax
+                            call        stmt_save_subject
                             jmp         P_InitStack_α
 ucall0_ret_g:
                             pop         qword [P_InitStack_ret_γ]
@@ -1179,8 +1302,9 @@ ucall0_ret_g:
                             pop         rdi
                             mov         rsi, [rel box_InitStack_data_size]
                             call        blk_free
-                            add         rsp, 8          ; remove align pad
+                            call        stmt_restore_subject
                             GET_VAR     S_InitStack
+                            add         rsp, 8          ; remove align pad
                             mov         rax, [rbp-16]
                             mov         rdx, [rbp-8]
                             call        stmt_is_fail
@@ -1201,6 +1325,7 @@ ucall0_ret_o:
                             mov         rsi, [rel box_InitStack_data_size]
                             call        blk_free
                             add         rsp, 8          ; remove align pad
+                            call        stmt_restore_subject
                             LOAD_FAILDESCR32
 ucall0_done:
                             FAIL_BR     Ln_65
@@ -1225,6 +1350,7 @@ Ln_65:                      mov         edi, 124
                             mov         [P_InitCounter_ret_γ], rax
                             lea         rax, [rel ucall1_ret_o]
                             mov         [P_InitCounter_ret_ω], rax
+                            call        stmt_save_subject
                             jmp         P_InitCounter_α
 ucall1_ret_g:
                             pop         qword [P_InitCounter_ret_γ]
@@ -1232,8 +1358,9 @@ ucall1_ret_g:
                             pop         rdi
                             mov         rsi, [rel box_InitCounter_data_size]
                             call        blk_free
-                            add         rsp, 8          ; remove align pad
+                            call        stmt_restore_subject
                             GET_VAR     S_InitCounter
+                            add         rsp, 8          ; remove align pad
                             mov         rax, [rbp-16]
                             mov         rdx, [rbp-8]
                             call        stmt_is_fail
@@ -1254,6 +1381,7 @@ ucall1_ret_o:
                             mov         rsi, [rel box_InitCounter_data_size]
                             call        blk_free
                             add         rsp, 8          ; remove align pad
+                            call        stmt_restore_subject
                             LOAD_FAILDESCR32
 ucall1_done:
                             FAIL_BR     Ln_66
@@ -1307,9 +1435,10 @@ Ln_68:                      mov         edi, 128
                             call        stmt_concat
                             mov         [rbp-32], rax
                             mov         [rbp-24], rdx
-                            FAIL_BR     Ln_69
+                            FAIL_BR     Lf_69
                             SET_VAR     S_buf
                             jmp         L_rdloop_21
+Lf_69:                      jmp         L_rdloop_21
 
 Ln_69:
 ;  scan ================================================================================================================
@@ -1317,6 +1446,8 @@ L_scan_22:                  mov         edi, 130
                             call        comm_stno
                             GET_VAR     S_buf
                             SUBJ_FROM16
+                            test        eax, eax
+                            jnz         P_70_ω
                             mov         qword [scan_start_70], 0
 scan_retry_70:
                             mov         rax, [scan_start_70]
@@ -1374,7 +1505,6 @@ L_SNO_END:
 section .data
 lit_str_1            db 95, 67, 82, 68, 32, 58, 95, 80, 85, 78
 lit_str_2            db 95
-lit_str_3            db 0  ; ""
 
 section .text
 
@@ -1393,6 +1523,7 @@ P_InitStack_α:              FN_α_INIT   InitStack
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 fn_InitStack_γ:             FN_γ        P_InitStack_ret_γ ; fn γ
 fn_InitStack_ω:             FN_ω        P_InitStack_ret_ω ; fn ω
+P_InitStack_β:              jmp         [P_InitStack_ret_ω] ; fn β — backtrack = fail
 
 ; P_Push_α — user function α entry (1 param) [r12=DATA block]
 ;  Push ================================================================================================================
@@ -1410,6 +1541,7 @@ P_Push_α:                   FN_α_INIT   Push
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 fn_Push_γ:                  FN_γ        P_Push_ret_γ ; fn γ
 fn_Push_ω:                  FN_ω        P_Push_ret_ω ; fn ω
+P_Push_β:                   jmp         [P_Push_ret_ω] ; fn β — backtrack = fail
 
 ; P_Pop_α — user function α entry (1 param) [r12=DATA block]
 ;  Pop =================================================================================================================
@@ -1427,6 +1559,7 @@ P_Pop_α:                    FN_α_INIT   Pop
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 fn_Pop_γ:                   FN_γ        P_Pop_ret_γ ; fn γ
 fn_Pop_ω:                   FN_ω        P_Pop_ret_ω ; fn ω
+P_Pop_β:                    jmp         [P_Pop_ret_ω] ; fn β — backtrack = fail
 
 ; P_Top_α — user function α entry (0 params) [r12=DATA block]
 ;  Top =================================================================================================================
@@ -1441,6 +1574,7 @@ P_Top_α:                    FN_α_INIT   Top
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 fn_Top_γ:                   FN_γ        P_Top_ret_γ ; fn γ
 fn_Top_ω:                   FN_ω        P_Top_ret_ω ; fn ω
+P_Top_β:                    jmp         [P_Top_ret_ω] ; fn β — backtrack = fail
 
 ; P_InitCounter_α — user function α entry (0 params) [r12=DATA block]
 ;  InitCounter =========================================================================================================
@@ -1455,6 +1589,7 @@ P_InitCounter_α:            FN_α_INIT   InitCounter
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 fn_InitCounter_γ:           FN_γ        P_InitCounter_ret_γ ; fn γ
 fn_InitCounter_ω:           FN_ω        P_InitCounter_ret_ω ; fn ω
+P_InitCounter_β:            jmp         [P_InitCounter_ret_ω] ; fn β — backtrack = fail
 
 ; P_PushCounter_α — user function α entry (0 params) [r12=DATA block]
 ;  PushCounter =========================================================================================================
@@ -1469,6 +1604,7 @@ P_PushCounter_α:            FN_α_INIT   PushCounter
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 fn_PushCounter_γ:           FN_γ        P_PushCounter_ret_γ ; fn γ
 fn_PushCounter_ω:           FN_ω        P_PushCounter_ret_ω ; fn ω
+P_PushCounter_β:            jmp         [P_PushCounter_ret_ω] ; fn β — backtrack = fail
 
 ; P_IncCounter_α — user function α entry (0 params) [r12=DATA block]
 ;  IncCounter ==========================================================================================================
@@ -1483,6 +1619,7 @@ P_IncCounter_α:             FN_α_INIT   IncCounter
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 fn_IncCounter_γ:            FN_γ        P_IncCounter_ret_γ ; fn γ
 fn_IncCounter_ω:            FN_ω        P_IncCounter_ret_ω ; fn ω
+P_IncCounter_β:             jmp         [P_IncCounter_ret_ω] ; fn β — backtrack = fail
 
 ; P_TopCounter_α — user function α entry (0 params) [r12=DATA block]
 ;  TopCounter ==========================================================================================================
@@ -1497,6 +1634,7 @@ P_TopCounter_α:             FN_α_INIT   TopCounter
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 fn_TopCounter_γ:            FN_γ        P_TopCounter_ret_γ ; fn γ
 fn_TopCounter_ω:            FN_ω        P_TopCounter_ret_ω ; fn ω
+P_TopCounter_β:             jmp         [P_TopCounter_ret_ω] ; fn β — backtrack = fail
 
 ; P_PopCounter_α — user function α entry (0 params) [r12=DATA block]
 ;  PopCounter ==========================================================================================================
@@ -1511,6 +1649,7 @@ P_PopCounter_α:             FN_α_INIT   PopCounter
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 fn_PopCounter_γ:            FN_γ        P_PopCounter_ret_γ ; fn γ
 fn_PopCounter_ω:            FN_ω        P_PopCounter_ret_ω ; fn ω
+P_PopCounter_β:             jmp         [P_PopCounter_ret_ω] ; fn β — backtrack = fail
 
 ; P_do_mem_init_α — user function α entry (0 params) [r12=DATA block]
 ;  do_mem_init =========================================================================================================
@@ -1525,6 +1664,7 @@ P_do_mem_init_α:            FN_α_INIT   do_mem_init
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 fn_do_mem_init_γ:           FN_γ        P_do_mem_init_ret_γ ; fn γ
 fn_do_mem_init_ω:           FN_ω        P_do_mem_init_ret_ω ; fn ω
+P_do_mem_init_β:            jmp         [P_do_mem_init_ret_ω] ; fn β — backtrack = fail
 
 ; P_do_new_sent_α — user function α entry (0 params) [r12=DATA block]
 ;  do_new_sent =========================================================================================================
@@ -1539,6 +1679,7 @@ P_do_new_sent_α:            FN_α_INIT   do_new_sent
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 fn_do_new_sent_γ:           FN_γ        P_do_new_sent_ret_γ ; fn γ
 fn_do_new_sent_ω:           FN_ω        P_do_new_sent_ret_ω ; fn ω
+P_do_new_sent_β:            jmp         [P_do_new_sent_ret_ω] ; fn β — backtrack = fail
 
 ; P_do_add_tok_α — user function α entry (0 params) [r12=DATA block]
 ;  do_add_tok ==========================================================================================================
@@ -1553,6 +1694,7 @@ P_do_add_tok_α:             FN_α_INIT   do_add_tok
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 fn_do_add_tok_γ:            FN_γ        P_do_add_tok_ret_γ ; fn γ
 fn_do_add_tok_ω:            FN_ω        P_do_add_tok_ret_ω ; fn ω
+P_do_add_tok_β:             jmp         [P_do_add_tok_ret_ω] ; fn β — backtrack = fail
 
 ; P_claws_info_α (α entry) [r12=DATA block]
 P_claws_info_α:             jmp         seq_l1_α ; SEQ
@@ -1648,26 +1790,30 @@ dol20_child_α:              jmp         seq_l21_α ; SEQ
 dol20_child_β:              jmp         seq_r21_β
 seq_l21_α:                  ANY_α_VAR   S_UCASE, r12+104, cursor, subject_data, subject_len_val, seq_r21_α, dol20_ω ; ANY(var) α
 seq_l21_β:                  ANY_β_VAR   r12+104, cursor, dol20_ω ; ANY(var) β
-seq_r21_α:                  SPAN_α      lit_str_3, 0, r12+112, cursor, subject_data, subject_len_val, dol20_γ, seq_l21_β ; SPAN α
-seq_r21_β:                  SPAN_β      r12+112, cursor, seq_l21_β ; SPAN β
+seq_r21_α:                  ;           SPAN(expr) α — eval arg then dispatch
+                            CAT2_VV     S_DIGITS, S_UCASE
+                            mov         [rel spn_expr_tmp_23_t], rax
+                            mov         [rel spn_expr_tmp_23_p], rdx
+spn_expr_tmp_23_dispatch:   SPAN_α_PTR  spn_expr_tmp_23_t, spn_expr_tmp_23_p, r12+112, cursor, subject_data, subject_len_val, dol20_γ, seq_l21_β ; SPAN(expr) α dispatch
+seq_r21_β:                  SPAN_β_PTR  r12+112, cursor, seq_l21_β ; SPAN(expr) β
 dol20_γ:                    DOL_CAPTURE r12+96, cursor, cap_tag_buf, cap_tag_len, subject_data, seq_r19_α ; DOL γ — capture span
 dol20_ω:                    jmp         seq_l18_β ; DOL ω — child failed
 
 seq_r19_α: ; REF(do_add_tok)
-                            lea         rax, [rel nref24_γ]
+                            lea         rax, [rel nref25_γ]
                             mov         [P_do_add_tok_ret_γ], rax
-                            lea         rax, [rel nref24_ω]
+                            lea         rax, [rel nref25_ω]
                             mov         [P_do_add_tok_ret_ω], rax
                             jmp         P_do_add_tok_α
-seq_r19_β:                  lea         rax, [rel nref24_γ] ; REF(%s)
+seq_r19_β:                  lea         rax, [rel nref25_γ] ; REF(%s)
                             mov         [P_do_add_tok_ret_γ], rax
-                            lea         rax, [rel nref24_ω]
+                            lea         rax, [rel nref25_ω]
                             mov         [P_do_add_tok_ret_ω], rax
                             jmp         P_do_add_tok_β
 
-nref24_γ:
+nref25_γ:
                             jmp         seq_r6_α
-nref24_ω:                   jmp         seq_l19_β
+nref25_ω:                   jmp         seq_l19_β
 seq_r6_α:                   LIT_α1      32, r12+120, cursor, subject_data, subject_len_val, arb5_child_ok, seq_l6_β ; LIT α
 seq_r6_β:                   LIT_β       r12+120, cursor, seq_l6_β ; LIT β
 seq_r4_α:                   RPOS_α      0, cursor, subject_len_val, patdef_claws_info_γ, seq_l4_β ; RPOS(%ld)
@@ -1948,7 +2094,7 @@ dq 0  ; [r12+80] = brk17_saved
 dq 0  ; [r12+88] = seq_l18_α_saved
 dq 0  ; [r12+96] = dol_entry_tag
 dq 0  ; [r12+104] = any22_saved
-dq 0  ; [r12+112] = span23_saved
+dq 0  ; [r12+112] = spn24_saved
 dq 0  ; [r12+120] = seq_r6_α_saved
 
 
