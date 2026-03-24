@@ -1,44 +1,81 @@
 %-------------------------------------------------------------------------------
 % 3
-% Dorothy, Jean, Virginia, Bill, Jim, and Tom are six young persons. 
-% Tom, who is older than Jim, is Dorothy's brother.
-% Virginia is the oldest girl.
-% The total age of each couple-to-be is the same; no two have the same age.
+% Dorothy, Jean, Virginia, Bill, Jim, and Tom are six young persons who have
+% been close friends from their childhood. Tom, who is older than Jim, is
+% Dorothy's brother. Virginia is the oldest girl. The total age of each
+% couple-to-be is the same although no two of us are the same age.
 % Jim and Jean are together as old as Bill and Dorothy.
-% What three engagements were announced?
+% What three engagements were announced at the party?
 %-------------------------------------------------------------------------------
 :- initialization(main). main :- puzzle; true.
 
-% Relative age ranking: assign 1..6 (all distinct). Constraints:
-%   T > Ji  (Tom older than Jim)
-%   V > D, V > J  (Virginia oldest girl)
-%   Ji + J =:= B + D  (Jim+Jean = Bill+Dorothy)
-%   B+GB =:= Ji+GJi =:= T+GT  (equal couple sums)
-%   Tom is Dorothy's brother => Tom not Dorothy's partner
-%
-% Enumerate with couple_sum/6: try all permutations of girls [D,J,V] onto boys [B,Ji,T].
-% Equal sums + Ji+J=B+D uniquely determines: Tom+Virginia, Bill+Jean, Jim+Dorothy.
-%   Verify: B+J =:= Ji+D? From Ji+J=B+D => J-D=B-Ji => B-Ji=J-D.
-%   Couple sums equal: B+GB=Ji+GJi=T+GT. Try GB=Jean(J), GJi=Dorothy(D), GT=Virginia(V):
-%     B+J = Ji+D => B-Ji=D-J.  From constraint: Ji+J=B+D => B-Ji=J-D. So D-J=J-D => 2J=2D => J=D. 
-%     But all distinct. Contradiction.
-%   Try GB=Dorothy(D), GJi=Jean(J), GT=Virginia(V):
-%     B+D=Ji+J ✓ (that's exactly the given constraint).
-%     B+D=T+V => T+V=B+D=Ji+J. And Vi oldest girl (V>D,V>J). Tom older than Jim (T>Ji).
-%     T+V=Ji+J: T>Ji and V>J => T+V>Ji+J. Contradiction.
-%   Try GB=Virginia(V), GJi=Dorothy(D), GT=Jean(J):
-%     B+V=Ji+D=T+J.  From Ji+J=B+D: Ji=B+D-J.
-%     Ji+D=T+J => B+D-J+D=T+J => B+2D-J=T+J => T=B+2D-2J.
-%     B+V=T+J=B+2D-2J+J=B+2D-J => V=2D-J. V>D => 2D-J>D => D>J. V>J => 2D-J>J => D>J ✓(same).
-%     T>Ji: T=B+2D-2J > B+D-J => 2D-2J>D-J => D>J ✓.
-%     All 6 distinct integers 1..6. V=2D-J. T=B+2D-2J. Ji=B+D-J.
-%     Try D=3,J=1: V=5, Ji=B+2, T=B+4. Need {B,Ji,T}⊆{2,4,6} (remaining after 1,3,5).
-%       B=2: Ji=4,T=6. All ∈{2,4,6} ✓. Check T>Ji: 6>4 ✓. V>D: 5>3 ✓. V>J: 5>1 ✓. All distinct ✓.
-%     Solution: Dorothy=3,Jean=1,Virginia=5,Bill=2,Jim=4,Tom=6.
-%     Couples: Bill+Virginia, Jim+Dorothy, Tom+Jean.
-%     Tom(Dorothy's brother)+Jean, not Dorothy ✓.
+age(1). age(2). age(3). age(4). age(5). age(6).
 
 puzzle :-
-    write('Bill+virginia Jim+dorothy Tom+jean'),
-    write('\n'),
+    age(D), age(J), age(V), age(B), age(Ji), age(T),
+    differ6(D, J, V, B, Ji, T),
+    T > Ji,                          % Tom older than Jim
+    V > D, V > J,                    % Virginia oldest girl
+    Ji + J =:= B + D,                % Jim+Jean = Bill+Dorothy
+    equal_sums(B, Ji, T, D, J, V),   % equal couple totals
+    not_dorothy(T, D, J, V, B, Ji),  % Tom is Dorothy's brother, not her partner
+    display(B, Ji, T, D, J, V),
     fail.
+
+% equal_sums: assign girls to boys so all couple totals match
+% boys B,Ji,T paired with girls from {D,J,V} in some order
+equal_sums(B, Ji, T, G1, G2, G3) :-
+    B + G1 =:= Ji + G2, Ji + G2 =:= T + G3.
+equal_sums(B, Ji, T, G1, G2, G3) :-
+    B + G1 =:= Ji + G3, Ji + G3 =:= T + G2.
+equal_sums(B, Ji, T, G1, G2, G3) :-
+    B + G2 =:= Ji + G1, Ji + G1 =:= T + G3.
+equal_sums(B, Ji, T, G1, G2, G3) :-
+    B + G2 =:= Ji + G3, Ji + G3 =:= T + G1.
+equal_sums(B, Ji, T, G1, G2, G3) :-
+    B + G3 =:= Ji + G1, Ji + G1 =:= T + G2.
+equal_sums(B, Ji, T, G1, G2, G3) :-
+    B + G3 =:= Ji + G2, Ji + G2 =:= T + G1.
+
+% Tom not paired with Dorothy (they are siblings)
+not_dorothy(T, D, J, V, B, Ji) :-
+    \+ partner_is(T, D, D, J, V, B, Ji).
+
+partner_is(T, D, D, _, _, _, _) :- T + D =:= T + D, fail. % placeholder
+% Instead encode: find Tom's girl partner and assert it's not Dorothy
+not_dorothy(T, D, J, V, B, Ji) :-
+    ( B  + D =:= Ji + J, Ji + J =:= T + V -> G_T = V
+    ; B  + D =:= Ji + V, Ji + V =:= T + J -> G_T = J
+    ; B  + J =:= Ji + D, Ji + D =:= T + V -> G_T = V
+    ; B  + J =:= Ji + V, Ji + V =:= T + D -> G_T = D
+    ; B  + V =:= Ji + D, Ji + D =:= T + J -> G_T = J
+    ; B  + V =:= Ji + J, Ji + J =:= T + D -> G_T = D
+    ; fail ),
+    G_T =\= D.
+
+display(B, Ji, T, D, J, V) :-
+    find_couples(B, Ji, T, D, J, V, GB, GJi, GT),
+    girl_name(D, J, V, GB,  GBn),
+    girl_name(D, J, V, GJi, GJin),
+    girl_name(D, J, V, GT,  GTn),
+    write('Bill+'), write(GBn),
+    write(' Jim+'), write(GJin),
+    write(' Tom+'), write(GTn),
+    write('\n').
+
+find_couples(B, Ji, T, D, J, V, D, J, V) :- B+D =:= Ji+J, Ji+J =:= T+V.
+find_couples(B, Ji, T, D, J, V, D, V, J) :- B+D =:= Ji+V, Ji+V =:= T+J.
+find_couples(B, Ji, T, D, J, V, J, D, V) :- B+J =:= Ji+D, Ji+D =:= T+V.
+find_couples(B, Ji, T, D, J, V, J, V, D) :- B+J =:= Ji+V, Ji+V =:= T+D.
+find_couples(B, Ji, T, D, J, V, V, D, J) :- B+V =:= Ji+D, Ji+D =:= T+J.
+find_couples(B, Ji, T, D, J, V, V, J, D) :- B+V =:= Ji+J, Ji+J =:= T+D.
+
+girl_name(D, _, _, G, dorothy)  :- G =:= D.
+girl_name(_, J, _, G, jean)     :- G =:= J.
+girl_name(_, _, V, G, virginia) :- G =:= V.
+
+differ6(A,B,C,D,E,F) :-
+    A=\=B, A=\=C, A=\=D, A=\=E, A=\=F,
+    B=\=C, B=\=D, B=\=E, B=\=F,
+    C=\=D, C=\=E, C=\=F,
+    D=\=E, D=\=F, E=\=F.
