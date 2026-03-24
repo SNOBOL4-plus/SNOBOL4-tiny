@@ -4,21 +4,24 @@
 %include "snobol4_asm.mac"
 global  main
 extern  stmt_init, stmt_strval, stmt_intval
-extern  stmt_realval, stmt_set_null, stmt_set_indirect
+extern  stmt_realval, stmt_set_null, stmt_set_indirect, stmt_get_indirect, stmt_nreturn_deref
 extern  stmt_get, stmt_set, stmt_output, stmt_input
 extern  stmt_concat, stmt_is_fail, stmt_finish
 extern  stmt_realval, stmt_set_null, stmt_set_indirect
 extern  stmt_apply, stmt_goto_dispatch
 extern  stmt_setup_subject, stmt_apply_replacement
 extern  stmt_apply_replacement_splice
-extern  stmt_set_capture, stmt_match_var
+extern  stmt_set_capture, stmt_match_var, stmt_match_descr
 extern  stmt_pos_var, stmt_rpos_var
+extern  stmt_save_subject, stmt_restore_subject
 extern  stmt_span_var, stmt_break_var
 extern  stmt_breakx_var, stmt_breakx_lit
-extern  stmt_any_var, stmt_notany_var
+extern  stmt_any_var, stmt_notany_var, stmt_any_ptr
+extern  stmt_break_ptr, stmt_span_ptr
 extern  stmt_at_capture
 extern  kw_anchor
 extern  stmt_aref, stmt_aset, stmt_field_set
+extern  stmt_aref2, stmt_aset2
 extern  comm_stno
 extern  blk_alloc, blk_free, memcpy  ; per-invocation DATA block runtime
 global  cursor, subject_data, subject_len_val
@@ -35,10 +38,6 @@ fn_ROMAN_arg_0_t         resq 1
 fn_ROMAN_arg_0_p         resq 1
 scan_start_3             resq 1
 scan_start_4             resq 1
-dol_entry_T              resq 1
-len2_saved               resq 1
-litvar4_saved            resq 1
-brk6_saved               resq 1
 ucall0_sv_0_t            resq 1
 ucall0_sv_0_p            resq 1
 ucall0_rsv_g             resq 1
@@ -81,6 +80,8 @@ L_ROMAN_1:                  mov         edi, 7
                             call        comm_stno
                             GET_VAR     S_N
                             SUBJ_FROM16
+                            test        eax, eax
+                            jnz         P_3_ω
                             mov         qword [scan_start_3], 0
 scan_retry_3:
                             mov         rax, [scan_start_3]
@@ -93,11 +94,11 @@ seq_l0_α:                   RPOS_α      1, cursor, subject_len_val, seq_r0_α,
 seq_l0_β:                   RPOS_β      cursor, P_3_ω
 
 seq_r0_α: ; DOL(T $  T)
-                            DOL_SAVE    dol_entry_T, cursor, dol1_child_α ; DOL α — save entry cursor
+                            DOL_SAVE    r12+64, cursor, dol1_child_α ; DOL α — save entry cursor
 seq_r0_β:                   jmp         dol1_child_β ; DOL β
-dol1_child_α:               LEN_α       1, len2_saved, cursor, subject_len_val, dol1_γ, dol1_ω ; LEN(%ld)
-dol1_child_β:               LEN_β       len2_saved, cursor, dol1_ω ; LEN β
-dol1_γ:                     DOL_CAPTURE dol_entry_T, cursor, cap_T_buf, cap_T_len, subject_data, P_3_γ ; DOL γ — capture span
+dol1_child_α:               LEN_α       1, r12+72, cursor, subject_len_val, dol1_γ, dol1_ω ; LEN(%ld)
+dol1_child_β:               LEN_β       r12+72, cursor, dol1_ω ; LEN β
+dol1_γ:                     DOL_CAPTURE r12+64, cursor, cap_T_buf, cap_T_len, subject_data, P_3_γ ; DOL γ — capture span
 dol1_ω:                     jmp         seq_l0_β ; DOL ω — child failed
 
 P_3_γ:                      SET_CAPTURE S_T, cap_T_buf, cap_T_len
@@ -124,6 +125,8 @@ Ln_3:                       mov         edi, 8
                             mov         [rbp-16], rax
                             mov         [rbp-8],  rdx
                             SUBJ_FROM16
+                            test        eax, eax
+                            jnz         P_4_ω
                             mov         qword [scan_start_4], 0
 scan_retry_4:
                             mov         rax, [scan_start_4]
@@ -134,15 +137,15 @@ P_4_α:                      jmp         seq_l3_α ; SEQ
 P_4_β:                      jmp         seq_r3_β
 
 ; E_VART T → LIT_VAR (stmt_match_var)
-seq_l3_α:                   LIT_VAR_α   S_T, litvar4_saved, cursor, seq_r3_α, P_4_ω
-seq_l3_β:                   LIT_VAR_β   litvar4_saved, cursor, P_4_ω
+seq_l3_α:                   LIT_VAR_α   S_T, r12+80, cursor, seq_r3_α, P_4_ω
+seq_l3_β:                   LIT_VAR_β   r12+80, cursor, P_4_ω
 
 seq_r3_α: ; DOL(T $  T)
-                            DOL_SAVE    dol_entry_T, cursor, dol5_child_α ; DOL α — save entry cursor
+                            DOL_SAVE    r12+64, cursor, dol5_child_α ; DOL α — save entry cursor
 seq_r3_β:                   jmp         dol5_child_β ; DOL β
-dol5_child_α:               BREAK_α     lit_str_1, 1, brk6_saved, cursor, subject_data, subject_len_val, dol5_γ, dol5_ω ; BREAK α
-dol5_child_β:               BREAK_β     brk6_saved, cursor, dol5_ω ; BREAK β
-dol5_γ:                     DOL_CAPTURE dol_entry_T, cursor, cap_T_buf, cap_T_len, subject_data, P_4_γ ; DOL γ — capture span
+dol5_child_α:               BREAK_α     lit_str_1, 1, r12+88, cursor, subject_data, subject_len_val, dol5_γ, dol5_ω ; BREAK α
+dol5_child_β:               BREAK_β     r12+88, cursor, dol5_ω ; BREAK β
+dol5_γ:                     DOL_CAPTURE r12+64, cursor, cap_T_buf, cap_T_len, subject_data, P_4_γ ; DOL γ — capture span
 dol5_ω:                     jmp         seq_l3_β ; DOL ω — child failed
 
 P_4_γ:                      mov         rax, [cursor]
@@ -194,6 +197,7 @@ Ln_4:                       mov         edi, 10
                             mov         [P_ROMAN_ret_γ], rax
                             lea         rax, [rel ucall0_ret_o]
                             mov         [P_ROMAN_ret_ω], rax
+                            call        stmt_save_subject
                             jmp         P_ROMAN_α
 ucall0_ret_g:
                             pop         qword [P_ROMAN_ret_γ]
@@ -205,12 +209,13 @@ ucall0_ret_g:
                             pop         rdx
                             lea         rdi, [rel S_T]
                             call        stmt_set
+                            call        stmt_restore_subject
+                            GET_VAR     S_ROMAN
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_N]
                             call        stmt_set
                             add         rsp, 8          ; remove align pad
-                            GET_VAR     S_ROMAN
                             mov         rax, [rbp-16]
                             mov         rdx, [rbp-8]
                             call        stmt_is_fail
@@ -239,6 +244,7 @@ ucall0_ret_o:
                             lea         rdi, [rel S_N]
                             call        stmt_set
                             add         rsp, 8          ; remove align pad
+                            call        stmt_restore_subject
                             LOAD_FAILDESCR32
 ucall0_done:
                             STORE_ARG32 0
@@ -317,6 +323,7 @@ L_LOOP_2:                   mov         edi, 15
                             mov         [P_ROMAN_ret_γ], rax
                             lea         rax, [rel ucall1_ret_o]
                             mov         [P_ROMAN_ret_ω], rax
+                            call        stmt_save_subject
                             jmp         P_ROMAN_α
 ucall1_ret_g:
                             pop         qword [P_ROMAN_ret_γ]
@@ -328,12 +335,13 @@ ucall1_ret_g:
                             pop         rdx
                             lea         rdi, [rel S_T]
                             call        stmt_set
+                            call        stmt_restore_subject
+                            GET_VAR     S_ROMAN
                             pop         rsi
                             pop         rdx
                             lea         rdi, [rel S_N]
                             call        stmt_set
                             add         rsp, 8          ; remove align pad
-                            GET_VAR     S_ROMAN
                             mov         rax, [rbp-16]
                             mov         rdx, [rbp-8]
                             call        stmt_is_fail
@@ -362,6 +370,7 @@ ucall1_ret_o:
                             lea         rdi, [rel S_N]
                             call        stmt_set
                             add         rsp, 8          ; remove align pad
+                            call        stmt_restore_subject
                             LOAD_FAILDESCR32
 ucall1_done:
                             FAIL_BR     Ln_9
@@ -462,6 +471,7 @@ P_ROMAN_α:                  FN_α_INIT   ROMAN
 ;  γ/ω ---------------------------------------------------------------------------------------------------------------
 fn_ROMAN_γ:                 FN_γ        P_ROMAN_ret_γ ; fn γ
 fn_ROMAN_ω:                 FN_ω        P_ROMAN_ret_ω ; fn ω
+P_ROMAN_β:                  jmp         [P_ROMAN_ret_ω] ; fn β — backtrack = fail
 
 section .text
 ;  STUB LABELS =========================================================================================================
@@ -479,7 +489,7 @@ global  box_ROMAN_data_template, box_ROMAN_data_size
 section .data
 ;  BOX DATA TEMPLATES ==================================================================================================
                             align       8
-box_ROMAN_data_size: dq 64
+box_ROMAN_data_size: dq 112
 box_ROMAN_data_template:
 dq 0  ; [r12+0] = P_ROMAN_ret_γ
 dq 0  ; [r12+8] = P_ROMAN_ret_ω
@@ -489,6 +499,12 @@ dq 0  ; [r12+32] = fn_ROMAN_tmp2_t
 dq 0  ; [r12+40] = fn_ROMAN_tmp2_p
 dq 0  ; [r12+48] = fn_ROMAN_tmp3_t
 dq 0  ; [r12+56] = fn_ROMAN_tmp3_p
+dq 0  ; [r12+64] = dol_entry_T
+dq 0  ; [r12+72] = len2_saved
+dq 0  ; [r12+80] = litvar4_saved
+dq 0  ; [r12+88] = brk6_saved
+dq 0  ; [r12+96] = scan_start_3
+dq 0  ; [r12+104] = scan_start_4
 
 
 section .data

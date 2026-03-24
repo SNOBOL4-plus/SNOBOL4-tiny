@@ -4,21 +4,24 @@
 %include "snobol4_asm.mac"
 global  main
 extern  stmt_init, stmt_strval, stmt_intval
-extern  stmt_realval, stmt_set_null, stmt_set_indirect
+extern  stmt_realval, stmt_set_null, stmt_set_indirect, stmt_get_indirect, stmt_nreturn_deref
 extern  stmt_get, stmt_set, stmt_output, stmt_input
 extern  stmt_concat, stmt_is_fail, stmt_finish
 extern  stmt_realval, stmt_set_null, stmt_set_indirect
 extern  stmt_apply, stmt_goto_dispatch
 extern  stmt_setup_subject, stmt_apply_replacement
 extern  stmt_apply_replacement_splice
-extern  stmt_set_capture, stmt_match_var
+extern  stmt_set_capture, stmt_match_var, stmt_match_descr
 extern  stmt_pos_var, stmt_rpos_var
+extern  stmt_save_subject, stmt_restore_subject
 extern  stmt_span_var, stmt_break_var
 extern  stmt_breakx_var, stmt_breakx_lit
-extern  stmt_any_var, stmt_notany_var
+extern  stmt_any_var, stmt_notany_var, stmt_any_ptr
+extern  stmt_break_ptr, stmt_span_ptr
 extern  stmt_at_capture
 extern  kw_anchor
 extern  stmt_aref, stmt_aset, stmt_field_set
+extern  stmt_aref2, stmt_aset2
 extern  comm_stno
 extern  blk_alloc, blk_free, memcpy  ; per-invocation DATA block runtime
 global  cursor, subject_data, subject_len_val
@@ -133,6 +136,8 @@ L_NEXTW_2:                  mov         edi, 10
                             call        comm_stno
                             GET_VAR     S_LINE
                             SUBJ_FROM16
+                            test        eax, eax
+                            jnz         P_5_ω
                             mov         qword [scan_start_5], 0
 scan_retry_5:
                             mov         rax, [scan_start_5]
@@ -176,9 +181,10 @@ P_5_ω:                      cmp         qword [rel kw_anchor], 0
 Ln_5:                       mov         edi, 11
                             call        comm_stno
                             CONC2_VI    S_add, S_N, 1
-                            FAIL_BR     Ln_6
+                            FAIL_BR     Lf_6
                             SET_VAR     S_N
                             jmp         L_NEXTW_2
+Lf_6:                       jmp         L_NEXTW_2
 
 Ln_6:
 ;  DONE ================================================================================================================
