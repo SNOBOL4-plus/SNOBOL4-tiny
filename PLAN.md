@@ -10,18 +10,16 @@ ln -sfn /home/claude/snobol4ever/x64 /home/claude/x64   # if x64 missing
 
 ---
 
-## Current milestone: `M-BEAUTY-SEMANTIC` (B-275)
+## Current milestone: `M-BEAUTY-OMEGA` (B-276)
 
-1. Check `demo/inc/XDump.sno` exists; if not, create driver + ref from CSNOBOL4 oracle
-2. `INC=demo/inc bash test/beauty/run_beauty_subsystem.sh XDump`
+1. Check `demo/inc/omega.sno` exists ✅
+2. `INC=demo/inc bash test/beauty/run_beauty_subsystem.sh omega`
 3. Fix any ASM divergences
-4. On PASS: `git commit -m "B-275: M-BEAUTY-XDUMP ✅"` + push
-5. Update `.github/PLAN.md` TINY backend row, advance to `M-BEAUTY-SEMANTIC`
+4. On PASS: `git commit -m "B-276: M-BEAUTY-OMEGA ✅"` + push
+5. Update PLAN.md, advance to `M-BEAUTY-TRACE` (final subsystem before bootstrap)
 
-**Fixed B-274:** `expr_flatten_str` in `emit_byrd_asm.c` — multi-line DEFINE specs
-(E_CONC of E_QLITs) now registered as user functions; `fn_Read_γ/ω` emitted;
-FRETURN inside `Read` body routes correctly. 8/8 ASM PASS. Commit `eeeb5ad`.
-
+**Fixed B-275:** M-BEAUTY-SEMANTIC — `nPush/nInc/nPop/nTop` pattern helpers pass
+3-way monitor; all 8 tests PASS (CSNOBOL4 + SPITBOL + ASM). Commit `fe86477`.
 ---
 
 ## Beauty subsystem sequence
@@ -44,9 +42,8 @@ FRETURN inside `Read` body routes correctly. 8/8 ASM PASS. Commit `eeeb5ad`.
 | 14 | Qize        | ✅ |
 | 15 | ReadWrite   | ✅ |
 | 16 | XDump       | ✅ |
-| 17 | semantic    | ← now |
-
-| 18 | omega       | |
+| 17 | semantic    | ✅ |
+| 18 | omega       | ← now |
 
 ---
 
