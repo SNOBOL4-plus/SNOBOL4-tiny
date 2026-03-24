@@ -583,6 +583,16 @@ DESCR_t stmt_aref(DESCR_t arr, DESCR_t key) {
     return _aref_impl(arr, keys, 1);
 }
 
+/* stmt_aref2: 2D subscript arr[i,j] — passes both indices to _aref_impl.
+ * SysV AMD64 calling convention for two DESCR_t args after arr:
+ *   arr:   rdi=type, rsi=ptr
+ *   key1:  rdx=type, rcx=ptr
+ *   key2:  r8=type,  r9=ptr  */
+DESCR_t stmt_aref2(DESCR_t arr, DESCR_t key1, DESCR_t key2) {
+    DESCR_t keys[2] = { key1, key2 };
+    return _aref_impl(arr, keys, 2);
+}
+
 /* stmt_aset: set element in ARRAY or TABLE descriptor.
  *   arr  — DESCR_t of the array/table  (rdi:rsi)
  *   key  — DESCR_t subscript            (rdx:rcx)
@@ -591,6 +601,13 @@ DESCR_t stmt_aref(DESCR_t arr, DESCR_t key) {
 void stmt_aset(DESCR_t arr, DESCR_t key, DESCR_t val) {
     DESCR_t keys[1] = { key };
     _aset_impl(arr, keys, 1, val);
+}
+
+/* stmt_aset2: 2D array assignment arr[i,j] = val.
+ * SysV AMD64: arr(rdi:rsi), key1(rdx:rcx), key2(r8:r9), val on stack. */
+void stmt_aset2(DESCR_t arr, DESCR_t key1, DESCR_t key2, DESCR_t val) {
+    DESCR_t keys[2] = { key1, key2 };
+    _aset_impl(arr, keys, 2, val);
 }
 
 /* stmt_field_set: set a DATA record field.

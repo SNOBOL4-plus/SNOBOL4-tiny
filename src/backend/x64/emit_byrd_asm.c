@@ -3376,17 +3376,48 @@ static int emit_expr(EXPR_t *e, int rbp_off) {
     }
     case E_IDX: {
         /* arr<i> or arr['key'] or tbl['key']  →  stmt_aref(arr, key)
+         * arr[i,j]                             →  stmt_aref2(arr, key1, key2)
          * SysV AMD64: DESCR_t args passed in pairs of int regs.
-         *   arg0 (arr): rdi=type, rsi=ptr
-         *   arg1 (key): rdx=type, rcx=ptr
+         *   arg0 (arr):  rdi=type, rsi=ptr
+         *   arg1 (key1): rdx=type, rcx=ptr
+         *   arg2 (key2): r8=type,  r9=ptr    (2D only)
          * Returns DESCR_t in rax:rdx.
          *
-         * ORDERING FIX: evaluate arr first into [rbp-32/24], then PUSH those
-         * two qwords onto the C stack before evaluating the key.  Key evaluation
-         * (e.g. LOAD_INT) always writes [rbp-32/24] first, which would clobber
-         * the array descriptor if we left it there.  After key eval the array
-         * descriptor is restored from the stack into rdi:rsi. */
+         * ORDERING FIX: evaluate arr first, push to C stack, then evaluate
+         * keys so that [rbp-32/24] clobbers are safe. */
         if (e->nchildren < 2 || !e->children[0] || !e->children[1]) goto fallback;
+
+        /* 2D subscript: arr[i,j] — nchildren==3 */
+        if (e->nchildren >= 3 && e->children[2]) {
+            /* Step 1: evaluate array into [rbp-32/24], push to stack */
+            emit_expr(e->children[0], -32);
+            A("    push    qword [rbp-24]\n");   /* arr.p */
+            A("    push    qword [rbp-32]\n");   /* arr.v */
+            /* Step 2: evaluate key1 into [rbp-32/24], push to stack */
+            emit_expr(e->children[1], -32);
+            A("    push    qword [rbp-24]\n");   /* key1.p */
+            A("    push    qword [rbp-32]\n");   /* key1.v */
+            /* Step 3: evaluate key2 into [rbp-32/24] */
+            emit_expr(e->children[2], -32);
+            /* Step 4: load key2 into r8:r9, pop key1 into rdx:rcx, pop arr into rdi:rsi */
+            A("    mov     r8,  [rbp-32]\n");   /* key2.v */
+            A("    mov     r9,  [rbp-24]\n");   /* key2.p */
+            A("    pop     rdx\n");              /* key1.v */
+            A("    pop     rcx\n");              /* key1.p */
+            A("    pop     rdi\n");              /* arr.v */
+            A("    pop     rsi\n");              /* arr.p */
+            A("    call    stmt_aref2\n");
+            if (rbp_off == -16) {
+                A("    mov     [rbp-16], rax\n");
+                A("    mov     [rbp-8],  rdx\n");
+            } else {
+                A("    mov     [rbp-32], rax\n");
+                A("    mov     [rbp-24], rdx\n");
+            }
+            return 1;
+        }
+
+        /* 1D subscript: arr[i] or tbl[key] */
         /* Step 1: evaluate array into [rbp-32/24] */
         emit_expr(e->children[0], -32);
         /* Step 2: push array descriptor onto C stack to protect from key eval */
@@ -4180,6 +4211,7 @@ static void emit_program(Program *prog) {
     A("    extern  stmt_at_capture\n");
     A("    extern  kw_anchor\n");
     A("    extern  stmt_aref, stmt_aset, stmt_field_set\n");
+    A("    extern  stmt_aref2, stmt_aset2\n");
     A("    extern  comm_stno\n");
     A("    extern  blk_alloc, blk_free, memcpy  ; per-invocation DATA block runtime\n");
     A("    global  cursor, subject_data, subject_len_val\n");
@@ -4429,15 +4461,15 @@ static void emit_program(Program *prog) {
                        s->subject->kind == E_IDX &&
                        s->subject->children[0] && s->subject->nchildren >= 2) {
                 /* A<i> = val  or  T['key'] = val  →  stmt_aset(arr, key, val)
+                 * A[i,j] = val                    →  stmt_aset2(arr, k1, k2, val)
                  *
                  * SysV AMD64 calling convention for stmt_aset(arr, key, val):
                  *   arr: rdi=type, rsi=ptr
                  *   key: rdx=type, rcx=ptr
                  *   val: r8=type,  r9=ptr
                  *
-                 * Evaluation order: arr first, then key, then RHS val.
-                 * We stash arr and key in .bss scratch slots to survive the
-                 * RHS evaluation (which may clobber [rbp-16/8] and [rbp-32/24]).
+                 * Evaluation order: arr first, then key(s), then RHS val.
+                 * We push all onto the C stack to survive RHS evaluation.
                  */
                 int has_f_tgt_idx = (id_f >= 0 || (tgt_f && is_special_goto(tgt_f)));
                 int has_u_only_idx = (!has_f_tgt_idx && tgt_u);
@@ -4452,11 +4484,56 @@ static void emit_program(Program *prog) {
                 snprintf(arr_p_lab, sizeof arr_p_lab, "idx_arr%d_p", idx_uid);
                 snprintf(key_t_lab, sizeof key_t_lab, "idx_key%d_t", idx_uid);
                 snprintf(key_p_lab, sizeof key_p_lab, "idx_key%d_p", idx_uid);
-                /* Emit .bss declarations (we emit them inline; the assembler
-                 * allows forward .bss refs in NASM with resq) — we use a
-                 * deferred approach: emit the scratch code into a side buffer
-                 * and rely on the .bss prescan pass.  Simpler: just push/pop. */
 
+                int is_2d = (s->subject->nchildren >= 3 && s->subject->children[2]);
+
+                if (is_2d) {
+                    /* 2D: arr[i,j] = val → stmt_aset2(arr, key1, key2, val)
+                     * stmt_aset2 signature: (DESCR_t arr, DESCR_t k1, DESCR_t k2, DESCR_t val)
+                     * SysV: arr→rdi:rsi, k1→rdx:rcx, k2→r8:r9, val passed on stack
+                     * We push: arr, k1, k2 onto C stack, evaluate RHS, then load regs */
+                    /* Eval arr → [rbp-16/8], push */
+                    emit_expr(s->subject->children[0], -16);
+                    A("    push    qword [rbp-8]\n");   /* arr.p */
+                    A("    push    qword [rbp-16]\n");  /* arr.v */
+                    /* Eval key1 → [rbp-32/24], push */
+                    emit_expr(s->subject->children[1], -32);
+                    A("    push    qword [rbp-24]\n");  /* k1.p */
+                    A("    push    qword [rbp-32]\n");  /* k1.v */
+                    /* Eval key2 → [rbp-32/24], push */
+                    emit_expr(s->subject->children[2], -32);
+                    A("    push    qword [rbp-24]\n");  /* k2.p */
+                    A("    push    qword [rbp-32]\n");  /* k2.v */
+                    /* Eval RHS → [rbp-32/24] */
+                    if (!s->replacement || s->replacement->kind == E_NULV) {
+                        A("    mov     qword [rbp-32], 1\n");
+                        A("    mov     qword [rbp-24], 0\n");
+                    } else {
+                        emit_expr(s->replacement, -32);
+                        A("    FAIL_BR     %s\n", has_u_only_idx ? sfail_lbl : fail_target);
+                    }
+                    /* Stack layout (top=rsp): k2.v k2.p k1.v k1.p arr.v arr.p
+                     * [rsp+0]=k2.v [rsp+8]=k2.p [rsp+16]=k1.v [rsp+24]=k1.p
+                     * [rsp+32]=arr.v [rsp+40]=arr.p */
+                    /* val → push on stack for 7th+ arg (beyond 6-reg limit) */
+                    /* stmt_aset2(arr,k1,k2,val): 4 DESCR_t = 8 int64 regs; val overflows → stack */
+                    /* Push val onto stack first (rightmost arg goes first in stack frame) */
+                    A("    sub     rsp, 16\n");         /* space for val on stack */
+                    A("    mov     rax, [rbp-32]\n");   /* val.v */
+                    A("    mov     [rsp], rax\n");
+                    A("    mov     rax, [rbp-24]\n");   /* val.p */
+                    A("    mov     [rsp+8], rax\n");
+                    /* Load k2 into r8:r9, k1 into rdx:rcx, arr into rdi:rsi */
+                    A("    mov     r8,  [rsp+16]\n");   /* k2.v (shifted by 16 for val) */
+                    A("    mov     r9,  [rsp+24]\n");   /* k2.p */
+                    A("    mov     rdx, [rsp+32]\n");   /* k1.v */
+                    A("    mov     rcx, [rsp+40]\n");   /* k1.p */
+                    A("    mov     rdi, [rsp+48]\n");   /* arr.v */
+                    A("    mov     rsi, [rsp+56]\n");   /* arr.p */
+                    A("    call    stmt_aset2\n");
+                    A("    add     rsp, 64\n");         /* pop 8 saved qwords (val+k2+k1+arr) */
+                } else {
+                /* 1D: arr[i] = val or tbl[k] = val */
                 /* Evaluate arr → [rbp-16/8] */
                 emit_expr(s->subject->children[0],      -16);
                 /* Save arr onto C stack */
@@ -4487,6 +4564,7 @@ static void emit_program(Program *prog) {
                 A("    mov     rsi, [rsp+24]\n");   /* arr ptr  */
                 A("    add     rsp, 32\n");         /* pop 4 saved qwords */
                 A("    call    stmt_aset\n");
+                } /* end 1D */
                 emit_jmp(tgt_s ? tgt_s : tgt_u, next_lbl);
                 if (has_f_tgt_idx) {
                     asmL(sfail_lbl);

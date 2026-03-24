@@ -92,7 +92,7 @@ static inline void _aset_impl(DESCR_t arr, DESCR_t *keys, int n, DESCR_t v) {
     if (n <= 0) return;
     if (arr.v == DT_T) {
         const char *k = VARVAL_fn(keys[0]);
-        table_set(arr.tbl, k ? k : "", v);
+        table_set_descr(arr.tbl, k ? k : "", keys[0], v);
         return;
     }
     if (arr.v == DT_A) {

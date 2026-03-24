@@ -1,0 +1,20 @@
+x = 42
+PASS: 1 integer dump
+s = 'hello'
+PASS: 2 string dump
+e = ''
+PASS: 3 empty string dump
+arr = ARRAY['1:1']
+arr[1] = 'alpha'
+PASS: 4 array dump
+t = TABLE
+t['key'] = 'val'
+PASS: 5 table dump
+r = 3.14
+PASS: 6 real dump
+p = PATTERN
+PASS: 7 pattern dump
+t2 = TABLE
+t2[1] = 'one'
+t2[2] = 'two'
+PASS: 8 nested table dump

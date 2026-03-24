@@ -817,7 +817,7 @@ static DESCR_t _b_PAT_FENCE(DESCR_t *a, int n)   { return n>=1 ? pat_fence_p(a[0
 static DESCR_t _b_PAT_ALT(DESCR_t *a, int n)     { return n>=2 ? pat_alt(a[0], a[1])  : (n>=1 ? a[0] : FAILDESCR); }
 static DESCR_t _b_PAT_CONCAT(DESCR_t *a, int n)  { return n>=2 ? pat_cat(a[0], a[1])  : (n>=1 ? a[0] : FAILDESCR); }
 
-/* PROTOTYPE(array_or_table) — returns dimension string e.g. "3" or "2,3" */
+/* PROTOTYPE(array_or_table) — returns dimension string e.g. "1:3" or "1:3,1:2" */
 static DESCR_t _b_PROTOTYPE(DESCR_t *a, int n) {
     if (n < 1) return FAILDESCR;
     DESCR_t v = a[0];
@@ -825,13 +825,14 @@ static DESCR_t _b_PROTOTYPE(DESCR_t *a, int n) {
         ARBLK_t *arr = v.arr;
         char buf[128];
         if (arr->ndim > 1) {
-            /* 2D: ndim repurposed as cols; rows = hi-lo+1 */
+            /* 2D: ndim repurposed as cols count; rows span lo..hi */
             int rows = arr->hi - arr->lo + 1;
             int cols = arr->ndim;  /* stored as cols count */
-            snprintf(buf, sizeof(buf), "%d,%d", rows, cols);
+            snprintf(buf, sizeof(buf), "%d:%d,%d:%d",
+                     arr->lo, arr->lo + rows - 1, 1, cols);
         } else {
-            int sz = arr->hi - arr->lo + 1;
-            snprintf(buf, sizeof(buf), "%d", sz);
+            /* 1D: return "lo:hi" — matches CSNOBOL4 PROTOTYPE behavior */
+            snprintf(buf, sizeof(buf), "%d:%d", arr->lo, arr->hi);
         }
         return STRVAL(GC_strdup(buf));
     }
@@ -1313,7 +1314,26 @@ void table_set(TBBLK_t *tbl, const char *key, DESCR_t val) {
         if (strcmp(e->key, key) == 0) { e->val = val; return; }
     }
     TBPAIR_t *e = GC_malloc(sizeof(TBPAIR_t));
-    e->key  = GC_strdup(key);
+    e->key       = GC_strdup(key);
+    e->key_descr = STRVAL(e->key);  /* default: string descriptor */
+    e->val  = val;
+    e->next = tbl->buckets[h];
+    tbl->buckets[h] = e;
+    tbl->size++;
+}
+
+/* table_set_descr: set a table entry preserving the original key descriptor type.
+ * Used by _aset_impl so integer keys (e.g. t[1] = 'x') round-trip as integers
+ * through SORT() → objArr[i,1] → DATATYPE check in XDump. */
+void table_set_descr(TBBLK_t *tbl, const char *key, DESCR_t key_d, DESCR_t val) {
+    if (!tbl || !key) return;
+    unsigned h = _tbl_hash(key);
+    for (TBPAIR_t *e = tbl->buckets[h]; e; e = e->next) {
+        if (strcmp(e->key, key) == 0) { e->val = val; e->key_descr = key_d; return; }
+    }
+    TBPAIR_t *e = GC_malloc(sizeof(TBPAIR_t));
+    e->key       = GC_strdup(key);
+    e->key_descr = key_d;
     e->val  = val;
     e->next = tbl->buckets[h];
     tbl->buckets[h] = e;
