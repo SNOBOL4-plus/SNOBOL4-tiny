@@ -175,6 +175,7 @@ void      array_set2(ARBLK_t *a, int i, int j, DESCR_t v);
 
 typedef struct _TBBLK_tEntry {
     char   *key;
+    DESCR_t  key_descr;  /* original key descriptor — preserves integer/string type */
     DESCR_t  val;
     struct _TBBLK_tEntry *next;
 } TBPAIR_t;
@@ -189,6 +190,7 @@ typedef struct _TBBLK_t {
 TBBLK_t *table_new(void);
 DESCR_t    table_get(TBBLK_t *tbl, const char *key);
 void      table_set(TBBLK_t *tbl, const char *key, DESCR_t val);
+void      table_set_descr(TBBLK_t *tbl, const char *key, DESCR_t key_d, DESCR_t val);
 int       table_has(TBBLK_t *tbl, const char *key);
 
 /* ============================================================

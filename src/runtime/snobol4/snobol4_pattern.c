@@ -1324,22 +1324,22 @@ DESCR_t sort_fn(DESCR_t arr) {
         for (TBPAIR_t *e = tbl->buckets[h]; e; e = e->next) n++;
     if (n == 0) return FAILDESCR;
 
-    /* Collect all (key, value) pairs */
+    /* Collect all (key, key_descr, value) pairs */
     const char **keys = GC_malloc(n * sizeof(char *));
+    DESCR_t *key_descrs = GC_malloc(n * sizeof(DESCR_t));
     DESCR_t *vals = GC_malloc(n * sizeof(DESCR_t));
     int idx = 0;
     for (int h = 0; h < TABLE_BUCKETS; h++)
         for (TBPAIR_t *e = tbl->buckets[h]; e; e = e->next) {
             keys[idx] = e->key;
+            key_descrs[idx] = e->key_descr;
             vals[idx] = e->val;
             idx++;
         }
 
-    /* Sort keys (indirect sort via INDEX_fn array) */
-    /* Build INDEX_fn array and sort */
+    /* Sort by string key (indirect insertion sort) */
     int *order = GC_malloc(n * sizeof(int));
     for (int i = 0; i < n; i++) order[i] = i;
-    /* Simple insertion sort to avoid qsort complexity with indirect */
     for (int i = 1; i < n; i++) {
         int tmp = order[i];
         int j = i - 1;
@@ -1349,14 +1349,14 @@ DESCR_t sort_fn(DESCR_t arr) {
         order[j+1] = tmp;
     }
 
-    /* Build 2D array[1..n, 1..2] */
+    /* Build 2D array[1..n, 1..2]: col1=key_descr (preserves type), col2=val */
     ARBLK_t *a = GC_malloc(sizeof(ARBLK_t));
     a->lo   = 1;
     a->hi   = n;
     a->ndim = 2;   /* 2 columns */
     a->data = GC_malloc(n * 2 * sizeof(DESCR_t));
     for (int i = 0; i < n; i++) {
-        a->data[i * 2 + 0] = STRVAL(GC_strdup(keys[order[i]]));
+        a->data[i * 2 + 0] = key_descrs[order[i]];  /* preserve integer/string type */
         a->data[i * 2 + 1] = vals[order[i]];
     }
     DESCR_t result = {0};
