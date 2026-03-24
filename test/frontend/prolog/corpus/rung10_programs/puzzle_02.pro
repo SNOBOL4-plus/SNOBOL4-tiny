@@ -12,6 +12,7 @@ person(daw).
 person(fuller).
 hasHeardOf(fuller, daw) :- !, fail.
 hasHeardOf(_, _).
+earnsMore(fuller, daw).
 earnsMore(daw, clark).
 doesEarnMore(X, Y) :- earnsMore(X, Y).
 doesEarnMore(X, Y) :- earnsMore(Y, X), !, fail.
