@@ -1203,8 +1203,24 @@ static void jvm_emit_expr(EXPR_t *e) {
         char igdesc_ary[512]; snprintf(igdesc_ary, sizeof igdesc_ary,
             "%s/sno_indr_get(Ljava/lang/String;)Ljava/lang/String;", jvm_classname);
         JI("invokestatic", igdesc_ary);
-        if (e->children && e->children[0]) jvm_emit_expr(e->children[0]);
-        else JI("ldc", "\"1\"");
+        /* Build key: "row" for 1D, "row,col" for 2D */
+        if (e->children && e->children[0] && e->children[1]) {
+            /* 2D: concatenate row + "," + col */
+            JI("new", "java/lang/StringBuilder");
+            JI("dup", "");
+            JI("invokespecial", "java/lang/StringBuilder/<init>()V");
+            jvm_emit_expr(e->children[0]);
+            JI("invokevirtual", "java/lang/StringBuilder/append(Ljava/lang/String;)Ljava/lang/StringBuilder;");
+            JI("ldc", "\",\"");
+            JI("invokevirtual", "java/lang/StringBuilder/append(Ljava/lang/String;)Ljava/lang/StringBuilder;");
+            jvm_emit_expr(e->children[1]);
+            JI("invokevirtual", "java/lang/StringBuilder/append(Ljava/lang/String;)Ljava/lang/StringBuilder;");
+            JI("invokevirtual", "java/lang/StringBuilder/toString()Ljava/lang/String;");
+        } else if (e->children && e->children[0]) {
+            jvm_emit_expr(e->children[0]);
+        } else {
+            JI("ldc", "\"1\"");
+        }
         char agdesc_ary[512]; snprintf(agdesc_ary, sizeof agdesc_ary,
             "%s/sno_array_get(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", jvm_classname);
         JI("invokestatic", agdesc_ary);
@@ -2406,6 +2422,12 @@ static void jvm_emit_stmt(STMT_t *s, int stmt_idx) {
         J("    iadd\n");
         J("    putstatic %s\n", stnodesc);
     }
+    /* Enforce &STLIMIT / increment &STCOUNT */
+    {
+        char tickdesc[512];
+        snprintf(tickdesc, sizeof tickdesc, "%s/sno_stcount_tick()V", jvm_classname);
+        J("    invokestatic %s\n", tickdesc);
+    }
 
     /* If inside a user function, intercept RETURN/FRETURN/NRETURN gotos */
     /* (handled per-goto in jvm_emit_goto_target below) */
@@ -3042,6 +3064,30 @@ static void jvm_emit_runtime_helpers(void) {
         J("    invokestatic java/lang/Integer/toString(I)Ljava/lang/String;\n");
         J("    areturn\n");
         J("Lkwg_not_anchor:\n");
+        J("    aload_0\n");
+        J("    ldc \"STLIMIT\"\n");
+        J("    invokevirtual java/lang/String/equalsIgnoreCase(Ljava/lang/String;)Z\n");
+        J("    ifeq Lkwg_not_stlimit\n");
+        {
+            char sldesc2[512];
+            snprintf(sldesc2, sizeof sldesc2, "%s/sno_kw_STLIMIT I", jvm_classname);
+            J("    getstatic %s\n", sldesc2);
+        }
+        J("    invokestatic java/lang/Integer/toString(I)Ljava/lang/String;\n");
+        J("    areturn\n");
+        J("Lkwg_not_stlimit:\n");
+        J("    aload_0\n");
+        J("    ldc \"STCOUNT\"\n");
+        J("    invokevirtual java/lang/String/equalsIgnoreCase(Ljava/lang/String;)Z\n");
+        J("    ifeq Lkwg_not_stcount\n");
+        {
+            char scdesc2[512];
+            snprintf(scdesc2, sizeof scdesc2, "%s/sno_kw_STCOUNT I", jvm_classname);
+            J("    getstatic %s\n", scdesc2);
+        }
+        J("    invokestatic java/lang/Integer/toString(I)Ljava/lang/String;\n");
+        J("    areturn\n");
+        J("Lkwg_not_stcount:\n");
         /* Unknown keyword → "" */
         J("    ldc \"\"\n");
         J("    areturn\n");
@@ -3084,6 +3130,32 @@ static void jvm_emit_runtime_helpers(void) {
         }
         J("    return\n");
         J("Lkws_not_stno:\n");
+        J("    aload_0\n");
+        J("    ldc \"STLIMIT\"\n");
+        J("    invokevirtual java/lang/String/equalsIgnoreCase(Ljava/lang/String;)Z\n");
+        J("    ifeq Lkws_not_stlimit\n");
+        J("    aload_1\n");
+        J("    invokestatic java/lang/Integer/parseInt(Ljava/lang/String;)I\n");
+        {
+            char sldesc[512];
+            snprintf(sldesc, sizeof sldesc, "%s/sno_kw_STLIMIT I", jvm_classname);
+            J("    putstatic %s\n", sldesc);
+        }
+        J("    return\n");
+        J("Lkws_not_stlimit:\n");
+        J("    aload_0\n");
+        J("    ldc \"STCOUNT\"\n");
+        J("    invokevirtual java/lang/String/equalsIgnoreCase(Ljava/lang/String;)Z\n");
+        J("    ifeq Lkws_not_stcount\n");
+        J("    aload_1\n");
+        J("    invokestatic java/lang/Integer/parseInt(Ljava/lang/String;)I\n");
+        {
+            char scdesc[512];
+            snprintf(scdesc, sizeof scdesc, "%s/sno_kw_STCOUNT I", jvm_classname);
+            J("    putstatic %s\n", scdesc);
+        }
+        J("    return\n");
+        J("Lkws_not_stcount:\n");
         J("    return\n");
         J(".end method\n\n");
 
@@ -3184,6 +3256,38 @@ static void jvm_emit_runtime_helpers(void) {
         J("    return\n");
         J(".end method\n\n");
 
+        /* sno_stcount_tick() → void
+         * Increments &STCOUNT. If &STLIMIT >= 0 and &STCOUNT > &STLIMIT → terminate. */
+        J(".method static sno_stcount_tick()V\n");
+        J("    .limit stack 4\n");
+        J("    .limit locals 0\n");
+        {
+            char scdesc3[512], sldesc3[512];
+            snprintf(scdesc3, sizeof scdesc3, "%s/sno_kw_STCOUNT I", jvm_classname);
+            snprintf(sldesc3, sizeof sldesc3, "%s/sno_kw_STLIMIT I", jvm_classname);
+            /* increment STCOUNT */
+            J("    getstatic %s\n", scdesc3);
+            J("    iconst_1\n");
+            J("    iadd\n");
+            J("    putstatic %s\n", scdesc3);
+            /* check STLIMIT: if STLIMIT < 0, skip (unlimited) */
+            J("    getstatic %s\n", sldesc3);
+            J("    iflt Lstick_ok\n");
+            /* STCOUNT > STLIMIT? */
+            J("    getstatic %s\n", scdesc3);
+            J("    getstatic %s\n", sldesc3);
+            J("    if_icmple Lstick_ok\n");
+            /* exceeded — print message and exit */
+            J("    getstatic java/lang/System/err Ljava/io/PrintStream;\n");
+            J("    ldc \"Termination: statement limit\"\n");
+            J("    invokevirtual java/io/PrintStream/println(Ljava/lang/String;)V\n");
+            J("    iconst_1\n");
+            J("    invokestatic java/lang/System/exit(I)V\n");
+            J("Lstick_ok:\n");
+        }
+        J("    return\n");
+        J(".end method\n\n");
+
         /* sno_indr_get(String name) → String
          * Look up variable whose name is the string value of name. */
         J(".method static sno_indr_get(Ljava/lang/String;)Ljava/lang/String;\n");
@@ -3195,10 +3299,10 @@ static void jvm_emit_runtime_helpers(void) {
         J("    invokevirtual java/util/HashMap/get(Ljava/lang/Object;)Ljava/lang/Object;\n");
         J("    checkcast java/lang/String\n");
         J("    dup\n");
-        J("    ifnonnull Lsig_done\n");
+        J("    ifnonnull Lsig_done_indr\n");
         J("    pop\n");
         J("    ldc \"\"\n");
-        J("Lsig_done:\n");
+        J("Lsig_done_indr:\n");
         J("    areturn\n");
         J(".end method\n\n");
 
@@ -4138,6 +4242,8 @@ static void jvm_emit_header(Program *prog) {
     J(".field static sno_kw_TRIM I\n");
     J(".field static sno_kw_ANCHOR I\n");
     J(".field static sno_kw_STNO I\n");
+    J(".field static sno_kw_STLIMIT I\n");   /* -1 = unlimited */
+    J(".field static sno_kw_STCOUNT I\n");   /* current step count */
 
     /* Dynamic variable map for indirect assignment (J2) */
     J(".field static sno_vars Ljava/util/HashMap;\n");
@@ -4174,6 +4280,10 @@ static void jvm_emit_header(Program *prog) {
     J("    putstatic       %s/sno_kw_ANCHOR I\n", jvm_classname);
     J("    iconst_0\n");
     J("    putstatic       %s/sno_kw_STNO I\n", jvm_classname);
+    J("    iconst_m1\n");
+    J("    putstatic       %s/sno_kw_STLIMIT I\n", jvm_classname);
+    J("    iconst_0\n");
+    J("    putstatic       %s/sno_kw_STCOUNT I\n", jvm_classname);
     /* init sno_vars HashMap */
     J("    new java/util/HashMap\n");
     J("    dup\n");
