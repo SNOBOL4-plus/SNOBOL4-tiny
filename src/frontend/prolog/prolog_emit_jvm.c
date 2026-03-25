@@ -1797,6 +1797,62 @@ static void pj_emit_body(EXPR_t **goals, int ngoals, const char *lbl_γ,
 }
 
 /* -------------------------------------------------------------------------
+ * pj_emit_between_builtin — emit synthetic p_between_3 method.
+ * Signature: p_between_3([Low], [High], [Var], cs) → Object[] | null
+ * cs = offset from Low: try value Low+cs each invocation.
+ * Returns {cs+1} on success so caller retries with the next value.
+ * ------------------------------------------------------------------------- */
+static void pj_emit_between_builtin(void) {
+    J("; === between/3 synthetic predicate ========================================\n");
+    J(".method static p_between_3([Ljava/lang/Object;[Ljava/lang/Object;[Ljava/lang/Object;I)[Ljava/lang/Object;\n");
+    J("    .limit stack 6\n");
+    J("    .limit locals 8\n");
+    /* locals: 0=Low, 1=High, 2=Var, 3=cs, 4-5=cur(long), 6-7=high(long) */
+    J("    aload_0\n");
+    J("    invokestatic %s/pj_deref(Ljava/lang/Object;)Ljava/lang/Object;\n", pj_classname);
+    JI("checkcast", "[Ljava/lang/Object;");
+    JI("iconst_1", "");
+    JI("aaload", "");
+    JI("checkcast", "java/lang/String");
+    JI("invokestatic", "java/lang/Long/parseLong(Ljava/lang/String;)J");
+    J("    iload_3\n");
+    JI("i2l", "");
+    JI("ladd", "");
+    J("    lstore 4\n");                /* cur = Low + cs */
+    J("    aload_1\n");
+    J("    invokestatic %s/pj_deref(Ljava/lang/Object;)Ljava/lang/Object;\n", pj_classname);
+    JI("checkcast", "[Ljava/lang/Object;");
+    JI("iconst_1", "");
+    JI("aaload", "");
+    JI("checkcast", "java/lang/String");
+    JI("invokestatic", "java/lang/Long/parseLong(Ljava/lang/String;)J");
+    J("    lstore 6\n");                /* high */
+    J("    lload 4\n");
+    J("    lload 6\n");
+    JI("lcmp", "");
+    J("    ifgt p_between_3_fail\n");   /* cur > high → fail */
+    J("    lload 4\n");
+    J("    invokestatic %s/pj_term_int(J)[Ljava/lang/Object;\n", pj_classname);
+    J("    aload_2\n");
+    J("    invokestatic %s/pj_unify(Ljava/lang/Object;Ljava/lang/Object;)Z\n", pj_classname);
+    J("    ifeq p_between_3_fail\n");   /* unify failed → fail */
+    JI("iconst_1", "");
+    JI("anewarray", "java/lang/Object");
+    JI("dup", "");
+    JI("iconst_0", "");
+    J("    iload_3\n");
+    JI("iconst_1", "");
+    JI("iadd", "");
+    JI("invokestatic", "java/lang/Integer/valueOf(I)Ljava/lang/Integer;");
+    JI("aastore", "");
+    JI("areturn", "");
+    J("p_between_3_fail:\n");
+    JI("aconst_null", "");
+    JI("areturn", "");
+    J(".end method\n\n");
+}
+
+/* -------------------------------------------------------------------------
  * Clause emitter
  * Emits one clause block inside the predicate method (switch case).
  * Layout: p_functor_arity(arg0..argN-1, cs) — cs = continuation state
@@ -2217,6 +2273,20 @@ void prolog_emit_jvm(Program *prog, FILE *out, const char *filename) {
 
     pj_emit_class_header();
     pj_emit_runtime_helpers();
+
+    /* Check if program uses between/3 but doesn't define it — emit synthetic method */
+    {
+        int defines_between = 0;
+        for (STMT_t *s = prog->head; s; s = s->next) {
+            if (!s->subject) continue;
+            if (s->subject->kind == E_CHOICE && s->subject->sval &&
+                strcmp(s->subject->sval, "between") == 0) {
+                defines_between = 1;
+            }
+        }
+        if (!defines_between)
+            pj_emit_between_builtin();
+    }
 
     /* emit each predicate */
     for (STMT_t *s = prog->head; s; s = s->next) {
