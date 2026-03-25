@@ -1462,58 +1462,88 @@ static void ij_emit_neg(IcnNode *n, IjPorts ports, char *oα, char *oβ) {
 /* =========================================================================
  * ICN_TO_BY — E1 to E2 by E3  (stepped range generator)
  * step>0: yield i while i<=end; step<0: yield i while i>=end.
+ *
+ * Forward-only jump structure (no backward branches -> no StackMapTable):
+ *
+ *   a:     eval E1 -> I_f; eval E2 -> end_f; eval E3 -> step_f; goto check
+ *   b:     I_f += step_f; goto check
+ *   check: (reached by forward jumps from both a and b)
+ *          step>0: if I_f > end_f -> ports.w; else push I_f -> ports.g
+ *          step<0: if I_f < end_f -> ports.w; else push I_f -> ports.g
+ *          step=0: -> ports.w
  * ======================================================================= */
 static void ij_emit_to_by(IcnNode *n, IjPorts ports, char *oα, char *oβ) {
     int id = ij_new_id(); char a[64], b[64];
     lbl_α(id,a,sizeof a); lbl_β(id,b,sizeof b);
     strncpy(oα,a,63); strncpy(oβ,b,63);
+
+    /* Static fields for cross-label values */
     char I_f[64], end_f[64], step_f[64];
     snprintf(I_f,    sizeof I_f,    "icn_%d_toby_i",   id);
     snprintf(end_f,  sizeof end_f,  "icn_%d_toby_end", id);
     snprintf(step_f, sizeof step_f, "icn_%d_toby_stp", id);
-    ij_declare_static(I_f); ij_declare_static(end_f); ij_declare_static(step_f);
-    char r1[64], r2[64], code[64], chkp[64], chkn[64], adv[64];
-    snprintf(r1,   sizeof r1,   "icn_%d_tb_r1",  id);
-    snprintf(r2,   sizeof r2,   "icn_%d_tb_r2",  id);
-    snprintf(code, sizeof code, "icn_%d_tb_code",id);
-    snprintf(chkp, sizeof chkp, "icn_%d_tb_ckp", id);
-    snprintf(chkn, sizeof chkn, "icn_%d_tb_ckn", id);
-    snprintf(adv,  sizeof adv,  "icn_%d_tb_adv", id);
-    IcnNode *e1=(n->nchildren>0)?n->children[0]:NULL;
-    IcnNode *e2=(n->nchildren>1)?n->children[1]:NULL;
-    IcnNode *e3=(n->nchildren>2)?n->children[2]:NULL;
+    ij_declare_static(I_f);
+    ij_declare_static(end_f);
+    ij_declare_static(step_f);
+
+    /* Labels */
+    char r1[64], r2[64], r3[64], check[64], chkp[64], chkn[64];
+    snprintf(r1,    sizeof r1,    "icn_%d_tb_r1",    id);
+    snprintf(r2,    sizeof r2,    "icn_%d_tb_r2",    id);
+    snprintf(r3,    sizeof r3,    "icn_%d_tb_r3",    id);
+    snprintf(check, sizeof check, "icn_%d_tb_check", id);
+    snprintf(chkp,  sizeof chkp,  "icn_%d_tb_ckp",  id);
+    snprintf(chkn,  sizeof chkn,  "icn_%d_tb_ckn",  id);
+
+    IcnNode *e1 = (n->nchildren > 0) ? n->children[0] : NULL;
+    IcnNode *e2 = (n->nchildren > 1) ? n->children[1] : NULL;
+    IcnNode *e3 = (n->nchildren > 2) ? n->children[2] : NULL;
+
+    /* Wire child ports: relay labels store each value then chain to next eval */
     IjPorts p1; strncpy(p1.γ,r1,63); strncpy(p1.ω,ports.ω,63);
     IjPorts p2; strncpy(p2.γ,r2,63); strncpy(p2.ω,ports.ω,63);
-    IjPorts p3; strncpy(p3.γ,code,63); strncpy(p3.ω,ports.ω,63);
+    IjPorts p3; strncpy(p3.γ,r3,63); strncpy(p3.ω,ports.ω,63);
+
     char a1[64],b1[64],a2[64],b2[64],a3[64],b3[64];
-    ij_emit_expr(e1,p1,a1,b1);
-    ij_emit_expr(e2,p2,a2,b2);
-    ij_emit_expr(e3,p3,a3,b3);
-    JC("TO_BY");
-    JL(a); JGoto(a1);
-    JL(b); JGoto(adv);
-    JL(r1); ij_put_long(I_f);    JGoto(a2);
-    JL(r2); ij_put_long(end_f);  JGoto(a3);
-    JL(code); ij_put_long(step_f);
-    /* check direction */
-    ij_get_long(step_f); JI("lconst_0",""); JI("lcmp","");
-    J("    ifgt %s\n", chkp);
-    J("    iflt %s\n", chkn);
-    JGoto(ports.ω);   /* step=0 → fail */
-    JL(chkp);
-    ij_get_long(I_f); ij_get_long(end_f); JI("lcmp","");
-    J("    ifgt %s\n", ports.ω);
-    ij_get_long(I_f); JGoto(ports.γ);
-    JL(chkn);
-    ij_get_long(I_f); ij_get_long(end_f); JI("lcmp","");
-    J("    iflt %s\n", ports.ω);
-    ij_get_long(I_f); JGoto(ports.γ);
-    JL(adv);
+    ij_emit_expr(e1, p1, a1, b1);
+    ij_emit_expr(e2, p2, a2, b2);
+    ij_emit_expr(e3, p3, a3, b3);
+
+    JC("TO_BY -- forward-only, no backward branches");
+
+    /* a: start -- evaluate E1, E2, E3 in sequence, then goto check (FORWARD) */
+    JL(a);  JGoto(a1);
+    JL(r1); ij_put_long(I_f);    JGoto(a2);    /* E1 done -> store I,    eval E2  */
+    JL(r2); ij_put_long(end_f);  JGoto(a3);    /* E2 done -> store end,  eval E3  */
+    JL(r3); ij_put_long(step_f); JGoto(check); /* E3 done -> store step, -> check */
+
+    /* b: advance -- I += step, then goto check (FORWARD) */
+    JL(b);
     ij_get_long(I_f); ij_get_long(step_f); JI("ladd",""); ij_put_long(I_f);
+    JGoto(check);
+
+    /* check: both a and b jump here forward -- no backward edges.
+     * Inspect step direction with TWO separate lcmp ops -- one per branch.
+     * Using a single lcmp + ifgt + iflt would underflow the stack because
+     * ifgt consumes the int, leaving nothing for iflt. */
+    JL(check);
     ij_get_long(step_f); JI("lconst_0",""); JI("lcmp","");
-    J("    ifgt %s\n", chkp);
-    JGoto(chkn);
-    (void)b1;(void)b2;(void)b3;
+    J("    ifgt %s\n", chkp);   /* step > 0 -> positive check */
+    ij_get_long(step_f); JI("lconst_0",""); JI("lcmp","");
+    J("    iflt %s\n", chkn);   /* step < 0 -> negative check */
+    JGoto(ports.ω);             /* step == 0 -> always fail */
+
+    JL(chkp);   /* positive step: yield while I <= end */
+    ij_get_long(I_f); ij_get_long(end_f); JI("lcmp","");
+    J("    ifgt %s\n", ports.ω);    /* I > end -> exhausted */
+    ij_get_long(I_f); JGoto(ports.γ);
+
+    JL(chkn);   /* negative step: yield while I >= end */
+    ij_get_long(I_f); ij_get_long(end_f); JI("lcmp","");
+    J("    iflt %s\n", ports.ω);    /* I < end -> exhausted */
+    ij_get_long(I_f); JGoto(ports.γ);
+
+    (void)b1; (void)b2; (void)b3;
 }
 
 /* =========================================================================
@@ -1908,7 +1938,7 @@ void ij_emit_file(IcnNode **nodes, int count, FILE *out, const char *filename) {
 
     /* Emit class header */
     J("; Auto-generated by icon_emit_jvm.c — Tiny-ICON Byrd Box JVM\n");
-    J(".bytecode 50.0\n");   /* Java 6 — no StackMapTable required */
+    J(".bytecode 45.0\n");   /* Java 6 — no StackMapTable required */
     J(".class public %s\n", ij_classname);
     J(".super java/lang/Object\n\n");
 
