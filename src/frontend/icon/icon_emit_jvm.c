@@ -2718,6 +2718,67 @@ static void ij_emit_call(IcnNode *n, IjPorts ports, char *oα, char *oβ) {
         return;
     }
 
+    /* === M-IJ-SORT === */
+
+    /* sort(L) — sort list of longs ascending, return new ArrayList.
+     * One-shot: α evals L, stores, calls icn_builtin_sort, result list → γ.
+     * β → ω. */
+    if (strcmp(fname, "sort") == 0 && nargs >= 1 && !ij_is_user_proc(fname)) {
+        char list_fld[80]; snprintf(list_fld, sizeof list_fld, "icn_%d_sort_list", id);
+        char relay[64];    snprintf(relay,    sizeof relay,    "icn_%d_sort_rel",  id);
+        ij_declare_static_list(list_fld);
+
+        IjPorts ep; strncpy(ep.γ, relay, 63); strncpy(ep.ω, ports.ω, 63);
+        char ea[64], eb[64]; ij_emit_expr(n->children[1], ep, ea, eb);
+
+        JL(a); JGoto(ea);
+        JL(b); JGoto(ports.ω);
+
+        JL(relay);
+        ij_put_list_field(list_fld);
+        ij_get_list_field(list_fld);
+        JI("invokestatic", ij_classname_buf("icn_builtin_sort(Ljava/util/ArrayList;)Ljava/util/ArrayList;"));
+        JGoto(ports.γ);
+        return;
+    }
+
+    /* sortf(L, field) — sort list of records by 1-based field index, return new ArrayList.
+     * One-shot: α evals L then field index, calls icn_builtin_sortf, result → γ.
+     * β → ω. */
+    if (strcmp(fname, "sortf") == 0 && nargs >= 2 && !ij_is_user_proc(fname)) {
+        char list_fld[80];  snprintf(list_fld,  sizeof list_fld,  "icn_%d_sortf_list", id);
+        char field_fld[80]; snprintf(field_fld, sizeof field_fld, "icn_%d_sortf_fld",  id);
+        char relay_l[64];   snprintf(relay_l,   sizeof relay_l,   "icn_%d_sortf_rl",   id);
+        char relay_f[64];   snprintf(relay_f,   sizeof relay_f,   "icn_%d_sortf_rf",   id);
+        ij_declare_static_list(list_fld);
+        ij_declare_static(field_fld);
+
+        IjPorts ep; strncpy(ep.γ, relay_l, 63); strncpy(ep.ω, ports.ω, 63);
+        char ea[64], eb[64]; ij_emit_expr(n->children[1], ep, ea, eb);
+
+        IjPorts fp; strncpy(fp.γ, relay_f, 63); strncpy(fp.ω, ports.ω, 63);
+        char fa[64], fb[64]; ij_emit_expr(n->children[2], fp, fa, fb);
+
+        JL(a); JGoto(ea);
+        JL(b); JGoto(ports.ω);
+
+        JL(relay_l);
+        ij_put_list_field(list_fld);
+        JGoto(fa);
+
+        JL(relay_f);
+        ij_put_long(field_fld);
+
+        ij_get_list_field(list_fld);
+        ij_get_long(field_fld);
+        J("    l2i\n");
+        JI("invokestatic", ij_classname_buf("icn_builtin_sortf(Ljava/util/ArrayList;I)Ljava/util/ArrayList;"));
+        JGoto(ports.γ);
+        return;
+    }
+
+    /* === END M-IJ-SORT === */
+
     /* === END M-IJ-BUILTINS-MISC === */
 
     /* === END M-IJ-BUILTINS-TYPE === */
@@ -5938,6 +5999,163 @@ void ij_emit_file(IcnNode **nodes, int count, FILE *out, const char *filename, c
     J(".end method\n\n");
 
     /* === END M-IJ-BUILTINS-TYPE helpers === */
+
+    /* === M-IJ-SORT helpers === */
+
+    /* icn_builtin_sort(ArrayList src) → ArrayList
+     * Copies src into a new ArrayList, sorts ascending by Long value
+     * using insertion sort (no Comparator class needed in Jasmin).
+     * Stack discipline: local 0 = src, local 1 = result, local 2 = i (int),
+     *   local 3 = j (int), local 4-5 = key (long). */
+    J(".method public static icn_builtin_sort(Ljava/util/ArrayList;)Ljava/util/ArrayList;\n");
+    J("    .limit stack 6\n    .limit locals 8\n");
+    /* result = new ArrayList(src) */
+    J("    new java/util/ArrayList\n");
+    J("    dup\n");
+    J("    aload_0\n");
+    J("    invokespecial java/util/ArrayList/<init>(Ljava/util/Collection;)V\n");
+    J("    astore_1\n");
+    /* i = 1 */
+    J("    iconst_1\n");
+    J("    istore_2\n");
+    /* outer loop: while i < result.size() */
+    J("icn_sort_outer:\n");
+    J("    aload_1\n");
+    J("    invokevirtual java/util/ArrayList/size()I\n");
+    J("    iload_2\n");
+    J("    if_icmple icn_sort_done\n");
+    /* key = ((Long)result.get(i)).longValue() */
+    J("    aload_1\n");
+    J("    iload_2\n");
+    J("    invokevirtual java/util/ArrayList/get(I)Ljava/lang/Object;\n");
+    J("    checkcast java/lang/Long\n");
+    J("    invokevirtual java/lang/Long/longValue()J\n");
+    J("    lstore_4\n");
+    /* j = i - 1 */
+    J("    iload_2\n");
+    J("    iconst_1\n");
+    J("    isub\n");
+    J("    istore_3\n");
+    /* inner loop: while j >= 0 && result.get(j) > key */
+    J("icn_sort_inner:\n");
+    J("    iload_3\n");
+    J("    iflt icn_sort_insert\n");
+    J("    aload_1\n");
+    J("    iload_3\n");
+    J("    invokevirtual java/util/ArrayList/get(I)Ljava/lang/Object;\n");
+    J("    checkcast java/lang/Long\n");
+    J("    invokevirtual java/lang/Long/longValue()J\n");
+    J("    lload_4\n");
+    J("    lcmp\n");
+    J("    ifle icn_sort_insert\n");
+    /* result.set(j+1, result.get(j)) */
+    J("    aload_1\n");
+    J("    iload_3\n");
+    J("    iconst_1\n");
+    J("    iadd\n");
+    J("    aload_1\n");
+    J("    iload_3\n");
+    J("    invokevirtual java/util/ArrayList/get(I)Ljava/lang/Object;\n");
+    J("    invokevirtual java/util/ArrayList/set(ILjava/lang/Object;)Ljava/lang/Object;\n");
+    J("    pop\n");
+    /* j-- */
+    J("    iinc 3 -1\n");
+    J("    goto icn_sort_inner\n");
+    /* result.set(j+1, Long(key)) */
+    J("icn_sort_insert:\n");
+    J("    aload_1\n");
+    J("    iload_3\n");
+    J("    iconst_1\n");
+    J("    iadd\n");
+    J("    lload_4\n");
+    J("    invokestatic java/lang/Long/valueOf(J)Ljava/lang/Long;\n");
+    J("    invokevirtual java/util/ArrayList/set(ILjava/lang/Object;)Ljava/lang/Object;\n");
+    J("    pop\n");
+    /* i++ */
+    J("    iinc 2 1\n");
+    J("    goto icn_sort_outer\n");
+    J("icn_sort_done:\n");
+    J("    aload_1\n");
+    J("    areturn\n");
+    J(".end method\n\n");
+
+    /* icn_builtin_sortf(ArrayList src, int fieldIdx) → ArrayList
+     * Sorts list of records by 1-based fieldIdx using insertion sort.
+     * Records are Objects; fields are accessed by reflection (getDeclaredFields()[fieldIdx-1]).
+     * local 0=src, 1=fieldIdx, 2=result, 3=i, 4=j, 5=keyObj, 6=tmpObj */
+    J(".method public static icn_builtin_sortf(Ljava/util/ArrayList;I)Ljava/util/ArrayList;\n");
+    J("    .limit stack 8\n    .limit locals 10\n");
+    /* result = new ArrayList(src) */
+    J("    new java/util/ArrayList\n");
+    J("    dup\n");
+    J("    aload_0\n");
+    J("    invokespecial java/util/ArrayList/<init>(Ljava/util/Collection;)V\n");
+    J("    astore_2\n");
+    /* i = 1 */
+    J("    iconst_1\n");
+    J("    istore_3\n");
+    /* outer: while i < result.size() */
+    J("icn_sortf_outer:\n");
+    J("    aload_2\n");
+    J("    invokevirtual java/util/ArrayList/size()I\n");
+    J("    iload_3\n");
+    J("    if_icmple icn_sortf_done\n");
+    /* keyObj = result.get(i) */
+    J("    aload_2\n");
+    J("    iload_3\n");
+    J("    invokevirtual java/util/ArrayList/get(I)Ljava/lang/Object;\n");
+    J("    astore 5\n");
+    /* j = i-1 */
+    J("    iload_3\n    iconst_1\n    isub\n    istore 4\n");
+    /* inner: while j>=0 && cmpField(result[j], keyObj, fieldIdx) > 0 */
+    J("icn_sortf_inner:\n");
+    J("    iload 4\n");
+    J("    iflt icn_sortf_insert\n");
+    /* get field value of result[j] */
+    J("    aload_2\n    iload 4\n");
+    J("    invokevirtual java/util/ArrayList/get(I)Ljava/lang/Object;\n");
+    J("    astore 6\n");
+    /* reflect: result[j].getClass().getDeclaredFields()[fieldIdx-1].get(result[j]) */
+    J("    aload 6\n");
+    J("    invokevirtual java/lang/Object/getClass()Ljava/lang/Class;\n");
+    J("    invokevirtual java/lang/Class/getDeclaredFields()[Ljava/lang/reflect/Field;\n");
+    J("    iload_1\n    iconst_1\n    isub\n    aaload\n");
+    J("    aload 6\n");
+    J("    invokevirtual java/lang/reflect/Field/get(Ljava/lang/Object;)Ljava/lang/Object;\n");
+    J("    astore 7\n");
+    /* same for keyObj */
+    J("    aload 5\n");
+    J("    invokevirtual java/lang/Object/getClass()Ljava/lang/Class;\n");
+    J("    invokevirtual java/lang/Class/getDeclaredFields()[Ljava/lang/reflect/Field;\n");
+    J("    iload_1\n    iconst_1\n    isub\n    aaload\n");
+    J("    aload 5\n");
+    J("    invokevirtual java/lang/reflect/Field/get(Ljava/lang/Object;)Ljava/lang/Object;\n");
+    J("    astore 8\n");
+    /* compare as Long: if local7 (Long) > local8 (Long) → shift */
+    J("    aload 7\n");
+    J("    checkcast java/lang/Long\n");
+    J("    aload 8\n");
+    J("    checkcast java/lang/Long\n");
+    J("    invokevirtual java/lang/Long/compareTo(Ljava/lang/Long;)I\n");
+    J("    ifle icn_sortf_insert\n");
+    /* result.set(j+1, result.get(j)) */
+    J("    aload_2\n    iload 4\n    iconst_1\n    iadd\n");
+    J("    aload_2\n    iload 4\n");
+    J("    invokevirtual java/util/ArrayList/get(I)Ljava/lang/Object;\n");
+    J("    invokevirtual java/util/ArrayList/set(ILjava/lang/Object;)Ljava/lang/Object;\n");
+    J("    pop\n");
+    J("    iinc 4 -1\n");
+    J("    goto icn_sortf_inner\n");
+    J("icn_sortf_insert:\n");
+    J("    aload_2\n    iload 4\n    iconst_1\n    iadd\n    aload 5\n");
+    J("    invokevirtual java/util/ArrayList/set(ILjava/lang/Object;)Ljava/lang/Object;\n");
+    J("    pop\n");
+    J("    iinc 3 1\n");
+    J("    goto icn_sortf_outer\n");
+    J("icn_sortf_done:\n");
+    J("    aload_2\n");
+    J("    areturn\n");
+    J(".end method\n\n");
 
     /* === END M-IJ-BUILTINS-STR helpers === */
 

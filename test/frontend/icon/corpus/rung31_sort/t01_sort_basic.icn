@@ -1,0 +1,5 @@
+procedure main();
+  L := [3, 1, 2];
+  S := sort(L);
+  every write(!S);
+end
