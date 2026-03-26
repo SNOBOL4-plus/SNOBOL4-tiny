@@ -1,0 +1,56 @@
+&pos &subject: 3 abcde
+&pos &subject: 1 wxyz
+"main"
+"T"
+"L"
+"s"
+"a"
+&null
+"&error"
+"T[\"abc\"]"
+"T[\"abc\"]"
+"L[1]"
+"L[2]"
+"L[3]"
+"L[200]"
+"L[191]"
+"L[1]"
+"L[2]"
+"L[3]"
+"L[200]"
+"L[191]"
+"complex.r"
+
+----------------------------------------------------------------------
+co-expression_1(0)
+global identifiers:
+   complex = record constructor complex
+   display = function display
+   image = function image
+   list = function list
+   main = procedure main
+   main2 = procedure main2
+   name = function name
+   push = function push
+   recurse = procedure recurse
+   repl = function repl
+   table = function table
+   variable = function variable
+   write = function write
+----------------------------------------------------------------------
+co-expression_1(0)
+global identifiers:
+   complex = record constructor complex
+   display = function display
+   image = function image
+   list = function list
+   main = procedure main
+   main2 = procedure main2
+   name = function name
+   push = function push
+   recurse = procedure recurse
+   repl = function repl
+   table = function table
+   variable = function variable
+   write = function write
+----------------------------------------------------------------------
