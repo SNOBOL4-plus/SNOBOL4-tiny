@@ -231,8 +231,8 @@ static IcnToken scan_number(IcnLexer *lx) {
         return t;
     }
 
-    /* Fractional part */
-    if (lex_cur(lx) == '.' && isdigit((unsigned char)lex_peek1(lx))) {
+    /* Fractional part — also handles leading-dot entry (.23) */
+    if (lex_cur(lx) == '.' && (isdigit((unsigned char)lex_peek1(lx)) || len > 0)) {
         is_real = 1;
         buf_push(&buf, &len, &cap, lex_advance(lx)); /* . */
         while (isdigit((unsigned char)lex_cur(lx)))
@@ -304,6 +304,7 @@ static IcnToken lex_one(IcnLexer *lx) {
 
     switch (c) {
         case '+':
+            if (lex_cur(lx) == '+') { lex_advance(lx); return make_tok(TK_PLUSPLUS,   line, col); }
             if (lex_cur(lx) == ':' && lex_peek1(lx) == '=') {
                 lex_advance(lx); lex_advance(lx);
                 return make_tok(TK_AUGPLUS, line, col);
@@ -311,6 +312,7 @@ static IcnToken lex_one(IcnLexer *lx) {
             return make_tok(TK_PLUS, line, col);
 
         case '-':
+            if (lex_cur(lx) == '-') { lex_advance(lx); return make_tok(TK_MINUSMINUS, line, col); }
             if (lex_cur(lx) == ':' && lex_peek1(lx) == '=') {
                 lex_advance(lx); lex_advance(lx);
                 return make_tok(TK_AUGMINUS, line, col);
@@ -322,6 +324,7 @@ static IcnToken lex_one(IcnLexer *lx) {
             return make_tok(TK_MINUS, line, col);
 
         case '*':
+            if (lex_cur(lx) == '*') { lex_advance(lx); return make_tok(TK_STARSTAR,   line, col); }
             if (lex_cur(lx) == ':' && lex_peek1(lx) == '=') {
                 lex_advance(lx); lex_advance(lx);
                 return make_tok(TK_AUGSTAR, line, col);
@@ -364,7 +367,20 @@ static IcnToken lex_one(IcnLexer *lx) {
             return make_tok(TK_GT, line, col);
 
         case '=':
-            if (lex_cur(lx) == '=') { lex_advance(lx); return make_tok(TK_SEQ, line, col); }
+            if (lex_cur(lx) == '=') {
+                lex_advance(lx);
+                /* ==:= augmented string-eq assign */
+                if (lex_cur(lx) == ':' && lex_peek1(lx) == '=') {
+                    lex_advance(lx); lex_advance(lx);
+                    return make_tok(TK_AUGSEQ, line, col);
+                }
+                return make_tok(TK_SEQ, line, col);
+            }
+            /* =:= augmented numeric-eq assign */
+            if (lex_cur(lx) == ':' && lex_peek1(lx) == '=') {
+                lex_advance(lx); lex_advance(lx);
+                return make_tok(TK_AUGEQ, line, col);
+            }
             return make_tok(TK_EQ, line, col);
 
         case '~':
@@ -400,7 +416,14 @@ static IcnToken lex_one(IcnLexer *lx) {
         case '!': return make_tok(TK_BANG, line, col);
         case '?': return make_tok(TK_QMARK, line, col);
         case '@': return make_tok(TK_AT, line, col);
-        case '.': return make_tok(TK_DOT, line, col);
+        case '.':
+            /* .digit -> real literal e.g. .23  .5 */
+            if (isdigit((unsigned char)lex_cur(lx))) {
+                /* back up so scan_number sees the '.' */
+                lx->pos--; lx->col--;
+                return scan_number(lx);
+            }
+            return make_tok(TK_DOT, line, col);
 
         case '(': return make_tok(TK_LPAREN, line, col);
         case ')': return make_tok(TK_RPAREN, line, col);
@@ -492,6 +515,11 @@ const char *icn_tk_name(IcnTkKind kind) {
         case TK_AUGSLASH:  return "/:=";
         case TK_AUGMOD:    return "%:=";
         case TK_AUGCONCAT: return "||:=";
+        case TK_AUGEQ:     return "=:=";
+        case TK_AUGSEQ:    return "==:=";
+        case TK_PLUSPLUS:  return "++";
+        case TK_MINUSMINUS: return "--";
+        case TK_STARSTAR:  return "**";
         case TK_AND:       return "&";
         case TK_BAR:       return "|";
         case TK_BACKSLASH: return "\\";

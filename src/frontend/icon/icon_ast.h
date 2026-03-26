@@ -38,6 +38,15 @@ typedef enum {
     ICN_MOD,       /* E1 % E2 */
     ICN_POW,       /* E1 ^ E2 */
     ICN_NEG,       /* -E (unary) */
+    ICN_POS,       /* +E (unary) */
+    ICN_RANDOM,    /* ?E (unary random element/char) */
+    ICN_COMPLEMENT,/* ~E (cset complement) */
+    ICN_CSET_UNION,   /* E1 ++ E2 */
+    ICN_CSET_DIFF,    /* E1 -- E2 */
+    ICN_CSET_INTER,   /* E1 ** E2 */
+    ICN_BANG_BINARY,  /* E1 ! E2  (invoke E1 with args from list E2) */
+    ICN_SECTION_PLUS, /* E[i+:n] */
+    ICN_SECTION_MINUS,/* E[i-:n] */
 
     /* --- Numeric relational (icont: N_Binop) --- */
     ICN_LT,        /* E1 < E2  -- paper §4.3 goal-directed retry */
