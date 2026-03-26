@@ -65,6 +65,14 @@ typedef enum {
     TK_AUGSLASH,   /* /:= */
     TK_AUGMOD,     /* %:= */
     TK_AUGCONCAT,  /* ||:= */
+    TK_AUGEQ,      /* =:= (augmented numeric =) */
+    TK_AUGSEQ,     /* ==:= (augmented string ==) */
+    TK_EQSWAP,     /* =:= — same token; alias */
+
+    /* Cset / set operators */
+    TK_PLUSPLUS,   /* ++ (cset union) */
+    TK_MINUSMINUS, /* -- (cset difference) */
+    TK_STARSTAR,   /* ** (cset intersection) */
 
     /* Misc operators */
     TK_AND,        /* & (conjunction) */
