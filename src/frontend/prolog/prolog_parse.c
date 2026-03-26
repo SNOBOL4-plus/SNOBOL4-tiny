@@ -125,6 +125,13 @@ static const OpEntry BIN_OPS[] = {
     { "/",     400, ASSOC_LEFT  },
     { "//",    400, ASSOC_LEFT  },
     { "mod",   400, ASSOC_LEFT  },
+    { "rem",   400, ASSOC_LEFT  },
+    { ">>",    400, ASSOC_LEFT  },
+    { "<<",    400, ASSOC_LEFT  },
+    { "xor",   400, ASSOC_LEFT  },
+    { "/\\",   500, ASSOC_LEFT  },
+    { "\\/",   500, ASSOC_LEFT  },
+    { "**",    200, ASSOC_RIGHT },
     { "^",     200, ASSOC_RIGHT },
     { NULL,    0,   ASSOC_NONE  }
 };
@@ -268,6 +275,12 @@ static Term *parse_primary(Parser *p) {
             if (strcmp(tk.text, "\\+") == 0 || strcmp(tk.text, "not") == 0) {
                 Term *arg = parse_term(p, 900);
                 int fid = prolog_atom_intern(tk.text);
+                Term *args[1] = { arg };
+                return term_new_compound(fid, 1, args);
+            }
+            if (strcmp(tk.text, "\\") == 0) {
+                Term *arg = parse_term(p, 200);
+                int fid = prolog_atom_intern("\\");
                 Term *args[1] = { arg };
                 return term_new_compound(fid, 1, args);
             }

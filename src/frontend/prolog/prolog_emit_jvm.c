@@ -2808,6 +2808,60 @@ static void pj_emit_arith(EXPR_t *e, int *var_locals, int n_vars) {
                 JI("ldiv", "");
                 break;
             }
+            if (strcmp(e->sval, "/\\") == 0 && e->nchildren == 2) {
+                pj_emit_arith(e->children[0], var_locals, n_vars);
+                pj_emit_arith(e->children[1], var_locals, n_vars);
+                JI("land", ""); break;
+            }
+            if (strcmp(e->sval, "\\/") == 0 && e->nchildren == 2) {
+                pj_emit_arith(e->children[0], var_locals, n_vars);
+                pj_emit_arith(e->children[1], var_locals, n_vars);
+                JI("lor", ""); break;
+            }
+            if (strcmp(e->sval, "xor") == 0 && e->nchildren == 2) {
+                pj_emit_arith(e->children[0], var_locals, n_vars);
+                pj_emit_arith(e->children[1], var_locals, n_vars);
+                JI("lxor", ""); break;
+            }
+            if (strcmp(e->sval, ">>") == 0 && e->nchildren == 2) {
+                pj_emit_arith(e->children[0], var_locals, n_vars);
+                pj_emit_arith(e->children[1], var_locals, n_vars);
+                JI("l2i", ""); JI("lshr", ""); break;
+            }
+            if (strcmp(e->sval, "<<") == 0 && e->nchildren == 2) {
+                pj_emit_arith(e->children[0], var_locals, n_vars);
+                pj_emit_arith(e->children[1], var_locals, n_vars);
+                JI("l2i", ""); JI("lshl", ""); break;
+            }
+            if (strcmp(e->sval, "\\") == 0 && e->nchildren == 1) {
+                pj_emit_arith(e->children[0], var_locals, n_vars);
+                JI("lconst_1", ""); JI("lneg", ""); JI("lxor", ""); /* ~N = N xor -1 */
+                break;
+            }
+            if (strcmp(e->sval, "max") == 0 && e->nchildren == 2) {
+                pj_emit_arith(e->children[0], var_locals, n_vars);
+                pj_emit_arith(e->children[1], var_locals, n_vars);
+                J("    invokestatic java/lang/Math/max(JJ)J\n");
+                break;
+            }
+            if (strcmp(e->sval, "min") == 0 && e->nchildren == 2) {
+                pj_emit_arith(e->children[0], var_locals, n_vars);
+                pj_emit_arith(e->children[1], var_locals, n_vars);
+                J("    invokestatic java/lang/Math/min(JJ)J\n");
+                break;
+            }
+            if ((strcmp(e->sval, "**") == 0 || strcmp(e->sval, "^") == 0) && e->nchildren == 2) {
+                pj_emit_arith(e->children[0], var_locals, n_vars);
+                JI("l2d", "");
+                pj_emit_arith(e->children[1], var_locals, n_vars);
+                JI("l2d", "");
+                J("    invokestatic java/lang/Math/pow(DD)D\n");
+                JI("d2l", "");
+                break;
+            }
+        }
+        /* unary arithmetic functions */
+        if (e->sval && e->nchildren >= 1) {
             if (strcmp(e->sval, "abs") == 0 && e->nchildren == 1) {
                 pj_emit_arith(e->children[0], var_locals, n_vars);
                 /* abs: dup, negate, take max */
@@ -2815,7 +2869,30 @@ static void pj_emit_arith(EXPR_t *e, int *var_locals, int n_vars) {
                 J("    invokestatic java/lang/Math/max(JJ)J\n");
                 break;
             }
-        }
+            if (strcmp(e->sval, "sign") == 0 && e->nchildren == 1) {
+                pj_emit_arith(e->children[0], var_locals, n_vars);
+                /* sign: Long.signum returns int, convert to long */
+                J("    invokestatic java/lang/Long/signum(J)I\n");
+                JI("i2l", "");
+                break;
+            }
+            if ((strcmp(e->sval, "truncate") == 0 || strcmp(e->sval, "integer") == 0
+                 || strcmp(e->sval, "round") == 0 || strcmp(e->sval, "ceiling") == 0
+                 || strcmp(e->sval, "floor") == 0) && e->nchildren == 1) {
+                /* for integer inputs these are identity */
+                pj_emit_arith(e->children[0], var_locals, n_vars);
+                break;
+            }
+            if (strcmp(e->sval, "msb") == 0 && e->nchildren == 1) {
+                /* msb(N) = 63 - Long.numberOfLeadingZeros(N) */
+                JI("ldc2_w", "63");
+                pj_emit_arith(e->children[0], var_locals, n_vars);
+                J("    invokestatic java/lang/Long/numberOfLeadingZeros(J)I\n");
+                JI("i2l", "");
+                JI("lsub", "");
+                break;
+            }
+        }  /* end unary */
         JI("lconst_0", "");
         break;
     default:
