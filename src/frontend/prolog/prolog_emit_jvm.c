@@ -1624,6 +1624,139 @@ static void pj_emit_assertz_helpers(void) {
     J("    invokestatic %s/pj_arraylist_to_list(Ljava/util/ArrayList;)Ljava/lang/Object;\n", pj_classname);
     JI("areturn", "");
     J(".end method\n\n");
+
+    /* pj_is_var(Object) -> Z
+     * Returns 1 if term is an unbound variable (null or var tag with null binding). */
+    J("; pj_is_var(Object) -> Z\n");
+    J(".method static pj_is_var(Ljava/lang/Object;)Z\n");
+    J("    .limit stack 3\n");
+    J("    .limit locals 1\n");
+    JI("aload_0", "");
+    J("    ifnull pj_isvar_true\n");
+    JI("aload_0", "");
+    JI("checkcast", "[Ljava/lang/Object;");
+    JI("iconst_0", "");
+    JI("aaload", "");
+    JI("ldc", "\"var\"");
+    JI("invokevirtual", "java/lang/Object/equals(Ljava/lang/Object;)Z");
+    J("    ifeq pj_isvar_false\n");
+    /* tag=="var": check [1]==null */
+    JI("aload_0", "");
+    JI("checkcast", "[Ljava/lang/Object;");
+    JI("iconst_1", "");
+    JI("aaload", "");
+    J("    ifnonnull pj_isvar_false\n");
+    J("pj_isvar_true:\n");
+    JI("iconst_1", "");
+    JI("ireturn", "");
+    J("pj_isvar_false:\n");
+    JI("iconst_0", "");
+    JI("ireturn", "");
+    J(".end method\n\n");
+
+    /* pj_succ_2(Object x, Object y) -> Z
+     * succ(?X, ?Y): Y = X+1 or X = Y-1.
+     * Returns 1 on success (after unification), 0 on failure. */
+    J("; pj_succ_2(Object x, Object y) -> Z\n");
+    J(".method static pj_succ_2(Ljava/lang/Object;Ljava/lang/Object;)Z\n");
+    J("    .limit stack 6\n");
+    J("    .limit locals 4\n");
+    JI("aload_0", "");
+    J("    invokestatic %s/pj_deref(Ljava/lang/Object;)Ljava/lang/Object;\n", pj_classname);
+    JI("astore_0", "");
+    JI("aload_1", "");
+    J("    invokestatic %s/pj_deref(Ljava/lang/Object;)Ljava/lang/Object;\n", pj_classname);
+    JI("astore_1", "");
+    JI("aload_0", "");
+    J("    invokestatic %s/pj_is_var(Ljava/lang/Object;)Z\n", pj_classname);
+    J("    ifne pj_succ2_x_unbound\n");
+    /* X is bound: Y = X+1 */
+    JI("aload_0", "");
+    J("    invokestatic %s/pj_int_val(Ljava/lang/Object;)J\n", pj_classname);
+    JI("lconst_1", "");
+    JI("ladd", "");
+    J("    invokestatic %s/pj_term_int(J)[Ljava/lang/Object;\n", pj_classname);
+    JI("aload_1", "");
+    J("    invokestatic %s/pj_unify(Ljava/lang/Object;Ljava/lang/Object;)Z\n", pj_classname);
+    JI("ireturn", "");
+    J("pj_succ2_x_unbound:\n");
+    /* X unbound: X = Y-1; fail if Y-1 < 0 */
+    JI("aload_1", "");
+    J("    invokestatic %s/pj_int_val(Ljava/lang/Object;)J\n", pj_classname);
+    JI("lconst_1", "");
+    JI("lsub", "");
+    JI("dup2", "");
+    JI("lstore_2", "");   /* save result */
+    JI("lconst_0", "");
+    JI("lcmp", "");
+    J("    iflt pj_succ2_neg\n");
+    JI("lload_2", "");
+    J("    invokestatic %s/pj_term_int(J)[Ljava/lang/Object;\n", pj_classname);
+    JI("aload_0", "");
+    J("    invokestatic %s/pj_unify(Ljava/lang/Object;Ljava/lang/Object;)Z\n", pj_classname);
+    JI("ireturn", "");
+    J("pj_succ2_neg:\n");
+    JI("iconst_0", "");
+    JI("ireturn", "");
+    J(".end method\n\n");
+
+    /* pj_plus_3(Object x, Object y, Object z) -> Z
+     * plus(?X, ?Y, ?Z): Z = X+Y (any two bound determines third).
+     * Returns 1 on success, 0 on failure. */
+    J("; pj_plus_3(Object x, Object y, Object z) -> Z\n");
+    J(".method static pj_plus_3(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Z\n");
+    J("    .limit stack 8\n");
+    J("    .limit locals 8\n");
+    JI("aload_0", "");
+    J("    invokestatic %s/pj_deref(Ljava/lang/Object;)Ljava/lang/Object;\n", pj_classname);
+    JI("astore_0", "");
+    JI("aload_1", "");
+    J("    invokestatic %s/pj_deref(Ljava/lang/Object;)Ljava/lang/Object;\n", pj_classname);
+    JI("astore_1", "");
+    JI("aload_2", "");
+    J("    invokestatic %s/pj_deref(Ljava/lang/Object;)Ljava/lang/Object;\n", pj_classname);
+    JI("astore_2", "");
+    /* case: X var → Z = Y+? → need Y and Z bound: X = Z-Y */
+    JI("aload_0", "");
+    J("    invokestatic %s/pj_is_var(Ljava/lang/Object;)Z\n", pj_classname);
+    J("    ifne pj_plus3_x_var\n");
+    /* X bound */
+    JI("aload_1", "");
+    J("    invokestatic %s/pj_is_var(Ljava/lang/Object;)Z\n", pj_classname);
+    J("    ifne pj_plus3_y_var\n");
+    /* X and Y bound: Z = X+Y */
+    JI("aload_0", "");
+    J("    invokestatic %s/pj_int_val(Ljava/lang/Object;)J\n", pj_classname);
+    JI("aload_1", "");
+    J("    invokestatic %s/pj_int_val(Ljava/lang/Object;)J\n", pj_classname);
+    JI("ladd", "");
+    J("    invokestatic %s/pj_term_int(J)[Ljava/lang/Object;\n", pj_classname);
+    JI("aload_2", "");
+    J("    invokestatic %s/pj_unify(Ljava/lang/Object;Ljava/lang/Object;)Z\n", pj_classname);
+    JI("ireturn", "");
+    J("pj_plus3_y_var:\n");
+    /* X bound, Y var, Z must be bound: Y = Z-X */
+    JI("aload_2", "");
+    J("    invokestatic %s/pj_int_val(Ljava/lang/Object;)J\n", pj_classname);
+    JI("aload_0", "");
+    J("    invokestatic %s/pj_int_val(Ljava/lang/Object;)J\n", pj_classname);
+    JI("lsub", "");
+    J("    invokestatic %s/pj_term_int(J)[Ljava/lang/Object;\n", pj_classname);
+    JI("aload_1", "");
+    J("    invokestatic %s/pj_unify(Ljava/lang/Object;Ljava/lang/Object;)Z\n", pj_classname);
+    JI("ireturn", "");
+    J("pj_plus3_x_var:\n");
+    /* X var, Y and Z must be bound: X = Z-Y */
+    JI("aload_2", "");
+    J("    invokestatic %s/pj_int_val(Ljava/lang/Object;)J\n", pj_classname);
+    JI("aload_1", "");
+    J("    invokestatic %s/pj_int_val(Ljava/lang/Object;)J\n", pj_classname);
+    JI("lsub", "");
+    J("    invokestatic %s/pj_term_int(J)[Ljava/lang/Object;\n", pj_classname);
+    JI("aload_0", "");
+    J("    invokestatic %s/pj_unify(Ljava/lang/Object;Ljava/lang/Object;)Z\n", pj_classname);
+    JI("ireturn", "");
+    J(".end method\n\n");
 }
 
 /* -------------------------------------------------------------------------
@@ -1891,6 +2024,7 @@ static int pj_is_user_call(EXPR_t *goal) {
         "between","findall",
         "assertz","asserta","abolish","retract",
         "sort","msort",
+        "succ","plus",
         NULL
     };
     for (int i = 0; builtins[i]; i++)
@@ -2256,6 +2390,25 @@ static void pj_emit_goal(EXPR_t *goal, const char *lbl_γ, const char *lbl_ω,
             J("    invokestatic %s/pj_sort_list(Ljava/lang/Object;I)Ljava/lang/Object;\n", pj_classname);
             pj_emit_term(goal->children[1], var_locals, n_vars);
             J("    invokestatic %s/pj_unify(Ljava/lang/Object;Ljava/lang/Object;)Z\n", pj_classname);
+            J("    ifeq %s\n", lbl_ω);
+            JI("goto", lbl_γ);
+            return;
+        }
+        /* succ(?X, ?Y) — Y = X+1 or X = Y-1 */
+        if (strcmp(fn, "succ") == 0 && nargs == 2) {
+            pj_emit_term(goal->children[0], var_locals, n_vars);
+            pj_emit_term(goal->children[1], var_locals, n_vars);
+            J("    invokestatic %s/pj_succ_2(Ljava/lang/Object;Ljava/lang/Object;)Z\n", pj_classname);
+            J("    ifeq %s\n", lbl_ω);
+            JI("goto", lbl_γ);
+            return;
+        }
+        /* plus(?X, ?Y, ?Z) — Z = X+Y */
+        if (strcmp(fn, "plus") == 0 && nargs == 3) {
+            pj_emit_term(goal->children[0], var_locals, n_vars);
+            pj_emit_term(goal->children[1], var_locals, n_vars);
+            pj_emit_term(goal->children[2], var_locals, n_vars);
+            J("    invokestatic %s/pj_plus_3(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Z\n", pj_classname);
             J("    ifeq %s\n", lbl_ω);
             JI("goto", lbl_γ);
             return;
