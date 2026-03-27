@@ -1292,6 +1292,136 @@ static void pj_emit_runtime_helpers(void) {
     J(".end method\n\n");
 
     /* ------------------------------------------------------------------
+     * pj_list_to_term(Object list) -> Object[]
+     * Compose direction of =../2: [F|Args] -> F(Args...)
+     * list is a proper Prolog list: cons cells or nil.
+     * Returns null on bad input.
+     * local 0 = list (current cell), local 1 = arity, local 2 = functor string
+     * local 3 = result term array, local 4 = tmp, local 5 = i
+     * ------------------------------------------------------------------ */
+    /* ------------------------------------------------------------------
+     * pj_list_to_term(Object list) -> Object[]
+     * Compose direction of =../2: [F|Args] -> F(Args...)
+     * Uses a 32-slot scratch array; returns null on bad input.
+     * local 0 = list cursor, local 1 = scratch Object[34], local 2 = count,
+     * local 3 = tmp cell, local 4 = head
+     * ------------------------------------------------------------------ */
+    J(".method static pj_list_to_term(Ljava/lang/Object;)[Ljava/lang/Object;\n");
+    J("    .limit stack 8\n");
+    J("    .limit locals 6\n");
+    /* deref first cell — must be cons */
+    JI("aload_0", "");
+    J("    invokestatic %s/pj_deref(Ljava/lang/Object;)Ljava/lang/Object;\n", pj_classname);
+    JI("astore_0", "");
+    JI("aload_0", ""); JI("ifnull", "ltl_fail");
+    JI("aload_0", ""); JI("checkcast", "[Ljava/lang/Object;");
+    JI("iconst_0", ""); JI("aaload", "");
+    JI("ldc", "\"compound\""); JI("invokevirtual", "java/lang/Object/equals(Ljava/lang/Object;)Z");
+    JI("ifeq", "ltl_fail");
+    JI("aload_0", ""); JI("checkcast", "[Ljava/lang/Object;");
+    JI("iconst_1", ""); JI("aaload", "");
+    JI("ldc", "\".\""); JI("invokevirtual", "java/lang/Object/equals(Ljava/lang/Object;)Z");
+    JI("ifeq", "ltl_fail");
+    /* extract functor term (head of first cons) */
+    JI("aload_0", ""); JI("checkcast", "[Ljava/lang/Object;");
+    JI("iconst_2", ""); JI("aaload", "");
+    J("    invokestatic %s/pj_deref(Ljava/lang/Object;)Ljava/lang/Object;\n", pj_classname);
+    JI("astore", "4");  /* local 4 = functor term */
+    /* advance to args list */
+    JI("aload_0", ""); JI("checkcast", "[Ljava/lang/Object;");
+    JI("bipush", "3"); JI("aaload", "");
+    J("    invokestatic %s/pj_deref(Ljava/lang/Object;)Ljava/lang/Object;\n", pj_classname);
+    JI("astore_0", "");
+    /* allocate scratch array of 34 elements */
+    JI("bipush", "34"); JI("anewarray", "java/lang/Object"); JI("astore_1", "");
+    JI("iconst_0", ""); JI("istore_2", "");  /* count = 0 */
+    J("ltl_loop:\n");
+    JI("aload_0", ""); JI("ifnull", "ltl_build");
+    JI("aload_0", ""); JI("checkcast", "[Ljava/lang/Object;");
+    JI("iconst_0", ""); JI("aaload", "");
+    JI("ldc", "\"atom\""); JI("invokevirtual", "java/lang/Object/equals(Ljava/lang/Object;)Z");
+    JI("ifne", "ltl_build");  /* nil atom -> done */
+    /* check not overflowing scratch */
+    JI("iload_2", ""); JI("bipush", "32"); JI("if_icmpge", "ltl_fail");
+    /* store head into scratch[count] */
+    JI("aload_1", ""); JI("iload_2", "");
+    JI("aload_0", ""); JI("checkcast", "[Ljava/lang/Object;");
+    JI("iconst_2", ""); JI("aaload", "");
+    JI("aastore", "");
+    JI("iinc", "2 1");
+    /* advance */
+    JI("aload_0", ""); JI("checkcast", "[Ljava/lang/Object;");
+    JI("bipush", "3"); JI("aaload", "");
+    J("    invokestatic %s/pj_deref(Ljava/lang/Object;)Ljava/lang/Object;\n", pj_classname);
+    JI("astore_0", "");
+    JI("goto", "ltl_loop");
+    J("ltl_build:\n");
+    /* arity 0: return functor term as-is (it's already an atom cell) */
+    JI("iload_2", ""); JI("ifne", "ltl_compound");
+    JI("aload", "4"); JI("checkcast", "[Ljava/lang/Object;"); JI("areturn", "");
+    J("ltl_compound:\n");
+    /* allocate result: Object[2 + count] */
+    JI("iload_2", ""); JI("iconst_2", ""); JI("iadd", "");
+    JI("anewarray", "java/lang/Object");
+    JI("astore_3", "");
+    JI("aload_3", ""); JI("iconst_0", ""); JI("ldc", "\"compound\""); JI("aastore", "");
+    JI("aload_3", ""); JI("iconst_1", "");
+    JI("aload", "4");
+    J("    invokestatic %s/pj_atom_name(Ljava/lang/Object;)Ljava/lang/String;\n", pj_classname);
+    JI("aastore", "");
+    /* copy args */
+    JI("iconst_0", ""); JI("istore", "5");
+    J("ltl_copy:\n");
+    JI("iload", "5"); JI("iload_2", ""); JI("if_icmpge", "ltl_ret");
+    JI("aload_3", ""); JI("iload", "5"); JI("iconst_2", ""); JI("iadd", "");
+    JI("aload_1", ""); JI("iload", "5"); JI("aaload", "");
+    JI("aastore", "");
+    JI("iinc", "5 1"); JI("goto", "ltl_copy");
+    J("ltl_ret:\n");
+    JI("aload_3", ""); JI("areturn", "");
+    J("ltl_fail:\n");
+    JI("aconst_null", ""); JI("areturn", "");
+    J(".end method\n\n");
+
+    /* ------------------------------------------------------------------
+     * pj_univ(Object term, Object list) -> boolean (Z)
+     * Bidirectional =../2 at runtime.
+     * If term is bound: decompose to list via pj_term_to_list, unify.
+     * If term is unbound: compose from list via pj_list_to_term, unify.
+     * local 0 = term, local 1 = list, local 2 = deref'd term, local 3 = result
+     * ------------------------------------------------------------------ */
+    J(".method static pj_univ(Ljava/lang/Object;Ljava/lang/Object;)Z\n");
+    J("    .limit stack 4\n");
+    J("    .limit locals 4\n");
+    JI("aload_0", "");
+    J("    invokestatic %s/pj_deref(Ljava/lang/Object;)Ljava/lang/Object;\n", pj_classname);
+    JI("astore_2", "");  /* local 2 = deref term */
+    /* check if term is var (unbound): tag == null or tag == "var" */
+    JI("aload_2", ""); JI("ifnull", "univ_compose");
+    JI("aload_2", ""); JI("checkcast", "[Ljava/lang/Object;");
+    JI("iconst_0", ""); JI("aaload", "");
+    JI("ldc", "\"var\""); JI("invokevirtual", "java/lang/Object/equals(Ljava/lang/Object;)Z");
+    JI("ifne", "univ_compose");
+    /* term is bound: decompose */
+    JI("aload_2", "");
+    J("    invokestatic %s/pj_term_to_list(Ljava/lang/Object;)[Ljava/lang/Object;\n", pj_classname);
+    JI("aload_1", "");
+    J("    invokestatic %s/pj_unify(Ljava/lang/Object;Ljava/lang/Object;)Z\n", pj_classname);
+    JI("ireturn", "");
+    J("univ_compose:\n");
+    /* term is unbound: build term from list */
+    JI("aload_1", "");
+    J("    invokestatic %s/pj_list_to_term(Ljava/lang/Object;)[Ljava/lang/Object;\n", pj_classname);
+    JI("astore_3", "");
+    JI("aload_3", ""); JI("ifnull", "univ_fail");
+    JI("aload_0", ""); JI("aload_3", "");
+    J("    invokestatic %s/pj_unify(Ljava/lang/Object;Ljava/lang/Object;)Z\n", pj_classname);
+    JI("ireturn", "");
+    J("univ_fail:\n");
+    JI("iconst_0", ""); JI("ireturn", "");
+    J(".end method\n\n");
+
+    /* ------------------------------------------------------------------
      * M-PJ-ATOM-BUILTINS — PJ-48 runtime helpers
      * ------------------------------------------------------------------ */
 
@@ -4947,18 +5077,14 @@ static void pj_emit_goal(EXPR_t *goal, const char *lbl_γ, const char *lbl_ω,
             JI("goto", lbl_γ);
             return;
         }
-        /* =../2: Term =.. List (univ)
-         * foo(a,b) =.. [foo,a,b];  atom =.. [atom]
-         * Delegate entirely to pj_term_to_list helper. */
+        /* =../2: Term =.. List (univ) — bidirectional via pj_univ helper.
+         * Decompose: Term bound   -> list = pj_term_to_list(Term); unify list.
+         * Compose:   Term unbound -> term = pj_list_to_term(List); unify term.
+         * Both directions handled at runtime by pj_univ(term, list) -> bool. */
         if (strcmp(fn, "=..") == 0 && nargs == 2) {
             pj_emit_term(goal->children[0], var_locals, n_vars);
-            J("    invokestatic %s/pj_deref(Ljava/lang/Object;)Ljava/lang/Object;\n", pj_classname);
-            J("    ifnull %s\n", lbl_ω);
-            pj_emit_term(goal->children[0], var_locals, n_vars);
-            J("    invokestatic %s/pj_deref(Ljava/lang/Object;)Ljava/lang/Object;\n", pj_classname);
-            J("    invokestatic %s/pj_term_to_list(Ljava/lang/Object;)[Ljava/lang/Object;\n", pj_classname);
             pj_emit_term(goal->children[1], var_locals, n_vars);
-            J("    invokestatic %s/pj_unify(Ljava/lang/Object;Ljava/lang/Object;)Z\n", pj_classname);
+            J("    invokestatic %s/pj_univ(Ljava/lang/Object;Ljava/lang/Object;)Z\n", pj_classname);
             J("    ifeq %s\n", lbl_ω);
             JI("goto", lbl_γ);
             return;
