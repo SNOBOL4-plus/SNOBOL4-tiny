@@ -18,6 +18,16 @@ forall_fails(Cond, Action) :- Cond, \+ Action.
 acyclic_term(_).
 cyclic_term(_) :- fail.
 
+%% expand_goal/2 — DCG phrase expansion (SWI built-in substitute)
+%% Single clause with if-then-else to avoid cut-inside-catch issues.
+expand_goal(Goal, G) :-
+    ( Goal = phrase(F, S), atom(F) -> G =.. [F, S, []]
+    ; Goal = phrase(F, S, T), atom(F) -> G =.. [F, S, T]
+    ; Goal = phrase(H, S), compound(H) -> H =.. [Hf|Args], append(Args, [S,[]], A2), G =.. [Hf|A2]
+    ; Goal = phrase(H, S, T), compound(H) -> H =.. [Hf|Args], append(Args, [S,T], A2), G =.. [Hf|A2]
+    ; G = Goal
+    ).
+
 maplist(_, []).
 maplist(Goal, [H|T]) :- call_1(Goal, H), maplist(Goal, T).
 maplist(_, [], []).
