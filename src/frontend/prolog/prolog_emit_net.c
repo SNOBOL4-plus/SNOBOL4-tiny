@@ -93,12 +93,6 @@ static void pn_set_classname(const char *filename) {
  * Export predicate
  * ----------------------------------------------------------------------- */
 
-static int pn_is_exported(const char *functor) {
-    for (ExportEntry *e = pn_prog->exports; e; e = e->next)
-        if (strcasecmp(e->name, functor) == 0) return 1;
-    return 0;
-}
-
 /* -----------------------------------------------------------------------
  * Helpers: escape a string for CIL ldstr
  * ----------------------------------------------------------------------- */
@@ -311,9 +305,7 @@ static void pn_emit_predicate(STMT_t *stmt) {
     method[sizeof method - 1] = '\0';
     for (char *p = method; *p; p++) *p = (char)toupper((unsigned char)*p);
 
-    /* M-LINK-NET-6: all predicates public — Prolog export directives in future sprint */
-    int exported = 1;
-    (void)pn_is_exported;
+    /* All predicates public — Prolog :- export directive parsing in future sprint */
     const char *vis = "public";
     const char *ACT = "class [mscorlib]System.Action";
 
@@ -356,7 +348,7 @@ static void pn_emit_predicate(STMT_t *stmt) {
 
         /* Success: store result (last arg) in ByrdBoxLinkage.Result, then call gamma */
         if (n_args > 0) {
-            /* Store args[n_args-1] (the output variable) as Result */
+            /* Store vars[n_args-1] (the output variable) as Result */
             N("    ldloc.1\n");   /* vars array — bound variable values */
             N("    ldc.i4  %d\n", n_args - 1);
             N("    ldelem.ref\n");
@@ -436,18 +428,6 @@ static void pn_emit_predicate(STMT_t *stmt) {
     }
     N("  }\n\n");
 
-    /* Exported Byrd-ABI wrapper (result via ByrdBoxLinkage.Result) */
-    if (exported) {
-        N("  .method public static void %s_EXPORT(object[] args,"
-          " %s gamma, %s omega) cil managed\n", method, ACT, ACT);
-        /* alias: same body, just calls the dispatcher */
-        /* Actually re-export with same signature as ABI requires */
-        N("  {\n    .maxstack 4\n");
-        N("    ldarg.0\n    ldarg.1\n    ldarg.2\n");
-        N("    call       void %s::%s(object[], %s, %s)\n",
-          pn_class, method, ACT, ACT);
-        N("    ret\n  }\n\n");
-    }
 }
 
 /* -----------------------------------------------------------------------
