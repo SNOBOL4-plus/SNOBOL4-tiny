@@ -6243,9 +6243,50 @@ static void pj_emit_forall_builtin(void) {
 static void pj_emit_between_builtin(void) {
     J("; === between/3 synthetic predicate ========================================\n");
     J(".method static p_between_3([Ljava/lang/Object;[Ljava/lang/Object;[Ljava/lang/Object;I)[Ljava/lang/Object;\n");
-    J("    .limit stack 6\n");
-    J("    .limit locals 8\n");
-    /* locals: 0=Low, 1=High, 2=Var, 3=cs, 4-5=cur(long), 6-7=high(long) */
+    J("    .limit stack 8\n");
+    J("    .limit locals 10\n");
+    /* locals: 0=Low,1=High,2=Var,3=cs, 4-5=low(long),6-7=high(long),8-9=cur(long) */
+
+    /* Fast path: if cs==0 AND Var is already bound (tag!="var"), do range check */
+    J("    iload_3\n"); J("    ifne p_between_3_generate\n");  /* cs!=0 → generate mode */
+    J("    aload_2\n");
+    J("    invokestatic %s/pj_deref(Ljava/lang/Object;)Ljava/lang/Object;\n", pj_classname);
+    JI("checkcast", "[Ljava/lang/Object;");
+    JI("iconst_0", ""); JI("aaload", "");     /* tag */
+    JI("ldc", "\"var\"");
+    JI("invokevirtual", "java/lang/Object/equals(Ljava/lang/Object;)Z");
+    J("    ifne p_between_3_generate\n");     /* var is unbound → generate mode */
+
+    /* Bound var fast path: check Low =< Var =< High */
+    J("    aload_0\n");
+    J("    invokestatic %s/pj_deref(Ljava/lang/Object;)Ljava/lang/Object;\n", pj_classname);
+    JI("checkcast", "[Ljava/lang/Object;"); JI("iconst_1", ""); JI("aaload", "");
+    JI("checkcast", "java/lang/String"); JI("invokestatic", "java/lang/Long/parseLong(Ljava/lang/String;)J");
+    J("    lstore 4\n");   /* low */
+    J("    aload_1\n");
+    J("    invokestatic %s/pj_deref(Ljava/lang/Object;)Ljava/lang/Object;\n", pj_classname);
+    JI("checkcast", "[Ljava/lang/Object;"); JI("iconst_1", ""); JI("aaload", "");
+    JI("checkcast", "java/lang/String"); JI("invokestatic", "java/lang/Long/parseLong(Ljava/lang/String;)J");
+    J("    lstore 6\n");   /* high */
+    J("    aload_2\n");
+    J("    invokestatic %s/pj_deref(Ljava/lang/Object;)Ljava/lang/Object;\n", pj_classname);
+    JI("checkcast", "[Ljava/lang/Object;"); JI("iconst_1", ""); JI("aaload", "");
+    JI("checkcast", "java/lang/String"); JI("invokestatic", "java/lang/Long/parseLong(Ljava/lang/String;)J");
+    J("    lstore 8\n");   /* var_val */
+    /* check low <= var_val */
+    J("    lload 4\n"); J("    lload 8\n"); JI("lcmp", ""); J("    ifgt p_between_3_fail\n");
+    /* check var_val <= high */
+    J("    lload 8\n"); J("    lload 6\n"); JI("lcmp", ""); J("    ifgt p_between_3_fail\n");
+    /* succeed deterministically: return {MAX_INT} to signal no retry needed */
+    JI("iconst_1", ""); JI("anewarray", "java/lang/Object");
+    JI("dup", ""); JI("iconst_0", "");
+    JI("ldc", "2147483647");
+    JI("invokestatic", "java/lang/Integer/valueOf(I)Ljava/lang/Integer;");
+    JI("aastore", "");
+    JI("areturn", "");
+
+    /* Generate mode: iterate cur = Low + cs */
+    J("p_between_3_generate:\n");
     J("    aload_0\n");
     J("    invokestatic %s/pj_deref(Ljava/lang/Object;)Ljava/lang/Object;\n", pj_classname);
     JI("checkcast", "[Ljava/lang/Object;");
@@ -6256,7 +6297,7 @@ static void pj_emit_between_builtin(void) {
     J("    iload_3\n");
     JI("i2l", "");
     JI("ladd", "");
-    J("    lstore 4\n");                /* cur = Low + cs */
+    J("    lstore 8\n");                /* cur = Low + cs */
     J("    aload_1\n");
     J("    invokestatic %s/pj_deref(Ljava/lang/Object;)Ljava/lang/Object;\n", pj_classname);
     JI("checkcast", "[Ljava/lang/Object;");
@@ -6265,11 +6306,11 @@ static void pj_emit_between_builtin(void) {
     JI("checkcast", "java/lang/String");
     JI("invokestatic", "java/lang/Long/parseLong(Ljava/lang/String;)J");
     J("    lstore 6\n");                /* high */
-    J("    lload 4\n");
+    J("    lload 8\n");
     J("    lload 6\n");
     JI("lcmp", "");
     J("    ifgt p_between_3_fail\n");   /* cur > high → fail */
-    J("    lload 4\n");
+    J("    lload 8\n");
     J("    invokestatic %s/pj_term_int(J)[Ljava/lang/Object;\n", pj_classname);
     J("    aload_2\n");
     J("    invokestatic %s/pj_unify(Ljava/lang/Object;Ljava/lang/Object;)Z\n", pj_classname);
