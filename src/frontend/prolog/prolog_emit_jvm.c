@@ -51,6 +51,18 @@ static void JI(const char *instr, const char *ops) {
         J("    %s\n", instr);
 }
 
+/* Emit:  ldc "escaped_string"
+ * Escapes backslash and double-quote so Jasmin accepts any atom name. */
+static void pj_ldc_str(const char *s) {
+    J("    ldc \"");
+    for (; s && *s; s++) {
+        if      (*s == '\\') J("\\\\");
+        else if (*s == '"')  J("\\\"");
+        else                 fputc(*s, pj_out);
+    }
+    J("\"\n");
+}
+
 static void JL(const char *label, const char *instr, const char *ops) {
     if (label && label[0]) J("%s:\n", label);
     JI(instr, ops);
@@ -3010,7 +3022,7 @@ static void pj_emit_term(EXPR_t *e, int *var_locals, int n_vars) {
     case E_QLIT: {
         /* atom — push atom term */
         pj_intern_atom(e->sval ? e->sval : "");
-        J("    ldc \"%s\"\n", e->sval ? e->sval : "");
+        pj_ldc_str(e->sval ? e->sval : "");
         J("    invokestatic %s/pj_term_atom(Ljava/lang/String;)[Ljava/lang/Object;\n",
           pj_classname);
         break;
@@ -3044,7 +3056,7 @@ static void pj_emit_term(EXPR_t *e, int *var_locals, int n_vars) {
         int arity = e->nchildren;
         if (arity == 0) {
             /* arity-0 compound = atom */
-            J("    ldc \"%s\"\n", e->sval ? e->sval : "");
+            pj_ldc_str(e->sval ? e->sval : "");
             J("    invokestatic %s/pj_term_atom(Ljava/lang/String;)[Ljava/lang/Object;\n",
               pj_classname);
         } else {
@@ -3059,7 +3071,7 @@ static void pj_emit_term(EXPR_t *e, int *var_locals, int n_vars) {
             /* [1] = functor string */
             JI("dup", "");
             JI("iconst_1", "");
-            J("    ldc \"%s\"\n", e->sval ? e->sval : "");
+            pj_ldc_str(e->sval ? e->sval : "");
             JI("aastore", "");
             /* [2..] = args */
             for (int ai = 0; ai < arity; ai++) {
