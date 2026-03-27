@@ -1,6 +1,6 @@
 #SRC: JCON
 
-procedure main();
+procedure main()
    local i, s, x;
 
    ws();		# dump initial state
@@ -56,7 +56,7 @@ procedure main();
    }
 end
 
-procedure setpos(n);
+procedure setpos(n)
    writes("p := ", right(image(n),10));
    if &pos := n then
       writes("       ");
@@ -66,7 +66,7 @@ procedure setpos(n);
    return;
 end
 
-procedure setsubj(s);
+procedure setsubj(s)
    writes("s := ", right(image(s),10));
    if &subject := s then
       writes("       ");

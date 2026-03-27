@@ -1,4 +1,4 @@
-procedure main();
+procedure main()
   local line;
   while line := read() do
     write(line);

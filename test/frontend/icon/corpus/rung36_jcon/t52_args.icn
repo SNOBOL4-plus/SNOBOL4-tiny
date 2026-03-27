@@ -2,7 +2,7 @@
 #
 #  test various numbers of args
 
-procedure main();
+procedure main()
    local plist, alist, e;
 
    plist := [3, -2, "image", proc("~===", 2), 
@@ -33,61 +33,61 @@ end
 
 #  p0 through p12 do their own output and then fail
 
-procedure p0();
+procedure p0()
    note("p0");
 end
 
-procedure p1(a);
+procedure p1(a)
    note("p1", a);
 end
 
-procedure p2(a, b);
+procedure p2(a, b)
    note("p2", a, b);
 end
 
-procedure p3(a, b, c);
+procedure p3(a, b, c)
    note("p3", a, b, c);
 end
 
-procedure p4(a, b, c, d);
+procedure p4(a, b, c, d)
    note("p4", a, b, c, d);
 end
 
-procedure p5(a, b, c, d, e);
+procedure p5(a, b, c, d, e)
    note("p5", a, b, c, d, e);
 end
 
-procedure p6(a, b, c, d, e, f);
+procedure p6(a, b, c, d, e, f)
    note("p6", a, b, c, d, e, f);
 end
 
-procedure p7(a, b, c, d, e, f, g);
+procedure p7(a, b, c, d, e, f, g)
    note("p7", a, b, c, d, e, f, g);
 end
 
-procedure p8(a, b, c, d, e, f, g, h);
+procedure p8(a, b, c, d, e, f, g, h)
    note("p8", a, b, c, d, e, f, g, h);
 end
 
-procedure p9(a, b, c, d, e, f, g, h, i);
+procedure p9(a, b, c, d, e, f, g, h, i)
    note("p9", a, b, c, d, e, f, g, h, i);
 end
 
-procedure p10(a, b, c, d, e, f, g, h, i, j);
+procedure p10(a, b, c, d, e, f, g, h, i, j)
    note("p10", a, b, c, d, e, f, g, h, i, j);
 end
 
-procedure p11(a, b, c, d, e, f, g, h, i, j, k);
+procedure p11(a, b, c, d, e, f, g, h, i, j, k)
    note("p11", a, b, c, d, e, f, g, h, i, j, k);
 end
 
-procedure p12(a, b, c, d, e, f, g, h, i, j, k, l);
+procedure p12(a, b, c, d, e, f, g, h, i, j, k, l)
    note("p12", a, b, c, d, e, f, g, h, i, j, k, l);
 end
 
 
 
-procedure note(a[]);
+procedure note(a[])
    local e;
 
    every e := !a do writes(\e | "~", " ");

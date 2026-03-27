@@ -50,7 +50,7 @@
 
 global n, solution;
 
-procedure main(args);
+procedure main(args)
    local i, opts;
 
    n := integer(args[1]) | 6;
@@ -63,7 +63,7 @@ end
 
 # q(c) - place a queen in column c.
 #
-procedure q(c);
+procedure q(c)
    local r;
    static up, down, rows;
    initial {
@@ -81,7 +81,7 @@ end
 
 # show the solution on a chess board.
 #
-procedure show();
+procedure show()
    static count, line, border;
    initial {
       count := 0;

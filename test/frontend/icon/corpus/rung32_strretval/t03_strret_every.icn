@@ -1,6 +1,6 @@
-procedure tag(s);
+procedure tag(s)
   return "[" || s || "]";
 end
-procedure main();
+procedure main()
   every write(tag("a" | "b" | "c"));
 end

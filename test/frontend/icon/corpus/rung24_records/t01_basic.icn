@@ -1,5 +1,5 @@
 record point(x, y)
-procedure main();
+procedure main()
   p := point(3, 4);
   write(p.x);
   write(p.y);

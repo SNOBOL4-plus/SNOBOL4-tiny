@@ -1,6 +1,6 @@
 #SRC: V9GEN
 
-procedure main();
+procedure main()
    write("This test of floating-point arithmetic is likely to show");
    write("differences from platform to platform because of differences");
    write("in floating-point precision and details of the routines that");
@@ -14,7 +14,7 @@ procedure main();
    p6();
 end
 
-procedure p4();
+procedure p4()
    write("Image(2.0) ----> ",Image(Image(2.0)) | "none");
    write("string(2.0) ----> ",Image(string(2.0)) | "none");
    write("string(2.7) ----> ",Image(string(2.7)) | "none");
@@ -37,7 +37,7 @@ procedure p4();
    write("-1.0 ----> ",Image(-1.0) | "none");
 end
 
-procedure p5();
+procedure p5()
    write("real(2) ----> ",Image(real(2)) | "none");
    write("real(2.0) ----> ",Image(real(2.0)) | "none");
    write("real(2.7) ----> ",Image(real(2.7)) | "none");
@@ -101,7 +101,7 @@ procedure p5();
    write("-36. * 9 ----> ",Image(-36. * 9) | "none");
 end
 
-procedure p6();
+procedure p6()
    write("36 * -9. ----> ",Image(36 * -9.) | "none");
    write("-36. * -9. ----> ",Image(-36. * -9.) | "none");
    write("36. / 9 ----> ",Image(36. / 9) | "none");
@@ -159,7 +159,7 @@ procedure p6();
    write("-36. ^ -9 ----> ",Image(-36. ^ -9) | "none");
 end
 
-procedure Image(x);
+procedure Image(x)
    local head, tail, exp, span;
 
    span := 9;

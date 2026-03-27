@@ -2,7 +2,7 @@
 
 # test sorting and copying
 
-procedure main(args);
+procedure main(args)
    listtest();
    rectest();
    tbltest();
@@ -14,7 +14,7 @@ end
 
 #  listtest() -- test sorting of lists and sets
 
-procedure listtest();
+procedure listtest()
    local n, x, S, L1, L2, L3;
 
    every n := (0 to 10) | 23 | 47 | 91 do {
@@ -47,7 +47,7 @@ record r1(a);
 record r2(a,b);
 record r5(a,b,c,d,e);
 
-procedure rectest();
+procedure rectest()
    write();
    wlist(sort(r0()));
    wlist(sort(copy(r0()),));
@@ -64,7 +64,7 @@ end
 
 #  tbltest() -- test sorting of tables
 
-procedure tbltest();
+procedure tbltest()
    local T, L;
 
    T := table();
@@ -99,7 +99,7 @@ end
 
 #  randval() -- return random integer, real, string, or cset value
 
-procedure randval();
+procedure randval()
    return case ?4 of {
       1:  ?999;					# 000 - 999
       2:  ?99 / 10.0;				# 0.0 - 9.9
@@ -112,7 +112,7 @@ end
 #  check that two lists have identical components
 #  and that they are in ascending order
 
-procedure check(a, b);
+procedure check(a, b)
    local i, ai, ai1, bi, d;
 
    if *a ~= *b then
@@ -138,7 +138,7 @@ end
 
 #  write list
 
-procedure wlist(L);
+procedure wlist(L)
    writes(*L, ":");
    every writes(right(!L, 4) | "\n");
    return;
@@ -148,7 +148,7 @@ end
 
 #  test copy(), especially that copies are really distinct
 
-procedure copytest();
+procedure copytest()
    local L1, L2, S1, S2, T1, T2, R1, R2;
 
    write();
@@ -194,7 +194,7 @@ end
 
 #  sort different types together
 
-procedure messtest();
+procedure messtest()
    local L1, L2, L3;
 
    write();
@@ -220,7 +220,7 @@ procedure messtest();
    return;
 end
 
-procedure wsortf(L, n);
+procedure wsortf(L, n)
    local e, s;
 
    write();

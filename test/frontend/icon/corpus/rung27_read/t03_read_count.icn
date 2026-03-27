@@ -1,4 +1,4 @@
-procedure main();
+procedure main()
   local n;
   n := 0;
   while read() do

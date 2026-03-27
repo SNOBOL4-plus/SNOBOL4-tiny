@@ -2,7 +2,7 @@
 
 record array(a,b,c,d,e,f,g);
 
-procedure p1();
+procedure p1()
    write(" ----> ",image() | "none");
    write("s := \"abcd\" ----> ",image(s := "abcd") | "none");
    write("s := \"x\" ----> ",image(s := "x") | "none");
@@ -16,7 +16,7 @@ procedure p1();
    write("s ----> ",image(s) | "none");
 end
 
-procedure p2();
+procedure p2()
    write("s := \"x\" ----> ",image(s := "x") | "none");
    write("s ||:= \"abc\" ----> ",image(s ||:= "abc") | "none");
    write("s ----> ",image(s) | "none");
@@ -30,7 +30,7 @@ procedure p2();
    write("s ==:= \"X\" ----> ",image(s ==:= "X") | "none");
 end
 
-procedure p3();
+procedure p3()
    write("s ----> ",image(s) | "none");
    write("s := \"x\" ----> ",image(s := "x") | "none");
    write("s ==:= \"abc\" ----> ",image(s ==:= "abc") | "none");
@@ -44,7 +44,7 @@ procedure p3();
    write("s[0-:6] := \"u\" ----> ",image(s[0-:6] := "u") | "none");
 end
 
-procedure p4();
+procedure p4()
    write("{s[1:0] :=: s[0:1];s} ----> ",image({s[1:0] :=: s[0:1];s}) | "none");
    write("\"x\" << \"x\" ----> ",image("x" << "x") | "none");
    write("\"x\" << \"X\" ----> ",image("x" << "X") | "none");
@@ -58,7 +58,7 @@ procedure p4();
    write("\"x\" >> \"x\" ----> ",image("x" >> "x") | "none");
 end
 
-procedure p5();
+procedure p5()
    write("\"x\" >> \"X\" ----> ",image("x" >> "X") | "none");
    write("\"X\" >> \"x\" ----> ",image("X" >> "x") | "none");
    write("\"x\" == \"x\" ----> ",image("x" == "x") | "none");
@@ -71,7 +71,7 @@ procedure p5();
    write("every i := 1 to 9 do write(repl(\"2\",i) + 1) ----> ",image(every i := 1 to 9 do write(repl("2",i) + 1)) | "none");
 end
 
-procedure p6();
+procedure p6()
    write("every i := 1 to 30 do write(integer(repl(\"0\",i) || \"2\")) ----> ",image(every i := 1 to 30 do write(integer(repl("0",i) || "2"))) | "none");
    write("every i := 1 to 30 do write((repl(\"0\",i) || \"2\") + 1) ----> ",image(every i := 1 to 30 do write((repl("0",i) || "2") + 1)) | "none");
    write("c1 := 'abcde' ----> ",image(c1 := 'abcde') | "none");
@@ -83,7 +83,7 @@ procedure p6();
    write("3 ~=== *\"abc\" ----> ",image(3 ~=== *"abc") | "none");
 end
 
-procedure p7();
+procedure p7()
    write("'abc' ~=== ('abc' ++ '') ----> ",image('abc' ~=== ('abc' ++ '')) | "none");
    write("any('aeiou',&lcase) ----> ",image(any('aeiou',&lcase)) | "none");
    write("any('aeiou',&ucase) ----> ",image(any('aeiou',&ucase)) | "none");
@@ -97,7 +97,7 @@ procedure p7();
    write("many(&lcase,\"this is a Test\") ----> ",image(many(&lcase,"this is a Test")) | "none");
 end
 
-procedure p8();
+procedure p8()
    write("many(&lcase,\"this is a Test\",5) ----> ",image(many(&lcase,"this is a Test",5)) | "none");
    write("many(&lcase,\"this is a Test\",5,9) ----> ",image(many(&lcase,"this is a Test",5,9)) | "none");
    write("find(\"aa\",\"xxaaaaaa\") ----> ",image(find("aa","xxaaaaaa")) | "none");
@@ -111,11 +111,11 @@ procedure p8();
    write("bal(,,,\"()+()\") ----> ",image(bal(,,,"()+()")) | "none");
 end
 
-procedure p9();
+procedure p9()
    write("bal(&cset,,,\"()+()\") ----> ",image(bal(&cset,,,"()+()")) | "none");
 end
 
-procedure main();
+procedure main()
    p1();
    p2();
    p3();

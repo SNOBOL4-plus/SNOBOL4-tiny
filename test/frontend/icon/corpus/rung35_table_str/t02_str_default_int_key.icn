@@ -1,4 +1,4 @@
-procedure main();
+procedure main()
   local t;
   t := table("none");
   t[1] := "yes";

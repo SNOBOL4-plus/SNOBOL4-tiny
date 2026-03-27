@@ -1,6 +1,6 @@
 record person(name, age)
 record coord(x, y)
-procedure main();
+procedure main()
   c := coord(5, 6);
   write(c.x + c.y);
 end

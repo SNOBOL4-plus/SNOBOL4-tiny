@@ -2,7 +2,7 @@
 
 #  I/O test -- writes ./tmp1 and ./tmp2 as well as stdout
 
-procedure main();
+procedure main()
    local L, f, m, n, t1, t2;
 
    L := [&input, &output, &errout,
@@ -94,7 +94,7 @@ end
 
 #  wfile(name, mode, s) -- break apart string and write file
 
-procedure wfile(name, mode, s);
+procedure wfile(name, mode, s)
    local f;
 
    write();
@@ -120,7 +120,7 @@ end
 
 #  rfile(name) -- read and echo file contents (several different ways)
 
-procedure rfile(name);
+procedure rfile(name)
    local f, i;
 
    writes("read  ", name, ":\t");
@@ -165,7 +165,7 @@ end
 
 #  tsys(s) -- test system call
 
-procedure tsys(s);
+procedure tsys(s)
    write("$ ", s);
    system(s);
    return;
@@ -174,7 +174,7 @@ end
 
 #  tpipe() -- test pipes
 
-procedure tpipe();
+procedure tpipe()
    local f, p;
 
    # very simple case

@@ -1,8 +1,8 @@
 # rung02 t01: procedure add(x,y) — tests param passing
-procedure add(x, y);
+procedure add(x, y)
   return x + y;
 end
 
-procedure main();
+procedure main()
   every write(add(3, 4));
 end

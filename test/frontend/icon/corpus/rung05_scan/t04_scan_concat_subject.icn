@@ -1,4 +1,4 @@
 # rung05 t04: scan of concat result
-procedure main();
+procedure main()
   ("foo" || "bar") ? write(&subject);
 end

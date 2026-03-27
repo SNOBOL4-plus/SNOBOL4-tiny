@@ -2,7 +2,7 @@
 
 # test maintenance of scanning environments.
 
-procedure main();
+procedure main()
 	write("simple");
 	"fghjkl" ? {
 		write(tab(3));
@@ -44,7 +44,7 @@ procedure main();
 	}
 end
 
-procedure foo();
+procedure foo()
 	suspend move(1);
 	"zxc" ? suspend upto(&lcase);
 	suspend upto(&lcase);

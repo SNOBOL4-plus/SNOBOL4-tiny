@@ -2,7 +2,7 @@
 
 # table test
 
-procedure main();
+procedure main()
    local k, x, y;
 
    x := table();
@@ -80,7 +80,7 @@ end
 #
 #  also checks member()
 
-procedure tdump(label, T);
+procedure tdump(label, T)
    local x;
 
    writes(right(label, 10), " :", right(*T, 2), " :");

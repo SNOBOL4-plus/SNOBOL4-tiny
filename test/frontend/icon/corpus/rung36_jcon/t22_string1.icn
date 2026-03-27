@@ -2,7 +2,7 @@
 
 # string test -- including operations on string *constants*
 
-procedure main();
+procedure main()
    local s, t;
 
    s := "abcde";

@@ -1,6 +1,6 @@
 #SRC: V9GEN
 
-procedure main(a);
+procedure main(a)
    local x, l0, l1, l2, l3, l4, l5, l6, l7, l8, l9;
    static y;
    variable("a") := 1;
@@ -33,7 +33,7 @@ end
 
 record complex(r,i);
 
-procedure main2(a);
+procedure main2(a)
    local T, L, L1;
    static s;
    every write(image(name(main | T | L | s | a)));

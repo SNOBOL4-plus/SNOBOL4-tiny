@@ -8,7 +8,7 @@
 #  the strings separated by semicolons.  It then diagrams all the
 #  intersections of the two strings in a common character.
 
-procedure main();
+procedure main()
    local line, j;
    while line := read() do { 
       write();
@@ -17,14 +17,14 @@ procedure main();
        }
 end
 
-procedure cross(s1,s2);
+procedure cross(s1,s2)
    local j, k;
    every j := upto(s2,s1) do
       every k := upto(s1[ j ],s2) do
          xprint(s1,s2,j,k);
 end
 
-procedure xprint(s1,s2,j,k);
+procedure xprint(s1,s2,j,k)
    write();
    every write(right(s2[ 1 to k-1 ],j));
    write(s1);

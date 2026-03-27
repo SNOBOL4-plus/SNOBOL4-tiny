@@ -17,7 +17,7 @@ global ptab;
 
 
 
-procedure main(args);
+procedure main(args)
    local f, line, p, l, tlocal, ttotal, pctlocal, pcttotal, sorttotal;
 
    if args[1] == "-t" then
@@ -72,7 +72,7 @@ end
 
 
 
-procedure lookup(s);
+procedure lookup(s)
    local p;
    initial ptab := table();
 
@@ -84,7 +84,7 @@ end
 
 
 
-procedure accumulate();
+procedure accumulate()
    local count, caller, callee, time, p, q;
 
    count := integer(tab(many(&digits)));
@@ -112,7 +112,7 @@ end
 
 
 
-procedure fixname(s);
+procedure fixname(s)
    s ? {
       # strip "meaningless" prefix
       ="jcon/" | (="java/" & tab(upto('/') + 1)) | (="p_l$" & tab(upto('$')));
@@ -124,7 +124,7 @@ end
 
 #  pad(s, n) -- pad string to length n, never truncating
 
-procedure pad(s, n);
+procedure pad(s, n)
    if *s < n then
       return right(s, n);
    else

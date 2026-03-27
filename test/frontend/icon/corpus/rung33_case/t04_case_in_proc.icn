@@ -1,11 +1,11 @@
-procedure classify(n);
+procedure classify(n)
   return case n of {
     1: "one";
     2: "two";
     default: "many";
   };
 end
-procedure main();
+procedure main()
   write(classify(1));
   write(classify(2));
   write(classify(9));

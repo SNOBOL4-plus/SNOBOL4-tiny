@@ -1,7 +1,7 @@
-procedure shout(s);
+procedure shout(s)
   return s || "!";
 end
-procedure main();
+procedure main()
   r := shout("hi");
   write(r);
   write(shout("bye"));

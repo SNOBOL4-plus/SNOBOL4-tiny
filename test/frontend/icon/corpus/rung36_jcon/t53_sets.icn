@@ -2,7 +2,7 @@
 
 # set test
 
-procedure main();
+procedure main()
    local x, y, z;
 
    wset("empty", x := set());
@@ -70,7 +70,7 @@ end
 #  dump a set, assuming it contains nothing other than:
 #	&null, 0 - 9, 0.0 - 9.0, "", "a" - "e", '', 'cs'
 
-procedure wset(label, S);
+procedure wset(label, S)
    local x;
 
    writes(right(label, 10), " :", right(*S, 2), " :");

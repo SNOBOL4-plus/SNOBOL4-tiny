@@ -1,13 +1,13 @@
 #SRC: JCON
 
-procedure main();
+procedure main()
 	foo();
 	foo();
 	p();
 	p();
 end
 
-procedure foo();
+procedure foo()
 	static a;
 
 	write(image(a));
@@ -15,7 +15,7 @@ procedure foo();
 end
 
 
-procedure p();
+procedure p()
    static c;
    initial c := 0;
 

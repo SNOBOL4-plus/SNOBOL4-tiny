@@ -34,7 +34,7 @@ $endif;#comment on if terminator
 
 # main test program
 
-procedure main();
+procedure main()
    # write values from definitions; test no substitution in string constant
    write("abc,def,ghi,xx,yy: ", abc, " ", def, " ", ghi, " ", xx, " ", yy);
 
@@ -92,7 +92,7 @@ end
 #  precheck (v, s, p) -- check that s is in &features iff v is non-null;
 #			 always print presence/absence if p is non-null
 
-procedure precheck (v, s, p);
+procedure precheck (v, s, p)
    if s == &features then {
       if /v then
 	 write ("error: no predefined symbol for ", s); 

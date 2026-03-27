@@ -1,5 +1,5 @@
 record box(w, h)
-procedure main();
+procedure main()
   b := box(10, 20);
   b.w := 99;
   write(b.w);

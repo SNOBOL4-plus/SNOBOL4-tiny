@@ -1,4 +1,4 @@
-procedure main();
+procedure main()
   s := "hello";
   write(*s);
 end

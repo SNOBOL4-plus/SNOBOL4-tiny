@@ -1,10 +1,10 @@
 global greeting;
 
-procedure setup();
+procedure setup()
   greeting := "hello";
 end
 
-procedure main();
+procedure main()
   setup();
   write(greeting);
 end

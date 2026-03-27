@@ -1,5 +1,5 @@
 record point(x, y);
-procedure main();
+procedure main()
   L := [point(3, 10), point(1, 20), point(2, 30)];
   S := sortf(L, 1);
   every p := !S do write(p.x);

@@ -1,5 +1,5 @@
 # rung06 t02: any() fails if first char not in cset; write not called
-procedure main();
+procedure main()
   local found;
   found := 0;
   "xyz" ? (any('aeiou') & (found := 1));

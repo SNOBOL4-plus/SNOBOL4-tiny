@@ -4,7 +4,7 @@
 #  uses string invocation of operations
 
 
-procedure main();
+procedure main()
    local i, r, c, s;
 
    i := 1;
@@ -29,7 +29,7 @@ procedure main();
 end
 
 
-procedure toby(i, j, k);
+procedure toby(i, j, k)
    local n, s;
    s := image(i) || " to " || image(j) || " by " || image(k) || ":";
    writes(left(s, 24));
@@ -39,7 +39,7 @@ procedure toby(i, j, k);
 end
 
 
-procedure unop(o, i, r, c, s);
+procedure unop(o, i, r, c, s)
    write(left(o || "x", 7),
       right(o(i) | "---", 6),
       right(o(r) | "---", 6),
@@ -49,7 +49,7 @@ procedure unop(o, i, r, c, s);
 end
 
 
-procedure binop(o, i, r, c, s);
+procedure binop(o, i, r, c, s)
    write("x ", left(o || " y", 5),
       right(o(i, r) | "---", 6),
       right(o(i, c) | "---", 6),

@@ -3,7 +3,7 @@
 record simple(f);
 record rec(f1, f2);
 
-procedure main();
+procedure main()
    local a, b;
 
    a := rec();

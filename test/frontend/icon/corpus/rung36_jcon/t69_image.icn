@@ -5,7 +5,7 @@
 record point(x,y);
 record circle(x, y, r);
 
-procedure main(args);
+procedure main(args)
    local c1, c2, c3, c4, s;
 
    dump();
@@ -59,7 +59,7 @@ procedure main(args);
 end
 
 
-procedure dump(x);
+procedure dump(x)
    local n;
 
    if n := serial(x) then
@@ -71,13 +71,13 @@ procedure dump(x);
 end
 
 
-procedure convert(x);
+procedure convert(x)
    write(pad(x), pad(integer(x) | &null), pad(real(x) | &null),
       pad(numeric(x) | &null), pad(string(x) | &null), pad(cset(x) | &null));
    return;
 end
 
 
-procedure pad(x);
+procedure pad(x)
    return right(image(\x) | "---", 13);
 end

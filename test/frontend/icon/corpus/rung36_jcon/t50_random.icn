@@ -6,7 +6,7 @@
 
 record r10(a,b,c,d,e,f,g,h,i,j);
 
-procedure main();
+procedure main()
    local r;
 
    rtest();
@@ -24,7 +24,7 @@ procedure main();
    rtest();
 end
 
-procedure rtest();
+procedure rtest()
    local i;
    static L, S, T, R;
    initial {

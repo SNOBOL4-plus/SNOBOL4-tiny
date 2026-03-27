@@ -4,7 +4,7 @@ record array(a,b,c,d,e,f,g);
 global F, f;
 global w, t;
 
-procedure p1();
+procedure p1()
    write(" ----> ",image() | "none");
    write("copy(1) ----> ",image(copy(1)) | "none");
    write("copy(\"abc\") ----> ",image(copy("abc")) | "none");
@@ -17,7 +17,7 @@ procedure p1();
    write("w := copy(write) ----> ",image(w := copy(write)) | "none");
 end
 
-procedure p2();
+procedure p2()
    write("w(image(w)) ----> ",image(w(image(w))) | "none");
    write("copy(array()) ----> ",image(copy(array())) | "none");
    write("copy := copy(copy) ----> ",image(copy := copy(copy)) | "none");
@@ -30,7 +30,7 @@ procedure p2();
    write("every i := 1 to 100 do t[i] := i ----> ",image(every i := 1 to 100 do t[i] := i) | "none");
 end
 
-procedure p3();
+procedure p3()
    write("x := sort(t) ----> ",image(x := sort(t)) | "none");
    write("every write((!x)[2]) ----> ",image(every write((!x)[2])) | "none");
    write("every write(center(\"abcdef\",1 to 20,\" \" | \"0\" | \"=-\")) ----> ",image(every write(center("abcdef",1 to 20," " | "0" | "=-"))) | "none");
@@ -44,7 +44,7 @@ procedure p3();
    write("repl(&cset,0) ----> ",image(repl(&cset,0)) | "none");
 end
 
-procedure p4();
+procedure p4()
    write("trim(&lcase) ----> ",image(trim(&lcase)) | "none");
    write("trim(&lcase,&lcase) ----> ",image(trim(&lcase,&lcase)) | "none");
    write("image(2) ----> ",image(image(2)) | "none");
@@ -54,7 +54,7 @@ procedure p4();
    write("image(&input) ----> ",image(image(&input)) | "none");
 end
 
-procedure p5();
+procedure p5()
    write("image() ----> ",image(image()) | "none");
    write("image(&null) ----> ",image(image(&null)) | "none");
    write("image([1,2,3]) ----> ",image(image([1,2,3])) | "none");
@@ -68,7 +68,7 @@ procedure p5();
    write("image(repl) ----> ",image(image(repl)) | "none");
 end
 
-procedure p6();
+procedure p6()
    write("image(main) ----> ",image(image(main)) | "none");
    write("image(repl(&lcase,10)) ----> ",image(image(repl(&lcase,10))) | "none");
    write("image(array) ----> ",image(image(array)) | "none");
@@ -80,7 +80,7 @@ procedure p6();
    write("string(\" 2\") ----> ",image(string(" 2")) | "none");
 end
 
-procedure p7();
+procedure p7()
    write("string(\"2 \") ----> ",image(string("2 ")) | "none");
    write("string(\"+2\") ----> ",image(string("+2")) | "none");
    write("string(\"-2\") ----> ",image(string("-2")) | "none");
@@ -93,7 +93,7 @@ procedure p7();
    write("string(\"+\") ----> ",image(string("+")) | "none");
 end
 
-procedure p8();
+procedure p8()
    write("string(\"22222222222222222222222222222222222222222222222222222222222\") ----> ",image(string("22222222222222222222222222222222222222222222222222222222222")) | "none");
    write("string(\"7r4\") ----> ",image(string("7r4")) | "none");
    write("string(\"4r7\") ----> ",image(string("4r7")) | "none");
@@ -102,7 +102,7 @@ procedure p8();
    write("string(\"16rff\") ----> ",image(string("16rff")) | "none");
 end
 
-procedure p9();
+procedure p9()
    write("string(\"36rcat\") ----> ",image(string("36rcat")) | "none");
    write("string(\"36Rcat\") ----> ",image(string("36Rcat")) | "none");
    write("string(\"36rCAT\") ----> ",image(string("36rCAT")) | "none");
@@ -115,7 +115,7 @@ procedure p9();
    write("type(&null) ----> ",image(type(&null)) | "none");
 end
 
-procedure p10();
+procedure p10()
    write("type([]) ----> ",image(type([])) | "none");
    write("type(table()) ----> ",image(type(table())) | "none");
    write("type(main) ----> ",image(type(main)) | "none");
@@ -126,7 +126,7 @@ procedure p10();
    write("cset(2) ----> ",image(cset(2)) | "none");
 end
 
-procedure p11();
+procedure p11()
    write("cset(\"2\") ----> ",image(cset("2")) | "none");
    write("cset(\" 2\") ----> ",image(cset(" 2")) | "none");
    write("cset(\"2 \") ----> ",image(cset("2 ")) | "none");
@@ -140,7 +140,7 @@ procedure p11();
    write("cset(\"-\") ----> ",image(cset("-")) | "none");
 end
 
-procedure p12();
+procedure p12()
    write("cset(\"+\") ----> ",image(cset("+")) | "none");
    write("cset(\"22222222222222222222222222222222222222222222222222222222222\") ----> ",image(cset("22222222222222222222222222222222222222222222222222222222222")) | "none");
    write("cset(\"7r4\") ----> ",image(cset("7r4")) | "none");
@@ -148,7 +148,7 @@ procedure p12();
    write("cset(\"4r 7\") ----> ",image(cset("4r 7")) | "none");
 end
 
-procedure p13();
+procedure p13()
    write("cset(\"7r 4\") ----> ",image(cset("7r 4")) | "none");
    write("cset(\"16rff\") ----> ",image(cset("16rff")) | "none");
    write("cset(\"36rcat\") ----> ",image(cset("36rcat")) | "none");
@@ -162,10 +162,10 @@ procedure p13();
    write("every write(seq(,3)) \\ 10 ----> ",image(every write(seq(,3)) \ 10) | "none");
 end
 
-procedure p14();
+procedure p14()
 end
 
-procedure main();
+procedure main()
    p1();
    p2();
    p3();
@@ -182,6 +182,6 @@ procedure main();
    p14();
 end
 
-procedure wf (v);
+procedure wf (v)
     writes(left(v,5)," ");
     end

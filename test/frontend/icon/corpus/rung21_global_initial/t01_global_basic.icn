@@ -1,10 +1,10 @@
 global counter;
 
-procedure inc();
+procedure inc()
   counter := counter + 1;
 end
 
-procedure main();
+procedure main()
   counter := 0;
   inc();
   inc();

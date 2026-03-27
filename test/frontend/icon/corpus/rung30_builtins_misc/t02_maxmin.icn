@@ -1,4 +1,4 @@
-procedure main();
+procedure main()
   write(max(3, 7));
   write(min(3, 7));
   write(max(5, 5));

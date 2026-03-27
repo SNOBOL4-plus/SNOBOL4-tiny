@@ -1,4 +1,4 @@
-procedure main();
+procedure main()
   a := "foo";
   b := "bar";
   a ||:= "-";

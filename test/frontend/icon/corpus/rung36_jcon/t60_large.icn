@@ -1,6 +1,6 @@
 #SRC: V9GEN
 
-procedure main ();
+procedure main ()
    local big, med1, med2, small, i;
 
    if not(&features == "large integers") then
@@ -30,9 +30,9 @@ procedure main ();
       }
 end
 
-procedure optest (op, a, b);
+procedure optest (op, a, b)
     write (a, " ", op, " ", b, " = ", op(a,b)|"none");
 end
 
-procedure foo(x);
+procedure foo(x)
 end

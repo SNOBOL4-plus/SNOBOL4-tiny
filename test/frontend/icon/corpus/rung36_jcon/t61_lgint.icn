@@ -3,7 +3,7 @@
 
 # test large integer calculations
 
-procedure main();
+procedure main()
    local a, b, primes;
    primes := [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37,
       41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
@@ -93,7 +93,7 @@ procedure minpower(b);			# find minimum power that is a large int
    write(right(b,2), " ^", right(e, 3), " =", right(b ^ e, 22));
 end
 
-procedure bigexp(v);
+procedure bigexp(v)
    local x;
    &error := -1;
    write("       v = ", v);

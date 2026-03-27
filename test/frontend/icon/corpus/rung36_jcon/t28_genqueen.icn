@@ -80,7 +80,7 @@ procedure solvequeen (c);        # Column for next queen placement
 
 # writeboard() -- Write an image of the board with the queen positions
 # represented by Qs.
-procedure writeboard ();
+procedure writeboard ()
    local
       r,                        # Index over rows during print
       c,                        # Column of queen in row r

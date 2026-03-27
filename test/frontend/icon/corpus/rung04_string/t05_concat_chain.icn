@@ -1,5 +1,5 @@
 # rung04 t05: concat chain
-procedure main();
+procedure main()
   local a;
   local b;
   a := "hel";

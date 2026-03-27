@@ -3,7 +3,7 @@
 
 # test type conversion and error handling in entab/detab
 
-procedure main ();
+procedure main ()
    local s;
 
    s := "rutabaga";
@@ -30,7 +30,7 @@ end
 
 # ferr(err,func,arglst) -- call func(args), verify that error "err" is produced
 
-procedure ferr (err, func, args);
+procedure ferr (err, func, args)
    local val, msg;
 
    val := "";
@@ -70,7 +70,7 @@ end
 #  The result of each entab call is then passed to detab, with results expected
 #  to match the original entab argument (or its detab, if it had any tabs).
 
-procedure endetab1 ();
+procedure endetab1 ()
    local params, line, s, t;
 
    params := setup ("=");		# start with default tabs (no args)

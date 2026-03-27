@@ -4,7 +4,7 @@
 
 record dfa(Q,S,d,q0,F);          # a DFA
 
-procedure main();
+procedure main()
 
    x := getdfa();
    every 1 to 10 do
@@ -14,7 +14,7 @@ end
 
 ## - getdfa() -- accept a dfa from input, return it
 ##
-procedure getdfa();
+procedure getdfa()
 local Q,S,d,q0,F;
 local q,a;
 
@@ -35,7 +35,7 @@ end
 
 ## readset(s) - get a set
 #
-procedure readset(s);
+procedure readset(s)
 local t1;
 
    writes(s);
@@ -47,7 +47,7 @@ end
 
 ## showdfa(msg,D) -- show a dfa
 #
-procedure showdfa(msg,D);
+procedure showdfa(msg,D)
 local q,a;
 
    every 1 to 3 do write();
@@ -72,7 +72,7 @@ end
 
 ## writeset(msg,s) -- display a set
 #
-procedure writeset(msg,s);
+procedure writeset(msg,s)
 local tmp;
    tmp := "";
    every tmp ||:= !s || ",";
@@ -84,7 +84,7 @@ end
 #
 global distab, dlists;
 
-procedure minimize(D);
+procedure minimize(D)
 local F,QF;
 local p,q,a,cs;
 
@@ -115,7 +115,7 @@ end
 
 ## marklists(l) -- recursively mark the pair of nodes
 #                  on list l.
-procedure marklists(l);
+procedure marklists(l)
 local e;
 
    if /l then return;
@@ -129,7 +129,7 @@ end
 
 ## makemdfa(D,DT) -- Use the table from the minimization
 #                    to construct the minimal dfa
-procedure makemdfa(D,DT);
+procedure makemdfa(D,DT)
 local elist, etab, qset, tlist, echeck;
 local p, q, Delta, q0;
 
@@ -168,14 +168,14 @@ end
 
 ## equiv(q,el) -- return the equivalence class in el containing q
 #
-procedure equiv(q,el);
+procedure equiv(q,el)
    every p := !el do
       if p++q == p then return p;
 end
 
 ## equivdelta(p,a,D,el) -- apply delta to equiv. classes
 #
-procedure equivdelta(p,a,D,el);
+procedure equivdelta(p,a,D,el)
 local q, r;
    q := !p;               # any state in equiv. class p
    r := D.d[q||":"||a];   # find state in original dfa
@@ -186,7 +186,7 @@ end
 
 ## finalstates(D,el) -- build the set of final states
 #
-procedure finalstates(D,el);
+procedure finalstates(D,el)
 local flist, p, q;
 
    ftab := table();
@@ -200,7 +200,7 @@ end
 
 ## diff(l1,l2) -- return the difference of two sets
 #
-procedure diff(l1,l2);
+procedure diff(l1,l2)
 local l,t1,t2;
 
    t1 := '';

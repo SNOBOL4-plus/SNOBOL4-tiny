@@ -2,7 +2,7 @@
 
 #  only for Jcon; does not work under Icon v9
 
-procedure main();
+procedure main()
 
    every write ("a. ", 16r7ffffffffffffffd to 16r7fffffffffffffff);
 
