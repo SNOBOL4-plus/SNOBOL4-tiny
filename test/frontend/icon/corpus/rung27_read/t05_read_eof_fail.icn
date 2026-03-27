@@ -1,4 +1,4 @@
-procedure main();
+procedure main()
   if read() then
     write("got line")
   else

@@ -2,7 +2,7 @@
 
 record array(a,b,c,d,e,f,g);
 
-procedure p1();
+procedure p1()
    write("integer(2) ----> ",image(integer(2)) | "none");
    write("integer(\"2\") ----> ",image(integer("2")) | "none");
    write("integer(\" 2\") ----> ",image(integer(" 2")) | "none");
@@ -14,7 +14,7 @@ procedure p1();
    write("integer(\"\") ----> ",image(integer("")) | "none");
 end
 
-procedure p2();
+procedure p2()
    write("integer(\"--2\") ----> ",image(integer("--2")) | "none");
    write("integer(\" \") ----> ",image(integer(" ")) | "none");
    write("integer(\"-\") ----> ",image(integer("-")) | "none");
@@ -22,7 +22,7 @@ procedure p2();
    write("integer(\"7r4\") ----> ",image(integer("7r4")) | "none");
 end
 
-procedure p3();
+procedure p3()
    write("integer(\"4r7\") ----> ",image(integer("4r7")) | "none");
    write("integer(\"4r 7\") ----> ",image(integer("4r 7")) | "none");
    write("integer(\"7r 4\") ----> ",image(integer("7r 4")) | "none");
@@ -36,7 +36,7 @@ procedure p3();
    write("integer := abs ----> ",image(integer := abs) | "none");
 end
 
-procedure p4();
+procedure p4()
    write("numeric(2) ----> ",image(numeric(2)) | "none");
    write("numeric(\"2\") ----> ",image(numeric("2")) | "none");
    write("numeric(\" 2\") ----> ",image(numeric(" 2")) | "none");
@@ -48,7 +48,7 @@ procedure p4();
    write("numeric(\"\") ----> ",image(numeric("")) | "none");
 end
 
-procedure p5();
+procedure p5()
    write("numeric(\"--2\") ----> ",image(numeric("--2")) | "none");
    write("numeric(\" \") ----> ",image(numeric(" ")) | "none");
    write("numeric(\"-\") ----> ",image(numeric("-")) | "none");
@@ -56,7 +56,7 @@ procedure p5();
    write("numeric(\"7r4\") ----> ",image(numeric("7r4")) | "none");
 end
 
-procedure p6();
+procedure p6()
    write("numeric(\"4r7\") ----> ",image(numeric("4r7")) | "none");
    write("numeric(\"4r 7\") ----> ",image(numeric("4r 7")) | "none");
    write("numeric(\"7r 4\") ----> ",image(numeric("7r 4")) | "none");
@@ -68,7 +68,7 @@ procedure p6();
    write("numeric(\"2r0\") ----> ",image(numeric("2r0")) | "none");
 end
 
-procedure p9();
+procedure p9()
    write("100 - - 4 ----> ",image(100 - - 4) | "none");
    write("100 --4 ----> ",image(100 --4) | "none");
    write("100- - 4 ----> ",image(100- - 4) | "none");
@@ -76,7 +76,7 @@ procedure p9();
    write("100 - -4 ----> ",image(100 - -4) | "none");
 end
 
-procedure p10();
+procedure p10()
    write("abs(1) ----> ",image(abs(1)) | "none");
    write("abs(-1) ----> ",image(abs(-1)) | "none");
    write("abs(0) ----> ",image(abs(0)) | "none");
@@ -86,28 +86,28 @@ procedure p10();
    write("-36 % -7 ----> ",image(-36 % -7) | "none");
 end
 
-procedure p11();
+procedure p11()
    write("36 * 9 ----> ",image(36 * 9) | "none");
    write("-36 * 9 ----> ",image(-36 * 9) | "none");
    write("36 * -9 ----> ",image(36 * -9) | "none");
    write("-36 * -9 ----> ",image(-36 * -9) | "none");
 end
 
-procedure p12();
+procedure p12()
    write("36 / 9 ----> ",image(36 / 9) | "none");
    write("-36 / 9 ----> ",image(-36 / 9) | "none");
    write("36 / -9 ----> ",image(36 / -9) | "none");
    write("-36 / -9 ----> ",image(-36 / -9) | "none");
 end
 
-procedure p13();
+procedure p13()
    write("36 + 9 ----> ",image(36 + 9) | "none");
    write("-36 + 9 ----> ",image(-36 + 9) | "none");
    write("36 + -9 ----> ",image(36 + -9) | "none");
    write("-36 + -9 ----> ",image(-36 + -9) | "none");
 end
 
-procedure p14();
+procedure p14()
    write("36 ^ -9 ----> ",image(36 ^ -9) | "none");
    write("1 < 1 ----> ",image(1 < 1) | "none");
    write("1 < 2 ----> ",image(1 < 2) | "none");
@@ -117,7 +117,7 @@ procedure p14();
    write("-1 < -0 ----> ",image(-1 < -0) | "none");
 end
 
-procedure p15();
+procedure p15()
    write("1 > 1 ----> ",image(1 > 1) | "none");
    write("1 > 2 ----> ",image(1 > 2) | "none");
    write("1 > 0 ----> ",image(1 > 0) | "none");
@@ -125,7 +125,7 @@ procedure p15();
    write("1 > -2 ----> ",image(1 > -2) | "none");
 end
 
-procedure p16();
+procedure p16()
    write("-1 > -0 ----> ",image(-1 > -0) | "none");
    write("1 <= 1 ----> ",image(1 <= 1) | "none");
    write("1 <= 2 ----> ",image(1 <= 2) | "none");
@@ -133,7 +133,7 @@ procedure p16();
    write("-1 <= 0 ----> ",image(-1 <= 0) | "none");
 end
 
-procedure p17();
+procedure p17()
    write("1 <= -2 ----> ",image(1 <= -2) | "none");
    write("-1 <= -0 ----> ",image(-1 <= -0) | "none");
    write("1 >= 1 ----> ",image(1 >= 1) | "none");
@@ -141,7 +141,7 @@ procedure p17();
    write("1 >= 0 ----> ",image(1 >= 0) | "none");
 end
 
-procedure p18();
+procedure p18()
    write("-1 >= 0 ----> ",image(-1 >= 0) | "none");
    write("1 >= -2 ----> ",image(1 >= -2) | "none");
    write("-1 >= -0 ----> ",image(-1 >= -0) | "none");
@@ -149,7 +149,7 @@ procedure p18();
    write("1 = 2 ----> ",image(1 = 2) | "none");
 end
 
-procedure p19();
+procedure p19()
    write("1 = 0 ----> ",image(1 = 0) | "none");
    write("-1 = 0 ----> ",image(-1 = 0) | "none");
    write("1 = -2 ----> ",image(1 = -2) | "none");
@@ -157,7 +157,7 @@ procedure p19();
    write("1 ~= 1 ----> ",image(1 ~= 1) | "none");
 end
 
-procedure p20();
+procedure p20()
    write("1 ~= 2 ----> ",image(1 ~= 2) | "none");
    write("1 ~= 0 ----> ",image(1 ~= 0) | "none");
    write("-1 ~= 0 ----> ",image(-1 ~= 0) | "none");
@@ -165,12 +165,12 @@ procedure p20();
    write("-1 ~= -0 ----> ",image(-1 ~= -0) | "none");
 end
 
-procedure p21();
+procedure p21()
    write("36 ^ -9 ----> ",image(36 ^ -9) | "none");
    write("-36 ^ -9 ----> ",image(-36 ^ -9) | "none");
 end
 
-procedure main();
+procedure main()
    p1();
    p2();
    p3();

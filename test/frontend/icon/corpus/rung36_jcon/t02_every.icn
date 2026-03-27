@@ -1,6 +1,6 @@
 #SRC: JCON
 
-procedure main();
+procedure main()
    local s;
 
    every write("a. ");
@@ -29,6 +29,6 @@ procedure main();
    every write("u. ", f ! [5]);
 end
 
-procedure f(n);
+procedure f(n)
    suspend n | -n;
 end

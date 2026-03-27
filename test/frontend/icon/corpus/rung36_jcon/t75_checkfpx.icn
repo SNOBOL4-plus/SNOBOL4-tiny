@@ -1,6 +1,6 @@
 #SRC: V9GEN
 
-procedure main();
+procedure main()
    write("This test of floating-point arithmetic is likely to show");
    write("differences from platform to platform because of differences");
    write("in floating-point precision and details of the routines that");
@@ -14,7 +14,7 @@ procedure main();
    p3();
 end
 
-procedure p1();
+procedure p1()
    write("every 1 to 10 do write(?0) ----> ",(every 1 to 10 do write(Image(?0))) | "none");
    write("every i := 1 to 50 do write(real(repl(\"0\",i) || \"2.\")) ----> ",Image(every i := 1 to 50 do write(real(repl("0",i) || "2."))) | "none");
    write("every i := 1 to 30 do write(integer(repl(\"0\",i) || \"2\")) ----> ",Image(every i := 1 to 30 do write(integer(repl("0",i) || "2"))) | "none");
@@ -38,7 +38,7 @@ procedure p1();
    write("numeric(\"0.3\") ----> ",Image(numeric("0.3")) | "none");
 end
 
-procedure p2();
+procedure p2()
    write("numeric(\" . 3\") ----> ",Image(numeric(" . 3")) | "none");
    write("numeric(\"e2\") ----> ",Image(numeric("e2")) | "none");
    write("numeric(\"3e500\") ----> ",Image(numeric("3e500")) | "none");
@@ -90,13 +90,13 @@ procedure p2();
    write("?30.0 ----> ",Image(?30.0) | "none");
 end
 
-procedure p3();
+procedure p3()
    write("copy(1.0) ----> ",Image(copy(1.0)) | "none");
    write("trim(3.14159,58) ----> ",Image(trim(3.14159,58)) | "none");
    write("Image(2e13) ----> ",Image(Image(2e13)) | "none");
    write("Image(0.0006) ----> ",Image(Image(0.0006)) | "none");
 end
-procedure Image(x);
+procedure Image(x)
    local head, tail, exp, span;
 
    span := 9;

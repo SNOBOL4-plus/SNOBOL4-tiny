@@ -1,6 +1,6 @@
 #  test text and binary I/O in many different lengths from tiny to huge
 
-procedure main();
+procedure main()
    testio("tmp3", "t", read, write, create textgen());
    testio("tmp4", "u", reads, writes, create bingen() | textgen() | "\^@");
    write("no problems found");

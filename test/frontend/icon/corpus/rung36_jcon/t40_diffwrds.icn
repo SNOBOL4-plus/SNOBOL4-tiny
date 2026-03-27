@@ -7,7 +7,7 @@
 #  This program lists all the different words in the input text.
 #  The definition of a "word" is naive.
 
-procedure main();
+procedure main()
    words := set();
    while text := read() do
       text ? while tab(upto(&letters)) do

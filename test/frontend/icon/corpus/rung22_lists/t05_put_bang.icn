@@ -1,4 +1,4 @@
-procedure main();
+procedure main()
   L := [];
   put(L, 4);
   put(L, 5);

@@ -1,6 +1,6 @@
 #SRC: V9GEN
 
-procedure main ();
+procedure main ()
    sf([]);
 
    write(args(main));
@@ -173,26 +173,26 @@ procedure main ();
 end
 
 # write word in hexadecimal
-procedure word (v);
+procedure word (v)
    xd (v, 8);
    writes (" ");
    return;
    end
 
 # write n low-order hex digits of v
-procedure xd (v, n);
+procedure xd (v, n)
    xd (ishift (v, -4), 0 < n - 1);
    writes ("0123456789ABCDEF" [1 + iand (v, 16r0F)]);
    return;
    end
 # ferr(func,val,err) -- call func(val) and verify that error "err" is produced
 
-procedure ferr (func, val, err);
+procedure ferr (func, val, err)
    write(msg := "oops -- " || image(func) || "(" || image (val) || ") ");
    return;
 end
 
-procedure p(a, b, c[]);
+procedure p(a, b, c[])
    write("   image(a):", image(a));
    write("   image(b):", image(b));
    write("   image(c):", image(c));
@@ -200,11 +200,11 @@ procedure p(a, b, c[]);
    every write("\t", !c);
 end
 
-procedure q(a[]);
+procedure q(a[])
    write("   every write(\"\\t\", !a):");
    every write("\t", !a);
 end
-procedure show(t);
+procedure show(t)
    local x;
 
    write("   *t --> ", *t);
@@ -223,7 +223,7 @@ global data;
 record r1(a);
 record r3(a,b,c);
 
-procedure sf (args);
+procedure sf (args)
     local n, z;
 
     z := [];
@@ -256,7 +256,7 @@ procedure sf (args);
 	every test (!args);
     end
 
-procedure test (n);
+procedure test (n)
     local r1, r2;
     write ();
     write ("-------------------- testing n = ", \n | "&null");
@@ -269,7 +269,7 @@ procedure test (n);
 	dump ("sortf(S,n) [********** OOPS -- results differ: **********]", r2);
     end
 
-procedure dump (s, l);
+procedure dump (s, l)
     local e;
     write ();
     write (s, ":");
@@ -283,7 +283,7 @@ procedure dump (s, l);
     return;
     end
 
-procedure same (a, b);
+procedure same (a, b)
     local i;
     if *a ~= *b then fail;
     every i := 1 to *a do

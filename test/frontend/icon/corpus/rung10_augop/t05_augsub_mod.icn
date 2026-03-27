@@ -1,4 +1,4 @@
-procedure main();
+procedure main()
   x := 20;
   x -:= 5;
   write(x);

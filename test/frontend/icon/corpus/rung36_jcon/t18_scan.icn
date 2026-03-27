@@ -2,7 +2,7 @@
 
 record array(a,b,c,d,e,f,g);
 
-procedure p1();
+procedure p1()
    write(" ----> ",image() | "none");
    write("every write((\"badc\" | \"edgf\" | \"x\") ? write(upto(!&lcase))) ----> ",image(every write(("badc" | "edgf" | "x") ? write(upto(!&lcase)))) | "none");
    write("every write(((\"aeiou\" | \"foobaz\") ? upto('dracula')) ? =(1 to 10)) ----> ",image(every write((("aeiou" | "foobaz") ? upto('dracula')) ? =(1 to 10))) | "none");
@@ -15,7 +15,7 @@ procedure p1();
    write("-1 ----> ",image(-1) | "none");
 end
 
-procedure p2();
+procedure p2()
    write("?10 ----> ",image(?10) | "none");
    write("?10 ----> ",image(?10) | "none");
    write("?10 ----> ",image(?10) | "none");
@@ -28,7 +28,7 @@ procedure p2();
    write("&subject := string(&lcase) ----> ",image(&subject := string(&lcase)) | "none");
 end
 
-procedure p3();
+procedure p3()
    write("while write(move(1)) ----> ",image(while write(move(1))) | "none");
    write("&subject := string(&lcase) ----> ",image(&subject := string(&lcase)) | "none");
    write("every write(tab(1 to 10)) ----> ",image(every write(tab(1 to 10))) | "none");
@@ -42,7 +42,7 @@ procedure p3();
    write("s ?:= move(3) ----> ",image(s ?:= move(3)) | "none");
 end
 
-procedure p4();
+procedure p4()
    write("s := \"abcdef\" ----> ",image(s := "abcdef") | "none");
    write("every write(s ?:= upto(&lcase)) ----> ",image(every write(s ?:= upto(&lcase))) | "none");
    write("s := \"this is the time to work it all out\" ----> ",image(s := "this is the time to work it all out") | "none");
@@ -52,7 +52,7 @@ procedure p4();
    write("\"abcdef\" ? (tab(0) & (while write(move(-1)))) ----> ",image("abcdef" ? (tab(0) & (while write(move(-1))))) | "none");
 end
 
-procedure main();
+procedure main()
    p1();
    p2();
    p3();

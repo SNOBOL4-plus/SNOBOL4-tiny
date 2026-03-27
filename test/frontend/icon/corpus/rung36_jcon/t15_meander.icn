@@ -8,7 +8,7 @@
 #  from standard input with the alphabet separated from the length by
 #  a colon.
 
-procedure main();
+procedure main()
    local line, alpha, n;
    while line := read() do { 
       line ? if { 
@@ -21,7 +21,7 @@ procedure main();
        }
 end
 
-procedure meander(alpha,n);
+procedure meander(alpha,n)
    local result, t, i, c, k;
    i := k := *alpha;
    t := n-1;

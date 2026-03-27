@@ -1,4 +1,4 @@
-procedure main();
+procedure main()
   local t;
   t := table(0);
   insert(t, 1, 10);

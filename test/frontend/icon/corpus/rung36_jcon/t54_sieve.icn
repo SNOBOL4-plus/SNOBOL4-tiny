@@ -7,7 +7,7 @@
 #  This program illustrates the use of sets in implementing the
 #  classical sieve algorithm for computing prime numbers.
 
-procedure main(args);
+procedure main(args)
    local limit, s, i, primes;
    limit := integer(args[1]) | 1000;
    s := set();

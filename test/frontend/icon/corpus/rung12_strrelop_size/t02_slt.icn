@@ -1,4 +1,4 @@
-procedure main();
+procedure main()
   if ("abc" << "bcd") then write("less");
   if ("bcd" << "abc") then write("nope");
   write("done");

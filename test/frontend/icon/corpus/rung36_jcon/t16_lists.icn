@@ -1,6 +1,6 @@
 #SRC: JCON
 
-procedure main();
+procedure main()
    local i, x, y, z;
 
    write(args(push));
@@ -81,7 +81,7 @@ procedure main();
 
 end
 
-procedure limage(label, lst);
+procedure limage(label, lst)
    writes(label, ". [", *lst, "]");
    every writes(" ", image(!lst));
    write();

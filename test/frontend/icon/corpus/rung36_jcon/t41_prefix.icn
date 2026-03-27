@@ -7,32 +7,32 @@
 #  This program accepts infix expressions from standard input and
 #  writes the corresponding prefix expressions to standard output.
 
-procedure main();
+procedure main()
    while write(prefix(read()));
 end
 
-procedure prefix(s);
+procedure prefix(s)
    s := strip(s);
    return lassoc(s,'+-' | '*/') | rassoc(s,'^') | s;
 end
 
-procedure strip(s);
+procedure strip(s)
    while s ? (="(" & s <- tab(bal(')')) & pos(-1));
    return s;
 end
 
-procedure lassoc(s,c);
+procedure lassoc(s,c)
    local j;
    s ? every j := bal(c);
    return form(s,\j);
 end
 
-procedure rassoc(s,c);
+procedure rassoc(s,c)
    local j;
    return form(s,s ? bal(c));
 end
 
-procedure form(s,k);
+procedure form(s,k)
    local a1, a2, op;
    s ? { 
       a1 := tab(k);

@@ -2,7 +2,7 @@
 
 # test grouping of various operators
 
-procedure main();
+procedure main()
 	write(3^3^2);
 	write(8/4/2);
 	write(2-2-2);
@@ -12,10 +12,10 @@ procedure main();
 	write("x" ? (tab(0)||"y") ? tab(0));
 end
 
-procedure f(x);
+procedure f(x)
 	return x;
 end
 
-procedure g(x);
+procedure g(x)
 	return x+2;
 end

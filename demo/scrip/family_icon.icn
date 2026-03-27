@@ -1,31 +1,31 @@
 # family_icon.icn -- Icon block of the Scrip family-tree demo.
 # Pure expression style -- no if/then as expr, no {} blocks, no string params.
 
-procedure prolog_query_count();
+procedure prolog_query_count()
   return "0";
 end
 
-procedure prolog_query_grandparents();
+procedure prolog_query_grandparents()
   return "";
 end
 
-procedure prolog_query_siblings();
+procedure prolog_query_siblings()
   return "";
 end
 
-procedure prolog_query_cousins();
+procedure prolog_query_cousins()
   return "";
 end
 
-procedure prolog_query_generations();
+procedure prolog_query_generations()
   return "";
 end
 
-procedure prolog_query_ancestors(uid);
+procedure prolog_query_ancestors(uid)
   return "";
 end
 
-procedure main();
+procedure main()
   local raw, n, i, j, line, pi, a, b, key, t, cnt, lo, hi;
 
   cnt := prolog_query_count();

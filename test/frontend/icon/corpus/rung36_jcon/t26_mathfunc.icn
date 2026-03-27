@@ -2,7 +2,7 @@
 
 #  test math functions including argument coercion
 
-procedure main();
+procedure main()
    every try(sqrt, 0.0 | 0.25 | 1 | 2.25 | "4" | 256.0);
    every try(log, 0.1 | 0.25 | 1.0 | &e | "10" | 100 | 1000);
    every try(log, 0.1 | 0.25 | 1.0 | &e | "10" | 100 | 1000, 10);
@@ -20,7 +20,7 @@ end
 
 #  try(p, a, b) -- print call to p(a,b) and its results
 
-procedure try(p, a, b);
+procedure try(p, a, b)
    write(image(p,15), "(", r(a), (", "||r(\b)) | &null, ") = ", r(p(a,b)));
    return;
 end
@@ -28,7 +28,7 @@ end
 
 #  r(v) -- round v to have only 3 digits after the decimal point
 
-procedure r(v);
+procedure r(v)
    if v >= 0 then
       return integer(v * 1000 + 0.5) / 1000.0;
    else

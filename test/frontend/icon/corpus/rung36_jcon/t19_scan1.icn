@@ -1,6 +1,6 @@
 #SRC: JCON
 
-procedure main();
+procedure main()
    local skips, vowels, uppers;
 
    write(any('ab', "1234ab", 0, 7) | "fail");

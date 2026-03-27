@@ -1,4 +1,4 @@
-procedure main();
+procedure main()
   s := "xy";
   result := "";
   every result ||:= !s;

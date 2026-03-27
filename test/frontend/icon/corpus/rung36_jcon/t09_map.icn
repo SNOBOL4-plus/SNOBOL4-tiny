@@ -1,6 +1,6 @@
 #SRC: JCON
 
-procedure main();
+procedure main()
     write(map("aBcDeF"));
     write(map("AbCdEf"));
     write(map("aBcDeF", "abcdefghijklmnopqrstuvwxyz"));

@@ -1,7 +1,7 @@
 #SRC: V9GEN
 
 
-procedure spell(n);
+procedure spell(n)
    local m;
    n := integer(n) | stop(image(n)," is not an integer");
    if n <= 12 then return {
@@ -39,12 +39,12 @@ procedure spell(n);
    else fail;
 end
 
-procedure spellw(n);
+procedure spellw(n)
    write(n, "	", spell(n));
    return;
 end
 
-procedure main();
+procedure main()
    every spellw(1 to 25);
    every spellw(30 to 110 by 3);
    spellw(945123342);
@@ -60,7 +60,7 @@ end
 #  This program illustrates the use of sets in implementing the
 #  classical sieve algorithm for computing prime numbers.
 
-procedure sieve();
+procedure sieve()
    local limit, s, i;
    limit := 100;
    s := set();
@@ -82,11 +82,11 @@ end
 #  results with the words in a column 20 characters wide.  The definition
 #  of a "word" is naive.
 
-procedure wordcnt();
+procedure wordcnt()
    wordcount(20);
 end
 
-procedure wordcount(n);
+procedure wordcount(n)
    local t, line, x, i;
    static letters;
    initial letters := &lcase ++ &ucase;

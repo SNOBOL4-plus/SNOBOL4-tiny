@@ -1,4 +1,4 @@
-procedure main();
+procedure main()
   local t, total;
   t := table(0);
   t[1] := 10;

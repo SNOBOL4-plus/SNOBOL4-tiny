@@ -2,7 +2,7 @@
 
 record array(a,b,c,d,e,f,g);
 
-procedure p1();
+procedure p1()
    write(" ----> ",image() | "none");
    write("list(0) ----> ",image(list(0)) | "none");
    write("list(0,1) ----> ",image(list(0,1)) | "none");
@@ -16,7 +16,7 @@ procedure p1();
    write("every write(!a1) ----> ",image(every write(!a1)) | "none");
 end
 
-procedure p2();
+procedure p2()
    write("sort(a1) ----> ",image(sort(a1)) | "none");
    write("t := table() ----> ",image(t := table()) | "none");
    write("every t[!&lcase] := 1 ----> ",image(every t[!&lcase] := 1) | "none");
@@ -30,7 +30,7 @@ procedure p2();
    write("*s ----> ",image(*s) | "none");
 end
 
-procedure p3();
+procedure p3()
    write("every write(!sort(s)) ----> ",image(every write(!sort(s))) | "none");
    write("*copy(s) ----> ",image(*copy(s)) | "none");
    write("image(s) ----> ",image(image(s)) | "none");
@@ -44,7 +44,7 @@ procedure p3();
    write("*s ----> ",image(*s) | "none");
 end
 
-procedure p4();
+procedure p4()
    write("every s1 := insert(set([]),!&lcase) ----> ",image(every s1 := insert(set([]),!&lcase)) | "none");
    write("s2 := set([\"a\",\"aa\",\"ab\",\"b\",1,2,3,4]) ----> ",image(s2 := set(["a","aa","ab","b",1,2,3,4])) | "none");
    write("s3 := s1 ++ s2 ----> ",image(s3 := s1 ++ s2) | "none");
@@ -58,7 +58,7 @@ procedure p4();
    write("a := sort(t,3) ----> ",image(a := sort(t,3)) | "none");
 end
 
-procedure p5();
+procedure p5()
    write("every i := 1 to *a - 1 by 2 do write(image(a[i]),\" \",a[i + 1]) ----> ",image(every i := 1 to *a - 1 by 2 do write(image(a[i])," ",a[i + 1])) | "none");
    write("a := sort(t,4) ----> ",image(a := sort(t,4)) | "none");
    write("every i := 1 to *a - 1 by 2 do write(image(a[i]),\" \",a[i + 1]) ----> ",image(every i := 1 to *a - 1 by 2 do write(image(a[i])," ",a[i + 1])) | "none");
@@ -72,7 +72,7 @@ procedure p5();
    write("x := sort(x) ----> ",image(x := sort(x)) | "none");
 end
 
-procedure p6();
+procedure p6()
    write("every write(image(!x)) ----> ",image(every write(image(!x))) | "none");
    write("t := table(table()) ----> ",image(t := table(table())) | "none");
    write("every t[1 to 10] := 1 do write(image(t)) ----> ",image(every t[1 to 10] := 1 do write(image(t))) | "none");
@@ -86,7 +86,7 @@ procedure p6();
    write("*t ----> ",image(*t) | "none");
 end
 
-procedure p7();
+procedure p7()
    write("x := [] ----> ",image(x := []) | "none");
    write("*x ----> ",image(*x) | "none");
    write("every push(x,1 to 10) ----> ",image(every push(x,1 to 10)) | "none");
@@ -100,7 +100,7 @@ procedure p7();
    write("every push(x,1 to 10) ----> ",image(every push(x,1 to 10)) | "none");
 end
 
-procedure p8();
+procedure p8()
    write("every 1 to 10 do write(pull(x)) ----> ",image(every 1 to 10 do write(pull(x))) | "none");
    write("x := [1,2,3,4,5,6,7,8,9,0] ----> ",image(x := [1,2,3,4,5,6,7,8,9,0]) | "none");
    write("every write(image(x[1:0 to -20 by -1])) ----> ",image(every write(image(x[1:0 to -20 by -1]))) | "none");
@@ -114,7 +114,7 @@ procedure p8();
    write("a3[1] ----> ",image(a3[1]) | "none");
 end
 
-procedure p9();
+procedure p9()
    write("a4[1] ----> ",image(a4[1]) | "none");
    write("a4[1] := a ----> ",image(a4[1] := a) | "none");
    write("a := [1,2,3,4] ----> ",image(a := [1,2,3,4]) | "none");
@@ -128,7 +128,7 @@ procedure p9();
    write("every write(!a5) ----> ",image(every write(!a5)) | "none");
 end
 
-procedure p10();
+procedure p10()
    write("a3 := a[0:3] ----> ",image(a3 := a[0:3]) | "none");
    write("every write(!a3) ----> ",image(every write(!a3)) | "none");
    write("a := \"abcd\" ----> ",image(a := "abcd") | "none");
@@ -142,7 +142,7 @@ procedure p10();
    write("every write(!a4) ----> ",image(every write(!a4)) | "none");
 end
 
-procedure p11();
+procedure p11()
    write("a5 := a[0-:2] ----> ",image(a5 := a[0-:2]) | "none");
    write("every write(!a5) ----> ",image(every write(!a5)) | "none");
    write("[] ||| [] ----> ",image([] ||| []) | "none");
@@ -156,7 +156,7 @@ procedure p11();
    write("r.e ----> ",image(r.e) | "none");
 end
 
-procedure p12();
+procedure p12()
    write("r.f ----> ",image(r.f) | "none");
    write("type(r) ----> ",image(type(r)) | "none");
    write("image(r) ----> ",image(image(r)) | "none");
@@ -170,7 +170,7 @@ procedure p12();
    write("r.b ----> ",image(r.b) | "none");
 end
 
-procedure p13();
+procedure p13()
    write("r.c ----> ",image(r.c) | "none");
    write("r.d ----> ",image(r.d) | "none");
    write("r.e ----> ",image(r.e) | "none");
@@ -184,7 +184,7 @@ procedure p13();
    every writes(" ", "a:" | !sort(a) | "\n");
 end
 
-procedure main();
+procedure main()
    p1();
    p2();
    p3();

@@ -1,6 +1,6 @@
 #SRC: JCON
 
-procedure main();
+procedure main()
 
    write(right("abc"));
    write(right("def", ));

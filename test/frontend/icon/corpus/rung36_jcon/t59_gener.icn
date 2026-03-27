@@ -15,7 +15,7 @@
 global verbose;
 
 
-procedure main (args);
+procedure main (args)
    if args[1] == "-v" then
       verbose := 1;
    every tdel (41 | 619 | 991,  3 | 11 |  23);
@@ -32,7 +32,7 @@ procedure main (args);
 #   for each element generated until the set reaches <limit>
 #   entries.
 
-procedure tins (init, limit, n);
+procedure tins (init, limit, n)
    writes ("test insert:",
       right(init,6), ",", right(limit,5), ",", right(n,3));
    s := set();
@@ -52,7 +52,7 @@ procedure tins (init, limit, n);
 #   The set initially contains the first <limit> integers.
 #   Then, for each one generated, n elements are deleted.
 
-procedure tdel (limit, n);
+procedure tdel (limit, n)
    writes ("test delete:", right(limit,6), ",", right(n,5));
    s := set();
    every insert (s, 1 to limit);
@@ -73,7 +73,7 @@ procedure tdel (limit, n);
 #   s2  large set (after insertion / before deletion)
 #   l   generated list
 
-procedure check (s1, s2, l);
+procedure check (s1, s2, l)
    sg := set(l);
    if \verbose then
        writes ("  \tsizes ",right(*s1,5)," <=",right(*sg,5)," <=",right(*s2,5));
@@ -105,7 +105,7 @@ procedure check (s1, s2, l);
 
 ##  check for generation of stale (already deleted) elements of sets and tables
 
-procedure stale();
+procedure stale()
    local i, N, S, T;
 
    N := 100;

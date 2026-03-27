@@ -1,6 +1,6 @@
 #SRC: V9GEN
 
-procedure main();
+procedure main()
    s1 := collate(&cset,&cset);
    s2 := collate(reverse(&cset),reverse(&cset));
    write(image(decollate(s1,0)));
@@ -10,7 +10,7 @@ procedure main();
    perm();
 end
 
-procedure collate(s1,s2);
+procedure collate(s1,s2)
   local length, ltemp, rtemp, t;
   static llabels, rlabels, clabels, blabels, half;
   initial {
@@ -45,7 +45,7 @@ procedure collate(s1,s2);
       collate(right(s1,length-half),right(s2,length-half)) || t;
 end
 
-procedure decollate(s,n);
+procedure decollate(s,n)
    static dsize, image, object;
    local ssize;
    initial {
@@ -61,14 +61,14 @@ procedure decollate(s,n);
       return map(object[1+:(dsize-2)/2],image[(n+1)+:dsize-2],
          s[1+:(dsize-2)]) || decollate(s[dsize-1:0],n);
 end
-procedure perm();
+procedure perm()
    output := set();
    every 1 to 2 do
       every insert(output,permute("ogram"));
    every write(!sort(output));
 end
 
-procedure permute(s);
+procedure permute(s)
    local i, x, t;
    if s == "" then return "";
    every i := 1 to *s do {

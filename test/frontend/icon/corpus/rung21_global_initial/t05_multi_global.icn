@@ -1,11 +1,11 @@
 global x, y;
 
-procedure setvals();
+procedure setvals()
   x := 7;
   y := 3;
 end
 
-procedure main();
+procedure main()
   setvals();
   write(x + y);
 end

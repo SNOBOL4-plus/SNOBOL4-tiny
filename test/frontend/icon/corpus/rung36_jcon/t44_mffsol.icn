@@ -9,7 +9,7 @@
 global range;				# vertical coordinate range
 global red, green, blue;			# current color
 
-procedure main (args);
+procedure main (args)
     range := 1000;
     aset := cset(&ascii ? (tab(upto(' ')) & move(1) & move(94)));
     pset := '';				# set of chars in use as players
@@ -89,7 +89,7 @@ procedure main (args);
 # given polar coordinates (radius,angle,dx,dy), write cartesian equivalents
 # offset by (dx,dy)
 
-procedure cart (r,a,dx,dy);
+procedure cart (r,a,dx,dy)
     x := pct (50 + r * cos(a) + dy);
     y := pct (50 + r * sin(a) + dy);
     writes (x," ",y," ");
@@ -98,14 +98,14 @@ procedure cart (r,a,dx,dy);
 
 # return a string representing a given percentage of the coordinate range
 
-procedure pct (n);
+procedure pct (n)
     return string(integer(n * range / 100));
     end
 
 
 # set new color coordinates.  iterate until acceptable.
 
-procedure newcolor();
+procedure newcolor()
     repeat {
 	red := (red + 103) % 256;
 	green := (green + 211) % 256;

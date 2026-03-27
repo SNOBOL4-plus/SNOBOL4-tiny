@@ -1,7 +1,7 @@
 #SRC: V9/201909
 #  radix.icn -- test radix conversion in linker vs runtime
 
-procedure main();
+procedure main()
    try("2r101111", 2r101111);
    try("3r201", 3r201);
    try("4r11213", 4r11213);
@@ -51,7 +51,7 @@ procedure main();
       36rZYXWVYTSRQPONMLKJIHGFEDCBA9876543210);
 end
 
-procedure try(s, i);
+procedure try(s, i)
 	local j;
 	j := integer(s);
 	if /j then

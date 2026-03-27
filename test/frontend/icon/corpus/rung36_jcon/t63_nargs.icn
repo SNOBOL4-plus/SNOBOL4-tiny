@@ -4,7 +4,7 @@
 
 #%#%  later: add graphics procedures
 
-procedure main();
+procedure main()
    nargs(abs, "abs");
    nargs(acos, "acos");
    nargs(any, "any");
@@ -93,6 +93,6 @@ procedure main();
    nargs(writes, "writes");
 end
 
-procedure nargs(p, s);
+procedure nargs(p, s)
    write(right(args(p),3), " ", s);
 end

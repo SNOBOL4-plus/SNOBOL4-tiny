@@ -8,11 +8,11 @@
 #  results with the words in a column 20 characters wide.  The definition
 #  of a "word" is naive.
 
-procedure main();
+procedure main()
    wordcount(20);
 end
 
-procedure wordcount(n);
+procedure wordcount(n)
    local t, line, x, i;
    static letters;
    initial letters := &lcase ++ &ucase;

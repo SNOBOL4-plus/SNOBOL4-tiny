@@ -2,7 +2,7 @@
 
 # string subscripting test
 
-procedure main();
+procedure main()
    local i, j, k, s, t;
 
    s := "abcde";

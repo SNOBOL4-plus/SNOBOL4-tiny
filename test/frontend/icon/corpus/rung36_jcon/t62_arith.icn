@@ -7,7 +7,7 @@
 # note also:  on Dec Alpha, Java doesn't sign-extend on right-shifts,
 #		causing differences to appear.
 
-procedure main();
+procedure main()
    local i, j;
 
    numtest(0, 0);
@@ -49,7 +49,7 @@ procedure main();
    every pow(-1.5 | -1.0 | -.5 | 0.0, -3 to 3);
 end
 
-procedure numtest(a, b);
+procedure numtest(a, b)
    static f;
    initial f := "---";
 
@@ -73,7 +73,7 @@ procedure numtest(a, b);
    return;
 end
 
-procedure bitcombo(i, j);
+procedure bitcombo(i, j)
    every wr5(i | j | icom(i) | icom(j) | iand(i,j) | ior(i,j) | ixor(i,j));
    write();
    return;
@@ -96,7 +96,7 @@ procedure r1(v);				# round real to 1 digit after decimal
 end
 
 
-procedure shifttest();
+procedure shifttest()
    local n;
 
    every n := 64 | 63 | (5 to -5 by -1) | -63 | -64 do {
@@ -107,13 +107,13 @@ procedure shifttest();
    }
 end
 
-procedure wr25(n);
+procedure wr25(n)
    writes(right(n, 25));
 end
 
 
 
-procedure pow(m, n);
+procedure pow(m, n)
    local v;
 
    if m = 0 & n <= 0 then

@@ -2,7 +2,7 @@
 
 record array(a,b,c,d,e,f,g);
 
-procedure p1();
+procedure p1()
    write(" ----> ",image() | "none");
    write("2 === +2 ----> ",image(2 === +2) | "none");
    write("3 === *\"abc\" ----> ",image(3 === *"abc") | "none");
@@ -15,7 +15,7 @@ procedure p1();
    write("'\\^a\\^d' ----> ",image('\^a\^d') | "none");
 end
 
-procedure p2();
+procedure p2()
    write("\"a\" ----> ",image("a") | "none");
    write("\"ab\" ----> ",image("ab") | "none");
    write("\"\\xb9\" ----> ",image("\xb9") | "none");
@@ -29,7 +29,7 @@ procedure p2();
    write("*'\\^d' ----> ",image(*'\^d') | "none");
 end
 
-procedure p3();
+procedure p3()
    write("*'\\^a\\^d' ----> ",image(*'\^a\^d') | "none");
    write("*\"a\" ----> ",image(*"a") | "none");
    write("*\"ab\" ----> ",image(*"ab") | "none");
@@ -43,7 +43,7 @@ procedure p3();
    write("\"[]\"(&lcase,3) ----> ",image("[]"(&lcase,3)) | "none");
 end
 
-procedure p4();
+procedure p4()
    write("image(proc(\"^\",1)) ----> ",image(image(proc("^",1))) | "none");
    write("image(proc(\"^\",2)) ----> ",image(image(proc("^",2))) | "none");
    write("proc(\"+\",2)(3,4) ----> ",image(proc("+",2)(3,4)) | "none");
@@ -57,7 +57,7 @@ procedure p4();
    write("?[1,2,3,4] ----> ",image(?[1,2,3,4]) | "none");
 end
 
-procedure p5();
+procedure p5()
    write("x := array(1,2,3,4,5,6,7) ----> ",image(x := array(1,2,3,4,5,6,7)) | "none");
    write("?x ----> ",image(?x) | "none");
    write("?x ----> ",image(?x) | "none");
@@ -71,7 +71,7 @@ procedure p5();
    write("every 1 to 10 do write(?[1,2,3,4,5,6,7,8,9,10]) ----> ",image(every 1 to 10 do write(?[1,2,3,4,5,6,7,8,9,10])) | "none");
 end
 
-procedure p6();
+procedure p6()
    write("every 1 to 10 do write(?\"abcdef\") ----> ",image(every 1 to 10 do write(?"abcdef")) | "none");
    write("x := array(1,2,3,4,5,6,7) ----> ",image(x := array(1,2,3,4,5,6,7)) | "none");
    write("every 1 to 10 do write(?x) ----> ",image(every 1 to 10 do write(?x)) | "none");
@@ -80,7 +80,7 @@ procedure p6();
    write("0(1,2) ----> ",image(0(1,2)) | "none");
 end
 
-procedure p7();
+procedure p7()
    write("1(1) ----> ",image(1(1)) | "none");
    write("2(1) ----> ",image(2(1)) | "none");
    write("(-1)(1,2,3) ----> ",image((-1)(1,2,3)) | "none");
@@ -94,7 +94,7 @@ procedure p7();
    write("every write(!![1,2,3,4,5]) ----> ",image(every write(!![1,2,3,4,5])) | "none");
 end
 
-procedure p8();
+procedure p8()
    write("every write(!![1,\"ab\",[1,2,3],34]) ----> ",image(every write(!![1,"ab",[1,2,3],34])) | "none");
    write("every write(!([1,\"ab\",[1,2,3],34][1 to 4])) ----> ",image(every write(!([1,"ab",[1,2,3],34][1 to 4]))) | "none");
    write("x := array(1,2,3,4,5) ----> ",image(x := array(1,2,3,4,5)) | "none");
@@ -108,7 +108,7 @@ procedure p8();
    write("y ----> ",image(y) | "none");
 end
 
-procedure p9();
+procedure p9()
    write("*\"\" ----> ",image(*"") | "none");
    write("*'' ----> ",image(*'') | "none");
    write("*[] ----> ",image(*[]) | "none");
@@ -122,7 +122,7 @@ procedure p9();
    write("?\"abc\" ----> ",image(?"abc") | "none");
 end
 
-procedure p10();
+procedure p10()
    write("?&lcase ----> ",image(?&lcase) | "none");
    write("?[1,2,3] ----> ",image(?[1,2,3]) | "none");
    write("?table() ----> ",image(?table()) | "none");
@@ -135,7 +135,7 @@ procedure p10();
    write("/\"abc\" ----> ",image(/"abc") | "none");
 end
 
-procedure p11();
+procedure p11()
    write("/&null ----> ",image(/&null) | "none");
    write("/[] ----> ",image(/[]) | "none");
    write("/&lcase ----> ",image(/&lcase) | "none");
@@ -149,7 +149,7 @@ procedure p11();
    write("||(1 to 10) ----> ",image(||(1 to 10)) | "none");
 end
 
-procedure p12();
+procedure p12()
    write("|||(1 to 10) ----> ",image(|||(1 to 10)) | "none");
    write("||||(1 to 10) ----> ",image(||||(1 to 10)) | "none");
    write("|||||(1 to 10) ----> ",image(|||||(1 to 10)) | "none");
@@ -163,7 +163,7 @@ procedure p12();
    write("not \\&null ----> ",image(not \&null) | "none");
 end
 
-procedure p13();
+procedure p13()
    write("repeat break ----> ",image(repeat break) | "none");
    write("until 1 do 2 ----> ",image(until 1 do 2) | "none");
    write("if 1 then 2 else 3 ----> ",image(if 1 then 2 else 3) | "none");
@@ -177,7 +177,7 @@ procedure p13();
    write("x :=: y ----> ",image(x :=: y) | "none");
 end
 
-procedure p14();
+procedure p14()
    write("y :=: x ----> ",image(y :=: x) | "none");
    write("x ----> ",image(x) | "none");
    write("y ----> ",image(y) | "none");
@@ -191,7 +191,7 @@ procedure p14();
    write("z := 3 ----> ",image(z := 3) | "none");
 end
 
-procedure p15();
+procedure p15()
    write("x <-> y ----> ",image(x <-> y) | "none");
    write("y <-> x ----> ",image(y <-> x) | "none");
    write("x ----> ",image(x) | "none");
@@ -205,7 +205,7 @@ procedure p15();
    write("(1 & 2 & 3 & x) := 3 ----> ",image((1 & 2 & 3 & x) := 3) | "none");
 end
 
-procedure p16();
+procedure p16()
    write("x ----> ",image(x) | "none");
    write("x := 1 ----> ",image(x := 1) | "none");
    write("y := 2 ----> ",image(y := 2) | "none");
@@ -214,7 +214,7 @@ procedure p16();
    write("y ----> ",image(y) | "none");
 end
 
-procedure main();
+procedure main()
    p1();
    p2();
    p3();

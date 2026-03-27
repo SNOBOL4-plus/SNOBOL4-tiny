@@ -2,7 +2,7 @@
 
 #  kwds.icn -- check keywords, as best can do reproducibly
 
-procedure main();
+procedure main()
    &error := 747;
    every kw("allocated", &allocated | "[failed]");
    every kw("ascii", &ascii | "[failed]");
@@ -63,7 +63,7 @@ procedure main();
    every kw("y", &y | "[failed]");
 end
 
-procedure kw(label, value);
+procedure kw(label, value)
    local s;
    static prev;
 
@@ -79,6 +79,6 @@ procedure kw(label, value);
    return;
 end
 
-procedure nmap(s);
+procedure nmap(s)
    return map(s, "0123456789", "nnnnnnnnnn");
 end

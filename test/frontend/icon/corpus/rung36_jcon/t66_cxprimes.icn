@@ -2,7 +2,7 @@
 
 #  prime number generation using co-expressions
 
-procedure main();
+procedure main()
    local s, x;
 
    s := create (2 to 100);
@@ -12,7 +12,7 @@ procedure main();
    }
 end
 
-procedure sieve(x, s);
+procedure sieve(x, s)
    local t;
 
    while t := @s do {

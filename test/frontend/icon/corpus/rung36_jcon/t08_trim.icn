@@ -1,6 +1,6 @@
 #SRC: JCON
 
-procedure main();
+procedure main()
     write(image(trim("abc  ")));
     write(image(trim("abc  ", ' ')));
     write(image(trim("abc  ", 'x')));

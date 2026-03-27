@@ -1,4 +1,4 @@
-procedure main();
+procedure main()
   local t;
   t := table("0");
   t["alice"] := "1";

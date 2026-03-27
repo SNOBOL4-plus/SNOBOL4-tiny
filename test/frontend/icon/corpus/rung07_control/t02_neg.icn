@@ -1,5 +1,5 @@
 # rung07 t02: unary minus
-procedure main();
+procedure main()
   local x;
   x := 5;
   write(-x);

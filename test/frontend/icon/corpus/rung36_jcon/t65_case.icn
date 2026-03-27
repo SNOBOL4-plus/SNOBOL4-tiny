@@ -2,7 +2,7 @@
 
 record rec(a);
 
-procedure main(args);
+procedure main(args)
    local L, s, x, r, c;
 
    r := rec(45);
@@ -30,5 +30,5 @@ procedure main(args);
       }
 end
 
-procedure foo();
+procedure foo()
 end
