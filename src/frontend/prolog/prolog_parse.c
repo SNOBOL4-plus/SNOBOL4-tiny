@@ -98,6 +98,48 @@ typedef enum { ASSOC_NONE, ASSOC_LEFT, ASSOC_RIGHT } Assoc;
 
 typedef struct { const char *name; int prec; Assoc assoc; } OpEntry;
 
+/* -------------------------------------------------------------------------
+ * Dynamic user-defined operator table (populated by :- op(...) directives)
+ * ------------------------------------------------------------------------- */
+#define MAX_USER_OPS 256
+typedef struct {
+    char  name[128];
+    int   prec;
+    Assoc assoc;
+    int   is_prefix;  /* 1 = fx/fy prefix, 0 = xfx/xfy/yfx binary */
+} UserOp;
+static UserOp  user_ops[MAX_USER_OPS];
+static int     n_user_ops = 0;
+
+/* Map SWI op-type string to Assoc and prefix flag */
+static void parse_op_type(const char *type, Assoc *assoc, int *is_prefix) {
+    if (strcmp(type, "xfx") == 0) { *assoc = ASSOC_NONE;  *is_prefix = 0; }
+    else if (strcmp(type, "xfy") == 0) { *assoc = ASSOC_RIGHT; *is_prefix = 0; }
+    else if (strcmp(type, "yfx") == 0) { *assoc = ASSOC_LEFT;  *is_prefix = 0; }
+    else if (strcmp(type, "fx")  == 0) { *assoc = ASSOC_NONE;  *is_prefix = 1; }
+    else if (strcmp(type, "fy")  == 0) { *assoc = ASSOC_RIGHT; *is_prefix = 1; }
+    else                               { *assoc = ASSOC_NONE;  *is_prefix = 0; }
+}
+
+static void register_user_op(int prec, const char *type, const char *name) {
+    if (n_user_ops >= MAX_USER_OPS) return;
+    Assoc assoc; int is_prefix;
+    parse_op_type(type, &assoc, &is_prefix);
+    /* update existing entry if already registered */
+    for (int i = 0; i < n_user_ops; i++) {
+        if (strcmp(user_ops[i].name, name) == 0 && user_ops[i].is_prefix == is_prefix) {
+            user_ops[i].prec   = prec;
+            user_ops[i].assoc  = assoc;
+            return;
+        }
+    }
+    snprintf(user_ops[n_user_ops].name, sizeof user_ops[0].name, "%s", name);
+    user_ops[n_user_ops].prec      = prec;
+    user_ops[n_user_ops].assoc     = assoc;
+    user_ops[n_user_ops].is_prefix = is_prefix;
+    n_user_ops++;
+}
+
 /* Binary operators in ascending precedence order */
 static const OpEntry BIN_OPS[] = {
     { ":-",   1200, ASSOC_NONE  },  /* :- as binary op inside parens/args */
@@ -146,6 +188,16 @@ static const OpEntry BIN_OPS[] = {
 static const OpEntry *find_binop(const char *name) {
     for (const OpEntry *op = BIN_OPS; op->name; op++)
         if (strcmp(op->name, name) == 0) return op;
+    /* Also check dynamic user-defined binary ops */
+    static OpEntry dyn; /* scratch — single-threaded, fine */
+    for (int i = 0; i < n_user_ops; i++) {
+        if (!user_ops[i].is_prefix && strcmp(user_ops[i].name, name) == 0) {
+            dyn.name  = user_ops[i].name;
+            dyn.prec  = user_ops[i].prec;
+            dyn.assoc = user_ops[i].assoc;
+            return &dyn;
+        }
+    }
     return NULL;
 }
 
@@ -276,7 +328,10 @@ static Term *parse_primary(Parser *p) {
                     strcmp(tk.text, "meta_predicate") == 0 ||
                     strcmp(tk.text, "use_module") == 0 ||
                     strcmp(tk.text, "ensure_loaded") == 0 ||
-                    strcmp(tk.text, "mode") == 0) {
+                    strcmp(tk.text, "mode") == 0 ||
+                    strcmp(tk.text, "table") == 0 ||
+                    strcmp(tk.text, "enable_tabling") == 0 ||
+                    strcmp(tk.text, "module_info") == 0) {
                 /* Only treat as prefix if next token can start a term */
                 if (pk.kind == TK_ATOM || pk.kind == TK_VAR || pk.kind == TK_INT ||
                     pk.kind == TK_FLOAT || pk.kind == TK_LPAREN || pk.kind == TK_LBRACKET ||
@@ -696,6 +751,42 @@ static PlClause *parse_clause(Parser *p) {
         Token dot = lexer_next(&p->lx);
         if (dot.kind != TK_DOT)
             perror_at(p, dot.line, "expected . after directive");
+        /* Process op/3 immediately so subsequent clauses can use the operator */
+        if (goal) {
+            Term *g = term_deref(goal);
+            int op_id = prolog_atom_intern("op");
+            if (g && g->tag == TT_COMPOUND && g->compound.functor == op_id
+                   && g->compound.arity == 3) {
+                Term *tprec = term_deref(g->compound.args[0]);
+                Term *ttype = term_deref(g->compound.args[1]);
+                Term *tname = term_deref(g->compound.args[2]);
+                if (tprec && tprec->tag == TT_INT &&
+                    ttype && ttype->tag == TT_ATOM &&
+                    tname && tname->tag == TT_ATOM) {
+                    const char *type = prolog_atom_name(ttype->atom_id);
+                    const char *name = prolog_atom_name(tname->atom_id);
+                    register_user_op((int)tprec->ival, type, name);
+                }
+                /* also handle op(P, T, [name1, name2, ...]) list form */
+                if (tname && tname->tag == TT_COMPOUND) {
+                    /* walk list */
+                    Term *lst = tname;
+                    int dot_id = prolog_atom_intern(".");
+                    while (lst && lst->tag == TT_COMPOUND
+                               && lst->compound.functor == dot_id
+                               && lst->compound.arity == 2) {
+                        Term *nm = term_deref(lst->compound.args[0]);
+                        if (nm && nm->tag == TT_ATOM && tprec && tprec->tag == TT_INT
+                               && ttype && ttype->tag == TT_ATOM) {
+                            const char *type = prolog_atom_name(ttype->atom_id);
+                            const char *name = prolog_atom_name(nm->atom_id);
+                            register_user_op((int)tprec->ival, type, name);
+                        }
+                        lst = term_deref(lst->compound.args[1]);
+                    }
+                }
+            }
+        }
         cl->head  = NULL;
         cl->body  = malloc(sizeof(Term *));
         cl->body[0] = goal;

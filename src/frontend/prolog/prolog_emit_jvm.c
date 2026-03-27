@@ -5279,8 +5279,11 @@ static void pj_emit_goal(EXPR_t *goal, const char *lbl_γ, const char *lbl_ω,
          * Jasmin accepts methods in any order in the file. */
         if ((strcmp(fn, "\\+") == 0 || strcmp(fn, "not") == 0) && nargs == 1) {
             int uid = pj_fresh_label();
-            /* --- emit helper method into pj_helper_buf (flushed after .end method) --- */
-            char parmdesc[1024]; parmdesc[0] = '\0';
+            /* --- emit helper into pj_helper_buf (deferred after .end method).
+             * If pj_helper_buf is already active (nested \+), use a fresh tmpfile
+             * for the inner helper and chain it onto pj_helper_buf when done,
+             * so helpers are emitted sequentially rather than interleaved. */
+            char parmdesc[2048]; parmdesc[0] = '\0';
             for (int _p = 0; _p < n_vars; _p++) strcat(parmdesc, "[Ljava/lang/Object;");
             char hname[128];
             snprintf(hname, sizeof hname, "naf_helper_%d", uid);
@@ -5289,10 +5292,10 @@ static void pj_emit_goal(EXPR_t *goal, const char *lbl_γ, const char *lbl_ω,
             for (int _v = 0; _v < nvl; _v++) inner_var_locals[_v] = _v;
             int h_trail = n_vars;
             int h_next  = n_vars + 1;
-            /* Redirect to helper buffer */
+            /* Save current output stream; direct helper into a fresh tmpfile */
             FILE *pj_saved_out = pj_out;
-            if (!pj_helper_buf) pj_helper_buf = tmpfile();
-            pj_out = pj_helper_buf;
+            FILE *naf_buf = tmpfile();
+            pj_out = naf_buf;
             J("\n.method static %s(%s)Z\n", hname, parmdesc);
             J("    .limit stack 32\n");
             J("    .limit locals %d\n", n_vars + 64);
@@ -5331,7 +5334,14 @@ static void pj_emit_goal(EXPR_t *goal, const char *lbl_γ, const char *lbl_ω,
             J("    invokestatic %s/pj_trail_unwind(I)V\n", pj_classname);
             J("    iconst_0\n    ireturn\n");
             J(".end method\n\n");
+            /* Chain helper onto pj_helper_buf for deferred flush after top-level .end method.
+             * This handles nested \+: inner helpers are appended to the same deferred buffer
+             * so they all land after the enclosing predicate's .end method, never inside it. */
             pj_out = pj_saved_out;
+            if (!pj_helper_buf) pj_helper_buf = tmpfile();
+            fflush(naf_buf); rewind(naf_buf);
+            { int _hc; while ((_hc = fgetc(naf_buf)) != EOF) fputc(_hc, pj_helper_buf); }
+            fclose(naf_buf);
             /* --- call helper from outer body --- */
             for (int _p = 0; _p < n_vars && _p < nvl; _p++)
                 J("    aload %d\n", var_locals[_p]);
@@ -5390,7 +5400,7 @@ static void pj_emit_goal(EXPR_t *goal, const char *lbl_γ, const char *lbl_ω,
                 snprintf(nfail, sizeof nfail, "nv%d_fail", uid2);
                 snprintf(nok,   sizeof nok,   "nv%d_ok",   uid2);
                 JI("dup", "");
-                J("    ifnull %s\n", nfail);  /* null = unbound → fail */
+                J("    ifnull %s\n", nfail);  /* null = unbound → fail; dup'd ref on stack */
                 JI("checkcast", "[Ljava/lang/Object;");
                 JI("dup", ""); JI("iconst_0", ""); JI("aaload", "");
                 JI("ldc", "\"var\"");
@@ -5407,7 +5417,8 @@ static void pj_emit_goal(EXPR_t *goal, const char *lbl_γ, const char *lbl_ω,
                 /* unbound var → fail */
                 JI("goto", lbl_ω);
                 J("%s:\n", nok);   JI("goto", lbl_γ);
-                J("%s:\n", nfail); JI("goto", lbl_ω);
+                /* nfail: reached via ifnull with dup'd ref still on stack → pop first */
+                J("%s:\n", nfail); JI("pop", ""); JI("goto", lbl_ω);
                 return;
             }
             /* For remaining type tests: get tag string */
@@ -5433,7 +5444,11 @@ static void pj_emit_goal(EXPR_t *goal, const char *lbl_γ, const char *lbl_ω,
                 JI("invokevirtual", "java/lang/Object/equals(Ljava/lang/Object;)Z");
                 J("    ifeq %s\n", lbl_ω);
             } else if (strcmp(fn, "atomic") == 0) {
-                /* atomic: atom or integer or float */
+                /* atomic: atom or integer or float
+                 * Pattern: dup+ldc+equals → ifne a_ok leaves tag-ref on stack (depth 1).
+                 * Last check (float) consumes the ref as invokevirtual receiver → depth 0.
+                 * So a_ok is a join of depth-1 (from ifne) and depth-0 (fall-through).
+                 * Fix: pop the residual ref at a_ok. */
                 int uid2 = pj_fresh_label();
                 char a_ok[128]; snprintf(a_ok, sizeof a_ok, "atomic%d_ok", uid2);
                 JI("dup", ""); JI("ldc", "\"atom\"");
@@ -5445,7 +5460,9 @@ static void pj_emit_goal(EXPR_t *goal, const char *lbl_γ, const char *lbl_ω,
                 JI("ldc", "\"float\"");
                 JI("invokevirtual", "java/lang/Object/equals(Ljava/lang/Object;)Z");
                 J("    ifeq %s\n", lbl_ω);
+                J("    goto %s\n", lbl_γ); /* float matched, stack clean, skip a_ok pop */
                 J("%s:\n", a_ok);
+                JI("pop", "");  /* discard residual tag-ref left by ifne branches */
             } else if (strcmp(fn, "is_list") == 0) {
                 /* is_list: atom "[]" or compound with functor "." and arity 2 */
                 /* We already have the tag on stack; just check it's [] atom or '.' compound */
@@ -5707,8 +5724,8 @@ static void pj_emit_goal(EXPR_t *goal, const char *lbl_γ, const char *lbl_ω,
          * this in a retry loop (Proebsting E2.fail→E1.resume). */
         {
             char safe[256]; pj_safe_name(fn, safe, sizeof safe);
-            char desc[512];
-            char argpart[256]; argpart[0] = '\0';
+            char desc[2048];
+            char argpart[1024]; argpart[0] = '\0';
             for (int i = 0; i < nargs; i++) strcat(argpart, "[Ljava/lang/Object;");
             snprintf(desc, sizeof desc, "%s/p_%s_%d(%sI)[Ljava/lang/Object;",
                      pj_classname, safe, nargs, argpart);
@@ -5918,7 +5935,7 @@ static void pj_emit_body(EXPR_t **goals, int ngoals, const char *lbl_γ,
         const char *fn = g->sval;
         int nargs = g->nchildren;
         char safe[256]; pj_safe_name(fn, safe, sizeof safe);
-        char desc[512], argpart[256]; argpart[0] = '\0';
+        char desc[2048], argpart[1024]; argpart[0] = '\0';
         for (int j = 0; j < nargs; j++) strcat(argpart, "[Ljava/lang/Object;");
         snprintf(desc, sizeof desc, "%s/p_%s_%d(%sI)[Ljava/lang/Object;",
                  pj_classname, safe, nargs, argpart);
@@ -9173,7 +9190,9 @@ static void pj_emit_main(Program *prog) {
             strcmp(g->sval, "if") == 0 ||
             strcmp(g->sval, "else") == 0 ||
             strcmp(g->sval, "endif") == 0 ||
-            strcmp(g->sval, "initialization") == 0) {
+            strcmp(g->sval, "initialization") == 0 ||
+            strcmp(g->sval, "table") == 0 ||
+            strcmp(g->sval, "enable_tabling") == 0) {
             /* silently skip */
         } else if ((strcmp(g->sval, "assertz") == 0 || strcmp(g->sval, "asserta") == 0)
              && g->nchildren == 1) {
