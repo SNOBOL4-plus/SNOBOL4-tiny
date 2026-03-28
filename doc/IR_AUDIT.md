@@ -9,15 +9,15 @@ If it can be lowered or is a builtin call, it does not get its own EKind.
 
 ---
 
-## Result: 37 Node Kinds — Starting Point, Not Frozen
+## Result: 44 Node Kinds — Starting Point, Not Frozen
 
-The unified IR has **37 node kinds**. This is the minimal set covering all six
+The unified IR has **44 node kinds**. This is the minimal set covering all six
 frontends. The previous audit draft overcounted by ~35 nodes due to mechanical
 1:1 mapping of source AST kinds rather than principled lowering analysis.
 
 See GRAND_MASTER_REORG.md § The Shared IR for the canonical table with α/β
 wiring. This document explains the lowering decisions.
-**This 37-node set is analysis-time best judgment, not a frozen contract.**
+**This 44-node set is analysis-time best judgment, not a frozen contract.**
 The real test comes during Phases 3–5 when emitters are actually unified.
 Some lowering combinations that look clean on paper may require distinct β-wiring
 in practice — those warrant new nodes. Some nodes kept separate may prove to emit
@@ -80,21 +80,21 @@ are E_FNC. No new node kinds.
   Goal-directed but the Byrd box wiring is E_FNC — builtin handles succeed/fail.
 
 **String/cset ops — all E_FNC:**
-  ICN_CONCAT (||) -> E_CONC  (string concatenation = sequencing)
+  ICN_CONCAT (||) -> E_SEQ  (string concatenation = sequencing)
   ICN_LCONCAT (|||) -> E_FNC("lconcat",2)
   ICN_COMPLEMENT, ICN_CSET_UNION/DIFF/INTER -> E_FNC
   ICN_SIZE (*E) -> E_FNC("size",1)
   ICN_RANDOM (?E) -> E_FNC("random",1)
 
-**Control flow — key insight: all lower to E_CONC/E_OR/E_ARBNO compositions:**
-  ICN_SEQ_EXPR (;) -> E_CONC  (sequencing IS concatenation)
-  ICN_AND (&) -> E_CONC  (conjunction IS sequencing)
-  ICN_IF then A else B -> E_OR(E_CONC(cond,A), B)
-  ICN_EVERY E do body -> E_ARBNO(E_CONC(E, body))
-  ICN_WHILE E do body -> E_ARBNO(E_CONC(E, body))
-  ICN_UNTIL E do body -> E_ARBNO(E_CONC(E_OR(fail_node,E), body))
+**Control flow — key insight: all lower to E_SEQ/E_ALT/E_ARBNO compositions:**
+  ICN_SEQ_EXPR (;) -> E_SEQ  (sequencing IS concatenation)
+  ICN_AND (&) -> E_SEQ  (conjunction IS sequencing)
+  ICN_IF then A else B -> E_ALT(E_SEQ(cond,A), B)
+  ICN_EVERY E do body -> E_ARBNO(E_SEQ(E, body))
+  ICN_WHILE E do body -> E_ARBNO(E_SEQ(E, body))
+  ICN_UNTIL E do body -> E_ARBNO(E_SEQ(E_ALT(fail_node,E), body))
   ICN_REPEAT body -> E_ARBNO(body)
-  All loop/control forms share the same α/β wiring as E_ARBNO+E_CONC.
+  All loop/control forms share the same α/β wiring as E_ARBNO+E_SEQ.
 
 **Assignment:**
   ICN_ASSIGN -> E_ASSIGN
@@ -108,14 +108,14 @@ are E_FNC. No new node kinds.
   ICN_SECTION_PLUS/MINUS -> E_FNC
 
 **Logical:**
-  ICN_NOT -> E_OR(E_CONC(cond, E_CUT), fail)  — FENCE pattern
+  ICN_NOT -> E_ALT(E_SEQ(cond, E_CUT), fail)  — FENCE pattern
   ICN_NONNULL (\E), ICN_NULL (/E) -> E_FNC
   ICN_IDENTICAL (===) -> E_FNC
 
 **Generators — all exist:**
   ICN_TO -> E_TO
   ICN_TO_BY -> E_TO_BY
-  ICN_ALT -> E_ALT_GEN
+  ICN_ALT -> E_GENALT
   ICN_BANG -> E_BANG
   ICN_LIMIT -> E_LIMIT
   ICN_SCAN -> E_SCAN
@@ -143,11 +143,11 @@ are E_FNC. No new node kinds.
 Rebus is a SNOBOL4/Icon hybrid. Every REKind and RSKind maps to an existing
 SNOBOL4 EKind, the two new Icon kinds, or a lowering/E_FNC call.
 
-  P-component (SNOBOL4 patterns): RE_COND/IMM/CURSOR/DEREF -> E_NAM/DOL/ATP/STAR
+  P-component (SNOBOL4 patterns): RE_COND/IMM/CURSOR/DEREF -> E_DOT/DOL/ATP/STAR
   L-component (Icon control): same lowering as Icon
   RE_UNLESS -> FENCE pattern via E_CUT
-  RE_FOR -> E_CONC(E_ASSIGN, E_ARBNO(...)) composition
-  RE_PATOPT (~pat) -> E_OR(pat, E_QLIT(""))  — alternation with empty. Collapses.
+  RE_FOR -> E_SEQ(E_ASSIGN, E_ARBNO(...)) composition
+  RE_PATOPT (~pat) -> E_ALT(pat, E_QLIT(""))  — alternation with empty. Collapses.
   All arithmetic/comparison/assignment -> existing kinds or E_FNC
 
 Rebus additional gap: 0.
@@ -157,8 +157,8 @@ Rebus additional gap: 0.
 ## Name Alias Issue — must resolve in M-G1
 
 The reorg doc uses E_DOT/E_DOLLAR for cursor/value capture.
-sno2c.h uses E_NAM/E_DOL for the same nodes.
-The reorg doc uses E_ASSIGN; sno2c.h uses E_ASGN.
+sno2c.h uses E_DOT/E_DOLLAR for the same nodes.
+The reorg doc uses E_ASSIGN; sno2c.h uses E_ASSIGN.
 
 M-G1-IR-HEADER-DEF picks the canonical names for ir.h.
 Recommendation: use reorg doc names (E_DOT, E_DOLLAR, E_ASSIGN) — more
@@ -172,15 +172,15 @@ Beyond what currently exists in sno2c.h, ir.h adds:
 
 From the planned shared IR table (not yet in sno2c.h):
   E_ARB, E_ARBNO, E_POS, E_RPOS, E_DOT, E_DOLLAR, E_ASSIGN (canonical name),
-  E_SUSPEND, E_TO, E_TO_BY, E_LIMIT, E_ALT_GEN, E_BANG, E_SCAN, E_SWAP,
+  E_SUSPEND, E_TO, E_TO_BY, E_LIMIT, E_GENALT, E_BANG, E_SCAN, E_SWAP,
   E_POW, E_MOD
 
 From this audit (genuinely new):
   E_CSET, E_MAKELIST
 
-Total ir.h: 37 node kinds.
+Total ir.h: 44 node kinds.
 
 ---
 
-*M-G0-IR-AUDIT complete (revised). 37-node set is the target for ir.h.*
+*M-G0-IR-AUDIT complete (revised). 44-node set is the target for ir.h.*
 *Next: M-G1-IR-HEADER-DEF.*
