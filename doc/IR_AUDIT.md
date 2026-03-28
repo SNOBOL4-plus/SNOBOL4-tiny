@@ -184,3 +184,36 @@ Total ir.h: 44 node kinds.
 
 *M-G0-IR-AUDIT complete (revised). 44-node set is the target for ir.h.*
 *Next: M-G1-IR-HEADER-DEF.*
+
+---
+
+## Addendum — Pattern Primitives (G-7 final pass)
+
+The initial audit incorrectly collapsed all SNOBOL4 pattern primitives to
+`E_FNC`. This was wrong. Each has distinct Byrd box wiring in `emit_byrd_asm.c`
+(separate `emit_xxx` functions) and a distinct `p$xxx` match routine in SPITBOL
+MINIMAL. They all require their own `EKind`.
+
+Source of truth: `emit_byrd_asm.c` lines 2420-2422 — the recognized builtin list:
+
+| New node | Operation | SPITBOL | Wiring distinction |
+|----------|-----------|---------|-------------------|
+| `E_ANY` | `ANY(S)` match one char from cset | `p$any` | cursor+1 on match |
+| `E_NOTANY` | `NOTANY(S)` match char not in S | — | cursor+1 on match |
+| `E_SPAN` | `SPAN(S)` longest run from S | `p$spn` | cursor+N on match |
+| `E_BREAK` | `BREAK(S)` up to char in S | `p$brk` | stops before delimiter |
+| `E_BREAKX` | `BREAKX(S)` break with backtrack | `p$bkx` | β advances past delimiter |
+| `E_LEN` | `LEN(N)` exactly N chars | `p$len` | fixed advance |
+| `E_TAB` | `TAB(N)` to position N | `p$tab` | absolute cursor set |
+| `E_RTAB` | `RTAB(N)` to N from right | `p$rtb` | right-anchored |
+| `E_REM` | `REM` remainder | `p$rem` | always matches rest |
+| `E_FAIL` | `FAIL` always fail | `p$fal` | α and β both → ω |
+| `E_SUCCEED` | `SUCCEED` always succeed | `p$suc` | α and β both → γ |
+| `E_FENCE` | `FENCE` seal β | `XFNCE=35` | β → abort |
+| `E_ABORT` | `ABORT` abort match | — | propagates abort |
+| `E_BAL` | `BAL` balanced parens | `p$bal` | recursive balance check |
+
+**Total IR nodes: 59** (45 + 14 pattern primitives).
+
+Icon equivalents (`upto()`, `move()`, `tab()`, `match()` in scanning context)
+map to these same nodes during M-G5-LOWER-ICON.
