@@ -437,8 +437,9 @@ function prefixes and output macros only.
 | emit_wasm.c | establish `W()` | establish `emit_wasm_*` | establish `γ/ω` | establish `W<id>_α/β` |
 
 *`icon_emit.c`'s `E()` writes to an `IcnEmitter` buffer — same letter as the law's
-x64 output macro but different mechanism. M-G3-NAME-X64-ICON must rename it to
-distinguish from the law's `E()` for x64 instruction output.
+x64 output macro `E(fmt, ...)`. M-G3-NAME-X64-ICON renames the IcnEmitter write
+macro to `ICN_OUT()` to eliminate the collision, freeing `E()` for the law's x64
+instruction output use.
 
 **The two real deviations by file:**
 
