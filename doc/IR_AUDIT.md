@@ -68,7 +68,7 @@ are E_FNC. No new node kinds.
   ICN_REAL -> E_FLIT
   ICN_STR -> E_QLIT
   ICN_CSET -> E_CSET  (NEW — distinct type; pattern engine dispatches differently)
-  ICN_VAR -> E_VART
+  ICN_VAR -> E_VAR
 
 **Arithmetic:**
   ICN_ADD/SUB/MUL/DIV/MOD/POW/NEG -> E_ADD/SUB/MPY/DIV/MOD/POW/MNS
