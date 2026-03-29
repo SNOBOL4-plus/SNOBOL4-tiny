@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# run_crosscheck_asm_corpus.sh — compile each corpus .sno via sno2c -asm,
+# run_crosscheck_asm_corpus.sh — compile each corpus .sno via scrip-cc -asm,
 #   assemble, link, run, diff against .ref
 #
 # Mirrors run_crosscheck.sh but uses the ASM backend instead of C.
@@ -15,7 +15,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TINY="$(cd "$SCRIPT_DIR/../.." && pwd)"
 CORPUS="${CORPUS:-$(cd "$TINY/../corpus/crosscheck" && pwd)}"
-SNO2C="$TINY/sno2c"
+SNO2C="$TINY/scrip-cc"
 RT="$TINY/src/runtime"
 SNO2C_INC="$TINY/src/frontend/snobol4"
 STOP_ON_FAIL="${STOP_ON_FAIL:-0}"
@@ -55,7 +55,7 @@ run_test() {
 
     # Compile SNOBOL4 → ASM
     if ! "$SNO2C" -asm "$sno" > "$s_file" 2>/dev/null; then
-        echo -e "${RED}FAIL${RESET} $name  [sno2c error]"
+        echo -e "${RED}FAIL${RESET} $name  [scrip-cc error]"
         FAIL=$((FAIL+1))
         [[ "$STOP_ON_FAIL" == "1" ]] && exit 1
         return

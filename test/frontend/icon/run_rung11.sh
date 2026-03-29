@@ -1,7 +1,7 @@
 #!/bin/bash
 # run_rung11.sh — rung11_bang_augconcat JVM corpus runner
 set -euo pipefail
-DRIVER="${1:-/tmp/sno2c}"
+DRIVER="${1:-/tmp/scrip-cc}"
 JASMIN="$(dirname "$0")/../../../src/backend/jvm/jasmin.jar"
 CORPUS="$(dirname "$0")/corpus/rung11_bang_augconcat"
 TMPDIR_OUT="$(mktemp -d)"

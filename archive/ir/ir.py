@@ -1,5 +1,5 @@
 """
-ir.py — snobol4x IR node graph
+ir.py — one4all IR node graph
 
 The IR is a named flat table of nodes.  Edges are represented as node IDs
 (strings).  The graph supports cycles via REF nodes; cycle resolution happens

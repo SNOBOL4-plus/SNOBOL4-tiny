@@ -5,7 +5,7 @@
  * Emits Jasmin assembler (.j) text assembled by jasmin.jar into .class files.
  *
  * Pipeline:
- *   sno2c -jvm foo.icn -o foo.j
+ *   scrip-cc -jvm foo.icn -o foo.j
  *   java -jar jasmin.jar foo.j -d outdir/
  *   java -cp outdir/ FooClass
  *
@@ -48,7 +48,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include "icon_ast.h"
 #include "icon_lex.h"
-#include "sno2c.h"          /* ImportEntry — for cross-class IMPORT dispatch */
+#include "scrip_cc.h"          /* ImportEntry — for cross-class IMPORT dispatch */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

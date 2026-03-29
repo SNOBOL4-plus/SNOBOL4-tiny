@@ -41,7 +41,7 @@ justified only when the Byrd box wiring is structurally distinct — when
 
 ### SNOBOL4 — gap: 0
 
-All SNOBOL4 constructs are already covered. The existing sno2c.h EKind enum
+All SNOBOL4 constructs are already covered. The existing scrip-cc.h EKind enum
 is the basis of the shared IR, extended by new entries for Icon/Rebus.
 
 ### Prolog — gap: 0
@@ -157,20 +157,20 @@ Rebus additional gap: 0.
 ## Name Alias Issue — must resolve in M-G1
 
 The reorg doc uses E_CAPT_COND/E_CAPT_IMM for cursor/value capture.
-sno2c.h uses E_CAPT_COND/E_CAPT_IMM for the same nodes.
-The reorg doc uses E_ASSIGN; sno2c.h uses E_ASSIGN.
+scrip-cc.h uses E_CAPT_COND/E_CAPT_IMM for the same nodes.
+The reorg doc uses E_ASSIGN; scrip-cc.h uses E_ASSIGN.
 
 M-G1-IR-HEADER-DEF picks the canonical names for ir.h.
 Recommendation: use reorg doc names (E_CAPT_COND, E_CAPT_IMM, E_ASSIGN) — more
-self-documenting. sno2c.h gets #define aliases during Phase 1, removed in Phase 3.
+self-documenting. scrip-cc.h gets #define aliases during Phase 1, removed in Phase 3.
 
 ---
 
 ## New Entries for ir.h Summary
 
-Beyond what currently exists in sno2c.h, ir.h adds:
+Beyond what currently exists in scrip-cc.h, ir.h adds:
 
-From the planned shared IR table (not yet in sno2c.h):
+From the planned shared IR table (not yet in scrip-cc.h):
   E_ARB, E_ARBNO, E_POS, E_RPOS, E_CAPT_COND, E_CAPT_IMM, E_ASSIGN (canonical name),
   E_SUSPEND, E_TO, E_TO_BY, E_LIMIT, E_GENALT, E_ITER, E_MATCH, E_SWAP,
   E_POW, E_MOD

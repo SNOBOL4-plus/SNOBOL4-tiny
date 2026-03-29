@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # test/crosscheck/run_crosscheck_net.sh — NET backend full corpus runner
 #
-# Runs corpus crosscheck rungs against the sno2c -net backend via
+# Runs corpus crosscheck rungs against the scrip-cc -net backend via
 # the harness adapter (adapters/tiny_net/run.sh).
 #
 # Usage:
@@ -14,7 +14,7 @@
 #   CORPUS       — crosscheck corpus dir (default: /home/claude/corpus/crosscheck)
 #   HARNESS_REPO — path to harness  (default: /home/claude/harness)
 #   STOP_ON_FAIL — 1 = stop at first failure (default: 0)
-#   NET_CACHE    — ilasm cache dir (default: /tmp/snobol4x_net_cache)
+#   NET_CACHE    — ilasm cache dir (default: /tmp/one4all_net_cache)
 #
 # Speed: first run is slow (~400ms/test for ilasm). Repeat runs skip unchanged
 # .exe files via md5 cache — only mono startup (~110ms) per test.
@@ -28,7 +28,7 @@ TINY="$(cd "$SCRIPT_DIR/../.." && pwd)"
 CORPUS="${CORPUS:-$(cd "$TINY/../corpus/crosscheck" && pwd)}"
 HARNESS_REPO="${HARNESS_REPO:-$TINY/../harness}"
 STOP_ON_FAIL="${STOP_ON_FAIL:-0}"
-export NET_CACHE="${NET_CACHE:-/tmp/snobol4x_net_cache}"
+export NET_CACHE="${NET_CACHE:-/tmp/one4all_net_cache}"
 export TINY_REPO="$TINY"
 
 ADAPTER="$HARNESS_REPO/adapters/tiny_net/run.sh"

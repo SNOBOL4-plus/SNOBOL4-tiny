@@ -32,7 +32,7 @@
  * Entry point: pl_emit(Program*, FILE*)
  *
  * Build notes:
- *   This file is included by the sno2c driver when -pl is active.
+ *   This file is included by the scrip-cc driver when -pl is active.
  *   It #includes emit_pretty.h from the C backend for the PLG/PL/PS/PG macros.
  *   Compile with:
  *     gcc -I src/frontend/snobol4 -I src/frontend/prolog \
@@ -40,7 +40,7 @@
  */
 
 #define EMIT_BYRD_PL_C
-#include "sno2c.h"
+#include "scrip_cc.h"
 #include "prolog_atom.h"
 #include "prolog_runtime.h"
 
@@ -941,7 +941,7 @@ static void emit_directive(EXPR_t *e) {
 /* =========================================================================
  * pl_emit — main entry point
  *
- * Called by the sno2c driver when -pl flag is active.
+ * Called by the scrip-cc driver when -pl flag is active.
  * ======================================================================= */
 void pl_emit(Program *prog, FILE *f) {
     pl_out = f;

@@ -6,7 +6,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TINY="$(cd "$SCRIPT_DIR/../.." && pwd)"
 CORPUS="${CORPUS:-/home/claude/corpus/crosscheck/beauty}"
-SNO2C="$TINY/sno2c"
+SNO2C="$TINY/scrip-cc"
 RT="$TINY/src/runtime"
 INC="${INC:-$TINY/demo/inc}"
 BEAUTY="${BEAUTY:-$TINY/demo/beauty.sno}"
@@ -17,9 +17,9 @@ PASS=0; FAIL=0; SKIP=0
 WORK=$(mktemp -d); trap "rm -rf $WORK" EXIT
 
 # Compile beauty.sno via -asm
-echo "Compiling beauty.sno via sno2c -asm ..."
+echo "Compiling beauty.sno via scrip-cc -asm ..."
 "$SNO2C" -asm -I"$INC" "$BEAUTY" > "$WORK/beauty.s" 2>&1 || {
-    echo -e "${RED}FAIL${RESET} sno2c -asm beauty.sno failed"
+    echo -e "${RED}FAIL${RESET} scrip-cc -asm beauty.sno failed"
     cat "$WORK/beauty.s" | head -20
     exit 1
 }

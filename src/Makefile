@@ -68,7 +68,7 @@ OBJS = $(SRCS:.c=.o)
 
 .PHONY: all clean
 
-BIN    = ../sno2c
+BIN    = ../scrip-cc
 
 all: $(BIN)
 
@@ -77,7 +77,7 @@ $(BIN): $(OBJS)
 
 # Pattern rule — each .c depends on the shared headers
 %.o: %.c \
-     frontend/snobol4/sno2c.h \
+     frontend/snobol4/scrip_cc.h \
      frontend/snobol4/lex.h \
      backend/c/emit_cnode.h \
      backend/c/emit_pretty.h
@@ -99,7 +99,7 @@ ICON_SRCS = \
     backend/jvm/emit_jvm_icon.c \
     frontend/icon/icon_runtime.c
 
-ICON_BIN = ../sno2c_icon
+ICON_BIN = ../scrip-cc-icon
 
 icn_main: $(ICON_BIN)
 

@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # run_crosscheck_jvm_rung.sh — JVM backend corpus ladder driver
 #
-# Compiles each .sno in a given directory via sno2c -jvm, assembles with
+# Compiles each .sno in a given directory via scrip-cc -jvm, assembles with
 # jasmin.jar, runs with java, diffs vs .ref oracle.
 #
 # Usage:
 #   bash test/crosscheck/run_crosscheck_jvm_rung.sh <dir> [dir2 ...]
 #
 # Environment overrides:
-#   SNO2C        — path to sno2c binary     (default: ./sno2c)
+#   SNO2C        — path to scrip-cc binary     (default: ./scrip-cc)
 #   INC          — SNOBOL4 include dir      (default: demo/inc)
 #   JASMIN       — path to jasmin.jar       (default: src/backend/jvm/jasmin.jar)
 #   STOP_ON_FAIL — stop at first failure    (default: 0)
@@ -17,7 +17,7 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TINY="$(cd "$SCRIPT_DIR/../.." && pwd)"
-SNO2C="${SNO2C:-$TINY/sno2c}"
+SNO2C="${SNO2C:-$TINY/scrip-cc}"
 INC="${INC:-$TINY/demo/inc}"
 JASMIN="${JASMIN:-$TINY/src/backend/jvm/jasmin.jar}"
 STOP_ON_FAIL="${STOP_ON_FAIL:-0}"
@@ -32,7 +32,7 @@ if [[ $# -eq 0 ]]; then
 fi
 
 if [[ ! -x "$SNO2C" ]]; then
-    echo "ERROR: sno2c not found at $SNO2C"; exit 1
+    echo "ERROR: scrip-cc not found at $SNO2C"; exit 1
 fi
 
 if [[ ! -f "$JASMIN" ]]; then
@@ -61,9 +61,9 @@ run_test() {
     local jfile="$classdir/${base}.j"
 
     # Compile .sno → .j
-    if ! "$SNO2C" -jvm -I"$INC" "$sno" > "$jfile" 2>"$WORK/${base}.sno2c_err"; then
-        echo -e "${RED}FAIL${RESET} $base  [sno2c error]"
-        head -3 "$WORK/${base}.sno2c_err"
+    if ! "$SNO2C" -jvm -I"$INC" "$sno" > "$jfile" 2>"$WORK/${base}.scrip-cc_err"; then
+        echo -e "${RED}FAIL${RESET} $base  [scrip-cc error]"
+        head -3 "$WORK/${base}.scrip-cc_err"
         FAIL=$((FAIL+1)); [[ "$STOP_ON_FAIL" == "1" ]] && exit 1; return 0
     fi
 

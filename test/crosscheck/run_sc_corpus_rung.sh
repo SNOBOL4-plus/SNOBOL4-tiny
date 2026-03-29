@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # run_sc_corpus_rung.sh — SC corpus ladder driver (-sc -asm pipeline)
 #
-# Compiles each .sc in a given directory via sno2c -sc -asm, assembles,
+# Compiles each .sc in a given directory via scrip-cc -sc -asm, assembles,
 # links against stmt_rt + snobol4 runtime, runs, diffs vs .ref oracle.
 #
 # Usage:
@@ -15,14 +15,14 @@
 #       test/crosscheck/sc_corpus/assign
 #
 # Environment overrides:
-#   SNO2C        — path to sno2c binary     (default: ./sno2c)
+#   SNO2C        — path to scrip-cc binary     (default: ./scrip-cc)
 #   STOP_ON_FAIL — 1 to stop at first fail  (default: 0)
 
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TINY="$(cd "$SCRIPT_DIR/../.." && pwd)"
-SNO2C="${SNO2C:-$TINY/sno2c}"
+SNO2C="${SNO2C:-$TINY/scrip-cc}"
 RT="$TINY/src/runtime"
 STOP_ON_FAIL="${STOP_ON_FAIL:-0}"
 
@@ -35,7 +35,7 @@ if [[ $# -eq 0 ]]; then
 fi
 
 if [[ ! -x "$SNO2C" ]]; then
-    echo "ERROR: sno2c not found at $SNO2C"
+    echo "ERROR: scrip-cc not found at $SNO2C"
     exit 1
 fi
 
@@ -71,10 +71,10 @@ run_test() {
     local o_file="$WORK/${base}.o"
     local bin="$WORK/${base}_bin"
 
-    # sno2c -sc -asm
-    if ! "$SNO2C" -sc -asm "$sc" > "$s_file" 2>"$WORK/${base}.sno2c_err"; then
-        echo -e "${RED}FAIL${RESET} $base  [sno2c error]"
-        cat "$WORK/${base}.sno2c_err" | head -3
+    # scrip-cc -sc -asm
+    if ! "$SNO2C" -sc -asm "$sc" > "$s_file" 2>"$WORK/${base}.scrip-cc_err"; then
+        echo -e "${RED}FAIL${RESET} $base  [scrip-cc error]"
+        cat "$WORK/${base}.scrip-cc_err" | head -3
         FAIL=$((FAIL+1))
         [[ "$STOP_ON_FAIL" == "1" ]] && exit 1
         return 0

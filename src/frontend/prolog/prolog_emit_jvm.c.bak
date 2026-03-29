@@ -14,7 +14,7 @@
  * Sprint: PJ-S1 (M-PJ-SCAFFOLD, M-PJ-HELLO)
  */
 
-#include "sno2c.h"
+#include "scrip_cc.h"
 #include "prolog_atom.h"
 #include "prolog_parse.h"
 #include "prolog_lower.h"

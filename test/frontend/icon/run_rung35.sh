@@ -1,5 +1,5 @@
 #!/bin/bash
-DRIVER="${1:-/tmp/sno2c}"
+DRIVER="${1:-/tmp/scrip-cc}"
 JASMIN="$(dirname "$0")/../../../src/backend/jvm/jasmin.jar"
 CORPUS="$(dirname "$0")/corpus/rung35_block_body"
 PASS=0; FAIL=0; XFAIL=0

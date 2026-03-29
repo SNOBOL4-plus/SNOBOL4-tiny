@@ -1,21 +1,21 @@
 /*
  * icn_main.c — Tiny-ICON compiler driver
  *
- * Originally a standalone binary.  Now integrated into sno2c:
+ * Originally a standalone binary.  Now integrated into scrip-cc:
  *   - icn_main() is the old main(), kept for reference / standalone use.
  *   - icn_prescan_imports() pre-scans raw source for $import/-IMPORT control lines
  *     and returns an ImportEntry* list (same type as SNOBOL4 lex uses).
- *     Called by sno2c main.c before icn_lex_init(), mirrors pj_linker_prescan().
+ *     Called by scrip-cc main.c before icn_lex_init(), mirrors pj_linker_prescan().
  *
- * Usage (standalone):  sno2c [-jvm] [-o out] file.icn
- * Usage (via sno2c):   sno2c -icn [-jvm] [-o out] file.icn
+ * Usage (standalone):  scrip-cc [-jvm] [-o out] file.icn
+ * Usage (via scrip-cc):   scrip-cc -icn [-jvm] [-o out] file.icn
  */
 
 #include "icon_lex.h"
 #include "icon_ast.h"
 #include "icon_parse.h"
 #include "icon_emit.h"
-#include "sno2c.h"          /* ExportEntry, ImportEntry */
+#include "scrip_cc.h"          /* ExportEntry, ImportEntry */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -98,7 +98,7 @@ static char *read_file(const char *path) {
     return buf;
 }
 
-/* icn_main — standalone entry point; not called by sno2c; not called by sno2c */
+/* icn_main — standalone entry point; not called by scrip-cc; not called by scrip-cc */
 int icn_main(int argc, char **argv) {
     const char *input  = NULL;
     const char *output = NULL;
@@ -111,7 +111,7 @@ int icn_main(int argc, char **argv) {
         else if (strcmp(argv[i], "-jvm") == 0) do_jvm = 1;
         else input = argv[i];
     }
-    if (!input) { fprintf(stderr, "usage: sno2c [-jvm] [-o out.j/.asm] [-run] file.icn\n"); return 1; }
+    if (!input) { fprintf(stderr, "usage: scrip-cc [-jvm] [-o out.j/.asm] [-run] file.icn\n"); return 1; }
 
     char *src = read_file(input);
     if (!src) return 1;

@@ -1,8 +1,8 @@
 /*
- * prolog_lower.c — Prolog ClauseAST -> sno2c IR lowering
+ * prolog_lower.c — Prolog ClauseAST -> scrip-cc IR lowering
  *
  * Takes a PlProgram (list of PlClause) and produces a Program* whose
- * STMT_t nodes carry the Prolog IR node kinds added to EKind in sno2c.h.
+ * STMT_t nodes carry the Prolog IR node kinds added to EKind in scrip-cc.h.
  *
  * Pipeline:
  *   1. Group clauses by functor/arity key -> one E_CHOICE per predicate
@@ -26,7 +26,7 @@
 #include "prolog_lower.h"
 #include "prolog_atom.h"
 #include "term.h"
-#include "sno2c.h"
+#include "scrip_cc.h"
 
 #include <stdio.h>
 #include <stdlib.h>

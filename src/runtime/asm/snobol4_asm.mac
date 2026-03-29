@@ -1,5 +1,5 @@
 ; =============================================================================
-; snobol4_asm.mac — NASM macro library for sno2c ASM backend
+; snobol4_asm.mac — NASM macro library for scrip-cc ASM backend
 ;
 ; Design: every emitted line follows the three-column SNOBOL4 form:
 ;

@@ -1,7 +1,7 @@
 #ifndef PROLOG_LOWER_H
 #define PROLOG_LOWER_H
 /*
- * prolog_lower.h — Prolog ClauseAST -> sno2c IR lowering
+ * prolog_lower.h — Prolog ClauseAST -> scrip-cc IR lowering
  *
  * prolog_lower() takes a PlProgram (from prolog_parse) and produces a
  * Program* of STMT_t nodes carrying the new Prolog IR node kinds:
@@ -26,7 +26,7 @@
  *   subject->dval = (double)n_args  (reusing dval field)
  */
 
-#include "sno2c.h"
+#include "scrip_cc.h"
 #include "prolog_parse.h"
 
 /*

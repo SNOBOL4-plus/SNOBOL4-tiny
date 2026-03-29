@@ -1,7 +1,7 @@
 #!/bin/bash
 # run_rung08_strbuiltins.sh — rung08_strbuiltins corpus runner
 cd "$(dirname "$0")/../../.."
-DRIVER=${1:-/tmp/sno2c}
+DRIVER=${1:-/tmp/scrip-cc}
 PASS=0; FAIL=0; XFAIL=0
 for icn in test/frontend/icon/corpus/rung08_strbuiltins/t*.icn; do
   [ -f "$icn" ] || continue

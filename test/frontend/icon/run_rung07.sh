@@ -1,10 +1,10 @@
 #!/bin/bash
 # run_rung07.sh — rung07_control JVM corpus runner
-# Usage: ./run_rung07.sh [sno2c_path]
+# Usage: ./run_rung07.sh [scrip-cc_path]
 
 set -euo pipefail
 
-DRIVER="${1:-/tmp/sno2c}"
+DRIVER="${1:-/tmp/scrip-cc}"
 JASMIN="$(dirname "$0")/../../../src/backend/jvm/jasmin.jar"
 CORPUS="$(dirname "$0")/corpus/rung07_control"
 TMPDIR_OUT="$(mktemp -d)"

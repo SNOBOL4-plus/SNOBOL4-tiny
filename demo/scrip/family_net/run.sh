@@ -3,11 +3,11 @@
 # Three languages, real EXPORT/IMPORT linkage, no funny linkage.
 #
 # Usage: bash run.sh
-# Requires: sno2c, jasmin.jar, java, ByrdBoxLinkage.j
+# Requires: scrip-cc, jasmin.jar, java, ByrdBoxLinkage.j
 set -e
 
 REPO="$(cd "$(dirname "$0")/../../.." && pwd)"
-SNO2C="${SNO2C:-$REPO/sno2c}"
+SNO2C="${SNO2C:-$REPO/scrip-cc}"
 JASMIN="${JASMIN:-$REPO/src/backend/jvm/jasmin.jar}"
 BYRD="${BYRD:-$REPO/src/runtime/jvm/ByrdBoxLinkage.j}"
 OUT=./out ; mkdir -p "$OUT"

@@ -17,8 +17,8 @@
 #   ICONT     path to icont binary     (default: icont)
 #
 # Environment overrides (snobol4ever JVM frontends):
-#   SNO2C         path to sno2c binary       (default: auto-detect)
-#   SNO2C   path to sno2c binary  (default: auto-detect)
+#   SNO2C         path to scrip-cc binary       (default: auto-detect)
+#   SNO2C   path to scrip-cc binary  (default: auto-detect)
 #   JASMIN        path to jasmin.jar          (default: auto-detect)
 #
 set -euo pipefail
@@ -76,14 +76,14 @@ done
 # ── Auto-detect snobol4ever tools ─────────────────────────────────────────────
 SNO2C="${SNO2C:-}"
 if [ -z "$SNO2C" ]; then
-    if [ -x "$SNOBOL4X/sno2c" ]; then SNO2C="$SNOBOL4X/sno2c"
-    elif command -v sno2c &>/dev/null; then SNO2C="sno2c"; fi
+    if [ -x "$SNOBOL4X/scrip-cc" ]; then SNO2C="$SNOBOL4X/scrip-cc"
+    elif command -v scrip-cc &>/dev/null; then SNO2C="scrip-cc"; fi
 fi
 
 SNO2C="${SNO2C:-}"
 if [ -z "$SNO2C" ]; then
-    if [ -x "/tmp/sno2c" ]; then SNO2C="/tmp/sno2c"
-    elif command -v sno2c &>/dev/null; then SNO2C="sno2c"; fi
+    if [ -x "/tmp/scrip-cc" ]; then SNO2C="/tmp/scrip-cc"
+    elif command -v scrip-cc &>/dev/null; then SNO2C="scrip-cc"; fi
 fi
 
 JASMIN="${JASMIN:-}"
@@ -169,7 +169,7 @@ run_jvm_backend() {
     case "$label" in
         SNO2C-JVM)
             if [ -z "$SNO2C" ]; then
-                skip "$label  (sno2c not found)"
+                skip "$label  (scrip-cc not found)"
                 SKIP_COUNT=$((SKIP_COUNT+1))
                 return
             fi
@@ -177,7 +177,7 @@ run_jvm_backend() {
             ;;
         ICON-JVM)
             if [ -z "$SNO2C" ]; then
-                skip "$label  (sno2c not found)"
+                skip "$label  (scrip-cc not found)"
                 SKIP_COUNT=$((SKIP_COUNT+1))
                 return
             fi
@@ -185,7 +185,7 @@ run_jvm_backend() {
             ;;
         PROLOG-JVM)
             if [ -z "$SNO2C" ]; then
-                skip "$label  (sno2c not found)"
+                skip "$label  (scrip-cc not found)"
                 SKIP_COUNT=$((SKIP_COUNT+1))
                 return
             fi

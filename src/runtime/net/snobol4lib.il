@@ -1,4 +1,4 @@
-// snobol4lib.il - SNOBOL4 standard library helpers for sno2c -net backend
+// snobol4lib.il - SNOBOL4 standard library helpers for scrip-cc -net backend
 //
 // All sno_* helper functions used by emitted .il programs.
 // Will grow to include all INCLUDES from beauty.sno and full SNOBOL4 repertoire.

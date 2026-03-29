@@ -2,7 +2,7 @@
 % Reads Prolog source from stdin, prints parse tree as S-expressions.
 % Milestone: M-PARSE-PROLOG
 %
-% Uses only builtins confirmed supported by sno2c -pl -jvm.
+% Uses only builtins confirmed supported by scrip-cc -pl -jvm.
 % Character classification via atom_codes + arithmetic comparisons.
 %
 % Output format (treebank-style S-expressions):

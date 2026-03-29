@@ -257,7 +257,7 @@ static inline RCase *rcase_new(int lineno) {
 }
 
 /* ================================================================
- * String helpers (same pattern as sno2c.h)
+ * String helpers (same pattern as scrip-cc.h)
  * ================================================================ */
 static inline char *rebus_intern(const char *s) {
     return s ? strdup(s) : NULL;

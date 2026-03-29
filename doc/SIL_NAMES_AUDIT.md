@@ -83,7 +83,7 @@ heritage applies here. Prefix is the law.
 These are names inside the emitter `.c` files themselves — local variables,
 parameters, struct fields, typedef names.
 
-### 2a. The `EXPR_t` / `EKind` IR struct (`sno2c.h`)
+### 2a. The `EXPR_t` / `EKind` IR struct (`scrip-cc.h`)
 
 ```c
 typedef struct EXPR_t EXPR_t;
@@ -108,7 +108,7 @@ struct EXPR_t {
 
 **Verdict:** ✅ `EXPR_t` struct field names are correct. No changes needed.
 
-**Old names in `sno2c.h` EKind enum still present (pre-reorg):**
+**Old names in `scrip-cc.h` EKind enum still present (pre-reorg):**
 
 | Old | Canonical | Status |
 |-----|-----------|--------|
@@ -515,7 +515,7 @@ Add to naming law in GRAND_MASTER_REORG.md:
 
 Add to naming law:
 
-> During Phase 1 (M-G1-IR-HEADER-WIRE), `sno2c.h` receives `#define` aliases
+> During Phase 1 (M-G1-IR-HEADER-WIRE), `scrip-cc.h` receives `#define` aliases
 > mapping old names to canonical `ir.h` names (e.g. `#define E_VART E_VAR`).
 > These aliases exist only for compilation compatibility. They are removed
 > in Phase 5 when all frontends are updated to use canonical names.

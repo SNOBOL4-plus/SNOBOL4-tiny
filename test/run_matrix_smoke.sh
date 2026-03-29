@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# test/run_matrix_smoke.sh — snobol4x matrix smoke test
+# test/run_matrix_smoke.sh — one4all matrix smoke test
 #
 # Exercises every locally testable frontend × backend combination.
 # Does NOT require corpus (uses tests bundled in this repo).
-# Always run from the snobol4x root:
+# Always run from the one4all root:
 #
 #   bash test/run_matrix_smoke.sh
 #
@@ -11,8 +11,8 @@
 #
 # What's tested:
 #   SNOBOL4 × x64 ASM   — sc_corpus (hello, assign, output)
-#   SNOBOL4 × JVM       — sc_corpus via sno2c -jvm + jasmin + java
-#   SNOBOL4 × .NET      — sc_corpus via sno2c -net + ilasm + mono  (skipped if no mono)
+#   SNOBOL4 × JVM       — sc_corpus via scrip-cc -jvm + jasmin + java
+#   SNOBOL4 × .NET      — sc_corpus via scrip-cc -net + ilasm + mono  (skipped if no mono)
 #   Icon    × x64 ASM   — rungs 01-35 via run_icon_x64_rung.sh     (skipped if no icont)
 #   Icon    × JVM       — run_crosscheck_jvm_rung.sh sc_corpus     (skipped if no jasmin)
 #   Prolog  × x64 ASM   — rung scripts via run_prolog_x64_rung.sh  (skipped if no nasm)

@@ -1,4 +1,4 @@
-# snobol4x
+# one4all
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
@@ -10,8 +10,8 @@ Part of the [snobol4ever](https://github.com/snobol4ever) organization.
 
 ## What This Is
 
-`snobol4x` (the **TINY** compiler) is a from-scratch SNOBOL4 compiler: one frontend
-pipeline (`sno2c`) feeding four independent backend emitters. Write SNOBOL4 once.
+`one4all` (the **TINY** compiler) is a from-scratch SNOBOL4 compiler: one frontend
+pipeline (`scrip-cc`) feeding four independent backend emitters. Write SNOBOL4 once.
 Run it anywhere.
 
 | Flag | Output | Status |
@@ -89,23 +89,23 @@ SNOBOL4, Icon, and Prolog are three syntaxes for one execution machine.
 # Dependencies
 apt-get install -y libgc-dev nasm default-jdk
 
-# Build sno2c
+# Build scrip-cc
 make -C src
 
 # C backend (default)
-./sno2c program.sno > prog.c && gcc prog.c -lgc -o prog && ./prog
+./scrip-cc program.sno > prog.c && gcc prog.c -lgc -o prog && ./prog
 
 # ASM backend
-./sno2c -asm program.sno > prog.s
+./scrip-cc -asm program.sno > prog.s
 nasm -f elf64 prog.s -o prog.o && gcc prog.o -lgc -o prog && ./prog
 
 # JVM backend
-./sno2c -jvm program.sno > prog.j
+./scrip-cc -jvm program.sno > prog.j
 java -jar src/backend/jvm/jasmin.jar prog.j -d .
 java -cp . Prog
 
 # NET backend
-./sno2c -net program.sno > prog.il
+./scrip-cc -net program.sno > prog.il
 ilasm prog.il && mono prog.exe
 ```
 
@@ -152,7 +152,7 @@ JASMIN=src/backend/jvm/jasmin.jar
 PDIR=../corpus/crosscheck/patterns
 for sno in $PDIR/*.sno; do
   base=$(basename $sno .sno); TMPD=$(mktemp -d)
-  ./sno2c -jvm "$sno" > $TMPD/p.j 2>/dev/null
+  ./scrip-cc -jvm "$sno" > $TMPD/p.j 2>/dev/null
   java -jar $JASMIN $TMPD/p.j -d $TMPD/ 2>/dev/null
   cls=$(ls $TMPD/*.class 2>/dev/null | head -1 | xargs basename 2>/dev/null | sed 's/.class//')
   got=$(java -cp $TMPD $cls 2>/dev/null); exp=$(cat "${sno%.sno}.ref" 2>/dev/null)
@@ -199,7 +199,7 @@ src/
     jvm/              JVM Jasmin emitter (emit_byrd_jvm.c 4,051 lines · jasmin.jar)
     net/              .NET CIL emitter (emit_byrd_net.c 1,934 lines)
   driver/
-    main.c            sno2c entry point — flag dispatch
+    main.c            scrip-cc entry point — flag dispatch
   runtime/
     asm/              NASM macro library + runtime helpers
 test/
@@ -231,9 +231,9 @@ streams event-by-event via named FIFOs.
 |---|-------------|------|
 | 1 | CSNOBOL4 2.3.3 | Primary oracle |
 | 2 | SPITBOL x64 4.0f | Secondary oracle |
-| 3 | snobol4x ASM backend | Compiled target |
-| 4 | snobol4x JVM backend | Compiled target |
-| 5 | snobol4x NET backend | Compiled target |
+| 3 | one4all ASM backend | Compiled target |
+| 4 | one4all JVM backend | Compiled target |
+| 5 | one4all NET backend | Compiled target |
 
 `monitor_ipc.so` — a LOAD'd C shared library — writes trace events to a per-participant
 named FIFO, bypassing stdio entirely. The collector reads all five FIFOs in parallel.
@@ -263,7 +263,7 @@ output byte-for-byte identical to the CSNOBOL4 oracle (M-JVM-BEAUTY ✅, commit
 
 ## The Development Story
 
-snobol4x is co-authored by **Lon Jones Cherryholmes** and **Claude Sonnet 4.6**.
+one4all is co-authored by **Lon Jones Cherryholmes** and **Claude Sonnet 4.6**.
 
 The sessions run like a buddy comedy: Lon arrives with an architectural insight or an
 inconvenient bug, Claude writes the code, they argue about the right abstraction, one
@@ -284,7 +284,7 @@ the compiler writing itself — one session at a time.
 Sprint state lives in [snobol4ever/.github](https://github.com/snobol4ever/.github):
 
 - **PLAN.md** — milestone dashboard, 4D feature matrix
-- **TINY.md** — snobol4x sprint state, invariants, next actions per session
+- **TINY.md** — one4all sprint state, invariants, next actions per session
 - **JVM.md** — JVM backend sprint state
 - **MONITOR.md** — five-way monitor design and sprint detail
 - **SESSIONS_ARCHIVE.md** — full session history, append-only
@@ -296,7 +296,7 @@ Sprint state lives in [snobol4ever/.github](https://github.com/snobol4ever/.gith
 
 ## Collaborators
 
-- **Lon Jones Cherryholmes** — compiler architecture, all backends, snobol4x lead
+- **Lon Jones Cherryholmes** — compiler architecture, all backends, one4all lead
 - **Jeffrey Cooper, M.D.** — snobol4dotnet, .NET MSIL target
 - **Claude Sonnet 4.6** — TINY co-author; every sprint, every Byrd box,
   every labeled goto — written in session, committed, pushed
@@ -307,7 +307,7 @@ Sprint state lives in [snobol4ever/.github](https://github.com/snobol4ever/.gith
 ## Source Volume (G-VOLUME · M-VOL-X ✅ · 2026-03-22)
 
 > `wc -l` scan of `src/`. Generated artifacts (`.s` files, 36,890 lines across 28 files) excluded.
-> Categories are logical function — comparable across snobol4x, snobol4jvm, snobol4dotnet.
+> Categories are logical function — comparable across one4all, snobol4jvm, snobol4dotnet.
 > % of total = % of `src/` lines only.
 
 | Category | Files | Lines | Blank-stripped | % total |

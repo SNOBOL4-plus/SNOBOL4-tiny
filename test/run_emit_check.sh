@@ -11,12 +11,12 @@
 #   bash test/run_emit_check.sh --update   # regenerate generated files
 #   bash test/run_emit_check.sh --verbose  # print PASS lines too
 #
-# Environment: SNO2C (default: <root>/sno2c), JOBS (default: nproc)
+# Environment: SNO2C (default: <root>/scrip-cc), JOBS (default: nproc)
 
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SNO2C="${SNO2C:-$ROOT/sno2c}"
+SNO2C="${SNO2C:-$ROOT/scrip-cc}"
 export SNO2C
 JOBS="${JOBS:-$(nproc 2>/dev/null || echo 4)}"
 TEST_SNO="$ROOT/test/snobol4"
@@ -32,7 +32,7 @@ done
 GREEN='\033[0;32m'; RED='\033[0;31m'; BOLD='\033[1m'; RESET='\033[0m'
 
 if [[ ! -x "$SNO2C" ]]; then
-  echo "ERROR: sno2c not found at $SNO2C — build first (cd src && make)" >&2; exit 1
+  echo "ERROR: scrip-cc not found at $SNO2C — build first (cd src && make)" >&2; exit 1
 fi
 
 mapfile -t SNO_FILES < <(find "$TEST_SNO" -name "*.sno" | sort)

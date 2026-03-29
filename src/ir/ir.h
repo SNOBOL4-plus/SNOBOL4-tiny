@@ -166,8 +166,8 @@ typedef enum EKind {
 
 /* EXPR_t — the unified IR node struct.
  *
- * M-G1-IR-HEADER-WIRE: sno2c.h provides its own EXPR_t for now (legacy
- * field names: dval, no nalloc/id).  When sno2c.h includes ir.h first it
+ * M-G1-IR-HEADER-WIRE: scrip-cc.h provides its own EXPR_t for now (legacy
+ * field names: dval, no nalloc/id).  When scrip-cc.h includes ir.h first it
  * defines EXPR_T_DEFINED to suppress this copy and avoid a redefinition
  * error.  Struct field unification is a later reorg milestone.
  */
@@ -258,7 +258,7 @@ static const char * const ekind_name[E_KIND_COUNT] = {
 #endif /* IR_DEFINE_NAMES */
 
 /* =========================================================================
- * Alias bridges — compatibility with pre-reorg sno2c.h names
+ * Alias bridges — compatibility with pre-reorg scrip-cc.h names
  *
  * Added in M-G1-IR-HEADER-WIRE. Removed in Phase 5 as each frontend's
  * lower.c is updated to use canonical names directly.

@@ -19,12 +19,12 @@
  */
 
 /*
- * Include sno2c.h — it defines EXPR_T_DEFINED + IR_COMPAT_ALIASES then
+ * Include scrip-cc.h — it defines EXPR_T_DEFINED + IR_COMPAT_ALIASES then
  * includes ir/ir.h, giving us EKind, EXPR_t, and all compat aliases.
  * We additionally define IR_DEFINE_NAMES here to pull in ekind_name[].
  */
 #define IR_DEFINE_NAMES
-#include "sno2c.h"   /* → ir/ir.h (EKind, EXPR_t, compat aliases, ekind_name) */
+#include "scrip_cc.h"   /* → ir/ir.h (EKind, EXPR_t, compat aliases, ekind_name) */
 
 /* -------------------------------------------------------------------------
  * ir_print.h forward declarations (inlined here — no separate .h needed
@@ -170,7 +170,7 @@ void ir_print_node_nl(const EXPR_t *e, FILE *f) {
  * ---------------------------------------------------------------------- */
 #ifdef IR_PRINT_TEST
 
-/* Minimal EXPR_t for test — mirrors sno2c.h fields we use */
+/* Minimal EXPR_t for test — mirrors scrip-cc.h fields we use */
 #include <stdlib.h>
 
 static EXPR_t *mk(EKind k) {

@@ -2,9 +2,9 @@
 # setup.sh — one-time environment bootstrap for snobol4ever development
 #
 # Idempotent: safe to run multiple times.
-# After running: snobol4, spitbol, sno2c, snobol4-asm, snobol4-jvm all work.
+# After running: snobol4, spitbol, scrip-cc, snobol4-asm, snobol4-jvm all work.
 #
-# Usage: bash setup.sh [--skip-csnobol4] [--skip-spitbol] [--skip-sno2c]
+# Usage: bash setup.sh [--skip-csnobol4] [--skip-spitbol] [--skip-scrip-cc]
 set -euo pipefail
 
 SNOBOL4X="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -98,20 +98,20 @@ out=$(spitbol -b /tmp/_setup_spitbol.sno 2>/dev/null || true)
 [ "$out" = "spitbol-ok" ] || fail "spitbol smoke test failed (got: $out)"
 ok "spitbol smoke test passed (exit code ignored — sandbox segfault-on-exit is expected)"
 
-# ── 4. sno2c compiler ────────────────────────────────────────────────────────
-step "sno2c compiler"
-if [ -x "$SNOBOL4X/sno2c" ]; then
-    skip "sno2c already built"
+# ── 4. scrip-cc compiler ────────────────────────────────────────────────────────
+step "scrip-cc compiler"
+if [ -x "$SNOBOL4X/scrip-cc" ]; then
+    skip "scrip-cc already built"
 else
     cd "$SNOBOL4X/src"
     make -j4 2>&1 | tail -3
     cd "$SNOBOL4X"
-    ok "sno2c built"
+    ok "scrip-cc built"
 fi
-[ -x "$SNOBOL4X/sno2c" ] || fail "sno2c not found after build"
-# sno2c_jvm symlink (snobol4-jvm script expects /home/claude/sno2c_jvm)
-[ -e /home/claude/sno2c_jvm ] || ln -sf "$SNOBOL4X/sno2c" /home/claude/sno2c_jvm
-ok "sno2c ready"
+[ -x "$SNOBOL4X/scrip-cc" ] || fail "scrip-cc not found after build"
+# scrip-cc_jvm symlink (snobol4-jvm script expects /home/claude/scrip-cc_jvm)
+[ -e /home/claude/scrip-cc_jvm ] || ln -sf "$SNOBOL4X/scrip-cc" /home/claude/scrip-cc_jvm
+ok "scrip-cc ready"
 
 # ── 5. Java / Jasmin ─────────────────────────────────────────────────────────
 step "Java / Jasmin (JVM backend)"
@@ -144,7 +144,7 @@ echo ""
 echo -e "${GREEN}Setup complete.${RESET} Environment ready for monitor + beauty sprint."
 echo "  snobol4:  $(which snobol4)"
 echo "  spitbol:  $(which spitbol)"
-echo "  sno2c:    $SNOBOL4X/sno2c"
+echo "  scrip-cc:    $SNOBOL4X/scrip-cc"
 echo "  monitor:  $MDIR/run_monitor.sh"
 echo "  corpus:   $CORPUS"
 rm -f /tmp/_setup_smoke.sno /tmp/_setup_spitbol.sno

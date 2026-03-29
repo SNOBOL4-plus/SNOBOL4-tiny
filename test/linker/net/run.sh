@@ -3,7 +3,7 @@
 # Expected output: Hello, World
 set -e
 
-SNO2C=../../../src/driver/sno2c
+SNO2C=../../../src/driver/scrip-cc
 RUNTIME=../../../src/runtime/net
 OUT=./out
 mkdir -p "$OUT"

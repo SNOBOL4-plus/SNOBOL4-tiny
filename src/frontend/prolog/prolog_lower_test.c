@@ -13,7 +13,7 @@
 #include "prolog_lower.h"
 #include "prolog_parse.h"
 #include "prolog_atom.h"
-#include "sno2c.h"
+#include "scrip_cc.h"
 
 #include <stdio.h>
 #include <stdlib.h>

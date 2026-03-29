@@ -6,7 +6,7 @@ set -euo pipefail
 
 SNO="${1:?Usage: snobol4-jvm <file.sno>}"
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SNO2C="${SNO2C_JVM:-/home/claude/sno2c_jvm}"
+SNO2C="${SNO2C_JVM:-/home/claude/scrip-cc_jvm}"
 JASMIN="${JASMIN:-$DIR/src/backend/jvm/jasmin.jar}"
 JVM_CACHE="${JVM_CACHE:-/tmp/snobol4x_jvm_cache}"
 

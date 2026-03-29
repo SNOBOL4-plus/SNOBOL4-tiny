@@ -1,7 +1,7 @@
 /*
- * runtime_shim.h — shim between sno2c-generated C and snobol4.h runtime
+ * runtime_shim.h — shim between scrip-cc-generated C and snobol4.h runtime
  *
- * sno2c emits: STRVAL_fn(), INTVAL_fn(), kw(), CONCAT_fn(), alt(),
+ * scrip-cc emits: STRVAL_fn(), INTVAL_fn(), kw(), CONCAT_fn(), alt(),
  * aref(), aset(), iset(), deref(), cursor_get(),
  * assign_expr(), get(v), set(v,x), IS_FAIL_fn(v), DT_SNUL.
  * Also: MATCH_fn(&s,pat) → SnoMatch; REPLACE_fn(&s,&m,repl).
@@ -21,13 +21,13 @@
 /* ---- Failure macro ---- */
 #define IS_FAIL_fn(v)      IS_FAIL_fn(v)
 
-/* ---- Variable get/set: sno2c emits static locals, identity macros ---- */
+/* ---- Variable get/set: scrip-cc emits static locals, identity macros ---- */
 #define get(v)          (v)
 #define set(v, x)       ((v) = (x))
 
 /* ---- Null DESCR_t ---- */
 /* We cannot redefine DT_SNUL (it's a DTYPE_t enum member).
- * sno2c emits DT_SNUL as a DESCR_t — we handle this by emit.c
+ * scrip-cc emits DT_SNUL as a DESCR_t — we handle this by emit.c
  * emitting NULVCL instead. See emit.c emit_expr E_NULV case. */
 
 /* ---- Scalar constructors ---- */

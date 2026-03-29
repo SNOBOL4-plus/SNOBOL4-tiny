@@ -13,9 +13,9 @@ WORDCOUNT=/home/claude/corpus/crosscheck/strings/wordcount.sno
 TMPD=$(mktemp -d)
 trap "rm -rf $TMPD" EXIT
 
-./sno2c -jvm $NULL_SNO      > $TMPD/null_new.j
-./sno2c -jvm $ROMAN         > $TMPD/roman_new.j
-./sno2c -jvm $WORDCOUNT     > $TMPD/wordcount_new.j
+./scrip-cc -jvm $NULL_SNO      > $TMPD/null_new.j
+./scrip-cc -jvm $ROMAN         > $TMPD/roman_new.j
+./scrip-cc -jvm $WORDCOUNT     > $TMPD/wordcount_new.j
 
 # Verify all three assemble clean
 java -jar $JASMIN $TMPD/null_new.j      -d $TMPD/ 2>/dev/null || { echo "FAIL: hello_prog.j does not assemble"; exit 1; }

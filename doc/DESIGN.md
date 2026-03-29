@@ -1,4 +1,4 @@
-# snobol4x — Design Notes
+# one4all — Design Notes
 
 ## The Byrd Box Model
 
@@ -130,7 +130,7 @@ For MSIL: DynamicMethod.
 
 ## The Forth Analogy — Why This Architecture
 
-snobol4x's architecture is deliberately modeled on the Forth kernel/dictionary
+one4all's architecture is deliberately modeled on the Forth kernel/dictionary
 split. Forth's power comes from having an irreducibly small native kernel (~12
 primitives) and then building everything else in the language itself. The same
 discipline applies here.
@@ -148,7 +148,7 @@ NEXT: lw  W, (IP)    ; fetch next word pointer
 SPITBOL uses an equivalent: `succp` (3 instructions: load pthen, load pcode,
 jmp). Every pattern node pays this cost at runtime.
 
-snobol4x pays **zero**. The α/β/γ/ω wiring is baked into the compiled
+one4all pays **zero**. The α/β/γ/ω wiring is baked into the compiled
 output as static gotos. There is no dispatch loop — the wiring IS the execution.
 This is the fundamental speed advantage over SPITBOL's threaded model.
 
@@ -184,7 +184,7 @@ See `doc/DECISIONS.md` for the two foundational questions. Decision 2
 
 ### Expressions first, statements second (decided 2026-03-10)
 
-snobol4x implements pattern expressions before the SNOBOL4 statement
+one4all implements pattern expressions before the SNOBOL4 statement
 model. Stages:
 
 - **Stage B** (Sprints 0–4): single pattern, stdin/stdout, no naming
@@ -217,7 +217,7 @@ uses four actions:
 These are **the same four states as α/β/γ/ω** — not by coincidence. Both
 are implementations of the Byrd Box model. The difference is execution strategy:
 
-| | SNOBOL4c.c interpreter | snobol4x compiler |
+| | SNOBOL4c.c interpreter | one4all compiler |
 |---|---|---|
 | Dispatch | `switch(type<<2\|action)` at runtime | Static `goto` labels baked into C output |
 | State | `state_t Z` on heap | Named static variables per node |
@@ -231,7 +231,7 @@ The `.h` files (`BEAD_PATTERN.h`, `C_PATTERN.h`, `CALC_PATTERN.h`, etc.) are
 that walks SNOBOL4python pattern objects and dumps them as C struct declarations).
 They are `#include`d directly into `SNOBOL4c.c`.
 
-The `test_sno_*.c` files are what a snobol4x **compiler** emits instead —
+The `test_sno_*.c` files are what a one4all **compiler** emits instead —
 the same patterns, but as inlined C-with-gotos rather than interpreted structs.
 
 ### The two routes from here
@@ -329,7 +329,7 @@ replacement, goto1, goto2). That IS the IR shape for Stage D.
 
 ## The SNOBOL4tiny Language — Formal Definition (Stage B)
 
-This section defines the language that snobol4x compiles at Stage B
+This section defines the language that one4all compiles at Stage B
 (Sprints 8–13). It is distinct from full SNOBOL4 (Stage C) and from the
 primitive pattern engine (Stage A).
 
@@ -445,7 +445,7 @@ The initial target set:
 | Forth source | `forthWord` | Whitespace-delimited tokens |
 
 **Why EDN specifically:** EDN (Extensible Data Notation) is the format used by
-snobol4jvm (Clojure) for its internal IR serialization. A snobol4x that reads
+snobol4jvm (Clojure) for its internal IR serialization. A one4all that reads
 EDN can directly consume snobol4jvm IR output — closing a cross-implementation loop.
 
 ### Implementation Path
@@ -466,27 +466,27 @@ The `ednExpr` pattern is itself a SNOBOL4 pattern — it would live in
 
 ### The Bootstrap Angle
 
-Once snobol4x can read EDN, and snobol4jvm emits EDN IR, the pipeline becomes:
+Once one4all can read EDN, and snobol4jvm emits EDN IR, the pipeline becomes:
 
 ```
 SNOBOL4 source
     → snobol4jvm (parses, emits EDN IR)
-    → snobol4x stdin (reads EDN, emits C-with-gotos)
+    → one4all stdin (reads EDN, emits C-with-gotos)
     → compiled binary
 ```
 
-snobol4x becomes a backend for snobol4jvm output. The two implementations
+one4all becomes a backend for snobol4jvm output. The two implementations
 validate each other through a shared IR format.
 
 ### The Alt Pattern IS the Architecture
 
 The deeper point: the polyglot dispatcher is not a bolt-on feature. It reveals that
 the SNOBOL4 pattern match IS a universal parsing framework. Any context-free language
-with a SNOBOL4 grammar can be parsed by `MATCH()`. The "language" snobol4x
+with a SNOBOL4 grammar can be parsed by `MATCH()`. The "language" one4all
 implements is therefore not SNOBOL4 — it is **whatever grammar is loaded into
 `SNOBOL4_EXPRESSION_PATTERN.h`** at compile time.
 
-This means snobol4x is not a SNOBOL4 compiler. It is a **compiler compiler**
+This means one4all is not a SNOBOL4 compiler. It is a **compiler compiler**
 whose input language is a SNOBOL4 pattern expression.
 
 ---

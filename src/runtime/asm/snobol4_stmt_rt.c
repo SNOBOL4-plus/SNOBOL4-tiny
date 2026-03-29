@@ -60,7 +60,7 @@
 void stmt_init(void) {
     SNO_INIT_fn();
     /* inc_init() removed — library functions (lwr, upr, Gen, etc.) are now
-     * compiled directly from the -INCLUDE'd SNOBOL4 source by sno2c -asm */
+     * compiled directly from the -INCLUDE'd SNOBOL4 source by scrip-cc -asm */
     NV_SYNC_fn();
 }
 

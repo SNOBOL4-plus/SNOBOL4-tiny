@@ -1,7 +1,7 @@
 #!/bin/bash
 # run_rung20_section_seqexpr.sh — rung20_section_seqexpr corpus runner
 cd "$(dirname "$0")/../../.."
-DRIVER=${1:-/tmp/sno2c}
+DRIVER=${1:-/tmp/scrip-cc}
 PASS=0; FAIL=0; XFAIL=0
 for icn in test/frontend/icon/corpus/rung20_section_seqexpr/t*.icn; do
   [ -f "$icn" ] || continue

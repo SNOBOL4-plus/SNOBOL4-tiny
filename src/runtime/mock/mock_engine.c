@@ -1,6 +1,6 @@
 /* mock_engine.c — minimal recursive interpreter for dynamic pattern nodes.
  *
- * The compiled Byrd box path (sno2c -trampoline output) emits labeled-goto C
+ * The compiled Byrd box path (scrip-cc -trampoline output) emits labeled-goto C
  * for all statically known patterns.  But beauty.sno constructs a small number
  * of pattern trees at runtime (e.g. `nl | ';'` terminators in pat_Command)
  * that reach engine_match_ex via match_pattern_at.

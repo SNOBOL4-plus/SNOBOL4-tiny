@@ -9,7 +9,7 @@ Archived session182. These files have no build role in the C compiler.
 | `parser.py` | Early Python SNOBOL4 parser prototype, predates the C lex/yacc frontend. Uses `ir.py` Graph nodes. |
 | `sno_parser.py` | More complete Python parser (Sprint 16+), handles full Stmt/Expr/PatExpr IR. Referenced `ir.py` Expr, PatExpr. ~1000 lines. |
 
-Live SNOBOL4 frontend is in `src/frontend/snobol4/` (lex.c, parse.c, sno.l, sno.y, sno2c.h).
+Live SNOBOL4 frontend is in `src/frontend/snobol4/` (lex.c, parse.c, sno.l, sno.y, scrip-cc.h).
 Live Rebus frontend is in `src/frontend/rebus/` (own Makefile, M-REBUS ✅).
 
 Removed from `src/frontend/`: `icon/`, `snocone/.gitkeep`, `prolog/.gitkeep`.

@@ -25,7 +25,7 @@
  *   ARCH-scrip-abi.md  — ABI contract
  */
 
-#include "sno2c.h"
+#include "scrip_cc.h"
 #include "prolog_lower.h"
 #include <stdio.h>
 #include <stdlib.h>

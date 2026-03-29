@@ -1,4 +1,4 @@
-# snobol4x — Sprint Plan
+# one4all — Sprint Plan
 
 ---
 
@@ -7,9 +7,9 @@
 Every session, before anything else:
 
 ```bash
-git clone https://github.com/snobol4ever/snobol4x
+git clone https://github.com/snobol4ever/one4all
 git clone https://github.com/snobol4ever/x64
-bash /home/claude/snobol4x/setup.sh   # installs libgc-dev, nasm, m4, CSNOBOL4, SPITBOL, sno2c
+bash /home/claude/one4all/setup.sh   # installs libgc-dev, nasm, m4, CSNOBOL4, SPITBOL, scrip-cc
 ```
 
 `setup.sh` is idempotent. Never skip it. Missing packages (nasm, libgc-dev, etc.)
@@ -52,13 +52,13 @@ are always the cause when builds fail with "not found" errors.
 ## §0 — PROJECT VISION (Session 43, 2026-03-12)
 
 > **SNOBOL4 everywhere. SNOBOL4 for all. SNOBOL4 for now. SNOBOL4 forever.**
-> `snobol4x` · `snobol4now` · `snobol4ever`
+> `one4all` · `snobol4now` · `snobol4ever`
 
 The snobol4ever org is a **two-dimensional compiler matrix**:
 
 |                | **SNOBOL4** | **SPITBOL** | **SNOCONE** | **REBUS** | *(more)* |
 |----------------|-------------|-------------|-------------|-----------|----------|
-| **C / native** | snobol4x (snoc) ← *here* | — | — | — | |
+| **C / native** | one4all (snoc) ← *here* | — | — | — | |
 | **JVM**        | snobol4jvm | — | snocone.clj | — | |
 | **.NET**       | snobol4dotnet | — | snocone.cs | — | |
 | **ASM**        | — | — | — | — | |
@@ -69,7 +69,7 @@ The snobol4ever org is a **two-dimensional compiler matrix**:
 - Each cell = a working compiler+runtime for that *(language × platform)* pair
 - The mission: fill the matrix. Make string-processing power available everywhere.
 
-snobol4x (snoc) is the **C/native × SNOBOL4** cell. Beauty.sno self-hosting
+one4all (snoc) is the **C/native × SNOBOL4** cell. Beauty.sno self-hosting
 is the proof-of-correctness for that cell. Every other cell follows the same pattern.
 
 ---
@@ -78,7 +78,7 @@ is the proof-of-correctness for that cell. Every other cell follows the same pat
 
 | Repo            | Commit    | Status                                      |
 |-----------------|-----------|---------------------------------------------|
-| snobol4x    | `6d3d1fa` | 22/22 PASS. snoc: 1213 stmts, 0 errors.     |
+| one4all    | `6d3d1fa` | 22/22 PASS. snoc: 1213 stmts, 0 errors.     |
 | snobol4dotnet  | `b5aad44` | 1,607 / 0                                   |
 | snobol4jvm     | `9cf0af3` | 1,896 / 4,120 / 0                           |
 
@@ -250,7 +250,7 @@ convention adjusted. Decide: **treat `error` as FRETURN for now, revisit.**
 ### Build + test sequence
 
 ```bash
-cd /home/claude/snobol4x/src/snoc && make clean && make
+cd /home/claude/one4all/src/snoc && make clean && make
 
 # Step 1: hello world still works
 ./snoc /tmp/hello.sno > /tmp/hello.c
@@ -292,7 +292,7 @@ Claude Sonnet 4.6 writes the commit message (recorded at `c5b3e99`).
 ## §9 — Runtime build command (reference)
 
 ```bash
-RUNTIME="/home/claude/snobol4x/src/runtime"
+RUNTIME="/home/claude/one4all/src/runtime"
 gcc -O0 -g "$1" \
     $RUNTIME/snobol4/snobol4.c \
     $RUNTIME/snobol4/mock_includes.c \
@@ -792,7 +792,7 @@ Every session that produces a meaningfully different compiler output commits:
 ### How to run
 
 ```bash
-REPO=/path/to/snobol4x
+REPO=/path/to/one4all
 
 # Step 1: build
 bash $REPO/test/smoke/build_beauty.sh
@@ -950,7 +950,7 @@ This prevents broken static boxes for `upr('h') | lwr('H')`. But without the `st
 
 1. `bash setup.sh`
 2. Upgrade `stmt_match_var` in `snobol4_stmt_rt.c` to dispatch DT_P variables through the pattern engine
-3. Verify `icase` test passes: `INC=demo/inc ./sno2c -asm ... && nasm ... && gcc ... && ./prog_asm`
+3. Verify `icase` test passes: `INC=demo/inc ./scrip-cc -asm ... && nasm ... && gcc ... && ./prog_asm`
 4. Run full 3-way monitor: `INC=demo/inc bash test/beauty/run_beauty_subsystem.sh case`
 5. On 9/9 PASS: commit all fixes + `B-263: M-BEAUTY-CASE ✅`, update §START table
 6. Advance to `M-BEAUTY-ASSIGN`
@@ -1186,7 +1186,7 @@ This routes keyword reads through `NV_GET_fn` which has the C-runtime values.
 
 **Step 3 — Rebuild and verify:**
 ```bash
-cd /home/claude/beauty-project/snobol4x/src && make
+cd /home/claude/beauty-project/one4all/src && make
 TMP=$(mktemp -d)
 RT=src/runtime; INC=demo/inc
 # [build as before]
@@ -1479,7 +1479,7 @@ The 3-way sync monitor proved essential: each divergence printed the exact step,
 ### Next session action plan
 
 ```bash
-bash /home/claude/snobol4x/setup.sh
+bash /home/claude/one4all/setup.sh
 
 # Step 1: Create driver and ref
 mkdir -p test/beauty/stack
@@ -1686,7 +1686,7 @@ trailed binding (not just clear the trail stack entry).
 ```bash
 for d in test/frontend/prolog/corpus/rung10_programs/*.pro; do
     base=$(basename $d .pro)
-    out=$(./sno2c -pl -asm "$d" -o /tmp/pl_$base.s 2>/dev/null \
+    out=$(./scrip-cc -pl -asm "$d" -o /tmp/pl_$base.s 2>/dev/null \
           && nasm -f elf64 /tmp/pl_$base.s -o /tmp/pl_$base.o \
           && gcc /tmp/pl_$base.o ... -o /tmp/pl_$base \
           && /tmp/pl_$base)
@@ -1702,7 +1702,7 @@ Expected:
 5. On rung10 PASS: run rung01–09 regression, then commit and push both repos.
 
 ### Next session trigger phrase
-**"playing with Prolog frontend"** → F-225 session → pick up at snobol4x PLAN.md §25.
+**"playing with Prolog frontend"** → F-225 session → pick up at one4all PLAN.md §25.
 
 ## §26 — Session Handoff F-225 (2026-03-23): per-ucall trail marks — mini PASS, rung10 WIP
 
@@ -1782,8 +1782,8 @@ F-223 greek pass (`b0b190c`) is the last clean commit.
 
 ### Next session action plan (F-226)
 
-1. `bash setup.sh` (installs deps, builds sno2c)
-2. Read snobol4x PLAN.md §26 (this section)
+1. `bash setup.sh` (installs deps, builds scrip-cc)
+2. Read one4all PLAN.md §26 (this section)
 3. Fix the `αN` trail mark to only fire on fresh entry (`edx==0`), not resume
 4. Test mini cross-product → must stay 9/9
 5. Test `person(C), person(M), differ(C,M)` 3-ucall case → must give 6 pairs
@@ -1792,7 +1792,7 @@ F-223 greek pass (`b0b190c`) is the last clean commit.
 8. If PASS: commit `F-226: M-PROLOG-R10 ✅`, update dashboard, push both repos
 
 ### Trigger phrase for next session
-**"playing with Prolog frontend"** → F-226 → pick up at snobol4x PLAN.md §26.
+**"playing with Prolog frontend"** → F-226 → pick up at one4all PLAN.md §26.
 
 ## §27 — Session Handoff F-226 (2026-03-23): βN unwind fix — 2-ucall PASS, regressions in 1-ucall
 
@@ -1868,7 +1868,7 @@ and `αN-1`'s skip-mark guard can be removed (marks are now taken at γ time, no
 ### Next session action plan (F-227)
 
 1. `bash setup.sh` (or just `cd src && make`)
-2. Read snobol4x PLAN.md §27 (this section)
+2. Read one4all PLAN.md §27 (this section)
 3. **Revert fix 2**: change `βN` unwind back to `UCALL_MARK_OFFSET(ucall_seq)` (own mark)
 4. **Move trail mark to γ_{N-1} time**: emit mark just BEFORE the `γ_{N-1}` label
 5. **Remove the `edx==0` skip-mark guard at αN** (fix 1 no longer needed if marks are at γ time)
@@ -1879,7 +1879,7 @@ and `αN-1`'s skip-mark guard can be removed (marks are now taken at γ time, no
 10. Commit `F-227: M-PROLOG-R10 ✅` if all pass, update dashboards, push both repos
 
 ### Trigger phrase for next session
-**"playing with Prolog frontend"** → F-227 → snobol4x PLAN.md §27
+**"playing with Prolog frontend"** → F-227 → one4all PLAN.md §27
 
 ---
 
@@ -1906,17 +1906,17 @@ and `αN-1`'s skip-mark guard can be removed (marks are now taken at γ time, no
 
 ```bash
 ln -sfn /home/claude/beauty-project/x64 /home/claude/x64   # if needed
-bash /home/claude/beauty-project/snobol4x/setup.sh
+bash /home/claude/beauty-project/one4all/setup.sh
 ```
 
-1. Read snobol4x PLAN.md §28 (this section) + `test/beauty/TDump/` for current state
+1. Read one4all PLAN.md §28 (this section) + `test/beauty/TDump/` for current state
 2. Fix bug 1: `ANY(&UCASE &LCASE)` quoting in `emit_byrd_asm.c`
 3. Fix bug 2: `STLIMIT` loop guard in `Gen.sno`
 4. Run: `INC=demo/inc bash test/beauty/run_beauty_subsystem.sh TDump`
 5. On PASS: commit `B-271: M-BEAUTY-TDUMP ✅`, update §START → `M-BEAUTY-GEN`
 
 ### Trigger phrase
-**"playing with beauty"** → B-271 → snobol4x PLAN.md §28, milestone `M-BEAUTY-TDUMP`
+**"playing with beauty"** → B-271 → one4all PLAN.md §28, milestone `M-BEAUTY-TDUMP`
 
 ---
 
@@ -1980,7 +1980,7 @@ SNOBOL4 variable, that is the bug.
 
 ```bash
 ln -sfn /home/claude/beauty_project/x64 /home/claude/x64
-bash /home/claude/beauty_project/snobol4x/setup.sh
+bash /home/claude/beauty_project/one4all/setup.sh
 ```
 
 1. Find `AT_α` macro and `E_AT` emit in `emit_byrd_asm.c`
@@ -2013,7 +2013,7 @@ bash /home/claude/beauty_project/snobol4x/setup.sh
 | 8 | LineMap 2-line second offset | ? |
 
 ### Trigger phrase for next session
-**"playing with beauty"** → B-273 → snobol4x PLAN.md §29, milestone `M-BEAUTY-READWRITE`
+**"playing with beauty"** → B-273 → one4all PLAN.md §29, milestone `M-BEAUTY-READWRITE`
 
 
 ---
@@ -2078,7 +2078,7 @@ Also check `snprintf(last_β_lbl, ...)` — it uses `bi` for `β%d`, must match 
 9. Update HQ PLAN.md dashboard row + fire M-PROLOG-R10 ✅ M-PROLOG-CORPUS ✅
 
 ### Trigger phrase
-**"playing with Prolog frontend"** → F-228 → snobol4x PLAN.md §28
+**"playing with Prolog frontend"** → F-228 → one4all PLAN.md §28
 ## §28 — Session Handoff B-270 (2026-03-23): M-BEAUTY-STACK 3-way PASS ✅
 
 ### Work completed this session
@@ -2102,17 +2102,17 @@ Also check `snprintf(last_β_lbl, ...)` — it uses `bi` for `β%d`, must match 
 
 ```bash
 ln -sfn /home/claude/beauty-project/x64 /home/claude/x64   # if needed
-bash /home/claude/beauty-project/snobol4x/setup.sh
+bash /home/claude/beauty-project/one4all/setup.sh
 ```
 
-1. Read snobol4x PLAN.md §28 (this section) + `test/beauty/TDump/` for current state
+1. Read one4all PLAN.md §28 (this section) + `test/beauty/TDump/` for current state
 2. Fix bug 1: `ANY(&UCASE &LCASE)` quoting in `emit_byrd_asm.c`
 3. Fix bug 2: `STLIMIT` loop guard in `Gen.sno`
 4. Run: `INC=demo/inc bash test/beauty/run_beauty_subsystem.sh TDump`
 5. On PASS: commit `B-271: M-BEAUTY-TDUMP ✅`, update §START → `M-BEAUTY-GEN`
 
 ### Trigger phrase
-**"playing with beauty"** → B-271 → snobol4x PLAN.md §28, milestone `M-BEAUTY-TDUMP`
+**"playing with beauty"** → B-271 → one4all PLAN.md §28, milestone `M-BEAUTY-TDUMP`
 
 ---
 
@@ -2176,7 +2176,7 @@ SNOBOL4 variable, that is the bug.
 
 ```bash
 ln -sfn /home/claude/beauty_project/x64 /home/claude/x64
-bash /home/claude/beauty_project/snobol4x/setup.sh
+bash /home/claude/beauty_project/one4all/setup.sh
 ```
 
 1. Find `AT_α` macro and `E_AT` emit in `emit_byrd_asm.c`
@@ -2209,7 +2209,7 @@ bash /home/claude/beauty_project/snobol4x/setup.sh
 | 8 | LineMap 2-line second offset | ? |
 
 ### Trigger phrase for next session
-**"playing with beauty"** → B-273 → snobol4x PLAN.md §29, milestone `M-BEAUTY-READWRITE`
+**"playing with beauty"** → B-273 → one4all PLAN.md §29, milestone `M-BEAUTY-READWRITE`
 
 ---
 
@@ -2304,10 +2304,10 @@ Same fix needed for `_b_OUTPUT` if `Write.sno` uses the same 3-arg pattern.
 
 ```bash
 ln -sfn /home/claude/beauty-project/x64 /home/claude/x64  # if needed
-bash /home/claude/snobol4x/setup.sh
+bash /home/claude/one4all/setup.sh
 ```
 
-1. Read snobol4x PLAN.md §30 (this section)
+1. Read one4all PLAN.md §30 (this section)
 2. Fix `_b_INPUT` in `src/runtime/snobol4/snobol4.c` — handle `n==3` (extract filename from opts)
 3. Check `_b_OUTPUT` — apply same `n==3` pattern if `Write.sno` uses same syntax
 4. Rebuild: `cd src && make`

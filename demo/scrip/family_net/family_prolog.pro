@@ -1,5 +1,5 @@
 % family_prolog.pro — Prolog block of the Scrip family-tree demo.
-% Uses only builtins confirmed supported by sno2c -pl -jvm parser+emitter.
+% Uses only builtins confirmed supported by scrip-cc -pl -jvm parser+emitter.
 % Deduplication of symmetric pairs done in Icon output stage.
 
 % ── Pure helpers ──────────────────────────────────────────────────────────

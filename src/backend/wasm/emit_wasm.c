@@ -1,5 +1,5 @@
 /*
- * emit_wasm.c — WebAssembly text-format emitter for sno2c (scaffold)
+ * emit_wasm.c — WebAssembly text-format emitter for scrip-cc (scaffold)
  *
  * Skeleton only — Phase 2 scaffold (M-G2-SCAFFOLD-WASM).
  * No IR node handling yet. Entry point compiles and links clean.
@@ -11,7 +11,7 @@
  * Milestone: M-G2-SCAFFOLD-WASM
  */
 
-#include "sno2c.h"
+#include "scrip_cc.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

@@ -1,7 +1,7 @@
 #!/bin/bash
 # run_monitor_3way.sh <sno_file> [tracepoints_conf]
 #
-# Sync-step 3-way monitor: CSNOBOL4 + SPITBOL + snobol4x ASM backend.
+# Sync-step 3-way monitor: CSNOBOL4 + SPITBOL + one4all ASM backend.
 # JVM and NET excluded. Identical logic to run_monitor_sync.sh minus
 # those two participants. NAMES="spl csn asm" (SPITBOL is oracle[0]).
 #
@@ -57,7 +57,7 @@ for src in "$RT/asm/snobol4_stmt_rt.c" "$RT/snobol4/snobol4.c" \
         -I"$DIR/src/frontend/snobol4" -w \
         -o "$TMP/$(basename "$src" .c).o" 2>/dev/null
 done
-"$DIR/sno2c" -asm -I"$INC" "$TMP/instr.sno" > "$TMP/prog.s" 2>/dev/null
+"$DIR/scrip-cc" -asm -I"$INC" "$TMP/instr.sno" > "$TMP/prog.s" 2>/dev/null
 nasm -f elf64 -I"$RT/asm/" "$TMP/prog.s" -o "$TMP/prog.o" 2>/dev/null
 gcc -no-pie "$TMP/prog.o" \
     "$TMP/snobol4_stmt_rt.o" "$TMP/snobol4.o" "$TMP/mock_includes.o" \
@@ -72,7 +72,7 @@ READY_PATHS=$(echo $NAMES | tr ' ' '\n' | sed "s|.*|$TMP/&.ready|" | tr '\n' ','
 GO_PATHS=$(echo $NAMES    | tr ' ' '\n' | sed "s|.*|$TMP/&.go|"    | tr '\n' ',' | sed 's/,$//')
 
 # ── Step 4: launch 3 participants ────────────────────────────────────────
-# SPITBOL is participant 0 (primary oracle) — snobol4x targets SPITBOL semantics (D-001/D-005).
+# SPITBOL is participant 0 (primary oracle) — one4all targets SPITBOL semantics (D-001/D-005).
 # CSNOBOL4 is secondary; its quirks (FENCE, DATATYPE case) are ignore-points.
 (cd "$INC" && SNOLIB="$X64_DIR:$INC" MONITOR_READY_PIPE="$TMP/spl.ready" \
     MONITOR_GO_PIPE="$TMP/spl.go" MONITOR_SO="$X64_DIR/monitor_ipc_spitbol.so" \

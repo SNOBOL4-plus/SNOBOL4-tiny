@@ -1,12 +1,12 @@
 /*
- * main.c — sno2c driver
+ * main.c — scrip-cc driver
  *
  * Usage (gcc-style):
- *   sno2c -asm file1.sno file2.sno ...   → file1.s  file2.s  ...
- *   sno2c -jvm file1.sno file2.sno ...   → file1.j  file2.j  ...
- *   sno2c -net file1.sno file2.sno ...   → file1.il file2.il ...
- *   sno2c -asm -o out.s file.sno         → out.s  (single file, explicit output)
- *   sno2c -asm                           → stdout (stdin mode)
+ *   scrip-cc -asm file1.sno file2.sno ...   → file1.s  file2.s  ...
+ *   scrip-cc -jvm file1.sno file2.sno ...   → file1.j  file2.j  ...
+ *   scrip-cc -net file1.sno file2.sno ...   → file1.il file2.il ...
+ *   scrip-cc -asm -o out.s file.sno         → out.s  (single file, explicit output)
+ *   scrip-cc -asm                           → stdout (stdin mode)
  *
  * Multiple source files: each input produces one output alongside the source
  * (suffix replaced). -o is an error with more than one input file.
@@ -14,7 +14,7 @@
  *
  * Milestone: M-G-INV-EMIT — multi-file support for emit-diff invariant check
  */
-#include "sno2c.h"
+#include "scrip_cc.h"
 #include "snocone_driver.h"
 #include "snocone_cf.h"
 #include "prolog_atom.h"
@@ -114,7 +114,7 @@ static int compile_one(const char *infile, const char *outpath, FILE *out) {
 
     if (file_icn) {
         char *src = read_all(in);
-        if (!src) { fprintf(stderr, "sno2c: read error\n"); rc = 1; goto done; }
+        if (!src) { fprintf(stderr, "scrip-cc: read error\n"); rc = 1; goto done; }
         ImportEntry *imports = icn_prescan_imports(src);
         IcnLexer lx; icn_lex_init(&lx, src);
         IcnParser parser; icn_parse_init(&parser, &lx);
@@ -122,7 +122,7 @@ static int compile_one(const char *infile, const char *outpath, FILE *out) {
         IcnNode **procs = icn_parse_file(&parser, &count);
         free(src);
         if (parser.had_error) {
-            fprintf(stderr, "sno2c: Icon parse error: %s\n", parser.errmsg);
+            fprintf(stderr, "scrip-cc: Icon parse error: %s\n", parser.errmsg);
             rc = 1; goto done;
         }
         if (jvm_mode) ij_emit_file(procs, count, out, infile, outpath, imports);
@@ -134,12 +134,12 @@ static int compile_one(const char *infile, const char *outpath, FILE *out) {
 
     if (file_pl) {
         char *src = read_all(in);
-        if (!src) { fprintf(stderr, "sno2c: read error\n"); rc = 1; goto done; }
+        if (!src) { fprintf(stderr, "scrip-cc: read error\n"); rc = 1; goto done; }
         prolog_atom_init();
         PlProgram *pl_prog = prolog_parse(src, infile ? infile : "<stdin>");
         free(src);
         if (pl_prog->nerrors) {
-            fprintf(stderr, "sno2c: %d Prolog parse error(s)\n", pl_prog->nerrors);
+            fprintf(stderr, "scrip-cc: %d Prolog parse error(s)\n", pl_prog->nerrors);
             rc = 1; goto done;
         }
         prog = prolog_lower(pl_prog);
@@ -155,7 +155,7 @@ static int compile_one(const char *infile, const char *outpath, FILE *out) {
 
     if (file_sc) {
         char *src = read_all(in);
-        if (!src) { fprintf(stderr, "sno2c: read error\n"); rc = 1; goto done; }
+        if (!src) { fprintf(stderr, "scrip-cc: read error\n"); rc = 1; goto done; }
         prog = asm_mode ? snocone_cf_compile(src, infile ? infile : "<stdin>")
                         : snocone_compile   (src, infile ? infile : "<stdin>");
         free(src);
@@ -163,7 +163,7 @@ static int compile_one(const char *infile, const char *outpath, FILE *out) {
     } else {
         prog = snoc_parse(in, infile ? infile : "<stdin>");
         if (snoc_nerrors) {
-            fprintf(stderr, "sno2c: %d error(s)\n", snoc_nerrors); rc = 1; goto done;
+            fprintf(stderr, "scrip-cc: %d error(s)\n", snoc_nerrors); rc = 1; goto done;
         }
     }
 
@@ -200,10 +200,10 @@ int main(int argc, char *argv[]) {
         } else if (!strcmp(argv[i], "-F"))           { fold_mode = 1;
         } else if (!strcmp(argv[i], "-f"))           { fold_mode = 0;
         } else if (argv[i][0] != '-') {
-            if (nfiles >= 1024) { fprintf(stderr, "sno2c: too many input files\n"); return 1; }
+            if (nfiles >= 1024) { fprintf(stderr, "scrip-cc: too many input files\n"); return 1; }
             files[nfiles++] = argv[i];
         } else {
-            fprintf(stderr, "sno2c: unknown option %s\n", argv[i]); return 1;
+            fprintf(stderr, "scrip-cc: unknown option %s\n", argv[i]); return 1;
         }
     }
 
@@ -218,7 +218,7 @@ int main(int argc, char *argv[]) {
 
     /* -o with multiple files: error */
     if (explicit_out && nfiles > 1) {
-        fprintf(stderr, "sno2c: -o cannot be used with multiple input files\n"); return 1;
+        fprintf(stderr, "scrip-cc: -o cannot be used with multiple input files\n"); return 1;
     }
 
     /* Single file, explicit -o */
@@ -239,7 +239,7 @@ int main(int argc, char *argv[]) {
         if (!out) { perror(outname); free(outname); any_error = 1; continue; }
         int rc = compile_one(files[i], outname, out);
         fclose(out);
-        if (rc) { fprintf(stderr, "sno2c: error compiling %s\n", files[i]); any_error = 1; }
+        if (rc) { fprintf(stderr, "scrip-cc: error compiling %s\n", files[i]); any_error = 1; }
         free(outname);
     }
     return any_error ? 1 : 0;

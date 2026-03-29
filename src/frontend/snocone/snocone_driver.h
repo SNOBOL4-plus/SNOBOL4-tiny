@@ -20,7 +20,7 @@
 #ifndef SNOCONE_DRIVER_H
 #define SNOCONE_DRIVER_H
 
-#include "sno2c.h"   /* Program */
+#include "scrip_cc.h"   /* Program */
 
 /*
  * snocone_compile(source, filename)

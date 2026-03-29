@@ -1,6 +1,6 @@
 // snobol4run.il — SNOBOL4 .NET runtime internals
 //
-// Keyword state, I/O, and execution support for sno2c -net emitted programs.
+// Keyword state, I/O, and execution support for scrip-cc -net emitted programs.
 //
 // Compile once:
 //   ilasm snobol4run.il /dll /output:snobol4run.dll

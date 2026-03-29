@@ -6,15 +6,15 @@
 #
 # What this script does:
 #   VERIFY   — confirms build is clean and baseline invariants hold
-#   DIAGNOSE — identifies all sno2c statics that need resetting between files
+#   DIAGNOSE — identifies all scrip-cc statics that need resetting between files
 #   FIX      — patches snoc_reset() to cover all statics
-#   TEST     — confirms sno2c -asm *.sno (152 files) no longer crashes
+#   TEST     — confirms scrip-cc -asm *.sno (152 files) no longer crashes
 #   BASELINE — generates emit_baseline/ snapshot (committed to repo)
 #   CHECK    — runs emit-diff check to confirm all 152×3 match baseline
 #   TIMING   — reports wall time (target: <5s for all three backends)
 #
 # Usage:
-#   cd /home/claude/snobol4x
+#   cd /home/claude/one4all
 #   bash test/g8_session.sh [--skip-verify] [--skip-fix] [--only-baseline]
 #
 # After this script completes successfully, commit:
@@ -22,14 +22,14 @@
 #   git commit -m "G-8: M-G-INV-EMIT-FIX ✅ — in-process batch + emit baseline"
 #
 # Milestones closed by this script:
-#   M-G-INV-EMIT-FIX  — sno2c processes all corpus files in one invocation
+#   M-G-INV-EMIT-FIX  — scrip-cc processes all corpus files in one invocation
 #   M-G-INV-EMIT      — emit-diff harness green, baseline committed
 #
 # Authors: Claude Sonnet 4.6 (G-8 session, 2026-03-29)
 
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SNO2C="$ROOT/sno2c"
+SNO2C="$ROOT/scrip-cc"
 CORPUS="${CORPUS:-$(cd "$ROOT/../corpus" 2>/dev/null && pwd || echo "")}"
 BASELINE="$ROOT/test/emit_baseline"
 
@@ -56,10 +56,10 @@ if [[ $SKIP_VERIFY -eq 0 ]]; then
   echo -e "${BOLD}VERIFY — build + corpus path${RESET}"
 
   if [[ ! -x "$SNO2C" ]]; then
-    info "sno2c not built — building now..."
-    (cd "$ROOT/src" && make -j4 -s) && ok "sno2c built" || { fail "build failed"; exit 1; }
+    info "scrip-cc not built — building now..."
+    (cd "$ROOT/src" && make -j4 -s) && ok "scrip-cc built" || { fail "build failed"; exit 1; }
   else
-    ok "sno2c exists: $SNO2C"
+    ok "scrip-cc exists: $SNO2C"
   fi
 
   if [[ -z "$CORPUS" || ! -d "$CORPUS/crosscheck" ]]; then
@@ -109,7 +109,7 @@ if [[ $SKIP_FIX -eq 0 && $ONLY_BASELINE -eq 0 ]]; then
   info "  uid_ctr — resets within emit_program dry-run but may carry over?"
   echo ""
   info "APPROACH:"
-  info "  1. Run: gcc -fsanitize=address,undefined -g sno2c to get exact crash location"
+  info "  1. Run: gcc -fsanitize=address,undefined -g scrip-cc to get exact crash location"
   info "  2. Read the stack trace — it names the exact static"
   info "  3. Add that static to snoc_reset() in lex.c"
   info "  4. Re-run this script to verify"
@@ -117,8 +117,8 @@ if [[ $SKIP_FIX -eq 0 && $ONLY_BASELINE -eq 0 ]]; then
 
   # Try to build with ASan for better crash diagnosis
   info "Building with AddressSanitizer for crash diagnosis..."
-  ASAN_BIN="$ROOT/sno2c_asan"
-  if (cd "$ROOT/src" && make -j4 -s CFLAGS="-Wall -Wno-unused-function -g -O0 -I. -Ifrontend/snobol4 -Ifrontend/snocone -Ifrontend/prolog -Ifrontend/icon -Ibackend/c -Ibackend/x64 -fsanitize=address,undefined" 2>/dev/null && cp "$ROOT/sno2c" "$ASAN_BIN") 2>/dev/null; then
+  ASAN_BIN="$ROOT/scrip-cc_asan"
+  if (cd "$ROOT/src" && make -j4 -s CFLAGS="-Wall -Wno-unused-function -g -O0 -I. -Ifrontend/snobol4 -Ifrontend/snocone -Ifrontend/prolog -Ifrontend/icon -Ibackend/c -Ibackend/x64 -fsanitize=address,undefined" 2>/dev/null && cp "$ROOT/scrip-cc" "$ASAN_BIN") 2>/dev/null; then
     ok "ASan binary: $ASAN_BIN"
     info "Running crash pair under ASan..."
     ASAN_OPTIONS=abort_on_error=0 "$ASAN_BIN" -asm "$F013" "$F014" > /dev/null 2>&1 || true

@@ -96,7 +96,7 @@ extern abort_frame_t *_sno_abort_top;
 
 /* sno_computed_goto — resolve a runtime label string to a block function pointer.
  * Called by $'literal' and $(expr) goto targets.
- * The block_label_table is emitted by sno2c at the end of each program. */
+ * The block_label_table is emitted by scrip-cc at the end of each program. */
 typedef struct { const char *name; void *(*fn)(void); } _BlockEntry_t;
 extern _BlockEntry_t _block_label_table[];
 extern int           _block_label_count;

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """inject_linkage.py -- Inject cross-language funny linkage into compiled .j files.
 
-After sno2c -jvm and icon_driver -jvm produce their .j files, this script:
+After scrip-cc -jvm and icon_driver -jvm produce their .j files, this script:
   1. Appends String-bridge public static methods to FamilyProlog.j
   2. Replaces SNOBOL4 stub method bodies in FamilySnobol4.j with invokestatic
      calls to FamilyProlog bridge methods

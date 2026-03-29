@@ -1,7 +1,7 @@
 # BASELINE.md — Pre-Reorg Freeze Baseline
 
 **Tag:** `pre-reorg-freeze`
-**snobol4x HEAD:** `a051367`
+**one4all HEAD:** `a051367`
 **Date:** 2026-03-28
 **Recorded by:** Claude Sonnet 4.6 (G-7 session)
 
@@ -46,7 +46,7 @@ No test suite yet. Gate: `builds clean`. Suites added as M-G6 milestones deliver
 - `snobol4dotnet` (C#) and `snobol4jvm` (Clojure) are separate repos; not tracked here.
 - `harness` and `corpus` are infrastructure repos; their baselines are
   their own HEADs at freeze time (`eced661` and `ccd79fa` respectively).
-- The C backend (`sno2c -c`, `sno2c.c`) is dead/unmaintained and excluded from all invariants.
+- The C backend (`scrip-cc -c`, `scrip-cc.c`) is dead/unmaintained and excluded from all invariants.
 - Scrip frontend: corpus runners exist (`test/scrip/run_corpus_icon.sh`,
   `run_corpus_prolog.sh`) but these test the *parser tools*, not a Scrip→backend pipeline.
   No Scrip backend invariant yet — added when M-G6-SCRIP-X64 lands.

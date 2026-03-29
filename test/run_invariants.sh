@@ -12,7 +12,7 @@
 #   --verbose   print per-test PASS lines (default: FAIL lines only)
 #
 # Environment overrides:
-#   SNO2C       path to sno2c binary        (default: <root>/sno2c)
+#   SNO2C       path to scrip-cc binary        (default: <root>/scrip-cc)
 #   CORPUS      path to corpus root  (default: <root>/../corpus)
 #   JASMIN      path to jasmin.jar          (default: <root>/src/backend/jvm/jasmin.jar)
 #   TIMEOUT_X86 per-test timeout x86 (s)   (default: 5)
@@ -27,7 +27,7 @@ set -uo pipefail
 
 # ── Config ────────────────────────────────────────────────────────────────────
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SNO2C="${SNO2C:-$ROOT/sno2c}"
+SNO2C="${SNO2C:-$ROOT/scrip-cc}"
 CORPUS="${CORPUS:-$(cd "$ROOT/../corpus" 2>/dev/null && pwd || echo "")}"
 JASMIN="${JASMIN:-$ROOT/src/backend/jvm/jasmin.jar}"
 RT="$ROOT/src/runtime"

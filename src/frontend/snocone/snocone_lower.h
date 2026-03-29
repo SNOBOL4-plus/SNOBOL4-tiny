@@ -59,7 +59,7 @@
 #define SNOCONE_LOWER_H
 
 #include "snocone_parse.h"
-#include "sno2c.h"      /* EXPR_t, STMT_t, Program */
+#include "scrip_cc.h"      /* EXPR_t, STMT_t, Program */
 
 /* ---------------------------------------------------------------------------
  * Lower result

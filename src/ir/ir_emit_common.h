@@ -2,7 +2,7 @@
  * ir_emit_common.h — Shared IR emit utilities (public API)
  *
  * Include this from any emitter that uses ir_nary_right_fold.
- * Requires sno2c.h (or ir/ir.h) to already be included for EXPR_t / EKind.
+ * Requires scrip-cc.h (or ir/ir.h) to already be included for EXPR_t / EKind.
  *
  * Milestone: M-G4-SHARED-CONC-FOLD
  */
@@ -10,7 +10,7 @@
 #ifndef IR_EMIT_COMMON_H
 #define IR_EMIT_COMMON_H
 
-#include "sno2c.h"   /* EXPR_t, EKind */
+#include "scrip_cc.h"   /* EXPR_t, EKind */
 
 /* Right-fold an n-ary node (nchildren >= 3) into binary nodes of fold_kind.
  * Returns root. *out_nodes / *out_kids must be freed via ir_nary_right_fold_free. */

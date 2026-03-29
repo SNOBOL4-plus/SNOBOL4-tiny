@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # run_crosscheck_net_rung.sh — NET backend corpus ladder driver
 #
-# Compiles each .sno in a given directory via sno2c -net, assembles with
+# Compiles each .sno in a given directory via scrip-cc -net, assembles with
 # ilasm, runs under mono, diffs vs .ref oracle.
 #
 # SPEED: ilasm and mono are both slow to start (~400ms each). This script
@@ -19,17 +19,17 @@
 #       /path/to/corpus/output
 #
 # Environment overrides:
-#   SNO2C        — path to sno2c binary  (default: ./sno2c)
+#   SNO2C        — path to scrip-cc binary  (default: ./scrip-cc)
 #   STOP_ON_FAIL — 1 = stop at first failure (default: 0)
-#   CACHE_DIR    — where to cache .il/.exe (default: /tmp/snobol4x_net_cache)
+#   CACHE_DIR    — where to cache .il/.exe (default: /tmp/one4all_net_cache)
 
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TINY="$(cd "$SCRIPT_DIR/../.." && pwd)"
-SNO2C="${SNO2C:-$TINY/sno2c}"
+SNO2C="${SNO2C:-$TINY/scrip-cc}"
 STOP_ON_FAIL="${STOP_ON_FAIL:-0}"
-CACHE_DIR="${CACHE_DIR:-/tmp/snobol4x_net_cache}"
+CACHE_DIR="${CACHE_DIR:-/tmp/one4all_net_cache}"
 mkdir -p "$CACHE_DIR"
 HARNESS="$TINY/src/runtime/net/SnobolHarness.exe"
 
@@ -72,7 +72,7 @@ for dir in "$@"; do
         exe="$CACHE_DIR/${rung}_${base}.exe"
         stamp="$CACHE_DIR/${rung}_${base}.stamp"
 
-        # Always re-emit .il (sno2c is fast — ~1ms)
+        # Always re-emit .il (scrip-cc is fast — ~1ms)
         "$SNO2C" -net "$sno" > "$il" 2>/dev/null
 
         # Only re-assemble if .il changed (ilasm is slow — ~400ms)

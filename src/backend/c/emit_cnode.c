@@ -1,6 +1,6 @@
 /* emit_cnode.c — CNODE_t IR build + measure + print phases */
 
-#include "sno2c.h"
+#include "scrip_cc.h"
 #include "emit_cnode.h"
 #include <stdlib.h>
 #include <string.h>

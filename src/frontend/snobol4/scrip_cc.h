@@ -1,7 +1,7 @@
 #ifndef SNO2C_H
 #define SNO2C_H
 /*
- * sno2c.h — IR for the sno2c SNOBOL4→C compiler
+ * scrip_cc.h — IR for the scrip-cc SNOBOL4→C compiler
  *
  * ONE expression type.  The emitter decides whether to call
  * pat_* or * based on emission context (subject vs pattern field).
@@ -25,7 +25,7 @@
  * bridge #defines so all existing code (E_NULV, E_VART, E_MNS, E_CONC, …)
  * continues to compile unchanged.
  *
- * EXPR_T_DEFINED tells ir.h to skip its own EXPR_t definition; sno2c.h
+ * EXPR_T_DEFINED tells ir.h to skip its own EXPR_t definition; scrip_cc.h
  * owns the struct for now.  Field unification is a later reorg milestone.
  */
 #define IR_COMPAT_ALIASES

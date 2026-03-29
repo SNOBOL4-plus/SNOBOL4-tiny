@@ -1,5 +1,5 @@
 /*
- * parse.c — hand-rolled SNOBOL4 recursive-descent parser for sno2c
+ * parse.c — hand-rolled SNOBOL4 recursive-descent parser for scrip-cc
  *
  * Grammar source: beauty.sno snoExpr0–snoExpr17 + snoStmt
  *
@@ -32,7 +32,7 @@
  *   snoExpr17 → parse_expr17  atom
  */
 
-#include "sno2c.h"
+#include "scrip_cc.h"
 #include "lex.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -230,7 +230,7 @@ static EXPR_t *parse_expr14(Lex *lx) {
     EKind uk;
     switch (t.kind) {
         case T_AT:     uk=E_ATP;    break;
-        case T_TILDE:  uk=E_INDR; break;  /* ~ is NOT in sno2c.h so map to DEREF for now */
+        case T_TILDE:  uk=E_INDR; break;  /* ~ is NOT in scrip-cc.h so map to DEREF for now */
         case T_QMARK:  uk=E_NAM;  break;  /* unary ? = interrogation */
         case T_AMP:    uk=E_OPSYN;break;
         case T_PLUS:   lex_next(lx); return parse_expr14(lx); /* unary + is identity */

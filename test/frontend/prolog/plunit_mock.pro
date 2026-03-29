@@ -1,7 +1,7 @@
 % plunit_mock.pro — runtime mock of SWI-Prolog's plunit library.
 %
 % Feed raw SWI test files as-is:
-%   cat plunit_mock.pro test_foo.pl | sno2c -pl -jvm - -o test_foo.j
+%   cat plunit_mock.pro test_foo.pl | scrip-cc -pl -jvm - -o test_foo.j
 %
 % Design: all plunit machinery runs at JVM runtime via the dynamic DB.
 % No Python, no stripping, no regex.  begin_tests/end_tests are directives

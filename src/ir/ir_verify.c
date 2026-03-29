@@ -21,7 +21,7 @@
  */
 
 #define IR_DEFINE_NAMES
-#include "sno2c.h"   /* → ir/ir.h (EKind, EXPR_t, compat aliases, ekind_name) */
+#include "scrip_cc.h"   /* → ir/ir.h (EKind, EXPR_t, compat aliases, ekind_name) */
 
 #include <stdio.h>
 #include <string.h>

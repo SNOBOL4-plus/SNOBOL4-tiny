@@ -9,7 +9,7 @@
 #ifndef SNOCONE_CF_H
 #define SNOCONE_CF_H
 
-#include "sno2c.h"   /* Program, STMT_t, EXPR_t, expr_new, stmt_new, etc. */
+#include "scrip_cc.h"   /* Program, STMT_t, EXPR_t, expr_new, stmt_new, etc. */
 
 /*
  * snocone_cf_compile(source, filename) → Program*

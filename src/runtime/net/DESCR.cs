@@ -1,6 +1,6 @@
 // DESCR.cs — SCRIP universal value type for the .NET backend.
 //
-// This is the .NET parallel of DESCR_t (snobol4x/src/runtime/snobol4/snobol4.h)
+// This is the .NET parallel of DESCR_t (one4all/src/runtime/snobol4/snobol4.h)
 // and struct descr (snobol4-2.3.3/include/snotypes.h).
 //
 // The SIL descriptor is a two-field cell:

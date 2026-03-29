@@ -1,4 +1,4 @@
-/* emit_cnode.h — CNODE_t IR for sno2c C expression pretty-printer
+/* emit_cnode.h — CNODE_t IR for scrip-cc C expression pretty-printer
  *
  * Architecture: pp/qq split (same model as beauty.sno)
  *   build_expr(EXPR_t*)  → CNODE_t tree  (no output — the "build" phase)
@@ -64,7 +64,7 @@ CNODE_t *cn_call3(CArena *a, const char *fn, CNODE_t *a0, CNODE_t *a1, CNODE_t *
 /* -----------------------------------------------------------------------
  * Build phase — mirrors emit_expr / emit_pat
  * ----------------------------------------------------------------------- */
-struct EXPR_t;  /* forward decl — defined in sno2c.h */
+struct EXPR_t;  /* forward decl — defined in scrip-cc.h */
 CNODE_t *build_expr(CArena *a, struct EXPR_t *e);
 CNODE_t *build_pat (CArena *a, struct EXPR_t *e);
 

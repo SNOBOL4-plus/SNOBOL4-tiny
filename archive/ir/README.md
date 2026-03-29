@@ -6,7 +6,7 @@ Archived session182. These files have no build role and will not acquire one.
 
 | File | What it was |
 |------|-------------|
-| `ir.py` | Python dataclasses for `Expr`, `PatExpr`, `Stmt`, `Program` — prototype SNOBOL4 statement IR. Fossil ancestor of `EXPR_t`/`STMT_t` in `frontend/snobol4/sno2c.h`. Used by abandoned Python frontends in `src/frontend/icon/` and `src/backend/net/`. |
+| `ir.py` | Python dataclasses for `Expr`, `PatExpr`, `Stmt`, `Program` — prototype SNOBOL4 statement IR. Fossil ancestor of `EXPR_t`/`STMT_t` in `frontend/snobol4/scrip-cc.h`. Used by abandoned Python frontends in `src/frontend/icon/` and `src/backend/net/`. |
 | `byrd_ir.py` | Python dataclass model of Byrd Box four-port IR (α/β/σ/φ), ported from Jcon's `ir.icn`. Designed as shared IR for JVM and MSIL backends. Never connected to a live build. Reference: Jcon paper https://www2.cs.arizona.edu/icon/jcon/impl.pdf |
 | `lower.py` | Pattern AST → Chunk/Goto lowering pass (irgen.icn equivalent). The `_emit()` function is the **canonical reference** for how `src/backend/c/emit_byrd.c` wires Seq/Alt/Arbno four-port control flow — `emit_byrd.c` cites it in comments. Smoke test at bottom is runnable and passes. |
 

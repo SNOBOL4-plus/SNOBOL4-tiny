@@ -3,7 +3,7 @@
  *
  * Backend-agnostic helpers used by two or more emitters.
  * No output macros here — no E(), J(), N(), W().
- * No backend-specific headers — only sno2c.h and stdlib.
+ * No backend-specific headers — only scrip-cc.h and stdlib.
  *
  * Public API:
  *   ir_nary_right_fold(node, fold_kind, out_nodes, out_kids)
@@ -31,7 +31,7 @@
  * Milestone: M-G4-SHARED-CONC-FOLD
  */
 
-#include "sno2c.h"   /* → ir/ir.h (EKind, EXPR_t) */
+#include "scrip_cc.h"   /* → ir/ir.h (EKind, EXPR_t) */
 #include <stdlib.h>
 #include <assert.h>
 

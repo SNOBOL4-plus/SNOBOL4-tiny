@@ -1,13 +1,13 @@
 #!/bin/bash
 # run_sc_asm_corpus.sh — SC corpus runner for -sc -asm pipeline
 # Usage: bash run_sc_asm_corpus.sh [stop_on_fail=0]
-# Run from snobol4x root.
+# Run from one4all root.
 
 PASS=0; FAIL=0; SKIP=0
 STOP_ON_FAIL=${STOP_ON_FAIL:-0}
 DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$DIR/../../../.." && pwd)"
-SNO2C="$ROOT/sno2c"
+SNO2C="$ROOT/scrip-cc"
 RT="$ROOT/src/runtime"
 
 compile_link() {

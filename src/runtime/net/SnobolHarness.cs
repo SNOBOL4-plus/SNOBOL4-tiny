@@ -1,4 +1,4 @@
-// SnobolHarness.cs — run multiple sno2c-compiled .exe files in one mono process
+// SnobolHarness.cs — run multiple scrip-cc-compiled .exe files in one mono process
 //
 // Usage: mono SnobolHarness.exe <out_dir> <exe1> <exe2> ...
 // For each exe: captures stdout to <out_dir>/<basename>.out

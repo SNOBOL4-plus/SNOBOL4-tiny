@@ -1,10 +1,10 @@
-# snobol4x — Sprint Plan
+# one4all — Sprint Plan
 
 ## §START — Bootstrap (ALWAYS FIRST)
 
 ```bash
 cd /home/claude/snobol4ever
-bash snobol4x/setup.sh          # must end: 106/106 ALL PASS
+bash one4all/setup.sh          # must end: 106/106 ALL PASS
 ln -sfn /home/claude/snobol4ever/x64 /home/claude/x64   # if x64 missing
 ```
 
