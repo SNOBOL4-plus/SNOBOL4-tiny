@@ -242,3 +242,34 @@ const char *icn_str_section(const char *s, long i, long j, long kind) {
     icn_str_arena_pos += (int)(slen + 1);
     return out;
 }
+
+/* =========================================================================
+ * ICN_BANG runtime helpers — string character iteration
+ * Added: 2026-03-29, G-9 s14, M-G4-CONVERGENCE-ANALYSIS (BACKLOG-BANG-X64)
+ * ======================================================================= */
+
+/* icn_bang_char_at(s, pos): return single-char string at 0-based pos.
+ * Uses icn_subscript_buf (shared 2-byte buffer) — one live result at a time.
+ * Returns NULL if pos out of range. */
+const char *icn_bang_char_at(const char *s, long pos) {
+    if (!s) return (void*)0;
+    long len = my_strlen(s);
+    if (pos < 0 || pos >= len) return (void*)0;
+    icn_subscript_buf[0] = s[pos];
+    icn_subscript_buf[1] = '\0';
+    return icn_subscript_buf;
+}
+
+/* icn_match_pat(pat): match pat at icn_subject[icn_pos..].
+ * Returns new pos (>= 0) on success, -1 on failure.
+ * Updates icn_pos on success. */
+long icn_match_pat(const char *pat) {
+    if (!pat || !icn_subject) return -1;
+    long plen = my_strlen(pat);
+    long slen = my_strlen(icn_subject);
+    if (icn_pos + plen > slen) return -1;
+    for (long i = 0; i < plen; i++)
+        if (icn_subject[icn_pos + i] != pat[i]) return -1;
+    icn_pos += plen;
+    return icn_pos;
+}
