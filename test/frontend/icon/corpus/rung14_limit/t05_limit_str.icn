@@ -1,3 +1,0 @@
-procedure main()
-  every write(("a"|"b"|"c") \ 2);
-end

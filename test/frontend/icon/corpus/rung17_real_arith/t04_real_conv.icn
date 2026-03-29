@@ -1,3 +1,0 @@
-procedure main()
-  write(real(5));
-end

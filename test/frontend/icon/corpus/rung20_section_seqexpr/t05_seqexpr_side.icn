@@ -1,5 +1,0 @@
-procedure main()
-  x := 0;
-  y := (x := x + 1; x := x + 1; x);
-  write(y);
-end

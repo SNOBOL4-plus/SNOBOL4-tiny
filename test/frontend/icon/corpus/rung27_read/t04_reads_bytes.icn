@@ -1,5 +1,0 @@
-procedure main()
-  local s;
-  s := reads(5);
-  write(s);
-end

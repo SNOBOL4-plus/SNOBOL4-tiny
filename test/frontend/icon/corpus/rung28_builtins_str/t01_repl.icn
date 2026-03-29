@@ -1,5 +1,0 @@
-procedure main()
-  write(repl("ab", 3));
-  write(repl("x", 0));
-  write(repl("-", 4));
-end

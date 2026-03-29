@@ -1,5 +1,0 @@
-procedure main()
-  x := 2.5;
-  y := 3.0;
-  if x < y then write("yes") else write("no");
-end

@@ -1,5 +1,0 @@
-procedure main()
-  write(reverse("hello"));
-  write(reverse(""));
-  write(reverse("a"));
-end

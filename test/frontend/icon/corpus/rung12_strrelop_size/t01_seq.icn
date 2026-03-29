@@ -1,5 +1,0 @@
-procedure main()
-  if ("abc" == "abc") then write("equal");
-  if ("abc" == "def") then write("nope");
-  write("done");
-end

@@ -1,5 +1,0 @@
-procedure main()
-  write(case 1 of { 1: 1*10; 2: 2*20; default: 99*100; });
-  write(case 2 of { 1: 1*10; 2: 2*20; default: 99*100; });
-  write(case 7 of { 1: 1*10; 2: 2*20; default: 7*100; });
-end

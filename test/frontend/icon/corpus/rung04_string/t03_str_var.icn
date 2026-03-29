@@ -1,6 +1,0 @@
-# rung04 t03: string variable and concat
-procedure main()
-  local s;
-  s := "hello";
-  write(s || " world");
-end

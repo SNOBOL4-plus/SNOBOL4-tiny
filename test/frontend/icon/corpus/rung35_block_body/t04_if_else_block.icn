@@ -1,9 +1,0 @@
-procedure main()
-  x := 2;
-  if x > 3 then {
-    write("big");
-  } else {
-    write("small");
-    write(x);
-  };
-end
