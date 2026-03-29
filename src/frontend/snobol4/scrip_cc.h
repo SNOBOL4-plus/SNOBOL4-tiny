@@ -22,7 +22,7 @@
 /*
  * M-G1-IR-HEADER-WIRE: EKind is now defined in ir/ir.h (the single source
  * of truth for all 59 canonical node kinds).  IR_COMPAT_ALIASES enables the
- * bridge #defines so all existing code (E_NULV, E_VART, E_MNS, E_CONC, …)
+ * bridge #defines so all existing code (E_NULV, E_VART, E_MNS, …)
  * continues to compile unchanged.
  *
  * EXPR_T_DEFINED tells ir.h to skip its own EXPR_t definition; scrip_cc.h
@@ -44,7 +44,7 @@
  *   unary   (E_MNS/E_ATP/E_INDR/...)                     nchildren=1
  *   binary  (E_ADD/E_SUB/E_MPY/E_DIV/E_EXPOP/E_OPSYN/
  *            E_ASGN/E_NAM/E_DOL/E_ARY)                   nchildren=2
- *   n-ary   (E_CONC / E_OR)                               nchildren>=0
+ *   n-ary   (E_SEQ / E_CONCAT / E_OR)                     nchildren>=0
  *   call    (E_FNC)                                       nchildren=nargs
  *   subscript (E_IDX)                                     children[0]=base, children[1..]=indices
  *

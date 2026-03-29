@@ -21,7 +21,7 @@
  *   SNOCONE_CARET     ->  E_EXPOP
  *   SNOCONE_CONCAT    ->  E_CONC  (blank concat — juxtaposition)
  *   SNOCONE_OR        ->  E_OR    (pattern alternation || )
- *   SNOCONE_PIPE      ->  E_CONC  (single | — also string concat in SNOBOL4)
+ *   SNOCONE_PIPE      ->  E_SEQ / E_CONCAT  (single | — pattern→E_SEQ, value→E_CONCAT)
  *   SNOCONE_PERIOD    ->  E_NAM   (conditional capture  .)
  *   SNOCONE_DOLLAR    ->  E_DOL   (immediate capture    $)
  *   SNOCONE_AT        ->  E_ATP   (@var — cursor position)

@@ -1509,7 +1509,7 @@
 ;
 ; Unlike CONC2 (which calls stmt_apply("CONCAT") for pattern concatenation),
 ; these macros call stmt_concat(a, b) directly — producing a string result.
-; Used by prog_emit_expr E_CONC in non-pattern (value) context.
+; Used by prog_emit_expr E_CONCAT in value context (string concatenation).
 ;
 ;   CAT2_SS  s1, s2          — concat(literal, literal)  → [rbp-32/24]
 ;   CAT2_SV  s,  varlab      — concat(literal, variable)

@@ -11,7 +11,7 @@
  *
  * Implemented nodes (matching hand-written oracles):
  *   LIT (E_QLIT)     — inline repe cmpsb or single-byte cmp
- *   SEQ (E_CONC)     — recursive left/right wiring
+ *   SEQ (E_SEQ)      — recursive left/right wiring
  *   ALT (E_OR)       — cursor-save, left-fail-try-right wiring
  *   POS              — cursor == n check
  *   RPOS             — cursor == subj_len - n check
@@ -850,7 +850,7 @@ static void emit_pat_node(EXPR_t *pat,
                            int depth);
 
 /* -----------------------------------------------------------------------
- * emit_seq — SEQ (E_CONC / CAT)
+ * emit_seq — SEQ (E_SEQ / CAT)
  *
  * Wiring (Proebsting §4.3, oracle cat_pos_lit_rpos.s):
  *   α → left_α
@@ -1587,7 +1587,7 @@ static void emit_pat_node(EXPR_t *pat,
                 int cslen = (int)strlen(arg->sval);
                 emit_any(cs, cslen, α, β, γ, ω, cursor, subj, subj_len);
             } else {
-                /* Runtime expression (e.g. E_CONC of vars like &UCASE &LCASE):
+                /* Runtime expression (e.g. E_SEQ/E_CONCAT of vars like &UCASE &LCASE):
                  * Evaluate into raw BSS temp slots and dispatch via ANY_α_PTR.
                  * We do NOT call var_register() here — doing so would emit
                  * S_any_expr_tmp_N in BOTH the BSS (resq 1) and the string
@@ -1665,7 +1665,7 @@ static void emit_pat_node(EXPR_t *pat,
             } else if (arg->kind == E_QLIT && arg->sval) {
                 emit_break(arg->sval, (int)strlen(arg->sval), α, β, γ, ω, cursor, subj, subj_len);
             } else {
-                /* Runtime expression (e.g. E_CONC of vars like sq dq):
+                /* Runtime expression (e.g. E_SEQ/E_CONCAT of vars like sq dq):
                  * Evaluate into BSS temp slots, dispatch via BREAK_α_PTR. */
                 char tmplab[LBUF];
                 snprintf(tmplab, LBUF, "brk_expr_tmp_%d", next_uid());
@@ -2382,10 +2382,10 @@ static void emit_null_program(void) {
 
 /* -----------------------------------------------------------------------
  * expr_is_pattern_expr — return 1 if expression tree is a genuine
- * pattern-building expression (contains E_FNC, E_OR, or E_CONC with
+ * pattern-building expression (contains E_FNC, E_OR, or E_SEQ with
  * at least one non-literal/non-value child).
  * Pure value assignments (E_VART, E_QLIT, E_ILIT alone, or
- * E_CONC/E_OR where ALL leaves are literals or variable refs with no
+ * E_CONCAT/E_OR where ALL leaves are literals or variable refs with no
  * pattern-function calls) are NOT named patterns in program context. */
 static int expr_has_pattern_fn(EXPR_t *e) {
     if (!e) return 0;
@@ -2425,8 +2425,7 @@ static int expr_is_pattern_expr(EXPR_t *e) {
      * Fix: B-263 icase. */
     if (e->kind == E_OR) return expr_has_pattern_fn(e);
     /* E_SEQ = goal-directed sequence — always a pattern expression.
-     * E_CONCAT = pure value concat — never a pattern expression.
-     * M-G4-SPLIT-SEQ-CONCAT: E_CONC compat alias -> E_SEQ handled above. */
+     * E_CONCAT = pure value concat — never a pattern expression. */
     if (e->kind == E_SEQ) return 1;
     if (e->kind == E_CONCAT) return 0;
     /* E_ATP (@var cursor capture) is always a pattern expression:
@@ -2571,7 +2570,7 @@ static void scan_named_patterns(Program *prog) {
              s->subject->children[0]->kind == E_CONCAT)) {
             /* B-275: Handle multi-line DEFINE specs built via continuation (+) lines.
              * Single-line: DEFINE('fname(p)loc')  → children[0] is E_QLIT.
-             * Multi-line:  DEFINE('fname(p)'      → children[0] is E_CONC of E_QLITs.
+             * Multi-line:  DEFINE('fname(p)'      → children[0] is E_CONCAT of E_QLITs.
              *              +      'loc1,loc2')
              * expr_flatten_str() handles both cases by DFS-collecting E_QLIT leaves. */
             char def_buf[1024];
@@ -3593,7 +3592,7 @@ static int emit_expr(EXPR_t *e, int rbp_off) {
             return 1;
         }
         /*
-         * n-ary E_CONC (string concat): inline left-fold avoids slot aliasing.
+         * n-ary E_CONCAT (string concat): inline left-fold avoids slot aliasing.
          * Each step: push accumulator, eval next child, pop+call stmt_concat.
          * n-ary E_OR (pattern ALT): right-fold into binary nodes (unchanged).
          */
@@ -3623,12 +3622,12 @@ static int emit_expr(EXPR_t *e, int rbp_off) {
             ir_nary_right_fold_free(_fn, _fk, _nc - 1);
             return _ret;
         }
-        /* E_CONC = string CAT  (value context): call stmt_concat directly.
-         * E_OR   = pattern SEQ (alternation):   call stmt_apply("ALT").
+        /* E_CONCAT = string CAT (value context): call stmt_concat directly.
+         * E_OR     = pattern ALT (alternation):  call stmt_apply("ALT").
          *
-         * Naming: CAT for string concatenation, SEQ/ALT for pattern alternation.
-         * E_CONC in emit_expr is always value-context — pattern-context
-         * E_CONC is handled by emit_pat_node, not here. */
+         * Naming: E_CONCAT for string concatenation, E_SEQ/E_ALT for patterns.
+         * E_CONCAT in emit_expr is always value-context — pattern-context
+         * sequences use E_SEQ and are handled by emit_pat_node, not here. */
 
         int left_is_str  = e->children[0]  && e->children[0]->kind  == E_QLIT;
         int left_is_var  = e->children[0]  && e->children[0]->kind  == E_VART;
