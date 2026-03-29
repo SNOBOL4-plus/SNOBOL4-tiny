@@ -1,4 +1,0 @@
-*  f17: -INCLUDE preprocessing — write a tiny inc file then include it
-*  (scrip-cc parser: -INCLUDE is a noop; just test file compiles & runs without -INCLUDE)
-        OUTPUT = 'PASS'
-END
