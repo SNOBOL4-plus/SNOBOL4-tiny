@@ -2198,21 +2198,116 @@ static void emit_case(IcnEmitter *em, IcnNode *n, IcnPorts ports,
     }
 }
 
-/* ICN_BANG — !E: generate elements of a list or string characters.
- * Stub: for strings, generate each character as a 1-char string.
- * For lists (opaque ptr), stub as immediate fail. */
+/* =========================================================================
+ * ICN_BANG — !E: string character generator
+ * Implemented: 2026-03-29, G-9 s14 (was stub; BACKLOG-BANG-X64)
+ *
+ * α: eval E once → store char* in BSS str_slot, reset pos=0, fall to check
+ * β: resume at check (string already in BSS slot)
+ * check: pos >= icn_strlen(str) → ω
+ *        else: call icn_bang_char_at(str, pos) → rax (char*)
+ *              push rax; pos++; → γ
+ *
+ * BSS: per-node icn_N_bang_str (8 bytes, char*) + icn_N_bang_pos (8 bytes)
+ * Lists (ICN_LIST children): stub as fail — list runtime not yet in x64.
+ * ======================================================================= */
 static void emit_bang(IcnEmitter *em, IcnNode *n, IcnPorts ports,
                       char *oa, char *ob) {
     int id = icn_new_id(em); char a[64], b[64];
     icn_label_α(id,a,sizeof a); icn_label_β(id,b,sizeof b);
     strncpy(oa,a,63); strncpy(ob,b,63);
-    /* Stub: just fail — list/string iteration needs runtime support */
-    Ldef(em,a); Jmp(em,ports.ω);
-    Ldef(em,b); Jmp(em,ports.ω);
-    (void)n;
+
+    IcnNode *child = (n->nchildren > 0) ? n->children[0] : NULL;
+
+    /* List bang: not yet implemented in x64 runtime — stub */
+    if (child && child->kind == ICN_MAKELIST) {
+        Ldef(em,a); Jmp(em,ports.ω);
+        Ldef(em,b); Jmp(em,ports.ω);
+        return;
+    }
+
+    char str_bss[64], pos_bss[64], check[64], after_str[64];
+    snprintf(str_bss,  sizeof str_bss,  "icon_%d_bang_str", id);
+    snprintf(pos_bss,  sizeof pos_bss,  "icon_%d_bang_pos", id);
+    snprintf(check,    sizeof check,    "icon_%d_bang_chk", id);
+    snprintf(after_str,sizeof after_str,"icon_%d_bang_as",  id);
+    bss_declare(str_bss);   /* char* — 8 bytes */
+    bss_declare(pos_bss);   /* int64 — 8 bytes */
+
+    /* Emit child expression; success → after_str (char* on stack) */
+    char ca[64], cb[64];
+    IcnPorts cp; strncpy(cp.γ, after_str, 63); strncpy(cp.ω, ports.ω, 63);
+    if (child) emit_expr(em, child, cp, ca, cb);
+    else { snprintf(ca,64,"%s_noc",a); Ldef(em,ca); Jmp(em,ports.ω); }
+
+    /* after_str: child produced char* on hw stack → store, reset pos */
+    Ldef(em, after_str);
+    E(em,"    pop     rax\n");
+    E(em,"    mov     [rel %s], rax\n", str_bss);
+    E(em,"    mov     qword [rel %s], 0\n", pos_bss);
+    /* fall through to check */
+
+    /* check: pos >= strlen(str) → ω; else char_at(str, pos) → push → γ */
+    Ldef(em, check);
+    E(em,"    mov     rdi, [rel %s]\n", str_bss);
+    E(em,"    call    icn_strlen\n");          /* rax = length */
+    E(em,"    cmp     [rel %s], rax\n", pos_bss);
+    E(em,"    jge     %s\n", ports.ω);
+    E(em,"    mov     rdi, [rel %s]\n", str_bss);
+    E(em,"    mov     rsi, [rel %s]\n", pos_bss);
+    E(em,"    call    icn_bang_char_at\n");    /* rax = char* */
+    E(em,"    push    rax\n");
+    E(em,"    inc     qword [rel %s]\n", pos_bss);
+    Jmp(em, ports.γ);
+
+    /* α: start from child eval */
+    Ldef(em,a); Jmp(em,ca);
+    /* β: resume — string still in BSS, just re-check */
+    Ldef(em,b); Jmp(em,check);
 }
 
-/* ICN_BANG_BINARY / ICN_MATCH — stubs */
+/* =========================================================================
+ * ICN_MATCH — =E  (scan: succeed if subject starts with E, advance &pos)
+ * Implemented: 2026-03-29, G-9 s14 (was stub; BACKLOG-BANG-X64)
+ *
+ * One-shot: α evals E → call icn_match_pat(pat) → rax (new pos or -1)
+ * On success: push matched substring → γ. β → ω.
+ *
+ * icn_match_pat uses/updates global icn_subject / icn_pos (icon_runtime.c).
+ * ======================================================================= */
+static void emit_match(IcnEmitter *em, IcnNode *n, IcnPorts ports,
+                       char *oa, char *ob) {
+    int id = icn_new_id(em); char a[64], b[64];
+    icn_label_α(id,a,sizeof a); icn_label_β(id,b,sizeof b);
+    strncpy(oa,a,63); strncpy(ob,b,63);
+
+    char pat_bss[64], after_pat[64];
+    snprintf(pat_bss,  sizeof pat_bss,  "icon_%d_match_pat", id);
+    snprintf(after_pat,sizeof after_pat,"icon_%d_match_ap",  id);
+    bss_declare(pat_bss);
+
+    char ca[64], cb[64];
+    IcnPorts cp; strncpy(cp.γ, after_pat, 63); strncpy(cp.ω, ports.ω, 63);
+    if (n->nchildren > 0) emit_expr(em, n->children[0], cp, ca, cb);
+    else { snprintf(ca,64,"%s_noc",a); Ldef(em,ca); Jmp(em,ports.ω); }
+
+    Ldef(em, after_pat);
+    E(em,"    pop     rdi\n");                 /* pattern char* */
+    E(em,"    mov     [rel %s], rdi\n", pat_bss);
+    E(em,"    call    icn_match_pat\n");       /* rax = new pos or -1 */
+    E(em,"    cmp     rax, -1\n");
+    E(em,"    je      %s\n", ports.ω);
+    /* push matched portion (from old pos to new pos) — use icn_str_section */
+    /* For now: push pat ptr as matched value (correct for literal patterns) */
+    E(em,"    mov     rax, [rel %s]\n", pat_bss);
+    E(em,"    push    rax\n");
+    Jmp(em, ports.γ);
+
+    Ldef(em,a); Jmp(em,ca);
+    Ldef(em,b); Jmp(em,ports.ω);    /* one-shot */
+}
+
+/* ICN_BANG_BINARY — stub (binary list iteration, no x64 list runtime) */
 static void emit_stub_fail(IcnEmitter *em, IcnNode *n, IcnPorts ports,
                            char *oa, char *ob) {
     (void)n;
@@ -2280,7 +2375,7 @@ static void emit_expr(IcnEmitter *em, IcnNode *n, IcnPorts ports,
         case ICN_CASE:      emit_case      (em,n,ports,oa,ob); break;
         case ICN_BANG:      emit_bang      (em,n,ports,oa,ob); break;
         case ICN_BANG_BINARY: emit_stub_fail(em,n,ports,oa,ob); break;
-        case ICN_MATCH:     emit_stub_fail (em,n,ports,oa,ob); break;
+        case ICN_MATCH:     emit_match     (em,n,ports,oa,ob); break;
         case ICN_AND: {
             /* n-ary conjunction: E1 & E2 & ... & En
              * irgen.icn ir_conjunction wiring:
@@ -2524,7 +2619,7 @@ void icn_emit_file(IcnEmitter *em, IcnNode **nodes, int count) {
     E(em,"    extern icn_str_find\n    extern icn_match\n    extern icn_tab\n    extern icn_move\n");
     E(em,"    extern icn_subject\n    extern icn_pos\n");
     E(em,"    extern icn_str_cmp\n    extern icn_strlen\n    extern icn_pow\n");
-    E(em,"    extern icn_str_subscript\n    extern icn_str_section\n\n");
+    E(em,"    extern icn_str_subscript\n    extern icn_str_section\n    extern icn_bang_char_at\n    extern icn_match_pat\n\n");
     E(em,"_start:\n    call    icn_main\n    mov     rax, 60\n    xor     rdi, rdi\n    syscall\n\n");
 
     fputs(body,em->out); free(body);
