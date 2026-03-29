@@ -1,4 +1,0 @@
-# rung05 t01: scan sets &subject; body reads it
-procedure main()
-  "hello" ? write(&subject);
-end

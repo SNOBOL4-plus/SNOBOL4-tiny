@@ -1,3 +1,0 @@
-procedure main()
-  every write(3.0 < (2.5 | 3.5 | 4.5));
-end

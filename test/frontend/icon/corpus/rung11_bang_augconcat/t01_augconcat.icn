@@ -1,5 +1,0 @@
-procedure main()
-  s := "hello";
-  s ||:= " world";
-  write(s);
-end

@@ -1,8 +1,0 @@
-# rung04 t05: concat chain
-procedure main()
-  local a;
-  local b;
-  a := "hel";
-  b := "lo";
-  write(a || b || "!");
-end

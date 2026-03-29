@@ -1,4 +1,0 @@
-procedure main()
-  x := 3.0;
-  write(x^2);
-end

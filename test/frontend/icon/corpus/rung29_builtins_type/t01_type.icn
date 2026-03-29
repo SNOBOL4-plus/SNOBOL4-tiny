@@ -1,5 +1,0 @@
-procedure main()
-  write(type(42));
-  write(type("hello"));
-  write(type(3.14));
-end

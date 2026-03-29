@@ -1,6 +1,0 @@
-procedure main()
-  x := 100;
-  write(type(x));
-  write(image(x));
-  write(numeric("7") + 1);
-end

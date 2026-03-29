@@ -1,3 +1,0 @@
-procedure main()
-  if 1.5 > 2.5 then write("gt") else write("le");
-end
