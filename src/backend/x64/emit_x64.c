@@ -4770,13 +4770,17 @@ static void emit_program(Program *prog) {
                 int has_u_only = (!has_f_tgt && tgt_u);
                 const char *fail_target = has_f_tgt ? sfail_lbl : next_lbl;
                 /* Eval the name expression → [rbp-16/8] */
-                /* SNOBOL4 parser puts operand in ->children[1] for E_INDR.
-                 * Snocone sc_lower puts it in ->children[0].  Accept either. */
+                /* Parser uses unop() → operand in children[0].
+                 * Snocone sc_lower also uses children[0].
+                 * Guard nchildren before accessing to avoid OOB read. */
                 EXPR_t *indir_name;
-                if (s->subject->kind == E_INDR)
-                    indir_name = s->subject->children[1] ? s->subject->children[1] : s->subject->children[0];
+                EXPR_t *subj = s->subject;
+                EXPR_t *c0 = subj->nchildren > 0 ? subj->children[0] : NULL;
+                EXPR_t *c1 = subj->nchildren > 1 ? subj->children[1] : NULL;
+                if (subj->kind == E_INDR)
+                    indir_name = c1 ? c1 : c0;
                 else
-                    indir_name = s->subject->children[0]  ? s->subject->children[0]  : s->subject->children[1];
+                    indir_name = c0 ? c0 : c1;
                 emit_expr(indir_name, -16);
                 /* Eval the RHS → [rbp-32/24] */
                 if (!s->replacement || s->replacement->kind == E_NULV) {
@@ -5356,11 +5360,25 @@ static void emit_prolog_program(Program *prog);  /* forward */
 
 void asm_emit(Program *prog, FILE *f) {
     out = f;
-    box_data_init();
-    named_pats_init();
-    lit_table_init();
-    call_slots_init();
-    str_table_init();
+
+    /* Per-file reset — allocate once, zero contents on every call.
+     * Without this, multi-file runs carry stale EXPR_t* pointers and table
+     * state across files → corrupted labels, SIGSEGV. (M-G-INV-EMIT-FIX) */
+    box_data_init();    named_pats_init();  lit_table_init();
+    call_slots_init();  str_table_init();
+    /* zero array contents (not just counts) to kill stale EXPR_t* pointers */
+    memset(named_pats, 0, NAMED_PAT_MAX * sizeof(NamedPat));
+    memset(call_slots, 0, CALL_SLOTS_MAX * LBUF);
+    memset(_bref_pool, 0, sizeof _bref_pool);
+    /* counts */
+    uid_ctr = 0;        call_uid_ctr = 0;
+    named_pat_reset();  /* named_pat_count=0, nreturn_fn_count=0 */
+    lit_reset();        str_reset();
+    var_reset();        /* nvar=0, box_data_count=0, box_ctx_idx=-1 */
+    cap_vars_reset();
+    /* formatting */
+    col = 0;  pending_sep[0] = '\0';  pending_label[0] = '\0';
+    _bref_slot = 0;
 
     /* Pass 1: scan for named pattern assignments */
     scan_named_patterns(prog);

@@ -58,15 +58,20 @@ if [[ $TOTAL -eq 0 ]]; then
   echo "ERROR: no .sno files found in $CORPUS/crosscheck" >&2; exit 1
 fi
 
+# Icon and Prolog inputs: artifact samples in the snobol4x repo itself
+ICN_FILES=(); mapfile -t ICN_FILES < <(find "$ROOT/artifacts/icon/samples" -name "*.icn" 2>/dev/null | sort)
+PRO_FILES=(); mapfile -t PRO_FILES < <(find "$ROOT/artifacts/prolog/samples" -name "*.pro" 2>/dev/null | sort)
+
 # ── Update mode: regenerate baseline ──────────────────────────────────────────
 if [[ $UPDATE -eq 1 ]]; then
-  echo "Regenerating emit baseline for $TOTAL files × 3 backends..."
+  ICN_COUNT=${#ICN_FILES[@]}; PRO_COUNT=${#PRO_FILES[@]}
+  echo "Regenerating emit baseline: $TOTAL SNOBOL4 × 3 + $ICN_COUNT Icon × 2 + $PRO_COUNT Prolog × 2..."
   mkdir -p "$BASELINE"
 
   emit_one_update() {
-    local sno="$1" backend="$2" ext="$3"
+    local sno="$1" backend="$2" ext="$3" srcext="$4"
     local name
-    name="$(basename "$sno" .sno)"
+    name="$(basename "$sno" ".$srcext")"
     local subdir
     subdir="$(basename "$(dirname "$sno")")"
     local outdir="$BASELINE/$backend/$subdir"
@@ -76,9 +81,22 @@ if [[ $UPDATE -eq 1 ]]; then
   export -f emit_one_update
   export SNO2C BASELINE
 
-  printf '%s\n' "${SNO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'emit_one_update "$1" -asm s'   _ {}
-  printf '%s\n' "${SNO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'emit_one_update "$1" -jvm j'   _ {}
-  printf '%s\n' "${SNO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'emit_one_update "$1" -net il'  _ {}
+  # SNOBOL4 × 3 backends
+  printf '%s\n' "${SNO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'emit_one_update "$1" -asm s sno'  _ {}
+  printf '%s\n' "${SNO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'emit_one_update "$1" -jvm j sno'  _ {}
+  printf '%s\n' "${SNO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'emit_one_update "$1" -net il sno' _ {}
+
+  # Icon × 2 backends (asm, jvm) — no .NET Icon emitter yet
+  if [[ ${#ICN_FILES[@]} -gt 0 ]]; then
+    printf '%s\n' "${ICN_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'emit_one_update "$1" -asm s icn' _ {}
+    printf '%s\n' "${ICN_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'emit_one_update "$1" -jvm j icn' _ {}
+  fi
+
+  # Prolog × 2 backends (asm, jvm) — no .NET Prolog emitter yet
+  if [[ ${#PRO_FILES[@]} -gt 0 ]]; then
+    printf '%s\n' "${PRO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'emit_one_update "$1" -asm s pro' _ {}
+    printf '%s\n' "${PRO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'emit_one_update "$1" -jvm j pro' _ {}
+  fi
 
   COUNT=$(find "$BASELINE" -type f | wc -l)
   echo "Baseline written: $COUNT files in $BASELINE"
@@ -101,9 +119,9 @@ touch "$FAIL_LOG"
 START=$(date +%s%N 2>/dev/null || date +%s)
 
 emit_one_check() {
-  local sno="$1" backend="$2" ext="$3"
+  local sno="$1" backend="$2" ext="$3" srcext="$4"
   local name subdir
-  name="$(basename "$sno" .sno)"
+  name="$(basename "$sno" ".$srcext")"
   subdir="$(basename "$(dirname "$sno")")"
   local expected="$BASELINE/$backend/$subdir/$name.$ext"
   local got
@@ -112,20 +130,29 @@ emit_one_check() {
     echo "MISSING_BASELINE $backend $subdir/$name" >> "$FAIL_LOG"
     return
   fi
-  if diff -q <(echo "$got") "$expected" > /dev/null 2>&1; then
+  if printf '%s' "$got" | diff -q - "$expected" > /dev/null 2>&1; then
     echo "PASS $backend $subdir/$name" >> "$FAIL_LOG"
   else
     echo "FAIL $backend $subdir/$name" >> "$FAIL_LOG"
-    diff <(echo "$got") "$expected" | head -20 >> "$FAIL_LOG"
+    diff <(printf '%s' "$got") "$expected" | head -20 >> "$FAIL_LOG"
     echo "---" >> "$FAIL_LOG"
   fi
 }
 export -f emit_one_check
 export SNO2C BASELINE FAIL_LOG
 
-printf '%s\n' "${SNO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'emit_one_check "$1" -asm s'  _ {}
-printf '%s\n' "${SNO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'emit_one_check "$1" -jvm j'  _ {}
-printf '%s\n' "${SNO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'emit_one_check "$1" -net il' _ {}
+# SNOBOL4 × 3 backends
+printf '%s\n' "${SNO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'emit_one_check "$1" -asm s sno'  _ {}
+printf '%s\n' "${SNO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'emit_one_check "$1" -jvm j sno'  _ {}
+printf '%s\n' "${SNO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'emit_one_check "$1" -net il sno' _ {}
+
+# Icon × 2 backends
+[[ ${#ICN_FILES[@]} -gt 0 ]] && printf '%s\n' "${ICN_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'emit_one_check "$1" -asm s icn' _ {}
+[[ ${#ICN_FILES[@]} -gt 0 ]] && printf '%s\n' "${ICN_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'emit_one_check "$1" -jvm j icn' _ {}
+
+# Prolog × 2 backends
+[[ ${#PRO_FILES[@]} -gt 0 ]] && printf '%s\n' "${PRO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'emit_one_check "$1" -asm s pro' _ {}
+[[ ${#PRO_FILES[@]} -gt 0 ]] && printf '%s\n' "${PRO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'emit_one_check "$1" -jvm j pro' _ {}
 
 END=$(date +%s%N 2>/dev/null || date +%s)
 WALL_MS=$(( (END - START) / 1000000 ))
@@ -142,4 +169,5 @@ while IFS= read -r line; do
 done < "$FAIL_LOG"
 
 echo ""
-echo -e "${BOLD}Emit-diff results: ${GREEN}$PASS pass${RESET} / ${RED}$FAIL fail${RESET} — ${WALL_MS}ms
+echo -e "${BOLD}Emit-diff results: ${GREEN}$PASS pass${RESET} / ${RED}$FAIL fail${RESET} — ${WALL_MS}ms wall${RESET}"
+[[ $FAIL -eq 0 ]] && exit 0 || exit 1
