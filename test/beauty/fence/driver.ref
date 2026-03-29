@@ -1,2 +1,0 @@
-PASS: FENCE alt gamma
-FAIL: FENCE should not succeed as subject match

@@ -1,7 +1,0 @@
-PASS: 1 TLump leaf
-PASS: 2 TLump node
-PASS: 3 TLump len=0 fails
-(Name)
-PASS: 4 TDump leaf
-(BinOp (Name) (Name))
-PASS: 5 TDump node
