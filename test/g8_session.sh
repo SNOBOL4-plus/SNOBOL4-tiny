@@ -186,3 +186,34 @@ else
   echo "  Fix the issues above, then re-run: bash test/g8_session.sh"
 fi
 echo -e "${BOLD}═══════════════════════════════════════════════════════${RESET}"
+
+# ── EXTEND TO 7 CELLS ─────────────────────────────────────────────────────────
+# run_emit_check.sh currently covers SNOBOL4×crosscheck only (3 of 7 cells).
+# After M-G-INV-EMIT-FIX, extend it to cover all 7 active cells:
+#
+#   Cell 1-3: SNOBOL4 × x86/JVM/.NET  — corpus/crosscheck/*.sno (152 files)
+#   Cell 4-5: Icon    × x86/JVM       — test/frontend/icon/corpus/rung*/*.icn (258 files)
+#   Cell 6-7: Prolog  × x86/JVM       — test/frontend/prolog/corpus/rung*/*.pro/.pl (131 files)
+#
+# Icon and Prolog frontends do NOT have the SIGSEGV issue (they init fresh per
+# compile_one call — no snoc_* global state). Multi-file batch works for them now.
+#
+# To extend run_emit_check.sh:
+#   1. Add SNO_FILES_ICN and SNO_FILES_PRO arrays alongside SNO_FILES
+#   2. For each: emit_one_check "$f" -asm s / emit_one_check "$f" -jvm j
+#   3. Baseline dirs: emit_baseline/-asm-icn/ emit_baseline/-jvm-icn/ etc.
+#   4. Run --update to regenerate, confirm all 7 cells green
+#
+# Quick test that Icon multi-file works today:
+echo -e "${BOLD}BONUS — verify Icon/Prolog multi-file (should work already)${RESET}"
+ICN_FILES=$(find "$ROOT/test/frontend/icon/corpus" -name "*.icn" 2>/dev/null | head -10 | tr '\n' ' ')
+if [[ -n "$ICN_FILES" ]]; then
+  eval "$SNO2C -asm $ICN_FILES" > /dev/null 2>&1 && ok "Icon x86 multi-file: OK" || fail "Icon x86 multi-file: CRASH"
+  find "$ROOT/test/frontend/icon/corpus" -name "*.s" | xargs rm -f 2>/dev/null || true
+fi
+PRO_FILES=$(find "$ROOT/test/frontend/prolog/corpus" -name "*.pro" -o -name "*.pl" 2>/dev/null | head -10 | tr '\n' ' ')
+if [[ -n "$PRO_FILES" ]]; then
+  eval "$SNO2C -asm $PRO_FILES" > /dev/null 2>&1 && ok "Prolog x86 multi-file: OK" || fail "Prolog x86 multi-file: CRASH"
+  find "$ROOT/test/frontend/prolog/corpus" -name "*.s" | xargs rm -f 2>/dev/null || true
+fi
+echo ""
