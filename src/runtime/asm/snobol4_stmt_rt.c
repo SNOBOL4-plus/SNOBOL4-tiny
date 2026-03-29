@@ -232,7 +232,7 @@ int stmt_any_ptr(uint64_t vtype, void *vptr, int64_t cursor,
 }
 
 /* stmt_break_ptr — BREAK() with a pre-evaluated DESCR_t (type+ptr pair).
- * Used for BREAK(runtime-expr) where arg is E_CONC, not a named variable. */
+ * Used for BREAK(runtime-expr) where arg is E_CONCAT, not a named variable. */
 int64_t stmt_break_ptr(uint64_t vtype, void *vptr, int64_t cursor,
                        const char *subj, int64_t subj_len) {
     DESCR_t v; v.v = (int)vtype; v.p = vptr;

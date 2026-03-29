@@ -487,8 +487,8 @@ static EXPR_t *parse_expr4(Lex *lx) {
 
     if (n == 1) { free(items); return first; }
 
-    /* Build flat n-ary E_CONC node */
-    EXPR_t *e = expr_new(E_CONC);
+    /* Build flat n-ary E_SEQ node (fixup_val_tree reclassifies to E_CONCAT if value context) */
+    EXPR_t *e = expr_new(E_SEQ);
     for (int i = 0; i < n; i++) expr_add_child(e, items[i]);
     free(items);
     return e;
@@ -799,13 +799,13 @@ static STMT_t *parse_body_field(const char *body, int lineno) {
  * Top-level: convert LineArray → Program
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── M-G4-SPLIT-SEQ-CONCAT: post-parse E_CONC context fixup ─────────────────
- * parse_expr4 emits E_CONC (= E_SEQ alias) for all juxtaposition-concat sites.
+/* ── M-G4-SPLIT-SEQ-CONCAT: post-parse E_SEQ context fixup ──────────────────
+ * parse_expr4 emits E_SEQ for all juxtaposition-concat sites.
  * After parsing, we know context for s->subject (always value).
  * s->replacement is ambiguous: it may be a pure value expression OR a pattern
  * expression (e.g. PAT = " the " ARB . OUTPUT ("of"|"a")).
  *
- * fixup_val_tree : walk a value-context tree — rename E_SEQ (alias E_CONC)
+ * fixup_val_tree : walk a value-context tree — rename E_SEQ
  *                  to E_CONCAT (pure string concat, cannot fail).
  *
  * repl_is_pat_tree: lightweight check — true if tree contains any node that is

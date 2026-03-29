@@ -350,7 +350,7 @@ static const JvmNamedPat *jvm_named_pat_lookup(const char *varname) {
 }
 
 /* expr_is_pattern_expr — mirrors ASM backend: E_OR is always a pattern;
- * E_CONC or E_FNC is a pattern if any descendant is E_FNC/E_NAM/E_DOL. */
+ * E_SEQ/E_CONCAT or E_FNC is a pattern if any descendant is E_FNC/E_NAM/E_DOL. */
 static int jvm_expr_has_pat_fn(EXPR_t *e) {
     if (!e) return 0;
     if (e->kind == E_FNC || e->kind == E_NAM || e->kind == E_DOL) return 1;
@@ -1498,11 +1498,11 @@ static void jvm_emit_pat_node(EXPR_t *pat,
             {
                 EXPR_t *nodes[64]; int n = 0;
                 EXPR_t *cur = pat->children[0];
-                while (cur && cur->kind == E_CONC) {
+                while (cur && cur->kind == E_SEQ) {
                     nodes[n++] = cur->children[0];
                     if (cur->children[1] == arb_nam) break;
                     cur = cur->children[1];
-                    if (!cur || cur->kind != E_CONC) break;
+                    if (!cur || cur->kind != E_SEQ) break;
                 }
                 if (n > 0) {
                     char chain[64][64];
@@ -4246,7 +4246,7 @@ static void jvm_parse_proto(const char *proto, JvmFnDef *fn) {
 static const char *jvm_flatten_str(EXPR_t *e, char *buf, int bufsz) {
     if (!e) return NULL;
     if (e->kind == E_QLIT) { strncpy(buf, e->sval ? e->sval : "", bufsz-1); return buf; }
-    if (e->kind == E_CONC) {
+    if (e->kind == E_CONCAT) {
         char lb[2048], rb[2048];
         const char *l = jvm_flatten_str(e->children[0], lb, sizeof lb);
         const char *r = jvm_flatten_str(e->children[1], rb, sizeof rb);

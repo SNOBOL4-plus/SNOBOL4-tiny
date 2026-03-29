@@ -201,8 +201,7 @@ CNODE_t *build_expr(CArena *a, EXPR_t *e) {
     case E_MNS:
         return cn_call1(a, "neg", build_expr(a, e->children[0]));
 
-    case E_CONC: {
-        if (e->nchildren == 0) return cn_raw(a, "STRVAL_fn(\"\")");
+    case E_CONCAT: {
         if (e->nchildren == 1) return build_expr(a, e->children[0]);
         CNODE_t *_acc = cn_call2(a, "CONCAT_fn", build_expr(a, e->children[0]), build_expr(a, e->children[1]));
         for (int _i = 2; _i < e->nchildren; _i++)
@@ -311,7 +310,7 @@ CNODE_t *build_pat(CArena *a, EXPR_t *e) {
         return cn_call1(a, "pat_deref",
             build_expr(a, e->children[1] ? e->children[1] : e->children[0]));
 
-    case E_CONC:
+    case E_SEQ:
         return cn_call2(a, "pat_cat", build_pat(a, e->children[0]), build_pat(a, e->children[1]));
 
     case E_MPY:

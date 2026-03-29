@@ -615,7 +615,7 @@ static void decl_emit_undefs(FILE *out_file) {
  *
  * E_QLIT  → "literal"          (compile-time constant)
  * E_VART  → VARVAL_fn(NV_GET_fn("name"))
- * E_CONC → CONCAT_fn(lhs, rhs)   (both sides recursed)
+ * E_CONCAT → CONCAT_fn(lhs, rhs)   (both sides recursed)
  * fallback → ""
  * ----------------------------------------------------------------------- */
 static void emit_charset_cexpr(EXPR_t *arg, char *buf, int bufsz);
@@ -642,7 +642,7 @@ static void emit_charset_cexpr(EXPR_t *arg, char *buf, int bufsz) {
         snprintf(buf, bufsz, "VARVAL_fn(NV_GET_fn(\"%s\"))",
                  arg->sval ? arg->sval : "");
         return;
-    case E_CONC: {
+    case E_CONCAT: {
         char lbuf[512], rbuf[512];
         emit_charset_cexpr(arg->children[0],  lbuf, (int)sizeof lbuf);
         emit_charset_cexpr(arg->children[1], rbuf, (int)sizeof rbuf);
@@ -2041,8 +2041,8 @@ static void emit_pat_node(EXPR_t *pat,
         }
     }
 
-    /* ----------------------------------------------------------- E_CONC (CAT / SEQ) */
-    case E_CONC: {
+    /* ----------------------------------------------------------- E_SEQ (pattern CAT / Byrd-box SEQ) */
+    case E_SEQ: {
         int _nc = pat->nchildren;
         if (_nc == 0) { PLG(α, γ); return; }
         if (_nc == 1) { emit_pat_node(pat->children[0], α, β, γ, ω, subj, subj_len, cursor, depth); return; }
@@ -2057,7 +2057,7 @@ static void emit_pat_node(EXPR_t *pat,
         for (int _i = _nc - 2; _i >= 0; _i--) {
             int _n = _nc - 2 - _i;
             _nodes[_n] = calloc(1, sizeof(EXPR_t));
-            _nodes[_n]->kind = E_CONC;
+            _nodes[_n]->kind = E_SEQ;
             _kids[_n*2+0] = pat->children[_i];
             _kids[_n*2+1] = _right;
             _nodes[_n]->children  = &_kids[_n*2];
@@ -2919,7 +2919,7 @@ int expr_contains_pattern(EXPR_t *e);
 /* -----------------------------------------------------------------------
  * emit_chain_pretty — multi-line indented binary chain emitter
  *
- * Walks a left-associative binary chain (E_CONC/E_OR) collecting all
+ * Walks a left-associative binary chain (E_SEQ/E_CONCAT/E_OR) collecting all
  * leaves, then emits as indented multi-line nested calls.
  *
  * fn_name:  "CONCAT_fn", "pat_cat", "pat_alt"
@@ -3031,8 +3031,8 @@ static void emit_expr(EXPR_t *e) {
 
     case E_MNS: C("neg("); emit_expr(e->children[0]); C(")"); break;
 
-    case E_CONC:
-        emit_chain_pretty(e, E_CONC, "CONCAT_fn", emit_expr, 2);
+    case E_CONCAT:
+        emit_chain_pretty(e, E_CONCAT, "CONCAT_fn", emit_expr, 2);
         break;
 
     case E_OPSYN: C("APPLY_fn(\"reduce\",(DESCR_t[]){"); emit_expr(e->children[0]); C(","); emit_expr(e->children[1]); C("},2)"); break;
@@ -3106,7 +3106,7 @@ static void emit_expr(EXPR_t *e) {
  *
  * Same EXPR_t nodes, different routing:
  *   E_FNC  → pat_builtin or pat_call
- *   E_CONC → pat_cat
+ *   E_SEQ  → pat_cat
  *   E_OR   → pat_alt
  *   E_NAM  → pat_cond(child_pat, varname)
  *   E_DOL   → pat_imm(child_pat, varname)
@@ -3142,8 +3142,8 @@ static void emit_pat(EXPR_t *e) {
         }
         break;
 
-    case E_CONC:
-        emit_chain_pretty(e, E_CONC, "pat_cat", emit_pat, 2);
+    case E_SEQ:
+        emit_chain_pretty(e, E_SEQ, "pat_cat", emit_pat, 2);
         break;
 
     case E_MPY:
@@ -3526,7 +3526,7 @@ static int is_pat_builtin_call(EXPR_t *e) {
 }
 
 /* Returns 1 if expr e is a pattern node (E_FNC to pat_builtin, E_NAM capture,
- * E_OR, or E_CONC whose left child is a pattern). */
+ * E_OR, or E_SEQ whose left child is a pattern). */
 static int is_pat_node(EXPR_t *e) {
     if (!e) return 0;
     if (is_pat_builtin_call(e)) return 1;
@@ -3545,13 +3545,13 @@ static int is_pat_node(EXPR_t *e) {
  * E_NAM (. capture), E_OR (| alternation in pattern context), E_FNC to
  * any pattern builtin including ARBNO/FENCE/etc. */
 /* Returns 1 if the expression subtree rooted at e contains ANY pattern-valued
- * node.  Used by emit_expr to decide whether E_CONC / E_OR should be routed
+ * node.  Used by emit_expr to decide whether E_SEQ / E_OR should be routed
  * through emit_pat (pat_cat / pat_alt) instead of the string path
  * (CONCAT_fn / alt).
  *
  * Key cases that are pattern-valued but NOT caught by is_pat_node:
  *   - E_INDR whose left child is E_VART — "*varname" deferred pattern ref
- *   - E_CONC or E_OR whose subtree contains any of the above
+ *   - E_SEQ or E_OR whose subtree contains any of the above
  */
 int expr_contains_pattern(EXPR_t *e) {
     if (!e) return 0;
@@ -3562,7 +3562,7 @@ int expr_contains_pattern(EXPR_t *e) {
     /* *varname(arg) — parser misparse deref+CONCAT_fn */
     if (e->kind == E_INDR && e->children[0] && e->children[0]->kind == E_FNC) return 1;
     /* recurse into children */
-    if (e->kind == E_CONC || e->kind == E_OR || e->kind == E_MPY)
+    if (e->kind == E_SEQ || e->kind == E_CONCAT || e->kind == E_OR || e->kind == E_MPY)
         return expr_contains_pattern(e->children[0]) || expr_contains_pattern(e->children[1]);
     /* $ and . operators — pattern may be on the left side */
     if (e->kind == E_DOL || e->kind == E_NAM)
@@ -3578,7 +3578,7 @@ int expr_contains_pattern(EXPR_t *e) {
     return 0;
 }
 
-/* Walk the E_CONC left spine. When we find a right child that is_pat_node,
+/* Walk the E_SEQ/E_CONCAT left spine. When we find a right child that is_pat_node,
  * detach it and everything after it into the pattern.
  * Returns the extracted pattern root, or NULL if nothing found.
  * *subj_out is set to the remaining subject (may be the original expr if
@@ -3595,7 +3595,7 @@ typedef struct { EXPR_t *subj; EXPR_t *pat; } SplitResult;
 static EXPR_t *make_concat(EXPR_t *left, EXPR_t *right) {
     if (!left)  return right;
     if (!right) return left;
-    EXPR_t *e = expr_new(E_CONC);
+    EXPR_t *e = expr_new(E_CONCAT);
     e->children[0] = left; e->children[1] = right;
     return e;
 }
@@ -3604,7 +3604,7 @@ static SplitResult split_spine(EXPR_t *e) {
     /* Null or non-CONCAT_fn node that's a pure value: subject only */
     if (!e) { SplitResult r = {NULL, NULL}; return r; }
 
-    if (e->kind != E_CONC) {
+    if (e->kind != E_CONCAT) {
         if (is_pat_node(e)) {
             SplitResult r = {NULL, e}; return r;   /* entire node is pattern */
         } else {
@@ -3612,7 +3612,7 @@ static SplitResult split_spine(EXPR_t *e) {
         }
     }
 
-    /* e = E_CONC(left, right) */
+    /* e = E_CONCAT(left, right) */
     /* First check if RIGHT is a pattern node (first pat on the right spine) */
     if (is_pat_node(e->children[1])) {
         /* Split here: left is subject, right and above become pattern */
@@ -3693,7 +3693,7 @@ static int pat_is_anchored(EXPR_t *e) {
             return 1;
         return 0;
     }
-    if (e->kind == E_CONC) return pat_is_anchored(e->children[0]);
+    if (e->kind == E_SEQ) return pat_is_anchored(e->children[0]);
     return 0;
 }
 
@@ -3760,7 +3760,7 @@ static void emit_stmt(STMT_t *s, const char *fn) {
         int u=next_uid();
         /* If the RHS contains deferred refs (*var), reduce() calls (&), or
          * pattern builtins (ARBNO/FENCE/etc.), emit in pattern context so
-         * E_CONC becomes pat_cat and *var becomes pat_ref.
+         * E_SEQ becomes pat_cat and *var becomes pat_ref.
          * This handles: snoParse = nPush() ARBNO(*snoCommand) ... nPop() */
         if (expr_contains_pattern(s->replacement)) {
             int _col = fprintf(out, "DESCR_t _v%d = ", u);
@@ -3830,9 +3830,9 @@ static void emit_stmt(STMT_t *s, const char *fn) {
             mstart_node->sval = strdup("SNO_MSTART");
             mstart_node->ival = u;  /* thread the statement uid so emit_byrd can name the var */
 
-            EXPR_t *seq1 = expr_binary(E_CONC, arb, mstart_node);
+            EXPR_t *seq1 = expr_binary(E_SEQ, arb, mstart_node);
 
-            EXPR_t *seq = expr_binary(E_CONC, seq1, s->pattern);
+            EXPR_t *seq = expr_binary(E_SEQ, seq1, s->pattern);
             scan_pat = seq;
         }
         cond_reset();
@@ -4018,13 +4018,13 @@ static void parse_proto(const char *proto, FnDef *fn) {
     }
 }
 
-/* Flatten a string-literal expression (E_QLIT or E_CONC chain of E_QLIT)
+/* Flatten a string-literal expression (E_QLIT or E_CONCAT chain of E_QLIT)
  * into a single static buffer.  Returns NULL if any node is not a string. */
 static char _define_proto_buf[4096];
 static const char *flatten_str_expr(EXPR_t *e) {
     if (!e) return NULL;
     if (e->kind == E_QLIT) return e->sval;
-    if (e->kind == E_CONC) {
+    if (e->kind == E_CONCAT) {
         const char *l = flatten_str_expr(e->children[0]);
         const char *r = flatten_str_expr(e->children[1]);
         if (!l || !r) return NULL;

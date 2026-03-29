@@ -347,7 +347,7 @@ static void net_ldstr(const char *s) {
  * ----------------------------------------------------------------------- */
 
 /* net_expr_can_fail: returns 1 if expression can set local 0 = 0 (failure).
- * Used by E_CONC to decide whether to emit a goal-directed short-circuit check.
+ * Used by E_CONCAT to decide whether to emit a goal-directed short-circuit check.
  * Only predicate/comparison functions actually fail — pattern constructors and
  * string functions always succeed and must NOT be treated as failing. */
 static int net_expr_can_fail(EXPR_t *e) {
@@ -826,7 +826,7 @@ static void net_emit_expr(EXPR_t *e) {
          * After each child that can set local 0 = 0 (failure), check and branch
          * to the statement fail label WITHOUT leaving any string on the stack.
          * Stack discipline: after the check+branch the stack depth is the same
-         * as it was before this E_CONC started (zero strings contributed).
+         * as it was before this E_CONCAT started (zero strings contributed).
          * On success path: one accumulated string remains on stack (as expected).
          *
          * CIL stack balance rule: every branch target must have consistent depth.
