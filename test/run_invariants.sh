@@ -46,90 +46,24 @@ done
 GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[0;33m'
 BOLD='\033[1m'; RESET='\033[0m'
 
-# ── Tool bootstrap (run_invariants needs: scrip-cc, nasm, libgc, java) ────────
-# Checked and fixed HERE, before the watchdog starts, so a missing tool is never
-# discovered 5 minutes into the suite. Each check is self-healing where possible.
-ensure_tools() {
-  local ok=1
-
-  # 1. scrip-cc — build from source if binary absent or zero-size
-  if [[ ! -x "$SCRIP_CC" || ! -s "$SCRIP_CC" ]]; then
-    echo -e "${YELLOW}  [tools] scrip-cc missing — building from $ROOT/src ...${RESET}"
-    if (cd "$ROOT/src" && make -j"$(nproc 2>/dev/null || echo 4)" 2>/dev/null); then
-      echo -e "${GREEN}  [tools] scrip-cc built ✓${RESET}"
-    else
-      echo -e "${RED}  [tools] scrip-cc build FAILED — cannot continue${RESET}" >&2; ok=0
-    fi
+# ── Preflight — verify tools present ────────────────────────────────────────────
+# This script does NOT install tools. Run SESSION_SETUP.sh first:
+#   TOKEN=ghp_xxx bash /home/claude/.github/SESSION_SETUP.sh
+_need() {
+  local label="$1" ok="$2"
+  if [[ "$ok" == "1" ]]; then
+    echo -e "${GREEN}  [ok]${RESET}  $label"
+  else
+    echo -e "${RED}  [MISSING]${RESET}  $label — run: TOKEN=... bash /home/claude/.github/SESSION_SETUP.sh" >&2
+    exit 2
   fi
-  [[ -x "$SCRIP_CC" && -s "$SCRIP_CC" ]] || { echo -e "${RED}  [tools] scrip-cc still missing${RESET}" >&2; ok=0; }
-
-  # 2. nasm — install via apt if absent
-  if ! command -v nasm &>/dev/null; then
-    echo -e "${YELLOW}  [tools] nasm missing — installing ...${RESET}"
-    if apt-get install -y nasm >/dev/null 2>&1; then
-      echo -e "${GREEN}  [tools] nasm installed ✓${RESET}"
-    else
-      echo -e "${RED}  [tools] nasm install FAILED (try: apt-get install nasm)${RESET}" >&2; ok=0
-    fi
-  fi
-
-  # 3. libgc (Boehm GC) — needed for -lgc link; check header presence as proxy
-  if ! ldconfig -p 2>/dev/null | grep -q 'libgc\.so' && \
-     ! pkg-config --exists bdw-gc 2>/dev/null && \
-     [[ ! -f /usr/include/gc/gc.h && ! -f /usr/local/include/gc/gc.h ]]; then
-    echo -e "${YELLOW}  [tools] libgc-dev missing — installing ...${RESET}"
-    if apt-get install -y libgc-dev >/dev/null 2>&1; then
-      echo -e "${GREEN}  [tools] libgc-dev installed ✓${RESET}"
-    else
-      echo -e "${RED}  [tools] libgc-dev install FAILED (try: apt-get install libgc-dev)${RESET}" >&2; ok=0
-    fi
-  fi
-
-  # 4. java runtime — install JRE if absent
-  if ! command -v java &>/dev/null; then
-    echo -e "${YELLOW}  [tools] java missing — installing default-jre ...${RESET}"
-    if apt-get install -y default-jre >/dev/null 2>&1; then
-      echo -e "${GREEN}  [tools] default-jre installed ✓${RESET}"
-    else
-      echo -e "${RED}  [tools] default-jre install FAILED${RESET}" >&2; ok=0
-    fi
-  fi
-
-  # 5. javac — install JDK if absent (needed to compile SnoHarness)
-  if ! command -v javac &>/dev/null; then
-    echo -e "${YELLOW}  [tools] javac missing — installing default-jdk ...${RESET}"
-    if apt-get install -y default-jdk >/dev/null 2>&1; then
-      echo -e "${GREEN}  [tools] default-jdk installed ✓${RESET}"
-    else
-      echo -e "${RED}  [tools] default-jdk install FAILED${RESET}" >&2; ok=0
-    fi
-  fi
-
-  # 6. SnoHarness — compile if .class absent or stale
-  local HARNESS_DIR="$ROOT/test/jvm"
-  if command -v javac &>/dev/null &&      [[ ! -f "$HARNESS_DIR/SnoHarness.class" ||         "$HARNESS_DIR/SnoHarness.java" -nt "$HARNESS_DIR/SnoHarness.class" ]]; then
-    echo -e "${YELLOW}  [tools] SnoHarness.class missing or stale — compiling ...${RESET}"
-    if javac "$HARNESS_DIR/SnoRuntime.java" "$HARNESS_DIR/SnoHarness.java" -d "$HARNESS_DIR" 2>/dev/null; then
-      echo -e "${GREEN}  [tools] SnoHarness compiled ✓${RESET}"
-    else
-      echo -e "${RED}  [tools] SnoHarness compile FAILED${RESET}" >&2; ok=0
-    fi
-  fi
-
-  # 7. mono + ilasm — needed for snobol4_net cell
-  if ! command -v mono &>/dev/null || ! command -v ilasm &>/dev/null; then
-    echo -e "${YELLOW}  [tools] mono/ilasm missing — installing mono-devel ...${RESET}"
-    if apt-get install -y mono-devel >/dev/null 2>&1; then
-      echo -e "${GREEN}  [tools] mono-devel installed ✓${RESET}"
-    else
-      echo -e "${RED}  [tools] mono-devel install FAILED${RESET}" >&2; ok=0
-    fi
-  fi
-
-  [[ $ok -eq 1 ]] || { echo -e "${RED}${BOLD}  TOOL BOOTSTRAP FAILED — fix above errors and retry${RESET}" >&2; exit 2; }
-  echo -e "${GREEN}  [tools] all required tools present ✓${RESET}"
 }
-ensure_tools
+_need "scrip-cc"    "$([[ -x "$SCRIP_CC" && -s "$SCRIP_CC" ]] && echo 1 || echo 0)"
+_need "nasm"        "$(command -v nasm &>/dev/null && echo 1 || echo 0)"
+_need "java"        "$(command -v java &>/dev/null && echo 1 || echo 0)"
+_need "javac"       "$(command -v javac &>/dev/null && echo 1 || echo 0)"
+_need "SnoHarness"  "$([[ -f "$ROOT/test/jvm/SnoHarness.class" ]] && echo 1 || echo 0)"
+echo -e "${GREEN}  [tools] all required tools present ✓${RESET}"
 
 trap 'rm -rf "$WORK"' EXIT
 
