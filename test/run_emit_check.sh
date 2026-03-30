@@ -26,10 +26,12 @@ if [[ -n "${CORPUS:-}" ]]; then
   TEST_SNO="$CORPUS/crosscheck"
   TEST_ICN="$CORPUS/programs/icon"
   TEST_PRO="$CORPUS/programs/prolog"
+  TEST_REB="$CORPUS/programs/rebus"
 else
   TEST_SNO="$ROOT/test/snobol4"
   TEST_ICN="$ROOT/test/icon"
   TEST_PRO="$ROOT/test/prolog"
+  TEST_REB="$ROOT/test/rebus"
 fi
 
 UPDATE=0; VERBOSE=0
@@ -60,9 +62,10 @@ echo -e "${GREEN}  [tools] all required tools present ✓${RESET}"
 mapfile -t SNO_FILES < <(find "$TEST_SNO" -name "*.sno" | sort)
 mapfile -t ICN_FILES < <(find "$TEST_ICN" -name "*.icn" 2>/dev/null | while read -r f; do [[ -f "${f%.icn}.s" ]] && echo "$f"; done | sort)
 mapfile -t PRO_FILES < <(find "$TEST_PRO" -name "*.pl"  2>/dev/null | while read -r f; do [[ -f "${f%.pl}.s"  ]] && echo "$f"; done | sort)
+mapfile -t REB_FILES < <(find "$TEST_REB" -name "*.reb" 2>/dev/null | while read -r f; do [[ -f "${f%.reb}.s" ]] && echo "$f"; done | sort)
 
 if [[ $UPDATE -eq 1 ]]; then
-  echo "Regenerating: ${#SNO_FILES[@]} SNOBOL4×3 + ${#ICN_FILES[@]} Icon×2 + ${#PRO_FILES[@]} Prolog×2..."
+  echo "Regenerating: ${#SNO_FILES[@]} SNOBOL4×3 + ${#ICN_FILES[@]} Icon×2 + ${#PRO_FILES[@]} Prolog×2 + ${#REB_FILES[@]} Rebus×3..."
   regen_one() {
     local src="$1" backend="$2" ext="$3"
     local dir name; dir="$(dirname "$src")"; name="$(basename "${src%.*}")"
@@ -78,6 +81,9 @@ if [[ $UPDATE -eq 1 ]]; then
   [[ ${#ICN_FILES[@]} -gt 0 ]] && printf '%s\n' "${ICN_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -jvm j' _ {}
   [[ ${#PRO_FILES[@]} -gt 0 ]] && printf '%s\n' "${PRO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -asm s' _ {}
   [[ ${#PRO_FILES[@]} -gt 0 ]] && printf '%s\n' "${PRO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -jvm j' _ {}
+  [[ ${#REB_FILES[@]} -gt 0 ]] && printf '%s\n' "${REB_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -asm s'  _ {}
+  [[ ${#REB_FILES[@]} -gt 0 ]] && printf '%s\n' "${REB_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -jvm j'  _ {}
+  [[ ${#REB_FILES[@]} -gt 0 ]] && printf '%s\n' "${REB_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -net il' _ {}
   COUNT=$(find "$TEST_SNO" "$TEST_ICN" "$TEST_PRO" \( -name "*.s" -o -name "*.j" -o -name "*.il" \) 2>/dev/null | wc -l)
   echo "Done: $COUNT generated files alongside sources."
   echo "Commit: git add test/snobol4 test/icon test/prolog"
@@ -114,6 +120,7 @@ check_one() {
   rm -f "$tmp"
 }
 export -f check_one; export SCRIP_CC FAIL_LOG
+export TEST_REB
 
 printf '%s\n' "${SNO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'check_one "$1" -asm s'  _ {}
 printf '%s\n' "${SNO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'check_one "$1" -jvm j'  _ {}
@@ -122,6 +129,9 @@ printf '%s\n' "${SNO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'check_one "$1" -
 [[ ${#ICN_FILES[@]} -gt 0 ]] && printf '%s\n' "${ICN_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'check_one "$1" -jvm j' _ {}
 [[ ${#PRO_FILES[@]} -gt 0 ]] && printf '%s\n' "${PRO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'check_one "$1" -asm s' _ {}
 [[ ${#PRO_FILES[@]} -gt 0 ]] && printf '%s\n' "${PRO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'check_one "$1" -jvm j' _ {}
+[[ ${#REB_FILES[@]} -gt 0 ]] && printf '%s\n' "${REB_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'check_one "$1" -asm s'  _ {}
+[[ ${#REB_FILES[@]} -gt 0 ]] && printf '%s\n' "${REB_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'check_one "$1" -jvm j'  _ {}
+[[ ${#REB_FILES[@]} -gt 0 ]] && printf '%s\n' "${REB_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'check_one "$1" -net il' _ {}
 
 END=$(date +%s%N 2>/dev/null || date +%s)
 WALL_MS=$(( (END - START) / 1000000 ))

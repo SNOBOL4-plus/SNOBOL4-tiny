@@ -5,6 +5,7 @@ CFLAGS = -Wall -Wno-unused-function -g -O0 \
          -I frontend/snocone \
          -I frontend/prolog \
          -I frontend/icon \
+         -I frontend/rebus \
          -I backend/c \
          -I backend/x64
 
@@ -28,6 +29,12 @@ FRONTEND_SNOCONE = \
     frontend/snocone/snocone_lower.c \
     frontend/snocone/snocone_driver.c \
     frontend/snocone/snocone_cf.c
+
+FRONTEND_REBUS = \
+    frontend/rebus/rebus_lower.c \
+    frontend/rebus/rebus.tab.c \
+    frontend/rebus/lex.rebus.c \
+    frontend/rebus/rebus_print.c
 
 BACKEND_C = \
     backend/c/emit_cnode.c \
@@ -64,7 +71,7 @@ FRONTEND_ICON = \
     frontend/icon/icon_ast.c \
     frontend/icon/icon_runtime.c
 
-SRCS = $(FRONTEND_SNO) $(FRONTEND_PROLOG) $(FRONTEND_SNOCONE) $(FRONTEND_ICON) $(BACKEND_C) $(BACKEND_X64) $(BACKEND_JVM) $(BACKEND_NET) $(BACKEND_WASM) $(IR) $(DRIVER)
+SRCS = $(FRONTEND_SNO) $(FRONTEND_PROLOG) $(FRONTEND_SNOCONE) $(FRONTEND_REBUS) $(FRONTEND_ICON) $(BACKEND_C) $(BACKEND_X64) $(BACKEND_JVM) $(BACKEND_NET) $(BACKEND_WASM) $(IR) $(DRIVER)
 OBJS = $(SRCS:.c=.o)
 
 .PHONY: all clean
@@ -75,6 +82,15 @@ all: $(BIN)
 
 $(BIN): $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^ -lm
+
+# Rebus parser — generate from .y/.l if not present
+frontend/rebus/rebus.tab.c frontend/rebus/rebus.tab.h: frontend/rebus/rebus.y
+	bison -d -o frontend/rebus/rebus.tab.c frontend/rebus/rebus.y
+
+frontend/rebus/lex.rebus.c: frontend/rebus/rebus.l frontend/rebus/rebus.tab.h
+	flex -o frontend/rebus/lex.rebus.c frontend/rebus/rebus.l
+
+frontend/rebus/rebus.tab.o frontend/rebus/lex.rebus.o frontend/rebus/rebus_lower.o frontend/rebus/rebus_print.o: frontend/rebus/rebus.tab.h
 
 # emit_x64_prolog.c is included by emit_x64.c — explicit dep so make rebuilds on change
 backend/x64/emit_x64.o: backend/x64/emit_x64_prolog.c
