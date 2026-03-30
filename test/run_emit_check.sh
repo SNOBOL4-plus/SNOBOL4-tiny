@@ -35,6 +35,21 @@ GREEN='\033[0;32m'; RED='\033[0;31m'; BOLD='\033[1m'; RESET='\033[0m'
 # Self-healing: builds scrip-cc from source if missing. Fast-fails before doing
 # any emit work, so a missing binary is caught in seconds not minutes.
 ensure_tools() {
+  # apt packages — self-healing, matches SESSION_BOOTSTRAP.sh
+  _apt_install() {
+    local cmd="$1" pkg="${2:-$1}"
+    command -v "$cmd" &>/dev/null && return
+    apt-get install -y "$pkg" -qq 2>/dev/null \
+      || { echo -e "${RED}  [tools] $pkg install failed${RESET}" >&2; exit 2; }
+  }
+  _apt_install nasm
+  _apt_install gcc
+  _apt_install make
+  if ! ldconfig -p 2>/dev/null | grep -q 'libgc\.so'; then
+    apt-get install -y libgc-dev -qq 2>/dev/null || true
+  fi
+
+  # scrip-cc — build from source if missing
   if [[ ! -x "$SCRIP_CC" || ! -s "$SCRIP_CC" ]]; then
     echo -e "${BOLD}  [tools] scrip-cc missing — building from $ROOT/src ...${RESET}"
     if (cd "$ROOT/src" && make -j"$(nproc 2>/dev/null || echo 4)" 2>/dev/null); then
@@ -43,7 +58,9 @@ ensure_tools() {
       echo -e "${RED}  [tools] scrip-cc build FAILED — run: cd $ROOT/src && make${RESET}" >&2; exit 2
     fi
   fi
-  [[ -x "$SCRIP_CC" && -s "$SCRIP_CC" ]] || { echo -e "${RED}  [tools] scrip-cc still missing after build attempt${RESET}" >&2; exit 2; }
+  [[ -x "$SCRIP_CC" && -s "$SCRIP_CC" ]] \
+    || { echo -e "${RED}  [tools] scrip-cc still missing after build attempt${RESET}" >&2; exit 2; }
+  echo -e "${GREEN}  [tools] all required tools present ✓${RESET}"
 }
 ensure_tools
 
