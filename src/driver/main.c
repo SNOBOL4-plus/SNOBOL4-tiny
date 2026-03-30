@@ -156,8 +156,9 @@ static int compile_one(const char *infile, const char *outpath, FILE *out) {
     if (file_sc) {
         char *src = read_all(in);
         if (!src) { fprintf(stderr, "scrip-cc: read error\n"); rc = 1; goto done; }
-        prog = asm_mode ? snocone_cf_compile(src, infile ? infile : "<stdin>")
-                        : snocone_compile   (src, infile ? infile : "<stdin>");
+        /* snocone_cf_compile is a frontend lowering pass, not ASM-specific.
+           Always use it regardless of backend (M-G5-LOWER-SNOCONE-FIX). */
+        prog = snocone_cf_compile(src, infile ? infile : "<stdin>");
         free(src);
         if (!prog) { rc = 1; goto done; }
     } else {
