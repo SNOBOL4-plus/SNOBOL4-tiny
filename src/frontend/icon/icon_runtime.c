@@ -333,18 +333,12 @@ const char *icn_cset_diff(const char *a, const char *b) {
 }
 
 /* icn_random(n): random integer in range 1..n (Icon ?E semantics).
- * Returns 0 if n <= 0. Pure LCG seeded from stack pointer (ASLR entropy) — no libc. */
+ * Returns 0 if n <= 0. Uses a simple LCG — no libc (runtime is -nostdlib). */
 long icn_random(long n) {
-    static unsigned long state = 0;
-    if (!state) {
-        unsigned long sp;
-        __asm__("mov %%rsp, %0" : "=r"(sp));
-        state = sp ^ 0xdeadbeefcafe1234UL;
-        if (!state) state = 0xdeadbeefUL;
-    }
+    static unsigned long seed = 12345;
+    seed = seed * 6364136223846793005UL + 1442695040888963407UL;
     if (n <= 0) return 0;
-    state = state * 6364136223846793005UL + 1442695040888963407UL;
-    return (long)((state >> 33) % (unsigned long)n) + 1;
+    return (long)((seed >> 33) % (unsigned long)n) + 1;
 }
 
 /* icn_cset_inter(a, b): chars in BOTH a and b. */

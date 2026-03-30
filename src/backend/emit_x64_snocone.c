@@ -334,6 +334,17 @@ static int lower_token(const ScPToken *tok, ExprStack *s,
     }
 }
 
+/* sc_pat_concat_to_seq — rewrite E_CONCAT → E_SEQ in a pattern tree in-place.
+ * Snocone uses && (E_CONCAT) for pattern sequence; the shared emit_x64 pattern
+ * emitter only knows E_SEQ.  This rewrite is Snocone-local and does not touch
+ * any other frontend's IR. */
+static void sc_pat_concat_to_seq(EXPR_t *e) {
+    if (!e) return;
+    if (e->kind == E_CONCAT) e->kind = E_SEQ;
+    for (int i = 0; i < e->nchildren; i++)
+        sc_pat_concat_to_seq(e->children[i]);
+}
+
 /* Assemble a STMT_t from the top of the expression stack */
 static STMT_t *assemble_stmt(ExprStack *s, int lineno) {
     EXPR_t *top = es_peek(s);
@@ -350,6 +361,7 @@ static STMT_t *assemble_stmt(ExprStack *s, int lineno) {
         if (lhs && lhs->kind == E_MATCH) {
             st->subject     = expr_left(lhs);
             st->pattern     = expr_right(lhs);
+            sc_pat_concat_to_seq(st->pattern);
             st->replacement = rhs;
             st->has_eq      = 1;
             free(lhs);
@@ -363,6 +375,7 @@ static STMT_t *assemble_stmt(ExprStack *s, int lineno) {
         es_pop(s);
         st->subject = expr_left(top);
         st->pattern = expr_right(top);
+        sc_pat_concat_to_seq(st->pattern);
         free(top);
     } else {
         es_pop(s);
