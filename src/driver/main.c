@@ -5,6 +5,7 @@
  *   scrip-cc -asm file1.sno file2.sno ...   → file1.s  file2.s  ...
  *   scrip-cc -jvm file1.sno file2.sno ...   → file1.j  file2.j  ...
  *   scrip-cc -net file1.sno file2.sno ...   → file1.il file2.il ...
+ *   scrip-cc -wasm file1.sno file2.sno ...  → file1.wat file2.wat ...
  *   scrip-cc -asm -o out.s file.sno         → out.s  (single file, explicit output)
  *   scrip-cc -asm                           → stdout (stdin mode)
  *
@@ -35,6 +36,7 @@ void asm_emit_prolog(Program *prog, FILE *f);
 extern int asm_body_mode;
 void jvm_emit(Program *prog, FILE *f, const char *filename);
 void net_emit(Program *prog, FILE *f, const char *filename);
+void emit_wasm(Program *prog, FILE *f, const char *filename);
 void pl_emit(Program *prog, FILE *f);
 void prolog_emit_jvm(Program *prog, FILE *f, const char *filename);
 void prolog_emit_net(Program *prog, FILE *f, const char *filename);
@@ -46,6 +48,7 @@ void emit_jvm_icon_file(IcnNode **nodes, int count, FILE *out,
 static int asm_mode  = 0;
 static int jvm_mode  = 0;
 static int net_mode  = 0;
+static int wasm_mode = 0;
 static int sc_mode   = 0;
 static int pl_mode   = 0;
 static int icn_mode  = 0;
@@ -84,9 +87,10 @@ static char *derive_outname(const char *infile, const char *out_ext) {
 }
 
 static const char *backend_ext(void) {
-    if (asm_mode) return ".s";
-    if (jvm_mode) return ".j";
-    if (net_mode) return ".il";
+    if (asm_mode)  return ".s";
+    if (jvm_mode)  return ".j";
+    if (net_mode)  return ".il";
+    if (wasm_mode) return ".wat";
     return ".c";
 }
 
@@ -164,10 +168,11 @@ static int compile_one(const char *infile, const char *outpath, FILE *out) {
         }
         prog = rebus_lower(rp);
         if (!prog) { rc = 1; goto done; }
-        if      (asm_mode) asm_emit(prog, out);
-        else if (jvm_mode) jvm_emit(prog, out, infile);
-        else if (net_mode) net_emit(prog, out, infile);
-        else               c_emit(prog, out);
+        if      (asm_mode)  asm_emit(prog, out);
+        else if (jvm_mode)  jvm_emit(prog, out, infile);
+        else if (net_mode)  net_emit(prog, out, infile);
+        else if (wasm_mode) emit_wasm(prog, out, infile);
+        else                c_emit(prog, out);
         goto done;
     }
 
@@ -186,10 +191,11 @@ static int compile_one(const char *infile, const char *outpath, FILE *out) {
         }
     }
 
-    if      (asm_mode) asm_emit(prog, out);
-    else if (jvm_mode) jvm_emit(prog, out, infile);
-    else if (net_mode) net_emit(prog, out, infile);
-    else               c_emit(prog, out);
+    if      (asm_mode)  asm_emit(prog, out);
+    else if (jvm_mode)  jvm_emit(prog, out, infile);
+    else if (net_mode)  net_emit(prog, out, infile);
+    else if (wasm_mode) emit_wasm(prog, out, infile);
+    else                c_emit(prog, out);
 
 done:
     if (infile && in != stdin) fclose(in);
@@ -213,6 +219,7 @@ int main(int argc, char *argv[]) {
         } else if (!strcmp(argv[i], "-jvm"))         { jvm_mode = 1;
         } else if (!strcmp(argv[i], "-icn"))         { icn_mode = 1;
         } else if (!strcmp(argv[i], "-net"))         { net_mode = 1;
+        } else if (!strcmp(argv[i], "-wasm"))        { wasm_mode = 1;
         } else if (!strcmp(argv[i], "-asm-body"))    { asm_mode = 1; asm_body_mode = 1;
         } else if (!strcmp(argv[i], "-pl"))          { pl_mode = 1;
         } else if (!strcmp(argv[i], "-sc"))          { sc_mode = 1;
