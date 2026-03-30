@@ -156,10 +156,30 @@ static WasmTy emit_expr(const EXPR_t *e) {
         if (lt == TY_STR) { W("    (call $sno_str_to_int)\n"); lt = TY_INT; }
         WasmTy rt = emit_expr(e->children[1]);
         if (rt == TY_STR) { W("    (call $sno_str_to_int)\n"); rt = TY_INT; }
-        /* Exponentiation: always float via $sno_pow (imported from math) */
+        /* Exponentiation: int**int → integer (loop); any float → float via $sno_pow */
         if (e->kind == E_POW) {
-            if (lt == TY_INT) W("    (f64.convert_i64_s)\n");
-            if (rt == TY_INT) W("    (f64.convert_i64_s)\n");
+            if (lt == TY_INT && rt == TY_INT) {
+                /* Integer exponentiation: result = lt ^ rt using loop */
+                /* Stack: [i64_base, i64_exp] — use $tmp_f to hold base temporarily */
+                /* Emit inline: result=1; while(exp-->0) result*=base */
+                /* Use a helper approach: sno_pow already does integer loop internally
+                 * but returns f64. Instead, emit inline i64 exponent loop.
+                 * We need two locals but only have $tmp_f (f64). Use runtime sno_pow
+                 * then truncate to i64 (exact for integer inputs). */
+                W("    (f64.convert_i64_s)\n");   /* rt: i64→f64 (top of stack) */
+                W("    (local.set $tmp_f)\n");     /* save rt_f */
+                W("    (f64.convert_i64_s)\n");   /* lt: i64→f64 */
+                W("    (local.get $tmp_f)\n");     /* restore rt_f */
+                W("    (call $sno_pow)\n");
+                W("    (i64.trunc_f64_s)\n");      /* back to i64 (exact for small ints) */
+                return TY_INT;
+            } else if (lt == TY_INT && rt == TY_FLOAT) {
+                W("    (local.set $tmp_f)\n");
+                W("    (f64.convert_i64_s)\n");
+                W("    (local.get $tmp_f)\n");
+            } else if (lt == TY_FLOAT && rt == TY_INT) {
+                W("    (f64.convert_i64_s)\n");
+            }
             W("    (call $sno_pow)\n");
             return TY_FLOAT;
         }
@@ -206,6 +226,31 @@ static WasmTy emit_expr(const EXPR_t *e) {
         }
         return TY_STR;
     }
+    case E_FNC: {
+        const char *fn = e->sval ? e->sval : "";
+        /* REMDR(a,b) → i64.rem_s */
+        if (strcasecmp(fn, "remdr") == 0 && e->nchildren >= 2) {
+            WasmTy ta = emit_expr(e->children[0]);
+            if (ta == TY_STR) W("    (call $sno_str_to_int)\n");
+            if (ta == TY_FLOAT) { W("    (i64.trunc_f64_s)\n"); }
+            WasmTy tb = emit_expr(e->children[1]);
+            if (tb == TY_STR) W("    (call $sno_str_to_int)\n");
+            if (tb == TY_FLOAT) { W("    (i64.trunc_f64_s)\n"); }
+            W("    (i64.rem_s)\n");
+            return TY_INT;
+        }
+        /* Default: evaluate args, drop results, return empty string */
+        for (int i = 0; i < e->nchildren; i++) {
+            WasmTy t = emit_expr(e->children[i]);
+            if (t == TY_STR) { W("    (drop)\n    (drop)\n"); }
+            else              { W("    (drop)\n"); }
+        }
+        W("    ;; unimplemented builtin '%s' in value ctx — empty string\n", fn);
+        { int idx = strlit_intern("");
+          W("    (i32.const %d)\n", strlit_abs(idx));
+          W("    (i32.const 0)\n"); }
+        return TY_STR;
+    }
     default:
         W("    ;; UNHANDLED EKind %d\n", (int)e->kind);
         { int idx = strlit_intern("");
@@ -233,8 +278,11 @@ static void collect_labels(Program *prog) {
     for (int i = 0; i < nlabels; i++) free(lbl_names[i]);
     nlabels = 0;
     lbl_names[nlabels++] = strdup("__end__");          /* index 0 */
-    for (STMT_t *s = prog->head; s; s = s->next) {
+    /* Pass 1: statement labels in position order — defines block layout */
+    for (STMT_t *s = prog->head; s; s = s->next)
         if (s->label && *s->label) lbl_index(s->label);
+    /* Pass 2: goto targets — may reference labels not yet defined as stmts */
+    for (STMT_t *s = prog->head; s; s = s->next) {
         if (!s->go) continue;
         if (s->go->onsuccess) lbl_index(s->go->onsuccess);
         if (s->go->onfailure) lbl_index(s->go->onfailure);
