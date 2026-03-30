@@ -14,7 +14,7 @@
  * Full backtracking (β port, trail, choice-point stack) — future sprint.
  *
  * Byrd-box ABI (ARCH-scrip-abi.md §4.1):
- *   public static void PRED(object[] args, Action gamma, Action omega)
+ *   public static void PRED(object[] args, Action γ, Action ω)
  *
  * Variable representation: object[] env — slot index = var slot from lower.
  * Atom representation: boxed string stored in env slot or on stack.
@@ -158,7 +158,7 @@ static void pn_emit_head_unify(EXPR_t *arg, int arg_slot,
 
 /* -----------------------------------------------------------------------
  * Emit a body goal.
- * Returns 1 if it might fail (needs omega wiring), 0 if always succeeds.
+ * Returns 1 if it might fail (needs ω wiring), 0 if always succeeds.
  * ----------------------------------------------------------------------- */
 
 static void pn_emit_goal(EXPR_t *goal, const char *omega_lbl, int n_vars);
@@ -245,7 +245,7 @@ static void pn_emit_goal(EXPR_t *goal, const char *omega_lbl, int n_vars) {
             N("    stelem.ref\n");
         }
 
-        /* gamma delegate: set flag=1 */
+        /* γ delegate: set flag=1 */
         char gname[64], oname[64], fname[64];
         snprintf(gname, sizeof gname, "pn_gamma_%d", uid);
         snprintf(oname, sizeof oname, "pn_omega_%d", uid);
@@ -257,12 +257,12 @@ static void pn_emit_goal(EXPR_t *goal, const char *omega_lbl, int n_vars) {
         D("  .method private static void %s() cil managed\n", oname);
         D("  {\n    .maxstack 1\n    ldc.i4.0\n    stsfld int32 %s::%s\n    ret\n  }\n", pn_class, fname);
 
-        /* gamma Action */
+        /* γ Action */
         N("    ldnull\n");
         N("    ldftn      void %s::%s()\n", pn_class, gname);
         N("    newobj     instance void [mscorlib]System.Action::.ctor"
           "(object, native int)\n");
-        /* omega Action */
+        /* ω Action */
         N("    ldnull\n");
         N("    ldftn      void %s::%s()\n", pn_class, oname);
         N("    newobj     instance void [mscorlib]System.Action::.ctor"
@@ -329,7 +329,7 @@ static void pn_emit_predicate(STMT_t *stmt) {
         char omega_lbl[64]; snprintf(omega_lbl, sizeof omega_lbl, "CL%d_omega", ci);
 
         N("  .method private static void %s("
-          "object[] args, object[] vars, %s gamma, %s omega)"
+          "object[] args, object[] vars, %s γ, %s ω)"
           " cil managed\n", cl_name, ACT, ACT);
         N("  {\n");
         N("    .maxstack 8\n");
@@ -354,7 +354,7 @@ static void pn_emit_predicate(STMT_t *stmt) {
             pn_emit_goal(goal, omega_lbl, n_vars);
         }
 
-        /* Success: store result (last arg) in ByrdBoxLinkage.Result, then call gamma */
+        /* Success: store result (last arg) in ByrdBoxLinkage.Result, then call γ */
         if (n_args > 0) {
             /* Store vars[n_args-1] (the output variable) as Result */
             N("    ldloc.1\n");   /* vars array — bound variable values */
@@ -375,7 +375,7 @@ static void pn_emit_predicate(STMT_t *stmt) {
     }
 
     /* Dispatcher: try clauses left-to-right */
-    N("  .method %s static void %s(object[] args, %s gamma, %s omega)"
+    N("  .method %s static void %s(object[] args, %s γ, %s ω)"
       " cil managed\n", vis, method, ACT, ACT);
     N("  {\n");
     N("    .maxstack 8\n");
@@ -386,7 +386,7 @@ static void pn_emit_predicate(STMT_t *stmt) {
         N("    callvirt   instance void [mscorlib]System.Action::Invoke()\n");
         N("    ret\n");
     } else if (ncl == 1) {
-        /* single clause: call directly with original gamma/omega */
+        /* single clause: call directly with original γ/ω */
         EXPR_t *cl = expr_arg(choice, 0);
         if (cl) {
             char cl_name[128];
@@ -414,9 +414,9 @@ static void pn_emit_predicate(STMT_t *stmt) {
             D("  .method private static void %s() cil managed\n", on);
             D("  {\n    .maxstack 1\n    ldc.i4.0\n    stsfld int32 %s::%s\n    ret\n  }\n", pn_class, fn2);
 
-            /* try this clause: gamma = original gamma, omega = flag-setter */
+            /* try this clause: γ = original γ, ω = flag-setter */
             N("    ldarg.0\n    ldnull\n");
-            N("    ldarg.1\n");   /* original gamma */
+            N("    ldarg.1\n");   /* original γ */
             N("    ldnull\n");
             N("    ldftn      void %s::%s()\n", pn_class, on);
             N("    newobj     instance void [mscorlib]System.Action::.ctor"
@@ -424,11 +424,11 @@ static void pn_emit_predicate(STMT_t *stmt) {
             N("    call       void %s::%s(object[], object[], %s, %s)\n",
               pn_class, cl_name, ACT, ACT);
             N("    ldsfld     int32 %s::%s\n", pn_class, fn2);
-            /* flag=1: gamma was called (success) — gamma already invoked, just return */
+            /* flag=1: γ was called (success) — γ already invoked, just return */
             N("    brtrue     %s\n", exit_lbl);
-            /* flag=0: omega was called (fail) — try next clause */
+            /* flag=0: ω was called (fail) — try next clause */
         }
-        /* all clauses failed → call original omega */
+        /* all clauses failed → call original ω */
         N("    ldarg.2\n");
         N("    callvirt   instance void [mscorlib]System.Action::Invoke()\n");
         N("  %s:\n", exit_lbl);

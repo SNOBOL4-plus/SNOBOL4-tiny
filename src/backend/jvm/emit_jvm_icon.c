@@ -1731,7 +1731,7 @@ static void ij_emit_call(IcnNode *n, IjPorts ports, char *oα, char *oβ) {
             const char *next_relay = (i+1 < nargs) ? relays[i+1] : relays[nargs];
             IjPorts ap; strncpy(ap.γ, (i < nargs-1) ? relays[i+1] : relays[nargs], 63);
             strncpy(ap.ω, ports.ω, 63);
-            /* override gamma to relay through constructor assembly */
+            /* override γ to relay through constructor assembly */
             snprintf(ap.γ, 64, "icn_%d_rc_r%d", id, i+1);
             ij_emit_expr(n->children[1+i], ap, arg_a[i], arg_b[i]);
             (void)next_relay;
@@ -1745,7 +1745,7 @@ static void ij_emit_call(IcnNode *n, IjPorts ports, char *oα, char *oβ) {
 
         /* arg relay chain: box each arg into its Object static */
         for (int i = 0; i < nargs; i++) {
-            JL(relays[i+1]);  /* relay[i+1] is gamma of arg[i] */
+            JL(relays[i+1]);  /* relay[i+1] is γ of arg[i] */
             JI("invokestatic","java/lang/Long/valueOf(J)Ljava/lang/Long;");
             ij_put_obj_field(arg_flds[i]);
             if (i+1 < nargs) JGoto(arg_a[i+1]);
@@ -3512,7 +3512,7 @@ static void ij_emit_call(IcnNode *n, IjPorts ports, char *oα, char *oβ) {
                 JGoto(start_lbl); JBarrier();
 
                 for (int i = 0; i < nargs; i++) {
-                    /* Use a relay label INSIDE the expr stream as gamma so that
+                    /* Use a relay label INSIDE the expr stream as γ so that
                      * done_lbl is only reachable via an unconditional goto (depth 0).
                      * sv_fld stores the value; done_lbl loads it back at depth 0. */
                     char relay_lbl[64]; snprintf(relay_lbl, sizeof relay_lbl, "icn_%d_imp_r%d", id, i);
@@ -4196,7 +4196,7 @@ static void ij_emit_to(IcnNode *n, IjPorts ports, char *oα, char *oβ) {
 static void ij_emit_every(IcnNode *n, IjPorts ports, char *oα, char *oβ) {
     int id = ij_new_id(); char a[64], b[64];
     lbl_α(id,a,sizeof a); lbl_β(id,b,sizeof b);
-    /* pump_gen: arrived with NO value on stack — kick generator beta for next value */
+    /* pump_gen: arrived with NO value on stack — kick generator β for next value */
     char pump_gen[64]; snprintf(pump_gen, sizeof pump_gen, "icn_%d_pump", id);
     strncpy(oα,a,63); strncpy(oβ,b,63);
 
@@ -4232,7 +4232,7 @@ static void ij_emit_every(IcnNode *n, IjPorts ports, char *oα, char *oβ) {
         ij_emit_expr(gen, gp, ga, gb);
         JL(gen_drain); JI(ij_expr_is_obj(gen) ? "pop" : "pop2",""); /* fall through */
     }
-    /* pump_gen: NO value on stack — kick generator beta to produce next value */
+    /* pump_gen: NO value on stack — kick generator β to produce next value */
     JL(pump_gen); JGoto(gb);
     JL(a); JGoto(ga);
     JL(b); JGoto(ports.ω);
@@ -4266,14 +4266,14 @@ static void ij_emit_while(IcnNode *n, IjPorts ports, char *oα, char *oβ) {
         ij_loop_push(ports.ω, ca);   /* break→exit, next→re-eval cond */
         /* ICN_SEQ_EXPR body: emit each child as an independent statement.
          * A failing child (e.g. `if` with no else) must NOT abort remaining
-         * statements — it should fall through to the next child's alpha.
+         * statements — it should fall through to the next child's α.
          * Only the last child's ω goes to loop_top (re-check condition). */
         if (body->kind == ICN_SEQ_EXPR && body->nchildren >= 2) {
             int nc = body->nchildren;
             char (*cca)[64] = malloc(nc * 64);
             char (*ccb)[64] = malloc(nc * 64);
             char (*relay_g)[64] = malloc(nc * 64);
-            char (*relay_f)[64] = malloc(nc * 64); /* failure relay: stmt fail → next alpha */
+            char (*relay_f)[64] = malloc(nc * 64); /* failure relay: stmt fail → next α */
             for (int i = 0; i < nc; i++) {
                 snprintf(relay_g[i], 64, "icn_%d_wb_rg_%d", id, i);
                 snprintf(relay_f[i], 64, "icn_%d_wb_rf_%d", id, i);
@@ -4295,7 +4295,7 @@ static void ij_emit_while(IcnNode *n, IjPorts ports, char *oα, char *oβ) {
                 JI(is_ref ? "pop" : "pop2", "");
                 JGoto(cca[i+1]);
             }
-            /* ω relays: stmt failed → skip to next stmt alpha (no value on stack) */
+            /* ω relays: stmt failed → skip to next stmt α (no value on stack) */
             for (int i = 0; i < nc-1; i++) {
                 JL(relay_f[i]);
                 JGoto(cca[i+1]);
@@ -4513,7 +4513,7 @@ static int ij_expr_is_string(IcnNode *n) {
             return 0;
         }
         case ICN_IDENTICAL: {
-            /* E1 === E2: result is lhs value pushed at gamma.
+            /* E1 === E2: result is lhs value pushed at γ.
              * String if either operand is string. */
             if (n->nchildren >= 2)
                 return ij_expr_is_string(n->children[0]) ||
@@ -4870,7 +4870,7 @@ static void ij_emit_scan(IcnNode *n, IjPorts ports, char *oα, char *oβ) {
 
     /* β: restore subject/pos, → body.β */
     JL(beta_restore);
-    JC("SCAN restore (outer beta)");
+    JC("SCAN restore (outer β)");
     ij_get_str_field(old_subj); ij_put_str_field("icn_subject");
     ij_get_int_field(old_pos);  ij_put_int_field("icn_pos");
     JGoto(bb);   /* body.β */
@@ -7073,7 +7073,7 @@ static void ij_emit_proc(IcnNode *proc, FILE *out_target) {
         }
     }
 
-    /* Entry: generator dispatch — if icn_suspend_id != 0, we are resuming → beta entry */
+    /* Entry: generator dispatch — if icn_suspend_id != 0, we are resuming → β entry */
     if (is_gen && total_susp > 0) {
         char beta_entry[64]; snprintf(beta_entry, sizeof beta_entry, "icn_%s_beta", pname);
         char fresh_entry[64]; snprintf(fresh_entry, sizeof fresh_entry, "icn_%s_fresh", pname);
