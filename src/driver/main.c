@@ -24,6 +24,8 @@
 #include "icon_ast.h"
 #include "icon_parse.h"
 #include "icon_emit.h"
+#include "../frontend/rebus/rebus.h"
+#include "../frontend/rebus/rebus_lower.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -48,6 +50,7 @@ static int net_mode  = 0;
 static int sc_mode   = 0;
 static int pl_mode   = 0;
 static int icn_mode  = 0;
+static int reb_mode  = 0;
 static int fold_mode = 1;
 
 static int ends_with(const char *f, const char *s) {
@@ -95,6 +98,7 @@ static int compile_one(const char *infile, const char *outpath, FILE *out) {
     int file_sc  = sc_mode  || ends_with(infile, ".sc");
     int file_pl  = pl_mode  || ends_with(infile, ".pl") || ends_with(infile, ".pro");
     int file_icn = icn_mode || ends_with(infile, ".icn");
+    int file_reb = reb_mode || ends_with(infile, ".reb");
 
     FILE *in = stdin;
     if (infile) {
@@ -153,6 +157,21 @@ static int compile_one(const char *infile, const char *outpath, FILE *out) {
         goto done;
     }
 
+    if (file_reb) {
+        RProgram *rp = rebus_parse(in, infile ? infile : "<stdin>");
+        if (rebus_nerrors) {
+            fprintf(stderr, "scrip-cc: %d rebus error(s)\n", rebus_nerrors);
+            rc = 1; goto done;
+        }
+        prog = rebus_lower(rp);
+        if (!prog) { rc = 1; goto done; }
+        if      (asm_mode) asm_emit(prog, out);
+        else if (jvm_mode) jvm_emit(prog, out, infile);
+        else if (net_mode) net_emit(prog, out, infile);
+        else               c_emit(prog, out);
+        goto done;
+    }
+
     if (file_sc) {
         char *src = read_all(in);
         if (!src) { fprintf(stderr, "scrip-cc: read error\n"); rc = 1; goto done; }
@@ -198,6 +217,7 @@ int main(int argc, char *argv[]) {
         } else if (!strcmp(argv[i], "-asm-body"))    { asm_mode = 1; asm_body_mode = 1;
         } else if (!strcmp(argv[i], "-pl"))          { pl_mode = 1;
         } else if (!strcmp(argv[i], "-sc"))          { sc_mode = 1;
+        } else if (!strcmp(argv[i], "-reb"))         { reb_mode = 1;
         } else if (!strcmp(argv[i], "-F"))           { fold_mode = 1;
         } else if (!strcmp(argv[i], "-f"))           { fold_mode = 0;
         } else if (argv[i][0] != '-') {
