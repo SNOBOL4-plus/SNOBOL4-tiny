@@ -828,7 +828,7 @@ static void emit_alt(IcnEmitter *em, IcnNode *n, IcnPorts ports,
     strncpy(oa,a,63); strncpy(ob,b,63);
 
     int nc = n->nchildren;
-    /* Allocate alpha/beta label storage for each child */
+    /* Allocate α/β label storage for each child */
     char (*ca)[64] = malloc(nc * 64);
     char (*cb)[64] = malloc(nc * 64);
 
@@ -1749,7 +1749,7 @@ static void emit_seq_expr(IcnEmitter *em, IcnNode *n, IcnPorts ports,
     for (int i = 0; i < nc; i++) { alphas[i] = malloc(64); alphas[i][0] = '\0'; }
     char chain_lbl[64];
     strncpy(chain_lbl, ports.γ, 63);  /* last child → ports.γ */
-    /* Emit children in reverse so we know next alpha */
+    /* Emit children in reverse so we know next α */
     char prev_α[64]; strncpy(prev_α, ports.γ, 63);
     for (int i = nc-1; i >= 0; i--) {
         char relay[64]; snprintf(relay,64,"icon_%d_seq_%d",id,i);

@@ -918,12 +918,12 @@ static void pj_emit_runtime_helpers(void) {
     JI("invokevirtual", "java/lang/Object/equals(Ljava/lang/Object;)Z"); JI("ifne", "pjnq_no");
     JI("aload_0", ""); JI("ldc", "\";\"");
     JI("invokevirtual", "java/lang/Object/equals(Ljava/lang/Object;)Z"); JI("ifne", "pjnq_no");
-    /* Scan all chars: classify as alpha-id (starts lower, rest alnum/_)
+    /* Scan all chars: classify as α-id (starts lower, rest alnum/_)
        or symbolic (all in #&*+-./:<=>?@\\^~!)  or neither (needs quote) */
     /* Check first char */
     JI("aload_0", ""); JI("iconst_0", "");
     JI("invokevirtual", "java/lang/String/charAt(I)C"); JI("istore_2", "");
-    /* starts lower → alpha-id path */
+    /* starts lower → α-id path */
     JI("iload_2", "");
     JI("invokestatic", "java/lang/Character/isLowerCase(C)Z"); JI("ifne", "pjnq_alphaid");
     /* starts symbolic char → symbolic path */
@@ -2745,7 +2745,7 @@ static void pj_emit_assertz_helpers(void) {
     /* ------------------------------------------------------------------
      * pj_char_type_2(Object ch, Object type) -> Z
      * char_type(+Char, +Type): tests/queries character properties.
-     * Supported types: alpha, alnum, digit, digit(V), space, white,
+     * Supported types: α, alnum, digit, digit(V), space, white,
      *   end_of_line, upper, upper(L), lower, lower(U),
      *   to_upper(U), to_lower(L), ascii(Code).
      * locals:
@@ -2786,8 +2786,8 @@ static void pj_emit_assertz_helpers(void) {
     J("    invokestatic %s/pj_atom_name(Ljava/lang/Object;)Ljava/lang/String;\n", pj_classname);
     JI("astore", "4");  /* type_name */
 
-    /* alpha */
-    JI("aload", "4"); JI("ldc", "\"alpha\"");
+    /* α */
+    JI("aload", "4"); JI("ldc", "\"α\"");
     JI("invokevirtual", "java/lang/Object/equals(Ljava/lang/Object;)Z");
     JI("ifeq", "pjct_try_alnum");
     JI("iload_3", "");
@@ -4059,8 +4059,8 @@ static void pj_emit_gcd_helper(void) {
 
 /* -------------------------------------------------------------------------
  * pj_is_always_fail — true for goals that unconditionally fail (no retry).
- * These must route their omega to lbl_pred_ω (next clause), not to the
- * clause's own alpha/retry label, to avoid infinite retry loops.
+ * These must route their ω to lbl_pred_ω (next clause), not to the
+ * clause's own α/retry label, to avoid infinite retry loops.
  * ------------------------------------------------------------------------- */
 static int pj_is_always_fail(EXPR_t *goal) {
     if (!goal || goal->kind != E_FNC || !goal->sval) return 0;
@@ -4247,7 +4247,7 @@ static void pj_emit_goal(EXPR_t *goal, const char *lbl_γ, const char *lbl_ω,
 
     if (goal->kind == E_CUT) {
         /* cut: seal β by storing base[nclauses] into cs_local,
-         * so the next dispatch hits default:omega.
+         * so the next dispatch hits default:ω.
          * -1 means no enclosing choice (should not happen in valid Prolog). */
         if (cut_cs_seal >= 0 && cs_local_for_cut >= 0) {
             J("    ldc %d\n", cut_cs_seal);
@@ -5627,7 +5627,7 @@ static void pj_emit_goal(EXPR_t *goal, const char *lbl_γ, const char *lbl_ω,
                     rhs = expr_new(E_QLIT);
                     rhs->sval = strdup("[]");
                 }
-                /* emit: pj_unify(list_arg, rhs); ifeq omega; goto gamma */
+                /* emit: pj_unify(list_arg, rhs); ifeq ω; goto γ */
                 pj_emit_term(list_arg, var_locals, n_vars);
                 pj_emit_term(rhs, var_locals, n_vars);
                 J("    invokestatic %s/pj_unify(Ljava/lang/Object;Ljava/lang/Object;)Z\n", pj_classname);
@@ -5782,7 +5782,7 @@ static void pj_emit_body(EXPR_t **goals, int ngoals, const char *lbl_γ,
             J("    ldc %d\n", cut_cs_seal);
             J("    istore %d\n", cs_local_for_cut);
         }
-        /* Remaining goals after cut: failure goes to predicate omega.
+        /* Remaining goals after cut: failure goes to predicate ω.
          * Success goes to cutgamma which returns base[nclauses] so caller
          * cannot retry — fixes M-PJ-CUT-UCALL double-output. */
         const char *cut_fail = lbl_pred_ω ? lbl_pred_ω : lbl_outer_ω;
@@ -5966,7 +5966,7 @@ static void pj_emit_body(EXPR_t **goals, int ngoals, const char *lbl_γ,
             /* M-PJ-CUT-SCOPE: A cut inside a *called* predicate is scoped to
              * that predicate only and must NOT propagate into the caller.
              * Clamp MAX_VALUE return to 1 (deterministic success) so the
-             * caller's gamma body continues normally. */
+             * caller's γ body continues normally. */
             char clamp_done[128];
             snprintf(clamp_done, sizeof clamp_done, "clamp_done_%d", uid);
             J("    aload %d\n", local_rv);
@@ -6020,7 +6020,7 @@ static void pj_emit_body(EXPR_t **goals, int ngoals, const char *lbl_γ,
             J("    invokestatic %s/pj_trail_unwind(I)V\n", pj_classname);
             JI("goto", call_α);   /* β port: retry ucall for next solution */
         }
-        /* ucall exhausted → retry enclosing call (lbl_ω = enclosing beta).
+        /* ucall exhausted → retry enclosing call (lbl_ω = enclosing β).
          * Reset local_cs to 0 so the next invocation of this predicate
          * starts fresh.  Without this reset, a retry of the enclosing call
          * (e.g. item(Y) binding a new Y) would re-enter differ with cs
@@ -7565,11 +7565,11 @@ static void pj_emit_choice(EXPR_t *choice) {
         base[ci + 1] = base[ci] + 1;
         (void)has_ucall; /* stride is 1 regardless; sub_cs fills the gap */
     }
-    /* base[nclauses]: one-past-end sentinel for the dispatch omega guard */
+    /* base[nclauses]: one-past-end sentinel for the dispatch ω guard */
     base[nclauses] = base[nclauses - 1] + 1;
     /* last_has_ucall: does the last clause have any body user-calls?
      * If yes, the cs range for that clause is open-ended (sub_cs from inner
-     * calls can push cs beyond base[nclauses]), so we CANNOT add an omega guard.
+     * calls can push cs beyond base[nclauses]), so we CANNOT add an ω guard.
      * If no (pure fact/builtin), cs >= base[nclauses] means exhausted → ω safe. */
     int last_has_ucall = 0;
     int any_has_cut = 0;
@@ -7652,17 +7652,17 @@ static void pj_emit_choice(EXPR_t *choice) {
      * Mirrors ASM: cmp eax, base[ci]; jge pl_name_cN_α
      *
      * CUT SENTINEL GUARD: if last clause has ucalls AND a cut, add exact-equality
-     * guard cs == base[nclauses] → omega.  cutgamma returns base[nclauses] as the
+     * guard cs == base[nclauses] → ω.  cutgamma returns base[nclauses] as the
      * sentinel; this guard catches it before clause dispatch (the >= range guard
      * is suppressed for last_has_ucall predicates to allow open-ended sub-cs). */
     if (!last_has_ucall) {
-        J("    iload %d ; cs >= %d (all clauses exhausted)? → omega\n    ldc %d\n    if_icmpge p_%s_%d_omega\n",
+        J("    iload %d ; cs >= %d (all clauses exhausted)? → ω\n    ldc %d\n    if_icmpge p_%s_%d_omega\n",
           cs_local, base[nclauses], base[nclauses], safe_fn, arity);
     } else if (any_has_cut) {
         /* M-PJ-CUT-UCALL: use MAX_VALUE as unambiguous cutgamma sentinel.
          * base[nclauses] collides with last-clause γ return (base[nc-1]+0+1==nclauses).
          * Integer.MAX_VALUE (0x7fffffff) is never a legitimate cs value. */
-        J("    iload %d ; cs == 0x7fffffff (cutgamma sentinel)? -> omega\n    ldc 2147483647\n    if_icmpeq p_%s_%d_omega\n",
+        J("    iload %d ; cs == 0x7fffffff (cutgamma sentinel)? -> ω\n    ldc 2147483647\n    if_icmpeq p_%s_%d_omega\n",
           cs_local, safe_fn, arity);
     }
     J("    iload %d\n", cs_local);
@@ -7676,7 +7676,7 @@ static void pj_emit_choice(EXPR_t *choice) {
      * the result directly.  Branch distances in the dispatcher stay tiny.
      *
      * Sub-method signature: same args as parent + I (init_cs), no outer cs.
-     * Returns: null = clause failed (→ try next), Object[] = gamma/cutgamma result.
+     * Returns: null = clause failed (→ try next), Object[] = γ/cutgamma result.
      */
 #define PJ_SPLIT_THRESHOLD 16
     int do_split = (nclauses > PJ_SPLIT_THRESHOLD);
@@ -7698,7 +7698,7 @@ static void pj_emit_choice(EXPR_t *choice) {
      * the result directly.  Branch distances in the dispatcher stay tiny.
      *
      * Sub-method signature: same args as parent + I (init_cs), no outer cs.
-     * Returns: null = clause failed (→ try next), Object[] = gamma/cutgamma result.
+     * Returns: null = clause failed (→ try next), Object[] = γ/cutgamma result.
      */
     if (do_split) {
         /* ---- SPLIT PATH: dispatcher calls per-clause sub-methods ---- */
@@ -7792,7 +7792,7 @@ static void pj_emit_choice(EXPR_t *choice) {
          * CLAMP to 0: when alphafail routes from an earlier clause to this one,
          * cs < base[ci] (e.g. cs=0, base[ci]=1 → would give -1).
          * A negative init_cs propagates into body ucall cs arguments, causing
-         * the callee's dispatch to hit omega immediately (cs < 0 < base[0]).
+         * the callee's dispatch to hit ω immediately (cs < 0 < base[0]).
          * Clamping ensures fresh-entry semantics on any alphafail path. */
         J("    iload %d\n", cs_local);
         J("    ldc %d\n", base[ci]);
@@ -7963,7 +7963,7 @@ static void pj_emit_choice(EXPR_t *choice) {
                          init_cs_local, sub_cs_out_local,
                          base[nclauses], cs_local, pred_ω_lbl, cutγ_lbl);
             /* body_fail trampoline: unwind this clause's trail, jump to next
-             * clause (or predicate omega for the last clause). */
+             * clause (or predicate ω for the last clause). */
             J("p_%s_%d_bodyfail_%d:\n", safe_fn, arity, ci);
             J("    iload %d\n", trail_local);
             J("    invokestatic %s/pj_trail_unwind(I)V\n", pj_classname);
@@ -8001,15 +8001,15 @@ static void pj_emit_choice(EXPR_t *choice) {
         /* cutgamma port: cut fired — return {base[nclauses]} sentinel (M-PJ-CUT-UCALL fix).
          * base[nclauses] is the one-past-end value. The dispatch at the top of this
          * predicate now has an unconditional exact-equality guard (cs == base[nclauses]
-         * → omega) regardless of last_has_ucall, so re-entry with this sentinel
-         * immediately routes to omega without executing any clause body. */
+         * → ω) regardless of last_has_ucall, so re-entry with this sentinel
+         * immediately routes to ω without executing any clause body. */
         J("p_%s_%d_cutgamma_%d:\n", safe_fn, arity, ci);
         JI("iconst_1", "");
         JI("anewarray", "java/lang/Object");
         JI("dup", "");
         JI("iconst_0", "");
         /* M-PJ-CUT-UCALL: return MAX_VALUE (2147483647) as unambiguous sentinel.
-         * base[nclauses] is ambiguous — last-clause gamma returns the same value. */
+         * base[nclauses] is ambiguous — last-clause γ returns the same value. */
         J("    ldc 2147483647\n");
         JI("invokestatic", "java/lang/Integer/valueOf(I)Ljava/lang/Integer;");
         JI("aastore", "");
@@ -8028,7 +8028,7 @@ static void pj_emit_choice(EXPR_t *choice) {
         /* cs range for dynamic clauses: base[nclauses], base[nclauses]+1, ...
          * db_idx = cs - base[nclauses]  (0 = first dynamic clause)
          * On static-clause exhaustion cs < base[nclauses]+N, so we check if
-         * cs >= base[nclauses] which is already assured by reaching omega.
+         * cs >= base[nclauses] which is already assured by reaching ω.
          * We use a local for db_idx. */
         int db_idx_local = db_idx_local_slot; /* fixed: use locals_needed-2, not hardcoded offset */
         int db_lbl = pj_fresh_label();
@@ -8194,7 +8194,7 @@ static void pj_emit_choice(EXPR_t *choice) {
             for (int vi = 0; vi < n_vars; vi++)
                 var_locals[vi] = sm_vars_base + vi;
 
-            /* omega label = return null */
+            /* ω label = return null */
             char sm_omega[128];
             snprintf(sm_omega, sizeof sm_omega, "p_%s_%d__c%d_omega", safe_fn, arity, ci);
 
@@ -8266,7 +8266,7 @@ static void pj_emit_choice(EXPR_t *choice) {
                 J("    areturn\n");
             }
 
-            /* retry_head (alpha) label */
+            /* retry_head (α) label */
             J("p_%s_%d__c%d_alpha:\n", safe_fn, arity, ci);
             J("    iload %d\n", sm_trail);
             J("    invokestatic %s/pj_trail_unwind(I)V\n", pj_classname);
@@ -8293,7 +8293,7 @@ static void pj_emit_choice(EXPR_t *choice) {
                 J("    ifeq %s\n", sm_omega);
             }
 
-            /* beta label + body */
+            /* β label + body */
             J("p_%s_%d__c%d_beta:\n", safe_fn, arity, ci);
             {
                 int nbody = clause->nchildren - n_args;
@@ -8315,7 +8315,7 @@ static void pj_emit_choice(EXPR_t *choice) {
                 J("    areturn\n");
             }
 
-            /* gamma port */
+            /* γ port */
             J("p_%s_%d__c%d_gamma:\n", safe_fn, arity, ci);
             J("    iconst_1\n");
             J("    anewarray java/lang/Object\n");
@@ -8345,7 +8345,7 @@ static void pj_emit_choice(EXPR_t *choice) {
             J("    aastore\n");
             J("    areturn\n");
 
-            /* omega: null return */
+            /* ω: null return */
             J("%s:\n", sm_omega);
             J("    aconst_null\n");
             J("    areturn\n");
