@@ -41,7 +41,7 @@ typedef struct {
  * -------------------------------------------------------------------------*/
 typedef struct {
     FILE *out;
-    int   node_id;
+    int   uid;
     int   bounded;
     char  errmsg[256];
     int   had_error;
