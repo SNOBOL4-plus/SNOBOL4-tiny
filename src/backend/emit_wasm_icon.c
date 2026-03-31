@@ -120,6 +120,15 @@ static void icn_prescan_node(const EXPR_t *n) {
         icn_prescan_node(n->children[i]);
 }
 
+/* Returns 1 if any node in the subtree is E_SUSPEND */
+static int icn_has_suspend(const EXPR_t *n) {
+    if (!n) return 0;
+    if (n->kind == E_SUSPEND) return 1;
+    for (int i = 0; i < n->nchildren; i++)
+        if (icn_has_suspend(n->children[i])) return 1;
+    return 0;
+}
+
 /* ── §1c  Per-proc local variable table (M-IW-V01) ───────────────────────── */
 /* Local vars are emitted as per-proc globals: $icn_lv_PROC_VAR (mut i64).
  * This matches the param model (already globals) and is correct for
@@ -920,10 +929,18 @@ static void emit_expr_wasm(const EXPR_t *n,
                        e_start, e_resume);
         WI("  ;; E_EVERY  (node %d)\n", id);
         WI("  (func $%s (result i32)  return_call $%s)\n", sa, e_start);
-        /* every_resume asks body for NEXT value via e_resume.
-         * E_TO: e_resume increments counter+checks bounds (correct).
-         * E_FNC proc call: e_resume propagates fail -> terminates every. */
-        WI("  (func $%s (result i32)  return_call $%s)\n", every_resume, e_resume);
+        /* every_resume: ask generator for NEXT value.
+         * For suspend-based generators the resume path is stored in
+         * $icn_retcont by E_SUSPEND.after_val; use return_call_indirect.
+         * For simple generators (E_TO, E_TO_BY, etc.) use e_resume directly
+         * — those never set $icn_retcont and have no funcref table entry. */
+        if (icn_has_suspend(n->children[0])) {
+            WI("  (func $%s (result i32)\n", every_resume);
+            WI("    global.get $icn_retcont\n");
+            WI("    return_call_indirect (type $cont_t))\n");
+        } else {
+            WI("  (func $%s (result i32)  return_call $%s)\n", every_resume, e_resume);
+        }
         WI("  (func $%s (result i32)  return_call $%s)\n", every_fail, succ);
         snprintf(ra, sizeof ra, "%s", every_resume);
         break;
@@ -1127,6 +1144,162 @@ static void emit_expr_wasm(const EXPR_t *n,
         WI("  (func $%s (result i32)  return_call $%s)\n", ra, fail);
         break;
 
+    /* ── E_WHILE — while cond do body ────────────────────────────────────── *
+     * Four-port WASM wiring (mirrors x64/JVM oracles):                       *
+     *   sa        → cond.start                                               *
+     *   cond.esucc (cond_ok) → body.start                                    *
+     *   body.esucc → loop_top → cond.start  (iterate)                       *
+     *   body.efail → loop_top → cond.start  (body fail also loops)          *
+     *   cond.efail → outer_fail  (condition failed: while exits)             *
+     *   ra        → outer_fail  (resume of while = exhausted)               *
+     * ======================================================================= */
+    case E_WHILE: {
+        if (n->nchildren < 1) { emit_icn_stub(n, id, fail); break; }
+        EXPR_t *cond = n->children[0];
+        EXPR_t *body = (n->nchildren > 1) ? n->children[1] : NULL;
+
+        char cond_ok[64],  loop_top[64];
+        wfn(cond_ok,  sizeof cond_ok,  id, "condok");
+        wfn(loop_top, sizeof loop_top, id, "top");
+
+        /* Emit condition: esucc→cond_ok, efail→outer fail */
+        char c_start[64], c_resume[64];
+        emit_expr_wasm(cond, cond_ok, fail, c_start, c_resume);
+
+        /* Emit body: esucc→loop_top, efail→loop_top (body fail loops back) */
+        char b_start[64], b_resume[64];
+        if (body) {
+            emit_expr_wasm(body, loop_top, loop_top, b_start, b_resume);
+        }
+
+        WI("  ;; E_WHILE (node %d)\n", id);
+
+        /* sa: enter condition */
+        WI("  (func $%s (result i32)  return_call $%s)\n", sa, c_start);
+        /* ra: while resume = exhausted */
+        WI("  (func $%s (result i32)  return_call $%s)\n", ra, fail);
+
+        /* cond_ok: condition succeeded — enter body or loop back */
+        if (body) {
+            WI("  (func $%s (result i32)  return_call $%s)\n", cond_ok, b_start);
+        } else {
+            WI("  (func $%s (result i32)  return_call $%s)\n", cond_ok, loop_top);
+        }
+
+        /* loop_top: go back to condition start */
+        WI("  (func $%s (result i32)  return_call $%s)\n", loop_top, c_start);
+        break;
+    }
+
+    /* ── E_SUSPEND — user-defined generator yield (M-IW-G01) ─────────────── *
+     * suspend E [do body]                                                     *
+     *                                                                         *
+     * Four-port WASM wiring:                                                  *
+     *   sa        → E.start                                                   *
+     *   E.esucc   → store $icn_retval, arm resume index in $icn_retcont,     *
+     *               return via proc retcont (yield value to call-site)       *
+     *   ra        → resume_tramp (re-enter body or E.resume)                 *
+     *   body.esucc → E.resume  (re-drive value expression)                  *
+     *   E.efail / body.efail → outer_fail  (generator exhausted)            *
+     *                                                                         *
+     * Yield path: jump to icn_proc_{name}_retcont which calls                *
+     * icn_retcont_pop → return_call_indirect back to the call-site esucc.   *
+     * The call-site esucc reads $icn_retval into its local icn_int slot.     *
+     * Resume path: the outer every/while calls ra which re-enters the        *
+     * generator body or value expression.                                     *
+     * Single-active-generator model (matches x64 oracle).                    *
+     * ======================================================================= */
+    case E_SUSPEND: {
+        EXPR_t *val_node  = (n->nchildren > 0) ? n->children[0] : NULL;
+        EXPR_t *body_node = (n->nchildren > 1) ? n->children[1] : NULL;
+
+        char after_val[64];
+        wfn(after_val, sizeof after_val, id, "yield");
+
+        /* Resume trampoline: registered in funcref table so outer loop can
+         * call return_call_indirect $icn_retcont to re-enter generator */
+        char resume_tramp[64];
+        wfn(resume_tramp, sizeof resume_tramp, id, "rtramp");
+        int resume_idx = icn_retcont_register(resume_tramp);
+
+        /* Value expression: esucc→after_val, efail→outer_fail */
+        char e_start[64], e_resume[64];
+        emit_expr_wasm(val_node, after_val, fail, e_start, e_resume);
+
+        /* Body expression: esucc→e_resume (re-drive E), efail→outer_fail */
+        char b_start[64], b_resume[64];
+        if (body_node) {
+            emit_expr_wasm(body_node, e_resume, fail, b_start, b_resume);
+        }
+
+        WI("  ;; E_SUSPEND (node %d)  resume_idx=%d\n", id, resume_idx);
+
+        /* sa: start value evaluation */
+        WI("  (func $%s (result i32)  return_call $%s)\n", sa, e_start);
+
+        /* after_val: value in $icn_int{val_id} — store in $icn_retval,
+         * arm resume index, then yield via proc retcont to call-site.
+         * The val expression stored its result in the node-id global used
+         * by emit_expr_wasm internals; we need $icn_retval for the handoff. */
+        WI("  (func $%s (result i32)\n", after_val);
+        /* Find which icn_int holds the val result: it's the child node's id.
+         * The child was emitted with id = wasm_icon_ctr at emit time, which
+         * was captured as the id assigned just before emit_expr_wasm returned.
+         * Simpler: use $icn_retval directly — val node's after_val sets it
+         * via its own esucc chain; for E_ILIT/E_VAR the value is in icn_int{n}.
+         * Use the val_node's result: wasm_icon_ctr-1 after emit is unreliable.
+         * Instead: store to $icn_retval in the after_val func itself.
+         * The val expression's esucc (=after_val) fires when val succeeded,
+         * meaning $icn_int{val_id} holds the result where val_id = id of the
+         * first sub-node emitted. We access it via the e_start func name:
+         * the convention is that node id = wasm_icon_ctr at the call site.
+         * Cleanest: record the val sub-node's id by checking e_start name. */
+        /* e_start is "iconN_start" — extract N */
+        {
+            int val_id = 0;
+            sscanf(e_start, "icon%d_start", &val_id);
+            WI("    global.get $icn_int%d\n", val_id);
+            WI("    global.set $icn_retval\n");
+        }
+        /* Arm resume: store resume_tramp table index in $icn_retcont */
+        WI("    i32.const %d\n", resume_idx);
+        WI("    global.set $icn_retcont\n");
+        /* Yield to caller:
+         * 1. Decrement frame_depth so esucc reads the correct saved frame slot
+         *    (retcont_push incremented depth; we must undo that for frame_pop).
+         * 2. Peek top esucc_idx (NON-destructive — retcont frame stays live
+         *    so the generator can yield multiple times).
+         * 3. call_indirect → esucc → frame_pop (restores caller's icn_ints).
+         * The retcont stack entry is NOT consumed; only frame_depth changes. */
+        WI("    global.get $icn_frame_depth\n");
+        WI("    i32.const 1\n");
+        WI("    i32.sub\n");
+        WI("    global.set $icn_frame_depth\n");
+        WI("    call $icn_retcont_peek_esucc\n");
+        WI("    return_call_indirect (type $cont_t))\n");
+        /* resume_tramp: re-increment frame_depth (re-enter upto context)
+         * then continue into body or re-drive val expression */
+        if (body_node) {
+            WI("  (func $%s (result i32)\n", resume_tramp);
+            WI("    global.get $icn_frame_depth\n");
+            WI("    i32.const 1\n");
+            WI("    i32.add\n");
+            WI("    global.set $icn_frame_depth\n");
+            WI("    return_call $%s)\n", b_start);
+        } else {
+            WI("  (func $%s (result i32)\n", resume_tramp);
+            WI("    global.get $icn_frame_depth\n");
+            WI("    i32.const 1\n");
+            WI("    i32.add\n");
+            WI("    global.set $icn_frame_depth\n");
+            WI("    return_call $%s)\n", e_resume);
+        }
+
+        /* ra: outer resume of this suspend node = resume_tramp */
+        WI("  (func $%s (result i32)  return_call $%s)\n", ra, resume_tramp);
+        break;
+    }
+
     /* ── Unimplemented: stub-fail ─────────────────────────────────────────── */
     default:
         emit_icn_stub(n, id, fail);
@@ -1236,6 +1409,19 @@ void emit_wasm_icon_globals(FILE *out) {
     WI("    i32.sub\n");
     WI("    global.set $icn_frame_depth\n");
     /* return mem[sp] = efail_idx */
+    WI("    local.get $sp\n");
+    WI("    i32.load)\n");
+    /* retcont_peek_esucc: read top esucc_idx WITHOUT popping the frame.
+     * Used by E_SUSPEND to yield value back to call-site repeatedly
+     * (the retcont frame must stay live across multiple yields). */
+    WI("  (func $icn_retcont_peek_esucc (result i32)\n");
+    WI("    (local $sp i32)\n");
+    /* sp_top - 4 = esucc slot */
+    WI("    i32.const %d\n", ICON_RETCONT_SP_ADDR);
+    WI("    i32.load\n");
+    WI("    i32.const 4\n");
+    WI("    i32.sub\n");
+    WI("    local.set $sp\n");
     WI("    local.get $sp\n");
     WI("    i32.load)\n");
     WI("  (global $icn_retcont (mut i32) (i32.const 0))\n");
