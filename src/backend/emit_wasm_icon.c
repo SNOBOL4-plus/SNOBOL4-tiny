@@ -177,14 +177,13 @@ static void emit_frame_push(int nints, int nparams) {
     if (nints == 0 && nparams == 0) return;
     int total = (nints < ICON_FRAME_MAX_INTS ? nints : ICON_FRAME_MAX_INTS) + nparams;
     WI("    ;; frame_push: save %d ints + %d params at depth=$icn_frame_depth\n", nints, nparams);
-    WI("    (local $frame_base i32)\n");
-    emit_frame_base_load();
+    /* IW-14 Bug 3: use call $icn_frame_base inline — no (local) declaration needed */
     for (int i = 0; i < nints && i < ICON_FRAME_MAX_INTS; i++) {
-        WI("    local.get $frame_base  i32.const %d  i32.add  global.get $icn_int%d  i64.store\n",
+        WI("    call $icn_frame_base  i32.const %d  i32.add  global.get $icn_int%d  i64.store\n",
            i * 8, i);
     }
     for (int i = 0; i < nparams; i++) {
-        WI("    local.get $frame_base  i32.const %d  i32.add  global.get $icn_param%d  i64.store\n",
+        WI("    call $icn_frame_base  i32.const %d  i32.add  global.get $icn_param%d  i64.store\n",
            (nints + i) * 8, i);
     }
     (void)total;
@@ -193,14 +192,13 @@ static void emit_frame_push(int nints, int nparams) {
 static void emit_frame_pop(int nints, int nparams) {
     if (nints == 0 && nparams == 0) return;
     WI("    ;; frame_pop: restore %d ints + %d params at depth=$icn_frame_depth\n", nints, nparams);
-    WI("    (local $frame_base i32)\n");
-    emit_frame_base_load();
+    /* IW-14 Bug 3: use call $icn_frame_base inline — no (local) declaration needed */
     for (int i = 0; i < nints && i < ICON_FRAME_MAX_INTS; i++) {
-        WI("    local.get $frame_base  i32.const %d  i32.add  i64.load  global.set $icn_int%d\n",
+        WI("    call $icn_frame_base  i32.const %d  i32.add  i64.load  global.set $icn_int%d\n",
            i * 8, i);
     }
     for (int i = 0; i < nparams; i++) {
-        WI("    local.get $frame_base  i32.const %d  i32.add  i64.load  global.set $icn_param%d\n",
+        WI("    call $icn_frame_base  i32.const %d  i32.add  i64.load  global.set $icn_param%d\n",
            (nints + i) * 8, i);
     }
 }
@@ -1201,6 +1199,13 @@ void emit_wasm_icon_globals(FILE *out) {
     WI("  (global $icn_retcont (mut i32) (i32.const 0))\n");
     WI("  ;; IW-13: frame depth tracks recursive call depth for dynamic frame addressing\n");
     WI("  (global $icn_frame_depth (mut i32) (i32.const 0))\n");
+    /* IW-14: helper func computes frame base — avoids mid-body (local) declarations (Bug 3) */
+    WI("  (func $icn_frame_base (result i32)\n");
+    WI("    global.get $icn_frame_depth\n");
+    WI("    i32.const %d\n", ICON_FRAME_STRIDE);
+    WI("    i32.mul\n");
+    WI("    i32.const %d\n", ICON_GEN_STATE_BASE);
+    WI("    i32.add)\n");
     for (int i = 0; i < 8; i++)
         WI("  (global $icn_param%d (mut i64) (i64.const 0))\n", i);
 }
