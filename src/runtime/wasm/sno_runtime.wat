@@ -785,23 +785,25 @@
   )
 
   ;; ── sno_array_create2: create a 2D array ──────────────────────────────────
-  ;; (rows i32, cols i32, def_off i32, def_len i32) → handle i32
+  ;; (lo1 i32, hi1 i32, lo2 i32, hi2 i32) → handle i32
   (func $sno_array_create2 (export "sno_array_create2")
-    (param $rows i32) (param $cols i32) (param $def_off i32) (param $def_len i32)
+    (param $lo1 i32) (param $hi1 i32) (param $lo2 i32) (param $hi2 i32)
     (result i32)
-    (local $h i32) (local $nslots i32) (local $slots_bytes i32) (local $total i32) (local $i i32)
-    (local.set $nslots (i32.mul (local.get $rows) (local.get $cols)))
+    (local $h i32) (local $nrows i32) (local $ncols i32) (local $nslots i32) (local $slots_bytes i32) (local $total i32) (local $i i32)
+    (local.set $nrows (i32.add (i32.sub (local.get $hi1) (local.get $lo1)) (i32.const 1)))
+    (local.set $ncols (i32.add (i32.sub (local.get $hi2) (local.get $lo2)) (i32.const 1)))
+    (local.set $nslots (i32.mul (local.get $nrows) (local.get $ncols)))
     (local.set $slots_bytes (i32.mul (local.get $nslots) (i32.const 8)))
     (local.set $total (i32.add (i32.const 32) (local.get $slots_bytes)))
     (local.set $h (call $sno_arr_alloc (local.get $total)))
     (i32.store (local.get $h)                          (i32.const 1))
     (i32.store (i32.add (local.get $h) (i32.const 4))  (i32.const 2))         ;; ndims=2
-    (i32.store (i32.add (local.get $h) (i32.const 8))  (i32.const 1))         ;; lo1=1
-    (i32.store (i32.add (local.get $h) (i32.const 12)) (local.get $rows))     ;; hi1=rows
-    (i32.store (i32.add (local.get $h) (i32.const 16)) (i32.const 1))         ;; lo2=1
-    (i32.store (i32.add (local.get $h) (i32.const 20)) (local.get $cols))     ;; hi2=cols
-    (i32.store (i32.add (local.get $h) (i32.const 24)) (local.get $def_off))
-    (i32.store (i32.add (local.get $h) (i32.const 28)) (local.get $def_len))
+    (i32.store (i32.add (local.get $h) (i32.const 8))  (local.get $lo1))      ;; lo1
+    (i32.store (i32.add (local.get $h) (i32.const 12)) (local.get $hi1))      ;; hi1
+    (i32.store (i32.add (local.get $h) (i32.const 16)) (local.get $lo2))      ;; lo2
+    (i32.store (i32.add (local.get $h) (i32.const 20)) (local.get $hi2))      ;; hi2
+    (i32.store (i32.add (local.get $h) (i32.const 24)) (i32.const 0))         ;; def_off=0
+    (i32.store (i32.add (local.get $h) (i32.const 28)) (i32.const 0))         ;; def_len=0
     (local.set $i (i32.const 0))
     (block $done
       (loop $loop
