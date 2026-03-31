@@ -19,7 +19,7 @@
  *
  * Operator table (from bconv[] in snocone.sc / snocone.snobol4):
  *   &&  → E_CONCAT (blank concat)
- *   ||  → E_CONCAT (pattern alternation — value context; same IR node)
+ *   ||  → E_CONCAT (string concat — value context; same as && and |)
  *   |   → E_CONCAT
  *   ==  → EQ(a,b)    !=  → NE(a,b)
  *   <   → LT(a,b)    >   → GT(a,b)
@@ -170,7 +170,7 @@ static int lower_token(const ScPToken *tok, ExprStack *s,
         EXPR_t *r = es_pop(s), *l = es_pop(s);
         es_push(s, expr_binary(E_CONCAT, l, r)); return 0;
     }
-    case SNOCONE_OR: {     /* || → pattern alternation → E_ALT */
+    case SNOCONE_OR: {     /* || → E_ALT; sc_val_alt_to_concat rewrites to E_CONCAT in value ctx */
         EXPR_t *r = es_pop(s), *l = es_pop(s);
         es_push(s, expr_binary(E_ALT, l, r)); return 0;
     }
@@ -349,6 +349,17 @@ static void sc_pat_concat_to_seq(EXPR_t *e) {
         sc_pat_concat_to_seq(e->children[i]);
 }
 
+/* sc_val_alt_to_concat -- rewrite E_ALT -> E_CONCAT in a value tree in-place.
+ * Snocone || is dual-use: pattern alternation in pattern context, string
+ * concatenation in value context.  Parser always emits E_ALT for ||;
+ * this rewrite fixes value subtrees so emit_x64 sees E_CONCAT. */
+static void sc_val_alt_to_concat(EXPR_t *e) {
+    if (!e) return;
+    if (e->kind == E_ALT) e->kind = E_CONCAT;
+    for (int i = 0; i < e->nchildren; i++)
+        sc_val_alt_to_concat(e->children[i]);
+}
+
 /* Assemble a STMT_t from the top of the expression stack */
 static STMT_t *assemble_stmt(ExprStack *s, int lineno) {
     EXPR_t *top = es_peek(s);
@@ -367,11 +378,14 @@ static STMT_t *assemble_stmt(ExprStack *s, int lineno) {
             st->pattern     = expr_right(lhs);
             sc_pat_concat_to_seq(st->pattern);
             st->replacement = rhs;
+            sc_val_alt_to_concat(st->replacement); /* || in repl = string concat */
             st->has_eq      = 1;
             free(lhs);
         } else {
             st->subject     = lhs;
             st->replacement = rhs;
+            sc_val_alt_to_concat(st->replacement); /* || in plain assign RHS = string concat */
+            sc_val_alt_to_concat(st->subject);     /* || in subject expr = string concat */
             st->has_eq      = 1;
         }
     } else if (top->kind == E_MATCH) {
@@ -384,6 +398,7 @@ static STMT_t *assemble_stmt(ExprStack *s, int lineno) {
     } else {
         es_pop(s);
         st->subject = top;
+        sc_val_alt_to_concat(st->subject); /* || in bare expression = string concat */
     }
     return st;
 }
@@ -933,14 +948,66 @@ static void sc_do_stmt(CfState *st) {
         sc_advance(st);
         sc_skip_nl(st);
         if (sc_cur(st)->kind != SNOCONE_LPAREN) { st->nerrors++; return; }
-        sc_advance(st); /* consume ( */
 
-        STMT_t *init_s = sc_compile_expr(st, SNOCONE_SEMICOLON);
-        if (sc_cur(st)->kind == SNOCONE_SEMICOLON) sc_advance(st);
-        STMT_t *cond_s = sc_compile_expr(st, SNOCONE_SEMICOLON);
-        if (sc_cur(st)->kind == SNOCONE_SEMICOLON) sc_advance(st);
-        STMT_t *step_s = sc_compile_expr(st, SNOCONE_RPAREN);
-        if (sc_cur(st)->kind == SNOCONE_RPAREN) sc_advance(st);
+        /* Scan the entire for-header ( init ; cond ; step ) as one block,
+         * tracking paren depth so that nested calls like ADD(i,1) do not
+         * prematurely end the scan.  We then split on the two top-level ';'
+         * ourselves and compile each segment individually. */
+        int hdr_start = st->pos + 1; /* skip outer ( */
+        {
+            int d = 1;
+            st->pos++;          /* skip outer ( */
+            while (st->pos < st->count && d > 0) {
+                SnoconeKind _k = st->toks[st->pos].kind;
+                if (_k == SNOCONE_LPAREN)  d++;
+                if (_k == SNOCONE_RPAREN)  d--;
+                if (d > 0) st->pos++;
+                else       break;
+            }
+            /* st->pos now at the outer ) — do NOT advance yet */
+        }
+        int hdr_end = st->pos; /* index of outer ) */
+        if (sc_cur(st)->kind == SNOCONE_RPAREN) sc_advance(st); /* consume outer ) */
+
+        /* Split hdr_start..hdr_end-1 on top-level semicolons */
+        int seg[3][2]; /* seg[i] = {start, len} */
+        int nseg = 0, seg_start = hdr_start;
+        for (int _i = hdr_start; _i < hdr_end && nseg < 2; _i++) {
+            if (st->toks[_i].kind == SNOCONE_SEMICOLON) {
+                seg[nseg][0] = seg_start; seg[nseg][1] = _i - seg_start;
+                nseg++;
+                seg_start = _i + 1;
+            }
+        }
+        seg[nseg][0] = seg_start; seg[nseg][1] = hdr_end - seg_start;
+        nseg++;
+
+        /* Helper: compile a token sub-range into a STMT_t */
+        STMT_t *init_s = NULL, *cond_s = NULL, *step_s = NULL;
+        {
+            /* Temporarily redirect st->toks slice via sc_compile_slice helper.
+             * Simpler: save/restore pos and compile each segment directly. */
+            int saved_pos   = st->pos;
+            int saved_count = st->count;
+
+            if (nseg > 0 && seg[0][1] > 0) {
+                st->pos   = seg[0][0];
+                st->count = seg[0][0] + seg[0][1];
+                init_s = sc_compile_expr(st, SNOCONE_EOF);
+            }
+            if (nseg > 1 && seg[1][1] > 0) {
+                st->pos   = seg[1][0];
+                st->count = seg[1][0] + seg[1][1];
+                cond_s = sc_compile_expr(st, SNOCONE_EOF);
+            }
+            if (nseg > 2 && seg[2][1] > 0) {
+                st->pos   = seg[2][0];
+                st->count = seg[2][0] + seg[2][1];
+                step_s = sc_compile_expr(st, SNOCONE_EOF);
+            }
+            st->pos   = saved_pos;
+            st->count = saved_count;
+        }
 
         char *lab_test = sc_newlab(st);
         char *lab_body = sc_newlab(st);
