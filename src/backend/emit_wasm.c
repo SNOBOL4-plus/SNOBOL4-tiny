@@ -158,15 +158,15 @@ static void prescan_expr(const EXPR_t *e) {
                  && ch->children[0] && ch->children[0]->sval)
             var_intern(ch->children[0]->sval);
     }
-    /* CAPT_COND/CAPT_IMM: sval = target varname */
-    if ((e->kind == E_CAPT_COND || e->kind == E_CAPT_IMM) && e->sval
-            && !is_keyword_name(e->sval))
-        var_intern(e->sval);
-    /* CAPT_CUR (@var): varname in children[0]->sval */
-    if (e->kind == E_CAPT_CUR && e->nchildren > 0
-            && e->children[0] && e->children[0]->sval
-            && !is_keyword_name(e->children[0]->sval))
-        var_intern(e->children[0]->sval);
+    /* CAPT_COND/CAPT_IMM/CAPT_CUR: varname in children[1]->sval (binop shape) */
+    if (e->kind == E_CAPT_COND || e->kind == E_CAPT_IMM || e->kind == E_CAPT_CUR) {
+        /* Try sval first (legacy path), then children[1] (parser binop path) */
+        const char *vn = e->sval;
+        if (!vn && e->nchildren >= 2 && e->children[1] && e->children[1]->sval)
+            vn = e->children[1]->sval;
+        if (vn && !is_keyword_name(vn))
+            var_intern(vn);
+    }
     for (int i = 0; i < e->nchildren; i++) prescan_expr(e->children[i]);
 }
 static void prescan_prog(Program *prog) {
@@ -700,10 +700,15 @@ static void emit_pattern_node(const EXPR_t *pat) {
         W("      ))\n");
         return;
     }
-    /* E_CAPT_COND (.var) — conditional capture: extract subj[before..cursor] on success */
+    /* E_CAPT_COND (.var) — conditional capture: extract subj[before..cursor] on success
+     * IR shape: binop(E_CAPT_COND, pattern_child, E_VAR(varname))
+     * sval is NOT set; varname lives in children[1]->sval. */
     if (pat->kind == E_CAPT_COND) {
-        const char *varname = pat->sval ? pat->sval : "";
-        const EXPR_t *child = (pat->nchildren >= 1) ? pat->children[0] : NULL;
+        const EXPR_t *child   = (pat->nchildren >= 1) ? pat->children[0] : NULL;
+        const EXPR_t *varnode = (pat->nchildren >= 2) ? pat->children[1] : NULL;
+        const char *varname = varnode && varnode->sval ? varnode->sval
+                            : (pat->sval ? pat->sval : "");
+
         W("      ;; E_CAPT_COND .%s: save cursor, run child, capture on success\n", varname);
         W("      (local.set $pat_before (local.get $pat_cursor))\n");
         if (child) emit_pattern_node(child);
@@ -718,37 +723,75 @@ static void emit_pattern_node(const EXPR_t *pat) {
         }
         return;
     }
-    /* E_CAPT_IMM ($var) — immediate capture: same substring extraction as CAPT_COND */
+    /* E_CAPT_IMM ($var) — immediate capture: captures exactly what the inner pattern matched.
+     * IR shape: binop(E_CAPT_IMM, pattern_child, E_VAR(varname))
+     * For a QLIT child: sno_pat_search may scan forward from cursor to find the literal,
+     * so the match starts at (new_cursor - ndl_len), not at pat_before.
+     * We track child cursor-before to compute match length = new_cursor - child_cursor_before,
+     * and match offset via a second local $pat_imm_start that we set before child runs. */
     if (pat->kind == E_CAPT_IMM) {
-        const char *varname = pat->sval ? pat->sval : "";
-        const EXPR_t *child = (pat->nchildren >= 1) ? pat->children[0] : NULL;
-        W("      ;; E_CAPT_IMM $%s: save cursor, run child, capture matched span\n", varname);
+        const EXPR_t *child   = (pat->nchildren >= 1) ? pat->children[0] : NULL;
+        const EXPR_t *varnode = (pat->nchildren >= 2) ? pat->children[1] : NULL;
+        const char *varname = varnode && varnode->sval ? varnode->sval
+                            : (pat->sval ? pat->sval : "");
+        W("      ;; E_CAPT_IMM $%s: run child, capture exactly matched span\n", varname);
+        /* Save cursor before child so we can detect how far child advanced */
         W("      (local.set $pat_before (local.get $pat_cursor))\n");
         if (child) emit_pattern_node(child);
+        /* After child: pat_cursor = end of match (or -1).
+         * For QLIT the match may not start at pat_before (search scans forward).
+         * The child (QLIT) leaves cursor = match_start + ndl_len.
+         * We don't have match_start directly; use sno_pat_search convention:
+         * captured len = cursor - pat_before only if anchored. For unanchored search
+         * (QLIT in non-ANCHOR mode), use the actual child match length.
+         * Simplest correct approach: emit a sno_pat_search wrapper that also
+         * returns match_start. Until then: for QLIT child, len = ndl_len,
+         * off = subj_off + (cursor - ndl_len). For generic child: off = subj_off + pat_before,
+         * len = cursor - pat_before (COND semantics as fallback). */
         if (*varname && !is_keyword_name(varname)) {
-            W("      (if (i32.ge_s (local.get $pat_cursor) (i32.const 0)) (then\n");
-            W("        (global.set $var_%s_off\n", varname);
-            W("          (i32.add (local.get $pat_subj_off) (local.get $pat_before)))\n");
-            W("        (global.set $var_%s_len\n", varname);
-            W("          (i32.sub (local.get $pat_cursor) (local.get $pat_before)))\n");
-            W("      ))\n");
+            if (child && child->kind == E_QLIT) {
+                int idx = strlit_intern(child->sval ? child->sval : "");
+                int ndl_len = str_lits[idx].len;
+                W("      (if (i32.ge_s (local.get $pat_cursor) (i32.const 0)) (then\n");
+                W("        (global.set $var_%s_off\n", varname);
+                W("          (i32.add (local.get $pat_subj_off)\n");
+                W("                   (i32.sub (local.get $pat_cursor) (i32.const %d))))\n", ndl_len);
+                W("        (global.set $var_%s_len (i32.const %d))\n", varname, ndl_len);
+                W("      ))\n");
+            } else {
+                /* Generic child: capture subj[pat_before..cursor] (same as COND) */
+                W("      (if (i32.ge_s (local.get $pat_cursor) (i32.const 0)) (then\n");
+                W("        (global.set $var_%s_off\n", varname);
+                W("          (i32.add (local.get $pat_subj_off) (local.get $pat_before)))\n");
+                W("        (global.set $var_%s_len\n", varname);
+                W("          (i32.sub (local.get $pat_cursor) (local.get $pat_before)))\n");
+                W("      ))\n");
+            }
         }
         return;
     }
-    /* E_CAPT_CUR (@var) — zero-width cursor capture: store cursor position as integer string */
+    /* E_CAPT_CUR (@var) — zero-width cursor capture: store cursor position as integer string
+     * IR shape (cursor-after): binop(E_CAPT_CUR, pattern_child, E_VAR(varname))
+     * children[0] = pattern to match first; children[1] = target variable.
+     * Cursor position captured AFTER children[0] matches. */
     if (pat->kind == E_CAPT_CUR) {
-        const EXPR_t *vnode = (pat->nchildren >= 1) ? pat->children[0] : NULL;
-        const char *varname = (vnode && vnode->sval) ? vnode->sval
+        const EXPR_t *child   = (pat->nchildren >= 1) ? pat->children[0] : NULL;
+        const EXPR_t *varnode = (pat->nchildren >= 2) ? pat->children[1] : NULL;
+        const char *varname = varnode && varnode->sval ? varnode->sval
                             : (pat->sval ? pat->sval : "");
+        /* Run the child pattern first (advances cursor), then capture position */
+        if (child) emit_pattern_node(child);
         W("      ;; E_CAPT_CUR @%s: store cursor position as int string into var\n", varname);
         if (*varname && !is_keyword_name(varname)) {
-            /* convert cursor i32 → i64, call sno_int_to_str → (off, len), store */
-            W("      (i64.extend_i32_u (local.get $pat_cursor))\n");
-            W("      (call $sno_int_to_str)\n");
-            W("      (global.set $var_%s_len)\n", varname);
-            W("      (global.set $var_%s_off)\n", varname);
+            /* Only capture if child succeeded */
+            W("      (if (i32.ge_s (local.get $pat_cursor) (i32.const 0)) (then\n");
+            W("        (i64.extend_i32_u (local.get $pat_cursor))\n");
+            W("        (call $sno_int_to_str)\n");
+            W("        (global.set $var_%s_len)\n", varname);
+            W("        (global.set $var_%s_off)\n", varname);
+            W("      ))\n");
         }
-        /* zero-width: cursor unchanged; always succeeds */
+        /* zero-width as far as pattern matching is concerned: cursor already set by child */
         return;
     }
     /* E_FNC cursor-assertion / cursor-advance patterns: POS RPOS LEN TAB RTAB REM */
