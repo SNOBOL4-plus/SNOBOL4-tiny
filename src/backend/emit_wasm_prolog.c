@@ -248,6 +248,15 @@ static int cont_register(const char *name) {
 #define GT_SCRATCH_CELLS 32
 static int gt_scratch_used = 0;  /* bumped per ground arg slot allocated */
 
+/* Body-GT flag cells: [8128..8187] (15 i32 cells, 4 bytes each).
+ * Cell 0 (8128): PL_SET_ARG_FLAG — set by cp_set_arg emission in [H|T] head unification.
+ * Signals the outer GT loop that the clause did a tail-update (beta clause),
+ * so loop should retry at same ci rather than advancing. */
+#define PL_BGT_FLAG_BASE  8128
+#define PL_BGT_FLAG_CELLS 15
+#define PL_SET_ARG_FLAG   8128   /* mem[8128]: 1 if cp_set_arg was called this iteration */
+static int bgt_site_counter = 0;  /* reset per prolog_emit_wasm call */
+
 /* GT clause-index cells: [7872..7999] (32 i32 cells, 4 bytes each).
  * Each GT site gets one cell: GT_CI_BASE + site_id*4.
  * Initialized to 0 before each GT call; incremented by γ before looping.
@@ -275,6 +284,8 @@ typedef struct {
     int  nclauses;            /* number of clauses */
     int  ci_cell_addr;        /* memory address of clause-index counter (GT_CI_BASE + site_id*4) */
     char beta_fns[32][320];   /* beta_fns[0]="$pl_foo_alpha", [1]="$pl_foo_beta1"... */
+    int  is_body_gt;          /* 1 = body-call site: inner γ/ω just set flag, no body goals */
+    int  flag_addr;           /* PL_BGT_FLAG_BASE + bsite*4 for body-GT sites */
 } GTSiteData;
 static GTSiteData gt_site_data[MAX_GT_SITES];
 static int        gt_site_total = 0;
@@ -396,9 +407,14 @@ static void emit_pl_predicate(const EXPR_t *choice) {
                 if (ht && ht->kind == E_VAR && (int)ht->ival >= 0) {
                     int addr = env_slot_addr(env_idx, (int)ht->ival);
                     W("      (i32.const %d) (call $pl_cons_tail (local.get $a%d)) (call $pl_var_bind)\n", addr, ai);
-                    /* Update CP frame arg[ai] to the tail so GT loop retry
-                     * passes the reduced list, not the original full list. */
+                    /* Update CP frame arg[ai] to the tail so the outer GT loop retry
+                     * passes the reduced list when it re-enters beta1.
+                     * With per-call inner CP frames (PW-15), cp_set_arg updates the
+                     * INNER frame (top of stack), leaving the outer frame intact. */
                     W("      (call $pl_cp_set_arg (i32.const %d) (i32.load (i32.const %d)))\n", ai, addr);
+                    /* Signal outer GT loop: tail was updated, retry at same ci */
+                    W("      (i32.store (i32.const %d) (i32.const 1)) ;; set_arg_flag\n",
+                      PL_SET_ARG_FLAG);
                 }
             }
         }
@@ -908,21 +924,65 @@ static void emit_goal(const EXPR_t *goal, int env_idx, int in_disj_left) {
             return;
         }
 
-        /* Body predicate call: call α with same γ/ω as current clause.
-         * This propagates success/failure correctly through recursive calls.
-         * The α function will return_call_indirect to γ on success (continuing
-         * execution from the call site) or to ω on failure. */
-        W("    ;; call %s/%d (Byrd-box α, pass through γ/ω)\n", fn, n);
+        /* Body predicate call — two cases:
+         *   1-clause predicate (deterministic): return_call α passing parent γ/ω.
+         *      α succeeds → return_call_indirect γ (tail to parent continuation).
+         *      α fails    → return_call_indirect ω (tail to parent failure).
+         *   N-clause predicate (may have multiple solutions, e.g. member/2):
+         *      Push own CP frame, inline body-GT loop, poll per-site flag.
+         *      Inner γ: sets flag=1, returns 0 (WAT unwinds back to loop).
+         *      On flag=1: pop CP frame, writeback vars, return_call_indirect γ (first solution).
+         *      On flag=0 (ω fired): pop CP frame, return_call_indirect ω.
+         *
+         * PW-15: removed return_call for multi-clause case to fix rung05 (member/2).
+         * Old code passed outer γ/ω into recursive call, causing outer CP frame corruption.
+         */
+
+        /* Look up clause count for called predicate */
+        int body_nclauses = 1;
+        if (g_prog) {
+            char pred_key[256];
+            snprintf(pred_key, sizeof pred_key, "%s/%d", fn, n);
+            for (STMT_t *s = g_prog->head; s; s = s->next) {
+                if (!s->subject) continue;
+                EXPR_t *ch = s->subject;
+                if (ch->kind == E_CHOICE && ch->sval &&
+                    strcmp(ch->sval, pred_key) == 0) {
+                    body_nclauses = ch->nchildren;
+                    break;
+                }
+            }
+        }
+
+        if (body_nclauses == 1) {
+            /* Deterministic: direct tail-call through parent γ/ω */
+            W("    ;; call %s/%d (det, Byrd-box α → parent γ/ω)\n", fn, n);
+            W("    (local.get $trail)\n");
+            for (int ai = 0; ai < n; ai++) {
+                EXPR_t *arg = goal->children[ai];
+                if (!arg) { W("    (i32.const 0)\n"); continue; }
+                if (arg->kind == E_VAR && (int)arg->ival >= 0) {
+                    int addr = env_slot_addr(env_idx, (int)arg->ival);
+                    W("    (i32.const %d) ;; slot addr _V%d\n", addr, (int)arg->ival);
+                } else {
+                    emit_term_value(arg, env_idx);
+                }
+            }
+            W("    (local.get $gamma_idx) (local.get $omega_idx)\n");
+            W("    (return_call $pl_%s_alpha)\n", mangled + 3);
+            return;
+        }
+
+        /* Multi-clause body call: return_call alpha with outer γ/ω unchanged.
+         * cp_set_arg in [H|T] head unification sets PL_SET_ARG_FLAG so the
+         * outer GT loop knows to retry at same ci (not advance).  PW-15. */
+        W("    ;; call %s/%d (multi-clause, Byrd-box α → outer γ/ω)\n", fn, n);
         W("    (local.get $trail)\n");
         for (int ai = 0; ai < n; ai++) {
             EXPR_t *arg = goal->children[ai];
             if (!arg) { W("    (i32.const 0)\n"); continue; }
-            /* For unbound vars in clause env: pass slot address so callee can bind */
             if (arg->kind == E_VAR && (int)arg->ival >= 0) {
                 int addr = env_slot_addr(env_idx, (int)arg->ival);
-                /* PW-14 fix: pass slot ADDRESS not loaded value.
-                 * Alpha checks: if (a >= ENV_BASE) store(a, atom_id) else compare.
-                 * Was i32.load(addr) -> passed value -> OOB on cons-cell pointer. */
                 W("    (i32.const %d) ;; slot addr _V%d\n", addr, (int)arg->ival);
             } else {
                 emit_term_value(arg, env_idx);
@@ -1116,6 +1176,8 @@ static void emit_goals(const EXPR_t *g, int env_idx, int in_disj_left) {
 
                 W("    (loop $gt_%d\n", site_id);
                 W("      (i32.store (i32.const %d) (i32.const 0)) ;; GT flag reset\n", PL_GT_FLAG);
+                W("      (i32.store (i32.const %d) (i32.const 0)) ;; set_arg_flag reset\n",
+                  PL_SET_ARG_FLAG);
 
                 /* Call _call wrapper with ci from CP top */
                 W("      (local.get $trail)\n");
@@ -1130,14 +1192,20 @@ static void emit_goals(const EXPR_t *g, int env_idx, int in_disj_left) {
                 W("      (call $pl_cp_get_ci)    ;; ci from CP top\n");
                 W("      (call $pl_%s_call) drop\n", mangled + 3);
 
-                /* Poll flag: if γ fired (=1) loop advances CP ci then retries */
+                /* γ fired: advance ci only for direct head-match (SET_ARG_FLAG=0).
+                 * If SET_ARG_FLAG=1, a beta clause updated the tail via cp_set_arg —
+                 * stay at same ci so beta retries with the new tail next iteration. */
                 W("      (if (i32.load (i32.const %d)) (then\n", PL_GT_FLAG);
-                W("        (call $pl_cp_set_ci\n");
-                W("          (i32.add (call $pl_cp_get_ci) (i32.const 1)))\n");
+                W("        (if (i32.eqz (i32.load (i32.const %d))) (then\n", PL_SET_ARG_FLAG);
+                W("          ;; direct match (alpha): advance ci for next clause\n");
+                W("          (call $pl_cp_set_ci\n");
+                W("            (i32.add (call $pl_cp_get_ci) (i32.const 1)))\n");
+                W("        ))\n");
+                W("        ;; beta tail-update: ci stays, loop retries beta with new tail\n");
                 W("        (br $gt_%d)\n", site_id);
                 W("      ))\n");
                 W("    ) ;; $gt_%d\n", site_id);
-                W("    (call $pl_cp_pop) ;; discard CP frame\n");
+                /* ω pops its own frame before returning — no extra cp_pop needed */
 
                 W("    ;; ω fired — all solutions exhausted\n");
                 W("    (br $disj_end)\n");
@@ -1290,31 +1358,49 @@ static void emit_cont_functions_and_table(void) {
 
     for (int i = 0; i < cont_func_count; i++) {
         const char *name = cont_func_names[i];
-        int is_gamma = (strstr(name, "_gamma_") != NULL);
+        int is_gamma     = (strstr(name, "_gamma_") != NULL);
+        int is_body_gt   = (strstr(name, "_bgt_gamma_") != NULL ||
+                            strstr(name, "_bgt_omega_") != NULL);
 
         W("  (func $%s (param $trail i32) (result i32)\n", name);
 
-        if (is_gamma) {
-            /* Locals needed by emit_write_var and emit_write_atom_lit helpers */
+        if (is_body_gt) {
+            /* Body-GT inner γ/ω: just set the per-site flag, return 0.
+             * The inline loop in the clause body handles cp_pop and continuation. */
+            /* Extract bsite index from suffix */
+            const char *p = strrchr(name, '_');
+            int bsite_id = p ? atoi(p + 1) : 0;
+            int bflag = PL_BGT_FLAG_BASE + bsite_id * 4;
+            if (is_gamma) {
+                W("    ;; body-GT inner γ (bsite=%d): set flag@%d, return 0\n",
+                  bsite_id, bflag);
+                W("    (i32.store (i32.const %d) (i32.const 1))\n", bflag);
+            } else {
+                W("    ;; body-GT inner ω (bsite=%d): clear flag@%d, return 0\n",
+                  bsite_id, bflag);
+                W("    (i32.store (i32.const %d) (i32.const 0))\n", bflag);
+            }
+            W("    (i32.const 0)\n");
+        } else if (is_gamma) {
+            /* Main-GT γ: emit body goals, trail_unwind, set PL_GT_FLAG, return 0 */
             W("    (local $tmp i32)\n");
             W("    (local $tbl_entry i32)\n");
-            /* Find the GTSiteData for this γ */
-            int site_id = -1;
-            char site_str[16];
-            /* name = "pl_gt_gamma_N" — extract N */
+            /* Find the GTSiteData for this γ — match by site_id AND !is_body_gt */
             const char *p = strrchr(name, '_');
-            if (p) site_id = atoi(p + 1);
+            int site_id = p ? atoi(p + 1) : -1;
 
             GTSiteData *sd = NULL;
             for (int si = 0; si < gt_site_total; si++) {
-                if (gt_site_data[si].site_id == site_id) { sd = &gt_site_data[si]; break; }
+                if (gt_site_data[si].site_id == site_id &&
+                    !gt_site_data[si].is_body_gt) {
+                    sd = &gt_site_data[si]; break;
+                }
             }
-            (void)site_str;
 
             if (sd) {
-                W("    ;; γ for GT site %d (%s/%d): advance CP ci, run body goals, return 0\n",
+                W("    ;; γ for GT site %d (%s/%d): run body goals, return 0\n",
                   site_id, sd->mangled, sd->arity);
-
+                /* NOTE: ci advancement moved to outer GT loop (conditional on SET_ARG_FLAG) */
 
                 /* Signal main's loop: a solution was found */
                 W("    (i32.store (i32.const %d) (i32.const 1)) ;; GT flag=1 (γ fired)\n",
@@ -1324,8 +1410,7 @@ static void emit_cont_functions_and_table(void) {
                 for (int gi = 0; gi < sd->n_body_goals; gi++)
                     emit_goal(sd->body_goals[gi], sd->env_idx, 0);
 
-                /* Unwind trail — undo this clause's bindings for next retry.
-                 * Use CP trail_mark (snapshot at cp_push time) for correctness. */
+                /* Unwind trail — undo this clause's bindings for next retry */
                 W("    (call $trail_unwind (call $pl_cp_get_trail_mark))\n");
 
                 /* Reset var slots so _call can rebind on next solution */
@@ -1335,14 +1420,12 @@ static void emit_cont_functions_and_table(void) {
                           sd->arg_slots[ai], ai);
                 }
 
-                /* Return 0 — main's (loop) polls flag and calls _call again */
                 W("    (i32.const 0)\n");
             } else {
-                /* Fallback: should not happen */
                 W("    (i32.const 0) ;; γ stub (no site data)\n");
             }
         } else {
-            /* ω: all solutions exhausted — pop CP frame, clear GT flag, return 0 */
+            /* Main-GT ω: pop CP frame, clear PL_GT_FLAG, return 0 */
             W("    ;; ω: pop CP frame + clear GT flag\n");
             W("    (call $pl_cp_pop)\n");
             W("    (i32.store (i32.const %d) (i32.const 0))\n", PL_GT_FLAG);
@@ -1370,6 +1453,7 @@ void prolog_emit_wasm(Program *prog, FILE *out, const char *filename) {
     gt_site_counter = 0;
     gt_site_total   = 0;
     gt_scratch_used = 0;
+    bgt_site_counter = 0;
 
     emit_wasm_set_out(out);
     emit_wasm_strlit_reset();
