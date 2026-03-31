@@ -60,6 +60,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>  /* strcasecmp */
 
 /* =========================================================================
  * Expression lowering  (formerly snocone_lower.c)
@@ -614,6 +615,22 @@ static STMT_t *sc_compile_paren_expr(CfState *st) {
 static void sc_emit_cond(CfState *st, STMT_t *cond_s,
                          const char *s_lab, const char *f_lab) {
     if (!cond_s) cond_s = stmt_new();
+    /* SC-8 M-SC-B06: ~expr lowers to make_fnc1("NOT", inner).
+     * Implement by swapping S/F labels and unwrapping the inner expr.
+     * Handles arbitrarily nested ~~expr by looping. */
+    while (cond_s->subject &&
+           cond_s->subject->kind == E_FNC &&
+           cond_s->subject->sval &&
+           strcasecmp(cond_s->subject->sval, "NOT") == 0 &&
+           cond_s->subject->nchildren == 1 &&
+           !cond_s->pattern) {
+        EXPR_t *inner = cond_s->subject->children[0];
+        cond_s->subject->children[0] = NULL;
+        free(cond_s->subject);
+        cond_s->subject = inner;
+        /* swap S and F */
+        const char *tmp = s_lab; s_lab = f_lab; f_lab = tmp;
+    }
     cond_s->go = sgoto_new();
     if (s_lab) cond_s->go->onsuccess = strdup(s_lab);
     if (f_lab) cond_s->go->onfailure = strdup(f_lab);
