@@ -174,10 +174,18 @@ static int lower_token(const ScPToken *tok, ExprStack *s,
         EXPR_t *r = es_pop(s), *l = es_pop(s);
         es_push(s, expr_binary(E_ALT, l, r)); return 0;
     }
-    case SNOCONE_PERIOD: {
-        EXPR_t *var = es_pop(s), *expr = es_pop(s);
-        es_push(s, expr_binary(E_CAPT_COND, expr, var)); return 0;
-    }
+    case SNOCONE_PERIOD:
+        if (tok->is_unary) {
+            /* .VAR — unevaluated name reference → DT_N (name descriptor).
+             * Mirrors SNOBOL4 frontend T_DOT → E_CAPT_COND unary path.
+             * emit_x64.c E_CAPT_COND value-context handler (nchildren==1)
+             * emits DT_N(9) + lea varname, which DIFFER/IDENT receive as
+             * a name-typed descriptor — correct for IsSpitbol/IsSnobol4. */
+            es_push(s, expr_unary(E_CAPT_COND, es_pop(s))); return 0;
+        } else {
+            EXPR_t *var = es_pop(s), *expr = es_pop(s);
+            es_push(s, expr_binary(E_CAPT_COND, expr, var)); return 0;
+        }
     case SNOCONE_DOLLAR:
         if (tok->is_unary) {
             es_push(s, expr_unary(E_INDR, es_pop(s))); return 0;
