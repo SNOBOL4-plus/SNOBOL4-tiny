@@ -56,12 +56,25 @@ static int js_next_uid(void) { return ++uid_ctr; }
  * Prepends 'v_', replaces non-alnum/_ with '_'.
  * ----------------------------------------------------------------------- */
 
+/* Uppercase a SNOBOL4 variable name for _vars["NAME"] emission.
+ * SNOBOL4 identifiers are case-insensitive; we normalize to uppercase. */
+static const char *js_upper_var(const char *s) {
+    static char buf[512];
+    int i;
+    for (i = 0; s[i] && i < 510; i++)
+        buf[i] = (s[i] >= 'a' && s[i] <= 'z') ? (char)(s[i] - 32) : s[i];
+    buf[i] = '\0';
+    return buf;
+}
+
 static const char *jv(const char *s) {
     static char buf[520];
     int i = 0, j = 0;
     buf[j++] = 'v'; buf[j++] = '_';
     for (; s[i] && j < 510; i++) {
         unsigned char c = (unsigned char)s[i];
+        /* Normalize to uppercase — SNOBOL4 labels are case-insensitive */
+        if (c >= 'a' && c <= 'z') c = (unsigned char)(c - 32);
         buf[j++] = (isalnum(c) || c == '_') ? (char)c : '_';
     }
     buf[j] = '\0';
@@ -113,9 +126,9 @@ static void js_emit_expr(EXPR_t *e) {
         J("%ld", e->ival);
         break;
     case E_FLIT: {
-        /* SPITBOL real format: whole-number reals display as "1." not "1".
-         * JS loses type info on arithmetic; emit the canonical string form so
-         * String(v) in the runtime Proxy gives the right output. */
+        /* Emit real literals as canonical SNOBOL4 string form.
+         * "3." for whole-number reals (SPITBOL convention), "%g" for others.
+         * Arithmetic functions (_add etc.) call _num() which parses these. */
         double dv = e->dval;
         if (dv == (long)dv && !isinf(dv))
             J("\"%ld.\"", (long)dv);
@@ -124,7 +137,7 @@ static void js_emit_expr(EXPR_t *e) {
         break;
     }
     case E_VAR:
-        J("_vars[\"%s\"]", e->sval);
+        J("_vars[\"%s\"]", js_upper_var(e->sval));
         break;
     case E_KW:
         J("_kw(\"%s\")", e->sval);
@@ -136,6 +149,9 @@ static void js_emit_expr(EXPR_t *e) {
     }
     case E_NEG:
         J("(-_num("); js_emit_expr(e->children[0]); J("))");
+        break;
+    case E_UPLUS:
+        J("_num("); js_emit_expr(e->children[0]); J(")");
         break;
     case E_CONCAT:
         J("_cat(");
@@ -174,7 +190,7 @@ static void js_emit_expr(EXPR_t *e) {
         break;
     case E_ASSIGN: {
         const char *vname = e->children[0]->sval;
-        J("(_vars[\"%s\"] = ", vname);
+        J("(_vars[\"%s\"] = ", js_upper_var(vname));
         js_emit_expr(e->children[1]);
         J(")");
         break;
@@ -533,7 +549,7 @@ static void js_emit_pat_capt(EXPR_t *pat, const char *varname, int immediate,
     /* capt case: capture and proceed */
     JCASE(capt_uid, PROCEED);
     J("        _vars[\"%s\"] = _subj%d.slice(_saved[%d], _cur%d);\n",
-      varname, uid_stmt, snap_uid, uid_stmt);
+      js_upper_var(varname), uid_stmt, snap_uid, uid_stmt);
     JP(uid_γ, PROCEED);
 
     JCASE(capt_uid, CONCEDE);
@@ -858,7 +874,7 @@ static void js_emit_pat_stmt(STMT_t *s) {
         J("        var _head%d = _subj%d.slice(0, _mstart%d);\n", u, u, u);
         J("        var _tail%d = _subj%d.slice(_cur%d);\n", u, u, u);
         J("        _vars[\"%s\"] = _head%d + _repl%d + _tail%d;\n",
-          s->subject->sval, u, u, u);
+          js_upper_var(s->subject->sval), u, u, u);
         J("    }\n");
     }
 
@@ -890,7 +906,7 @@ static int js_emit_stmt_body(STMT_t *s) {
         J("    var _ok%d = (_v%d !== _FAIL);\n", u, u);
         J("    if (_ok%d) {\n", u);
         if (s->subject && s->subject->kind == E_VAR)
-            J("        _vars[\"%s\"] = _v%d;\n", s->subject->sval, u);
+            J("        _vars[\"%s\"] = _v%d;\n", js_upper_var(s->subject->sval), u);
         J("    }\n");
         if (s->go) { js_emit_goto(s->go, u); return 1; }
         return 0;
@@ -899,7 +915,7 @@ static int js_emit_stmt_body(STMT_t *s) {
     /* ---- null assign ---- */
     if (!s->pattern && !s->replacement && s->has_eq) {
         if (s->subject && s->subject->kind == E_VAR)
-            J("    _vars[\"%s\"] = null;\n", s->subject->sval);
+            J("    _vars[\"%s\"] = null;\n", js_upper_var(s->subject->sval));
         if (s->go) { js_emit_goto(s->go, -1); return 1; }
         return 0;
     }
@@ -976,23 +992,43 @@ void js_emit(Program *prog, FILE *f) {
 
     int block_open = 0;
     int end_emitted = 0;  /* set when is_end block is written */
-    const char *current_label = "START";  /* track last opened label */
+    /* syn_label holds a malloc'd synthetic label name when we generate one,
+     * or NULL when the current block was opened by a real SNOBOL4 label.
+     * Freed when a new block opens. */
+    char *syn_label = NULL;
+    int   at_start  = 1;   /* first block gets goto_v_START */
 
     for (STMT_t *s = prog->head; s; s = s->next) {
         /* Labeled stmt: close current block with fall-through to this label */
         if (s->label && block_open) {
             J("    return goto_%s;\n}\n\n", jv(s->label));
             block_open = 0;
+            free(syn_label); syn_label = NULL;
         }
 
         /* Open new block */
         if (!block_open) {
             if (s->label) {
-                current_label = s->label;
+                free(syn_label); syn_label = NULL;
                 J("goto_%s = function() {\n", jv(s->label));
+            } else if (at_start) {
+                J("goto_%s = function() {\n", jv("START"));
+            } else if (syn_label) {
+                /* Use the pre-generated synthetic label from the previous
+                 * transferred block's look-ahead. */
+                J("var goto_%s;\n", jv(syn_label));
+                J("goto_%s = function() {\n", jv(syn_label));
+                /* keep syn_label alive; will be freed on next label-open or block-open */
             } else {
-                J("goto_%s = function() {\n", jv(current_label));
+                /* Unlabeled continuation without a pre-generated label —
+                 * shouldn't normally happen, but generate one defensively. */
+                int cid = js_next_uid();
+                syn_label = malloc(32);
+                snprintf(syn_label, 32, "_c%d", cid);
+                J("var goto_%s;\n", jv(syn_label));
+                J("goto_%s = function() {\n", jv(syn_label));
             }
+            at_start   = 0;
             block_open = 1;
         }
 
@@ -1006,7 +1042,20 @@ void js_emit(Program *prog, FILE *f) {
         /* Emit stmt body; returns 1 if an explicit transfer was emitted */
         int transferred = js_emit_stmt_body(s);
         if (transferred) {
-            J("}\n\n");
+            /* If the next stmt is an unlabeled non-END continuation, the
+             * success path of this block falls through to it.  Pre-generate
+             * a synthetic label now and emit a return before closing, so the
+             * trampoline can find the next block. */
+            STMT_t *nx = s->next;
+            if (nx && !nx->label && !nx->is_end) {
+                int cid = js_next_uid();
+                free(syn_label);
+                syn_label = malloc(32);
+                snprintf(syn_label, 32, "_c%d", cid);
+                J("    return goto_%s;\n}\n\n", jv(syn_label));
+            } else {
+                J("}\n\n");
+            }
             block_open = 0;
         }
     }
@@ -1040,6 +1089,7 @@ void js_emit(Program *prog, FILE *f) {
       jv("START"));
 
     /* free */
+    free(syn_label);
     for (int i = 0; i < label_count; i++) free(label_list[i]);
     free(label_list);
     label_list = NULL; label_count = 0; label_cap = 0;

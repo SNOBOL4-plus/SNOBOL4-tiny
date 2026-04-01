@@ -58,6 +58,8 @@ const _vars = new Proxy(_store, {
 function _str(v) {
     if (v === null || v === undefined) return '';
     if (v === _FAIL) return '';
+    if (typeof v === 'number' && Number.isInteger(v)) return String(v);
+    if (typeof v === 'number') return String(v);
     return String(v);
 }
 
@@ -69,6 +71,21 @@ function _num(v) {
     return n;
 }
 
+/* Return true if value is an integer (not a real string like "3.") */
+function _is_int(v) {
+    if (typeof v === 'string') {
+        /* real literal strings contain a dot: "3.", "1.5" etc. */
+        return v.indexOf('.') < 0 && v.indexOf('e') < 0 && v.indexOf('E') < 0;
+    }
+    return typeof v === 'number' && Number.isInteger(v);
+}
+
+/* Return true if value looks numeric */
+function _is_numeric(v) {
+    if (v === null || v === undefined || v === '') return false;
+    return isFinite(Number(v));
+}
+
 /* -----------------------------------------------------------------------
  * Arithmetic — match SNOBOL4 semantics (integer if both integer-valued)
  * ----------------------------------------------------------------------- */
@@ -77,15 +94,29 @@ function _int_if_possible(n) {
     return Number.isInteger(n) ? n : n;
 }
 
-function _add(a, b) { return _int_if_possible(_num(a) + _num(b)); }
-function _sub(a, b) { return _int_if_possible(_num(a) - _num(b)); }
-function _mul(a, b) { return _int_if_possible(_num(a) * _num(b)); }
+function _add(a, b) {
+    const an = _num(a), bn = _num(b);
+    const r = an + bn;
+    return (_is_int(a) && _is_int(b)) ? Math.trunc(r) : r;
+}
+function _sub(a, b) {
+    const an = _num(a), bn = _num(b);
+    const r = an - bn;
+    return (_is_int(a) && _is_int(b)) ? Math.trunc(r) : r;
+}
+function _mul(a, b) {
+    const an = _num(a), bn = _num(b);
+    const r = an * bn;
+    return (_is_int(a) && _is_int(b)) ? Math.trunc(r) : r;
+}
 function _div(a, b) {
-    const bv = _num(b);
-    if (bv === 0) throw new Error('SNOBOL4: division by zero');
-    return _int_if_possible(_num(a) / bv);
+    const an = _num(a), bn = _num(b);
+    if (bn === 0) throw new Error('SNOBOL4: division by zero');
+    if (_is_int(a) && _is_int(b)) return Math.trunc(an / bn);
+    return an / bn;
 }
 function _pow(a, b) { return _int_if_possible(Math.pow(_num(a), _num(b))); }
+function _uplus(a)  { return _num(a); }
 
 /* -----------------------------------------------------------------------
  * String concatenation (n-ary)
@@ -129,8 +160,20 @@ const _builtins = {
     TRIM(args)    { return _str(args[0]).trimEnd(); },
     DUPL(args)    { const s=_str(args[0]), n=_num(args[1]); return s.repeat(Math.max(0,n)); },
     SUBSTR(args)  { const s=_str(args[0]),i=_num(args[1])-1,n=args[2]!=null?_num(args[2]):s.length-i; return s.substr(i,n); },
-    IDENT(args)   { return _str(args[0])===_str(args[1]) ? _str(args[0]) : _FAIL; },
-    DIFFER(args)  { return _str(args[0])!==_str(args[1]) ? _str(args[0]) : _FAIL; },
+    IDENT(args)   {
+        const a = args[0], b = args[1];
+        const eq = (_is_numeric(a) && _is_numeric(b))
+            ? _num(a) === _num(b)
+            : _str(a) === _str(b);
+        return eq ? _str(a) : _FAIL;
+    },
+    DIFFER(args)  {
+        const a = args[0], b = args[1];
+        const eq = (_is_numeric(a) && _is_numeric(b))
+            ? _num(a) === _num(b)
+            : _str(a) === _str(b);
+        return eq ? _FAIL : _str(a);
+    },
     LT(args)      { return _num(args[0])<_num(args[1])   ? _str(args[0]) : _FAIL; },
     LE(args)      { return _num(args[0])<=_num(args[1])  ? _str(args[0]) : _FAIL; },
     GT(args)      { return _num(args[0])>_num(args[1])   ? _str(args[0]) : _FAIL; },

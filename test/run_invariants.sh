@@ -263,6 +263,59 @@ run_snobol4_wasm() {
   echo "$fail"  > "$RESULTS/${cell}_fail"
 }
 
+run_snobol4_js() {
+  local cell="snobol4_js"
+  local pass=0 fail=0
+  if [[ -z "$CORPUS" || ! -d "$CORPUS/crosscheck" ]]; then
+    echo "SKIP" > "$RESULTS/${cell}_status"; return
+  fi
+  if ! command -v node &>/dev/null; then
+    echo "SKIP" > "$RESULTS/${cell}_status"; return
+  fi
+  local JS_RUNNER="$ROOT/test/js/run_js.js"
+  if [[ ! -f "$JS_RUNNER" ]]; then
+    echo "SKIP" > "$RESULTS/${cell}_status"; return
+  fi
+
+  local W="$WORK/$cell"; mkdir -p "$W"
+  local SNO_RT="$ROOT/src/runtime/js/sno_runtime.js"
+  local SNO_ENG="$ROOT/src/runtime/js/sno_engine.js"
+
+  local DIRS="hello rung2 rung3 rung4 rung8 rung9 rung10 rung11 arith assign capture concat control data functions keywords library output patterns"
+  for dir in $DIRS; do
+    local full="$CORPUS/crosscheck/$dir"
+    [[ -d "$full" ]] || continue
+    for sno in "$full"/*.sno; do
+      [[ -f "$sno" ]] || continue
+      local base; base=$(basename "$sno" .sno)
+      local ref="${sno%.sno}.ref"; [[ -f "$ref" ]] || continue
+      local xfail="${sno%.sno}.js.xfail"; [[ -f "$xfail" ]] && continue
+      local js="$W/${base}.js"
+      local got="$W/${base}.got"
+
+      if ! "$SCRIP_CC" -js -o "$js" "$sno" 2>/dev/null; then
+        fail=$((fail+1)); echo "  FAIL $cell $base [compile]"
+        csv_row FAIL "$cell" "$base" "compile"; continue
+      fi
+      if ! SNO_RUNTIME="$SNO_RT" SNO_ENGINE="$SNO_ENG" \
+           timeout "$TIMEOUT_X86" node "$JS_RUNNER" "$js" > "$got" 2>/dev/null; then
+        fail=$((fail+1)); echo "  FAIL $cell $base [run/timeout]"
+        csv_row FAIL "$cell" "$base" "run"; continue
+      fi
+      if diff -q "$ref" "$got" > /dev/null 2>&1; then
+        pass=$((pass+1)); [[ $VERBOSE -eq 1 ]] && echo "  PASS $cell $base"
+        csv_row PASS "$cell" "$base"
+      else
+        fail=$((fail+1)); echo "  FAIL $cell $base [output]"
+        csv_row FAIL "$cell" "$base" "output"
+      fi
+    done
+  done
+
+  echo "$pass" > "$RESULTS/${cell}_pass"
+  echo "$fail"  > "$RESULTS/${cell}_fail"
+}
+
 run_snobol4_x86() {
   local cell="snobol4_x86"
   local pass=0 fail=0
@@ -682,6 +735,7 @@ _run_cell() {
     echo "SKIP" > "$RESULTS/${cell}_status"; return
   fi
   case "$cell" in
+    snobol4_js)   run_snobol4_js   ;;
     snobol4_wasm) run_snobol4_wasm ;;
     snobol4_x86)  run_snobol4_x86  ;;
     snobol4_jvm)  run_snobol4_jvm  ;;
@@ -696,7 +750,7 @@ _run_cell() {
   esac
 }
 
-for _cell in snobol4_wasm snobol4_x86 snobol4_jvm snobol4_net \
+for _cell in snobol4_js snobol4_wasm snobol4_x86 snobol4_jvm snobol4_net \
              icon_x86 icon_jvm icon_wasm \
              prolog_x86 prolog_jvm prolog_wasm \
              snocone_x86; do
@@ -773,7 +827,7 @@ echo -e "${BOLD}                x86              JVM             .NET           
 
 for row_label in "SNOBOL4" "Icon   " "Prolog " "Snocone"; do
   case $row_label in
-    "SNOBOL4") cells="snobol4_x86 snobol4_jvm snobol4_net snobol4_wasm" ;;
+    "SNOBOL4") cells="snobol4_js  snobol4_x86 snobol4_jvm snobol4_net snobol4_wasm" ;;
     "Icon   ") cells="icon_x86    icon_jvm    icon_net    icon_wasm"    ;;
     "Prolog ") cells="prolog_x86  prolog_jvm  prolog_net  prolog_wasm"  ;;
     "Snocone") cells="snocone_x86 snocone_jvm snocone_net snocone_wasm" ;;
@@ -800,7 +854,7 @@ done
 echo -e "${BOLD}──────────────────────────────────────────────────${RESET}"
 
 OVERALL_FAIL=0
-for cell in snobol4_x86 snobol4_jvm snobol4_net snobol4_wasm icon_x86 icon_jvm icon_wasm prolog_x86 prolog_jvm prolog_wasm snocone_x86; do
+for cell in snobol4_js snobol4_x86 snobol4_jvm snobol4_net snobol4_wasm icon_x86 icon_jvm icon_wasm prolog_x86 prolog_jvm prolog_wasm snocone_x86; do
   any_fail "$cell" && OVERALL_FAIL=1
 done
 
@@ -810,7 +864,7 @@ echo -e "${BOLD}ELAPSED ${ELAPSED_MS}ms  (${ELAPSED_S}s)${RESET}"
 echo ""
 
 # Finalise CSV — summary rows per cell + latest symlink
-for cell in snobol4_x86 snobol4_jvm snobol4_net snobol4_wasm icon_x86 icon_jvm icon_wasm prolog_x86 prolog_jvm prolog_wasm snocone_x86; do
+for cell in snobol4_js snobol4_x86 snobol4_jvm snobol4_net snobol4_wasm icon_x86 icon_jvm icon_wasm prolog_x86 prolog_jvm prolog_wasm snocone_x86; do
   p=0; f=0
   [[ -f "$RESULTS/${cell}_pass" ]] && p=$(cat "$RESULTS/${cell}_pass")
   [[ -f "$RESULTS/${cell}_fail" ]] && f=$(cat "$RESULTS/${cell}_fail")
