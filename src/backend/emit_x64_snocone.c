@@ -19,8 +19,8 @@
  *
  * Operator table (from bconv[] in snocone.sc / snocone.snobol4):
  *   &&  → E_CONCAT (blank concat)
- *   ||  → E_CONCAT (string concat — value context; same as && and |)
- *   |   → E_CONCAT
+ *   ||  → E_ALT  (pattern alt in pattern ctx; sc_val_alt_to_concat → E_CONCAT in value ctx)
+ *   |   → E_ALT  (same as ||)
  *   ==  → EQ(a,b)    !=  → NE(a,b)
  *   <   → LT(a,b)    >   → GT(a,b)
  *   <=  → LE(a,b)    >=  → GE(a,b)
@@ -165,12 +165,12 @@ static int lower_token(const ScPToken *tok, ExprStack *s,
     }
 
     /* ---- String / pattern composition ---- */
-    case SNOCONE_CONCAT:   /* && → blank concat */
-    case SNOCONE_PIPE: {   /* |  → blank concat in value context */
+    case SNOCONE_CONCAT: { /* && → blank concat (pattern seq / value concat) */
         EXPR_t *r = es_pop(s), *l = es_pop(s);
         es_push(s, expr_binary(E_CONCAT, l, r)); return 0;
     }
-    case SNOCONE_OR: {     /* || → E_ALT; sc_val_alt_to_concat rewrites to E_CONCAT in value ctx */
+    case SNOCONE_PIPE:     /* |  → E_ALT; sc_val_alt_to_concat rewrites to E_CONCAT in value ctx */
+    case SNOCONE_OR: {     /* || → E_ALT; same rewrite in value ctx */
         EXPR_t *r = es_pop(s), *l = es_pop(s);
         es_push(s, expr_binary(E_ALT, l, r)); return 0;
     }
