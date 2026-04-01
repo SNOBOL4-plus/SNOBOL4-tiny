@@ -4506,6 +4506,38 @@ static void emit_pat_to_descr(EXPR_t *e) {
         }
         return;
     }
+    case E_CAPT_CUR: {
+        /* @var or pat@var — cursor-capture in DYN pattern context.
+         * Binary (pat@var): nchildren==2, children[0]=sub-pat, children[1]=E_VAR(varname)
+         * Unary  (@var):    nchildren==1, children[0]=E_VAR(varname)
+         *
+         * Build pat_at_cursor(varname): XATP("@") node.
+         * bb_build intercepts XATP with STRVAL_fn=="@" and builds bb_atp box
+         * that writes Δ as DT_I into varname on every gamma. */
+        int binary = (e->nchildren >= 2);
+        EXPR_t *varnd = binary ? e->children[1] : e->children[0];
+        const char *varname = (varnd && varnd->sval) ? varnd->sval : "";
+        const char *vlab = str_intern(varname);
+
+        /* Build pat_at_cursor(varname) -> rax:rdx = DT_P XATP("@") */
+        A("    lea     rdi, [rel %s]\n", vlab);
+        A("    call    pat_at_cursor\n");
+
+        if (binary) {
+            /* pat_cat(child, at_node): child matches first, then cursor captured.
+             * Stack dance: save at_node, build child, call pat_cat(child, at_node). */
+            A("    push    rdx\n");          /* save at_node.hi */
+            A("    push    rax\n");          /* save at_node.lo */
+            emit_pat_to_descr(e->children[0]);  /* child -> rax:rdx */
+            /* Now: child in rax:rdx, at_node on stack (lo at [rsp], hi at [rsp+8]) */
+            A("    mov     rdi, rax\n");     /* child.lo -> arg1.lo */
+            A("    mov     rsi, rdx\n");     /* child.hi -> arg1.hi */
+            A("    pop     rdx\n");          /* at_node.lo -> arg2.lo */
+            A("    pop     rcx\n");          /* at_node.hi -> arg2.hi */
+            A("    call    pat_cat\n");
+        }
+        return;
+    }
     default:
         /* Fallback: evaluate as expression (handles E_VAR holding DT_P, etc.) */
         emit_expr(e, -32);
@@ -4810,6 +4842,7 @@ static void emit_program(Program *prog) {
     A("    extern  pat_fence, pat_fence_p, pat_fail, pat_succeed\n");
     A("    extern  pat_abort, pat_bal, pat_ref, pat_ref_val\n");
     A("    extern  pat_assign_imm, pat_assign_cond, pat_epsilon\n");
+    A("    extern  pat_at_cursor\n");
     A("    extern  kw_anchor\n");
     A("    extern  stmt_aref, stmt_aset, stmt_field_set\n");
     A("    extern  stmt_aref2, stmt_aset2\n");
@@ -5429,10 +5462,13 @@ static void emit_program(Program *prog) {
         A("    mov     rdi, [rsp+32]\n");  /* restore subj_name */
         A("    mov     rsi, [rsp+40]\n");  /* restore subj_var  */
 
-        /* -- Replacement: evaluate if present → [rsp+0/8] -- */
-        int has_repl = (s->has_eq && s->replacement &&
-                        s->replacement->kind != E_NUL) ? 1 : 0;
-        if (has_repl) {
+        /* has_repl: any `= expr` including `=` alone (null replacement = delete match).
+         * Null replacement (s->replacement==NULL or E_NUL) still needs has_repl=1
+         * so Phase 5 splices out the matched portion. */
+        int has_repl = s->has_eq ? 1 : 0;
+        int repl_is_null = has_repl && (!s->replacement ||
+                                        s->replacement->kind == E_NUL);
+        if (has_repl && !repl_is_null) {
             /* Save rdi/rsi across replacement eval */
             A("    push    rdi\n");
             A("    push    rsi\n");
@@ -5447,7 +5483,12 @@ static void emit_program(Program *prog) {
         /* rdx:rcx = pat (already saved; reload) */
         A("    mov     rdx, [rsp+16]\n");   /* pat.lo */
         A("    mov     rcx, [rsp+24]\n");   /* pat.hi */
-        if (has_repl) {
+        if (has_repl && repl_is_null) {
+            /* Null replacement (= with no expr): write DT_SNUL into [rsp+0/8] */
+            A("    mov     qword [rsp+0], 0\n");   /* v=DT_SNUL(0), slen=0 */
+            A("    mov     qword [rsp+8], 0\n");   /* s=NULL */
+            A("    lea     r8, [rsp+0]\n");
+        } else if (has_repl) {
             A("    lea     r8, [rsp+0]\n");    /* repl ptr */
         } else {
             A("    xor     r8d, r8d\n");        /* NULL repl */

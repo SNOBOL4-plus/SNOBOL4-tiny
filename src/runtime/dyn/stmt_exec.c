@@ -571,6 +571,35 @@ void dyn_cache_stats(int *hits, int *misses)
     if (misses) *misses = g_cache_misses;
 }
 
+/* ── ATP box (@var) — cursor-position capture ───────────────────────────────
+ * On alpha: write Δ (current cursor) as DT_I into varname; succeed (epsilon).
+ * On beta: fail — cursor-capture has no meaningful backtrack semantics. */
+typedef struct { int done; const char *varname; } atp_t;
+
+static spec_t bb_atp(atp_t **ζζ, int entry)
+{
+    atp_t *ζ = *ζζ;
+
+    if (entry == α) goto ATP_α;
+                    goto ATP_β;
+
+    spec_t ATP;
+
+    ATP_α:  if (ζ->done)                goto ATP_ω;
+            ζ->done = 1;
+            if (ζ->varname && ζ->varname[0]) {
+                DESCR_t val;
+                val.v = DT_I;
+                val.i = (int64_t)Δ;
+                NV_SET_fn(ζ->varname, val);
+            }
+            ATP = spec(Σ + Δ, 0);       goto ATP_γ;
+    ATP_β:                               goto ATP_ω;
+
+    ATP_γ:                               return ATP;
+    ATP_ω:                               return spec_empty;
+}
+
 /* ══════════════════════════════════════════════════════════════════════════ */
 
 static bb_node_t bb_build(_PND_t *p)
@@ -892,9 +921,34 @@ static bb_node_t bb_build(_PND_t *p)
         break;
     }
 
-    /* ── BAL / ATP / unimplemented: epsilon stub (logged) ───────────── */
+    /* ── ATP (@var) — cursor-position capture ───────────────────────────── */
+    case _XATP: {
+        /* XATP with STRVAL_fn=="@" is the cursor-capture operator built by
+         * pat_at_cursor().  args[0].s holds the variable name.
+         * On alpha: write Δ as DT_I into varname, succeed (epsilon).
+         * On beta: fail (no backtrack). */
+        if (p->STRVAL_fn && strcmp(p->STRVAL_fn, "@") == 0) {
+            const char *varname = (p->nargs >= 1 && p->args[0].v == DT_S)
+                                  ? p->args[0].s : "";
+            atp_t *ζ = calloc(1, sizeof(atp_t));
+            ζ->varname = varname;
+            n.fn     = (bb_box_fn)bb_atp;
+            n.ζ      = ζ;
+            n.ζ_size = sizeof(atp_t);
+            break;
+        }
+        /* Other XATP (named function calls): epsilon stub */
+        fprintf(stderr, "stmt_exec: unimplemented XATP '%s' — using epsilon\n",
+                p->STRVAL_fn ? p->STRVAL_fn : "");
+        eps_t *ζ2 = calloc(1, sizeof(eps_t));
+        n.fn = (bb_box_fn)bb_eps;
+        n.ζ  = ζ2;
+        n.ζ_size = sizeof(*ζ2);
+        break;
+    }
+
+    /* ── BAL / unimplemented: epsilon stub (logged) ─────────────────────── */
     case _XBAL:
-    case _XATP:
     default: {
         fprintf(stderr, "stmt_exec: unimplemented XKIND %d — using epsilon\n",
                 (int)p->kind);

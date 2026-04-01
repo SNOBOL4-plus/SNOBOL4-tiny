@@ -281,6 +281,20 @@ DESCR_t pat_user_call(const char *name, DESCR_t *args, int nargs) {
     return spat_val(p);
 }
 
+/* pat_at_cursor — build XATP("@", varname) node for the @ cursor-capture operator.
+ * Called from emit_pat_to_descr (DYN path).  In bb_build the "@" name is
+ * intercepted and a bb_atp box is built that writes Δ (cursor) as DT_I into varname. */
+DESCR_t pat_at_cursor(const char *varname) {
+    PATND_t *p = spat_new(XATP);
+    p->STRVAL_fn = "@";
+    p->nargs = 1;
+    p->args  = (DESCR_t *)GC_MALLOC(sizeof(DESCR_t));
+    p->args[0].v    = DT_S;
+    p->args[0].s    = varname ? GC_strdup(varname) : "";
+    p->args[0].slen = varname ? (uint32_t)strlen(varname) : 0;
+    return spat_val(p);
+}
+
 /* =========================================================================
  * Pattern materialisation — convert PATND_t tree to engine Pattern* tree
  *
