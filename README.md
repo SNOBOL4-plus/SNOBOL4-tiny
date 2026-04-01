@@ -21,6 +21,7 @@ Run it anywhere.
 | `-jvm` | JVM Jasmin bytecode (`.j`) | ✅ 106/106 corpus · `beauty.sno` ✅ |
 | `-net` | .NET CIL assembly (`.il`) | ✅ 110/110 corpus · roman + wordcount ✅ |
 | `-wasm` | WebAssembly text format (`.wat`) | 🚧 active — SW-2, hello/literals/arith |
+| `-js`   | Node.js module (`.js`)           | 🚧 SJ-6 — 14/17 feat · 1286/0 emit |
 
 The 9 ASM failures (tests 022, 055, 064, cross, word1–4, wordcount) are under active
 investigation via the five-way differential monitor.
@@ -251,6 +252,78 @@ JVM OUTPUT fast-path hook and NET emitter hook in progress — M-MONITOR-IPC-5WA
 
 ---
 
+---
+
+## JavaScript Backend (In Progress — SJ-6)
+
+`-js` produces a Node.js module runnable with `node prog.js`.
+
+```bash
+# JS backend
+./scrip-cc -js program.sno -o prog.js
+SNO_RUNTIME=src/runtime/js/sno_runtime.js node prog.js
+```
+
+**Status:** SJ-6 · feat suite **14/17 PASS** · emit-diff **1286/0**
+
+| Feature | Status |
+|---------|--------|
+| Arithmetic, strings, control flow | ✅ |
+| Pattern matching (LIT/ANY/SPAN/BREAK/ARB/ARBNO/BAL/…) | ✅ |
+| Immediate capture (`$`) / conditional capture (`.`) | ✅ |
+| Hello suite (hello, literals, INTEGER, UCASE, REMDR) | ✅ 4/4 |
+| User-defined functions / DEFINE | 🔧 SJ-7 |
+| INPUT line buffering | 🔧 SJ-7 |
+| `run_invariants.sh` wiring | 🔧 SJ-7 |
+
+### Pattern Engine — `sno_engine.js`
+
+The JS pattern runtime (`src/runtime/js/sno_engine.js`, 532 lines) is an
+iterative frame-based engine modelled after the Clojure implementation in
+[`snobol4jvm`](https://github.com/snobol4ever/snobol4jvm). Frame state uses
+Greek variable names matching the Clojure source:
+
+```
+Frame ζ = [Σ, Δ, σ, δ, Π, φ, Ψ]
+  Σ/Δ — subject string + cursor on entry
+  σ/δ — subject string + current cursor
+  Π   — current pattern node
+  φ   — child index (ALT/SEQ) or retry state
+  Ψ   — parent frame stack
+Ω     — backtrack stack
+α     — current action signal (:proceed/:succeed/:fail/:recede)
+λ     — current node type tag
+```
+
+Frames are **immutable plain JS arrays** — transitions create new arrays,
+old ones are GC'd. No `memcpy`, no snapshot/restore, no arena. The GC *is*
+the stack allocator.
+
+### Benchmark: one4all vs spipatjs
+
+Head-to-head against Phil Budne's
+[spipatjs](https://github.com/philbudne/spipatjs) (3,090 lines, GNAT PE
+node-graph model) — same Node.js v22 process, same JIT warmup, 20,000
+iterations each. **one4all wins all 8 benchmarks.**
+
+| ID | Pattern | one4all | spipatjs | ratio |
+|----|---------|--------:|--------:|------:|
+| B01 | Literal match | 207,510 | 6,354 | **32.7×** |
+| B02 | BREAK+SPAN word scan | 23,578 | 6,072 | **3.9×** |
+| B03 | ARB backtrack depth 12 | 28,602 | 6,418 | **4.5×** |
+| B04 | ARBNO multi-rep | 232,160 | 6,875 | **33.8×** |
+| B05 | BAL balanced parens | 179,353 | 6,457 | **27.8×** |
+| B06 | Wide ALT (4 alternatives) | 9,196 | 6,379 | **1.4×** |
+| B07 | Deep SEQ (10 literals) | 163,845 | 6,268 | **26.1×** |
+| B08 | CAPT_IMM capture | 415,434 | 6,406 | **64.9×** |
+
+*ops/sec · Node.js v22.22.0 · see `test/js/bench_engine.js`*
+
+spipatjs's throughput is nearly flat (~6,000–6,900 ops/sec) regardless of
+pattern complexity — `Object.freeze()` on every match result dominates.
+one4all's immutable-frame design avoids all post-match allocation.
+
+
 ## The Bootstrap Goal
 
 The correctness target is self-hosting. Two gates:
@@ -293,7 +366,7 @@ Sprint state lives in [snobol4ever/.github](https://github.com/snobol4ever/.gith
 - **ARCH-monitor.md** — five-way monitor design and sprint detail
 - **SESSIONS_ARCHIVE.md** — full session history, append-only
 
-**Current sprint:** Grand Master Reorganization (G-8) — rename/rebrand, emit invariant check, shared IR fold.
+**Current sprint:** G-10 · SJ-6 (SNOBOL4×JS) — engine complete, bench done, DEFINE/RETURN next.
 
 ---
 
