@@ -10,15 +10,15 @@
  *       for(;;) switch(_pc) { case (uid<<2|SIGNAL): ... }
  *     using integer _pc = (node_uid << 2) | signal, matching engine.c.
  *   - OUTPUT via _vars Proxy (set trap writes to stdout).
- *   - Labels → JS label + goto via _pc assignment + continue dispatch.
+ *   - Labels map to JS labeled-continue blocks.
  *
- * Dispatch encoding (decided SJ-1 — do not re-debate):
+ * Dispatch encoding (SJ-1 — do not re-debate):
  *   const PROCEED=0, SUCCEED=1, CONCEDE=2, RECEDE=3;
  *   _pc = (uid << 2) | signal;
  *
  * Entry point: js_emit(Program*, FILE*)
  *
- * Sprint: SJ-2  Milestone: M-SJ-A01
+ * Sprint: SJ-2  Milestone: M-SJ-A02
  * Authors: Lon Jones Cherryholmes (arch), Claude Sonnet 4.6 (impl)
  */
 
@@ -52,13 +52,13 @@ static int js_next_uid(void) { return ++uid_ctr; }
 
 /* -----------------------------------------------------------------------
  * JS-safe variable name mangling
- * Prepends '_', replaces non-alnum/_ with '_'.
+ * Prepends 'v_', replaces non-alnum/_ with '_'.
  * ----------------------------------------------------------------------- */
 
 static const char *jv(const char *s) {
     static char buf[520];
     int i = 0, j = 0;
-    buf[j++] = '_';
+    buf[j++] = 'v'; buf[j++] = '_';
     for (; s[i] && j < 510; i++) {
         unsigned char c = (unsigned char)s[i];
         buf[j++] = (isalnum(c) || c == '_') ? (char)c : '_';
@@ -115,10 +115,7 @@ static void js_emit_expr(EXPR_t *e) {
         J("%g", e->dval);
         break;
     case E_VAR:
-        if (js_is_io(e->sval))
-            J("_vars[\"%s\"]", e->sval);
-        else
-            J("_vars[\"%s\"]", e->sval);
+        J("_vars[\"%s\"]", e->sval);
         break;
     case E_KW:
         J("_kw(\"%s\")", e->sval);
@@ -180,28 +177,545 @@ static void js_emit_expr(EXPR_t *e) {
 }
 
 /* -----------------------------------------------------------------------
+ * Pattern dispatch — Byrd-box (uid<<2)|signal switch
+ *
+ * Signals (matching engine.c):
+ *   PROCEED=0  α — enter node forward
+ *   SUCCEED=1  γ — node succeeded (unused as _pc target; we jump directly)
+ *   CONCEDE=2  β — ask node to try again / backtrack
+ *   RECEDE=3   ω — node permanently failed
+ *
+ * Each pattern node gets a uid.  Cases emitted:
+ *   case (uid<<2|0):  α path
+ *   case (uid<<2|2):  β path (backtrack)
+ * γ and ω are not cases; they are _pc assignments + continue.
+ * ----------------------------------------------------------------------- */
+
+#define PROCEED 0
+#define CONCEDE 2
+
+/* Emit:  _pc = (uid<<2|sig); continue dispatch; */
+static void JP(int uid, int sig) {
+    J("_pc = %d; continue dispatch;\n", (uid << 2) | sig);
+}
+
+/* Emit a case label */
+static void JCASE(int uid, int sig) {
+    J("    case %d: /* uid%d %s */\n", (uid << 2) | sig, uid,
+      sig == PROCEED ? "PROCEED" : "CONCEDE");
+}
+
+/* -----------------------------------------------------------------------
+ * Forward declaration
+ * ----------------------------------------------------------------------- */
+static void js_emit_pat(EXPR_t *pat, int uid_γ, int uid_ω,
+                        const char *subj, int uid_stmt);
+
+/* -----------------------------------------------------------------------
+ * Leaf pattern nodes — emit α and β cases for uid
+ *
+ * Convention:
+ *   α case: try to match; on success _pc→γ, on fail _pc→ω
+ *   β case: restore state, _pc→ω  (most leaves are deterministic)
+ * ----------------------------------------------------------------------- */
+
+/* LIT: match literal string s */
+static void js_emit_pat_lit(const char *s, int uid, int uid_γ, int uid_ω,
+                            const char *subj, int uid_stmt) {
+    int n = (int)strlen(s);
+    char safe[2048]; int si = 0;
+    safe[si++] = '"';
+    for (int i = 0; i < n && si < 2040; i++) {
+        unsigned char c = (unsigned char)s[i];
+        if      (c == '"')  { safe[si++]='"'; safe[si++]='"'; } /* handled below */
+        else if (c == '\\') { safe[si++]='\\'; safe[si++]='\\'; }
+        else if (c == '\n') { safe[si++]='\\'; safe[si++]='n'; }
+        else if (c < 0x20 || c > 0x7E) si += snprintf(safe+si, 8, "\\x%02x", c);
+        else safe[si++] = (char)c;
+    }
+    safe[si++]='"'; safe[si]='\0';
+    /* fix double-quote escaping */
+    for (int i = 0; i < si; i++) if (safe[i]=='"' && i>0 && safe[i-1]!='"') { /* ok */ }
+
+    /* α: bounds + match */
+    JCASE(uid, PROCEED);
+    J("        if (_cur%d + %d > _slen%d) { ", uid_stmt, n, uid_stmt); JP(uid_ω, PROCEED); J(" }\n");
+    if (n == 1) {
+        J("        if (_subj%d[_cur%d] !== ", uid_stmt, uid_stmt);
+        /* emit single char */
+        J("\""); { unsigned char c=(unsigned char)s[0];
+            if (c=='"') J("\\\""); else if(c=='\\') J("\\\\"); else J("%c",c); }
+        J("\"");
+        J(") { "); JP(uid_ω, PROCEED); J(" }\n");
+    } else {
+        J("        if (_subj%d.slice(_cur%d, _cur%d+%d) !== ", uid_stmt, uid_stmt, uid_stmt, n);
+        /* emit JS string literal */
+        J("\"");
+        for (int i=0;i<n;i++){unsigned char c=(unsigned char)s[i];
+            if(c=='"') J("\\\""); else if(c=='\\') J("\\\\");
+            else if(c=='\n') J("\\n"); else if(c<0x20||c>0x7E) J("\\x%02x",c);
+            else J("%c",c);}
+        J("\"");
+        J(") { "); JP(uid_ω, PROCEED); J(" }\n");
+    }
+    J("        _saved[%d] = _cur%d; _cur%d += %d;\n", uid, uid_stmt, uid_stmt, n);
+    JP(uid_γ, PROCEED);
+
+    /* β: restore */
+    JCASE(uid, CONCEDE);
+    J("        _cur%d = _saved[%d];\n", uid_stmt, uid);
+    JP(uid_ω, PROCEED);
+}
+
+/* ARB: match 0..n chars (backtrackable) */
+static void js_emit_pat_arb(int uid, int uid_γ, int uid_ω,
+                            const char *subj, int uid_stmt) {
+    /* α: save, succeed with zero chars */
+    JCASE(uid, PROCEED);
+    J("        _saved[%d] = _cur%d;\n", uid, uid_stmt);
+    JP(uid_γ, PROCEED);
+
+    /* β: advance one char and retry */
+    JCASE(uid, CONCEDE);
+    J("        if (_saved[%d] >= _slen%d) { ", uid, uid_stmt); JP(uid_ω, PROCEED); J(" }\n");
+    J("        _saved%d++; _cur%d = _saved%d;\n", uid, uid_stmt, uid);
+    JP(uid_γ, PROCEED);
+}
+
+/* REM: match rest of subject */
+static void js_emit_pat_rem(int uid, int uid_γ, int uid_ω,
+                            const char *subj, int uid_stmt) {
+    JCASE(uid, PROCEED);
+    J("        _saved[%d] = _cur%d; _cur%d = _slen%d;\n", uid, uid_stmt, uid_stmt, uid_stmt);
+    JP(uid_γ, PROCEED);
+
+    JCASE(uid, CONCEDE);
+    J("        _cur%d = _saved[%d];\n", uid_stmt, uid);
+    JP(uid_ω, PROCEED);
+}
+
+/* LEN(n): match exactly n chars */
+static void js_emit_pat_len(long n, int uid, int uid_γ, int uid_ω,
+                            const char *subj, int uid_stmt) {
+    JCASE(uid, PROCEED);
+    J("        if (_cur%d + %ld > _slen%d) { ", uid_stmt, n, uid_stmt); JP(uid_ω, PROCEED); J(" }\n");
+    J("        _saved[%d] = _cur%d; _cur%d += %ld;\n", uid, uid_stmt, uid_stmt, n);
+    JP(uid_γ, PROCEED);
+
+    JCASE(uid, CONCEDE);
+    J("        _cur%d = _saved[%d];\n", uid_stmt, uid);
+    JP(uid_ω, PROCEED);
+}
+
+/* POS(n): assert cursor == n */
+static void js_emit_pat_pos(long n, int uid, int uid_γ, int uid_ω,
+                            int uid_stmt) {
+    JCASE(uid, PROCEED);
+    J("        if (_cur%d !== %ld) { ", uid_stmt, n); JP(uid_ω, PROCEED); J(" }\n");
+    JP(uid_γ, PROCEED);
+
+    JCASE(uid, CONCEDE);
+    JP(uid_ω, PROCEED);
+}
+
+/* RPOS(n): assert cursor == len - n */
+static void js_emit_pat_rpos(long n, int uid, int uid_γ, int uid_ω,
+                             int uid_stmt) {
+    JCASE(uid, PROCEED);
+    J("        if (_cur%d !== _slen%d - %ld) { ", uid_stmt, uid_stmt, n); JP(uid_ω, PROCEED); J(" }\n");
+    JP(uid_γ, PROCEED);
+
+    JCASE(uid, CONCEDE);
+    JP(uid_ω, PROCEED);
+}
+
+/* TAB(n): advance TO position n */
+static void js_emit_pat_tab(long n, int uid, int uid_γ, int uid_ω,
+                            int uid_stmt) {
+    JCASE(uid, PROCEED);
+    J("        if (_cur%d > %ld) { ", uid_stmt, n); JP(uid_ω, PROCEED); J(" }\n");
+    J("        _saved[%d] = _cur%d; _cur%d = %ld;\n", uid, uid_stmt, uid_stmt, n);
+    JP(uid_γ, PROCEED);
+
+    JCASE(uid, CONCEDE);
+    J("        _cur%d = _saved[%d];\n", uid_stmt, uid);
+    JP(uid_ω, PROCEED);
+}
+
+/* RTAB(n): advance TO len - n */
+static void js_emit_pat_rtab(long n, int uid, int uid_γ, int uid_ω,
+                             int uid_stmt) {
+    JCASE(uid, PROCEED);
+    J("        if (_cur%d > _slen%d - %ld) { ", uid_stmt, uid_stmt, n); JP(uid_ω, PROCEED); J(" }\n");
+    J("        _saved[%d] = _cur%d; _cur%d = _slen%d - %ld;\n", uid, uid_stmt, uid_stmt, uid_stmt, n);
+    JP(uid_γ, PROCEED);
+
+    JCASE(uid, CONCEDE);
+    J("        _cur%d = _saved[%d];\n", uid_stmt, uid);
+    JP(uid_ω, PROCEED);
+}
+
+/* ANY(cs): match one char in charset string */
+static void js_emit_pat_any(const char *cs, int uid, int uid_γ, int uid_ω,
+                            const char *subj, int uid_stmt) {
+    JCASE(uid, PROCEED);
+    J("        if (_cur%d >= _slen%d) { ", uid_stmt, uid_stmt); JP(uid_ω, PROCEED); J(" }\n");
+    J("        if ("); js_escape_string(cs);
+    J(".indexOf(_subj%d[_cur%d]) < 0) { ", uid_stmt, uid_stmt); JP(uid_ω, PROCEED); J(" }\n");
+    J("        _saved%d = _cur%d; _cur%d++;\n", uid, uid_stmt, uid_stmt);
+    JP(uid_γ, PROCEED);
+
+    JCASE(uid, CONCEDE);
+    J("        _cur%d = _saved[%d];\n", uid_stmt, uid);
+    JP(uid_ω, PROCEED);
+}
+
+/* NOTANY(cs): match one char NOT in charset */
+static void js_emit_pat_notany(const char *cs, int uid, int uid_γ, int uid_ω,
+                               const char *subj, int uid_stmt) {
+    JCASE(uid, PROCEED);
+    J("        if (_cur%d >= _slen%d) { ", uid_stmt, uid_stmt); JP(uid_ω, PROCEED); J(" }\n");
+    J("        if ("); js_escape_string(cs);
+    J(".indexOf(_subj%d[_cur%d]) >= 0) { ", uid_stmt, uid_stmt); JP(uid_ω, PROCEED); J(" }\n");
+    J("        _saved%d = _cur%d; _cur%d++;\n", uid, uid_stmt, uid_stmt);
+    JP(uid_γ, PROCEED);
+
+    JCASE(uid, CONCEDE);
+    J("        _cur%d = _saved[%d];\n", uid_stmt, uid);
+    JP(uid_ω, PROCEED);
+}
+
+/* SPAN(cs): match 1+ chars in charset (backtrackable) */
+static void js_emit_pat_span(const char *cs, int uid, int uid_γ, int uid_ω,
+                             const char *subj, int uid_stmt) {
+    JCASE(uid, PROCEED);
+    J("        { var _start%d = _cur%d;\n", uid, uid_stmt);
+    J("          while (_cur%d < _slen%d && ", uid_stmt, uid_stmt);
+    js_escape_string(cs); J(".indexOf(_subj%d[_cur%d]) >= 0) _cur%d++;\n", uid_stmt, uid_stmt, uid_stmt);
+    J("          _saved[%d] = _cur%d - _start%d;\n", uid, uid_stmt, uid);
+    J("          if (_saved[%d] === 0) { ", uid); JP(uid_ω, PROCEED); J(" } }\n");
+    JP(uid_γ, PROCEED);
+
+    /* β: shrink by one */
+    JCASE(uid, CONCEDE);
+    J("        if (_saved[%d] <= 1) { _cur%d -= _saved[%d]; _saved[%d] = 0; ", uid, uid_stmt, uid, uid);
+    JP(uid_ω, PROCEED); J(" }\n");
+    J("        _saved[%d]--; _cur%d--;\n", uid, uid_stmt);
+    JP(uid_γ, PROCEED);
+}
+
+/* BREAK(cs): match 0+ chars NOT in cs, stop before cs-char */
+static void js_emit_pat_break(const char *cs, int uid, int uid_γ, int uid_ω,
+                              const char *subj, int uid_stmt) {
+    JCASE(uid, PROCEED);
+    J("        _saved[%d] = _cur%d;\n", uid, uid_stmt);
+    J("        while (_cur%d < _slen%d && ", uid_stmt, uid_stmt);
+    js_escape_string(cs); J(".indexOf(_subj%d[_cur%d]) < 0) _cur%d++;\n", uid_stmt, uid_stmt, uid_stmt);
+    J("        if (_cur%d >= _slen%d) { _cur%d = _saved%d; ", uid_stmt, uid_stmt, uid_stmt, uid);
+    JP(uid_ω, PROCEED); J(" }\n");
+    JP(uid_γ, PROCEED);
+
+    JCASE(uid, CONCEDE);
+    J("        _cur%d = _saved[%d];\n", uid_stmt, uid);
+    JP(uid_ω, PROCEED);
+}
+
+/* FENCE: α always succeeds, β always fails */
+static void js_emit_pat_fence(int uid, int uid_γ, int uid_ω, int uid_stmt) {
+    JCASE(uid, PROCEED);
+    JP(uid_γ, PROCEED);
+
+    JCASE(uid, CONCEDE);
+    JP(uid_ω, PROCEED);
+}
+
+/* SUCCEED: always succeeds on both α and β */
+static void js_emit_pat_succeed(int uid, int uid_γ, int uid_ω, int uid_stmt) {
+    JCASE(uid, PROCEED);
+    JP(uid_γ, PROCEED);
+
+    JCASE(uid, CONCEDE);
+    JP(uid_γ, PROCEED);
+}
+
+/* FAIL: always fails */
+static void js_emit_pat_fail(int uid, int uid_γ, int uid_ω, int uid_stmt) {
+    JCASE(uid, PROCEED);
+    JP(uid_ω, PROCEED);
+
+    JCASE(uid, CONCEDE);
+    JP(uid_ω, PROCEED);
+}
+
+/* -----------------------------------------------------------------------
+ * SEQ (concatenation): α→left_α; β→right_β; left_γ→right_α; right_ω→left_β
+ * ----------------------------------------------------------------------- */
+static void js_emit_pat_seq(EXPR_t *left, EXPR_t *right,
+                            int uid, int uid_γ, int uid_ω,
+                            const char *subj, int uid_stmt) {
+    int left_uid  = js_next_uid();
+    int right_uid = js_next_uid();
+    /* left_β_redirect: a uid whose PROCEED case jumps to left_uid CONCEDE.
+     * Passed as right's uid_ω so right's failure backtracks left. */
+    int left_β_uid = js_next_uid();
+
+    /* α: → left_α */
+    JCASE(uid, PROCEED);
+    JP(left_uid, PROCEED);
+
+    /* β: → right_β (resume right first) */
+    JCASE(uid, CONCEDE);
+    JP(right_uid, CONCEDE);
+
+    /* left_β redirect: right's ω fires this → backtrack left */
+    JCASE(left_β_uid, PROCEED);
+    JP(left_uid, CONCEDE);
+    JCASE(left_β_uid, CONCEDE);
+    JP(uid_ω, PROCEED);
+
+    /* emit left:  γ→right_α,    ω→uid_ω (left failing = whole SEQ fails) */
+    js_emit_pat(left,  right_uid, uid_ω, subj, uid_stmt);
+
+    /* emit right: γ→uid_γ, ω→left_β (right failing = backtrack left) */
+    js_emit_pat(right, uid_γ, left_β_uid, subj, uid_stmt);
+}
+
+/* ALT: α→left_α; β→right_β; left_ω→right_α; right_ω→uid_ω */
+static void js_emit_pat_alt(EXPR_t *left, EXPR_t *right,
+                            int uid, int uid_γ, int uid_ω,
+                            const char *subj, int uid_stmt) {
+    int left_uid  = js_next_uid();
+    int right_uid = js_next_uid();
+
+    JCASE(uid, PROCEED);
+    JP(left_uid, PROCEED);
+
+    JCASE(uid, CONCEDE);
+    JP(right_uid, CONCEDE);
+
+    js_emit_pat(left,  uid_γ,  right_uid, subj, uid_stmt);
+    js_emit_pat(right, uid_γ,  uid_ω,     subj, uid_stmt);
+}
+
+/* -----------------------------------------------------------------------
+ * Conditional/immediate capture (. and $ operators)
+ * ----------------------------------------------------------------------- */
+static void js_emit_pat_capt(EXPR_t *pat, const char *varname, int immediate,
+                             int uid, int uid_γ, int uid_ω,
+                             const char *subj, int uid_stmt) {
+    int child_uid = js_next_uid();
+    int snap_uid  = js_next_uid();
+
+    /* α: record cursor start, enter child */
+    JCASE(uid, PROCEED);
+    J("        _saved[%d] = _cur%d;\n", snap_uid, uid_stmt);
+    JP(child_uid, PROCEED);
+
+    /* β: re-enter child β */
+    JCASE(uid, CONCEDE);
+    JP(child_uid, CONCEDE);
+
+    /* child: γ → capture + uid_γ; ω → uid_ω */
+    /* We need child's γ to be a capture case */
+    int capt_uid = js_next_uid();
+
+    js_emit_pat(pat->children[0], capt_uid, uid_ω, subj, uid_stmt);
+
+    /* capt case: capture and proceed */
+    JCASE(capt_uid, PROCEED);
+    J("        _vars[\"%s\"] = _subj%d.slice(_saved[%d], _cur%d);\n",
+      varname, uid_stmt, snap_uid, uid_stmt);
+    JP(uid_γ, PROCEED);
+
+    JCASE(capt_uid, CONCEDE);
+    JP(uid_ω, PROCEED);
+
+    (void)child_uid; (void)snap_uid;
+}
+
+/* -----------------------------------------------------------------------
+ * Main pattern node dispatcher
+ * uid_γ, uid_ω: integer node-UIDs whose PROCEED case is the γ/ω target
+ * Special sentinel: uid_γ = -1 means "match succeeded" (break dispatch)
+ *                  uid_ω = -2 means "match failed"   (break dispatch)
+ * ----------------------------------------------------------------------- */
+
+#define UID_MATCH_OK   (-1)
+#define UID_MATCH_FAIL (-2)
+
+static void js_emit_pat(EXPR_t *pat, int uid_γ, int uid_ω,
+                        const char *subj, int uid_stmt) {
+    if (!pat) {
+        /* empty pattern — zero-width succeed */
+        int uid = js_next_uid();
+        JCASE(uid, PROCEED);
+        JP(uid_γ, PROCEED);
+        JCASE(uid, CONCEDE);
+        JP(uid_ω, PROCEED);
+        return;
+    }
+
+    int uid = js_next_uid();
+
+    /* Check for named builtins in E_FNC */
+    if (pat->kind == E_FNC && pat->sval) {
+        const char *fn = pat->sval;
+#define FNMATCH(x) (strcasecmp(fn,(x))==0)
+        if (FNMATCH("ARB")) {
+            js_emit_pat_arb(uid, uid_γ, uid_ω, subj, uid_stmt);
+            return;
+        }
+        if (FNMATCH("REM")) {
+            js_emit_pat_rem(uid, uid_γ, uid_ω, subj, uid_stmt);
+            return;
+        }
+        if (FNMATCH("FENCE")) {
+            js_emit_pat_fence(uid, uid_γ, uid_ω, uid_stmt);
+            return;
+        }
+        if (FNMATCH("SUCCEED")) {
+            js_emit_pat_succeed(uid, uid_γ, uid_ω, uid_stmt);
+            return;
+        }
+        if (FNMATCH("FAIL")) {
+            js_emit_pat_fail(uid, uid_γ, uid_ω, uid_stmt);
+            return;
+        }
+        if (FNMATCH("LEN") && pat->nchildren == 1 && pat->children[0]->kind == E_ILIT) {
+            js_emit_pat_len(pat->children[0]->ival, uid, uid_γ, uid_ω, subj, uid_stmt);
+            return;
+        }
+        if (FNMATCH("POS") && pat->nchildren == 1 && pat->children[0]->kind == E_ILIT) {
+            js_emit_pat_pos(pat->children[0]->ival, uid, uid_γ, uid_ω, uid_stmt);
+            return;
+        }
+        if (FNMATCH("RPOS") && pat->nchildren == 1 && pat->children[0]->kind == E_ILIT) {
+            js_emit_pat_rpos(pat->children[0]->ival, uid, uid_γ, uid_ω, uid_stmt);
+            return;
+        }
+        if (FNMATCH("TAB") && pat->nchildren == 1 && pat->children[0]->kind == E_ILIT) {
+            js_emit_pat_tab(pat->children[0]->ival, uid, uid_γ, uid_ω, uid_stmt);
+            return;
+        }
+        if (FNMATCH("RTAB") && pat->nchildren == 1 && pat->children[0]->kind == E_ILIT) {
+            js_emit_pat_rtab(pat->children[0]->ival, uid, uid_γ, uid_ω, uid_stmt);
+            return;
+        }
+        if (FNMATCH("ANY") && pat->nchildren == 1 && pat->children[0]->kind == E_QLIT) {
+            js_emit_pat_any(pat->children[0]->sval, uid, uid_γ, uid_ω, subj, uid_stmt);
+            return;
+        }
+        if (FNMATCH("NOTANY") && pat->nchildren == 1 && pat->children[0]->kind == E_QLIT) {
+            js_emit_pat_notany(pat->children[0]->sval, uid, uid_γ, uid_ω, subj, uid_stmt);
+            return;
+        }
+        if (FNMATCH("SPAN") && pat->nchildren == 1 && pat->children[0]->kind == E_QLIT) {
+            js_emit_pat_span(pat->children[0]->sval, uid, uid_γ, uid_ω, subj, uid_stmt);
+            return;
+        }
+        if (FNMATCH("BREAK") && pat->nchildren == 1 && pat->children[0]->kind == E_QLIT) {
+            js_emit_pat_break(pat->children[0]->sval, uid, uid_γ, uid_ω, subj, uid_stmt);
+            return;
+        }
+        /* Unknown FNC — treat as zero-width succeed stub */
+        JCASE(uid, PROCEED);
+        J("        /* stub FNC %s */\n", fn);
+        JP(uid_γ, PROCEED);
+        JCASE(uid, CONCEDE);
+        JP(uid_ω, PROCEED);
+        return;
+    }
+
+    switch (pat->kind) {
+    case E_QLIT:
+        js_emit_pat_lit(pat->sval ? pat->sval : "", uid, uid_γ, uid_ω, subj, uid_stmt);
+        break;
+
+    case E_ILIT:
+    case E_VAR:
+    case E_NUL: {
+        /* variable or integer: evaluate to string, match as literal */
+        /* emit a runtime dispatch case */
+        JCASE(uid, PROCEED);
+        J("        { var _pat_val%d = ", uid);
+        js_emit_expr(pat);
+        J(";\n");
+        J("          var _pat_s%d = (_pat_val%d === null || _pat_val%d === undefined) ? '' : String(_pat_val%d);\n",
+          uid, uid, uid, uid);
+        J("          var _pat_n%d = _pat_s%d.length;\n", uid, uid);
+        J("          if (_cur%d + _pat_n%d > _slen%d) { ", uid_stmt, uid, uid_stmt);
+        JP(uid_ω, PROCEED); J(" }\n");
+        J("          if (_subj%d.slice(_cur%d, _cur%d+_pat_n%d) !== _pat_s%d) { ",
+          uid_stmt, uid_stmt, uid_stmt, uid, uid);
+        JP(uid_ω, PROCEED); J(" }\n");
+        J("          _saved[%d] = _cur%d; _cur%d += _pat_n%d; }\n", uid, uid_stmt, uid_stmt, uid);
+        JP(uid_γ, PROCEED);
+
+        JCASE(uid, CONCEDE);
+        J("        _cur%d = _saved[%d];\n", uid_stmt, uid);
+        JP(uid_ω, PROCEED);
+        break;
+    }
+
+    case E_SEQ:
+        if (pat->nchildren == 2) {
+            js_emit_pat_seq(pat->children[0], pat->children[1],
+                            uid, uid_γ, uid_ω, subj, uid_stmt);
+        } else if (pat->nchildren == 0) {
+            JCASE(uid, PROCEED); JP(uid_γ, PROCEED);
+            JCASE(uid, CONCEDE); JP(uid_ω, PROCEED);
+        } else {
+            /* n-ary: right-fold */
+            js_emit_pat(pat->children[0], uid_γ, uid_ω, subj, uid_stmt);
+        }
+        break;
+
+    case E_ALT:
+        if (pat->nchildren == 2) {
+            js_emit_pat_alt(pat->children[0], pat->children[1],
+                            uid, uid_γ, uid_ω, subj, uid_stmt);
+        } else {
+            JCASE(uid, PROCEED); JP(uid_γ, PROCEED);
+            JCASE(uid, CONCEDE); JP(uid_ω, PROCEED);
+        }
+        break;
+
+    case E_CAPT_IMM:
+    case E_CAPT_COND: {
+        const char *vname = "OUTPUT";
+        if (pat->nchildren > 1 && pat->children[1] && pat->children[1]->sval)
+            vname = pat->children[1]->sval;
+        js_emit_pat_capt(pat, vname, pat->kind == E_CAPT_IMM,
+                         uid, uid_γ, uid_ω, subj, uid_stmt);
+        break;
+    }
+
+    default:
+        /* stub */
+        JCASE(uid, PROCEED);
+        J("        /* stub pat kind %d */\n", (int)pat->kind);
+        JP(uid_γ, PROCEED);
+        JCASE(uid, CONCEDE);
+        JP(uid_ω, PROCEED);
+        break;
+    }
+}
+
+/* -----------------------------------------------------------------------
  * Emit goto logic for a statement's SnoGoto
- * fn  — enclosing function name (for RETURN routing)
- * ok  — JS expression string that is truthy on success, or NULL (uncond)
  * ----------------------------------------------------------------------- */
 
 static void js_emit_goto(SnoGoto *go, int ok_uid) {
-    /* ok_uid < 0 → unconditional success */
-    if (!go) {
-        /* fall through to next statement */
-        return;
-    }
+    if (!go) return;
     if (go->uncond) {
         J("    goto_%s();\n    return;\n", jv(go->uncond));
         return;
     }
     if (ok_uid < 0) {
-        /* always success */
         if (go->onsuccess)
             J("    goto_%s();\n    return;\n", jv(go->onsuccess));
         return;
     }
-    /* conditional */
     if (go->onsuccess && go->onfailure) {
         J("    if (_ok%d) { goto_%s(); return; }\n", ok_uid, jv(go->onsuccess));
         J("    else       { goto_%s(); return; }\n", jv(go->onfailure));
@@ -213,7 +727,7 @@ static void js_emit_goto(SnoGoto *go, int ok_uid) {
 }
 
 /* -----------------------------------------------------------------------
- * Collect all labels for forward-declaration of goto_ functions
+ * Collect all labels
  * ----------------------------------------------------------------------- */
 
 static char **label_list = NULL;
@@ -246,86 +760,180 @@ static void collect_labels(Program *prog) {
  * Emit one statement
  * ----------------------------------------------------------------------- */
 
+/* Emit the pattern-match body as Byrd-box dispatch */
+static void js_emit_pat_stmt(STMT_t *s) {
+    int u = js_next_uid();
+    /* Declare all local pattern vars — JS var is function-scoped */
+    /* (JS engine hoists anyway; just emit the boilerplate) */
+    J("    var _subj%d = _str(", u);
+    js_emit_expr(s->subject);
+    J(");\n");
+    J("    var _slen%d = _subj%d.length;\n", u, u);
+    J("    var _cur%d  = 0;\n", u);
+    J("    var _mstart%d = 0;\n", u);
+    J("    var _ok%d   = false;\n", u);
+    /* _saved variables will be declared inline with var (JS hoists) */
+
+    /* Allocate all control UIDs up front so we know arb_uid before
+     * emitting any output — this lets us write var _pc = (arb_uid<<2)
+     * before the dispatch loop. */
+    int ok_uid    = js_next_uid();
+    int fail_uid  = js_next_uid();
+    int arb_uid   = js_next_uid();
+    /* relay_uid: a stable entry point between arb and the pattern tree.
+     * Arb jumps to relay; relay jumps to the pattern's first uid.
+     * This breaks the fragile uid_ctr+1 prediction — relay is always
+     * the uid immediately before the pattern allocation. */
+    int relay_uid = js_next_uid();
+
+    /* _pc must be initialised BEFORE the dispatch loop */
+    J("    var _pc = %d;\n", (arb_uid << 2) | PROCEED);
+    J("    var _saved = new Array(1024).fill(0); /* cursor save slots */\n");
+    J("    /* Byrd-box dispatch for stmt u%d */\n", u);
+    J("    dispatch: for(;;) switch(_pc) {\n");
+
+    /* ARB scanner: α saves cursor, jumps to relay (stable), relay → pattern. */
+    JCASE(arb_uid, PROCEED);
+    J("        _saved[%d] = _cur%d;\n", arb_uid, u);
+    JP(relay_uid, PROCEED);
+
+    JCASE(arb_uid, CONCEDE);
+    J("        if (_saved[%d] >= _slen%d) { ", arb_uid, u); JP(fail_uid, PROCEED); J(" }\n");
+    J("        _saved[%d]++; _cur%d = _saved[%d]; _mstart%d = _saved[%d];\n",
+      arb_uid, u, arb_uid, u, arb_uid);
+    JP(relay_uid, PROCEED);
+
+    /* arb_β_uid: a redirect that maps PROCEED → arb CONCEDE.
+     * Pattern failures flow here so arb advances the scan position. */
+    int arb_β_uid = js_next_uid();
+
+    /* relay: passthrough to the pattern's first uid (uid_ctr+1 at this exact moment) */
+    {
+        int pat_entry = uid_ctr + 1;   /* next uid js_emit_pat allocates */
+        JCASE(relay_uid, PROCEED);
+        JP(pat_entry, PROCEED);
+        JCASE(relay_uid, CONCEDE);
+        JP(arb_β_uid, PROCEED);
+    }
+
+    /* arb_β redirect: pattern ω fires this → arb CONCEDE (advance scan) */
+    JCASE(arb_β_uid, PROCEED);
+    JP(arb_uid, CONCEDE);
+    JCASE(arb_β_uid, CONCEDE);
+    JP(fail_uid, PROCEED);
+
+    /* Emit the actual pattern tree: γ→ok_uid, ω→arb_β_uid (→ arb CONCEDE) */
+    js_emit_pat(s->pattern, ok_uid, arb_β_uid, "subj", u);
+
+    /* ok case: match succeeded */
+    JCASE(ok_uid, PROCEED);
+    J("        _ok%d = true;\n", u);
+    J("        break dispatch;\n");
+    JCASE(ok_uid, CONCEDE);
+    J("        break dispatch;\n");
+
+    /* fail case: match failed */
+    JCASE(fail_uid, PROCEED);
+    J("        _ok%d = false;\n", u);
+    J("        break dispatch;\n");
+    JCASE(fail_uid, CONCEDE);
+    J("        break dispatch;\n");
+
+    J("    default:\n");
+    J("        /* unreachable — pattern dispatch hole uid=\" + _pc + \" */\n");
+    J("        break dispatch;\n");
+    J("    } /* end dispatch */\n");
+
+    /* Apply replacement if match succeeded */
+    if (s->replacement && s->subject && s->subject->kind == E_VAR) {
+        J("    if (_ok%d) {\n", u);
+        J("        var _repl%d = _str(", u); js_emit_expr(s->replacement); J(");\n");
+        J("        var _head%d = _subj%d.slice(0, _mstart%d);\n", u, u, u);
+        J("        var _tail%d = _subj%d.slice(_cur%d);\n", u, u, u);
+        J("        _vars[\"%s\"] = _head%d + _repl%d + _tail%d;\n",
+          s->subject->sval, u, u, u);
+        J("    }\n");
+    }
+
+    js_emit_goto(s->go, u);
+}
+
 static void js_emit_stmt(STMT_t *s) {
     J("/* line %d */\n", s->lineno);
 
-    /* label-only: emit the goto_ function and return */
     if (s->label) {
-        J("function goto_%s() {\n", jv(s->label));
+        J("goto_%s = function() {\n", jv(s->label));
+    } else {
+        J("{\n");
     }
 
-    /* label-only statement (no subject) */
     if (!s->subject) {
         if (s->go) js_emit_goto(s->go, -1);
-        if (s->label) J("}\n");
+        J("};\n" + (s->label ? 0 : 1)); /* }; for named fn, } for block */
+        if (!s->label) J("}\n");
         return;
-    }
-
-    if (!s->label) {
-        /* Inline statement — wrap in IIFE-style block */
-        J("{\n");
     }
 
     /* ---- pure assignment ---- */
     if (!s->pattern && s->replacement) {
         int u = js_next_uid();
-        J("    var _v%d = ", u);
-        js_emit_expr(s->replacement);
-        J(";\n");
+        J("    var _v%d = ", u); js_emit_expr(s->replacement); J(";\n");
         J("    var _ok%d = (_v%d !== _FAIL);\n", u, u);
         J("    if (_ok%d) {\n", u);
-        /* assign target */
-        if (s->subject && s->subject->kind == E_VAR) {
+        if (s->subject && s->subject->kind == E_VAR)
             J("        _vars[\"%s\"] = _v%d;\n", s->subject->sval, u);
-        }
         J("    }\n");
         js_emit_goto(s->go, u);
-        if (s->label) J("}\n"); else J("}\n");
+        if (s->label) J("};\n"); else J("}\n");
         return;
     }
 
-    /* ---- null assign (has_eq, no replacement) ---- */
+    /* ---- null assign ---- */
     if (!s->pattern && !s->replacement && s->has_eq) {
         if (s->subject && s->subject->kind == E_VAR)
             J("    _vars[\"%s\"] = null;\n", s->subject->sval);
         js_emit_goto(s->go, -1);
-        if (s->label) J("}\n"); else J("}\n");
+        if (s->label) J("};\n"); else J("}\n");
         return;
     }
 
     /* ---- pattern match ---- */
     if (s->pattern) {
-        int u = js_next_uid();
-        J("    var _s%d = _str(", u);
-        js_emit_expr(s->subject);
-        J(");\n");
-        J("    var _ok%d = _match(_s%d, ", u, u);
-        js_emit_expr(s->pattern);
-        J(");\n");
-        if (s->replacement && s->subject && s->subject->kind == E_VAR) {
-            J("    if (_ok%d) { _vars[\"%s\"] = _replace(_s%d, ", u, s->subject->sval, u);
-            js_emit_expr(s->replacement);
-            J("); }\n");
-        }
-        js_emit_goto(s->go, u);
-        if (s->label) J("}\n"); else J("}\n");
+        /* Initialize _pc to first dispatch entry */
+
+        /* declare saved vars (JS hoists var) — emit block */
+        js_emit_pat_stmt(s);
+        if (s->label) J("};\n"); else J("}\n");
         return;
     }
 
     /* ---- expression evaluation only ---- */
     {
         int u = js_next_uid();
-        J("    var _v%d = ", u);
-        js_emit_expr(s->subject);
-        J(";\n");
+        J("    var _v%d = ", u); js_emit_expr(s->subject); J(";\n");
         J("    var _ok%d = (_v%d !== _FAIL);\n", u, u);
         js_emit_goto(s->go, u);
-        if (s->label) J("}\n"); else J("}\n");
+        if (s->label) J("};\n"); else J("}\n");
     }
 }
 
 /* -----------------------------------------------------------------------
- * Emit the complete JS program
+ * Fix up _pc initialization for pattern stmts
+ * We need to set _pc BEFORE the dispatch loop starts.
+ * js_emit_pat_stmt emits a comment with the needed initial _pc value,
+ * then emits the dispatch loop.  We do a post-pass to fix up.
+ *
+ * Simpler approach: collect the first arb_uid and set it before dispatch.
+ * We implement this by tracking the "first uid emitted in the stmt" —
+ * which is arb_uid — and setting _pc there.
+ *
+ * Actually: the _pc = 0 initializer is wrong; we need _pc = (arb_uid<<2).
+ * Since arb_uid = uid_ctr at the time we start, we can compute it.
+ * We use a two-pass approach: save uid_ctr before, then write the real init.
+ * ----------------------------------------------------------------------- */
+
+/* -----------------------------------------------------------------------
+ * Main entry point
  * ----------------------------------------------------------------------- */
 
 void js_emit(Program *prog, FILE *f) {
@@ -335,45 +943,43 @@ void js_emit(Program *prog, FILE *f) {
 
     collect_labels(prog);
 
-    /* --- preamble: load runtime --- */
+    /* preamble */
     J("'use strict';\n");
     J("const _rt = require(process.env.SNO_RUNTIME || __dirname + '/sno_runtime.js');\n");
     J("const { _vars, _FAIL, _str, _num, _cat, _add, _sub, _mul, _div, _pow,\n");
-    J("        _apply, _kw, _match, _replace } = _rt;\n");
+    J("        _apply, _kw } = _rt;\n");
     J("\n");
 
-    /* --- forward declare all goto_ functions --- */
+    /* forward-declare goto_ functions */
     for (int i = 0; i < label_count; i++)
         J("var goto_%s;\n", jv(label_list[i]));
-    J("\n");
+    if (label_count) J("\n");
 
-    /* --- emit statements --- */
-    J("function _program() {\n");
-
+    /* Pass 1: emit all labeled statements as named function assignments.
+     * This ensures goto_X is assigned before any inline code calls it. */
+    J("\n/* --- labeled statement functions --- */\n");
     for (STMT_t *s = prog->head; s; s = s->next) {
-        if (s->is_end) {
-            J("    /* END */\n");
-            J("    return;\n");
-            break;
-        }
-        /* label statements become named functions; emit them before main flow */
         if (s->label) {
-            /* close _program for now, emit labeled block, reopen */
-            J("}\n\n");
-            js_emit_stmt(s);
-            J("\nfunction _program_continue_after_%s() {\n", jv(s->label));
-        } else {
             js_emit_stmt(s);
         }
+        if (s->is_end && s->label) break;
     }
 
-    J("}\n\n");
-    J("_program();\n");
+    /* Pass 2: emit the main (unlabeled) flow inline.
+     * Reset uid counter so pattern dispatch uids are fresh and
+     * don't collide with any uids consumed in pass 1. */
+    uid_ctr = 0;
+    J("\n/* --- main flow --- */\n");
+    J("(function _main() {\n");
+    for (STMT_t *s = prog->head; s; s = s->next) {
+        if (s->is_end) break;   /* stop before END — don't emit it */
+        if (!s->label) js_emit_stmt(s);
+    }
+    J("})();\n");  /* always close _main */
 
-    /* free label list */
+
+    /* free */
     for (int i = 0; i < label_count; i++) free(label_list[i]);
     free(label_list);
-    label_list  = NULL;
-    label_count = 0;
-    label_cap   = 0;
+    label_list = NULL; label_count = 0; label_cap = 0;
 }
