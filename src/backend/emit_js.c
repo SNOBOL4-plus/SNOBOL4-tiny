@@ -144,7 +144,14 @@ static void js_emit_expr(EXPR_t *e) {
         break;
     case E_INDR: {
         EXPR_t *operand = (e->nchildren > 1 && e->children[1]) ? e->children[1] : e->children[0];
-        J("_vars[_str("); js_emit_expr(operand); J(")]");
+        /* $.var: E_CAPT_COND(E_VAR) — indirect by name, not by value */
+        if (operand->kind == E_CAPT_COND && operand->nchildren == 1
+                && operand->children[0]->kind == E_VAR) {
+            J("_vars[\"%s\"]", js_upper_var(operand->children[0]->sval));
+        } else {
+            /* $'str' or $(expr): indirect by value */
+            J("_vars[_str("); js_emit_expr(operand); J(").toUpperCase()]");
+        }
         break;
     }
     case E_NEG:
@@ -907,6 +914,16 @@ static int js_emit_stmt_body(STMT_t *s) {
         J("    if (_ok%d) {\n", u);
         if (s->subject && s->subject->kind == E_VAR)
             J("        _vars[\"%s\"] = _v%d;\n", js_upper_var(s->subject->sval), u);
+        else if (s->subject && s->subject->kind == E_INDR) {
+            EXPR_t *op = (s->subject->nchildren > 1 && s->subject->children[1])
+                         ? s->subject->children[1] : s->subject->children[0];
+            if (op->kind == E_CAPT_COND && op->nchildren == 1
+                    && op->children[0]->kind == E_VAR)
+                J("        _vars[\"%s\"] = _v%d;\n", js_upper_var(op->children[0]->sval), u);
+            else {
+                J("        _vars[_str("); js_emit_expr(op); J(").toUpperCase()] = _v%d;\n", u);
+            }
+        }
         J("    }\n");
         if (s->go) { js_emit_goto(s->go, u); return 1; }
         return 0;
