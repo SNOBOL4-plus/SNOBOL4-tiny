@@ -58,6 +58,7 @@ static inline bool spec_is_empty(spec_t x)           { return x.σ == (const cha
 /* ── entry ports ────────────────────────────────────────────────────────── */
 static const int α = 0;   /* fresh entry */
 static const int β = 1;   /* backtrack re-entry */
+#define BB_ALPHA_DEFINED 1
 
 /* ── global match state ─────────────────────────────────────────────────── */
 /*

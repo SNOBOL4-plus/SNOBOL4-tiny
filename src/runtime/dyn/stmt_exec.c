@@ -80,8 +80,11 @@ extern char   *VARVAL_fn(DESCR_t d);
 /* In the full-runtime build, include bb_box.h after snobol4.h.
  * bb_box.h now uses spec_t (not spec_t) so no collision with engine. */
 #include "bb_box.h"
+/* bb_box.h already defines α/β — only define here if not already defined */
+#ifndef BB_ALPHA_DEFINED
 static const int α = 0;
 static const int β = 1;
+#endif
 
 #endif /* STMT_EXEC_STANDALONE */
 
@@ -819,9 +822,11 @@ static spec_t bb_deferred_var(deferred_var_t **ζζ, int entry)
                         ζ->child_ζ      = child.ζ;
                         ζ->child_ζ_size = child.ζ_size;
                     } else {
-                        /* Subsequent α: zero child state for fresh locals */
-                        if (ζ->child_ζ && ζ->child_ζ_size)
-                            memset(ζ->child_ζ, 0, ζ->child_ζ_size);
+                        /* Subsequent α: child graph is already built.
+                         * Do NOT memset — capture_t.varname and other config
+                         * fields must survive across calls.  Box β ports handle
+                         * their own cursor/state restore. */
+                        (void)0;
                     }
                     DVAR = ζ->child_fn(&ζ->child_ζ, α);
                     if (spec_is_empty(DVAR))                  goto DVAR_ω;
@@ -845,7 +850,7 @@ static spec_t bb_deferred_var(deferred_var_t **ζζ, int entry)
  * for standalone / test builds.
  */
 #ifndef STMT_EXEC_STANDALONE
-extern int kw_anchor;
+extern int64_t kw_anchor;
 #else
 /* Standalone: default to unanchored; test driver can override */
 int kw_anchor = 0;
