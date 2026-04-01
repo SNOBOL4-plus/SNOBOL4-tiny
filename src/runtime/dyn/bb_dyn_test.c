@@ -41,19 +41,19 @@ int         Ω = 0;
  */
 typedef struct { int dummy; } len1_t;
 
-str_t bb_len1(len1_t **ζζ, int entry)
+spec_t bb_len1(len1_t **ζζ, int entry)
 {
     len1_t *ζ = *ζζ;
     if (entry == α)                                     goto LEN1_α;
     if (entry == β)                                     goto LEN1_β;
 
-    str_t         LEN1;
+    spec_t         LEN1;
     LEN1_α:       if (Δ+1 > Ω)                         goto LEN1_ω;
-                  LEN1 = str(Σ+Δ,1); Δ+=1;             goto LEN1_γ;
+                  LEN1 = spec(Σ+Δ,1); Δ+=1;             goto LEN1_γ;
     LEN1_β:       Δ-=1;                                 goto LEN1_ω;
 
     LEN1_γ:       return LEN1;
-    LEN1_ω:       return empty;
+    LEN1_ω:       return spec_empty;
 }
 
 /* ── build the pattern graph ─────────────────────────────────────────────── */
@@ -64,12 +64,12 @@ str_t bb_len1(len1_t **ζζ, int entry)
  */
 
 /* forward declarations */
-str_t bb_lit  (void **ζζ, int entry);
-str_t bb_alt  (void **ζζ, int entry);
-str_t bb_seq  (void **ζζ, int entry);
-str_t bb_arbno(void **ζζ, int entry);
-str_t bb_pos  (void **ζζ, int entry);
-str_t bb_rpos (void **ζζ, int entry);
+spec_t bb_lit  (void **ζζ, int entry);
+spec_t bb_alt  (void **ζζ, int entry);
+spec_t bb_seq  (void **ζζ, int entry);
+spec_t bb_arbno(void **ζζ, int entry);
+spec_t bb_pos  (void **ζζ, int entry);
+spec_t bb_rpos (void **ζζ, int entry);
 
 /* These are the actual types from the .c files */
 typedef struct { const char *lit; int len; }          lit_t;
@@ -84,19 +84,19 @@ typedef struct {
     bb_child2_t children[BB_ALT_MAX];
     int         alt_i;
     int         saved_Δ;
-    str_t       result;
+    spec_t       result;
 } alt_t;
 
 /* SEQ state (from bb_seq.c) */
 typedef struct {
     bb_child2_t left;
     bb_child2_t right;
-    str_t       seq;
+    spec_t       seq;
 } seq_t;
 
 /* ARBNO state (from bb_arbno.c) */
 #define ARBNO_STACK_MAX 64
-typedef struct { str_t ARBNO; int saved_Δ; } arbno_frame_t;
+typedef struct { spec_t ARBNO; int saved_Δ; } arbno_frame_t;
 typedef struct {
     bb_box_fn    body_fn;
     void        *body_ζ;
@@ -114,8 +114,8 @@ static char output_buf[2048];
 static int  output_pos = 0;
 
     /* collect: write_str + write_nl (as test_sno_1.c does in ARBNO_γ) */
-    static str_t write_str_nl_collect(str_t s) {
-        if (!is_empty(s)) {
+    static spec_t write_str_nl_collect(spec_t s) {
+        if (!spec_is_empty(s)) {
             memcpy(output_buf + output_pos, s.σ, (size_t)s.δ);
             output_pos += s.δ;
             output_buf[output_pos++] = '\n';  /* write_str */
@@ -184,25 +184,25 @@ int main(void)
 
     /* POS(0) */
     pos_t *pos0 = &pos0_ζ;
-    str_t pos_r = bb_pos(&pos0, α);
-    if (is_empty(pos_r)) goto driver_ω;
+    spec_t pos_r = bb_pos(&pos0, α);
+    if (spec_is_empty(pos_r)) goto driver_ω;
 
     /* ARBNO loop: collect each γ, then check RPOS(0) */
     {
         arbno_t *arb = &arbno_ζ;
-        str_t arb_r  = bb_arbno(&arb, α);
+        spec_t arb_r  = bb_arbno(&arb, α);
         while (1) {
-            if (is_empty(arb_r)) break;
+            if (spec_is_empty(arb_r)) break;
 
             /* ARBNO_γ: write_str(out, ARBNO); write_nl(out) */
             write_str_nl_collect(arb_r);
 
             /* RPOS(0) check */
             rpos_t *rp = &rpos0_ζ;
-            str_t rpos_r = bb_rpos(&rp, α);
-            if (!is_empty(rpos_r)) {
+            spec_t rpos_r = bb_rpos(&rp, α);
+            if (!spec_is_empty(rpos_r)) {
                 /* seq_γ: write_str(out, seq) — final full match, no write_nl */
-                if (!is_empty(arb_r)) {
+                if (!spec_is_empty(arb_r)) {
                     memcpy(output_buf + output_pos, arb_r.σ, (size_t)arb_r.δ);
                     output_pos += arb_r.δ;
                     output_buf[output_pos++] = '\n';

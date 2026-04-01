@@ -14,10 +14,10 @@
  *     ─────────────────────────────────────────────────────────
  *     LIT_α:              length check                   → ω if too short
  *                         byte-by-byte match             → ω on mismatch
- *                         LIT = str(Σ+Δ, len); Δ += len; → LIT_γ
+ *                         LIT = spec(Σ+Δ, len); Δ += len; → LIT_γ
  *     LIT_β:              Δ -= len;                      → LIT_ω
  *     LIT_γ:              return LIT;
- *     LIT_ω:              return empty;
+ *     LIT_ω:              return spec_empty;
  *
  * State ζ: saved cursor advance (= lit_len, for β restore).
  * Since lit_len is known at box-build time, ζ can hold it directly;
@@ -36,12 +36,12 @@ typedef struct {
 
 /* ── bb_lit ──────────────────────────────────────────────────────────────── */
 /*
- * str_t bb_lit(lit_t **ζζ, int entry)
+ * spec_t bb_lit(lit_t **ζζ, int entry)
  *
  * ζζ must point to a lit_t pre-filled with lit/len before first α call.
  * (Unlike named patterns, LIT has no dynamic state beyond the literal itself.)
  */
-str_t bb_lit(lit_t **ζζ, int entry)
+spec_t bb_lit(lit_t **ζζ, int entry)
 {
     lit_t *ζ = *ζζ;
 
@@ -49,18 +49,18 @@ str_t bb_lit(lit_t **ζζ, int entry)
     if (entry == β)                                     goto LIT_β;
 
     /*------------------------------------------------------------------------*/
-    str_t         LIT;
+    spec_t         LIT;
 
     LIT_α:        if (Δ + ζ->len > Ω)                  goto LIT_ω;
                   if (memcmp(Σ + Δ, ζ->lit, (size_t)ζ->len) != 0)
                                                         goto LIT_ω;
-                  LIT = str(Σ+Δ, ζ->len); Δ += ζ->len; goto LIT_γ;
+                  LIT = spec(Σ+Δ, ζ->len); Δ += ζ->len; goto LIT_γ;
 
     LIT_β:        Δ -= ζ->len;                         goto LIT_ω;
 
     /*------------------------------------------------------------------------*/
     LIT_γ:        return LIT;
-    LIT_ω:        return empty;
+    LIT_ω:        return spec_empty;
 }
 
 /* ── bb_lit_new ──────────────────────────────────────────────────────────── */

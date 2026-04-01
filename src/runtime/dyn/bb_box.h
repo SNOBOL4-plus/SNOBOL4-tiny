@@ -41,19 +41,19 @@
  * empty (σ == NULL) signals failure (ω port fired).
  * This matches test_sno_*.c exactly.
  */
-typedef struct { const char *σ; int δ; } str_t;
+typedef struct { const char *σ; int δ; } spec_t;
 
 /* The failure sentinel */
-static const str_t empty = { (const char *)0, 0 };
+static const spec_t spec_empty = { (const char *)0, 0 };
 
 /* Construct a str_t from pointer and length */
-static inline str_t str(const char *σ, int δ) { return (str_t){ σ, δ }; }
+static inline spec_t spec(const char *σ, int δ) { return (spec_t){ σ, δ }; }
 
 /* Concatenate two substrings (they must be contiguous in the subject) */
-static inline str_t cat(str_t x, str_t y)     { return (str_t){ x.σ, x.δ + y.δ }; }
+static inline spec_t spec_cat(spec_t x, spec_t y)   { return (spec_t){ x.σ, x.δ + y.δ }; }
 
 /* Test for failure sentinel */
-static inline bool is_empty(str_t x)           { return x.σ == (const char *)0; }
+static inline bool spec_is_empty(spec_t x)           { return x.σ == (const char *)0; }
 
 /* ── entry ports ────────────────────────────────────────────────────────── */
 static const int α = 0;   /* fresh entry */
@@ -88,8 +88,8 @@ static inline void *bb_enter(void **ζζ, size_t size) {
 /* ── box function signature ──────────────────────────────────────────────── */
 /*
  * Every box is called as:
- *   str_t result = BoxName(&ζ, α);   // fresh
- *   str_t result = BoxName(&ζ, β);   // backtrack
+ *   spec_t result = BoxName(&ζ, α);   // fresh
+ *   spec_t result = BoxName(&ζ, β);   // backtrack
  *
  * Caller checks is_empty(result) to know if γ or ω fired.
  * The λ dispatch idiom (from test_sno_3.c):
@@ -99,6 +99,6 @@ static inline void *bb_enter(void **ζζ, size_t size) {
  *   BoxName_λ:  if (is_empty(BoxName))            goto BoxName_ω;
  *               else                              goto BoxName_γ;
  */
-typedef str_t (*bb_box_fn)(void **ζζ, int entry);
+typedef spec_t (*bb_box_fn)(void **ζζ, int entry);
 
 #endif /* BB_BOX_H */

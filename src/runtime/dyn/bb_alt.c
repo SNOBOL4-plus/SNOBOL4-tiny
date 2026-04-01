@@ -20,7 +20,7 @@
  *     child_α_ω:          alt_i++; Δ=saved_Δ;           → child[alt_i-1]_α / ALT_ω
  *     child_β_γ:          result=child_result;           → ALT_γ
  *     ALT_γ:              return result;
- *     ALT_ω:              return empty;
+ *     ALT_ω:              return spec_empty;
  */
 
 #include "bb_box.h"
@@ -38,11 +38,11 @@ typedef struct {
     bb_child_t children[BB_ALT_MAX];
     int        alt_i;       /* which child is currently live (1-based) */
     int        saved_Δ;     /* cursor at ALT_α entry */
-    str_t      result;
+    spec_t      result;
 } alt_t;
 
 /* ── bb_alt ──────────────────────────────────────────────────────────────── */
-str_t bb_alt(alt_t **ζζ, int entry)
+spec_t bb_alt(alt_t **ζζ, int entry)
 {
     alt_t *ζ = *ζζ;
 
@@ -50,18 +50,18 @@ str_t bb_alt(alt_t **ζζ, int entry)
     if (entry == β)                                     goto ALT_β;
 
     /*------------------------------------------------------------------------*/
-    str_t         child_result;
+    spec_t         child_result;
 
     ALT_α:        ζ->saved_Δ = Δ;
                   ζ->alt_i   = 1;
                   child_result = ζ->children[0].fn(&ζ->children[0].ζ, α);
-                  if (is_empty(child_result))           goto child_α_ω;
+                  if (spec_is_empty(child_result))           goto child_α_ω;
                   else                                  goto child_α_γ;
 
     ALT_β:        /* ask the child that last succeeded to undo — never try next */
                   child_result = ζ->children[ζ->alt_i-1].fn(
                                      &ζ->children[ζ->alt_i-1].ζ, β);
-                  if (is_empty(child_result))           goto ALT_ω;
+                  if (spec_is_empty(child_result))           goto ALT_ω;
                   else                                  goto child_β_γ;
 
     child_α_γ:    ζ->result = child_result;             goto ALT_γ;
@@ -72,14 +72,14 @@ str_t bb_alt(alt_t **ζζ, int entry)
                   Δ = ζ->saved_Δ;
                   child_result = ζ->children[ζ->alt_i-1].fn(
                                      &ζ->children[ζ->alt_i-1].ζ, α);
-                  if (is_empty(child_result))           goto child_α_ω;
+                  if (spec_is_empty(child_result))           goto child_α_ω;
                   else                                  goto child_α_γ;
 
     child_β_γ:    ζ->result = child_result;             goto ALT_γ;
 
     /*------------------------------------------------------------------------*/
     ALT_γ:        return ζ->result;
-    ALT_ω:        return empty;
+    ALT_ω:        return spec_empty;
 }
 
 /* ── bb_alt_new ──────────────────────────────────────────────────────────── */
