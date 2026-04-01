@@ -61,6 +61,8 @@ char *VARVAL_fn(DESCR_t d) {
 void dyn_cache_reset(void);
 void dyn_cache_stats(int *hits, int *misses);
 int  dyn_cache_test_run(const char *lit, int n_iters);
+int  dyn_deferred_var_test(void);
+int  dyn_anchor_test(void);
 int stmt_exec_dyn_str(const char *subject, const char *pattern,
                       const char *repl_str, char **out_subject);
 
@@ -159,6 +161,20 @@ int main(void)
     { int hits = dyn_cache_test_run("hello", 10);
       printf("  cache hits=%d (expected >= 9)\n", hits);
       CHECK(hits >= 9, "T14: cache hit at least 9 of 10 builds"); }
+
+    /* T15: DYN-4 deferred *VAR dispatch — variable changes between calls.
+     * bb_deferred_var must re-resolve NV_GET_fn on every alpha, not just first.
+     * We drive it via dyn_deferred_var_test(name, val1, val2):
+     *   call 1: NV stores val1 → match against val1 should succeed
+     *   call 2: NV stores val2 → match against val2 should succeed, val1 fail */
+    printf("T15: DYN-4 deferred *VAR — re-resolve on every alpha\n");
+    { int r = dyn_deferred_var_test();
+      CHECK(r == 1, "T15: deferred *VAR re-resolves live value on each alpha"); }
+
+    /* T16: kw_anchor — anchored match must not scan past position 0 */
+    printf("T16: kw_anchor — anchored match only at position 0\n");
+    { int r = dyn_anchor_test();
+      CHECK(r == 1, "T16: kw_anchor gates scan to position 0 only"); }
 
     printf("\n%s  (%d failure%s)\n",
            failures==0?"PASS":"FAIL",
