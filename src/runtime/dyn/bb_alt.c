@@ -19,8 +19,8 @@
  *     child_α_γ:          result=child_result;           → ALT_γ
  *     child_α_ω:          alt_i++; Δ=saved_Δ;           → child[alt_i-1]_α / ALT_ω
  *     child_β_γ:          result=child_result;           → ALT_γ
- *     ALT_γ:              return result;
- *     ALT_ω:              return spec_empty;
+                      *     ALT_γ:                            return result;
+                      *     ALT_ω:                            return spec_empty;
  */
 
 #pragma GCC diagnostic ignored "-Wmisleading-indentation"
@@ -47,8 +47,8 @@ spec_t bb_alt(alt_t **ζζ, int entry)
 {
     alt_t *ζ = *ζζ;
 
-    if (entry == α)                                     goto ALT_α;
-    if (entry == β)                                     goto ALT_β;
+    if (entry == α)                                 goto ALT_α;
+    if (entry == β)                                 goto ALT_β;
 
     /*------------------------------------------------------------------------*/
     spec_t         child_result;
@@ -56,31 +56,31 @@ spec_t bb_alt(alt_t **ζζ, int entry)
     ALT_α:        ζ->saved_Δ = Δ;
                   ζ->alt_i   = 1;
                   child_result = ζ->children[0].fn(&ζ->children[0].ζ, α);
-                  if (spec_is_empty(child_result))           goto child_α_ω;
-                  else                                  goto child_α_γ;
+                      if (spec_is_empty(child_result))        goto child_α_ω;
+                      else                                    goto child_α_γ;
 
     ALT_β:        /* ask the child that last succeeded to undo — never try next */
                   child_result = ζ->children[ζ->alt_i-1].fn(
                                      &ζ->children[ζ->alt_i-1].ζ, β);
-                  if (spec_is_empty(child_result))           goto ALT_ω;
-                  else                                  goto child_β_γ;
+                      if (spec_is_empty(child_result))        goto ALT_ω;
+                      else                                    goto child_β_γ;
 
-    child_α_γ:    ζ->result = child_result;             goto ALT_γ;
+    child_α_γ:        ζ->result = child_result;               goto ALT_γ;
 
     child_α_ω:    /* current child exhausted on α path — try next alternative */
                   ζ->alt_i++;
-                  if (ζ->alt_i > ζ->n)                 goto ALT_ω;
+                      if (ζ->alt_i > ζ->n)                    goto ALT_ω;
                   Δ = ζ->saved_Δ;
                   child_result = ζ->children[ζ->alt_i-1].fn(
                                      &ζ->children[ζ->alt_i-1].ζ, α);
-                  if (spec_is_empty(child_result))           goto child_α_ω;
-                  else                                  goto child_α_γ;
+                      if (spec_is_empty(child_result))        goto child_α_ω;
+                      else                                    goto child_α_γ;
 
-    child_β_γ:    ζ->result = child_result;             goto ALT_γ;
+    child_β_γ:        ζ->result = child_result;               goto ALT_γ;
 
     /*------------------------------------------------------------------------*/
-    ALT_γ:        return ζ->result;
-    ALT_ω:        return spec_empty;
+    ALT_γ:                                                    return ζ->result;
+    ALT_ω:                                                    return spec_empty;
 }
 
 /* ── bb_alt_new ──────────────────────────────────────────────────────────── */

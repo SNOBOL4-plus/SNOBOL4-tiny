@@ -424,12 +424,20 @@ extern spec_t bb_seq   (void **ζζ, int entry);
 extern spec_t bb_arbno (void **ζζ, int entry);
 extern spec_t bb_pos   (void **ζζ, int entry);
 extern spec_t bb_rpos  (void **ζζ, int entry);
+extern spec_t bb_tab   (void **ζζ, int entry);
+extern spec_t bb_rtab  (void **ζζ, int entry);
+extern spec_t bb_fence (void **ζζ, int entry);
+extern spec_t bb_abort (void **ζζ, int entry);
 
-/* lit_t / alt_t / seq_t / arbno_t / pos_t / rpos_t layouts
+/* lit_t / alt_t / seq_t / arbno_t / pos_t / rpos_t / tab_t / fence_t layouts
  * mirror the structs in the dyn/ box files exactly */
 typedef struct { const char *lit; int len; }   _lit_t;
 typedef struct { int n; }                       _pos_t;
 typedef struct { int n; }                       _rpos_t;
+typedef struct { int n; int advance; }          _tab_t;
+typedef struct { int n; int advance; }          _rtab_t;
+typedef struct { int fired; }                   _fence_t;
+typedef struct { int dummy; }                   _abort_t;
 
 #define BB_ALT_MAX_S 16
 typedef struct { bb_box_fn fn; void *ζ; }       _bchild_t;
@@ -693,39 +701,46 @@ static bb_node_t bb_build(_PND_t *p)
         break;
     }
 
-    /* ── TAB(n) — advance cursor to absolute position n ─────────────── */
+    /* ── TAB(n) — advance cursor TO absolute position n ─────────────── */
     case _XTB: {
-        /* TAB(n): like POS but anchors to absolute tab stop.
-         * Implemented as: if (Δ <= n) Δ=n; else ω */
-        _pos_t *ζ = calloc(1, sizeof(_pos_t));
+        /* TAB(n): if Δ <= n, advance Δ to n (zero-width match at n).
+         * Distinct from POS(n): POS requires Δ==n; TAB allows Δ<=n. */
+        _tab_t *ζ = calloc(1, sizeof(_tab_t));
         ζ->n = (int)p->num;
-        /* reuse POS box: POS(n) already checks Δ==n.
-         * TAB is slightly different (allows Δ <= n, advances to n).
-         * For DYN-3 correctness we use POS semantics; TAB optimisation
-         * is M-DYN-4. */
-        n.fn = (bb_box_fn)bb_pos;
+        n.fn = (bb_box_fn)bb_tab;
         n.ζ  = ζ;
         break;
     }
 
-    /* ── RTAB(n) — advance to (Ω-n) from right ─────────────────────── */
+    /* ── RTAB(n) — advance cursor TO position (Ω-n) from right ──────── */
     case _XRTB: {
-        _rpos_t *ζ = calloc(1, sizeof(_rpos_t));
+        _rtab_t *ζ = calloc(1, sizeof(_rtab_t));
         ζ->n = (int)p->num;
-        n.fn = (bb_box_fn)bb_rpos;
+        n.fn = (bb_box_fn)bb_rtab;
         n.ζ  = ζ;
         break;
     }
 
-    /* ── FENCE / ABORT / BAL: fall back to epsilon/fail for DYN-3 ───── */
-    case _XFNCE:
-    case _XABRT:
+    /* ── FENCE — cut: γ on α, ω on all β (no backtrack across fence) ── */
+    case _XFNCE: {
+        _fence_t *ζ = calloc(1, sizeof(_fence_t));
+        n.fn = (bb_box_fn)bb_fence;
+        n.ζ  = ζ;
+        break;
+    }
+
+    /* ── ABORT — immediate match failure, no backtracking ───────────── */
+    case _XABRT: {
+        _abort_t *ζ = calloc(1, sizeof(_abort_t));
+        n.fn = (bb_box_fn)bb_abort;
+        n.ζ  = ζ;
+        break;
+    }
+
+    /* ── BAL / ATP / unimplemented: epsilon stub (logged) ───────────── */
     case _XBAL:
     case _XATP:
     default: {
-        /* Unimplemented in DYN-3: use epsilon (safe — may give wrong
-         * results for these constructs but will not crash or regress
-         * the static path).  Logged for tracking. */
         fprintf(stderr, "stmt_exec: unimplemented XKIND %d — using epsilon\n",
                 (int)p->kind);
         eps_t *ζ = calloc(1, sizeof(eps_t));

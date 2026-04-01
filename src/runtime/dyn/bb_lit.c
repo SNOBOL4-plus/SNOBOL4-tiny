@@ -16,8 +16,8 @@
  *                         byte-by-byte match             → ω on mismatch
  *                         LIT = spec(Σ+Δ, len); Δ += len; → LIT_γ
  *     LIT_β:              Δ -= len;                      → LIT_ω
- *     LIT_γ:              return LIT;
- *     LIT_ω:              return spec_empty;
+                      *     LIT_γ:                            return LIT;
+                      *     LIT_ω:                            return spec_empty;
  *
  * State ζ: saved cursor advance (= lit_len, for β restore).
  * Since lit_len is known at box-build time, ζ can hold it directly;
@@ -45,22 +45,22 @@ spec_t bb_lit(lit_t **ζζ, int entry)
 {
     lit_t *ζ = *ζζ;
 
-    if (entry == α)                                     goto LIT_α;
-    if (entry == β)                                     goto LIT_β;
+    if (entry == α)                                 goto LIT_α;
+    if (entry == β)                                 goto LIT_β;
 
     /*------------------------------------------------------------------------*/
     spec_t         LIT;
 
-    LIT_α:        if (Δ + ζ->len > Ω)                  goto LIT_ω;
+    LIT_α:            if (Δ + ζ->len > Ω)                     goto LIT_ω;
                   if (memcmp(Σ + Δ, ζ->lit, (size_t)ζ->len) != 0)
-                                                        goto LIT_ω;
-                  LIT = spec(Σ+Δ, ζ->len); Δ += ζ->len; goto LIT_γ;
+                                                              goto LIT_ω;
+                      LIT = spec(Σ+Δ, ζ->len); Δ += ζ->len;   goto LIT_γ;
 
-    LIT_β:        Δ -= ζ->len;                         goto LIT_ω;
+    LIT_β:            Δ -= ζ->len;                            goto LIT_ω;
 
     /*------------------------------------------------------------------------*/
-    LIT_γ:        return LIT;
-    LIT_ω:        return spec_empty;
+    LIT_γ:                                                    return LIT;
+    LIT_ω:                                                    return spec_empty;
 }
 
 /* ── bb_lit_new ──────────────────────────────────────────────────────────── */

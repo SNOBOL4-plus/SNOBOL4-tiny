@@ -20,8 +20,8 @@
  *     alt_ω:              if (ARBNO_i <= 0)              → ARBNO_ω
  *                         ARBNO_i--; ζ = &stack[ARBNO_i];→ alt_β    (backtrack into body)
  *
- *     ARBNO_γ:            return ARBNO;
- *     ARBNO_ω:            return spec_empty;
+                      *     ARBNO_γ:                          return ARBNO;
+                      *     ARBNO_ω:                          return spec_empty;
  *
  * The ARBNO stack records one entry per successful body match.
  * On β, we walk back through the stack retrying each body iteration.
@@ -53,8 +53,8 @@ spec_t bb_arbno(arbno_t **ζζ, int entry)
 {
     arbno_t *ζ = *ζζ;
 
-    if (entry == α)                                     goto ARBNO_α;
-    if (entry == β)                                     goto ARBNO_β;
+    if (entry == α)                                 goto ARBNO_α;
+    if (entry == β)                                 goto ARBNO_β;
 
     /*------------------------------------------------------------------------*/
     spec_t             ARBNO;
@@ -66,8 +66,8 @@ spec_t bb_arbno(arbno_t **ζζ, int entry)
                   frame->ARBNO        = spec(Σ+Δ, 0);
                   frame->saved_Δ      = Δ;
                   body_r = ζ->body_fn(&ζ->body_ζ, α);
-                  if (spec_is_empty(body_r))                 goto body_ω;
-                  else                                  goto body_γ;
+                      if (spec_is_empty(body_r))              goto body_ω;
+                      else                                    goto body_γ;
 
     ARBNO_β:      ζ->ARBNO_i++;
                   frame               = &ζ->stack[ζ->ARBNO_i];
@@ -75,29 +75,29 @@ spec_t bb_arbno(arbno_t **ζζ, int entry)
                   frame->saved_Δ      = Δ;
                   /* try to match body one more time */
                   body_r = ζ->body_fn(&ζ->body_ζ, α);
-                  if (spec_is_empty(body_r))                 goto body_ω;
-                  else                                  goto body_γ;
+                      if (spec_is_empty(body_r))              goto body_ω;
+                      else                                    goto body_γ;
 
     body_γ:       frame  = &ζ->stack[ζ->ARBNO_i];
                   /* zero-advance guard */
-                  if (Δ == frame->saved_Δ)              goto ARBNO_γ_now;
+                      if (Δ == frame->saved_Δ)                goto ARBNO_γ_now;
                   ARBNO  = spec_cat(frame->ARBNO, body_r);
-                  ζ->stack[ζ->ARBNO_i].ARBNO = ARBNO;  goto ARBNO_γ_now;
+                      ζ->stack[ζ->ARBNO_i].ARBNO = ARBNO;     goto ARBNO_γ_now;
 
-    ARBNO_γ_now:  ARBNO  = ζ->stack[ζ->ARBNO_i].ARBNO; goto ARBNO_γ;
+    ARBNO_γ_now:      ARBNO  = ζ->stack[ζ->ARBNO_i].ARBNO;    goto ARBNO_γ;
 
-    body_ω:       if (ζ->ARBNO_i <= 0)                 goto ARBNO_ω;
+    body_ω:           if (ζ->ARBNO_i <= 0)                    goto ARBNO_ω;
                   ζ->ARBNO_i--;
                   frame  = &ζ->stack[ζ->ARBNO_i];
                   /* restore cursor to before this failed iteration */
                   Δ      = frame->saved_Δ;
                   body_r = ζ->body_fn(&ζ->body_ζ, β);
-                  if (spec_is_empty(body_r))                 goto body_ω;
-                  else                                  goto body_γ;
+                      if (spec_is_empty(body_r))              goto body_ω;
+                      else                                    goto body_γ;
 
     /*------------------------------------------------------------------------*/
-    ARBNO_γ:      return ARBNO;
-    ARBNO_ω:      return spec_empty;
+    ARBNO_γ:                                                  return ARBNO;
+    ARBNO_ω:                                                  return spec_empty;
 }
 
 /* ── bb_arbno_new ────────────────────────────────────────────────────────── */
