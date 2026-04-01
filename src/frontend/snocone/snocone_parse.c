@@ -34,7 +34,13 @@
 typedef struct { SnoconeKind kind; int lp; int rp; } PrecEntry;
 
 static const PrecEntry PREC_TABLE[] = {
-    { SNOCONE_ASSIGN,      1,  2 },
+    { SNOCONE_ASSIGN,          1,  2 },
+    { SNOCONE_PLUS_ASSIGN,     1,  2 },
+    { SNOCONE_MINUS_ASSIGN,    1,  2 },
+    { SNOCONE_STAR_ASSIGN,     1,  2 },
+    { SNOCONE_SLASH_ASSIGN,    1,  2 },
+    { SNOCONE_PERCENT_ASSIGN,  1,  2 },
+    { SNOCONE_CARET_ASSIGN,    1,  2 },
     { SNOCONE_QUESTION,    2,  2 },
     { SNOCONE_PIPE,        3,  3 },
     { SNOCONE_OR,          4,  4 },
