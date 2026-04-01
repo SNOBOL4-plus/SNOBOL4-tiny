@@ -95,27 +95,34 @@ function _int_if_possible(n) {
 }
 
 function _add(a, b) {
+    if (a === _FAIL || b === _FAIL) return _FAIL;
     const an = _num(a), bn = _num(b);
     const r = an + bn;
     return (_is_int(a) && _is_int(b)) ? Math.trunc(r) : r;
 }
 function _sub(a, b) {
+    if (a === _FAIL || b === _FAIL) return _FAIL;
     const an = _num(a), bn = _num(b);
     const r = an - bn;
     return (_is_int(a) && _is_int(b)) ? Math.trunc(r) : r;
 }
 function _mul(a, b) {
+    if (a === _FAIL || b === _FAIL) return _FAIL;
     const an = _num(a), bn = _num(b);
     const r = an * bn;
     return (_is_int(a) && _is_int(b)) ? Math.trunc(r) : r;
 }
 function _div(a, b) {
+    if (a === _FAIL || b === _FAIL) return _FAIL;
     const an = _num(a), bn = _num(b);
     if (bn === 0) throw new Error('SNOBOL4: division by zero');
     if (_is_int(a) && _is_int(b)) return Math.trunc(an / bn);
     return an / bn;
 }
-function _pow(a, b) { return _int_if_possible(Math.pow(_num(a), _num(b))); }
+function _pow(a, b) {
+    if (a === _FAIL || b === _FAIL) return _FAIL;
+    return _int_if_possible(Math.pow(_num(a), _num(b)));
+}
 function _uplus(a)  { return _num(a); }
 
 /* -----------------------------------------------------------------------
@@ -123,6 +130,7 @@ function _uplus(a)  { return _num(a); }
  * ----------------------------------------------------------------------- */
 
 function _cat(...args) {
+    for (const a of args) if (a === _FAIL) return _FAIL;
     return args.map(_str).join('');
 }
 
@@ -165,27 +173,27 @@ const _builtins = {
         const eq = (_is_numeric(a) && _is_numeric(b))
             ? _num(a) === _num(b)
             : _str(a) === _str(b);
-        return eq ? _str(a) : _FAIL;
+        return eq ? '' : _FAIL;
     },
     DIFFER(args)  {
         const a = args[0], b = args[1];
         const eq = (_is_numeric(a) && _is_numeric(b))
             ? _num(a) === _num(b)
             : _str(a) === _str(b);
-        return eq ? _FAIL : _str(a);
+        return eq ? _FAIL : '';
     },
-    LT(args)      { return _num(args[0])<_num(args[1])   ? _str(args[0]) : _FAIL; },
-    LE(args)      { return _num(args[0])<=_num(args[1])  ? _str(args[0]) : _FAIL; },
-    GT(args)      { return _num(args[0])>_num(args[1])   ? _str(args[0]) : _FAIL; },
-    GE(args)      { return _num(args[0])>=_num(args[1])  ? _str(args[0]) : _FAIL; },
-    EQ(args)      { return _num(args[0])===_num(args[1]) ? _str(args[0]) : _FAIL; },
-    NE(args)      { return _num(args[0])!==_num(args[1]) ? _str(args[0]) : _FAIL; },
-    LGT(args)     { return _str(args[0]) >  _str(args[1]) ? _str(args[0]) : _FAIL; },
-    LLT(args)     { return _str(args[0]) <  _str(args[1]) ? _str(args[0]) : _FAIL; },
-    LGE(args)     { return _str(args[0]) >= _str(args[1]) ? _str(args[0]) : _FAIL; },
-    LLE(args)     { return _str(args[0]) <= _str(args[1]) ? _str(args[0]) : _FAIL; },
-    LEQ(args)     { return _str(args[0]) === _str(args[1]) ? _str(args[0]) : _FAIL; },
-    LNE(args)     { return _str(args[0]) !== _str(args[1]) ? _str(args[0]) : _FAIL; },
+    LT(args)      { return _num(args[0])<_num(args[1])    ? '' : _FAIL; },
+    LE(args)      { return _num(args[0])<=_num(args[1])   ? '' : _FAIL; },
+    GT(args)      { return _num(args[0])>_num(args[1])    ? '' : _FAIL; },
+    GE(args)      { return _num(args[0])>=_num(args[1])   ? '' : _FAIL; },
+    EQ(args)      { return _num(args[0])===_num(args[1])  ? '' : _FAIL; },
+    NE(args)      { return _num(args[0])!==_num(args[1])  ? '' : _FAIL; },
+    LGT(args)     { return _str(args[0]) >  _str(args[1]) ? '' : _FAIL; },
+    LLT(args)     { return _str(args[0]) <  _str(args[1]) ? '' : _FAIL; },
+    LGE(args)     { return _str(args[0]) >= _str(args[1]) ? '' : _FAIL; },
+    LLE(args)     { return _str(args[0]) <= _str(args[1]) ? '' : _FAIL; },
+    LEQ(args)     { return _str(args[0]) === _str(args[1]) ? '' : _FAIL; },
+    LNE(args)     { return _str(args[0]) !== _str(args[1]) ? '' : _FAIL; },
     INTEGER(args) { const n=Number(args[0]); return Number.isInteger(n) ? n : _FAIL; },
     REAL(args)    { const n=Number(args[0]); return isFinite(n) ? n : _FAIL; },
     CONVERT(args) { /* basic: return arg[0] */ return args[0]; },
@@ -201,6 +209,7 @@ const _builtins = {
     UPPER(args)   { return _str(args[0]).toUpperCase(); },
     LOWER(args)   { return _str(args[0]).toLowerCase(); },
     ABORT(args)   { process.exit(1); },
+    TIME(args)    { return Date.now(); },
     FENCE(args)   { return args[0] !== undefined ? args[0] : ''; },
     FAIL(args)    { return _FAIL; },
     SUCCEED(args) { return args[0] !== undefined ? args[0] : ''; },

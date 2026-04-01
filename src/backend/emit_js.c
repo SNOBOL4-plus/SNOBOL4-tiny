@@ -1070,6 +1070,18 @@ void js_emit(Program *prog, FILE *f) {
                 syn_label = malloc(32);
                 snprintf(syn_label, 32, "_c%d", cid);
                 J("    return goto_%s;\n}\n\n", jv(syn_label));
+            } else if (nx && nx->label && !nx->is_end && s->go &&
+                       !s->go->uncond &&
+                       !(s->go->onsuccess && s->go->onsuccess[0] &&
+                         s->go->onfailure && s->go->onfailure[0])) {
+                /* Conditional-only goto (:S or :F but not both) — the
+                 * untaken branch must fall through to the next label. */
+                J("    return goto_%s;\n}\n\n", jv(nx->label));
+            } else if (nx && nx->is_end && s->go &&
+                       !s->go->uncond &&
+                       !(s->go->onsuccess && s->go->onsuccess[0] &&
+                         s->go->onfailure && s->go->onfailure[0])) {
+                J("    return goto_%s;\n}\n\n", jv("END"));
             } else {
                 J("}\n\n");
             }
