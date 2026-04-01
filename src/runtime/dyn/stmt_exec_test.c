@@ -5,7 +5,7 @@
  * Uses STMT_EXEC_STANDALONE to compile stmt_exec.c without snobol4.h.
  *
  * Build (from one4all/):
- *   gcc -Wall -Wno-unused-label -Wno-unused-variable -g -O0 \
+ *   gcc -Wall -Wno-unused-label -Wno-unused-variable -Wno-misleading-indentation -g -O0 \
  *       -DSTMT_EXEC_STANDALONE \
  *       -I src/runtime/dyn \
  *       src/runtime/dyn/bb_lit.c   \
@@ -13,6 +13,8 @@
  *       src/runtime/dyn/bb_seq.c   \
  *       src/runtime/dyn/bb_arbno.c \
  *       src/runtime/dyn/bb_pos.c   \
+ *       src/runtime/dyn/bb_tab.c   \
+ *       src/runtime/dyn/bb_fence.c \
  *       src/runtime/dyn/stmt_exec.c \
  *       src/runtime/dyn/stmt_exec_test.c \
  *       -o stmt_exec_test

@@ -325,11 +325,11 @@ static spec_t bb_eps(eps_t **ζζ, int entry)
 }
 
 /* ── DEFERRED VAR box — forward declared; defined after bb_build ────────── */
-#define DVAR_CHILD_STATE_MAX 4096   /* upper bound for child box state memset */
 typedef struct {
     const char  *name;
     bb_box_fn    child_fn;
     void        *child_ζ;
+    size_t       child_ζ_size; /* sizeof(*child_ζ) — set at first α; used for memset reset */
 } deferred_var_t;
 /* bb_deferred_var() defined after bb_build (needs bb_node_t) */
 static spec_t bb_deferred_var(deferred_var_t **ζζ, int entry);
@@ -408,6 +408,7 @@ static spec_t bb_capture(capture_t **ζζ, int entry)
 typedef struct {
     bb_box_fn  fn;
     void      *ζ;
+    size_t     ζ_size;     /* sizeof(*ζ) — stored at calloc site for safe memset */
 } bb_node_t;
 
 /* forward declaration for recursion */
@@ -472,6 +473,7 @@ static bb_node_t bb_build(_PND_t *p)
         eps_t *ζ = calloc(1, sizeof(eps_t));
         n.fn = (bb_box_fn)bb_eps;
         n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
                                                               return n;
     }
 
@@ -484,6 +486,7 @@ static bb_node_t bb_build(_PND_t *p)
         ζ->len = (int)strlen(ζ->lit);
         n.fn = (bb_box_fn)bb_lit;
         n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
         break;
     }
 
@@ -493,6 +496,7 @@ static bb_node_t bb_build(_PND_t *p)
         ζ->n = (int)p->num;
         n.fn = (bb_box_fn)bb_pos;
         n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
         break;
     }
 
@@ -502,6 +506,7 @@ static bb_node_t bb_build(_PND_t *p)
         ζ->n = (int)p->num;
         n.fn = (bb_box_fn)bb_rpos;
         n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
         break;
     }
 
@@ -511,6 +516,7 @@ static bb_node_t bb_build(_PND_t *p)
         ζ->n = (int)p->num;
         n.fn = (bb_box_fn)bb_len;
         n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
         break;
     }
 
@@ -520,6 +526,7 @@ static bb_node_t bb_build(_PND_t *p)
         ζ->chars = p->sval ? p->sval : "";
         n.fn = (bb_box_fn)bb_span;
         n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
         break;
     }
 
@@ -529,6 +536,7 @@ static bb_node_t bb_build(_PND_t *p)
         ζ->chars = p->sval ? p->sval : "";
         n.fn = (bb_box_fn)bb_brk;
         n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
         break;
     }
 
@@ -538,6 +546,7 @@ static bb_node_t bb_build(_PND_t *p)
         ζ->chars = p->sval ? p->sval : "";
         n.fn = (bb_box_fn)bb_any;
         n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
         break;
     }
 
@@ -547,6 +556,7 @@ static bb_node_t bb_build(_PND_t *p)
         ζ->chars = p->sval ? p->sval : "";
         n.fn = (bb_box_fn)bb_notany;
         n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
         break;
     }
 
@@ -555,6 +565,7 @@ static bb_node_t bb_build(_PND_t *p)
         arb_t *ζ = calloc(1, sizeof(arb_t));
         n.fn = (bb_box_fn)bb_arb;
         n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
         break;
     }
 
@@ -563,6 +574,7 @@ static bb_node_t bb_build(_PND_t *p)
         rem_t *ζ = calloc(1, sizeof(rem_t));
         n.fn = (bb_box_fn)bb_rem;
         n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
         break;
     }
 
@@ -571,6 +583,7 @@ static bb_node_t bb_build(_PND_t *p)
         succeed_t *ζ = calloc(1, sizeof(succeed_t));
         n.fn = (bb_box_fn)bb_succeed;
         n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
         break;
     }
 
@@ -579,6 +592,7 @@ static bb_node_t bb_build(_PND_t *p)
         fail_t *ζ = calloc(1, sizeof(fail_t));
         n.fn = (bb_box_fn)bb_fail;
         n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
         break;
     }
 
@@ -587,6 +601,7 @@ static bb_node_t bb_build(_PND_t *p)
         eps_t *ζ = calloc(1, sizeof(eps_t));
         n.fn = (bb_box_fn)bb_eps;
         n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
         break;
     }
 
@@ -599,6 +614,7 @@ static bb_node_t bb_build(_PND_t *p)
         ζ->right.fn = r.fn; ζ->right.ζ = r.ζ;
         n.fn = (bb_box_fn)bb_seq;
         n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
         break;
     }
 
@@ -629,6 +645,7 @@ static bb_node_t bb_build(_PND_t *p)
         ζ->n = nc;
         n.fn = (bb_box_fn)bb_alt;
         n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
         break;
     }
 
@@ -640,6 +657,7 @@ static bb_node_t bb_build(_PND_t *p)
         ζ->body_ζ  = body.ζ;
         n.fn = (bb_box_fn)bb_arbno;
         n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
         break;
     }
 
@@ -654,6 +672,7 @@ static bb_node_t bb_build(_PND_t *p)
         register_capture(ζ);
         n.fn = (bb_box_fn)bb_capture;
         n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
         break;
     }
 
@@ -668,6 +687,7 @@ static bb_node_t bb_build(_PND_t *p)
         register_capture(ζ);
         n.fn = (bb_box_fn)bb_capture;
         n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
         break;
     }
 
@@ -690,13 +710,17 @@ static bb_node_t bb_build(_PND_t *p)
             ζ->name     = name;
             ζ->child_fn = NULL;
             ζ->child_ζ  = NULL;
-            n.fn = (bb_box_fn)bb_deferred_var;
-            n.ζ  = ζ;
+            ζ->child_ζ_size = 0;
+            n.fn     = (bb_box_fn)bb_deferred_var;
+            n.ζ      = ζ;
+            n.ζ_size = sizeof(deferred_var_t);
+        n.ζ_size = sizeof(*ζ);
         } else {
             /* no name — epsilon (degenerate, shouldn't arise) */
             eps_t *ζ = calloc(1, sizeof(eps_t));
             n.fn = (bb_box_fn)bb_eps;
             n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
         }
         break;
     }
@@ -709,6 +733,7 @@ static bb_node_t bb_build(_PND_t *p)
         ζ->n = (int)p->num;
         n.fn = (bb_box_fn)bb_tab;
         n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
         break;
     }
 
@@ -718,6 +743,7 @@ static bb_node_t bb_build(_PND_t *p)
         ζ->n = (int)p->num;
         n.fn = (bb_box_fn)bb_rtab;
         n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
         break;
     }
 
@@ -726,6 +752,7 @@ static bb_node_t bb_build(_PND_t *p)
         _fence_t *ζ = calloc(1, sizeof(_fence_t));
         n.fn = (bb_box_fn)bb_fence;
         n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
         break;
     }
 
@@ -734,6 +761,7 @@ static bb_node_t bb_build(_PND_t *p)
         _abort_t *ζ = calloc(1, sizeof(_abort_t));
         n.fn = (bb_box_fn)bb_abort;
         n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
         break;
     }
 
@@ -746,6 +774,7 @@ static bb_node_t bb_build(_PND_t *p)
         eps_t *ζ = calloc(1, sizeof(eps_t));
         n.fn = (bb_box_fn)bb_eps;
         n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
         break;
     }
     } /* switch */
@@ -777,19 +806,22 @@ static spec_t bb_deferred_var(deferred_var_t **ζζ, int entry)
                             _lit_t *lz = calloc(1, sizeof(_lit_t));
                             lz->lit = val.s;
                             lz->len = (int)strlen(val.s);
-                            child.fn = (bb_box_fn)bb_lit;
-                            child.ζ  = lz;
+                            child.fn     = (bb_box_fn)bb_lit;
+                            child.ζ      = lz;
+                            child.ζ_size = sizeof(_lit_t);
                         } else {
                             eps_t *ez = calloc(1, sizeof(eps_t));
-                            child.fn = (bb_box_fn)bb_eps;
-                            child.ζ  = ez;
+                            child.fn     = (bb_box_fn)bb_eps;
+                            child.ζ      = ez;
+                            child.ζ_size = sizeof(eps_t);
                         }
-                        ζ->child_fn = child.fn;
-                        ζ->child_ζ  = child.ζ;
+                        ζ->child_fn     = child.fn;
+                        ζ->child_ζ      = child.ζ;
+                        ζ->child_ζ_size = child.ζ_size;
                     } else {
                         /* Subsequent α: zero child state for fresh locals */
-                        if (ζ->child_ζ)
-                            memset(ζ->child_ζ, 0, DVAR_CHILD_STATE_MAX);
+                        if (ζ->child_ζ && ζ->child_ζ_size)
+                            memset(ζ->child_ζ, 0, ζ->child_ζ_size);
                     }
                     DVAR = ζ->child_fn(&ζ->child_ζ, α);
                     if (spec_is_empty(DVAR))                  goto DVAR_ω;
