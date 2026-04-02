@@ -2023,6 +2023,17 @@ static int nreturn_fns_has(const char *name) {
 }
 
 static void named_pat_reset(void) { named_pat_count = 0; nreturn_fns_reset(); }
+
+/* inv_pats — M-DYN-OPT: invariant PAT= assignments detected during Pass 2b.
+ * Each entry is a (varname, rhs EXPR_t*) pair whose pattern graph is fully
+ * static (no E_VAR/E_DEFER/capture in the subtree).  Pre-built once at
+ * program startup, before the first statement executes. */
+#define INV_PATS_MAX 128
+typedef struct { char varname[NAME_LEN]; EXPR_t *rhs; } InvPat;
+static InvPat inv_pats[INV_PATS_MAX];
+static int    inv_pat_count = 0;
+static void   inv_pats_reset(void) { inv_pat_count = 0; }
+
 /* str_vars — registry for plain-string variable assignments (VAR = 'literal').
  * Used by E_INDR (*VAR) when the variable holds a string, not a named pattern.
  * At compile time we know the literal value, so we emit an inline LIT. */
@@ -2434,6 +2445,25 @@ static int expr_is_pattern_expr(EXPR_t *e) {
     if (e->kind == E_CAPT_CUR) return 1;
     /* Any function call is a pattern expression */
     return expr_has_pattern_fn(e);
+}
+
+/* expr_is_invariant — return 1 if expression tree contains no runtime-variable
+ * nodes: no E_VAR (variable ref), no E_DEFER (*VAR deferred ref), no capture
+ * nodes (E_CAPT_COND / E_CAPT_IMM / E_CAPT_CUR).
+ * Such an expression, when also passing expr_is_pattern_expr, produces the
+ * same pattern graph on every execution — it can be pre-built once at startup.
+ * M-DYN-OPT: used to identify invariant PAT= assignments. */
+static int expr_is_invariant(EXPR_t *e) {
+    if (!e) return 1;
+    /* Any of these nodes make the pattern variant (runtime-dependent) */
+    if (e->kind == E_VAR)       return 0;
+    if (e->kind == E_DEFER)     return 0;
+    if (e->kind == E_CAPT_COND) return 0;
+    if (e->kind == E_CAPT_IMM)  return 0;
+    if (e->kind == E_CAPT_CUR)  return 0;
+    for (int i = 0; i < e->nchildren; i++)
+        if (!expr_is_invariant(e->children[i])) return 0;
+    return 1;
 }
 
 /* scan_named_patterns — walk the program and register all
