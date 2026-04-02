@@ -199,15 +199,30 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
             ufname[i] = (char)toupper((unsigned char)fname[i]);
     }
 
-    /* ── Save current values of fname-var, params, locals ── */
+    /* ── Determine retname: the NV variable the body writes its return value into.
+     * For a normal call: retname == fname (body writes "fact" = ...).
+     * For an OPSYN alias: fname="facto" but entry_label="fact"; the body writes
+     * "fact", so we must save/restore "fact" and read it back on RETURN.
+     * We use FUNC_ENTRY_fn(fname) as retname whenever it differs from fname
+     * (case-insensitively) — that's the canonical body name. ── */
+    const char *entry_pre = FUNC_ENTRY_fn(fname);
+    const char *retname = fname;
+    /* For OPSYN aliases: fname="facto", entry_label="fact" — entry_label IS a registered
+     * function whose body writes "fact=...".  Use entry_label as the return-value slot.
+     * For alternate-entry: fname="fact2", entry_label="fact2_entry" — entry_label is just
+     * a label, NOT a registered function; body still writes "fact2=...".  Use fname. */
+    if (entry_pre && strcasecmp(entry_pre, fname) != 0 && FNCEX_fn(entry_pre))
+        retname = entry_pre;
+
+    /* ── Save current values of retname-var, params, locals ── */
     int nsaved = 1 + np + nl;
     char   **snames = GC_malloc((size_t)nsaved * sizeof(char *));
     DESCR_t *svals  = GC_malloc((size_t)nsaved * sizeof(DESCR_t));
-    /* Save/clear the return-value slot using source-case fname.
-     * NV store is case-sensitive: function body writes "double" not "DOUBLE". */
-    snames[0] = GC_strdup(fname);
-    svals[0]  = NV_GET_fn(fname);
-    NV_SET_fn(fname, NULVCL);                              /* clear return slot */
+    /* Save/clear the return-value slot using retname (may differ from fname for OPSYN).
+     * NV store is case-sensitive: function body writes "fact" not "FACT". */
+    snames[0] = GC_strdup(retname);
+    svals[0]  = NV_GET_fn(retname);
+    NV_SET_fn(retname, NULVCL);                            /* clear return slot */
     for (int i = 0; i < np; i++) {
         snames[1+i] = pnames[i];
         svals[1+i]  = NV_GET_fn(pnames[i]);
@@ -221,7 +236,7 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
 
     /* ── Push call frame ── */
     CallFrame *fr = &call_stack[call_depth++];
-    strncpy(fr->fname, fname, sizeof(fr->fname)-1);
+    strncpy(fr->fname, retname, sizeof(fr->fname)-1);
     fr->fname[sizeof(fr->fname)-1] = '\0';
     fr->saved_names = snames;
     fr->saved_vals  = svals;
@@ -694,6 +709,11 @@ static DESCR_t interp_eval(EXPR_t *e)
                 if (fl >= sizeof(ufn)) fl = sizeof(ufn)-1;
                 for (size_t i = 0; i <= fl; i++) ufn[i] = (char)toupper((unsigned char)e->sval[i]);
                 body = label_lookup(ufn);
+            }
+            if (!body) {
+                /* Try entry_label — needed for OPSYN aliases where label != alias name */
+                const char *el = FUNC_ENTRY_fn(e->sval);
+                if (el) body = label_lookup(el);
             }
             if (body)
                 return call_user_function(e->sval, args, nargs);
