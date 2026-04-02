@@ -103,30 +103,54 @@ mapfile -t PRO_FILES < <(find "$TEST_PRO" -name "*.pl"  2>/dev/null | while read
 mapfile -t REB_FILES < <(find "$TEST_REB" -name "*.reb" 2>/dev/null | while read -r f; do [[ -f "${f%.reb}.s" ]] && echo "$f"; done | sort)
 
 if [[ $UPDATE -eq 1 ]]; then
-  echo "Regenerating: ${#SNO_FILES[@]} SNOBOL4×3 + ${#ICN_FILES[@]} Icon×2 + ${#PRO_FILES[@]} Prolog×2 + ${#REB_FILES[@]} Rebus×3..."
+  # scrip-cc gcc-style: when given a source file with no -o, it writes the
+  # output alongside the source with the appropriate extension replaced.
+  # e.g.  scrip-cc -asm foo/bar.sno  →  foo/bar.s  (side by side, always)
+  # regen_one simply invokes scrip-cc with the right backend flag and no -o.
+  # Only non-empty output is kept (compile errors leave no file).
   regen_one() {
-    local src="$1" backend="$2" ext="$3"
-    local dir name; dir="$(dirname "$src")"; name="$(basename "${src%.*}")"
-    local tmp; tmp=$(mktemp)
-    "$SCRIP_CC" "$backend" -o /dev/stdout "$src" > "$tmp" 2>/dev/null
-    [[ -s "$tmp" ]] && mv "$tmp" "$dir/$name.$ext" || rm -f "$tmp"
+    local src="$1" backend="$2"
+    # Let scrip-cc derive the output path itself — same directory, ext replaced.
+    "$SCRIP_CC" "$backend" "$src" 2>/dev/null
+    # scrip-cc exits non-zero on error and writes nothing (or an empty file).
+    # If it left an empty output file, remove it so stale oracles aren't created.
+    local ext
+    case "$backend" in
+      -asm)  ext=s  ;; -jvm)  ext=j  ;; -net)  ext=il ;;
+      -wasm) ext=wat;; -js)   ext=js  ;; *)     ext=out;;
+    esac
+    local out="${src%.*}.$ext"
+    [[ -f "$out" && ! -s "$out" ]] && rm -f "$out"
   }
   export -f regen_one; export SCRIP_CC
-  printf '%s\n' "${SNO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -asm s'  _ {}
-  printf '%s\n' "${SNO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -jvm j'  _ {}
-  printf '%s\n' "${SNO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -net il' _ {}
-  printf '%s\n' "${SNO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -js  js' _ {}
-  printf '%s\n' "${SNO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -wasm wat' _ {}
-  [[ ${#ICN_FILES[@]} -gt 0 ]] && printf '%s\n' "${ICN_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -asm s' _ {}
-  [[ ${#ICN_FILES[@]} -gt 0 ]] && printf '%s\n' "${ICN_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -jvm j' _ {}
-  [[ ${#PRO_FILES[@]} -gt 0 ]] && printf '%s\n' "${PRO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -asm s' _ {}
-  [[ ${#PRO_FILES[@]} -gt 0 ]] && printf '%s\n' "${PRO_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -jvm j' _ {}
-  [[ ${#REB_FILES[@]} -gt 0 ]] && printf '%s\n' "${REB_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -asm s'  _ {}
-  [[ ${#REB_FILES[@]} -gt 0 ]] && printf '%s\n' "${REB_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -jvm j'  _ {}
-  [[ ${#REB_FILES[@]} -gt 0 ]] && printf '%s\n' "${REB_FILES[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -net il' _ {}
-  COUNT=$(find "$TEST_SNO" "$TEST_ICN" "$TEST_PRO" \( -name "*.s" -o -name "*.j" -o -name "*.il" \) 2>/dev/null | wc -l)
+
+  # ALL_SNO: every .sno in the corpus — not just those with an existing .s.
+  # Every clean compile drops its output next to the source automatically.
+  mapfile -t ALL_SNO < <(find "$TEST_SNO" -name "*.sno" | sort)
+  mapfile -t ALL_ICN < <(find "$TEST_ICN" -name "*.icn" 2>/dev/null | sort)
+  mapfile -t ALL_PRO < <(find "$TEST_PRO" -name "*.pl"  2>/dev/null | sort)
+  mapfile -t ALL_REB < <(find "$TEST_REB" -name "*.reb" 2>/dev/null | sort)
+
+  echo "Regenerating: ${#ALL_SNO[@]} SNOBOL4×5 + ${#ALL_ICN[@]} Icon×2 + ${#ALL_PRO[@]} Prolog×2 + ${#ALL_REB[@]} Rebus×3 (side-by-side, clean compiles only)..."
+
+  [[ $_want_sno_asm  -eq 1 ]] && printf '%s\n' "${ALL_SNO[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -asm'  _ {}
+  [[ $_want_sno_jvm  -eq 1 ]] && printf '%s\n' "${ALL_SNO[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -jvm'  _ {}
+  [[ $_want_sno_net  -eq 1 ]] && printf '%s\n' "${ALL_SNO[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -net'  _ {}
+  [[ $_want_sno_js   -eq 1 ]] && printf '%s\n' "${ALL_SNO[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -js'   _ {}
+  [[ $_want_sno_wasm -eq 1 ]] && printf '%s\n' "${ALL_SNO[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -wasm' _ {}
+  [[ ${#ALL_ICN[@]} -gt 0 && $_want_icn_asm -eq 1 ]] && printf '%s\n' "${ALL_ICN[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -asm' _ {}
+  [[ ${#ALL_ICN[@]} -gt 0 && $_want_icn_jvm -eq 1 ]] && printf '%s\n' "${ALL_ICN[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -jvm' _ {}
+  [[ ${#ALL_PRO[@]} -gt 0 && $_want_pro_asm -eq 1 ]] && printf '%s\n' "${ALL_PRO[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -asm' _ {}
+  [[ ${#ALL_PRO[@]} -gt 0 && $_want_pro_jvm -eq 1 ]] && printf '%s\n' "${ALL_PRO[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -jvm' _ {}
+  [[ ${#ALL_REB[@]} -gt 0 && $_want_reb_asm -eq 1 ]] && printf '%s\n' "${ALL_REB[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -asm' _ {}
+  [[ ${#ALL_REB[@]} -gt 0 && $_want_reb_jvm -eq 1 ]] && printf '%s\n' "${ALL_REB[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -jvm' _ {}
+  [[ ${#ALL_REB[@]} -gt 0 && $_want_reb_net -eq 1 ]] && printf '%s\n' "${ALL_REB[@]}" | xargs -P"$JOBS" -I{} bash -c 'regen_one "$1" -net' _ {}
+
+  COUNT=$(find "$TEST_SNO" "$TEST_ICN" "$TEST_PRO" "$TEST_REB" \
+    \( -name "*.s" -o -name "*.j" -o -name "*.il" -o -name "*.js" -o -name "*.wat" \) \
+    2>/dev/null | wc -l)
   echo "Done: $COUNT generated files alongside sources."
-  echo "Commit: git add test/snobol4 test/icon test/prolog"
+  echo "Next: cd $CORPUS && git add -A && git commit -m 'regen: update generated artifacts alongside sources'"
   exit 0
 fi
 
