@@ -81,6 +81,7 @@ static inline size_t descr_slen(DESCR_t d) {
 #define INTVAL(i_) ((DESCR_t){ .v = DT_I,  .i = (i_) })
 #define REALVAL(r_)((DESCR_t){ .v = DT_R, .r = (r_) })
 #define FAILDESCR    ((DESCR_t){ .v = DT_FAIL, .i = 0 })   /* P002/P003 */
+#define NAMEVAL(s_)  ((DESCR_t){ .v = DT_N,    .s = (char *)(s_) })  /* NRETURN lvalue ref */
 #define STYPE(v_)    ((v_).v)
 
 static inline int IS_FAIL_fn(DESCR_t v) { return v.v == DT_FAIL; }

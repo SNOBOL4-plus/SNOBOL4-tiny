@@ -338,6 +338,16 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
                             } else succeeded = 0;
                         }
                     } else succeeded = 0;
+                } else if (s->has_eq && s->subject && s->subject->kind == E_FNC &&
+                           s->subject->sval && s->subject->nchildren == 0) {
+                    /* NRETURN lvalue assign: ref_a() = val  (zero-arg fn call as lvalue)
+                     * Call the function; if result is DT_N write through to named variable. */
+                    DESCR_t fres = call_user_function(s->subject->sval, NULL, 0);
+                    if (fres.v == DT_N && fres.s && *fres.s) {
+                        DESCR_t rv = s->replacement ? interp_eval(s->replacement) : NULVCL;
+                        if (IS_FAIL_fn(rv)) succeeded = 0;
+                        else { NV_SET_fn(fres.s, rv); succeeded = 1; }
+                    } else succeeded = 0;
                 } else if (s->has_eq && s->subject && s->subject->kind == E_INDIRECT) {
                     EXPR_t *ichild = s->subject->nchildren > 0 ? s->subject->children[0] : NULL;
                     const char *nm = NULL;
@@ -375,6 +385,15 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
                     }
                     if (strcasecmp(target, "FRETURN") == 0) {
                         retval = FAILDESCR;
+                        goto fn_done;
+                    }
+                    if (strcasecmp(target, "NRETURN") == 0) {
+                        /* Return a name (lvalue ref) — the fn's return variable holds
+                         * a string name; wrap it as DT_N so the caller can dereference
+                         * or assign through it. */
+                        DESCR_t nrv = NV_GET_fn(fr->fname);
+                        const char *nname = (nrv.v == DT_N) ? nrv.s : VARVAL_fn(nrv);
+                        retval = nname ? NAMEVAL(GC_strdup(nname)) : FAILDESCR;
                         goto fn_done;
                     }
                     STMT_t *dest = label_lookup(target);
@@ -715,8 +734,12 @@ static DESCR_t interp_eval(EXPR_t *e)
                 const char *el = FUNC_ENTRY_fn(e->sval);
                 if (el) body = label_lookup(el);
             }
-            if (body)
-                return call_user_function(e->sval, args, nargs);
+            if (body) {
+                DESCR_t r = call_user_function(e->sval, args, nargs);
+                /* NRETURN: dereference name descriptor in value context */
+                if (r.v == DT_N && r.s && *r.s) return NV_GET_fn(r.s);
+                return r;
+            }
             return bres;  /* builtin returned NULVCL legitimately */
         }
         /* Not registered at all — try APPLY_fn for late-registered builtins */
