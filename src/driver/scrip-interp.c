@@ -28,6 +28,9 @@ extern Program *snoc_parse(FILE *f, const char *filename);
 #include "../runtime/snobol4/snobol4.h"
 #include "../runtime/snobol4/runtime_shim.h"
 
+/* pat_at_cursor not exposed in snobol4.h — forward-declare here */
+extern DESCR_t pat_at_cursor(const char *varname);
+
 /* ── stmt_init (from snobol4_stmt_rt.c) ──────────────────────────────── */
 extern void stmt_init(void);
 
@@ -218,6 +221,40 @@ static DESCR_t interp_eval(EXPR_t *e)
         DESCR_t i2 = interp_eval(e->children[2]);
         if (IS_FAIL_fn(i1) || IS_FAIL_fn(i2)) return FAILDESCR;
         return subscript_get2(base, i1, i2);
+    }
+
+    case E_ALT: {
+        /* child[0] | child[1] | ... — build pat_alt chain left-to-right */
+        if (e->nchildren == 0) return NULVCL;
+        DESCR_t acc = interp_eval(e->children[0]);
+        for (int i = 1; i < e->nchildren; i++)
+            acc = pat_alt(acc, interp_eval(e->children[i]));
+        return acc;
+    }
+    case E_CAPT_COND: {
+        /* pat . var — conditional assignment on match success */
+        if (e->nchildren < 2) return NULVCL;
+        DESCR_t pat = interp_eval(e->children[0]);
+        const char *nm = e->children[1]->sval;
+        return nm ? pat_assign_cond(pat, STRVAL((char *)nm)) : pat;
+    }
+    case E_CAPT_IMM: {
+        /* pat $ var — immediate assignment during match */
+        if (e->nchildren < 2) return NULVCL;
+        DESCR_t pat = interp_eval(e->children[0]);
+        const char *nm = e->children[1]->sval;
+        return nm ? pat_assign_imm(pat, STRVAL((char *)nm)) : pat;
+    }
+    case E_CAPT_CUR: {
+        /* pat @ var — cursor-position capture after matching pat.
+         * children[0] = left pattern, children[1] = variable (E_VAR, sval=name).
+         * Build: pat_cat(pat_left, pat_at_cursor(varname)) */
+        if (e->nchildren < 2) return NULVCL;
+        DESCR_t left_pat = interp_eval(e->children[0]);
+        const char *nm   = e->children[1]->sval;
+        if (!nm) return left_pat;
+        DESCR_t atp = pat_at_cursor(nm);
+        return pat_cat(left_pat, atp);
     }
 
     default:

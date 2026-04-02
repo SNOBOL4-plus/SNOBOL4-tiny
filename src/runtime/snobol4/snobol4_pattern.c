@@ -317,7 +317,8 @@ typedef struct {
     void   *var_data;   /* userdata for var_fn */
     int     start;      /* MATCH_fn start cursor */
     int     end;        /* MATCH_fn end cursor */
-    int     is_imm;     /* 1 = immediate ($), 0 = conditional (.) */
+    int     is_imm;        /* 1 = immediate ($), 0 = conditional (.) */
+    int     is_cursor_cap; /* 1 = @var — write cursor pos as integer, not substring */
 } Capture;
 
 #define MAX_CAPTURES 64
@@ -704,9 +705,10 @@ static Pattern *materialise(PATND_t *sp, MatchCtx *ctx) {
                 ctx->captures[slot].var_data = d;
             }
         }
-        ctx->captures[slot].is_imm   = (sp->kind == XFNME);
-        ctx->captures[slot].start    = -1;
-        ctx->captures[slot].end      = -1;
+        ctx->captures[slot].is_imm        = (sp->kind == XFNME);
+        ctx->captures[slot].is_cursor_cap  = 0;
+        ctx->captures[slot].start          = -1;
+        ctx->captures[slot].end            = -1;
         ctx->ncaptures++;
 
         /* Materialise child */
@@ -771,6 +773,31 @@ static Pattern *materialise(PATND_t *sp, MatchCtx *ctx) {
             return p;
         }
 
+        /* Special: "@" = cursor-position capture — write cursor as integer to varname */
+        if (strcmp(nm, "@") == 0 && sp->nargs >= 1) {
+            const char *vname = (sp->args[0].v == DT_S && sp->args[0].s)
+                                ? GC_strdup(sp->args[0].s) : NULL;
+            if (vname && vname[0]) {
+                int slot = ctx->ncaptures;
+                if (slot < MAX_CAPTURES) {
+                    ctx->captures[slot].var_name      = (char *)vname;
+                    ctx->captures[slot].var_fn        = NULL;
+                    ctx->captures[slot].var_data      = NULL;
+                    ctx->captures[slot].start         = -1;
+                    ctx->captures[slot].end           = -1;
+                    ctx->captures[slot].is_imm        = 0;
+                    ctx->captures[slot].is_cursor_cap = 1;
+                    ctx->ncaptures++;
+                    Pattern *ep  = make_epsilon(&ctx->pl);
+                    Pattern *cap = pattern_alloc(&ctx->pl);
+                    cap->type        = T_CAPTURE;
+                    cap->n           = slot;
+                    cap->children[0] = ep;
+                    return cap;
+                }
+            }
+        }
+
         /* All other calls (nInc, nPush, nPop, Reduce, match, etc.):
          * Defer to match time via T_FUNC — side-effect calls must fire
          * when the engine reaches this node, NOT during materialise(). */
@@ -808,6 +835,14 @@ static void apply_captures(MatchCtx *ctx) {
             vname = cap->var_fn(cap->var_data);
         }
         if (!vname || !vname[0]) continue;
+
+        /* @var cursor capture: write position as integer */
+        if (cap->is_cursor_cap) {
+            NV_SET_fn(vname, INTVAL((int64_t)cap->start));
+            if (getenv("PAT_DEBUG"))
+                fprintf(stderr, "CURSOR_CAP: %s = %d\n", vname, cap->start);
+            continue;
+        }
 
         int len = cap->end - cap->start;
         if (len < 0) len = 0;
