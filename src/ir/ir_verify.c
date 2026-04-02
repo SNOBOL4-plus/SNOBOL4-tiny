@@ -77,8 +77,8 @@ static const KindSpec kind_spec[E_KIND_COUNT] = {
     [E_POW]        = EXACT(2),
 
     /* Sequence / alternation — n-ary, at least 2 */
-    [E_PAT_SEQ]        = MIN(2),
-    [E_PAT_ALT]        = MIN(2),
+    [E_SEQ]        = MIN(2),
+    [E_ALT]        = MIN(2),
     [E_OPSYN]      = EXACT(2),
 
     /* Pattern primitives — leaves (no children) or 1 arg */
@@ -118,8 +118,8 @@ static const KindSpec kind_spec[E_KIND_COUNT] = {
     [E_TO]         = EXACT(2),     /* i to j */
     [E_TO_BY]      = EXACT(3),     /* i to j by k */
     [E_LIMIT]      = EXACT(2),     /* E \ N */
-    [E_ALTERNATES]     = MIN(2),
-    [E_ITER]       = EXACT(1),     /* !E */
+    [E_ALTERNATE]     = MIN(2),
+    [E_ITERATE]       = EXACT(1),     /* !E */
     [E_MAKELIST]   = ANY_KIND,     /* [] is valid */
 
     /* Prolog */
@@ -293,16 +293,16 @@ int main(void) {
         else fprintf(stderr, "PASS test3: E_ADD with 1 child caught\n");
     }
 
-    /* --- Test 4: E_PAT_SEQ with 2 valid children --- */
+    /* --- Test 4: E_SEQ with 2 valid children --- */
     {
-        EXPR_t *s  = mk(E_PAT_SEQ);
+        EXPR_t *s  = mk(E_SEQ);
         EXPR_t *q1 = mk(E_QLIT); q1->sval = "hello";
         EXPR_t *q2 = mk(E_QLIT); q2->sval = "world";
         add_child(s, q1);
         add_child(s, q2);
         int errs = ir_verify_node(s, "test4", stderr);
         if (errs != 0) { fprintf(stderr, "FAIL test4: expected 0 violations, got %d\n", errs); failures++; }
-        else fprintf(stderr, "PASS test4: valid E_PAT_SEQ\n");
+        else fprintf(stderr, "PASS test4: valid E_SEQ\n");
     }
 
     /* --- Test 5: E_QLIT missing sval --- */

@@ -435,8 +435,8 @@ Decision: `E_PLS` is the canonical name (matches SIL); `E_PLS` is deprecated.
 | `X / Y` | `DIV` | `o$dvd` — division | division | `E_DIV` |
 | `X ! Y` | `EXPOP` | `o$exp` — exponentiation | exponentiation | `E_POW` |
 | `X Y` (blank, value ctx) | `CONCAT` | `o$cnc` — concatenation | string concatenation | `E_CAT` |
-| `X Y` (blank, pattern ctx) | *(BINCON path, CONCL)* | *(c$cnc type, Byrd wiring)* | goal-directed pattern sequence | `E_PAT_SEQ` |
-| `X \| Y` | `OR` / `ORPP` | `o$alt` — alternation | pattern alternation | `E_PAT_ALT` |
+| `X Y` (blank, pattern ctx) | *(BINCON path, CONCL)* | *(c$cnc type, Byrd wiring)* | goal-directed pattern sequence | `E_SEQ` |
+| `X \| Y` | `OR` / `ORPP` | `o$alt` — alternation | pattern alternation | `E_ALT` |
 | `X ? Y` | `SCAN` | `o$pmv/pmn/pms` — pattern match | pattern match / scan | `E_SCAN` |
 | `X = Y` | `ASGN` | `o$ass` — assignment | assignment | `E_ASSIGN` |
 | `X . Y` | `NAM` | `o$pas` — pattern assignment | conditional capture (on match) | `E_CAPT_COND_ASGN` |

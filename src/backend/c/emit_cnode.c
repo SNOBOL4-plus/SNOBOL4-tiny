@@ -209,7 +209,7 @@ CNODE_t *build_expr(CArena *a, EXPR_t *e) {
         return _acc;
     }
 
-    case E_PAT_ALT: {
+    case E_ALT: {
         if (e->nchildren == 0) return cn_raw(a, "FAILDESCR");
         if (e->nchildren == 1) return build_expr(a, e->children[0]);
         int _is_pat = 0;
@@ -310,7 +310,7 @@ CNODE_t *build_pat(CArena *a, EXPR_t *e) {
         return cn_call1(a, "pat_deref",
             build_expr(a, e->children[1] ? e->children[1] : e->children[0]));
 
-    case E_PAT_SEQ:
+    case E_SEQ:
         return cn_call2(a, "pat_cat", build_pat(a, e->children[0]), build_pat(a, e->children[1]));
 
     case E_MUL:
@@ -327,7 +327,7 @@ CNODE_t *build_pat(CArena *a, EXPR_t *e) {
             cn_seq(a, build_expr(a, e->children[1]),
                    cn_raw(a, "))")))));
 
-    case E_PAT_ALT:
+    case E_ALT:
         return cn_call2(a, "pat_alt", build_pat(a, e->children[0]), build_pat(a, e->children[1]));
 
     case E_FNC: {

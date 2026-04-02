@@ -11,8 +11,8 @@
  *
  * Implemented nodes (matching hand-written oracles):
  *   LIT (E_QLIT)     — inline repe cmpsb or single-byte cmp
- *   SEQ (E_PAT_SEQ)      — recursive left/right wiring
- *   ALT (E_PAT_ALT)       — cursor-save, left-fail-try-right wiring
+ *   SEQ (E_SEQ)      — recursive left/right wiring
+ *   ALT (E_ALT)       — cursor-save, left-fail-try-right wiring
  *   POS              — cursor == n check
  *   RPOS             — cursor == subj_len - n check
  *   ARBNO            — flat .bss cursor stack, zero-advance guard
@@ -850,7 +850,7 @@ static void emit_pat_node(EXPR_t *pat,
                            int depth);
 
 /* -----------------------------------------------------------------------
- * emit_seq — SEQ (E_PAT_SEQ / CAT)
+ * emit_seq — SEQ (E_SEQ / CAT)
  *
  * Wiring (Proebsting §4.3, oracle cat_pos_lit_rpos.s):
  *   α → left_α
@@ -882,7 +882,7 @@ static void emit_seq(EXPR_t *left, EXPR_t *right,
 }
 
 /* -----------------------------------------------------------------------
- * emit_alt — ALT (E_PAT_ALT)
+ * emit_alt — ALT (E_ALT)
  *
  * Wiring (oracle alt_first.s, Proebsting §4.5 ifstmt):
  *   α → save cursor_at_alt; → left_α
@@ -1374,27 +1374,27 @@ static void emit_pat_node(EXPR_t *pat,
         break;
 
     case E_CAT:  /* Snocone: && in pattern context is goal-directed sequence */
-    case E_PAT_SEQ: {  /* M-G4-SPLIT-SEQ-CONCAT: pattern context — Byrd-box SEQ */
+    case E_SEQ: {  /* M-G4-SPLIT-SEQ-CONCAT: pattern context — Byrd-box SEQ */
         int _nc = pat->nchildren;
         if (_nc == 0) break;
         if (_nc == 1) { emit_pat_node(pat->children[0], α, β, γ, ω, cursor, subj, subj_len, depth); break; }
         if (_nc == 2) { emit_seq(pat->children[0], pat->children[1], α, β, γ, ω, cursor, subj, subj_len, depth); break; }
         /* >2: right-fold via shared helper */
         { EXPR_t **_fn, **_fk;
-          EXPR_t *_root = ir_nary_right_fold(pat, E_PAT_SEQ, &_fn, &_fk);
+          EXPR_t *_root = ir_nary_right_fold(pat, E_SEQ, &_fn, &_fk);
           emit_pat_node(_root, α, β, γ, ω, cursor, subj, subj_len, depth);
           ir_nary_right_fold_free(_fn, _fk, _nc - 1); }
         break;
     }
 
-    case E_PAT_ALT: {
+    case E_ALT: {
         int _nc = pat->nchildren;
         if (_nc == 0) break;
         if (_nc == 1) { emit_pat_node(pat->children[0], α, β, γ, ω, cursor, subj, subj_len, depth); break; }
         if (_nc == 2) { emit_alt(pat->children[0], pat->children[1], α, β, γ, ω, cursor, subj, subj_len, depth); break; }
         /* >2: right-fold via shared helper */
         { EXPR_t **_fn, **_fk;
-          EXPR_t *_root = ir_nary_right_fold(pat, E_PAT_ALT, &_fn, &_fk);
+          EXPR_t *_root = ir_nary_right_fold(pat, E_ALT, &_fn, &_fk);
           emit_pat_node(_root, α, β, γ, ω, cursor, subj, subj_len, depth);
           ir_nary_right_fold_free(_fn, _fk, _nc - 1); }
         break;
@@ -1588,7 +1588,7 @@ static void emit_pat_node(EXPR_t *pat,
                 int cslen = (int)strlen(arg->sval);
                 emit_any(cs, cslen, α, β, γ, ω, cursor, subj, subj_len);
             } else {
-                /* Runtime expression (e.g. E_PAT_SEQ/E_CAT of vars like &UCASE &LCASE):
+                /* Runtime expression (e.g. E_SEQ/E_CAT of vars like &UCASE &LCASE):
                  * Evaluate into raw BSS temp slots and dispatch via ANY_α_PTR.
                  * We do NOT call var_register() here — doing so would emit
                  * S_any_expr_tmp_N in BOTH the BSS (resq 1) and the string
@@ -1666,7 +1666,7 @@ static void emit_pat_node(EXPR_t *pat,
             } else if (arg->kind == E_QLIT && arg->sval) {
                 emit_break(arg->sval, (int)strlen(arg->sval), α, β, γ, ω, cursor, subj, subj_len);
             } else {
-                /* Runtime expression (e.g. E_PAT_SEQ/E_CAT of vars like sq dq):
+                /* Runtime expression (e.g. E_SEQ/E_CAT of vars like sq dq):
                  * Evaluate into BSS temp slots, dispatch via BREAK_α_PTR. */
                 char tmplab[LBUF];
                 snprintf(tmplab, LBUF, "brk_expr_tmp_%d", next_uid());
@@ -2394,10 +2394,10 @@ static void emit_null_program(void) {
 
 /* -----------------------------------------------------------------------
  * expr_is_pattern_expr — return 1 if expression tree is a genuine
- * pattern-building expression (contains E_FNC, E_PAT_ALT, or E_PAT_SEQ with
+ * pattern-building expression (contains E_FNC, E_ALT, or E_SEQ with
  * at least one non-literal/non-value child).
  * Pure value assignments (E_VAR, E_QLIT, E_ILIT alone, or
- * E_CAT/E_PAT_ALT where ALL leaves are literals or variable refs with no
+ * E_CAT/E_ALT where ALL leaves are literals or variable refs with no
  * pattern-function calls) are NOT named patterns in program context. */
 static int expr_has_pattern_fn(EXPR_t *e) {
     if (!e) return 0;
@@ -2429,16 +2429,16 @@ static int expr_has_pattern_fn(EXPR_t *e) {
 }
 static int expr_is_pattern_expr(EXPR_t *e) {
     if (!e) return 0;
-    /* E_PAT_ALT (alternation) is a named-pattern expression only when at least one
+    /* E_ALT (alternation) is a named-pattern expression only when at least one
      * child contains a compile-time pattern function (ANY, LEN, etc.).
      * If both sides are pure value expressions (e.g. upr('h') | lwr('H')),
      * the result is a runtime pattern VALUE — treat as value assignment so
      * the match 'subj' p uses XDSAR (runtime deref), not a broken static box.
      * Fix: B-263 icase. */
-    if (e->kind == E_PAT_ALT) return expr_has_pattern_fn(e);
-    /* E_PAT_SEQ = goal-directed sequence — always a pattern expression.
+    if (e->kind == E_ALT) return expr_has_pattern_fn(e);
+    /* E_SEQ = goal-directed sequence — always a pattern expression.
      * E_CAT = pure value concat — never a pattern expression. */
-    if (e->kind == E_PAT_SEQ) return 1;
+    if (e->kind == E_SEQ) return 1;
     if (e->kind == E_CAT) return 0;
     /* E_CAPT_CURSOR (@var cursor capture) is always a pattern expression:
      * unary @x or binary pat @x — both yield a pattern value. */
@@ -2494,7 +2494,7 @@ static const char *expr_flatten_str(const EXPR_t *e, char *buf, size_t bufsz) {
         memcpy(buf, e->sval, len + 1);
         return buf;
     }
-    if (e->kind == E_CAT || e->kind == E_PAT_SEQ) {
+    if (e->kind == E_CAT || e->kind == E_SEQ) {
         /* Left-fold: flatten left child first, then append right */
         char *pos = buf;
         size_t rem = bufsz;
@@ -2510,7 +2510,7 @@ static const char *expr_flatten_str(const EXPR_t *e, char *buf, size_t bufsz) {
             if (!cur) continue;
             if (cur->kind == E_QLIT) {
                 leaves[nleaves++] = cur;
-            } else if (cur->kind == E_CAT || cur->kind == E_PAT_SEQ) {
+            } else if (cur->kind == E_CAT || cur->kind == E_SEQ) {
                 /* Push right then left so left is processed first */
                 if (cur->nchildren >= 2 && cur->children[1]) stk2[t2++] = cur->children[1];
                 if (cur->nchildren >= 1 && cur->children[0]) stk2[t2++] = cur->children[0];
@@ -3603,11 +3603,11 @@ static int emit_expr(EXPR_t *e, int rbp_off) {
         return 1;
     }
 
-    case E_PAT_ALT:
+    case E_ALT:
     case E_CAT: {  /* M-G4-SPLIT-SEQ-CONCAT: value context — string concat */
         /* Unary | in value context — OPSYN dispatch: opsyn('|',.size,1) → APPLY_fn("|",arg,1).
-         * Parser creates E_PAT_ALT with 1 child for prefix |expr. */
-        if (e->kind == E_PAT_ALT && e->nchildren == 1 && e->children[0]) {
+         * Parser creates E_ALT with 1 child for prefix |expr. */
+        if (e->kind == E_ALT && e->nchildren == 1 && e->children[0]) {
             const char *fnlab = str_intern("|");
             A("    sub     rsp, 16\n");
             emit_expr(e->children[0], -32);
@@ -3625,7 +3625,7 @@ static int emit_expr(EXPR_t *e, int rbp_off) {
         /*
          * n-ary E_CAT (string concat): inline left-fold avoids slot aliasing.
          * Each step: push accumulator, eval next child, pop+call stmt_concat.
-         * n-ary E_PAT_ALT (pattern ALT): right-fold into binary nodes (unchanged).
+         * n-ary E_ALT (pattern ALT): right-fold into binary nodes (unchanged).
          */
         if (e->nchildren > 2 && e->kind == E_CAT) {
             int _nc = e->nchildren;
@@ -3645,7 +3645,7 @@ static int emit_expr(EXPR_t *e, int rbp_off) {
             return 1;
         }
         if (e->nchildren > 2) {
-            /* E_PAT_ALT right-fold via shared helper */
+            /* E_ALT right-fold via shared helper */
             int _nc = e->nchildren;
             EXPR_t **_fn, **_fk;
             EXPR_t *_r = ir_nary_right_fold(e, e->kind, &_fn, &_fk);
@@ -3654,11 +3654,11 @@ static int emit_expr(EXPR_t *e, int rbp_off) {
             return _ret;
         }
         /* E_CAT = string CAT (value context): call stmt_concat directly.
-         * E_PAT_ALT     = pattern ALT (alternation):  call stmt_apply("ALT").
+         * E_ALT     = pattern ALT (alternation):  call stmt_apply("ALT").
          *
-         * Naming: E_CAT for string concatenation, E_PAT_SEQ/E_PAT_ALT for patterns.
+         * Naming: E_CAT for string concatenation, E_SEQ/E_ALT for patterns.
          * E_CAT in emit_expr is always value-context — pattern-context
-         * sequences use E_PAT_SEQ and are handled by emit_pat_node, not here. */
+         * sequences use E_SEQ and are handled by emit_pat_node, not here. */
 
         int left_is_str  = e->children[0]  && e->children[0]->kind  == E_QLIT;
         int left_is_var  = e->children[0]  && e->children[0]->kind  == E_VAR;
@@ -3720,7 +3720,7 @@ static int emit_expr(EXPR_t *e, int rbp_off) {
             return 1;
         }
 
-        /* E_PAT_ALT — pattern ALT via stmt_apply("ALT") — unchanged */
+        /* E_ALT — pattern ALT via stmt_apply("ALT") — unchanged */
         const char *opname = "ALT";
         const char *mac_ss = "ALT2    ";
         const char *mac_sn = "ALT2_N  ";
@@ -4034,7 +4034,7 @@ static int emit_expr(EXPR_t *e, int rbp_off) {
     }
 
     /* ---- Unary | — OPSYN dispatch via APPLY_fn("|", args, 1) ---- */
-    /* Handled inside E_PAT_ALT above when nchildren == 1 */
+    /* Handled inside E_ALT above when nchildren == 1 */
 
     /* ---- E_CAPT_COND_ASGN in value context: .VAR yields the name as a string value ---- */
     case E_CAPT_COND_ASGN: {
@@ -4356,8 +4356,8 @@ static void emit_pat_to_descr(EXPR_t *e) {
         return;
     }
     case E_CAT:
-    case E_PAT_SEQ: {
-        /* Parser builds flat n-ary E_PAT_SEQ — all children are direct.
+    case E_SEQ: {
+        /* Parser builds flat n-ary E_SEQ — all children are direct.
          * Left-fold: emit children[0], then pat_cat(acc, children[i]) for i=1..n-1. */
         if (e->nchildren == 0) { A("    call    pat_epsilon\n"); return; }
         emit_pat_to_descr(e->children[0]);
@@ -4373,8 +4373,8 @@ static void emit_pat_to_descr(EXPR_t *e) {
         }
         return;
     }
-    case E_PAT_ALT: {
-        /* Parser builds flat n-ary E_PAT_ALT — all children are direct.
+    case E_ALT: {
+        /* Parser builds flat n-ary E_ALT — all children are direct.
          * Left-fold: emit children[0], then pat_alt(acc, children[i]) for i=1..n-1. */
         if (e->nchildren == 0) { A("    call    pat_epsilon\n"); return; }
         emit_pat_to_descr(e->children[0]);

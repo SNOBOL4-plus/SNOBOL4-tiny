@@ -1265,7 +1265,7 @@ static void emit_differ(const EXPR_t *e) {
 /* and length are in locals $pat_subj_off / $pat_subj_len, starting from the  */
 /* current value of local $pat_cursor.  On success $pat_cursor is updated to  */
 /* the position past the match.  On failure $pat_cursor is set to -1.         */
-/* Handles: E_QLIT (literal), E_PAT_SEQ (left then right, cursor threaded).       */
+/* Handles: E_QLIT (literal), E_SEQ (left then right, cursor threaded).       */
 static void emit_pattern_node(const EXPR_t *pat) {
     if (!pat || pat->kind == E_NUL) {
         /* empty pattern — always succeeds, cursor unchanged */
@@ -1284,9 +1284,9 @@ static void emit_pattern_node(const EXPR_t *pat) {
         W("      (local.set $pat_cursor)\n");
         return;
     }
-    if (pat->kind == E_PAT_SEQ) {
+    if (pat->kind == E_SEQ) {
         /* sequential: emit left then right, threading cursor */
-        W("      ;; E_PAT_SEQ pattern node: left then right\n");
+        W("      ;; E_SEQ pattern node: left then right\n");
         if (pat->nchildren >= 1) emit_pattern_node(pat->children[0]);
         /* only attempt right if left succeeded (cursor >= 0) */
         W("      (if (i32.ge_s (local.get $pat_cursor) (i32.const 0)) (then\n");
@@ -1313,9 +1313,9 @@ static void emit_pattern_node(const EXPR_t *pat) {
         W("      ))\n");
         return;
     }
-    if (pat->kind == E_PAT_ALT) {
+    if (pat->kind == E_ALT) {
         /* alternation: try left; if cursor==-1 restore and try right */
-        W("      ;; E_PAT_ALT: save cursor, try left, restore+try right on fail\n");
+        W("      ;; E_ALT: save cursor, try left, restore+try right on fail\n");
         W("      (local.set $pat_save_cursor (local.get $pat_cursor))\n");
         if (pat->nchildren >= 1) emit_pattern_node(pat->children[0]);
         W("      (if (i32.lt_s (local.get $pat_cursor) (i32.const 0)) (then\n");

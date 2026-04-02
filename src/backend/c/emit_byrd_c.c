@@ -2041,8 +2041,8 @@ static void emit_pat_node(EXPR_t *pat,
         }
     }
 
-    /* ----------------------------------------------------------- E_PAT_SEQ (pattern CAT / Byrd-box SEQ) */
-    case E_PAT_SEQ: {
+    /* ----------------------------------------------------------- E_SEQ (pattern CAT / Byrd-box SEQ) */
+    case E_SEQ: {
         int _nc = pat->nchildren;
         if (_nc == 0) { PLG(α, γ); return; }
         if (_nc == 1) { emit_pat_node(pat->children[0], α, β, γ, ω, subj, subj_len, cursor, depth); return; }
@@ -2057,7 +2057,7 @@ static void emit_pat_node(EXPR_t *pat,
         for (int _i = _nc - 2; _i >= 0; _i--) {
             int _n = _nc - 2 - _i;
             _nodes[_n] = calloc(1, sizeof(EXPR_t));
-            _nodes[_n]->kind = E_PAT_SEQ;
+            _nodes[_n]->kind = E_SEQ;
             _kids[_n*2+0] = pat->children[_i];
             _kids[_n*2+1] = _right;
             _nodes[_n]->children  = &_kids[_n*2];
@@ -2070,8 +2070,8 @@ static void emit_pat_node(EXPR_t *pat,
         return;
     }
 
-    /* ---------------------------------------------------------------- E_PAT_ALT */
-    case E_PAT_ALT: {
+    /* ---------------------------------------------------------------- E_ALT */
+    case E_ALT: {
         int _nc = pat->nchildren;
         if (_nc == 0) { PLG(α, ω); return; }
         if (_nc == 1) { emit_pat_node(pat->children[0], α, β, γ, ω, subj, subj_len, cursor, depth); return; }
@@ -2086,7 +2086,7 @@ static void emit_pat_node(EXPR_t *pat,
         for (int _i = _nc - 2; _i >= 0; _i--) {
             int _n = _nc - 2 - _i;
             _nodes[_n] = calloc(1, sizeof(EXPR_t));
-            _nodes[_n]->kind = E_PAT_ALT;
+            _nodes[_n]->kind = E_ALT;
             _kids[_n*2+0] = pat->children[_i];
             _kids[_n*2+1] = _right;
             _nodes[_n]->children  = &_kids[_n*2];
@@ -2919,7 +2919,7 @@ int expr_contains_pattern(EXPR_t *e);
 /* -----------------------------------------------------------------------
  * emit_chain_pretty — multi-line indented binary chain emitter
  *
- * Walks a left-associative binary chain (E_PAT_SEQ/E_CAT/E_PAT_ALT) collecting all
+ * Walks a left-associative binary chain (E_SEQ/E_CAT/E_ALT) collecting all
  * leaves, then emits as indented multi-line nested calls.
  *
  * fn_name:  "CONCAT_fn", "pat_cat", "pat_alt"
@@ -3041,7 +3041,7 @@ static void emit_expr(EXPR_t *e) {
     case E_MUL:    C("mul(");    emit_expr(e->children[0]); C(","); emit_expr(e->children[1]); C(")"); break;
     case E_DIV:    C("DIVIDE_fn(");    emit_expr(e->children[0]); C(","); emit_expr(e->children[1]); C(")"); break;
     case E_POW:    C("POWER_fn(");    emit_expr(e->children[0]); C(","); emit_expr(e->children[1]); C(")"); break;
-    case E_PAT_ALT:
+    case E_ALT:
         /* Same: if either side is pattern-valued, use pat_alt */
         if (expr_contains_pattern(e->children[0]) || expr_contains_pattern(e->children[1])) {
             C("pat_alt("); emit_pat(e->children[0]); C(","); emit_pat(e->children[1]); C(")");
@@ -3106,8 +3106,8 @@ static void emit_expr(EXPR_t *e) {
  *
  * Same EXPR_t nodes, different routing:
  *   E_FNC  → pat_builtin or pat_call
- *   E_PAT_SEQ  → pat_cat
- *   E_PAT_ALT   → pat_alt
+ *   E_SEQ  → pat_cat
+ *   E_ALT   → pat_alt
  *   E_CAPT_COND_ASGN  → pat_cond(child_pat, varname)
  *   E_CAPT_IMMED_ASGN   → pat_imm(child_pat, varname)
  *   E_INDIRECT → pat_ref(varname)   (deferred pattern reference *X)
@@ -3142,8 +3142,8 @@ static void emit_pat(EXPR_t *e) {
         }
         break;
 
-    case E_PAT_SEQ:
-        emit_chain_pretty(e, E_PAT_SEQ, "pat_cat", emit_pat, 2);
+    case E_SEQ:
+        emit_chain_pretty(e, E_SEQ, "pat_cat", emit_pat, 2);
         break;
 
     case E_MUL:
@@ -3163,8 +3163,8 @@ static void emit_pat(EXPR_t *e) {
          * this node during pattern matching. */
         C("pat_user_call(\"reduce\",(DESCR_t[]){"); emit_expr(e->children[0]); C(","); emit_expr(e->children[1]); C("},2)"); break;
 
-    case E_PAT_ALT:
-        emit_chain_pretty(e, E_PAT_ALT, "pat_alt", emit_pat, 2);
+    case E_ALT:
+        emit_chain_pretty(e, E_ALT, "pat_alt", emit_pat, 2);
         break;
 
     case E_CAPT_COND_ASGN: {
@@ -3526,12 +3526,12 @@ static int is_pat_builtin_call(EXPR_t *e) {
 }
 
 /* Returns 1 if expr e is a pattern node (E_FNC to pat_builtin, E_CAPT_COND_ASGN capture,
- * E_PAT_ALT, or E_PAT_SEQ whose left child is a pattern). */
+ * E_ALT, or E_SEQ whose left child is a pattern). */
 static int is_pat_node(EXPR_t *e) {
     if (!e) return 0;
     if (is_pat_builtin_call(e)) return 1;
     if (e->kind == E_CAPT_COND_ASGN)   return 1;  /* .var capture */
-    if (e->kind == E_PAT_ALT)    return 1;  /* | alternation */
+    if (e->kind == E_ALT)    return 1;  /* | alternation */
     if (e->kind == E_OPSYN) return 1;  /* & reduce() call — always pattern context */
     /* E_MUL(pat_node, x) — parsed from "pat *x" where * is multiplication token
      * but semantically is pattern-CONCAT_fn with deferred ref *x */
@@ -3542,16 +3542,16 @@ static int is_pat_node(EXPR_t *e) {
 /* Recursively checks if any node in e's subtree indicates pattern context.
  * Used to decide whether a pure assignment RHS should use emit_pat.
  * Indicators: E_INDIRECT (*var — always a pattern ref), E_OPSYN (& — reduce()),
- * E_CAPT_COND_ASGN (. capture), E_PAT_ALT (| alternation in pattern context), E_FNC to
+ * E_CAPT_COND_ASGN (. capture), E_ALT (| alternation in pattern context), E_FNC to
  * any pattern builtin including ARBNO/FENCE/etc. */
 /* Returns 1 if the expression subtree rooted at e contains ANY pattern-valued
- * node.  Used by emit_expr to decide whether E_PAT_SEQ / E_PAT_ALT should be routed
+ * node.  Used by emit_expr to decide whether E_SEQ / E_ALT should be routed
  * through emit_pat (pat_cat / pat_alt) instead of the string path
  * (CONCAT_fn / alt).
  *
  * Key cases that are pattern-valued but NOT caught by is_pat_node:
  *   - E_INDIRECT whose left child is E_VAR — "*varname" deferred pattern ref
- *   - E_PAT_SEQ or E_PAT_ALT whose subtree contains any of the above
+ *   - E_SEQ or E_ALT whose subtree contains any of the above
  */
 int expr_contains_pattern(EXPR_t *e) {
     if (!e) return 0;
@@ -3562,7 +3562,7 @@ int expr_contains_pattern(EXPR_t *e) {
     /* *varname(arg) — parser misparse deref+CONCAT_fn */
     if (e->kind == E_INDIRECT && e->children[0] && e->children[0]->kind == E_FNC) return 1;
     /* recurse into children */
-    if (e->kind == E_PAT_SEQ || e->kind == E_CAT || e->kind == E_PAT_ALT || e->kind == E_MUL)
+    if (e->kind == E_SEQ || e->kind == E_CAT || e->kind == E_ALT || e->kind == E_MUL)
         return expr_contains_pattern(e->children[0]) || expr_contains_pattern(e->children[1]);
     /* $ and . operators — pattern may be on the left side */
     if (e->kind == E_CAPT_IMMED_ASGN || e->kind == E_CAPT_COND_ASGN)
@@ -3578,7 +3578,7 @@ int expr_contains_pattern(EXPR_t *e) {
     return 0;
 }
 
-/* Walk the E_PAT_SEQ/E_CAT left spine. When we find a right child that is_pat_node,
+/* Walk the E_SEQ/E_CAT left spine. When we find a right child that is_pat_node,
  * detach it and everything after it into the pattern.
  * Returns the extracted pattern root, or NULL if nothing found.
  * *subj_out is set to the remaining subject (may be the original expr if
@@ -3693,7 +3693,7 @@ static int pat_is_anchored(EXPR_t *e) {
             return 1;
         return 0;
     }
-    if (e->kind == E_PAT_SEQ) return pat_is_anchored(e->children[0]);
+    if (e->kind == E_SEQ) return pat_is_anchored(e->children[0]);
     return 0;
 }
 
@@ -3760,7 +3760,7 @@ static void emit_stmt(STMT_t *s, const char *fn) {
         int u=next_uid();
         /* If the RHS contains deferred refs (*var), reduce() calls (&), or
          * pattern builtins (ARBNO/FENCE/etc.), emit in pattern context so
-         * E_PAT_SEQ becomes pat_cat and *var becomes pat_ref.
+         * E_SEQ becomes pat_cat and *var becomes pat_ref.
          * This handles: snoParse = nPush() ARBNO(*snoCommand) ... nPop() */
         if (expr_contains_pattern(s->replacement)) {
             int _col = fprintf(out, "DESCR_t _v%d = ", u);
@@ -3830,9 +3830,9 @@ static void emit_stmt(STMT_t *s, const char *fn) {
             mstart_node->sval = strdup("SNO_MSTART");
             mstart_node->ival = u;  /* thread the statement uid so emit_byrd can name the var */
 
-            EXPR_t *seq1 = expr_binary(E_PAT_SEQ, arb, mstart_node);
+            EXPR_t *seq1 = expr_binary(E_SEQ, arb, mstart_node);
 
-            EXPR_t *seq = expr_binary(E_PAT_SEQ, seq1, s->pattern);
+            EXPR_t *seq = expr_binary(E_SEQ, seq1, s->pattern);
             scan_pat = seq;
         }
         cond_reset();

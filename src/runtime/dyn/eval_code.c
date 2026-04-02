@@ -154,7 +154,7 @@ static DESCR_t eval_node(EXPR_t *e)
 
     /* ── string concatenation ────────────────────────────────────────── */
     case E_CAT:
-    case E_PAT_SEQ: {
+    case E_SEQ: {
         if (e->nchildren == 0) return NULVCL;
         DESCR_t acc = eval_node(e->children[0]);
         if (IS_FAIL_fn(acc)) return FAILDESCR;
@@ -226,7 +226,7 @@ static DESCR_t eval_node(EXPR_t *e)
 
     /* ── unhandled / pattern nodes — fall through as NULVCL ─────────── */
     default:
-        /* Pattern-context nodes (E_PAT_ALT, E_CAPT_COND_ASGN, etc.) arrive here
+        /* Pattern-context nodes (E_ALT, E_CAPT_COND_ASGN, etc.) arrive here
          * when EVAL is given a pattern expression string.  The old
          * _ev_expr hand-roller in snobol4_pattern.c handles those.
          * In value context, treat unknown nodes as null. */

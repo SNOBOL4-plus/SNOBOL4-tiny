@@ -2461,7 +2461,7 @@ static void emit_expr(EXPR_t *n, const char *γ, const char *ω,
         case E_SUSPEND:emit_suspend(n, γ, ω, oa, ob); break;
         case E_FAIL:   emit_fail_node(n, γ, ω, oa, ob); break;
         case E_IF:     emit_if(n, γ, ω, oa, ob); break;
-        case E_ALTERNATES:    emit_alt(n, γ, ω, oa, ob); break;
+        case E_ALTERNATE:    emit_alt(n, γ, ω, oa, ob); break;
         case E_SCAN:   emit_scan(n, γ, ω, oa, ob); break;
         case E_MNS:    emit_neg(n, γ, ω, oa, ob); break;
         case E_NOT:    emit_not(n, γ, ω, oa, ob); break;
@@ -2503,7 +2503,7 @@ static void emit_expr(EXPR_t *n, const char *γ, const char *ω,
         case E_RECORD:    emit_record(n, γ, ω, oa, ob); break;
         case E_FIELD:     emit_field(n, γ, ω, oa, ob); break;
         case E_CASE:      emit_case(n, γ, ω, oa, ob); break;
-        case E_ITER:      emit_bang(n, γ, ω, oa, ob); break;
+        case E_ITERATE:      emit_bang(n, γ, ω, oa, ob); break;
         case E_BANG_BINARY: emit_stub_fail(n, γ, ω, oa, ob); break;
         /* G1: ICN_POS — unary plus, identity: emit child unchanged */
         case E_PLS:    emit_expr(n->children[0], γ, ω, oa, ob); break;
@@ -2523,7 +2523,7 @@ static void emit_expr(EXPR_t *n, const char *γ, const char *ω,
         case E_CSET_UNION:  emit_cset_binop(n, γ, ω, oa, ob); break;
         case E_CSET_DIFF:   emit_cset_binop(n, γ, ω, oa, ob); break;
         case E_CSET_INTER:  emit_cset_binop(n, γ, ω, oa, ob); break;
-        case E_PAT_SEQ: {
+        case E_SEQ: {
             /* n-ary conjunction: E1 & E2 & ... & En
              * irgen.icn ir_conjunction wiring:
              *   α → E1.α; E1_γ → E2.α; ...; En_γ → node_γ

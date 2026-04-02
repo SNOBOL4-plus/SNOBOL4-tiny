@@ -115,7 +115,7 @@ static EXPR_t *lower_node(const IcnNode *n) {
 
     /* ----- String relational (NEW) ----------------------------------------
      * ICN_SEQ is string equality (==), NOT goal-directed sequence.
-     * Maps to E_LEQ (E_PAT_SEQ is already taken for goal-directed sequence).   */
+     * Maps to E_LEQ (E_SEQ is already taken for goal-directed sequence).   */
     case ICN_SLT:   return binary(E_LLT,  n);
     case ICN_SLE:   return binary(E_LLE,  n);
     case ICN_SGT:   return binary(E_LGT,  n);
@@ -165,11 +165,11 @@ static EXPR_t *lower_node(const IcnNode *n) {
     case ICN_SEQ_EXPR: return nary(E_SEQ_EXPR, n);
 
     /* ICN_AND — n-ary conjunction with full Byrd-box wiring.
-     * Semantically identical to E_PAT_SEQ (goal-directed sequence): SHARED.   */
-    case ICN_AND: return nary(E_PAT_SEQ, n);           /* SHARED */
+     * Semantically identical to E_SEQ (goal-directed sequence): SHARED.   */
+    case ICN_AND: return nary(E_SEQ, n);           /* SHARED */
 
-    /* ICN_ALT — value alternation (left | right), same as E_ALTERNATES. */
-    case ICN_ALT: return nary(E_ALTERNATES, n);        /* SHARED */
+    /* ICN_ALT — value alternation (left | right), same as E_ALTERNATE. */
+    case ICN_ALT: return nary(E_ALTERNATE, n);        /* SHARED */
 
     case ICN_EVERY:
         e = expr_new(E_EVERY);
@@ -229,7 +229,7 @@ static EXPR_t *lower_node(const IcnNode *n) {
     case ICN_TO:    return binary(E_TO,    n);     /* SHARED */
     case ICN_TO_BY: return nary  (E_TO_BY, n);     /* SHARED: 3 children */
     case ICN_LIMIT: return binary(E_LIMIT, n);     /* SHARED */
-    case ICN_BANG:  return unary (E_ITER,  n);     /* SHARED: !E */
+    case ICN_BANG:  return unary (E_ITERATE,  n);     /* SHARED: !E */
 
     case ICN_BANG_BINARY:
         return binary(E_BANG_BINARY, n);            /* NEW: E1 ! E2 */

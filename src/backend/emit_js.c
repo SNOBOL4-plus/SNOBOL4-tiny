@@ -689,7 +689,7 @@ static void js_emit_pat(EXPR_t *pat, int uid_γ, int uid_ω,
         break;
     }
 
-    case E_PAT_SEQ:
+    case E_SEQ:
         if (pat->nchildren == 2) {
             js_emit_pat_seq(pat->children[0], pat->children[1],
                             uid, uid_γ, uid_ω, subj, uid_stmt);
@@ -702,7 +702,7 @@ static void js_emit_pat(EXPR_t *pat, int uid_γ, int uid_ω,
         }
         break;
 
-    case E_PAT_ALT:
+    case E_ALT:
         if (pat->nchildren == 2) {
             js_emit_pat_alt(pat->children[0], pat->children[1],
                             uid, uid_γ, uid_ω, subj, uid_stmt);

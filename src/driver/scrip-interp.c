@@ -430,7 +430,7 @@ static DESCR_t interp_eval(EXPR_t *e)
     }
 
     case E_CAT:
-    case E_PAT_SEQ: {
+    case E_SEQ: {
         if (e->nchildren == 0) return NULVCL;
         DESCR_t acc = interp_eval(e->children[0]);
         if (IS_FAIL_fn(acc)) return FAILDESCR;
@@ -584,7 +584,7 @@ static DESCR_t interp_eval(EXPR_t *e)
         return interp_eval(e->children[0]);
     }
 
-    case E_PAT_ALT: {
+    case E_ALT: {
         /* child[0] | child[1] | ... — build pat_alt chain left-to-right */
         if (e->nchildren == 0) return NULVCL;
         DESCR_t acc = interp_eval(e->children[0]);

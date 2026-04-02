@@ -125,8 +125,8 @@ static EXPR_t *parse_expr17(Lex *lx) {
         EXPR_t *inner = parse_expr0(lx);
         skip_ws(lx);
         if (lex_peek(lx).kind == T_COMMA) {
-            /* (expr, expr, ...) — alternation group: flat n-ary E_PAT_ALT */
-            EXPR_t *alt = expr_new(E_PAT_ALT);
+            /* (expr, expr, ...) — alternation group: flat n-ary E_ALT */
+            EXPR_t *alt = expr_new(E_ALT);
             expr_add_child(alt, inner);
             while (lex_peek(lx).kind == T_COMMA) {
                 lex_next(lx); skip_ws(lx);
@@ -135,7 +135,7 @@ static EXPR_t *parse_expr17(Lex *lx) {
                 skip_ws(lx);
             }
             if (lex_peek(lx).kind==T_RPAREN) lex_next(lx);
-            /* unwrap single-child E_PAT_ALT (degenerate case) */
+            /* unwrap single-child E_ALT (degenerate case) */
             if (alt->nchildren == 1) { EXPR_t *tmp = alt->children[0]; free(alt->children); free(alt); return tmp; }
             return alt;
         }
@@ -243,7 +243,7 @@ static EXPR_t *parse_expr14(Lex *lx) {
         case T_SLASH:  uk=E_DIV;   break;  /* /X = definable unary */
         case T_HASH:   uk=E_MUL;   break;  /* #X = definable unary */
         case T_EQ:     uk=E_ASSIGN;break;  /* =X = definable unary */
-        case T_PIPE:   uk=E_PAT_ALT;   break;  /* |X = definable unary */
+        case T_PIPE:   uk=E_ALT;   break;  /* |X = definable unary */
         default:       return parse_expr15(lx);
     }
     TokKind op_tok = t.kind;
@@ -487,8 +487,8 @@ static EXPR_t *parse_expr4(Lex *lx) {
 
     if (n == 1) { free(items); return first; }
 
-    /* Build flat n-ary E_PAT_SEQ node (fixup_val_tree reclassifies to E_CAT if value context) */
-    EXPR_t *e = expr_new(E_PAT_SEQ);
+    /* Build flat n-ary E_SEQ node (fixup_val_tree reclassifies to E_CAT if value context) */
+    EXPR_t *e = expr_new(E_SEQ);
     for (int i = 0; i < n; i++) expr_add_child(e, items[i]);
     free(items);
     return e;
@@ -509,8 +509,8 @@ static EXPR_t *parse_expr3(Lex *lx) {
     }
     if (!has_pipe) return first;
 
-    /* Build flat n-ary E_PAT_ALT */
-    EXPR_t *e = expr_new(E_PAT_ALT);
+    /* Build flat n-ary E_ALT */
+    EXPR_t *e = expr_new(E_ALT);
     expr_add_child(e, first);
     for (;;) {
         LexMark m3 = lex_mark(lx);
@@ -799,23 +799,23 @@ static STMT_t *parse_body_field(const char *body, int lineno) {
  * Top-level: convert LineArray → Program
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── M-G4-SPLIT-SEQ-CONCAT: post-parse E_PAT_SEQ context fixup ──────────────────
- * parse_expr4 emits E_PAT_SEQ for all juxtaposition-concat sites.
+/* ── M-G4-SPLIT-SEQ-CONCAT: post-parse E_SEQ context fixup ──────────────────
+ * parse_expr4 emits E_SEQ for all juxtaposition-concat sites.
  * After parsing, we know context for s->subject (always value).
  * s->replacement is ambiguous: it may be a pure value expression OR a pattern
  * expression (e.g. PAT = " the " ARB . OUTPUT ("of"|"a")).
  *
- * fixup_val_tree : walk a value-context tree — rename E_PAT_SEQ
+ * fixup_val_tree : walk a value-context tree — rename E_SEQ
  *                  to E_CAT (pure string concat, cannot fail).
  *
  * repl_is_pat_tree: lightweight check — true if tree contains any node that is
  *   unambiguously pattern-only: E_ARB, E_ARBNO, E_CAPT_COND_ASGN, E_CAPT_IMMED_ASGN, E_CAPT_CURSOR, E_DEFER.
  *   (E_FNC pattern-function detection is left to the emitter's expr_is_pattern_expr.)
- *   If true, do NOT apply fixup_val_tree to s->replacement — leave as E_PAT_SEQ.
+ *   If true, do NOT apply fixup_val_tree to s->replacement — leave as E_SEQ.
  */
 static void fixup_val_tree(EXPR_t *e) {
     if (!e) return;
-    if (e->kind == E_PAT_SEQ) e->kind = E_CAT;   /* value concat, cannot fail */
+    if (e->kind == E_SEQ) e->kind = E_CAT;   /* value concat, cannot fail */
     for (int i = 0; i < e->nchildren; i++) fixup_val_tree(e->children[i]);
 }
 
@@ -903,11 +903,11 @@ Program *parse_program(LineArray *lines) {
             s->lineno = sl->lineno;
             if (sl->label) s->label = strdup(sl->label);
             s->go = parse_goto_field(sl->goto_str, sl->lineno);
-            /* M-G4-SPLIT-SEQ-CONCAT: fix value-context E_PAT_SEQ→E_CAT.
+            /* M-G4-SPLIT-SEQ-CONCAT: fix value-context E_SEQ→E_CAT.
              * s->subject is always value context.
              * s->replacement is value context UNLESS it is a pattern expression
              * (e.g. PAT = " the " ARB . OUTPUT ...) — guard with repl_is_pat_tree.
-             * s->pattern is pattern context — E_PAT_SEQ already correct, no action. */
+             * s->pattern is pattern context — E_SEQ already correct, no action. */
             fixup_val_tree(s->subject);
             if (s->replacement && !repl_is_pat_tree(s->replacement))
                 fixup_val_tree(s->replacement);

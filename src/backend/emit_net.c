@@ -251,8 +251,8 @@ static int expr_has_pat_fn(EXPR_t *e) {
 
 static int expr_is_pattern_expr(EXPR_t *e) {
     if (!e) return 0;
-    if (e->kind == E_PAT_ALT)   return 1;
-    if (e->kind == E_PAT_SEQ) return 1;
+    if (e->kind == E_ALT)   return 1;
+    if (e->kind == E_SEQ) return 1;
     if (e->kind == E_CAT) return 0;
     return expr_has_pat_fn(e);
 }
@@ -375,7 +375,7 @@ static int expr_can_fail(EXPR_t *e) {
         /* Pattern constructors and string functions: always succeed */
         return 0;
     }
-    if (e->kind == E_CAT || e->kind == E_PAT_SEQ) {
+    if (e->kind == E_CAT || e->kind == E_SEQ) {
         for (int i = 0; i < e->nchildren; i++)
             if (expr_can_fail(e->children[i])) return 1;
     }
@@ -867,7 +867,7 @@ static void emit_expr(EXPR_t *e) {
         }
         break;
     }
-    case E_PAT_ALT:
+    case E_ALT:
         /* Pattern alternation used as an expression value (e.g. P = 'a' | 'b').
          * The string value is a placeholder — pattern matching uses the structural
          * node tree, not this string.  Push non-empty sentinel so assignment succeeds. */
@@ -1054,7 +1054,7 @@ static void emit_pat_node(EXPR_t *pat,
         break;
     }
 
-    case E_PAT_SEQ: {  /* M-G4-SPLIT-SEQ-CONCAT: pattern context — Byrd-box SEQ */
+    case E_SEQ: {  /* M-G4-SPLIT-SEQ-CONCAT: pattern context — Byrd-box SEQ */
         /* SEQ: chain γ/ω left-to-right.
          *
          * Deferred-commit for NAM(ARB,...):
@@ -1184,7 +1184,7 @@ static void emit_pat_node(EXPR_t *pat,
         break;
     }
 
-    case E_PAT_ALT: {
+    case E_ALT: {
         /* ALT: try each arm; restore cursor on failure, try next */
         int nkids = expr_nargs(pat);
         if (nkids == 0) { N("    br         %s\n", ω); break; }

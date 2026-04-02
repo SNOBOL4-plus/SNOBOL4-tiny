@@ -19,8 +19,8 @@
  *
  * Operator table (from bconv[] in snocone.sc / snocone.snobol4):
  *   &&  → E_CAT (blank concat)
- *   ||  → E_PAT_ALT  (pattern alt in pattern ctx; sc_val_alt_to_concat → E_CAT in value ctx)
- *   |   → E_PAT_ALT  (same as ||)
+ *   ||  → E_ALT  (pattern alt in pattern ctx; sc_val_alt_to_concat → E_CAT in value ctx)
+ *   |   → E_ALT  (same as ||)
  *   ==  → EQ(a,b)    !=  → NE(a,b)
  *   <   → LT(a,b)    >   → GT(a,b)
  *   <=  → LE(a,b)    >=  → GE(a,b)
@@ -169,10 +169,10 @@ static int lower_token(const ScPToken *tok, ExprStack *s,
         EXPR_t *r = es_pop(s), *l = es_pop(s);
         es_push(s, expr_binary(E_CAT, l, r)); return 0;
     }
-    case SNOCONE_PIPE:     /* |  → E_PAT_ALT; sc_val_alt_to_concat rewrites to E_CAT in value ctx */
-    case SNOCONE_OR: {     /* || → E_PAT_ALT; same rewrite in value ctx */
+    case SNOCONE_PIPE:     /* |  → E_ALT; sc_val_alt_to_concat rewrites to E_CAT in value ctx */
+    case SNOCONE_OR: {     /* || → E_ALT; same rewrite in value ctx */
         EXPR_t *r = es_pop(s), *l = es_pop(s);
-        es_push(s, expr_binary(E_PAT_ALT, l, r)); return 0;
+        es_push(s, expr_binary(E_ALT, l, r)); return 0;
     }
     case SNOCONE_PERIOD:
         if (tok->is_unary) {
@@ -345,24 +345,24 @@ static int lower_token(const ScPToken *tok, ExprStack *s,
     }
 }
 
-/* sc_pat_concat_to_seq — rewrite E_CAT → E_PAT_SEQ in a pattern tree in-place.
+/* sc_pat_concat_to_seq — rewrite E_CAT → E_SEQ in a pattern tree in-place.
  * Snocone uses && (E_CAT) for pattern sequence; the shared emit_x64 pattern
- * emitter only knows E_PAT_SEQ.  This rewrite is Snocone-local and does not touch
+ * emitter only knows E_SEQ.  This rewrite is Snocone-local and does not touch
  * any other frontend's IR. */
 static void sc_pat_concat_to_seq(EXPR_t *e) {
     if (!e) return;
-    if (e->kind == E_CAT) e->kind = E_PAT_SEQ;
+    if (e->kind == E_CAT) e->kind = E_SEQ;
     for (int i = 0; i < e->nchildren; i++)
         sc_pat_concat_to_seq(e->children[i]);
 }
 
-/* sc_val_alt_to_concat -- rewrite E_PAT_ALT -> E_CAT in a value tree in-place.
+/* sc_val_alt_to_concat -- rewrite E_ALT -> E_CAT in a value tree in-place.
  * Snocone || is dual-use: pattern alternation in pattern context, string
- * concatenation in value context.  Parser always emits E_PAT_ALT for ||;
+ * concatenation in value context.  Parser always emits E_ALT for ||;
  * this rewrite fixes value subtrees so emit_x64 sees E_CAT. */
 static void sc_val_alt_to_concat(EXPR_t *e) {
     if (!e) return;
-    if (e->kind == E_PAT_ALT) e->kind = E_CAT;
+    if (e->kind == E_ALT) e->kind = E_CAT;
     for (int i = 0; i < e->nchildren; i++)
         sc_val_alt_to_concat(e->children[i]);
 }

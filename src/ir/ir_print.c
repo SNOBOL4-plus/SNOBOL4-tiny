@@ -11,7 +11,7 @@
  * Output format (S-expression, compact):
  *   Leaf:    (E_QLIT "hello")   (E_ILIT 42)   (E_VAR x)   (E_NUL)
  *   Unary:   (E_MNS (E_ILIT 1))
- *   N-ary:   (E_PAT_SEQ (E_QLIT "a") (E_VAR x) (E_QLIT "b"))
+ *   N-ary:   (E_SEQ (E_QLIT "a") (E_VAR x) (E_QLIT "b"))
  *   Wide:    multi-line with 2-space indent per depth level when nchildren > 1
  *
  * Produced by: Claude Sonnet 4.6 (G-7 session, 2026-03-28)
@@ -184,8 +184,8 @@ static void add_child(EXPR_t *parent, EXPR_t *child) {
 }
 
 int main(void) {
-    /* (E_PAT_SEQ (E_QLIT "hello") (E_VAR x) (E_ILIT 42)) */
-    EXPR_t *root = mk(E_PAT_SEQ);
+    /* (E_SEQ (E_QLIT "hello") (E_VAR x) (E_ILIT 42)) */
+    EXPR_t *root = mk(E_SEQ);
     EXPR_t *lit  = mk(E_QLIT); lit->sval  = "hello";
     EXPR_t *var  = mk(E_VAR);  var->sval  = "x";
     EXPR_t *num  = mk(E_ILIT); num->ival  = 42;
@@ -209,8 +209,8 @@ int main(void) {
     EXPR_t *arg = mk(E_VAR); arg->sval = "s";
     add_child(fnc, arg);
 
-    /* Pattern: (E_PAT_ALT (E_QLIT "foo") (E_SPAN "abc")) */
-    EXPR_t *alt  = mk(E_PAT_ALT);
+    /* Pattern: (E_ALT (E_QLIT "foo") (E_SPAN "abc")) */
+    EXPR_t *alt  = mk(E_ALT);
     EXPR_t *foo  = mk(E_QLIT); foo->sval  = "foo";
     EXPR_t *span = mk(E_SPAN); span->sval = "abc";
     add_child(alt, foo);
@@ -218,7 +218,7 @@ int main(void) {
 
     fputs("=== ir_print unit test ===\n\n", stdout);
 
-    fputs("1. E_PAT_SEQ:\n", stdout);
+    fputs("1. E_SEQ:\n", stdout);
     ir_print_node_nl(root, stdout);
 
     fputs("\n2. E_ASSIGN:\n", stdout);
@@ -227,7 +227,7 @@ int main(void) {
     fputs("\n3. E_FNC:\n", stdout);
     ir_print_node_nl(fnc, stdout);
 
-    fputs("\n4. E_PAT_ALT (pattern):\n", stdout);
+    fputs("\n4. E_ALT (pattern):\n", stdout);
     ir_print_node_nl(alt, stdout);
 
     fputs("\n5. E_NUL leaf:\n", stdout);

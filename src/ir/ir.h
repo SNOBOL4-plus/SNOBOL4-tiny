@@ -71,13 +71,13 @@ typedef enum EKind {
 
     /* --- Sequence and Alternation ---------------------------------------- */
 
-    E_PAT_SEQ,          /* Goal-directed sequence, n-ary — Byrd-box wiring       */
+    E_SEQ,          /* Goal-directed sequence, n-ary — Byrd-box wiring       */
                     /* α→lα, lγ→rα, rω→lβ, rγ→γ. SNOBOL4 pattern CAT;      */
                     /* Icon ||/;/&/loop bodies. (CONCAT/CONCL in SIL)          */
     E_CAT,       /* Pure value-context string concat, n-ary, cannot fail  */
                     /* SNOBOL4 value ctx; JVM StringBuilder; .NET Concat.     */
                     /* M-G4-SPLIT-SEQ-CONCAT (2026-03-28).                   */
-    E_PAT_ALT,          /* Pattern alternation, n-ary (ORPP in SIL; was E_OR)   */
+    E_ALT,          /* Pattern alternation, n-ary (ORPP in SIL; was E_OR)   */
     E_OPSYN,        /* & operator: reduce(left, right)                      */
 
     /* --- Pattern Primitives ---------------------------------------------- */
@@ -126,8 +126,8 @@ typedef enum EKind {
     E_TO,           /* i to j  generator                                    */
     E_TO_BY,        /* i to j by k  generator                               */
     E_LIMIT,        /* E \ N  limitation                                    */
-    E_ALTERNATES,       /* Icon / Rebus alt generator, left-then-right (was E_ALT_GEN) */
-    E_ITER,         /* !E  iterate list or string elements (was E_BANG)     */
+    E_ALTERNATE,       /* Icon / Rebus alt generator, left-then-right (was E_ALT_GEN) */
+    E_ITERATE,         /* !E  iterate list or string elements (was E_BANG)     */
     E_MAKELIST,     /* [e1,e2,...]  list constructor                        */
 
     /* --- Prolog ---------------------------------------------------------- */
@@ -279,9 +279,9 @@ static const char * const ekind_name[E_KIND_COUNT] = {
     [E_DIV]          = "E_DIV",
     [E_MOD]          = "E_MOD",
     [E_POW]          = "E_POW",
-    [E_PAT_SEQ]          = "E_PAT_SEQ",
+    [E_SEQ]          = "E_SEQ",
     [E_CAT]       = "E_CAT",
-    [E_PAT_ALT]          = "E_PAT_ALT",
+    [E_ALT]          = "E_ALT",
     [E_OPSYN]        = "E_OPSYN",
     [E_ARB]          = "E_ARB",
     [E_ARBNO]        = "E_ARBNO",
@@ -313,8 +313,8 @@ static const char * const ekind_name[E_KIND_COUNT] = {
     [E_TO]           = "E_TO",
     [E_TO_BY]        = "E_TO_BY",
     [E_LIMIT]        = "E_LIMIT",
-    [E_ALTERNATES]       = "E_ALTERNATES",
-    [E_ITER]         = "E_ITER",
+    [E_ALTERNATE]       = "E_ALTERNATE",
+    [E_ITERATE]         = "E_ITERATE",
     [E_MAKELIST]     = "E_MAKELIST",
     [E_UNIFY]        = "E_UNIFY",
     [E_CLAUSE]       = "E_CLAUSE",

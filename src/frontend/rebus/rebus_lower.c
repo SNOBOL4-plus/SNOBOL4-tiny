@@ -114,7 +114,7 @@ static EXPR_t *lower_expr(RebLow *L, RExpr *e) {
     case RE_VALUE: return make_fnc("IDENT",  1, lower_expr(L, e->left));
 
     /* --- Icon generator bang --- */
-    case RE_BANG:   return expr_unary(E_ITER,  lower_expr(L, e->left));
+    case RE_BANG:   return expr_unary(E_ITERATE,  lower_expr(L, e->left));
 
     /* --- Binary arithmetic --- */
     case RE_ADD: return expr_binary(E_ADD,    lower_expr(L,e->left), lower_expr(L,e->right));
@@ -127,7 +127,7 @@ static EXPR_t *lower_expr(RebLow *L, RExpr *e) {
     /* --- String/pattern --- */
     case RE_STRCAT: return expr_binary(E_CAT, lower_expr(L,e->left), lower_expr(L,e->right));
     case RE_PATCAT: return expr_binary(E_CAT, lower_expr(L,e->left), lower_expr(L,e->right));
-    case RE_ALT:    return expr_binary(E_PAT_ALT,    lower_expr(L,e->left), lower_expr(L,e->right));
+    case RE_ALT:    return expr_binary(E_ALT,    lower_expr(L,e->left), lower_expr(L,e->right));
 
     /* --- Comparison (SNOBOL4 pool) --- */
     case RE_EQ:  return make_fnc("EQ",     2, lower_expr(L,e->left), lower_expr(L,e->right));

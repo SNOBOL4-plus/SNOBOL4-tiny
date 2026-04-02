@@ -350,8 +350,8 @@ static const NamedPat *named_pat_lookup(const char *varname) {
     return NULL;
 }
 
-/* expr_is_pattern_expr — mirrors ASM backend: E_PAT_ALT is always a pattern;
- * E_PAT_SEQ/E_CAT or E_FNC is a pattern if any descendant is E_FNC/E_CAPT_COND_ASGN/E_CAPT_IMMED_ASGN. */
+/* expr_is_pattern_expr — mirrors ASM backend: E_ALT is always a pattern;
+ * E_SEQ/E_CAT or E_FNC is a pattern if any descendant is E_FNC/E_CAPT_COND_ASGN/E_CAPT_IMMED_ASGN. */
 static int expr_has_pat_fn(EXPR_t *e) {
     if (!e) return 0;
     if (e->kind == E_FNC || e->kind == E_CAPT_COND_ASGN || e->kind == E_CAPT_IMMED_ASGN) return 1;
@@ -361,8 +361,8 @@ static int expr_has_pat_fn(EXPR_t *e) {
 }
 static int expr_is_pattern_expr(EXPR_t *e) {
     if (!e) return 0;
-    if (e->kind == E_PAT_ALT)   return 1;   /* alternation is always a pattern */
-    if (e->kind == E_PAT_SEQ) return 1;
+    if (e->kind == E_ALT)   return 1;   /* alternation is always a pattern */
+    if (e->kind == E_SEQ) return 1;
     if (e->kind == E_CAT) return 0;
     return expr_has_pat_fn(e);
 }
@@ -1554,13 +1554,13 @@ static void emit_jvm_pat_node(EXPR_t *pat,
 
     /* ------------------------------------------------------------------ */
     /* ------------------------------------------------------------------ */
-    case E_PAT_SEQ: {  /* M-G4-SPLIT-SEQ-CONCAT: pattern context — Byrd-box SEQ */
+    case E_SEQ: {  /* M-G4-SPLIT-SEQ-CONCAT: pattern context — Byrd-box SEQ */
         /* SEQ node.  Walk right-spine of left subtree to find trailing ARB or
          * ARB.NAM node; if found, emit greedy ARB+backtrack loop around right. */
         EXPR_t *arb_nam = NULL;
         {
             EXPR_t *cur = pat->children[0];
-            while (cur && cur->kind == E_PAT_SEQ) cur = cur->children[1];
+            while (cur && cur->kind == E_SEQ) cur = cur->children[1];
             if (cur && cur->kind == E_CAPT_COND_ASGN && cur->children[0] &&
                 ((cur->children[0]->kind == E_FNC  && cur->children[0]->sval && strcasecmp(cur->children[0]->sval, "ARB") == 0) ||
                  (cur->children[0]->kind == E_VAR && cur->children[0]->sval && strcasecmp(cur->children[0]->sval, "ARB") == 0)))
@@ -1582,11 +1582,11 @@ static void emit_jvm_pat_node(EXPR_t *pat,
             {
                 EXPR_t *nodes[64]; int n = 0;
                 EXPR_t *cur = pat->children[0];
-                while (cur && cur->kind == E_PAT_SEQ) {
+                while (cur && cur->kind == E_SEQ) {
                     nodes[n++] = cur->children[0];
                     if (cur->children[1] == arb_nam) break;
                     cur = cur->children[1];
-                    if (!cur || cur->kind != E_PAT_SEQ) break;
+                    if (!cur || cur->kind != E_SEQ) break;
                 }
                 if (n > 0) {
                     char chain[64][64];
@@ -1684,7 +1684,7 @@ static void emit_jvm_pat_node(EXPR_t *pat,
         if (pat->nchildren > 2) {
             int _nc = pat->nchildren;
             EXPR_t **_fn, **_fk;
-            EXPR_t *_r = ir_nary_right_fold(pat, E_PAT_SEQ, &_fn, &_fk);
+            EXPR_t *_r = ir_nary_right_fold(pat, E_SEQ, &_fn, &_fk);
             emit_jvm_pat_node(_r, γ, ω, loc_subj, loc_cursor, loc_len, p_cap_local, out, classname);
             ir_nary_right_fold_free(_fn, _fk, _nc - 1);
             break;
@@ -1700,7 +1700,7 @@ static void emit_jvm_pat_node(EXPR_t *pat,
         break;
     }
 
-    case E_PAT_ALT: {
+    case E_ALT: {
         /* ALT node: try left; on failure restore cursor and try right
          * Wiring:
          *   save cursor_save
@@ -1710,7 +1710,7 @@ static void emit_jvm_pat_node(EXPR_t *pat,
         if (pat->nchildren > 2) {
             int _nc = pat->nchildren;
             EXPR_t **_fn, **_fk;
-            EXPR_t *_r = ir_nary_right_fold(pat, E_PAT_ALT, &_fn, &_fk);
+            EXPR_t *_r = ir_nary_right_fold(pat, E_ALT, &_fn, &_fk);
             emit_jvm_pat_node(_r, γ, ω, loc_subj, loc_cursor, loc_len, p_cap_local, out, classname);
             ir_nary_right_fold_free(_fn, _fk, _nc - 1);
             break;
@@ -2279,7 +2279,7 @@ static void emit_jvm_pat_node(EXPR_t *pat,
         }
 
         /* Check named-pattern registry (compile-time pattern variable assignments).
-         * E.g.  P = ('a' | 'b' | 'c')  registers P → E_PAT_ALT tree.
+         * E.g.  P = ('a' | 'b' | 'c')  registers P → E_ALT tree.
          * When we see P in pattern context, inline-expand its stored tree. */
         {
             const NamedPat *np = named_pat_lookup(vname);

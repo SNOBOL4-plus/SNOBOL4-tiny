@@ -25,8 +25,8 @@
  *
  * M-G3-ALIAS-CLEANUP: IR_COMPAT_ALIASES section removed — dead code,
  * never enabled. All code uses canonical EKind names directly:
- * E_VAR, E_PAT_ALT, E_MNS, E_POW, E_CAPT_COND_ASGN, E_CAPT_IMMED_ASGN,
- * E_CAPT_CURSOR, E_NUL, E_ASSIGN, E_SCAN, E_ITER, E_ALTERNATES, E_IDX.
+ * E_VAR, E_ALT, E_MNS, E_POW, E_CAPT_COND_ASGN, E_CAPT_IMMED_ASGN,
+ * E_CAPT_CURSOR, E_NUL, E_ASSIGN, E_SCAN, E_ITERATE, E_ALTERNATE, E_IDX.
  *
  * ir.h defines EXPR_t (with fval, nalloc, id) when included first.
  * scrip_cc.h defines a compatible subset when included standalone.
@@ -46,7 +46,7 @@
  *   unary   (E_MNS/E_CAPT_CURSOR/E_INDIRECT/...)                nchildren=1
  *   binary  (E_ADD/E_SUB/E_MUL/E_DIV/E_POW/E_OPSYN/
  *            E_ASSIGN/E_CAPT_COND_ASGN/E_CAPT_IMMED_ASGN/E_IDX)      nchildren=2
- *   n-ary   (E_PAT_SEQ / E_CAT / E_PAT_ALT)                   nchildren>=0
+ *   n-ary   (E_SEQ / E_CAT / E_ALT)                   nchildren>=0
  *   call    (E_FNC)                                       nchildren=nargs
  *   subscript (E_IDX)                                     children[0]=base, children[1..]=indices
  *

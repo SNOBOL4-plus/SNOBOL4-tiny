@@ -634,7 +634,7 @@ static int expr_is_record(EXPR_t *n) {
     if (n->kind == E_FNC && n->nchildren >= 1 && n->children[0]->kind == E_VAR)
         return is_record_type(n->children[0]->sval);
     /* !<record-list> yields a record Object */
-    if (n->kind == E_ITER && n->nchildren >= 1)
+    if (n->kind == E_ITERATE && n->nchildren >= 1)
         return expr_is_record_list(n->children[0]);
     /* VAR whose static field is Object-typed (assigned from a record constructor) */
     if (n->kind == E_VAR) {
@@ -852,7 +852,7 @@ static int expr_is_real(EXPR_t *n) {
             return expr_is_real(n->children[0]) || expr_is_real(n->children[1]);
     }
     /* ICN_ALT: real if first alternative is real (all alternatives must be same type) */
-    if (n->kind == E_ALTERNATES && n->nchildren >= 1)
+    if (n->kind == E_ALTERNATE && n->nchildren >= 1)
         return expr_is_real(n->children[0]);
     /* real() builtin call always returns double */
     if (n->kind == E_FNC && n->nchildren >= 1) {
@@ -1218,7 +1218,7 @@ static void emit_jvm_icon_assign(EXPR_t *n, Ports ports, char *oα, char *oβ) {
     int is_dbl  = !is_str && !is_list && !is_tbl && expr_is_real(rhs);
     int is_rec  = !is_str && !is_list && !is_tbl && !is_dbl && expr_is_record(rhs);
     /* Bang of a record-list yields the Object directly on the stack (no 0L placeholder) */
-    int is_rec_direct = is_rec && rhs->kind == E_ITER && expr_is_record_list(rhs->children[0]);
+    int is_rec_direct = is_rec && rhs->kind == E_ITERATE && expr_is_record_list(rhs->children[0]);
     int is_reclist = is_list && expr_is_record_list(rhs);
 
     if (lhs && lhs->kind == E_VAR) {
@@ -4410,7 +4410,7 @@ static int expr_is_string(EXPR_t *n) {
         case E_CSET:   return 1;  /* cset literal is a String */
         case E_CAT: return 1;
         case E_LCONCAT:return 1;  /* Tiny-ICON: ||| treated as string concat */
-        case E_ITER:
+        case E_ITERATE:
             /* !E yields single-char Strings for string operands,
              * but longs for list operands */
             if (n->nchildren >= 1) return expr_is_list(n->children[0]) ? 0 : 1;
@@ -4492,14 +4492,14 @@ static int expr_is_string(EXPR_t *n) {
             if (n->nchildren >= 3) return expr_is_string(n->children[2]);
             return 0;
         }
-        case E_ALTERNATES: {
+        case E_ALTERNATE: {
             /* ALT is string-typed if all alternatives are strings */
             if (n->nchildren == 0) return 0;
             for (int i = 0; i < n->nchildren; i++)
                 if (!expr_is_string(n->children[i])) return 0;
             return 1;
         }
-        case E_PAT_SEQ: {
+        case E_SEQ: {
             /* AND chain result type = last child's type */
             if (n->nchildren >= 1)
                 return expr_is_string(n->children[n->nchildren - 1]);
@@ -4724,7 +4724,7 @@ static void emit_jvm_icon_concat(EXPR_t *n, Ports ports, char *oα, char *oβ) {
     EXPR_t *lchild = n->children[0];
     /* left_is_value: true only for one-shot string producers (literals, vars, one-shot calls).
      * ICN_ALT is a generator — its β must be used to advance it, not restart from α. */
-    int left_is_value = expr_is_string(lchild) && lchild->kind != E_ALTERNATES;
+    int left_is_value = expr_is_string(lchild) && lchild->kind != E_ALTERNATE;
 
     /* left_relay: String ref on stack → astore into lc_fld → lstore */
     JL(left_relay); put_str_field(lc_fld); JGoto(lstore);
@@ -6603,8 +6603,8 @@ static void emit_jvm_icon_expr(EXPR_t *n, Ports ports, char *oα, char *oβ) {
         case E_FAIL:    emit_jvm_icon_fail_node(n,ports,oα,oβ); break;
         case E_IF:      emit_jvm_icon_if       (n,ports,oα,oβ); break;
         case E_CASE:    emit_jvm_icon_case     (n,ports,oα,oβ); break;
-        case E_ALTERNATES:     emit_jvm_icon_alt      (n,ports,oα,oβ); break;
-        case E_PAT_SEQ: {
+        case E_ALTERNATE:     emit_jvm_icon_alt      (n,ports,oα,oβ); break;
+        case E_SEQ: {
             /* n-ary conjunction: E1 & E2 & ... & En
              * irgen.icn ir_conjunction: Ei.γ → E(i+1).α; Ei.ω → E(i-1).β; β → En.β
              *
@@ -6743,7 +6743,7 @@ static void emit_jvm_icon_expr(EXPR_t *n, Ports ports, char *oα, char *oβ) {
         case E_LOOP_BREAK:   emit_jvm_icon_break    (n,ports,oα,oβ); break;
         case E_LOOP_NEXT:    emit_jvm_icon_next     (n,ports,oα,oβ); break;
         case E_AUGOP:   emit_jvm_icon_augop    (n,ports,oα,oβ); break;
-        case E_ITER:    emit_jvm_icon_bang     (n,ports,oα,oβ); break;
+        case E_ITERATE:    emit_jvm_icon_bang     (n,ports,oα,oβ); break;
         case E_SIZE:    emit_jvm_icon_size     (n,ports,oα,oβ); break;
         case E_LIMIT:   emit_jvm_icon_limit    (n,ports,oα,oβ); break;
         case E_FIELD:   emit_jvm_icon_field    (n,ports,oα,oβ); break;
@@ -7000,7 +7000,7 @@ static void emit_jvm_icon_proc(EXPR_t *proc, FILE *out_target) {
         EXPR_t *lhs = gen->children[0];
         EXPR_t *rhs = gen->children[1];  /* should be ICN_BANG(!reclist) */
         if (!lhs || lhs->kind != E_VAR) continue;
-        if (!rhs || rhs->kind != E_ITER || rhs->nchildren < 1) continue;
+        if (!rhs || rhs->kind != E_ITERATE || rhs->nchildren < 1) continue;
         if (!expr_is_record_list(rhs->children[0])) continue;
         /* lhs var is assigned a record from a record-list bang — tag as Object */
         int slot = locals_find(lhs->sval);

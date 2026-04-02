@@ -718,7 +718,7 @@ static void emit_goals(const EXPR_t *g, int env_idx, int in_disj_left);
 static void emit_goal(const EXPR_t *goal, int env_idx, int in_disj_left) {
     if (!goal) return;
 
-    if (goal->kind == E_PAT_SEQ) {
+    if (goal->kind == E_SEQ) {
         for (int i = 0; i < goal->nchildren; i++)
             emit_goal(goal->children[i], env_idx, in_disj_left);
         return;
