@@ -5,7 +5,7 @@
 
 extern DESCR_t (*NV_GET_fn)(const char*);
 extern bb_node_t bb_build(void*);
-typedef struct { const char *name; bb_box_fn child_fn; void *child_ζ; size_t child_ζ_size; } dvar_t;
+typedef struct { const char *name; bb_box_fn fn; void *fz; size_t fz_sz; } dvar_t;
 
 spec_t bb_deferred_var(void *zeta, int entry)
 {
@@ -14,24 +14,23 @@ spec_t bb_deferred_var(void *zeta, int entry)
     if (entry==α)                                                               goto DVAR_α;
     if (entry==β)                                                               goto DVAR_β;
     DVAR_α:         { DESCR_t val=NV_GET_fn(ζ->name); int rebuilt=0;            
-                      if (val.v==DT_P && val.p && val.p!=ζ->child_ζ) {          
+                      if (val.v==DT_P && val.p && val.p!=ζ->fz) {               
                           bb_node_t c=bb_build(val.p);                          
-                          ζ->child_fn=c.fn; ζ->child_ζ=c.ζ; ζ->child_ζ_size=c.ζ_size; rebuilt=1; }
+                          ζ->fn=c.fn; ζ->fz=c.ζ; ζ->fz_sz=c.ζ_size; rebuilt=1; }
                       else if (val.v==DT_S && val.s) {                          
-                          _lit_t *lz=(_lit_t*)ζ->child_ζ;                       
+                          _lit_t *lz=(_lit_t*)ζ->fz;                            
                           if (!lz||lz->lit!=val.s) {                            
                               lz=calloc(1,sizeof(_lit_t)); lz->lit=val.s; lz->len=(int)strlen(val.s);
-                              ζ->child_fn=(bb_box_fn)bb_lit; ζ->child_ζ=lz;     
-                              ζ->child_ζ_size=sizeof(_lit_t); rebuilt=1; } }    
-                      if (!rebuilt&&ζ->child_ζ&&ζ->child_ζ_size                 
-                          &&ζ->child_fn!=(bb_box_fn)bb_lit)                     
-                          memset(ζ->child_ζ,0,ζ->child_ζ_size); }               
-                    if (!ζ->child_fn)                                           goto DVAR_ω;
-                    DVAR=ζ->child_fn(ζ->child_ζ,α);                             
+                              ζ->fn=(bb_box_fn)bb_lit; ζ->fz=lz;                
+                              ζ->fz_sz=sizeof(_lit_t); rebuilt=1; } }           
+                      if (!rebuilt&&ζ->fz&&ζ->fz_sz&&ζ->fn!=(bb_box_fn)bb_lit)  
+                          memset(ζ->fz,0,ζ->fz_sz); }                           
+                    if (!ζ->fn)                                                 goto DVAR_ω;
+                    DVAR=ζ->fn(ζ->fz,α);                                        
                     if (spec_is_empty(DVAR))                                    goto DVAR_ω;
                                                                                 goto DVAR_γ;
-    DVAR_β:         if (!ζ->child_fn)                                           goto DVAR_ω;
-                    DVAR=ζ->child_fn(ζ->child_ζ,β);                             
+    DVAR_β:         if (!ζ->fn)                                                 goto DVAR_ω;
+                    DVAR=ζ->fn(ζ->fz,β);                                        
                     if (spec_is_empty(DVAR))                                    goto DVAR_ω;
                                                                                 goto DVAR_γ;
     DVAR_γ:                                                                     return DVAR;
