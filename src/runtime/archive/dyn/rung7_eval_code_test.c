@@ -2,7 +2,7 @@
  * rung7_eval_code_test.c — M-DYN-6 gate: EVAL and CODE via dynamic path
  *
  * Tests that EVAL_fn and CODE_fn work correctly using the full parser
- * + eval_expr_dyn() + stmt_exec_dyn() pipeline.
+ * + eval_expr_dyn() + exec_stmt() pipeline.
  *
  * TESTS
  * -----

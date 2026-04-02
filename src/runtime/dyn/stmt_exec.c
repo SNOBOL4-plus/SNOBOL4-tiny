@@ -15,7 +15,7 @@
  *
  * PUBLIC API
  * ----------
- *   int stmt_exec_dyn(DESCR_t *subj_var,
+ *   int exec_stmt(DESCR_t *subj_var,
  *                     DESCR_t  pat,
  *                     DESCR_t *repl,      // NULL → no replacement
  *                     int      has_repl)
@@ -120,7 +120,7 @@ typedef struct _PND {
 /* Defined by the test driver or the generated main. Declared extern here. */
 /* M-DYN-S1: defined here, referenced as extern in bb_*.c via bb_box.h.
  * Non-static so they get external linkage for separate compilation of bb_*.c.
- * Set by stmt_exec_dyn Phase 1; read by all box functions during Phase 3. */
+ * Set by exec_stmt Phase 1; read by all box functions during Phase 3. */
 const char *Σ = NULL;
 int         Δ = 0;
 int         Ω = 0;
@@ -168,7 +168,7 @@ static spec_t bb_deferred_var(void *zeta, int entry);
  * is IMMEDIATE — written on every γ, even during backtracking.
  *
  * Implementation: both kinds write via NV_SET_fn on γ.  For XNME
- * (immediate=0) the caller (stmt_exec_dyn) must pass the capture list
+ * (immediate=0) the caller (exec_stmt) must pass the capture list
  * and commit only on overall success.  For DYN-4 we buffer XNME captures
  * in a small pending-capture list and flush it in Phase 5.
  */
@@ -240,37 +240,37 @@ typedef struct {
 /* forward declaration for recursion */
 static bb_node_t bb_build(_PND_t *p);
 
-/* forward decls for capture registry (defined after stmt_exec_dyn) */
+/* forward decls for capture registry (defined after exec_stmt) */
 static void register_capture(capture_t *c);
 static void flush_pending_captures(void);
 
 /* Box state types are now in bb_box.h (canonical).
  * lit_t / pos_t etc. were private aliases — replaced with canonical names.
- * Complex composite types (_alt_t, _seq_t, _arbno_t) remain here. */
+ * Complex composite types (alt_t, seq_t, arbno_t) remain here. */
 #define BB_ALT_MAX_S 16
-typedef struct { bb_box_fn fn; void *state; }   _bchild_t;
+typedef struct { bb_box_fn fn; void *state; }   bchild_t;
 typedef struct {
     int       n;
-    _bchild_t children[BB_ALT_MAX_S];
+    bchild_t children[BB_ALT_MAX_S];
     int       current;
     int       position;
     spec_t    result;
-} _alt_t;
+} alt_t;
 
 typedef struct {
-    _bchild_t left;
-    _bchild_t right;
+    bchild_t left;
+    bchild_t right;
     spec_t    matched;
-} _seq_t;
+} seq_t;
 
 #define ARBNO_MAX_S 64
-typedef struct { spec_t matched; int start; } _aframe_t;
+typedef struct { spec_t matched; int start; } aframe_t;
 typedef struct {
     bb_box_fn  fn;
     void      *state;
     int        depth;
-    _aframe_t  stack[ARBNO_MAX_S];
-} _arbno_t;
+    aframe_t  stack[ARBNO_MAX_S];
+} arbno_t;
 
 /* ══════════════════════════════════════════════════════════════════════════
  * M-DYN-OPT — Invariance detection and node cache
@@ -316,13 +316,13 @@ static int patnd_is_invariant(_PND_t *p)
 typedef struct {
     _PND_t   *key;          /* NULL = empty slot */
     bb_node_t template;     /* pristine bb_node_t with fresh ζ as template */
-} _dync_slot_t;
+} cache_slot_t;
 
-static _dync_slot_t g_node_cache[DYNC_CACHE_CAP];
+static cache_slot_t g_node_cache[DYNC_CACHE_CAP];
 static int          g_cache_hits   = 0;
 static int          g_cache_misses = 0;
 
-static _dync_slot_t *_cache_find(_PND_t *key)
+static cache_slot_t *cache_find(_PND_t *key)
 {
     if (!key) return NULL;
     uintptr_t h = ((uintptr_t)key >> 4) & (DYNC_CACHE_CAP - 1);
@@ -337,9 +337,9 @@ static _dync_slot_t *_cache_find(_PND_t *key)
 /* Insert a newly built bb_node_t into the cache for key p.
  * The template ζ is the pristine calloc'd block; we keep it and will
  * memcpy from it on future hits. */
-static void _cache_insert(_PND_t *key, bb_node_t node)
+static void cache_insert(_PND_t *key, bb_node_t node)
 {
-    _dync_slot_t *slot = _cache_find(key);
+    cache_slot_t *slot = cache_find(key);
     if (!slot || slot->key != NULL) return;  /* full or key already in */
     slot->key      = key;
     slot->template = node;
@@ -347,7 +347,7 @@ static void _cache_insert(_PND_t *key, bb_node_t node)
 
 /* On cache hit, return bb_node_t with a FRESH ζ copy so match state
  * is clean each time.  fn is shared (stateless); ζ is per-match. */
-static bb_node_t _cache_get_fresh(_dync_slot_t *slot)
+static bb_node_t cache_get_fresh(cache_slot_t *slot)
 {
     bb_node_t n = slot->template;
     if (n.ζ_size && n.ζ) {
@@ -359,14 +359,14 @@ static bb_node_t _cache_get_fresh(_dync_slot_t *slot)
 }
 
 /* Public: reset the node cache (called between programs / test runs) */
-void dyn_cache_reset(void)
+void cache_reset(void)
 {
     for (int i = 0; i < DYNC_CACHE_CAP; i++) g_node_cache[i].key = NULL;
     g_cache_hits = g_cache_misses = 0;
 }
 
 /* Public: report cache stats */
-void dyn_cache_stats(int *hits, int *misses)
+void cache_stats(int *hits, int *misses)
 {
     if (hits)   *hits   = g_cache_hits;
     if (misses) *misses = g_cache_misses;
@@ -422,12 +422,12 @@ static bb_node_t bb_build(_PND_t *p)
      * memcpy instead of O(depth) tree walk + calloc chain.
      * On miss: build normally, then insert into cache for next time.
      */
-    int _is_inv = patnd_is_invariant(p);
-    if (_is_inv) {
-        _dync_slot_t *_slot = _cache_find(p);
-        if (_slot && _slot->key == p) {
+    int is_invariant = patnd_is_invariant(p);
+    if (is_invariant) {
+        cache_slot_t *slot = cache_find(p);
+        if (slot && slot->key == p) {
             g_cache_hits++;
-                                                              return _cache_get_fresh(_slot);
+                                                              return cache_get_fresh(slot);
         }
         g_cache_misses++;
         /* fall through — build it, then insert below */
@@ -573,7 +573,7 @@ static bb_node_t bb_build(_PND_t *p)
 
     /* ── CONCATENATION (left right) ─────────────────────────────────── */
     case _XCAT: {
-        _seq_t *ζ = calloc(1, sizeof(_seq_t));
+        seq_t *ζ = calloc(1, sizeof(seq_t));
         bb_node_t l = bb_build(p->left);
         bb_node_t r = bb_build(p->right);
         ζ->left.fn  = l.fn; ζ->left.state  = l.ζ;
@@ -590,7 +590,7 @@ static bb_node_t bb_build(_PND_t *p)
          * Flatten nested XOR into a single ALT with N children.
          * This matches the test_sno_1.c alt_α/alt_β pattern exactly.
          */
-        _alt_t *ζ = calloc(1, sizeof(_alt_t));
+        alt_t *ζ = calloc(1, sizeof(alt_t));
         /* collect all OR arms by walking right-spine */
         _PND_t *cur = p;
         int     nc  = 0;
@@ -617,7 +617,7 @@ static bb_node_t bb_build(_PND_t *p)
 
     /* ── ARBNO(body) ────────────────────────────────────────────────── */
     case _XARBN: {
-        _arbno_t *ζ = calloc(1, sizeof(_arbno_t));
+        arbno_t *ζ = calloc(1, sizeof(arbno_t));
         bb_node_t body  = bb_build(p->left);
         ζ->fn = body.fn;
         ζ->state  = body.ζ;
@@ -771,8 +771,8 @@ static bb_node_t bb_build(_PND_t *p)
     } /* switch */
 
     /* ── M-DYN-OPT: insert into cache if invariant ───────────────────── */
-    if (_is_inv)
-        _cache_insert(p, n);
+    if (is_invariant)
+        cache_insert(p, n);
 
                                                               return n;
 }
@@ -872,7 +872,7 @@ static spec_t bb_deferred_var(void *zeta, int entry)
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
- * PUBLIC: stmt_exec_dyn
+ * PUBLIC: exec_stmt
  * ══════════════════════════════════════════════════════════════════════════ */
 
 /*
@@ -891,10 +891,10 @@ int kw_anchor = 0;
  * DYN-4: pending-capture flush.
  * After Phase 3 confirms overall match success we walk the box graph
  * and commit any buffered XNME (.) captures.  We do this via a small
- * visitor that recurses through _seq_t and _alt_t frames and checks
+ * visitor that recurses through seq_t and alt_t frames and checks
  * every capture_t.has_pending flag.
  *
- * We need to reach capture_t nodes buried inside _seq_t / _alt_t.
+ * We need to reach capture_t nodes buried inside seq_t / alt_t.
  * Rather than a full graph walk (complex), we use a simple flat list:
  * bb_build registers every capture_t it allocates into a thread-local
  * array, and Phase 5 iterates the array.
@@ -936,7 +936,7 @@ static void flush_pending_captures(void)
 }
 
 /*
- * stmt_exec_dyn — execute one SNOBOL4 statement dynamically.
+ * exec_stmt — execute one SNOBOL4 statement dynamically.
  *
  * DYN-4 SIGNATURE CHANGE: subj_name (const char*) added.
  *   - If non-NULL: subject is fetched via NV_GET_fn(subj_name) (Phase 1)
@@ -954,7 +954,7 @@ static void flush_pending_captures(void)
  *
  * Returns 1 → :S, 0 → :F.
  */
-int stmt_exec_dyn(const char  *subj_name,
+int exec_stmt(const char  *subj_name,
                   DESCR_t     *subj_var,
                   DESCR_t      pat,
                   DESCR_t     *repl,
@@ -1016,6 +1016,9 @@ int stmt_exec_dyn(const char  *subj_name,
     int scan_limit = kw_anchor ? 0 : Ω;
 
     for (int scan = 0; scan <= scan_limit; scan++) {
+        /* reset stale pending captures from previous scan position */
+        for (int i = 0; i < g_capture_count; i++)
+            g_capture_list[i]->has_pending = 0;
         Δ = scan;
         spec_t result = root.fn(root.ζ, α);
         if (!spec_is_empty(result)) {
@@ -1036,7 +1039,7 @@ Phase4:
      * the subject has no NV home — can't write back safely.
      * In the full runtime this is :F.
      * Exception: subj_name=NULL + subj_var provided = test/convenience
-     * wrapper (stmt_exec_dyn_str).  We allow direct write in that case.
+     * wrapper (exec_stmt_args).  We allow direct write in that case.
      */
     if (has_repl && repl && !subj_name && !subj_var)          return 0;
 
@@ -1088,13 +1091,13 @@ Success:
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
- * dyn_cache_test_run — M-DYN-OPT test helper
+ * cache_test_run — M-DYN-OPT test helper
  *
  * Build a synthetic _XCHR (literal) _PND_t node N times via bb_build.
  * The node is invariant, so hits should equal N-1 (first call = miss,
  * subsequent = hits).  Returns 1 if hits > 0 (cache working), 0 if not.
  * ══════════════════════════════════════════════════════════════════════════ */
-int dyn_cache_test_run(const char *lit, int n_iters)
+int cache_test_run(const char *lit, int n_iters)
 {
     /* Build a single static _PND_t node (stack-allocated, same address each
      * call — required for pointer-keyed cache to work). */
@@ -1107,7 +1110,7 @@ int dyn_cache_test_run(const char *lit, int n_iters)
     node.args = NULL;
     node.nargs = 0;
 
-    dyn_cache_reset();
+    cache_reset();
 
     for (int i = 0; i < n_iters; i++) {
         bb_node_t n = bb_build(&node);
@@ -1115,12 +1118,12 @@ int dyn_cache_test_run(const char *lit, int n_iters)
     }
 
     int hits = 0, misses = 0;
-    dyn_cache_stats(&hits, &misses);
+    cache_stats(&hits, &misses);
     return hits;   /* caller checks hits > 0 */
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
- * dyn_deferred_var_test — T15 gate helper
+ * deferred_var_test — T15 gate helper
  *
  * Exercises bb_deferred_var re-resolution on every alpha.
  * We simulate two consecutive statement executions where the variable
@@ -1130,7 +1133,7 @@ int dyn_cache_test_run(const char *lit, int n_iters)
  *                                 subject "SwordFish"  should match
  *
  * Uses the NV table stubs in the test driver (NV_GET_fn returns whatever
- * was last set via NV_SET_fn).  We set PAT, then exercise stmt_exec_dyn
+ * was last set via NV_SET_fn).  We set PAT, then exercise exec_stmt
  * with a DT_P pattern whose _PND_t contains _XDSAR pointing to "PAT".
  *
  * Returns 1 if all three assertions pass, 0 if any fail.
@@ -1176,7 +1179,7 @@ static DESCR_t nv_get(const char *name)
 
 /* Build a _PND_t _XDSAR node pointing to a variable name, exercise
  * bb_deferred_var via direct call.  We own Σ/Δ/Ω globals. */
-int dyn_deferred_var_test(void)
+int deferred_var_test(void)
 {
     /* Set up NV table entry for "T15_PAT" */
     g_nv_count = 0;
@@ -1191,7 +1194,7 @@ int dyn_deferred_var_test(void)
     dsar_node.nargs = 0;
 
     /* Build the deferred box via bb_build */
-    dyn_cache_reset();
+    cache_reset();
     bb_node_t dvar = bb_build(&dsar_node);
 
     int ok = 1;
@@ -1199,7 +1202,7 @@ int dyn_deferred_var_test(void)
     /* --- Execution 1: PAT = "Bird", subject = "BlueBird" → should match --- */
     /* Manually override NV_GET_fn via our local table.  The test driver's
      * NV_GET_fn stub ignores the name and returns SNUL, so we can't use
-     * stmt_exec_dyn_str here.  Instead call bb_deferred_var directly. */
+     * exec_stmt_args here.  Instead call bb_deferred_var directly. */
     nv_set_str("T15_PAT", "Bird");
     /* bb_deferred_var calls NV_GET_fn(ζ->name) — but the test driver's stub
      * returns SNUL.  We need to patch the global NV path.  Simplest: call
@@ -1231,26 +1234,26 @@ int dyn_deferred_var_test(void)
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
- * dyn_anchor_test — T16 gate helper
+ * anchor_test — T16 gate helper
  *
  * kw_anchor = 1 means Phase 3 must only try position 0.
  * Subject = "XhelloY", pattern = "hello" (starts at pos 1).
  * Unanchored: match at pos 1 → :S.
  * Anchored:   only pos 0 tried → 'X' != 'h' → :F.
  * ══════════════════════════════════════════════════════════════════════════ */
-int dyn_anchor_test(void)
+int anchor_test(void)
 {
     int ok = 1;
 
     /* Unanchored: should find "hello" at position 1 */
     kw_anchor = 0;
-    int r_unanchored = stmt_exec_dyn_str("XhelloY", "hello", NULL, NULL);
+    int r_unanchored = exec_stmt_args("XhelloY", "hello", NULL, NULL);
     ok &= (r_unanchored == 1);
     printf("  unanchored match at pos 1: %s\n", r_unanchored ? "PASS" : "FAIL");
 
     /* Anchored: "hello" is NOT at position 0, should fail */
     kw_anchor = 1;
-    int r_anchored = stmt_exec_dyn_str("XhelloY", "hello", NULL, NULL);
+    int r_anchored = exec_stmt_args("XhelloY", "hello", NULL, NULL);
     ok &= (r_anchored == 0);
     printf("  anchored match fails (not at pos 0): %s\n", r_anchored == 0 ? "PASS" : "FAIL");
 
@@ -1259,11 +1262,11 @@ int dyn_anchor_test(void)
 }
 
 /* forward decl — defined below */
-int stmt_exec_dyn_str(const char *subject, const char *pattern,
+int exec_stmt_args(const char *subject, const char *pattern,
                       const char *repl_str, char **out_subject);
 
 /* ======================================================================
- * stmt_exec_dyn_str -- convenience wrapper: subject and pattern as C strings
+ * exec_stmt_args -- convenience wrapper: subject and pattern as C strings
  *
  * Used by the test driver (stmt_exec_test.c) to exercise the executor
  * without going through the full DESCR_t / PATND_t stack.
@@ -1273,7 +1276,7 @@ int stmt_exec_dyn_str(const char *subject, const char *pattern,
  * for test purposes only.  In the full runtime, callers always pass
  * a real subj_name.
  * ====================================================================== */
-int stmt_exec_dyn_str(const char  *subject,
+int exec_stmt_args(const char  *subject,
                       const char  *pattern,
                       const char  *repl_str,
                       char       **out_subject)
@@ -1302,7 +1305,7 @@ int stmt_exec_dyn_str(const char  *subject,
      * out_subject for convenience.  Phase 5 writes into subj.s via the
      * direct path (special case: when subj_name is NULL and !has_repl the
      * replacement step is skipped gracefully). */
-    int r = stmt_exec_dyn(NULL, &subj, pat, has_repl ? &repl_d : NULL, has_repl);
+    int r = exec_stmt(NULL, &subj, pat, has_repl ? &repl_d : NULL, has_repl);
 
     if (out_subject && r) {
         *out_subject = subj.s;

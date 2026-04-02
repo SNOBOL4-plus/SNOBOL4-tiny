@@ -1,14 +1,14 @@
 /*
  * rung6_dyn_test.c — M-DYN-5 Rung 6 corpus gate
  *
- * Drives stmt_exec_dyn() against PATND_t trees built from the real
+ * Drives exec_stmt() against PATND_t trees built from the real
  * snobol4_pattern.c API.  Exercises the XDSAR (*VAR) and XVAR paths
  * through the dynamic engine — the key DYN-4/DYN-5 correctness check.
  *
  * Each test mirrors a corpus/crosscheck/patterns/*.sno program exactly:
  *   - variables set via NV_SET_fn
  *   - patterns built via pat_lit / pat_cat / pat_alt / pat_ref / pat_assign_*
- *   - statement executed via stmt_exec_dyn()
+ *   - statement executed via exec_stmt()
  *   - OUTPUT observed via captured output_lines[]
  *
  * Build (from one4all/):
@@ -170,7 +170,7 @@ static void test_056_star_deref(void) {
     /* capture_start AFTER all setup printf, BEFORE the statement */
     fflush(stdout);
     capture_start();
-    int matched = stmt_exec_dyn("X", NULL, pat, NULL, 0);
+    int matched = exec_stmt("X", NULL, pat, NULL, 0);
     if (matched) {
         DESCR_t v = NV_GET_fn("V");
         NV_SET_fn("OUTPUT", v);
@@ -201,7 +201,7 @@ static void test_xdsar_mutation(void) {
     /* First match: PAT = 'foo' */
     NV_SET_fn("PAT", str_val("foo"));
     DESCR_t pat  = pat_assign_cond(pat_ref("PAT"), str_val("V"));
-    int r1 = stmt_exec_dyn("X", NULL, pat, NULL, 0);
+    int r1 = exec_stmt("X", NULL, pat, NULL, 0);
     DESCR_t v1 = NV_GET_fn("V");
     EXPECT_MATCH(r1, 1, "first match (PAT='foo')");
     tests++;
@@ -215,7 +215,7 @@ static void test_xdsar_mutation(void) {
     /* Mutate PAT, rebuild pattern (new XDSAR — deferred resolution) */
     NV_SET_fn("PAT", str_val("baz"));
     DESCR_t pat2 = pat_assign_cond(pat_ref("PAT"), str_val("V"));
-    int r2 = stmt_exec_dyn("X", NULL, pat2, NULL, 0);
+    int r2 = exec_stmt("X", NULL, pat2, NULL, 0);
     DESCR_t v2 = NV_GET_fn("V");
     EXPECT_MATCH(r2, 1, "second match (PAT='baz')");
     tests++;
@@ -245,7 +245,7 @@ static void test_xdsar_in_alt(void) {
     DESCR_t alt = pat_alt(pat_ref("PAT1"), pat_ref("PAT2"));
     DESCR_t pat = pat_assign_cond(alt, str_val("V"));
 
-    int r = stmt_exec_dyn("X", NULL, pat, NULL, 0);
+    int r = exec_stmt("X", NULL, pat, NULL, 0);
     DESCR_t v = NV_GET_fn("V");
     EXPECT_MATCH(r, 1, "(*PAT1|*PAT2) matched");
     tests++;
@@ -277,7 +277,7 @@ static void test_xnme_conditional(void) {
     DESCR_t cap  = pat_assign_cond(pat_lit("hello"), str_val("V"));
     DESCR_t pat  = pat_cat(cap, pat_lit("NOMATCH"));
 
-    int r = stmt_exec_dyn("X", NULL, pat, NULL, 0);
+    int r = exec_stmt("X", NULL, pat, NULL, 0);
     EXPECT_MATCH(r, 0, "('hello'.V)'NOMATCH' fails overall");
 
     /* V must be empty — capture was conditional, not committed */
@@ -311,7 +311,7 @@ static void test_xdsar_string_val(void) {
     NV_SET_fn("X",   str_val("hello world"));
 
     DESCR_t pat = pat_assign_cond(pat_ref("PAT"), str_val("V"));
-    int r = stmt_exec_dyn("X", NULL, pat, NULL, 0);
+    int r = exec_stmt("X", NULL, pat, NULL, 0);
     DESCR_t v = NV_GET_fn("V");
     EXPECT_MATCH(r, 1, "*PAT(DT_S) matched 'world'");
     tests++;

@@ -2,7 +2,7 @@
  * scrip-interp.c — SNOBOL4 tree-walk interpreter (M-INTERP-A01)
  *
  * Reuses the existing frontend (lex + parse → Program* IR) and the
- * dynamic runtime (stmt_exec_dyn, eval_code.c) to execute SNOBOL4
+ * dynamic runtime (exec_stmt, eval_code.c) to execute SNOBOL4
  * programs without emitting any assembly or bytecode.
  *
  * Usage:
@@ -40,8 +40,8 @@ extern void stmt_init(void);
 extern DESCR_t      eval_expr_dyn(const char *src);
 extern const char  *execute_code_dyn(DESCR_t code_block);
 
-/* ── stmt_exec_dyn (from stmt_exec.c) ────────────────────────────────── */
-extern int stmt_exec_dyn(const char *subj_name,
+/* ── exec_stmt (from stmt_exec.c) ────────────────────────────────── */
+extern int exec_stmt(const char *subj_name,
                           DESCR_t    *subj_var,
                           DESCR_t     pat,
                           DESCR_t    *repl,
@@ -245,7 +245,7 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
                             has_repl = !IS_FAIL_fn(repl_val);
                         }
                         Σ = subj_name ? subj_name : "";
-                        succeeded = stmt_exec_dyn(subj_name,
+                        succeeded = exec_stmt(subj_name,
                             subj_name ? NULL : &subj_val,
                             pat_d, has_repl ? &repl_val : NULL, has_repl);
                     }
@@ -601,7 +601,7 @@ static void execute_program(Program *prog)
 
         /* ── pattern match ─────────────────────────────────────────── */
         if (s->pattern) {
-            /* Build pattern descriptor via interp_eval then stmt_exec_dyn */
+            /* Build pattern descriptor via interp_eval then exec_stmt */
             DESCR_t pat_d = interp_eval(s->pattern);
             if (IS_FAIL_fn(pat_d)) {
                 succeeded = 0;
@@ -613,7 +613,7 @@ static void execute_program(Program *prog)
                     has_repl = !IS_FAIL_fn(repl_val);
                 }
                 Σ = subj_name ? subj_name : "";
-                succeeded = stmt_exec_dyn(
+                succeeded = exec_stmt(
                     subj_name,
                     subj_name ? NULL : &subj_val,
                     pat_d,

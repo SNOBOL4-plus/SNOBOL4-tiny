@@ -4471,7 +4471,7 @@ static void emit_pat_to_descr(EXPR_t *e) {
             return;
         }
         /* Unknown function in pattern context — evaluate as expression,
-         * result should be DT_P or DT_S (will be handled by stmt_exec_dyn) */
+         * result should be DT_P or DT_S (will be handled by exec_stmt) */
         emit_expr(e, -32);
         A("    mov     rax, [rbp-32]\n");
         A("    mov     rdx, [rbp-24]\n");
@@ -4886,7 +4886,7 @@ static void emit_program(Program *prog) {
     A("    extern  stmt_break_ptr, stmt_span_ptr\n");
     A("    extern  stmt_at_capture\n");
     /* M-DYN-S1: 5-phase dynamic execution */
-    A("    extern  stmt_exec_dyn\n");
+    A("    extern  exec_stmt\n");
     A("    extern  pat_lit, pat_cat, pat_alt, pat_span, pat_break_, pat_breakx\n");
     A("    extern  pat_any_cs, pat_notany, pat_len, pat_pos, pat_rpos\n");
     A("    extern  pat_tab, pat_rtab, pat_arb, pat_arbno, pat_rem\n");
@@ -5496,12 +5496,12 @@ static void emit_program(Program *prog) {
         /* Case 2: pattern-match statement — M-DYN-S1
          * subject pattern [= replacement] :S(L)F(L)
          *
-         * Five-phase execution via stmt_exec_dyn():
+         * Five-phase execution via exec_stmt():
          *   Phase 1: subject name or value
          *   Phase 2: pattern expr → DT_P via emit_pat_to_descr()
-         *   Phase 3+4+5: inside stmt_exec_dyn
+         *   Phase 3+4+5: inside exec_stmt
          *
-         * stmt_exec_dyn(subj_name, subj_var, pat, repl, has_repl)
+         * exec_stmt(subj_name, subj_var, pat, repl, has_repl)
          *   rdi=subj_name  rsi=NULL  rdx=pat.lo  rcx=pat.hi
          *   r8=repl_ptr    r9=has_repl
          * Returns 1=:S  0=:F
@@ -5558,7 +5558,7 @@ static void emit_program(Program *prog) {
             A("    pop     rdi\n");
         }
 
-        /* -- Call stmt_exec_dyn -- */
+        /* -- Call exec_stmt -- */
         /* rdx:rcx = pat (already saved; reload) */
         A("    mov     rdx, [rsp+16]\n");   /* pat.lo */
         A("    mov     rcx, [rsp+24]\n");   /* pat.hi */
@@ -5574,7 +5574,7 @@ static void emit_program(Program *prog) {
         }
         A("    mov     r9d, %d\n", has_repl);
         /* rdi and rsi already set above */
-        A("    call    stmt_exec_dyn\n");
+        A("    call    exec_stmt\n");
         A("    add     rsp, 48\n");
 
         /* -- Branch on result -- */

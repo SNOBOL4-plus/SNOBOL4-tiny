@@ -25,7 +25,7 @@
  *
  *   eval_expr_dyn: parse_expr_from_str → eval_node (recursive EXPR_t walk)
  *   code_dyn:      fmemopen → snoc_parse → Program* stored as DT_C
- *   execute_code_dyn: walk Program stmts, call stmt_exec_dyn per stmt,
+ *   execute_code_dyn: walk Program stmts, call exec_stmt per stmt,
  *                     resolve gotos, return first branch target.
  *
  * RELATION TO EXISTING EVAL_fn
@@ -61,8 +61,8 @@
 extern EXPR_t   *parse_expr_from_str(const char *src);
 extern Program  *snoc_parse(FILE *f, const char *filename);
 
-/* stmt_exec_dyn — the five-phase executor */
-extern int stmt_exec_dyn(const char  *subj_name,
+/* exec_stmt — the five-phase executor */
+extern int exec_stmt(const char  *subj_name,
                           DESCR_t     *subj_var,
                           DESCR_t      pat,
                           DESCR_t     *repl,
@@ -289,7 +289,7 @@ DESCR_t code_dyn(const char *src)
  * Execute each statement in the code block in order.
  * For each statement:
  *   - Phase 1: evaluate subject expression → subj_name / subj_val
- *   - Phase 2/3: if pattern present, call stmt_exec_dyn
+ *   - Phase 2/3: if pattern present, call exec_stmt
  *   - Goto resolution: check success/failure/uncond goto fields
  * Return the first goto label we need to branch to (caller resolves).
  *
@@ -297,7 +297,7 @@ DESCR_t code_dyn(const char *src)
  *   - Subject-only statements (no pattern) are assignments or OUTPUT.
  *   - We eval the subject expression and, if the statement has an
  *     assignment (has_eq), assign to the subject variable.
- *   - Pattern statements go through stmt_exec_dyn.
+ *   - Pattern statements go through exec_stmt.
  *   - Goto is returned as a string for the caller to dispatch.
  */
 const char *execute_code_dyn(DESCR_t code_block)
@@ -325,7 +325,7 @@ const char *execute_code_dyn(DESCR_t code_block)
         int succeeded = 1;   /* default: succeed (no pattern = always :S) */
 
         if (s->pattern) {
-            /* Pattern statement: build pattern DESCR_t, call stmt_exec_dyn */
+            /* Pattern statement: build pattern DESCR_t, call exec_stmt */
             DESCR_t pat_d = eval_node(s->pattern);
             if (IS_FAIL_fn(pat_d)) {
                 succeeded = 0;
@@ -336,7 +336,7 @@ const char *execute_code_dyn(DESCR_t code_block)
                     repl_val = eval_node(s->replacement);
                     has_repl = !IS_FAIL_fn(repl_val);
                 }
-                succeeded = stmt_exec_dyn(
+                succeeded = exec_stmt(
                     subj_name,
                     subj_name ? NULL : &subj_val,
                     pat_d,
