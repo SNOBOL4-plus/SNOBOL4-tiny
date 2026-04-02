@@ -127,16 +127,28 @@ ensure_sno4_archive() {
   local DYN="$RT/boxes"
   local DYNENG="$RT/dyn"
   local DYNFLAGS="-I$DYN -I$RT/snobol4 -I$RT -I$SCRIP_CC_INC -DDYN_ENGINE_LINKED"
-  gcc -O2 -c "$DYN/bb_lit.c"    $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_lit.o    || return 1
-  gcc -O2 -c "$DYN/bb_alt.c"    $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_alt.o    || return 1
-  gcc -O2 -c "$DYN/bb_seq.c"    $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_seq.o    || return 1
-  gcc -O2 -c "$DYN/bb_arbno.c"  $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_arbno.o  || return 1
-  gcc -O2 -c "$DYN/bb_pos.c"    $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_pos.o    || return 1
-  gcc -O2 -c "$DYN/bb_rpos.c"   $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_rpos.o   || return 1
-  gcc -O2 -c "$DYN/bb_tab.c"    $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_tab.o    || return 1
-  gcc -O2 -c "$DYN/bb_rtab.c"   $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_rtab.o   || return 1
-  gcc -O2 -c "$DYN/bb_fence.c"  $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_fence.o  || return 1
-  gcc -O2 -c "$DYN/bb_abort.c"  $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_abort.o  || return 1
+  gcc -O2 -c "$DYN/bb_lit.c"     $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_lit.o     || return 1
+  gcc -O2 -c "$DYN/bb_alt.c"     $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_alt.o     || return 1
+  gcc -O2 -c "$DYN/bb_seq.c"     $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_seq.o     || return 1
+  gcc -O2 -c "$DYN/bb_arbno.c"   $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_arbno.o   || return 1
+  gcc -O2 -c "$DYN/bb_pos.c"     $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_pos.o     || return 1
+  gcc -O2 -c "$DYN/bb_rpos.c"    $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_rpos.o    || return 1
+  gcc -O2 -c "$DYN/bb_tab.c"     $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_tab.o     || return 1
+  gcc -O2 -c "$DYN/bb_rtab.c"    $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_rtab.o    || return 1
+  gcc -O2 -c "$DYN/bb_fence.c"   $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_fence.o   || return 1
+  gcc -O2 -c "$DYN/bb_abort.c"   $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_abort.o   || return 1
+  gcc -O2 -c "$DYN/bb_len.c"     $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_len.o     || return 1
+  gcc -O2 -c "$DYN/bb_span.c"    $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_span.o    || return 1
+  gcc -O2 -c "$DYN/bb_any.c"     $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_any.o     || return 1
+  gcc -O2 -c "$DYN/bb_notany.c"  $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_notany.o  || return 1
+  gcc -O2 -c "$DYN/bb_brk.c"     $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_brk.o     || return 1
+  gcc -O2 -c "$DYN/bb_breakx.c"  $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_breakx.o  || return 1
+  gcc -O2 -c "$DYN/bb_arb.c"     $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_arb.o     || return 1
+  gcc -O2 -c "$DYN/bb_rem.c"     $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_rem.o     || return 1
+  gcc -O2 -c "$DYN/bb_succeed.c" $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_succeed.o || return 1
+  gcc -O2 -c "$DYN/bb_fail.c"    $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_fail.o    || return 1
+  gcc -O2 -c "$DYN/bb_eps.c"     $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_eps.o     || return 1
+  gcc -O2 -c "$DYN/bb_bal.c"     $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/bb_bal.o     || return 1
   gcc -O2 -c "$DYNENG/stmt_exec.c" $DYNFLAGS -w -o /tmp/rtbuild_sno_$$/stmt_exec.o || return 1
   # eval_code.c NOT compiled into archive: requires parse_expr_from_str + snoc_parse
   # (frontend symbols). Link separately for CODE/EVAL tests. M-DYN-S1 fix.
