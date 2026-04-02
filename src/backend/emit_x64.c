@@ -4874,7 +4874,7 @@ static void emit_program(Program *prog) {
     A("    extern  stmt_concat, stmt_is_fail, stmt_finish\n");
     A("    extern  stmt_realval, stmt_set_null, stmt_set_indirect\n");
     A("    extern  stmt_apply, stmt_goto_dispatch\n");
-    A("    extern  execute_code_dyn\n");
+    A("    extern  exec_code\n");
     A("    extern  stmt_setup_subject, stmt_apply_replacement\n");
     A("    extern  stmt_apply_replacement_splice\n");
     A("    extern  stmt_set_capture, stmt_match_var, stmt_match_descr\n");
@@ -5423,7 +5423,7 @@ static void emit_program(Program *prog) {
                     /* 2. Execute the code block → returns label-name DESCR_t */
                     A("    mov     rdi, rax\n");
                     A("    mov     rsi, rdx\n");
-                    A("    call    execute_code_dyn\n");
+                    A("    call    exec_code\n");
                     A("    mov     [rbp-48], rax\n");
                     A("    mov     [rbp-40], rdx\n");
 
@@ -5628,7 +5628,7 @@ static void emit_program(Program *prog) {
     /* ---- Stub definitions for referenced-but-undefined labels ----
      * An undefined label may be a :<VAR> CODE-block execution target.
      * For each: call stmt_get(S_LABEL) -> if DT_C, execute via
-     * execute_code_dyn(), then dispatch on returned label string.
+     * exec_code(), then dispatch on returned label string.
      * Dangling labels (no var / no match) fall to L_SNO_END. */
     for (int i = 0; i < label_count; i++) {
         if (!label_defined[i]) {
@@ -5647,10 +5647,10 @@ static void emit_program(Program *prog) {
             A("    lea     rdi, [rel %s]\n", slab);
             A("    call    stmt_get\n");
             /* rax=DESCR.type rdx=DESCR.ptr */
-            /* 2. execute_code_dyn(DESCR_t) -> const char* label */
+            /* 2. exec_code(DESCR_t) -> const char* label */
             A("    mov     rdi, rax\n");
             A("    mov     rsi, rdx\n");
-            A("    call    execute_code_dyn\n");
+            A("    call    exec_code\n");
             /* rax = label string ptr (NULL or empty -> end) */
             A("    test    rax, rax\n");
             A("    jz      %s\n", nomatch);

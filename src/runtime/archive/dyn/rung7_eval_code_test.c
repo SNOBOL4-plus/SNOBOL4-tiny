@@ -2,7 +2,7 @@
  * rung7_eval_code_test.c — M-DYN-6 gate: EVAL and CODE via dynamic path
  *
  * Tests that EVAL_fn and CODE_fn work correctly using the full parser
- * + eval_expr_dyn() + exec_stmt() pipeline.
+ * + eval_expr() + exec_stmt() pipeline.
  *
  * TESTS
  * -----
@@ -63,25 +63,25 @@ int         Δ = 0;
 
 /* ── eval_code.c public API ───────────────────────────────────────────── */
 /*
- * eval_expr_dyn: parse src as SNOBOL4 expression, evaluate, return DESCR_t.
+ * eval_expr: parse src as SNOBOL4 expression, evaluate, return DESCR_t.
  * Returns FAILDESCR on parse or eval failure.
  */
-extern DESCR_t eval_expr_dyn(const char *src);
+extern DESCR_t eval_expr(const char *src);
 
 /*
- * code_dyn: parse src as SNOBOL4 statement block, return DT_C DESCR_t.
- * The code block can be executed via execute_code_dyn().
+ * code: parse src as SNOBOL4 statement block, return DT_C DESCR_t.
+ * The code block can be executed via exec_code().
  * Returns FAILDESCR on parse failure.
  */
-extern DESCR_t code_dyn(const char *src);
+extern DESCR_t code(const char *src);
 
 /*
- * execute_code_dyn: execute a DT_C code block.
+ * exec_code: execute a DT_C code block.
  * Returns label name to jump to (caller resolves), or NULL on fall-through.
  * If the block has no goto and succeeds, returns "".
  * On failure returns NULL.
  */
-extern const char *execute_code_dyn(DESCR_t code_block);
+extern const char *exec_code(DESCR_t code_block);
 
 /* ── per-test reset ───────────────────────────────────────────────────── */
 static void runtime_reset(void) {
@@ -175,7 +175,7 @@ static void assert_output(const char *label, const char *got, const char *want) 
 /* T1: EVAL('2 + 3') → 5 */
 static void test_eval_arithmetic(void) {
     runtime_reset();
-    DESCR_t r = eval_expr_dyn("2 + 3");
+    DESCR_t r = eval_expr("2 + 3");
     assert_int("EVAL('2 + 3')", r, 5);
 }
 
@@ -184,23 +184,23 @@ static void test_eval_var_arith(void) {
     runtime_reset();
     DESCR_t ten = { .v = DT_I, .i = 10 };
     NV_SET_fn("X", ten);
-    DESCR_t r = eval_expr_dyn("X + 1");
+    DESCR_t r = eval_expr("X + 1");
     assert_int("EVAL('X + 1') X=10", r, 11);
 }
 
 /* T3: EVAL("'hello'") → string 'hello' */
 static void test_eval_quoted_string(void) {
     runtime_reset();
-    DESCR_t r = eval_expr_dyn("'hello'");
+    DESCR_t r = eval_expr("'hello'");
     assert_str("EVAL(\"'hello'\")", r, "hello");
 }
 
 /* T4: CODE executes, OUTPUT visible
  * Mirrors f13: CODE("CPASS OUTPUT = 'PASS' :(END)")
- * We call execute_code_dyn and check OUTPUT was written. */
+ * We call exec_code and check OUTPUT was written. */
 static void test_code_output(void) {
     runtime_reset();
-    DESCR_t c = code_dyn("CPASS OUTPUT = 'PASS' :(END)");
+    DESCR_t c = code("CPASS OUTPUT = 'PASS' :(END)");
     tests++;
     if (c.v != DT_C || !c.ptr) {
         printf("  FAIL  T%d: CODE parse — got v=%d\n", tests, (int)c.v);
@@ -212,7 +212,7 @@ static void test_code_output(void) {
     /* Execute it, capturing OUTPUT */
     char buf[256] = {0};
     capture_start();
-    const char *lbl = execute_code_dyn(c);
+    const char *lbl = exec_code(c);
     capture_end(buf, sizeof buf);
 
     assert_output("CODE OUTPUT='PASS'", buf, "PASS");
@@ -231,14 +231,14 @@ static void test_code_output(void) {
 /* T5: EVAL of concat '\"a\" \"b\"' → "ab" (E_CONCAT path) */
 static void test_eval_concat(void) {
     runtime_reset();
-    DESCR_t r = eval_expr_dyn("\"a\" \"b\"");
+    DESCR_t r = eval_expr("\"a\" \"b\"");
     assert_str("EVAL(concat 'a' 'b')", r, "ab");
 }
 
 /* T6: EVAL of integer literal alone → DT_I */
 static void test_eval_int_literal(void) {
     runtime_reset();
-    DESCR_t r = eval_expr_dyn("42");
+    DESCR_t r = eval_expr("42");
     assert_int("EVAL('42')", r, 42);
 }
 

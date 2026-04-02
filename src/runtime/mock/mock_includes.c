@@ -789,17 +789,17 @@ static DESCR_t _w_Insert(DESCR_t *a, int n) {
 
 /* Register all the missing functions */
 /* =========================================================================
- * Stubs for dynamic Byrd-box symbols (code_dyn, eval_expr_dyn)
+ * Stubs for dynamic Byrd-box symbols (code, eval_expr)
  *
  * snobol4.c and snobol4_pattern.c reference these externs when the full
- * dynamic engine (emit_x64.c / execute_code_dyn) is linked in.  The mock
+ * dynamic engine (emit_x64.c / exec_code) is linked in.  The mock
  * runtime does not include that engine, so we provide fail-returning stubs
  * so that snocone (and any other mock-linked test) can link cleanly.
  * Added SC-13 2026-04-01 to fix DYN-8 cross-session regression.
  * ========================================================================= */
 #ifndef DYN_ENGINE_LINKED
-DESCR_t code_dyn(const char *src)      { (void)src; return FAILDESCR; }
-DESCR_t eval_expr_dyn(const char *src) { (void)src; return FAILDESCR; }
+DESCR_t code(const char *src)      { (void)src; return FAILDESCR; }
+DESCR_t eval_expr(const char *src) { (void)src; return FAILDESCR; }
 #endif
 
 void inc_init_extra(void) {

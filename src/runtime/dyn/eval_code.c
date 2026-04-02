@@ -3,17 +3,17 @@
  *
  * PUBLIC API
  * ----------
- *   DESCR_t     eval_expr_dyn(const char *src)
+ *   DESCR_t     eval_expr(const char *src)
  *       Parse src as a SNOBOL4 expression via parse_expr_from_str(),
  *       walk the EXPR_t IR tree, evaluate to a DESCR_t.
  *       Returns FAILDESCR on parse or eval failure.
  *
- *   DESCR_t     code_dyn(const char *src)
+ *   DESCR_t     code(const char *src)
  *       Parse src as SNOBOL4 statements via snoc_parse() (fmemopen),
  *       stash the Program* in a DT_C DESCR_t.
  *       Returns FAILDESCR on parse failure.
  *
- *   const char *execute_code_dyn(DESCR_t code_block)
+ *   const char *exec_code(DESCR_t code_block)
  *       Execute a DT_C code block statement by statement.
  *       Returns the first unconditional/success goto label encountered,
  *       or "" on fall-through success, or NULL on failure.
@@ -23,16 +23,16 @@
  *   EVAL and CODE are not special.  They are the runtime doing what it
  *   always does with source that arrived late (ARCH-byrd-dynamic.md).
  *
- *   eval_expr_dyn: parse_expr_from_str → eval_node (recursive EXPR_t walk)
- *   code_dyn:      fmemopen → snoc_parse → Program* stored as DT_C
- *   execute_code_dyn: walk Program stmts, call exec_stmt per stmt,
+ *   eval_expr: parse_expr_from_str → eval_node (recursive EXPR_t walk)
+ *   code:      fmemopen → snoc_parse → Program* stored as DT_C
+ *   exec_code: walk Program stmts, call exec_stmt per stmt,
  *                     resolve gotos, return first branch target.
  *
  * RELATION TO EXISTING EVAL_fn
  * -----------------------------
  *   snobol4_pattern.c already has EVAL_fn() — a hand-rolled mini-parser
  *   covering the beauty.sno pattern-expression subset.  That path is
- *   preserved.  eval_expr_dyn() is the full-expression path; it is called
+ *   preserved.  eval_expr() is the full-expression path; it is called
  *   from a new EVAL_fn wrapper in snobol4_pattern.c (see patch note at
  *   bottom of this file) only after the existing fast path declines.
  *
@@ -235,10 +235,10 @@ static DESCR_t eval_node(EXPR_t *e)
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
- * eval_expr_dyn — public entry point
+ * eval_expr — public entry point
  * ══════════════════════════════════════════════════════════════════════════ */
 
-DESCR_t eval_expr_dyn(const char *src)
+DESCR_t eval_expr(const char *src)
 {
     if (!src || !*src) return NULVCL;
 
@@ -249,10 +249,10 @@ DESCR_t eval_expr_dyn(const char *src)
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
- * code_dyn — parse statement block, return DT_C DESCR_t
+ * code — parse statement block, return DT_C DESCR_t
  * ══════════════════════════════════════════════════════════════════════════ */
 
-DESCR_t code_dyn(const char *src)
+DESCR_t code(const char *src)
 {
     if (!src || !*src) return FAILDESCR;
 
@@ -282,7 +282,7 @@ DESCR_t code_dyn(const char *src)
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
- * execute_code_dyn — run a DT_C block, return first goto label (or ""/NULL)
+ * exec_code — run a DT_C block, return first goto label (or ""/NULL)
  * ══════════════════════════════════════════════════════════════════════════ */
 
 /*
@@ -300,7 +300,7 @@ DESCR_t code_dyn(const char *src)
  *   - Pattern statements go through exec_stmt.
  *   - Goto is returned as a string for the caller to dispatch.
  */
-const char *execute_code_dyn(DESCR_t code_block)
+const char *exec_code(DESCR_t code_block)
 {
     if (code_block.v != DT_C || !code_block.ptr) return NULL;
     Program *prog = (Program *)code_block.ptr;

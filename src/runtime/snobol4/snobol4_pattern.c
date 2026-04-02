@@ -1351,8 +1351,8 @@ DESCR_t EVAL_fn(DESCR_t expr) {
         return STRVAL(inner);
     }
     /* Try full dynamic evaluator first (arithmetic, variables, builtins) */
-    extern DESCR_t eval_expr_dyn(const char *src);
-    DESCR_t full = eval_expr_dyn(s);
+    extern DESCR_t eval_expr(const char *src);
+    DESCR_t full = eval_expr(s);
     if (!IS_FAIL_fn(full)) return full;
     /* Fallback: old _ev_expr for pattern-context strings */
     SnoEvalCtx ctx = { s, 0 };

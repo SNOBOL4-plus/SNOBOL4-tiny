@@ -37,8 +37,8 @@ extern DESCR_t pat_at_cursor(const char *varname);
 extern void stmt_init(void);
 
 /* ── eval_code.c ─────────────────────────────────────────────────────── */
-extern DESCR_t      eval_expr_dyn(const char *src);
-extern const char  *execute_code_dyn(DESCR_t code_block);
+extern DESCR_t      eval_expr(const char *src);
+extern const char  *exec_code(DESCR_t code_block);
 
 /* ── exec_stmt (from stmt_exec.c) ────────────────────────────────── */
 extern int exec_stmt(const char *subj_name,
@@ -329,7 +329,7 @@ fn_done:
 
 /* ══════════════════════════════════════════════════════════════════════════
  * eval_node_interp — thin wrapper; reuses eval_node from eval_code.c
- * via eval_expr_dyn (we call it by re-parsing for non-trivial exprs,
+ * via eval_expr (we call it by re-parsing for non-trivial exprs,
  * but for the common case we use NV_GET_fn / NV_SET_fn directly).
  *
  * For the interpreter we need direct EXPR_t evaluation, not string

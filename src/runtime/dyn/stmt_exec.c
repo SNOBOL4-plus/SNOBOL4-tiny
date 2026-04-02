@@ -302,6 +302,8 @@ static int patnd_is_invariant(_PND_t *p)
     case _XATP:
     case _XFNME:
     case _XNME:                                       return 0;  /* always variant */
+    case _XFARB:                                      return 0;  /* ARB: mutable count/start in arb_t */
+    case _XSTAR:                                      return 0;  /* REM: mutable ζ state */
     default:                                          break;
     }
     /* Recurse into children */

@@ -407,11 +407,11 @@ static DESCR_t _b_UCASE_fn(DESCR_t *a, int n) {
 
 /* EVAL / CODE / OPSYN / SORT wrappers — file scope required */
 extern DESCR_t EVAL_fn(DESCR_t);
-extern DESCR_t code_dyn(const char *src);
+extern DESCR_t code(const char *src);
 extern DESCR_t opsyn(DESCR_t, DESCR_t, DESCR_t);
 extern DESCR_t sort_fn(DESCR_t);
 static DESCR_t _b_EVAL(DESCR_t *a, int n)  { return EVAL_fn(n>0?a[0]:NULVCL); }
-static DESCR_t _b_CODE(DESCR_t *a, int n)  { return code_dyn(n>0?VARVAL_fn(a[0]):""); }
+static DESCR_t _b_CODE(DESCR_t *a, int n)  { return code(n>0?VARVAL_fn(a[0]):""); }
 static DESCR_t _b_OPSYN(DESCR_t *a, int n) {
     return opsyn(n>0?a[0]:NULVCL,n>1?a[1]:NULVCL,n>2?a[2]:NULVCL); }
 static DESCR_t _b_SORT(DESCR_t *a, int n)  { return sort_fn(n>0?a[0]:NULVCL); }
