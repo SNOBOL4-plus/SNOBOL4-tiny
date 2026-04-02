@@ -19,12 +19,11 @@
  */
 
 /*
- * Include scrip-cc.h — it defines EXPR_T_DEFINED + IR_COMPAT_ALIASES then
- * includes ir/ir.h, giving us EKind, EXPR_t, and all compat aliases.
- * We additionally define IR_DEFINE_NAMES here to pull in ekind_name[].
+ * Include scrip-cc.h — it defines EXPR_T_DEFINED then includes ir/ir.h,
+ * giving us EKind and EXPR_t.  IR_DEFINE_NAMES pulls in ekind_name[].
  */
 #define IR_DEFINE_NAMES
-#include "scrip_cc.h"   /* → ir/ir.h (EKind, EXPR_t, compat aliases, ekind_name) */
+#include "scrip_cc.h"   /* → ir/ir.h (EKind, EXPR_t, ekind_name) */
 
 /* -------------------------------------------------------------------------
  * ir_print.h forward declarations (inlined here — no separate .h needed

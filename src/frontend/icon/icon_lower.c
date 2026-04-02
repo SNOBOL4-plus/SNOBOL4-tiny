@@ -115,13 +115,13 @@ static EXPR_t *lower_node(const IcnNode *n) {
 
     /* ----- String relational (NEW) ----------------------------------------
      * ICN_SEQ is string equality (==), NOT goal-directed sequence.
-     * Maps to E_SSEQ (E_PAT_SEQ is already taken for goal-directed sequence).   */
-    case ICN_SLT:   return binary(E_SLT,  n);
-    case ICN_SLE:   return binary(E_SLE,  n);
-    case ICN_SGT:   return binary(E_SGT,  n);
-    case ICN_SGE:   return binary(E_SGE,  n);
-    case ICN_SEQ:   return binary(E_SSEQ, n);    /* ICN_SEQ == string EQ */
-    case ICN_SNE:   return binary(E_SNE,  n);
+     * Maps to E_LEQ (E_PAT_SEQ is already taken for goal-directed sequence).   */
+    case ICN_SLT:   return binary(E_LLT,  n);
+    case ICN_SLE:   return binary(E_LLE,  n);
+    case ICN_SGT:   return binary(E_LGT,  n);
+    case ICN_SGE:   return binary(E_LGE,  n);
+    case ICN_SEQ:   return binary(E_LEQ, n);    /* ICN_SEQ == string EQ */
+    case ICN_SNE:   return binary(E_LNE,  n);
 
     /* ----- Cset operators (NEW) ------------------------------------------ */
     case ICN_COMPLEMENT:  return unary (E_CSET_COMPL, n);

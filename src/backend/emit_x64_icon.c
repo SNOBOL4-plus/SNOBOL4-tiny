@@ -1646,7 +1646,7 @@ static void emit_augop(EXPR_t *n, const char *γ, const char *ω,
         case TK_AUGMOD:    op_kind = E_MOD;    break;
         case TK_AUGCONCAT: op_kind = E_CAT; break;
         case TK_AUGEQ:     op_kind = E_EQ;     break;
-        case TK_AUGSEQ:    op_kind = E_SSEQ;    break;
+        case TK_AUGSEQ:    op_kind = E_LEQ;    break;
         case TK_AUGLT:     op_kind = E_LT;     break;
         case TK_AUGLE:     op_kind = E_LE;     break;
         case TK_AUGGT:     op_kind = E_GT;     break;
@@ -1910,7 +1910,7 @@ static void emit_swap(EXPR_t *n, const char *γ, const char *ω,
     Ldef(b); Jmp(ω);
 }
 
-/* E_SGT/SGE/SLT/SLE/SNE — string relational operators.
+/* E_LGT/SGE/SLT/SLE/SNE — string relational operators.
  * Calls icn_str_cmp(a,b) then branches on result. */
 static void emit_strrelop(EXPR_t *n, const char *γ, const char *ω,
                           char *oa, char *ob) {
@@ -1940,12 +1940,12 @@ static void emit_strrelop(EXPR_t *n, const char *γ, const char *ω,
     E("    test    eax, eax\n");
     const char *jfail;
     switch(n->kind) {
-        case E_SGT: jfail="jle"; break;
-        case E_SGE: jfail="jl";  break;
-        case E_SLT: jfail="jge"; break;
-        case E_SLE: jfail="jg";  break;
-        case E_SNE: jfail="je";  break;
-        default:      jfail="jne"; break; /* E_SSEQ (==) */
+        case E_LGT: jfail="jle"; break;
+        case E_LGE: jfail="jl";  break;
+        case E_LLT: jfail="jge"; break;
+        case E_LLE: jfail="jg";  break;
+        case E_LNE: jfail="je";  break;
+        default:      jfail="jne"; break; /* E_LEQ (==) */
     }
     E("    %s     %s\n", jfail, ω);
     /* push right value as result (string ptr still valid) */
@@ -2466,7 +2466,7 @@ static void emit_expr(EXPR_t *n, const char *γ, const char *ω,
         case E_MNS:    emit_neg(n, γ, ω, oa, ob); break;
         case E_NOT:    emit_not(n, γ, ω, oa, ob); break;
         case E_NULL:   emit_not(n, γ, ω, oa, ob); break;
-        case E_SSEQ:    emit_seq(n, γ, ω, oa, ob); break;
+        case E_LEQ:    emit_seq(n, γ, ω, oa, ob); break;
         case E_CAT: case E_LCONCAT:
                          emit_concat(n, γ, ω, oa, ob); break;
         case E_ADD: case E_SUB: case E_MUL: case E_DIV: case E_MOD:
@@ -2488,8 +2488,8 @@ static void emit_expr(EXPR_t *n, const char *γ, const char *ω,
         case E_SEQ_EXPR:  emit_seq_expr(n, γ, ω, oa, ob); break;
         case E_IDENTICAL: emit_identical(n, γ, ω, oa, ob); break;
         case E_SWAP:      emit_swap(n, γ, ω, oa, ob); break;
-        case E_SGT: case E_SGE: case E_SLT:
-        case E_SLE: case E_SNE:
+        case E_LGT: case E_LGE: case E_LLT:
+        case E_LLE: case E_LNE:
                             emit_strrelop(n, γ, ω, oa, ob); break;
         case E_REPEAT:    emit_repeat(n, γ, ω, oa, ob); break;
         case E_LOOP_BREAK:     emit_break_node(n, γ, ω, oa, ob); break;

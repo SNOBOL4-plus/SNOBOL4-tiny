@@ -21,12 +21,12 @@
 /* ---- expression node kinds — from shared IR ---- */
 /*
  * M-G1-IR-HEADER-WIRE: EKind is now defined in ir/ir.h (the single source
- * of truth for all 59 canonical node kinds).
+ * of truth for all canonical node kinds).
  *
- * M-G3-ALIAS-CLEANUP: IR_COMPAT_ALIASES removed — all consumers now use
- * canonical EKind names (E_VAR, E_PAT_ALT, E_MNS, E_POW, E_CAPT_COND_ASGN,
- * E_CAPT_IMMED_ASGN, E_CAPT_CURSOR, E_NUL, E_ASSIGN, E_SCAN, E_ITER, E_ALTERNATES,
- * E_IDX) throughout.
+ * M-G3-ALIAS-CLEANUP: IR_COMPAT_ALIASES section removed — dead code,
+ * never enabled. All code uses canonical EKind names directly:
+ * E_VAR, E_PAT_ALT, E_MNS, E_POW, E_CAPT_COND_ASGN, E_CAPT_IMMED_ASGN,
+ * E_CAPT_CURSOR, E_NUL, E_ASSIGN, E_SCAN, E_ITER, E_ALTERNATES, E_IDX.
  *
  * ir.h defines EXPR_t (with fval, nalloc, id) when included first.
  * scrip_cc.h defines a compatible subset when included standalone.

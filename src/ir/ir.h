@@ -152,16 +152,16 @@ typedef enum EKind {
     E_EQ,           /* E1 = E2   (numeric equality)                         */
     E_NE,           /* E1 ~= E2  (numeric not-equal)                        */
 
-    /* --- Icon: String Relational -----------------------------------------
-     * Same goal-directed semantics; operate on string values.
-     * E_SSEQ chosen (not E_PAT_SEQ) because E_PAT_SEQ = goal-directed sequence. */
+    /* --- Icon: Lexicographic (String) Relational -------------------------
+     * L prefix = Lexicographic. Goal-directed semantics on string values.
+     * E_L{LT,LE,GT,GE,EQ,NE} — parallel to E_{LT,LE,GT,GE} numeric relops. */
 
-    E_SLT,          /* E1 << E2  (string less-than)                         */
-    E_SLE,          /* E1 <<= E2 (string less-or-equal)                     */
-    E_SGT,          /* E1 >> E2  (string greater-than)                      */
-    E_SGE,          /* E1 >>= E2 (string greater-or-equal)                  */
-    E_SSEQ,         /* E1 == E2  (string equality;  ICN_SEQ)                */
-    E_SNE,          /* E1 ~== E2 (string not-equal)                         */
+    E_LLT,          /* E1 << E2  (string less-than)                         */
+    E_LLE,          /* E1 <<= E2 (string less-or-equal)                     */
+    E_LGT,          /* E1 >> E2  (string greater-than)                      */
+    E_LGE,          /* E1 >>= E2 (string greater-or-equal)                  */
+    E_LEQ,         /* E1 == E2  (string equality;  ICN_SEQ)                */
+    E_LNE,          /* E1 ~== E2 (string not-equal)                         */
 
     /* --- Icon: Cset Operators -------------------------------------------- */
 
@@ -330,12 +330,12 @@ static const char * const ekind_name[E_KIND_COUNT] = {
     [E_EQ]           = "E_EQ",
     [E_NE]           = "E_NE",
     /* Icon string relational */
-    [E_SLT]          = "E_SLT",
-    [E_SLE]          = "E_SLE",
-    [E_SGT]          = "E_SGT",
-    [E_SGE]          = "E_SGE",
-    [E_SSEQ]         = "E_SSEQ",
-    [E_SNE]          = "E_SNE",
+    [E_LLT]          = "E_LLT",
+    [E_LLE]          = "E_LLE",
+    [E_LGT]          = "E_LGT",
+    [E_LGE]          = "E_LGE",
+    [E_LEQ]         = "E_LEQ",
+    [E_LNE]          = "E_LNE",
     /* Icon cset ops */
     [E_CSET_COMPL]   = "E_CSET_COMPL",
     [E_CSET_UNION]   = "E_CSET_UNION",
@@ -375,32 +375,7 @@ static const char * const ekind_name[E_KIND_COUNT] = {
 
 #endif /* IR_DEFINE_NAMES */
 
-/* =========================================================================
- * Alias bridges — compatibility with pre-reorg scrip-cc.h names
- *
- * Added in M-G1-IR-HEADER-WIRE. Removed in Phase 5 as each frontend's
- * lower.c is updated to use canonical names directly.
- * DO NOT use these aliases in new code.
- * ========================================================================= */
 
-#ifdef IR_COMPAT_ALIASES
-
-#define E_NULV      E_NUL
-#define E_VART      E_VAR
-#define E_STAR      E_DEFER
-#define E_MNS       E_MNS
-#define E_EXPOP     E_POW
-#define E_OR        E_PAT_ALT
-#define E_NAM       E_CAPT_COND_ASGN
-#define E_DOL       E_CAPT_IMMED_ASGN
-#define E_ATP       E_CAPT_CURSOR
-#define E_ARY       E_IDX
-#define E_ASGN      E_ASSIGN
-#define E_SCAN      E_SCAN
-#define E_BANG      E_ITER
-#define E_ALT_GEN   E_ALTERNATES
-
-#endif /* IR_COMPAT_ALIASES */
 
 #ifdef __cplusplus
 }

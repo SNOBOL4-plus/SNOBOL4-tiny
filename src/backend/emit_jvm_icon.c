@@ -5198,12 +5198,12 @@ static void emit_jvm_icon_strrelop(EXPR_t *n, Ports ports, char *oα, char *oβ)
     JI("invokevirtual", "java/lang/String/compareTo(Ljava/lang/String;)I");
     const char *jfail;
     switch (n->kind) {
-        case E_SSEQ: jfail = "ifne"; break;
-        case E_SNE: jfail = "ifeq"; break;
-        case E_SLT: jfail = "ifge"; break;
-        case E_SLE: jfail = "ifgt"; break;
-        case E_SGT: jfail = "ifle"; break;
-        case E_SGE: jfail = "iflt"; break;
+        case E_LEQ: jfail = "ifne"; break;
+        case E_LNE: jfail = "ifeq"; break;
+        case E_LLT: jfail = "ifge"; break;
+        case E_LLE: jfail = "ifgt"; break;
+        case E_LGT: jfail = "ifle"; break;
+        case E_LGE: jfail = "iflt"; break;
         default:      jfail = "ifne"; break;
     }
     J("    %s %s\n", jfail, rb2);
@@ -6747,8 +6747,8 @@ static void emit_jvm_icon_expr(EXPR_t *n, Ports ports, char *oα, char *oβ) {
         case E_SIZE:    emit_jvm_icon_size     (n,ports,oα,oβ); break;
         case E_LIMIT:   emit_jvm_icon_limit    (n,ports,oα,oβ); break;
         case E_FIELD:   emit_jvm_icon_field    (n,ports,oα,oβ); break;
-        case E_SSEQ: case E_SNE: case E_SLT:
-        case E_SLE: case E_SGT: case E_SGE:
+        case E_LEQ: case E_LNE: case E_LLT:
+        case E_LLE: case E_LGT: case E_LGE:
                           emit_jvm_icon_strrelop (n,ports,oα,oβ); break;
         default: {
             int id = next_uid(); char a2[64], b2[64];
