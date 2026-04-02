@@ -151,7 +151,7 @@ static spec_t bb_len(len_t **ζζ, int entry)
 }
 
 /* ── SPAN(chars) box ────────────────────────────────────────────────────── */
-typedef struct { const char *chars; } span_t;
+typedef struct { const char *chars; int δ; } span_t;
 
 static spec_t bb_span(span_t **ζζ, int entry)
 {
@@ -161,27 +161,11 @@ static spec_t bb_span(span_t **ζζ, int entry)
     if (entry == β)                                     goto SPAN_β;
 
     spec_t         SPAN;
-    int           SPAN_δ;
 
-    SPAN_α:       for (SPAN_δ = 0; Σ[Δ+SPAN_δ]; SPAN_δ++)
-                      if (!strchr(ζ->chars, Σ[Δ+SPAN_δ])) break;
-                  if (SPAN_δ <= 0)                            goto SPAN_ω;
-                  SPAN = spec(Σ+Δ, SPAN_δ); Δ += SPAN_δ;      goto SPAN_γ;
-    SPAN_β:       { /* recover δ: walk back until chars mismatch */
-                    int d = 0;
-                    /* saved in a local — re-scan from new Δ backwards */
-                    /* Δ is already advanced; we must find how far we went.
-                     * Since SPAN is not re-entrant on β after partial match,
-                     * we encode δ in ζ->chars[0] field is not safe.
-                     * Use a simple approach: store δ in the unused high bits.
-                     * For DYN-3 correctness: re-scan Σ at Δ backwards. */
-                    /* Simpler: SPAN boxes are not backtracked past their
-                     * initial advance (SPAN succeeds once, fully). On β,
-                     * undo the full advance. We need to know SPAN_δ.
-                     * Store it in ζ->chars via a side-band int in the struct. */
-                    (void)d;
-                                                              goto SPAN_ω; /* conservative: SPAN does not backtrack */
-                  }
+    SPAN_α:       for (ζ->δ = 0; Δ+ζ->δ < Ω && strchr(ζ->chars, Σ[Δ+ζ->δ]); ζ->δ++);
+                  if (ζ->δ <= 0)                            goto SPAN_ω;
+                  SPAN = spec(Σ+Δ, ζ->δ); Δ += ζ->δ;        goto SPAN_γ;
+    SPAN_β:       Δ -= ζ->δ;                                goto SPAN_ω;
 
     SPAN_γ:                                                   return SPAN;
     SPAN_ω:                                                   return spec_empty;
