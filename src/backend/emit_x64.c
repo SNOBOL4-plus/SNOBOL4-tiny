@@ -4712,6 +4712,26 @@ static void emit_program(Program *prog) {
         }
     }
 
+    /* ---- Pass 2b: collect invariant PAT= assignments (M-DYN-OPT) ----
+     * A statement qualifies if:
+     *   subject is a plain E_VAR (named variable),
+     *   there is no pattern (pure assignment, not a match stmt),
+     *   replacement exists and is a pattern expression with no runtime-variable nodes.
+     * Such patterns are built once in the program preamble instead of on every call. */
+    inv_pats_reset();
+    for (STMT_t *sp = prog->head; sp; sp = sp->next) {
+        if (sp->is_end) break;
+        if (!sp->subject || sp->subject->kind != E_VAR) continue;
+        if (sp->pattern) continue;
+        if (!sp->replacement) continue;
+        if (!expr_is_pattern_expr(sp->replacement)) continue;
+        if (!expr_is_invariant(sp->replacement)) continue;
+        if (inv_pat_count >= INV_PATS_MAX) break;
+        InvPat *ip = &inv_pats[inv_pat_count++];
+        snprintf(ip->varname, NAME_LEN, "%s", sp->subject->sval);
+        ip->rhs = sp->replacement;
+    }
+
     /* ---- Pre-scan: compute body_end_idx for DEFINE-style functions ----
      * Must run BEFORE Pass 3 so dry_cur_fn clearing in Pass 3 uses correct values.
      * For each function with a known end_label (the goto target from the DEFINE stmt,
@@ -4918,6 +4938,22 @@ static void emit_program(Program *prog) {
     A("section .text\n");
     A("main:\n");
     A("    PROG_INIT\n");
+
+    /* M-DYN-OPT: pre-build invariant patterns in preamble.
+     * Each invariant PAT= was collected in Pass 2b.  We emit pat_to_descr
+     * once here at startup and store the result into the named variable so
+     * every subsequent use of that variable skips the construction cost. */
+    if (inv_pat_count > 0) {
+        A("\n    ; M-DYN-OPT: pre-build invariant patterns\n");
+        for (int i = 0; i < inv_pat_count; i++) {
+            const char *vlab = str_intern(inv_pats[i].varname);
+            A("\n    ; pre-build: %s\n", inv_pats[i].varname);
+            emit_pat_to_descr(inv_pats[i].rhs);
+            A("    mov     [rbp-32], rax\n");
+            A("    mov     [rbp-24], rdx\n");
+            A("    SET_VAR     %s\n", vlab);
+        }
+    }
 
     /* Walk statements */
     int stmt_uid = 0;
