@@ -963,7 +963,7 @@ function _call(fname, arg_exprs) {
     case 'LPAD':    { const s=_str(args[0]??''),n=_num(args[1]??0),p=args[2]!==undefined?_str(args[2]):''; return s.padStart(n,p||' '); }
     case 'RPAD':    { const s=_str(args[0]??''),n=_num(args[1]??0),p=args[2]!==undefined?_str(args[2]):''; return s.padEnd(n,p||' '); }
     case 'INTEGER': { const n=Number(_str(args[0]??'')); return isFinite(n)?Math.trunc(n):_FAIL; }
-    case 'REAL':    { const n=parseFloat(_str(args[0]??'')); return isFinite(n)?n:_FAIL; }
+    case 'REAL':    { const n=parseFloat(_str(args[0]??'')); return isFinite(n)?_real_result(n):_FAIL; }
     case 'STRING':  return _str(args[0]??'');
     case 'CONVERT': { const v=args[0],t=_str(args[1]??'').toUpperCase();
                       if(t==='INTEGER') return Math.trunc(_num(v));

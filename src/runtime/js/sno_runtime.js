@@ -230,7 +230,7 @@ const _builtins = {
     INTEGER(args) { const n=Number(args[0]); return Number.isInteger(n) ? n : _FAIL; },
     REAL(args)    { const n=Number(args[0]); return isFinite(n) ? n : _FAIL; },
     CONVERT(args) { /* basic: return arg[0] */ return args[0]; },
-    DATATYPE(args){ return typeof args[0] === 'number' ? (Number.isInteger(args[0])?'INTEGER':'REAL') : 'STRING'; },
+    DATATYPE(args){ const v=args[0]; if(_is_real(v)) return 'REAL'; if(typeof v==='number'||(_is_int(v)&&v!==null&&v!=='')) return 'INTEGER'; return 'STRING'; },
     INPUT(args)   { return _vars['INPUT']; },
     OUTPUT(args)  { if(args[0]!==undefined) _vars['OUTPUT']=args[0]; return args[0]; },
     CHAR(args)    { return String.fromCharCode(_num(args[0])); },
