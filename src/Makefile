@@ -10,7 +10,6 @@ CFLAGS = -Wall -Wno-unused-function -g -O0 \
          -I backend
 
 FRONTEND_SNO = \
-    frontend/snobol4/lex.c \
     frontend/snobol4/sno.tab.c \
     frontend/snobol4/parse.c
 
@@ -109,12 +108,7 @@ frontend/snobol4/sno.tab.c frontend/snobol4/sno.tab.h: | frontend/snobol4/sno.y
 	    bison -d -o frontend/snobol4/sno.tab.c frontend/snobol4/sno.y; \
 	fi
 
-frontend/snobol4/lex.c: | frontend/snobol4/sno.l frontend/snobol4/sno.tab.h
-	@if [ ! -f frontend/snobol4/lex.c ]; then \
-	    lex -t frontend/snobol4/sno.l > frontend/snobol4/lex.c; \
-	fi
-
-frontend/snobol4/sno.tab.o frontend/snobol4/lex.o: frontend/snobol4/sno.tab.h
+frontend/snobol4/sno.tab.o frontend/snobol4/parse.o: frontend/snobol4/sno.tab.h
 
 frontend/rebus/rebus.tab.o frontend/rebus/lex.rebus.o frontend/rebus/rebus_lower.o frontend/rebus/rebus_print.o: frontend/rebus/rebus.tab.h
 
