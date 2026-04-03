@@ -41,7 +41,6 @@ int   n_inc = 0;
 static int   lineno = 1;
 static char  strbuf[65536];
 static int   strpos;
-static int   depth;      /* paren depth in BODY for ':' detection */
 
 
 static Token mktok(int k, const char *sv, long iv, double dv) {
@@ -72,7 +71,7 @@ G       ({WS}|{CONT})*
 
 <INITIAL>\n             { lineno++; /* blank line */ }
 <INITIAL>[*!|;]         { BEGIN(SKIP); }
-<INITIAL>[ \t]          { BEGIN(BODY_START); depth=0; }
+<INITIAL>[ \t]          { BEGIN(BODY_START); }
 
 <INITIAL>"-"            {
     /* CTL line: check for INCLUDE/COPY */
@@ -100,7 +99,7 @@ G       ({WS}|{CONT})*
 
 <LABEL>[ \t]            {
     strbuf[strpos] = '\0';
-    BEGIN(BODY_START); depth = 0;
+    BEGIN(BODY_START);
     return T_LABEL;
 }
 
@@ -116,7 +115,7 @@ G       ({WS}|{CONT})*
     /* non-IDCONT char immediately after label (no space) — put back, emit label */
     yyless(0);
     strbuf[strpos] = '\0';
-    BEGIN(BODY_START); depth = 0;
+    BEGIN(BODY_START);
     return T_LABEL;
 }
 
@@ -125,7 +124,7 @@ G       ({WS}|{CONT})*
 
 <BODY_START>[ \t]+      { /* discard leading whitespace — not concatenation */ }
 <BODY_START>\n          { lineno++; BEGIN(INITIAL); return T_STMT_END; }
-<BODY_START>";"         { depth=0; return T_STMT_END; }
+<BODY_START>";"         { return T_STMT_END; }
 <BODY_START>.           { yyless(0); BEGIN(BODY); }
 
     /* ---- BODY: statement body ----
@@ -137,13 +136,13 @@ G       ({WS}|{CONT})*
     /* Add G to definitions if not present — defined above as ({WS}|{CONT})* */
 
 <BODY>\n               { lineno++; BEGIN(INITIAL); return T_STMT_END; }
-<BODY>";"              { depth=0; return T_STMT_END; }
-<BODY>":"              { if(depth==0) BEGIN(GT); }
+<BODY>";"              { return T_STMT_END; }
+<BODY>{G}":"  { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; BEGIN(GT); }
 
 <BODY>&{ALPHA}{ALNUM}* { strbuf[0]='\0'; strncat(strbuf,yytext+1,sizeof(strbuf)-1); return T_KEYWORD; }
 
     /* T_CONCAT: White before atom-starting char — the only whitespace-only token */
-<BODY>{W}/[A-Za-z\x80-\xFF0-9'\"(]  { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; if(depth==0) return T_CONCAT; }
+<BODY>{W}  { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_CONCAT; }
 
     /* Binary ops: White OP White — mandatory space distinguishes from unary */
 <BODY>{W}"**"{W}  { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_EXPONENTIATION;  }
@@ -165,13 +164,13 @@ G       ({WS}|{CONT})*
 <BODY>{W}"~"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_TILDE;           }
 
     /* Structural: open absorbs trailing Gray; close absorbs leading Gray */
-<BODY>"("  { depth++; return T_LPAREN; }
-<BODY>"["  { depth++; return T_LBRACK; }
-<BODY>"<"  { depth++; return T_LANGLE; }
-<BODY>")"  { depth--; return T_RPAREN; }
-<BODY>"]"  { depth--; return T_RBRACK; }
-<BODY>">"  { depth--; return T_RANGLE; }
-<BODY>","  { return T_COMMA; }
+<BODY>"("{G}  { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_LPAREN; }
+<BODY>"["{G}  { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_LBRACK; }
+<BODY>"<"{G}  { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_LANGLE; }
+<BODY>{G}")"  { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_RPAREN; }
+<BODY>{G}"]"  { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_RBRACK; }
+<BODY>{G}">"  { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_RANGLE; }
+<BODY>{G}","{G}  { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=="\n") lineno++; return T_COMMA; }
 
     /* Atoms: arrive bare (T_CONCAT or Gray already consumed leading space) */
 <BODY>{ALPHA}{IDCONT}*/"("  { strbuf[0]='\0'; strncat(strbuf,yytext,sizeof(strbuf)-1); return T_FUNCTION; }
@@ -201,7 +200,6 @@ G       ({WS}|{CONT})*
 <BODY>"?"    { return T_UN_QUESTION_MARK;}
 <BODY>"&"    { return T_UN_AMPERSAND;    }
 
-<BODY>{WS}+  { /* discard horizontal whitespace not consumed by op rules */ }
 <BODY>.      { sno_error(lineno,"unexpected char '%s'",yytext); }
 
 
@@ -272,7 +270,7 @@ G       ({WS}|{CONT})*
     memcpy(strbuf, yytext+1, len); strbuf[len]='\0';
     return T_STR;
 }
-<GT>";"                 { depth=0; BEGIN(INITIAL); return T_STMT_END; }
+<GT>";"                 { BEGIN(INITIAL); return T_STMT_END; }
 <GT>\n                  { lineno++; BEGIN(INITIAL); return T_STMT_END; }
 <GT>.                   { /* ignore unknown chars in goto field */ }
 
