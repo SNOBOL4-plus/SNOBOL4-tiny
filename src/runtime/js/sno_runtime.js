@@ -28,6 +28,9 @@ const _store = {};
 
 const _vars = new Proxy(_store, {
     set(o, k, v) {
+        /* SNOBOL4 identifiers are case-insensitive — normalize to uppercase.
+         * Symbol keys (JS internals) pass through via the typeof guard. */
+        if (typeof k === 'string') k = k.toUpperCase();
         o[k] = v;
         if (k === 'OUTPUT') {
             process.stdout.write(String(v === null ? '' : v) + '\n');
@@ -35,6 +38,7 @@ const _vars = new Proxy(_store, {
         return true;
     },
     get(o, k) {
+        if (typeof k === 'string') k = k.toUpperCase();
         if (k in o) return o[k];
         if (k === 'INPUT') {
             /* synchronous readline — only works in Node.js */

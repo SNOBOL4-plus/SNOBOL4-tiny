@@ -855,9 +855,24 @@ function _build_pat(e) {
   if(!e) return _FAIL;
   switch(e.kind) {
     case E_QLIT:   return PAT_lit(e.sval);
-    case E_VAR:    { const v=_vars[e.sval]; return PAT_lit(_str(v??'')); }
+    case E_ILIT:   return PAT_lit(String(e.ival));
+    case E_FLIT:   return PAT_lit(String(e.dval));
+    case E_VAR:    {
+      /* Bare pattern keywords (no parens) parse as E_VAR — dispatch to constructors */
+      switch(e.sval.toUpperCase()) {
+        case 'FAIL':    return PAT_fail();
+        case 'SUCCEED': return PAT_succeed();
+        case 'FENCE':   return PAT_fence();
+        case 'ABORT':   return PAT_abort();
+        case 'ARB':     return PAT_arb();
+        case 'REM':     return PAT_rem();
+        case 'BAL':     return PAT_bal();
+      }
+      const v=_vars[e.sval]; return _is_fail(v)?_FAIL:PAT_lit(_str(v??''));
+    }
     case E_ALT:    return PAT_alt(...e.children.map(_build_pat));
     case E_SEQ:    return PAT_seq(...e.children.map(_build_pat));
+    case E_CAT:    return PAT_seq(...e.children.map(_build_pat));
     case E_ARB:    return PAT_arb();
     case E_ARBNO:  return PAT_arbno(_build_pat(e.children[0]));
     case E_REM:    return PAT_rem();
@@ -944,7 +959,20 @@ function _call(fname, arg_exprs) {
     case 'DEFINE':  { const spec=_str(args[0]??''),entry=args[1]?_str(args[1]):null; define_fn(spec,entry); return null; }
     case 'ARRAY':   { const n=parseInt(_str(args[0]??'1'),10); return new Array(Math.max(1,n)).fill(null); }
     case 'TABLE':   return new Map();
-    case 'DATA':    { define_fn(_str(args[0]??''), null); return null; }
+    case 'DATA': {
+      const spec = _str(args[0]??'');
+      const m = spec.match(/^(\w+)\(([^)]*)\)/);
+      if (!m) return null;
+      const tname  = m[1].toUpperCase();
+      const fields = m[2].split(',').map(s=>s.trim()).filter(Boolean).map(s=>s.toUpperCase());
+      /* Register the constructor: tname(f1,f2,...) → object with __datatype */
+      func_table[tname] = { __data_ctor: true, fields };
+      /* Register field accessor functions */
+      for (const f of fields) {
+        func_table[f] = { __data_field: true, field: f };
+      }
+      return null;
+    }
     case 'CHAR':    return String.fromCharCode(_num(args[0]??0));
     case 'CODE':    { const s=_str(args[0]??''); return s.length?s.charCodeAt(0):_FAIL; }
     case 'REMDR':   { const a=_num(args[0]??0),b=_num(args[1]??1); return b===0?_FAIL:a%b; }
@@ -956,7 +984,22 @@ function _call(fname, arg_exprs) {
     case 'LOG':     return Math.log(_num(args[0]??0));
     case 'DATE':    return new Date().toDateString();
     case 'TIME':    return Date.now();
-    case 'OPSYN':   case 'SETEXIT': case 'STOPTR': case 'TRACE': case 'SPITBOL': return null;
+    case 'DATATYPE': {
+      const v = args[0];
+      if (v === null || v === undefined) return 'STRING';
+      if (v instanceof Map)   return 'TABLE';
+      if (Array.isArray(v))   return 'ARRAY';
+      if (typeof v === 'object' && v.__datatype) return v.__datatype;
+      if (typeof v === 'number') return Number.isInteger(v) ? 'INTEGER' : 'REAL';
+      return 'STRING';
+    }
+    case 'LGT': return _str(args[0]??'') >  _str(args[1]??'') ? args[0] : _FAIL;
+    case 'LLT': return _str(args[0]??'') <  _str(args[1]??'') ? args[0] : _FAIL;
+    case 'LGE': return _str(args[0]??'') >= _str(args[1]??'') ? args[0] : _FAIL;
+    case 'LLE': return _str(args[0]??'') <= _str(args[1]??'') ? args[0] : _FAIL;
+    case 'LEQ': return _str(args[0]??'') === _str(args[1]??'') ? args[0] : _FAIL;
+    case 'LNE': return _str(args[0]??'') !== _str(args[1]??'') ? args[0] : _FAIL;
+    case 'OPSYN': case 'SETEXIT': case 'STOPTR': case 'TRACE': case 'SPITBOL': return null;
     case 'INPUT':   {
       try {
         const buf=Buffer.alloc(4096);
@@ -969,10 +1012,25 @@ function _call(fname, arg_exprs) {
 
   /* User-defined function */
   const fd=func_table[fn];
-  if(fd) return _call_user(fn, fd, args);
-
-  process.stderr.write(`sno-interp: undefined function ${fn}\n`);
-  return _FAIL;
+  if (!fd) {
+    process.stderr.write(`sno-interp: undefined function ${fn}\n`);
+    return _FAIL;
+  }
+  /* DATA constructor */
+  if (fd.__data_ctor) {
+    const obj = Object.create(null);
+    obj.__datatype = fn;  /* already uppercased */
+    for (let i=0; i<fd.fields.length; i++) obj[fd.fields[i]] = args[i]??null;
+    return obj;
+  }
+  /* DATA field accessor */
+  if (fd.__data_field) {
+    const obj = args[0];
+    if (!obj || typeof obj !== 'object') return _FAIL;
+    if (args.length > 1) { obj[fd.field] = args[1]; return args[1]; }  /* setter */
+    return obj[fd.field]??null;
+  }
+  return _call_user(fn, fd, args);
 }
 
 function _call_user(fname, fd, args) {
@@ -1010,6 +1068,10 @@ function _exec_from(start) {
 
   while(s&&steps++<LIMIT) {
     if(s.is_end) throw new EndSignal();
+
+    /* Update statement counters */
+    _vars['&STCOUNT'] = (_vars['&STCOUNT']||0) + 1;
+    _vars['&STNO']    = s.lineno || steps;
 
     let ok=true;
     let subj_name=null, subj_val=null;
