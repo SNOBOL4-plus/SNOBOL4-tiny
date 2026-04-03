@@ -6,7 +6,7 @@
 .assembly extern mscorlib {}
 
 .class public auto ansi beforefieldinit
-       Snobol4.Runtime.Boxes.BbLit
+       Snobol4.Runtime.Boxes.bb_lit
        extends [mscorlib]System.Object
        implements Snobol4.Runtime.Boxes.IByrdBox
 {
@@ -25,12 +25,12 @@
     pop
     ldstr      ""
   LIT_NOTNULL:
-    stfld      string Snobol4.Runtime.Boxes.BbLit::_lit
+    stfld      string Snobol4.Runtime.Boxes.bb_lit::_lit
     ldarg.0
     ldarg.0
-    ldfld      string Snobol4.Runtime.Boxes.BbLit::_lit
+    ldfld      string Snobol4.Runtime.Boxes.bb_lit::_lit
     callvirt   instance int32 [mscorlib]System.String::get_Length()
-    stfld      int32 Snobol4.Runtime.Boxes.BbLit::_len
+    stfld      int32 Snobol4.Runtime.Boxes.bb_lit::_len
     ret
   }
 
@@ -43,7 +43,7 @@
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbLit::_len
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_lit::_len
     add
     ldarg.1
     callvirt   instance int32 Snobol4.Runtime.Boxes.MatchState::get_Length()
@@ -53,14 +53,14 @@
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldarg.0
-    ldfld      string Snobol4.Runtime.Boxes.BbLit::_lit
+    ldfld      string Snobol4.Runtime.Boxes.bb_lit::_lit
     callvirt   instance bool Snobol4.Runtime.Boxes.MatchState::MatchesAt(int32, string)
     brfalse    LIT_A_FAIL
     // result = Spec.Of(cursor, len)
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbLit::_len
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_lit::_len
     call       valuetype Snobol4.Runtime.Boxes.Spec
                Snobol4.Runtime.Boxes.Spec::Of(int32, int32)
     stloc.0
@@ -69,7 +69,7 @@
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbLit::_len
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_lit::_len
     add
     stfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldloc.0
@@ -88,7 +88,7 @@
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbLit::_len
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_lit::_len
     sub
     stfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldsfld     valuetype Snobol4.Runtime.Boxes.Spec Snobol4.Runtime.Boxes.Spec::Fail

@@ -4,7 +4,7 @@
 .assembly extern mscorlib {}
 
 .class public auto ansi beforefieldinit
-       Snobol4.Runtime.Boxes.BbNotany
+       Snobol4.Runtime.Boxes.bb_notany
        extends [mscorlib]System.Object
        implements Snobol4.Runtime.Boxes.IByrdBox
 {
@@ -22,7 +22,7 @@
     pop
     ldstr      ""
   NOTANY_NN:
-    stfld      string Snobol4.Runtime.Boxes.BbNotany::_chars
+    stfld      string Snobol4.Runtime.Boxes.bb_notany::_chars
     ret
   }
 
@@ -42,7 +42,7 @@
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldarg.0
-    ldfld      string Snobol4.Runtime.Boxes.BbNotany::_chars
+    ldfld      string Snobol4.Runtime.Boxes.bb_notany::_chars
     callvirt   instance bool Snobol4.Runtime.Boxes.MatchState::CharInSet(int32, string)
     brtrue     NOTANY_A_FAIL
     ldarg.1

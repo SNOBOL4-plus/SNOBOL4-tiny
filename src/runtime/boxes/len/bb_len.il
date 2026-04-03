@@ -1,6 +1,6 @@
 // bb_len.il — LEN: match exactly n characters
 .assembly extern mscorlib {}
-.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.BbLen
+.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.bb_len
        extends [mscorlib]System.Object implements Snobol4.Runtime.Boxes.IByrdBox
 {
   .field private int32 _n
@@ -11,7 +11,7 @@
     call       instance void [mscorlib]System.Object::.ctor()
     ldarg.0
     ldarg.1
-    stfld      int32 Snobol4.Runtime.Boxes.BbLen::_n
+    stfld      int32 Snobol4.Runtime.Boxes.bb_len::_n
     ret
   }
   .method public virtual instance valuetype Snobol4.Runtime.Boxes.Spec
@@ -22,7 +22,7 @@
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbLen::_n
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_len::_n
     add
     ldarg.1
     callvirt   instance int32 Snobol4.Runtime.Boxes.MatchState::get_Length()
@@ -30,14 +30,14 @@
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbLen::_n
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_len::_n
     call       valuetype Snobol4.Runtime.Boxes.Spec Snobol4.Runtime.Boxes.Spec::Of(int32, int32)
     stloc.0
     ldarg.1
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbLen::_n
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_len::_n
     add
     stfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldloc.0
@@ -54,7 +54,7 @@
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbLen::_n
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_len::_n
     sub
     stfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldsfld     valuetype Snobol4.Runtime.Boxes.Spec Snobol4.Runtime.Boxes.Spec::Fail

@@ -4,7 +4,7 @@
 .assembly extern mscorlib {}
 
 .class public auto ansi beforefieldinit
-       Snobol4.Runtime.Boxes.BbSeq
+       Snobol4.Runtime.Boxes.bb_seq
        extends [mscorlib]System.Object
        implements Snobol4.Runtime.Boxes.IByrdBox
 {
@@ -22,10 +22,10 @@
     call       instance void [mscorlib]System.Object::.ctor()
     ldarg.0
     ldarg.1
-    stfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.BbSeq::_left
+    stfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_seq::_left
     ldarg.0
     ldarg.2
-    stfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.BbSeq::_right
+    stfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_seq::_right
     ret
   }
 
@@ -41,14 +41,14 @@
     ldarg.0
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
-    stfld      int32 Snobol4.Runtime.Boxes.BbSeq::_mStart
+    stfld      int32 Snobol4.Runtime.Boxes.bb_seq::_mStart
     ldarg.0
     ldc.i4.0
-    stfld      int32 Snobol4.Runtime.Boxes.BbSeq::_mLen
+    stfld      int32 Snobol4.Runtime.Boxes.bb_seq::_mLen
 
     // lr = _left.α(ms)
     ldarg.0
-    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.BbSeq::_left
+    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_seq::_left
     ldarg.1
     callvirt   instance valuetype Snobol4.Runtime.Boxes.Spec
                Snobol4.Runtime.Boxes.IByrdBox::α(class Snobol4.Runtime.Boxes.MatchState)
@@ -60,16 +60,16 @@
     // left_γ: accumulate
     ldarg.0
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbSeq::_mLen
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_seq::_mLen
     ldloca.s   V_lr
     ldfld      int32 Snobol4.Runtime.Boxes.Spec::Length
     add
-    stfld      int32 Snobol4.Runtime.Boxes.BbSeq::_mLen
+    stfld      int32 Snobol4.Runtime.Boxes.bb_seq::_mLen
 
   SEQ_A_TRY_RIGHT:
     // rr = _right.α(ms)
     ldarg.0
-    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.BbSeq::_right
+    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_seq::_right
     ldarg.1
     callvirt   instance valuetype Snobol4.Runtime.Boxes.Spec
                Snobol4.Runtime.Boxes.IByrdBox::α(class Snobol4.Runtime.Boxes.MatchState)
@@ -81,7 +81,7 @@
     // right_ω → left.β (inline — no cross-method branch)
   SEQ_A_LEFT_BETA:
     ldarg.0
-    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.BbSeq::_left
+    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_seq::_left
     ldarg.1
     callvirt   instance valuetype Snobol4.Runtime.Boxes.Spec
                Snobol4.Runtime.Boxes.IByrdBox::β(class Snobol4.Runtime.Boxes.MatchState)
@@ -92,18 +92,18 @@
     // left_γ from beta: re-accumulate and retry right.α
     ldarg.0
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbSeq::_mLen
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_seq::_mLen
     ldloca.s   V_lr
     ldfld      int32 Snobol4.Runtime.Boxes.Spec::Length
     add
-    stfld      int32 Snobol4.Runtime.Boxes.BbSeq::_mLen
+    stfld      int32 Snobol4.Runtime.Boxes.bb_seq::_mLen
     br         SEQ_A_TRY_RIGHT
 
   SEQ_A_GAMMA:
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbSeq::_mStart
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_seq::_mStart
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbSeq::_mLen
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_seq::_mLen
     ldloca.s   V_rr
     ldfld      int32 Snobol4.Runtime.Boxes.Spec::Length
     add
@@ -126,7 +126,7 @@
 
   SEQ_B_TRY_RIGHT:
     ldarg.0
-    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.BbSeq::_right
+    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_seq::_right
     ldarg.1
     callvirt   instance valuetype Snobol4.Runtime.Boxes.Spec
                Snobol4.Runtime.Boxes.IByrdBox::β(class Snobol4.Runtime.Boxes.MatchState)
@@ -137,7 +137,7 @@
 
   SEQ_B_LEFT_BETA:
     ldarg.0
-    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.BbSeq::_left
+    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_seq::_left
     ldarg.1
     callvirt   instance valuetype Snobol4.Runtime.Boxes.Spec
                Snobol4.Runtime.Boxes.IByrdBox::β(class Snobol4.Runtime.Boxes.MatchState)
@@ -147,14 +147,14 @@
     brtrue     SEQ_B_OMEGA
     ldarg.0
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbSeq::_mLen
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_seq::_mLen
     ldloca.s   V_lr
     ldfld      int32 Snobol4.Runtime.Boxes.Spec::Length
     add
-    stfld      int32 Snobol4.Runtime.Boxes.BbSeq::_mLen
+    stfld      int32 Snobol4.Runtime.Boxes.bb_seq::_mLen
     // retry right.α
     ldarg.0
-    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.BbSeq::_right
+    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_seq::_right
     ldarg.1
     callvirt   instance valuetype Snobol4.Runtime.Boxes.Spec
                Snobol4.Runtime.Boxes.IByrdBox::α(class Snobol4.Runtime.Boxes.MatchState)
@@ -165,9 +165,9 @@
 
   SEQ_B_GAMMA:
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbSeq::_mStart
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_seq::_mStart
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbSeq::_mLen
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_seq::_mLen
     ldloca.s   V_rr
     ldfld      int32 Snobol4.Runtime.Boxes.Spec::Length
     add

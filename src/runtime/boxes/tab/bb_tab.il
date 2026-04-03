@@ -1,6 +1,6 @@
 // bb_tab.il — TAB: advance TO absolute pos n; RTAB: advance TO Length-n
 .assembly extern mscorlib {}
-.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.BbTab
+.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.bb_tab
        extends [mscorlib]System.Object implements Snobol4.Runtime.Boxes.IByrdBox
 {
   .field private int32 _n
@@ -12,7 +12,7 @@
     call instance void [mscorlib]System.Object::.ctor()
     ldarg.0
     ldarg.1
-    stfld int32 Snobol4.Runtime.Boxes.BbTab::_n
+    stfld int32 Snobol4.Runtime.Boxes.bb_tab::_n
     ret
   }
   .method public virtual instance valuetype Snobol4.Runtime.Boxes.Spec
@@ -23,24 +23,24 @@
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbTab::_n
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_tab::_n
     bgt        TAB_A_FAIL
     ldarg.0
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbTab::_n
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_tab::_n
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     sub
-    stfld      int32 Snobol4.Runtime.Boxes.BbTab::_advance
+    stfld      int32 Snobol4.Runtime.Boxes.bb_tab::_advance
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbTab::_advance
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_tab::_advance
     call       valuetype Snobol4.Runtime.Boxes.Spec Snobol4.Runtime.Boxes.Spec::Of(int32, int32)
     stloc.0
     ldarg.1
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbTab::_n
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_tab::_n
     stfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldloc.0
     ret
@@ -56,7 +56,7 @@
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbTab::_advance
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_tab::_advance
     sub
     stfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldsfld valuetype Snobol4.Runtime.Boxes.Spec Snobol4.Runtime.Boxes.Spec::Fail
@@ -64,7 +64,7 @@
   }
 }
 
-.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.BbRtab
+.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.bb_rtab
        extends [mscorlib]System.Object implements Snobol4.Runtime.Boxes.IByrdBox
 {
   .field private int32 _n
@@ -76,7 +76,7 @@
     call instance void [mscorlib]System.Object::.ctor()
     ldarg.0
     ldarg.1
-    stfld int32 Snobol4.Runtime.Boxes.BbRtab::_n
+    stfld int32 Snobol4.Runtime.Boxes.bb_rtab::_n
     ret
   }
   .method public virtual instance valuetype Snobol4.Runtime.Boxes.Spec
@@ -87,7 +87,7 @@
     ldarg.1
     callvirt   instance int32 Snobol4.Runtime.Boxes.MatchState::get_Length()
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbRtab::_n
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_rtab::_n
     sub
     stloc.0
     ldarg.1
@@ -99,11 +99,11 @@
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     sub
-    stfld      int32 Snobol4.Runtime.Boxes.BbRtab::_advance
+    stfld      int32 Snobol4.Runtime.Boxes.bb_rtab::_advance
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbRtab::_advance
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_rtab::_advance
     call       valuetype Snobol4.Runtime.Boxes.Spec Snobol4.Runtime.Boxes.Spec::Of(int32, int32)
     stloc.1
     ldarg.1
@@ -123,7 +123,7 @@
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbRtab::_advance
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_rtab::_advance
     sub
     stfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldsfld valuetype Snobol4.Runtime.Boxes.Spec Snobol4.Runtime.Boxes.Spec::Fail

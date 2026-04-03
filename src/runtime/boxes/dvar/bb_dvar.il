@@ -1,7 +1,7 @@
 // bb_dvar.il — DVAR: *VAR — re-resolve variable's live value on every α
 // AUTHORS: Lon Jones Cherryholmes · Jeffrey Cooper M.D. · Claude Sonnet 4.6
 .assembly extern mscorlib {}
-.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.BbDvar
+.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.bb_dvar
        extends [mscorlib]System.Object implements Snobol4.Runtime.Boxes.IByrdBox
 {
   .field private string _varname
@@ -22,7 +22,7 @@
     pop
     ldstr      ""
   DV_NN:
-    stfld      string Snobol4.Runtime.Boxes.BbDvar::_varname
+    stfld      string Snobol4.Runtime.Boxes.bb_dvar::_varname
     ret
   }
 
@@ -32,12 +32,12 @@
     .maxstack 2
     .locals init (valuetype Snobol4.Runtime.Boxes.Spec V_r)
     ldarg.0
-    call       instance void Snobol4.Runtime.Boxes.BbDvar::RebuildChild()
+    call       instance void Snobol4.Runtime.Boxes.bb_dvar::RebuildChild()
     ldarg.0
-    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.BbDvar::_child
+    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_dvar::_child
     brfalse    DV_A_FAIL
     ldarg.0
-    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.BbDvar::_child
+    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_dvar::_child
     ldarg.1
     callvirt   instance valuetype Snobol4.Runtime.Boxes.Spec
                Snobol4.Runtime.Boxes.IByrdBox::α(class Snobol4.Runtime.Boxes.MatchState)
@@ -52,10 +52,10 @@
   {
     .maxstack 2
     ldarg.0
-    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.BbDvar::_child
+    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_dvar::_child
     brfalse    DV_B_FAIL
     ldarg.0
-    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.BbDvar::_child
+    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_dvar::_child
     ldarg.1
     callvirt   instance valuetype Snobol4.Runtime.Boxes.Spec
                Snobol4.Runtime.Boxes.IByrdBox::β(class Snobol4.Runtime.Boxes.MatchState)
@@ -73,14 +73,14 @@
     // Try pattern first
     ldarg.0
     ldfld      class [mscorlib]System.Func`2<string,class Snobol4.Runtime.Boxes.IByrdBox>
-               Snobol4.Runtime.Boxes.BbDvar::GetPatternVar
+               Snobol4.Runtime.Boxes.bb_dvar::GetPatternVar
     brfalse    DV_RC_STRING
 
     ldarg.0
     ldfld      class [mscorlib]System.Func`2<string,class Snobol4.Runtime.Boxes.IByrdBox>
-               Snobol4.Runtime.Boxes.BbDvar::GetPatternVar
+               Snobol4.Runtime.Boxes.bb_dvar::GetPatternVar
     ldarg.0
-    ldfld      string Snobol4.Runtime.Boxes.BbDvar::_varname
+    ldfld      string Snobol4.Runtime.Boxes.bb_dvar::_varname
     callvirt   instance !1 class [mscorlib]System.Func`2<string,class Snobol4.Runtime.Boxes.IByrdBox>::Invoke(!0)
     stloc.0
 
@@ -88,28 +88,28 @@
     brfalse    DV_RC_STRING
     // pat != null — use it if changed
     ldarg.0
-    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.BbDvar::_child
+    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_dvar::_child
     ldloc.0
     beq        DV_RC_DONE   // same reference → no rebuild
     ldarg.0
     ldloc.0
-    stfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.BbDvar::_child
+    stfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_dvar::_child
     ldarg.0
     ldnull
-    stfld      string Snobol4.Runtime.Boxes.BbDvar::_lastStringValue
+    stfld      string Snobol4.Runtime.Boxes.bb_dvar::_lastStringValue
     br         DV_RC_DONE
 
   DV_RC_STRING:
-    // fall back to string value → wrap as BbLit
+    // fall back to string value → wrap as bb_lit
     ldarg.0
     ldfld      class [mscorlib]System.Func`2<string,string>
-               Snobol4.Runtime.Boxes.BbDvar::GetStringVar
+               Snobol4.Runtime.Boxes.bb_dvar::GetStringVar
     brfalse    DV_RC_EMPTY
     ldarg.0
     ldfld      class [mscorlib]System.Func`2<string,string>
-               Snobol4.Runtime.Boxes.BbDvar::GetStringVar
+               Snobol4.Runtime.Boxes.bb_dvar::GetStringVar
     ldarg.0
-    ldfld      string Snobol4.Runtime.Boxes.BbDvar::_varname
+    ldfld      string Snobol4.Runtime.Boxes.bb_dvar::_varname
     callvirt   instance !1 class [mscorlib]System.Func`2<string,string>::Invoke(!0)
     stloc.1
     br         DV_RC_HAVELITVAL
@@ -119,21 +119,21 @@
   DV_RC_HAVELITVAL:
     // if _lastStringValue == s → unchanged
     ldarg.0
-    ldfld      string Snobol4.Runtime.Boxes.BbDvar::_lastStringValue
+    ldfld      string Snobol4.Runtime.Boxes.bb_dvar::_lastStringValue
     brfalse    DV_RC_REBUILD
     ldarg.0
-    ldfld      string Snobol4.Runtime.Boxes.BbDvar::_lastStringValue
+    ldfld      string Snobol4.Runtime.Boxes.bb_dvar::_lastStringValue
     ldloc.1
     callvirt   instance bool [mscorlib]System.String::Equals(string)
     brtrue     DV_RC_DONE
   DV_RC_REBUILD:
     ldarg.0
     ldloc.1
-    stfld      string Snobol4.Runtime.Boxes.BbDvar::_lastStringValue
+    stfld      string Snobol4.Runtime.Boxes.bb_dvar::_lastStringValue
     ldarg.0
     ldloc.1
-    newobj     instance void Snobol4.Runtime.Boxes.BbLit::.ctor(string)
-    stfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.BbDvar::_child
+    newobj     instance void Snobol4.Runtime.Boxes.bb_lit::.ctor(string)
+    stfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_dvar::_child
   DV_RC_DONE:
     ret
   }

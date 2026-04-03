@@ -5,7 +5,7 @@
 .assembly extern mscorlib {}
 
 .class public auto ansi beforefieldinit
-       Snobol4.Runtime.Boxes.BbAlt
+       Snobol4.Runtime.Boxes.bb_alt
        extends [mscorlib]System.Object
        implements Snobol4.Runtime.Boxes.IByrdBox
 {
@@ -21,7 +21,7 @@
     call       instance void [mscorlib]System.Object::.ctor()
     ldarg.0
     ldarg.1
-    stfld      class Snobol4.Runtime.Boxes.IByrdBox[] Snobol4.Runtime.Boxes.BbAlt::_children
+    stfld      class Snobol4.Runtime.Boxes.IByrdBox[] Snobol4.Runtime.Boxes.bb_alt::_children
     ret
   }
 
@@ -35,7 +35,7 @@
     ldarg.0
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
-    stfld      int32 Snobol4.Runtime.Boxes.BbAlt::_savedPos
+    stfld      int32 Snobol4.Runtime.Boxes.bb_alt::_savedPos
 
     ldc.i4.0
     stloc.0   // i = 0
@@ -43,7 +43,7 @@
   ALT_A_LOOP:
     ldloc.0
     ldarg.0
-    ldfld      class Snobol4.Runtime.Boxes.IByrdBox[] Snobol4.Runtime.Boxes.BbAlt::_children
+    ldfld      class Snobol4.Runtime.Boxes.IByrdBox[] Snobol4.Runtime.Boxes.bb_alt::_children
     ldlen
     conv.i4
     bge        ALT_A_FAIL
@@ -51,12 +51,12 @@
     // ms.Cursor = _savedPos
     ldarg.1
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbAlt::_savedPos
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_alt::_savedPos
     stfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
 
     // cr = children[i].α(ms)
     ldarg.0
-    ldfld      class Snobol4.Runtime.Boxes.IByrdBox[] Snobol4.Runtime.Boxes.BbAlt::_children
+    ldfld      class Snobol4.Runtime.Boxes.IByrdBox[] Snobol4.Runtime.Boxes.bb_alt::_children
     ldloc.0
     ldelem.ref
     ldarg.1
@@ -71,7 +71,7 @@
     // success: _current = i; return cr
     ldarg.0
     ldloc.0
-    stfld      int32 Snobol4.Runtime.Boxes.BbAlt::_current
+    stfld      int32 Snobol4.Runtime.Boxes.bb_alt::_current
     ldloc.1
     ret
 
@@ -85,7 +85,7 @@
   ALT_A_FAIL:
     ldarg.1
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbAlt::_savedPos
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_alt::_savedPos
     stfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldsfld     valuetype Snobol4.Runtime.Boxes.Spec Snobol4.Runtime.Boxes.Spec::Fail
     ret
@@ -98,9 +98,9 @@
     .locals init (valuetype Snobol4.Runtime.Boxes.Spec V_cr)
     // cr = children[_current].β(ms)
     ldarg.0
-    ldfld      class Snobol4.Runtime.Boxes.IByrdBox[] Snobol4.Runtime.Boxes.BbAlt::_children
+    ldfld      class Snobol4.Runtime.Boxes.IByrdBox[] Snobol4.Runtime.Boxes.bb_alt::_children
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbAlt::_current
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_alt::_current
     ldelem.ref
     ldarg.1
     callvirt   instance valuetype Snobol4.Runtime.Boxes.Spec

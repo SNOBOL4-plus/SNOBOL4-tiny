@@ -4,7 +4,7 @@
 .assembly extern mscorlib {}
 
 .class public auto ansi beforefieldinit
-       Snobol4.Runtime.Boxes.BbArb
+       Snobol4.Runtime.Boxes.bb_arb
        extends [mscorlib]System.Object
        implements Snobol4.Runtime.Boxes.IByrdBox
 {
@@ -25,11 +25,11 @@
     .maxstack 2
     ldarg.0
     ldc.i4.0
-    stfld      int32 Snobol4.Runtime.Boxes.BbArb::_count
+    stfld      int32 Snobol4.Runtime.Boxes.bb_arb::_count
     ldarg.0
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
-    stfld      int32 Snobol4.Runtime.Boxes.BbArb::_start
+    stfld      int32 Snobol4.Runtime.Boxes.bb_arb::_start
     // zero-width success first (lazy)
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
@@ -44,15 +44,15 @@
     // _count++
     ldarg.0
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbArb::_count
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_arb::_count
     ldc.i4.1
     add
-    stfld      int32 Snobol4.Runtime.Boxes.BbArb::_count
+    stfld      int32 Snobol4.Runtime.Boxes.bb_arb::_count
     // if _start + _count > Length → fail
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbArb::_start
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_arb::_start
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbArb::_count
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_arb::_count
     add
     ldarg.1
     callvirt   instance int32 Snobol4.Runtime.Boxes.MatchState::get_Length()
@@ -60,15 +60,15 @@
     // cursor = start + count
     ldarg.1
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbArb::_start
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_arb::_start
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbArb::_count
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_arb::_count
     add
     stfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbArb::_start
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_arb::_start
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbArb::_count
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_arb::_count
     call       valuetype Snobol4.Runtime.Boxes.Spec Snobol4.Runtime.Boxes.Spec::Of(int32, int32)
     ret
   ARB_B_FAIL:

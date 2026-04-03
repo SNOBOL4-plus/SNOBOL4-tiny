@@ -1,6 +1,6 @@
 // bb_bal.il — BAL: match balanced-parentheses expression
 .assembly extern mscorlib {}
-.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.BbBal
+.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.bb_bal
        extends [mscorlib]System.Object implements Snobol4.Runtime.Boxes.IByrdBox
 {
   .field private int32 _matchedLen
@@ -74,13 +74,13 @@
     ldloc.0
     ldloc      4
     sub
-    stfld      int32 Snobol4.Runtime.Boxes.BbBal::_matchedLen
+    stfld      int32 Snobol4.Runtime.Boxes.bb_bal::_matchedLen
     ldarg.1
     ldloc.0
     stfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldloc      4
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbBal::_matchedLen
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_bal::_matchedLen
     call       valuetype Snobol4.Runtime.Boxes.Spec Snobol4.Runtime.Boxes.Spec::Of(int32, int32)
     ret
   BAL_A_FAIL:
@@ -95,7 +95,7 @@
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbBal::_matchedLen
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_bal::_matchedLen
     sub
     stfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldsfld valuetype Snobol4.Runtime.Boxes.Spec Snobol4.Runtime.Boxes.Spec::Fail

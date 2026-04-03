@@ -1,7 +1,7 @@
 // bb_breakx.il — BREAKX: like BREAK but zero advance OR EOS → fail
 // AUTHORS: Lon Jones Cherryholmes · Jeffrey Cooper M.D. · Claude Sonnet 4.6
 .assembly extern mscorlib {}
-.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.BbBreakx
+.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.bb_breakx
        extends [mscorlib]System.Object implements Snobol4.Runtime.Boxes.IByrdBox
 {
   .field private string _chars
@@ -18,7 +18,7 @@
     pop
     ldstr      ""
   BRKX_NN:
-    stfld      string Snobol4.Runtime.Boxes.BbBreakx::_chars
+    stfld      string Snobol4.Runtime.Boxes.bb_breakx::_chars
     ret
   }
   .method public virtual instance valuetype Snobol4.Runtime.Boxes.Spec
@@ -28,12 +28,12 @@
     .locals init (valuetype Snobol4.Runtime.Boxes.Spec V_r)
     ldarg.0
     ldc.i4.0
-    stfld      int32 Snobol4.Runtime.Boxes.BbBreakx::_count
+    stfld      int32 Snobol4.Runtime.Boxes.bb_breakx::_count
   BRKX_A_LOOP:
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbBreakx::_count
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_breakx::_count
     add
     ldarg.1
     callvirt   instance int32 Snobol4.Runtime.Boxes.MatchState::get_Length()
@@ -42,18 +42,18 @@
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbBreakx::_count
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_breakx::_count
     add
     ldarg.0
-    ldfld      string Snobol4.Runtime.Boxes.BbBreakx::_chars
+    ldfld      string Snobol4.Runtime.Boxes.bb_breakx::_chars
     callvirt   instance bool Snobol4.Runtime.Boxes.MatchState::CharInSet(int32, string)
     brtrue     BRKX_A_FOUND
     ldarg.0
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbBreakx::_count
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_breakx::_count
     ldc.i4.1
     add
-    stfld      int32 Snobol4.Runtime.Boxes.BbBreakx::_count
+    stfld      int32 Snobol4.Runtime.Boxes.bb_breakx::_count
     br         BRKX_A_LOOP
   BRKX_A_FAIL:
     ldsfld     valuetype Snobol4.Runtime.Boxes.Spec Snobol4.Runtime.Boxes.Spec::Fail
@@ -61,20 +61,20 @@
   BRKX_A_FOUND:
     // zero advance → fail
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbBreakx::_count
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_breakx::_count
     ldc.i4.0
     ble        BRKX_A_FAIL
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbBreakx::_count
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_breakx::_count
     call       valuetype Snobol4.Runtime.Boxes.Spec Snobol4.Runtime.Boxes.Spec::Of(int32, int32)
     stloc.0
     ldarg.1
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbBreakx::_count
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_breakx::_count
     add
     stfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldloc.0
@@ -88,7 +88,7 @@
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbBreakx::_count
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_breakx::_count
     sub
     stfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldsfld     valuetype Snobol4.Runtime.Boxes.Spec Snobol4.Runtime.Boxes.Spec::Fail

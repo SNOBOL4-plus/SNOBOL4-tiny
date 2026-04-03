@@ -1,6 +1,6 @@
 // bb_not.il — NOT: \X — succeed iff child fails; β always ω
 .assembly extern mscorlib {}
-.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.BbNot
+.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.bb_not
        extends [mscorlib]System.Object implements Snobol4.Runtime.Boxes.IByrdBox
 {
   .field private class Snobol4.Runtime.Boxes.IByrdBox _child
@@ -12,7 +12,7 @@
     call instance void [mscorlib]System.Object::.ctor()
     ldarg.0
     ldarg.1
-    stfld class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.BbNot::_child
+    stfld class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_not::_child
     ret
   }
   .method public virtual instance valuetype Snobol4.Runtime.Boxes.Spec
@@ -24,7 +24,7 @@
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     stloc.0
     ldarg.0
-    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.BbNot::_child
+    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_not::_child
     ldarg.1
     callvirt   instance valuetype Snobol4.Runtime.Boxes.Spec
                Snobol4.Runtime.Boxes.IByrdBox::α(class Snobol4.Runtime.Boxes.MatchState)

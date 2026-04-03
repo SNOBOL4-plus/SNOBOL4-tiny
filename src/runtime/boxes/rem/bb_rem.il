@@ -1,6 +1,6 @@
 // bb_rem.il — REM: match entire remainder; no backtrack
 .assembly extern mscorlib {}
-.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.BbRem
+.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.bb_rem
        extends [mscorlib]System.Object implements Snobol4.Runtime.Boxes.IByrdBox
 {
   .method public specialname rtspecialname instance void .ctor() cil managed

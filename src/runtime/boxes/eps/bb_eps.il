@@ -1,6 +1,6 @@
 // bb_eps.il — EPS: zero-width success once; done flag prevents double-γ
 .assembly extern mscorlib {}
-.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.BbEps
+.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.bb_eps
        extends [mscorlib]System.Object implements Snobol4.Runtime.Boxes.IByrdBox
 {
   .field private bool _done
@@ -16,11 +16,11 @@
   {
     .maxstack 2
     ldarg.0
-    ldfld      bool Snobol4.Runtime.Boxes.BbEps::_done
+    ldfld      bool Snobol4.Runtime.Boxes.bb_eps::_done
     brtrue     EPS_A_FAIL
     ldarg.0
     ldc.i4.1
-    stfld      bool Snobol4.Runtime.Boxes.BbEps::_done
+    stfld      bool Snobol4.Runtime.Boxes.bb_eps::_done
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     call       valuetype Snobol4.Runtime.Boxes.Spec Snobol4.Runtime.Boxes.Spec::ZeroWidth(int32)

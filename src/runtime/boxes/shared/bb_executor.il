@@ -59,7 +59,7 @@
        extends [mscorlib]System.Object
 {
   .field private class Snobol4.Runtime.Boxes.IByrdBox _root
-  // _captures: List<BbCapture> — stored as object, cast on use
+  // _captures: List<bb_capture> — stored as object, cast on use
   .field private class [mscorlib]System.Collections.Generic.List`1<object> _captures
 
   .method public specialname rtspecialname instance void

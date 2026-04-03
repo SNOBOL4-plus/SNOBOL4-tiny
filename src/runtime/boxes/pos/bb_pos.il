@@ -1,6 +1,6 @@
 // bb_pos.il — POS: assert cursor==n (zero-width); RPOS: cursor==Length-n
 .assembly extern mscorlib {}
-.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.BbPos
+.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.bb_pos
        extends [mscorlib]System.Object implements Snobol4.Runtime.Boxes.IByrdBox
 {
   .field private int32 _n
@@ -11,7 +11,7 @@
     call instance void [mscorlib]System.Object::.ctor()
     ldarg.0
     ldarg.1
-    stfld int32 Snobol4.Runtime.Boxes.BbPos::_n
+    stfld int32 Snobol4.Runtime.Boxes.bb_pos::_n
     ret
   }
   .method public virtual instance valuetype Snobol4.Runtime.Boxes.Spec
@@ -21,7 +21,7 @@
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbPos::_n
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_pos::_n
     bne.un     POS_A_FAIL
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
@@ -40,7 +40,7 @@
   }
 }
 
-.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.BbRpos
+.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.bb_rpos
        extends [mscorlib]System.Object implements Snobol4.Runtime.Boxes.IByrdBox
 {
   .field private int32 _n
@@ -51,7 +51,7 @@
     call instance void [mscorlib]System.Object::.ctor()
     ldarg.0
     ldarg.1
-    stfld int32 Snobol4.Runtime.Boxes.BbRpos::_n
+    stfld int32 Snobol4.Runtime.Boxes.bb_rpos::_n
     ret
   }
   .method public virtual instance valuetype Snobol4.Runtime.Boxes.Spec
@@ -63,7 +63,7 @@
     ldarg.1
     callvirt   instance int32 Snobol4.Runtime.Boxes.MatchState::get_Length()
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbRpos::_n
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_rpos::_n
     sub
     bne.un     RPOS_A_FAIL
     ldarg.1

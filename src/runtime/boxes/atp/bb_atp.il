@@ -1,6 +1,6 @@
 // bb_atp.il — ATP: @var — write cursor position as integer string into varname
 .assembly extern mscorlib {}
-.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.BbAtp
+.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.bb_atp
        extends [mscorlib]System.Object implements Snobol4.Runtime.Boxes.IByrdBox
 {
   .field private string _varname
@@ -18,7 +18,7 @@
     pop
     ldstr      ""
   ATP_NN:
-    stfld      string Snobol4.Runtime.Boxes.BbAtp::_varname
+    stfld      string Snobol4.Runtime.Boxes.bb_atp::_varname
     ret
   }
 
@@ -28,17 +28,17 @@
     .maxstack 4
     // if SetVar != null && varname != "" → SetVar(varname, cursor.ToString())
     ldarg.0
-    ldfld      class [mscorlib]System.Action`2<string,string> Snobol4.Runtime.Boxes.BbAtp::SetVar
+    ldfld      class [mscorlib]System.Action`2<string,string> Snobol4.Runtime.Boxes.bb_atp::SetVar
     brfalse    ATP_A_SKIP
     ldarg.0
-    ldfld      string Snobol4.Runtime.Boxes.BbAtp::_varname
+    ldfld      string Snobol4.Runtime.Boxes.bb_atp::_varname
     ldstr      ""
     callvirt   instance bool [mscorlib]System.String::Equals(string)
     brtrue     ATP_A_SKIP
     ldarg.0
-    ldfld      class [mscorlib]System.Action`2<string,string> Snobol4.Runtime.Boxes.BbAtp::SetVar
+    ldfld      class [mscorlib]System.Action`2<string,string> Snobol4.Runtime.Boxes.bb_atp::SetVar
     ldarg.0
-    ldfld      string Snobol4.Runtime.Boxes.BbAtp::_varname
+    ldfld      string Snobol4.Runtime.Boxes.bb_atp::_varname
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     box        [mscorlib]System.Int32

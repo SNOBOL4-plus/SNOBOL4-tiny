@@ -3,7 +3,7 @@
 // AUTHORS: Lon Jones Cherryholmes · Jeffrey Cooper M.D. · Claude Sonnet 4.6
 .assembly extern mscorlib {}
 
-.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.BbCapture
+.class public auto ansi beforefieldinit Snobol4.Runtime.Boxes.bb_capture
        extends [mscorlib]System.Object implements Snobol4.Runtime.Boxes.IByrdBox
 {
   .field private class Snobol4.Runtime.Boxes.IByrdBox _child
@@ -25,7 +25,7 @@
     call       instance void [mscorlib]System.Object::.ctor()
     ldarg.0
     ldarg.1
-    stfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.BbCapture::_child
+    stfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_capture::_child
     ldarg.0
     ldarg.2
     dup
@@ -33,10 +33,10 @@
     pop
     ldstr      ""
   CAP_NN:
-    stfld      string Snobol4.Runtime.Boxes.BbCapture::_varname
+    stfld      string Snobol4.Runtime.Boxes.bb_capture::_varname
     ldarg.0
     ldarg.3
-    stfld      bool Snobol4.Runtime.Boxes.BbCapture::_immediate
+    stfld      bool Snobol4.Runtime.Boxes.bb_capture::_immediate
     ret
   }
 
@@ -46,7 +46,7 @@
     .maxstack 3
     .locals init (valuetype Snobol4.Runtime.Boxes.Spec V_cr)
     ldarg.0
-    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.BbCapture::_child
+    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_capture::_child
     ldarg.1
     callvirt   instance valuetype Snobol4.Runtime.Boxes.Spec
                Snobol4.Runtime.Boxes.IByrdBox::α(class Snobol4.Runtime.Boxes.MatchState)
@@ -57,7 +57,7 @@
     ldarg.0
     ldarg.1
     ldloca.s   V_cr
-    call       instance void Snobol4.Runtime.Boxes.BbCapture::OnGamma(
+    call       instance void Snobol4.Runtime.Boxes.bb_capture::OnGamma(
                  class Snobol4.Runtime.Boxes.MatchState,
                  valuetype Snobol4.Runtime.Boxes.Spec&)
     ldloc.0
@@ -65,7 +65,7 @@
   CAP_A_FAIL:
     ldarg.0
     ldc.i4.0
-    stfld      bool Snobol4.Runtime.Boxes.BbCapture::HasPending
+    stfld      bool Snobol4.Runtime.Boxes.bb_capture::HasPending
     ldsfld     valuetype Snobol4.Runtime.Boxes.Spec Snobol4.Runtime.Boxes.Spec::Fail
     ret
   }
@@ -76,7 +76,7 @@
     .maxstack 3
     .locals init (valuetype Snobol4.Runtime.Boxes.Spec V_cr)
     ldarg.0
-    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.BbCapture::_child
+    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_capture::_child
     ldarg.1
     callvirt   instance valuetype Snobol4.Runtime.Boxes.Spec
                Snobol4.Runtime.Boxes.IByrdBox::β(class Snobol4.Runtime.Boxes.MatchState)
@@ -87,7 +87,7 @@
     ldarg.0
     ldarg.1
     ldloca.s   V_cr
-    call       instance void Snobol4.Runtime.Boxes.BbCapture::OnGamma(
+    call       instance void Snobol4.Runtime.Boxes.bb_capture::OnGamma(
                  class Snobol4.Runtime.Boxes.MatchState,
                  valuetype Snobol4.Runtime.Boxes.Spec&)
     ldloc.0
@@ -95,7 +95,7 @@
   CAP_B_FAIL:
     ldarg.0
     ldc.i4.0
-    stfld      bool Snobol4.Runtime.Boxes.BbCapture::HasPending
+    stfld      bool Snobol4.Runtime.Boxes.bb_capture::HasPending
     ldsfld     valuetype Snobol4.Runtime.Boxes.Spec Snobol4.Runtime.Boxes.Spec::Fail
     ret
   }
@@ -118,35 +118,35 @@
     stloc.0
     // if _immediate && SetVar != null && varname != ""
     ldarg.0
-    ldfld      bool Snobol4.Runtime.Boxes.BbCapture::_immediate
+    ldfld      bool Snobol4.Runtime.Boxes.bb_capture::_immediate
     brfalse    OG_DEFERRED
     ldarg.0
-    ldfld      class [mscorlib]System.Action`2<string,string> Snobol4.Runtime.Boxes.BbCapture::SetVar
+    ldfld      class [mscorlib]System.Action`2<string,string> Snobol4.Runtime.Boxes.bb_capture::SetVar
     brfalse    OG_DONE
     ldarg.0
-    ldfld      string Snobol4.Runtime.Boxes.BbCapture::_varname
+    ldfld      string Snobol4.Runtime.Boxes.bb_capture::_varname
     ldstr      ""
     callvirt   instance bool [mscorlib]System.String::Equals(string)
     brtrue     OG_DONE
     ldarg.0
-    ldfld      class [mscorlib]System.Action`2<string,string> Snobol4.Runtime.Boxes.BbCapture::SetVar
+    ldfld      class [mscorlib]System.Action`2<string,string> Snobol4.Runtime.Boxes.bb_capture::SetVar
     ldarg.0
-    ldfld      string Snobol4.Runtime.Boxes.BbCapture::_varname
+    ldfld      string Snobol4.Runtime.Boxes.bb_capture::_varname
     ldloc.0
     callvirt   instance void class [mscorlib]System.Action`2<string,string>::Invoke(!0, !1)
     br         OG_DONE
   OG_DEFERRED:
     ldarg.0
-    ldfld      string Snobol4.Runtime.Boxes.BbCapture::_varname
+    ldfld      string Snobol4.Runtime.Boxes.bb_capture::_varname
     ldstr      ""
     callvirt   instance bool [mscorlib]System.String::Equals(string)
     brtrue     OG_DONE
     ldarg.0
     ldloc.0
-    stfld      string Snobol4.Runtime.Boxes.BbCapture::Pending
+    stfld      string Snobol4.Runtime.Boxes.bb_capture::Pending
     ldarg.0
     ldc.i4.1
-    stfld      bool Snobol4.Runtime.Boxes.BbCapture::HasPending
+    stfld      bool Snobol4.Runtime.Boxes.bb_capture::HasPending
   OG_DONE:
     ret
   }
@@ -156,22 +156,22 @@
   {
     .maxstack 3
     ldarg.0
-    ldfld      bool Snobol4.Runtime.Boxes.BbCapture::HasPending
+    ldfld      bool Snobol4.Runtime.Boxes.bb_capture::HasPending
     brfalse    CP_DONE
     ldarg.0
-    ldfld      string Snobol4.Runtime.Boxes.BbCapture::_varname
+    ldfld      string Snobol4.Runtime.Boxes.bb_capture::_varname
     ldstr      ""
     callvirt   instance bool [mscorlib]System.String::Equals(string)
     brtrue     CP_DONE
     ldarg.0
-    ldfld      class [mscorlib]System.Action`2<string,string> Snobol4.Runtime.Boxes.BbCapture::SetVar
+    ldfld      class [mscorlib]System.Action`2<string,string> Snobol4.Runtime.Boxes.bb_capture::SetVar
     brfalse    CP_DONE
     ldarg.0
-    ldfld      class [mscorlib]System.Action`2<string,string> Snobol4.Runtime.Boxes.BbCapture::SetVar
+    ldfld      class [mscorlib]System.Action`2<string,string> Snobol4.Runtime.Boxes.bb_capture::SetVar
     ldarg.0
-    ldfld      string Snobol4.Runtime.Boxes.BbCapture::_varname
+    ldfld      string Snobol4.Runtime.Boxes.bb_capture::_varname
     ldarg.0
-    ldfld      string Snobol4.Runtime.Boxes.BbCapture::Pending
+    ldfld      string Snobol4.Runtime.Boxes.bb_capture::Pending
     dup
     brtrue     CP_NOTNULL
     pop
@@ -181,7 +181,7 @@
   CP_DONE:
     ldarg.0
     ldc.i4.0
-    stfld      bool Snobol4.Runtime.Boxes.BbCapture::HasPending
+    stfld      bool Snobol4.Runtime.Boxes.bb_capture::HasPending
     ret
   }
 }

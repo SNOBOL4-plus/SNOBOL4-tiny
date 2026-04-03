@@ -4,7 +4,7 @@
 .assembly extern mscorlib {}
 
 .class public auto ansi beforefieldinit
-       Snobol4.Runtime.Boxes.BbArbno
+       Snobol4.Runtime.Boxes.bb_arbno
        extends [mscorlib]System.Object
        implements Snobol4.Runtime.Boxes.IByrdBox
 {
@@ -23,19 +23,19 @@
     call       instance void [mscorlib]System.Object::.ctor()
     ldarg.0
     ldarg.1
-    stfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.BbArbno::_body
+    stfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_arbno::_body
     ldarg.0
     ldc.i4     64
     newarr     [mscorlib]System.Int32
-    stfld      int32[] Snobol4.Runtime.Boxes.BbArbno::_matchStart
+    stfld      int32[] Snobol4.Runtime.Boxes.bb_arbno::_matchStart
     ldarg.0
     ldc.i4     64
     newarr     [mscorlib]System.Int32
-    stfld      int32[] Snobol4.Runtime.Boxes.BbArbno::_matchLen
+    stfld      int32[] Snobol4.Runtime.Boxes.bb_arbno::_matchLen
     ldarg.0
     ldc.i4     64
     newarr     [mscorlib]System.Int32
-    stfld      int32[] Snobol4.Runtime.Boxes.BbArbno::_startStack
+    stfld      int32[] Snobol4.Runtime.Boxes.bb_arbno::_startStack
     ret
   }
 
@@ -48,20 +48,20 @@
     // _depth = 0; push frame(ZeroWidth, cursor)
     ldarg.0
     ldc.i4.0
-    stfld      int32 Snobol4.Runtime.Boxes.BbArbno::_depth
+    stfld      int32 Snobol4.Runtime.Boxes.bb_arbno::_depth
     ldarg.0
-    ldfld      int32[] Snobol4.Runtime.Boxes.BbArbno::_matchStart
+    ldfld      int32[] Snobol4.Runtime.Boxes.bb_arbno::_matchStart
     ldc.i4.0
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     stelem.i4
     ldarg.0
-    ldfld      int32[] Snobol4.Runtime.Boxes.BbArbno::_matchLen
+    ldfld      int32[] Snobol4.Runtime.Boxes.bb_arbno::_matchLen
     ldc.i4.0
     ldc.i4.0
     stelem.i4
     ldarg.0
-    ldfld      int32[] Snobol4.Runtime.Boxes.BbArbno::_startStack
+    ldfld      int32[] Snobol4.Runtime.Boxes.bb_arbno::_startStack
     ldc.i4.0
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
@@ -74,7 +74,7 @@
     stloc.0
     // br = _body.α(ms)
     ldarg.0
-    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.BbArbno::_body
+    ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_arbno::_body
     ldarg.1
     callvirt   instance valuetype Snobol4.Runtime.Boxes.Spec
                Snobol4.Runtime.Boxes.IByrdBox::α(class Snobol4.Runtime.Boxes.MatchState)
@@ -90,34 +90,34 @@
     beq        ARBNO_A_STOP
     // advance: depth++ push new frame (if < 64)
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbArbno::_depth
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_arbno::_depth
     ldc.i4     63
     bge        ARBNO_A_STOP
     ldarg.0
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbArbno::_depth
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_arbno::_depth
     ldc.i4.1
     add
-    stfld      int32 Snobol4.Runtime.Boxes.BbArbno::_depth
+    stfld      int32 Snobol4.Runtime.Boxes.bb_arbno::_depth
     // _matchStart[depth] = _matchStart[depth-1] (cumulative start = always frame0 start)
     ldarg.0
-    ldfld      int32[] Snobol4.Runtime.Boxes.BbArbno::_matchStart
+    ldfld      int32[] Snobol4.Runtime.Boxes.bb_arbno::_matchStart
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbArbno::_depth
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_arbno::_depth
     ldarg.0
-    ldfld      int32[] Snobol4.Runtime.Boxes.BbArbno::_matchStart
+    ldfld      int32[] Snobol4.Runtime.Boxes.bb_arbno::_matchStart
     ldc.i4.0
     ldelem.i4
     stelem.i4
     // _matchLen[depth] = _matchLen[depth-1] + br.Length
     ldarg.0
-    ldfld      int32[] Snobol4.Runtime.Boxes.BbArbno::_matchLen
+    ldfld      int32[] Snobol4.Runtime.Boxes.bb_arbno::_matchLen
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbArbno::_depth
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_arbno::_depth
     ldarg.0
-    ldfld      int32[] Snobol4.Runtime.Boxes.BbArbno::_matchLen
+    ldfld      int32[] Snobol4.Runtime.Boxes.bb_arbno::_matchLen
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbArbno::_depth
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_arbno::_depth
     ldc.i4.1
     sub
     ldelem.i4
@@ -127,9 +127,9 @@
     stelem.i4
     // _startStack[depth] = cursor
     ldarg.0
-    ldfld      int32[] Snobol4.Runtime.Boxes.BbArbno::_startStack
+    ldfld      int32[] Snobol4.Runtime.Boxes.bb_arbno::_startStack
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbArbno::_depth
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_arbno::_depth
     ldarg.1
     ldfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     stelem.i4
@@ -138,14 +138,14 @@
   ARBNO_A_STOP:
     // return Spec.Of(_matchStart[_depth], _matchLen[_depth])
     ldarg.0
-    ldfld      int32[] Snobol4.Runtime.Boxes.BbArbno::_matchStart
+    ldfld      int32[] Snobol4.Runtime.Boxes.bb_arbno::_matchStart
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbArbno::_depth
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_arbno::_depth
     ldelem.i4
     ldarg.0
-    ldfld      int32[] Snobol4.Runtime.Boxes.BbArbno::_matchLen
+    ldfld      int32[] Snobol4.Runtime.Boxes.bb_arbno::_matchLen
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbArbno::_depth
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_arbno::_depth
     ldelem.i4
     call       valuetype Snobol4.Runtime.Boxes.Spec Snobol4.Runtime.Boxes.Spec::Of(int32, int32)
     ret
@@ -157,33 +157,33 @@
     .maxstack 3
     // if _depth <= 0 → fail
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbArbno::_depth
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_arbno::_depth
     ldc.i4.0
     ble        ARBNO_B_FAIL
     // _depth--
     ldarg.0
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbArbno::_depth
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_arbno::_depth
     ldc.i4.1
     sub
-    stfld      int32 Snobol4.Runtime.Boxes.BbArbno::_depth
+    stfld      int32 Snobol4.Runtime.Boxes.bb_arbno::_depth
     // ms.Cursor = _startStack[_depth]
     ldarg.1
     ldarg.0
-    ldfld      int32[] Snobol4.Runtime.Boxes.BbArbno::_startStack
+    ldfld      int32[] Snobol4.Runtime.Boxes.bb_arbno::_startStack
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbArbno::_depth
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_arbno::_depth
     ldelem.i4
     stfld      int32 Snobol4.Runtime.Boxes.MatchState::Cursor
     ldarg.0
-    ldfld      int32[] Snobol4.Runtime.Boxes.BbArbno::_matchStart
+    ldfld      int32[] Snobol4.Runtime.Boxes.bb_arbno::_matchStart
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbArbno::_depth
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_arbno::_depth
     ldelem.i4
     ldarg.0
-    ldfld      int32[] Snobol4.Runtime.Boxes.BbArbno::_matchLen
+    ldfld      int32[] Snobol4.Runtime.Boxes.bb_arbno::_matchLen
     ldarg.0
-    ldfld      int32 Snobol4.Runtime.Boxes.BbArbno::_depth
+    ldfld      int32 Snobol4.Runtime.Boxes.bb_arbno::_depth
     ldelem.i4
     call       valuetype Snobol4.Runtime.Boxes.Spec Snobol4.Runtime.Boxes.Spec::Of(int32, int32)
     ret
