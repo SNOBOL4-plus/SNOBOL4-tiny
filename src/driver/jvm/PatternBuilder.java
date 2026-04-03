@@ -57,21 +57,33 @@ class PatternBuilder {
     private final IntSetter         intSetter;
     private final bb_dvar.BoxResolver varResolver;
     private final VarGetter         varGetter;
-    /** Deferred (.var) captures registered for Phase-5 commit. */
-    private final java.util.List<bb_capture> deferred = new java.util.ArrayList<>();
+    /** Deferred (.var) captures registered for Phase-5 commit.
+     *  May be shared with inner PatternBuilders (for PAT-valued variable expansion)
+     *  so that inner .var captures are committed when the outer match succeeds.
+     */
+    private final java.util.List<bb_capture> deferred;
 
     PatternBuilder(bb_box.MatchState ms, VarSetter varSetter, IntSetter intSetter,
                    bb_dvar.BoxResolver varResolver) {
-        this(ms, varSetter, intSetter, varResolver, null);
+        this(ms, varSetter, intSetter, varResolver, null, null);
     }
 
     PatternBuilder(bb_box.MatchState ms, VarSetter varSetter, IntSetter intSetter,
                    bb_dvar.BoxResolver varResolver, VarGetter varGetter) {
+        this(ms, varSetter, intSetter, varResolver, varGetter, null);
+    }
+
+    /** Constructor with shared external deferred list — inner builders use this
+     *  so their .var captures are visible to the outer executor. */
+    PatternBuilder(bb_box.MatchState ms, VarSetter varSetter, IntSetter intSetter,
+                   bb_dvar.BoxResolver varResolver, VarGetter varGetter,
+                   java.util.List<bb_capture> sharedDeferred) {
         this.ms          = ms;
         this.varSetter   = varSetter;
         this.intSetter   = intSetter;
         this.varResolver = varResolver;
         this.varGetter   = varGetter;
+        this.deferred    = sharedDeferred != null ? sharedDeferred : new java.util.ArrayList<>();
     }
 
     /** Return list of deferred captures to commit on :S (Phase 5). */

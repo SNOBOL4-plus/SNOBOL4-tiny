@@ -734,6 +734,9 @@ public class Interpreter {
                     if (anchorVal.type == VType.INT && anchorVal.ival != 0) anchor = true;
                     bb_box.MatchState pms = new bb_box.MatchState(sv);
                     final PatternBuilder.VarGetter ufVg = nm2 -> nvGet(nm2).toSnoStr();
+                    // sharedDeferred: inner PatternBuilders for PAT-valued vars share
+                    // the same list so their .var captures are committed on outer :S
+                    final java.util.List<bb_capture> sharedDeferred = new java.util.ArrayList<>();
                     PatternBuilder pb = new PatternBuilder(
                         pms,
                         (nm, v) -> nvSet(nm, DESCR.str(v)),
@@ -745,12 +748,14 @@ public class Interpreter {
                                     (n, v) -> nvSet(n, DESCR.str(v)),
                                     (n, v) -> nvSet(n, DESCR.intv((long) v)),
                                     (vn, pms3) -> new bb_lit(pms3, nvGet(vn).toSnoStr()),
-                                    ufVg);
+                                    ufVg,
+                                    sharedDeferred);
                                 return inner.build(d.patNode);
                             }
                             return new bb_lit(pms2, d.toSnoStr());
                         },
-                        ufVg
+                        ufVg,
+                        sharedDeferred
                     );
                     bb_box root = pb.build(s.pattern);
                     // hasEq + null replacement = delete (replace with "")
@@ -872,6 +877,8 @@ public class Interpreter {
                 if (anchorVal.type == VType.INT && anchorVal.ival != 0) anchor = true;
 
                 bb_box.MatchState pms = new bb_box.MatchState(sv);
+                final java.util.List<bb_capture> sharedDeferred2 = new java.util.ArrayList<>();
+                final PatternBuilder.VarGetter ufVg2 = nm2 -> nvGet(nm2).toSnoStr();
 
                 PatternBuilder pb = new PatternBuilder(
                     pms,
@@ -881,7 +888,7 @@ public class Interpreter {
                         // Resolve pattern-valued variable at match time
                         DESCR d = nvGet(varName);
                         if (d.type == VType.PAT && d.patNode != null) {
-                            // Re-build from stored pattern ExprNode (shares pms2)
+                            // Re-build from stored pattern ExprNode (shares pms2 + sharedDeferred2)
                             PatternBuilder inner = new PatternBuilder(
                                 pms2,
                                 (n, v) -> nvSet(n, DESCR.str(v)),
@@ -890,13 +897,17 @@ public class Interpreter {
                                     DESCR d2 = nvGet(vn);
                                     if (d2.type == VType.PAT && d2.patNode != null) return new bb_fail(pms3);
                                     return new bb_lit(pms3, d2.toSnoStr());
-                                }
+                                },
+                                ufVg2,
+                                sharedDeferred2
                             );
                             return inner.build(d.patNode);
                         }
                         // String-valued: match as literal
                         return new bb_lit(pms2, d.toSnoStr());
-                    }
+                    },
+                    ufVg2,
+                    sharedDeferred2
                 );
 
                 bb_box root = pb.build(s.pattern);
