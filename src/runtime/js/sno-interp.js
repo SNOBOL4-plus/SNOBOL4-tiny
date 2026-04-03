@@ -71,6 +71,20 @@ const E_CAPT_COND_ASGN='E_CAPT_COND_ASGN', E_CAPT_IMMED_ASGN='E_CAPT_IMMED_ASGN'
 const E_CAPT_CURSOR='E_CAPT_CURSOR';
 const E_FNC='E_FNC', E_IDX='E_IDX', E_ASSIGN='E_ASSIGN', E_SCAN='E_SCAN';
 
+/* ── PAT_KINDS: E_* kinds that are pattern-only (never pure string values) ─ */
+/* Must be declared before Parser class and _expr_is_pat — both reference it.  */
+const PAT_KINDS = new Set([
+  E_ARB, E_ARBNO, E_CAPT_COND_ASGN, E_CAPT_IMMED_ASGN, E_CAPT_CURSOR, E_DEFER,
+  E_LEN, E_TAB, E_RTAB, E_POS, E_RPOS,
+  E_ANY, E_NOTANY, E_SPAN, E_BREAK, E_BREAKX, E_REM,
+  E_FAIL, E_SUCCEED, E_FENCE, E_ABORT, E_BAL,
+]);
+/* E_FNC names that always return a pattern — used by _expr_is_pat/_is_pat     */
+const PAT_FNC_NAMES = new Set([
+  'ANY','NOTANY','SPAN','BREAK','BREAKX','LEN','POS','RPOS','TAB','RTAB',
+  'ARB','ARBNO','REM','FAIL','SUCCEED','FENCE','ABORT','BAL',
+]);
+
 /* ═══════════════════════════════════════════════════════════════════════════
  * IR node constructors — same fields as C EXPR_t / STMT_t
  * ═══════════════════════════════════════════════════════════════════════════ */
@@ -238,9 +252,16 @@ class Lexer {
         let peek = this.pos;
         while (peek < len && src[peek] === '\n') peek++; /* skip blank lines */
         if (peek < len && (src[peek] === '+' || src[peek] === '.')) {
-          /* Consume the continuation marker and its leading whitespace now */
+          /* Consume the continuation marker and its leading whitespace now.
+           * Leave one virtual space by not advancing past the first space — the
+           * whitespace token handler will emit T_WS, connecting the two lines
+           * so _e4 juxtaposition can continue collecting items across the fold. */
           this.pos = peek + 1; /* skip '+' or '.' */
-          while (this.pos < len && (src[this.pos] === ' ' || src[this.pos] === '\t')) this.pos++;
+          /* skip all-but-one space so T_WS is emitted for juxtaposition */
+          let wsCount = 0;
+          while (this.pos < len && (src[this.pos] === ' ' || src[this.pos] === '\t')) { this.pos++; wsCount++; }
+          /* back up one char to leave a space token — only if whitespace was present */
+          if (wsCount > 0) this.pos--;
           this._bol = false;
           continue; /* fold: resume tokenizing same logical line */
         }
@@ -614,7 +635,9 @@ class Parser {
   _is_pat(e) {
     if(!e) return false;
     if([E_ARB,E_ARBNO,E_CAPT_COND_ASGN,E_CAPT_IMMED_ASGN,E_CAPT_CURSOR,E_DEFER].includes(e.kind)) return true;
-    return e.children.some(c=>this._is_pat(c));
+    /* E_FNC whose name is a pattern primitive (LEN, POS, TAB, ANY, etc.) */
+    if(e.kind===E_FNC && PAT_FNC_NAMES.has(e.sval.toUpperCase())) return true;
+    return (e.children||[]).some(c=>this._is_pat(c));
   }
 
   /* ── Goto label parser ───────────────────────────────────────────────── */
@@ -720,10 +743,11 @@ class Parser {
           const rhs=this._expr();
           /* S = P R form: if rhs is a multi-child SEQ/CAT and subject exists,
            * the last child is the replacement and prior children are the pattern.
-           * Only split when the first child is a function call (pattern predicate like eq/ne/gt).
-           * Literals and variable references as first child = value concat, don't split. */
+           * Only split when the first child is a function call (pattern predicate like eq/ne/gt)
+           * AND the whole RHS is not itself a pure pattern value (e.g. PAT = POS(0) LEN(4) . X).
+           * When the entire rhs is a pattern, it's a value assignment — no split. */
           if(s.subject && rhs && (rhs.kind===E_SEQ||rhs.kind===E_CAT) && rhs.children.length>=2
-             && rhs.children[0].kind===E_FNC) {
+             && rhs.children[0].kind===E_FNC && !this._is_pat(rhs)) {
             const kids=rhs.children;
             const patKids=kids.slice(0,-1);
             const replKid=kids[kids.length-1];
@@ -904,10 +928,12 @@ function _assign(lhs, val) {
 
 /* ── _expr_is_pat: true if expr tree contains pattern-only nodes ─────────── */
 /* M-SJ-B07: used by interp_eval to route E_SEQ containing pattern nodes     */
-/* to _build_pat instead of string concat.  Mirrors parser._is_pat().        */
+/* to _build_pat instead of string concat.  PAT_KINDS declared at top.      */
 function _expr_is_pat(e) {
   if (!e) return false;
-  if ([E_ARB, E_ARBNO, E_CAPT_COND_ASGN, E_CAPT_IMMED_ASGN, E_CAPT_CURSOR, E_DEFER].includes(e.kind)) return true;
+  if (PAT_KINDS.has(e.kind)) return true;
+  /* E_FNC whose name is a pattern primitive */
+  if (e.kind === E_FNC && PAT_FNC_NAMES.has(e.sval.toUpperCase())) return true;
   return (e.children||[]).some(c => _expr_is_pat(c));
 }
 
