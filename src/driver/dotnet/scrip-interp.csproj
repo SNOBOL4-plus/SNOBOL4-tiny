@@ -10,7 +10,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Reuse all 27 Byrd boxes + executor + factory + MatchState/IByrdBox -->
+    <!-- ⚠️ TEMPORARY: using bb_boxes.csproj (.cs oracle) until MSIL/net8 ABI resolved -->
+    <!-- ⛔ D-173: fix to reference boxes.dll (MSIL) once ilasm/net8 compat confirmed -->
+    <!-- See SESSIONS_ARCHIVE D-172 handoff for diagnosis notes -->
     <ProjectReference Include="../../runtime/boxes/shared/bb_boxes.csproj" />
   </ItemGroup>
 
