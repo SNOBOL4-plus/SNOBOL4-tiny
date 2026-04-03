@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Snobol4.Runtime.Boxes")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c7d4d5d779c65baf683bbb36ccb13f76b9bc0651")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e2fcad5196d7c048e782d5b31bbd4a51216b8f4e")]
 [assembly: System.Reflection.AssemblyProductAttribute("Snobol4.Runtime.Boxes")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Snobol4.Runtime.Boxes")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

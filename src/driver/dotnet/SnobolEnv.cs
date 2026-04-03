@@ -74,6 +74,107 @@ public sealed class SnobolEnv
     private readonly Dictionary<string, SnobolVal> _vars =
         new(StringComparer.OrdinalIgnoreCase);
 
+    // Pattern variable store: name → IR node (set when RHS of assignment is a pattern expression)
+    private readonly Dictionary<string, IrNode> _patVars =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    public void SetPattern(string name, IrNode patNode) =>
+        _patVars[name.ToUpperInvariant()] = patNode;
+
+    public IrNode? GetPattern(string name) =>
+        _patVars.TryGetValue(name.ToUpperInvariant(), out var n) ? n : null;
+
+    // ── Array store ───────────────────────────────────────────────────────────
+    // Arrays are indexed by a numeric handle stored in SnobolVal.Int.
+    private readonly List<SnobolVal?[]> _arrays = new();
+
+    public SnobolVal ArrayCreate(int size)
+    {
+        _arrays.Add(new SnobolVal?[size]);
+        return SnobolVal.Of((long)(_arrays.Count - 1));   // handle
+    }
+
+    public bool IsArray(SnobolVal v) => v.Type == DType.Int && v.Int >= 0 && v.Int < _arrays.Count;
+
+    public SnobolVal ArrayGet(SnobolVal handle, long idx)
+    {
+        if (!IsArray(handle)) return SnobolVal.Null;
+        var arr = _arrays[(int)handle.Int];
+        int i = (int)idx - 1;   // SNOBOL4 is 1-based
+        if (i < 0 || i >= arr.Length) return SnobolVal.Null;
+        return arr[i] ?? SnobolVal.Null;
+    }
+
+    public void ArraySet(SnobolVal handle, long idx, SnobolVal val)
+    {
+        if (!IsArray(handle)) return;
+        var arr = _arrays[(int)handle.Int];
+        int i = (int)idx - 1;
+        if (i >= 0 && i < arr.Length) arr[i] = val;
+    }
+
+    // ── Data type store ───────────────────────────────────────────────────────
+    // Each DATA type is a named record with ordered field names.
+    public sealed record DataTypeDef(string TypeName, string[] Fields);
+    private readonly Dictionary<string, DataTypeDef> _dataTypes =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    // Instances: handle → field values
+    private readonly List<(string TypeName, SnobolVal[] Fields)> _dataObjs = new();
+
+    public void DataDefine(string spec)
+    {
+        // spec like "complex(real,imag)" or "point(x,y)"
+        int p = spec.IndexOf('(');
+        if (p < 0) return;
+        var typeName = spec[..p].Trim();
+        var fieldPart = spec[(p + 1)..].TrimEnd(')');
+        var fields = fieldPart.Split(',').Select(f => f.Trim()).ToArray();
+        _dataTypes[typeName] = new DataTypeDef(typeName, fields);
+    }
+
+    public bool IsDataType(string name) => _dataTypes.ContainsKey(name);
+
+    private SnobolVal DataBuiltin(string spec)
+    {
+        DataDefine(spec);
+        return SnobolVal.Null;
+    }
+
+    public SnobolVal DataCreate(string typeName, SnobolVal[] args)
+    {
+        if (!_dataTypes.TryGetValue(typeName, out var def)) return SnobolVal.Fail;
+        var fields = new SnobolVal[def.Fields.Length];
+        for (int i = 0; i < fields.Length; i++)
+            fields[i] = i < args.Length ? args[i] : SnobolVal.Null;
+        _dataObjs.Add((typeName, fields));
+        // Encode: -(handle+1) so it's distinguishable from array handles (which are >= 0)
+        // Use a large negative offset to avoid collision with normal ints
+        long handle = -(long)(_dataObjs.Count);   // -1, -2, ...
+        return SnobolVal.Of(handle);
+    }
+
+    public bool IsDataObj(SnobolVal v) => v.Type == DType.Int && v.Int < 0 && (-v.Int - 1) < _dataObjs.Count;
+
+    public SnobolVal DataGetField(SnobolVal handle, string fieldName)
+    {
+        if (!IsDataObj(handle)) return SnobolVal.Null;
+        var (typeName, fields) = _dataObjs[(int)(-handle.Int - 1)];
+        if (!_dataTypes.TryGetValue(typeName, out var def)) return SnobolVal.Null;
+        int fi = Array.IndexOf(def.Fields, fieldName);
+        if (fi < 0) fi = Array.FindIndex(def.Fields, f => string.Equals(f, fieldName, StringComparison.OrdinalIgnoreCase));
+        return fi >= 0 ? fields[fi] : SnobolVal.Null;
+    }
+
+    public void DataSetField(SnobolVal handle, string fieldName, SnobolVal val)
+    {
+        if (!IsDataObj(handle)) return;
+        var (typeName, fields) = _dataObjs[(int)(-handle.Int - 1)];
+        if (!_dataTypes.TryGetValue(typeName, out var def)) return;
+        int fi = Array.FindIndex(def.Fields, f => string.Equals(f, fieldName, StringComparison.OrdinalIgnoreCase));
+        if (fi >= 0) fields[fi] = val;
+    }
+
     // Predefined system variables
     public SnobolEnv()
     {
@@ -136,6 +237,7 @@ public sealed class SnobolEnv
             "INTEGER" => args.Length >= 1 && long.TryParse(args[0].ToString(), out var iv) ? SnobolVal.Of(iv) : SnobolVal.Fail,
             "REAL"    => args.Length >= 1 && double.TryParse(args[0].ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var rv) ? SnobolVal.Of(rv) : SnobolVal.Fail,
             "STRING"  => args.Length >= 1 ? SnobolVal.Of(args[0].ToString()) : SnobolVal.Null,
+            "DATA"    => args.Length >= 1 ? DataBuiltin(args[0].ToString()) : SnobolVal.Fail,
             "IDENT"   => (args.Length >= 2 && args[0].ToString() == args[1].ToString()) ? SnobolVal.Null : SnobolVal.Fail,
             "DIFFER"  => (args.Length >= 2 && args[0].ToString() != args[1].ToString()) ? SnobolVal.Null : SnobolVal.Fail,
             "LT"      => Cmp(args, (a,b) => a < b),
@@ -155,7 +257,7 @@ public sealed class SnobolEnv
             "UCASE"   => args.Length >= 1 ? SnobolVal.Of(args[0].ToString().ToUpperInvariant()) : SnobolVal.Null,
             "LOWER"   => args.Length >= 1 ? SnobolVal.Of(args[0].ToString().ToLowerInvariant()) : SnobolVal.Null,
             "LCASE"   => args.Length >= 1 ? SnobolVal.Of(args[0].ToString().ToLowerInvariant()) : SnobolVal.Null,
-            "ARRAY"   => SnobolVal.Null,  // stub — arrays need SnobolArray type (future)
+            "ARRAY"   => args.Length >= 1 ? this.ArrayCreate((int)args[0].ToInt()) : SnobolVal.Fail,
             "TABLE"   => SnobolVal.Null,  // stub
             "PROTOTYPE" => args.Length >= 1 ? SnobolVal.Of(args[0].Type.ToString().ToUpperInvariant()) : SnobolVal.Fail,
             "DATATYPE" => args.Length >= 1 ? SnobolVal.Of(args[0].Type.ToString().ToUpperInvariant()) : SnobolVal.Fail,

@@ -116,7 +116,13 @@ public sealed class Executor
             { _output.WriteLine(replVal.ToString()); return true; }
 
             if (stmt.Subject?.Kind == IrKind.E_VAR)
-            { _env.Set(subjName!, replVal); return true; }
+            {
+                _env.Set(subjName!, replVal);
+                // Also store RHS IR as a pattern if it contains pattern nodes
+                if (stmt.Replacement != null && IsPatternNode(stmt.Replacement))
+                    _env.SetPattern(subjName!, stmt.Replacement);
+                return true;
+            }
 
             if (stmt.Subject?.Kind == IrKind.E_KEYWORD)
             { _env.Set("&" + stmt.Subject.SVal!, replVal); return true; }
@@ -128,6 +134,28 @@ public sealed class Executor
                 _env.Set(name, replVal);
                 return true;
             }
+            // DATA field setter via function LHS: x(P) = 99
+            if (stmt.Subject?.Kind == IrKind.E_FNC && stmt.Subject.Children.Length >= 1)
+            {
+                var fieldName = stmt.Subject.SVal?.ToUpperInvariant() ?? "";
+                var objVal    = EvalNode(stmt.Subject.Children[0]);
+                if (_env.IsDataObj(objVal))
+                { _env.DataSetField(objVal, fieldName, replVal); return true; }
+            }
+            // Array element assignment: A<idx> = val
+            if (stmt.Subject?.Kind == IrKind.E_IDX && stmt.Subject.Children.Length >= 2)
+            {
+                var baseNode = stmt.Subject.Children[0];
+                var idxVal   = EvalNode(stmt.Subject.Children[1]);
+                if (baseNode.Kind == IrKind.E_VAR)
+                {
+                    var arr = _env.Get(baseNode.SVal!);
+                    if (_env.IsArray(arr))
+                    { _env.ArraySet(arr, idxVal.ToInt(), replVal); return true; }
+                    if (_env.IsDataObj(arr))
+                    { _env.DataSetField(arr, idxVal.ToString(), replVal); return true; }
+                }
+            }
             return false;
         }
 
@@ -138,7 +166,23 @@ public sealed class Executor
             var builder = new PatternBuilder(
                 setVar:        (n, v) => _env.Set(n, SnobolVal.Of(v)),
                 getStringVar:  n      => _env.Get(n).ToString(),
-                getPatternVar: n      => null,
+                getPatternVar: n      => {
+                    var patIr = _env.GetPattern(n);
+                    if (patIr == null) return null;
+                    var inner = new PatternBuilder(
+                        setVar:        (vn, v) => _env.Set(vn, SnobolVal.Of(v)),
+                        getStringVar:  vn      => _env.Get(vn).ToString(),
+                        getPatternVar: vn      => {
+                            var pi = _env.GetPattern(vn);
+                            return pi == null ? null : new PatternBuilder(
+                                (vn2, v2) => _env.Set(vn2, SnobolVal.Of(v2)),
+                                vn2 => _env.Get(vn2).ToString(),
+                                _ => null,
+                                EvalNode).Build(pi);
+                        },
+                        evalNode:      EvalNode);
+                    return inner.Build(patIr);
+                },
                 evalNode:      EvalNode
             );
 
@@ -332,15 +376,34 @@ public sealed class Executor
         }
 
         var evalArgs = args.Select(EvalNode).ToArray();
+
+        // DATA field accessor: real(X) where X is a data object
+        if (evalArgs.Length == 1 && _env.IsDataObj(evalArgs[0]))
+        {
+            var fieldVal = _env.DataGetField(evalArgs[0], name);
+            if (!fieldVal.IsNull || _env.IsDataType(name)) return fieldVal;
+        }
+        // DATA constructor: complex(3, -2)
+        if (_env.IsDataType(name))
+            return _env.DataCreate(name, evalArgs);
+
         return _env.CallBuiltin(name, evalArgs);
     }
 
     private SnobolVal EvalIdx(IrNode n)
     {
-        // Children[0] = base, [1..] = indices
-        if (n.Children.Length == 0) return SnobolVal.Null;
-        var baseVal = EvalNode(n.Children[0]);
-        // Array/table subscript — stub: needs SnobolVal.Array support
+        // Children[0] = base var, [1..] = indices
+        if (n.Children.Length < 2) return SnobolVal.Null;
+        var baseNode = n.Children[0];
+        var idxVal   = EvalNode(n.Children[1]);
+        if (baseNode.Kind == IrKind.E_VAR)
+        {
+            var arr = _env.Get(baseNode.SVal!);
+            if (_env.IsArray(arr))
+                return _env.ArrayGet(arr, idxVal.ToInt());
+            if (_env.IsDataObj(arr))
+                return _env.DataGetField(arr, idxVal.ToString());
+        }
         return SnobolVal.Null;
     }
 
@@ -454,4 +517,37 @@ public sealed class Executor
         string.Equals(t, "RETURN",  StringComparison.OrdinalIgnoreCase) ||
         string.Equals(t, "FRETURN", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(t, "NRETURN", StringComparison.OrdinalIgnoreCase);
+
+    // Returns true if the IR node is a pattern expression (not a pure value expression)
+    private static bool IsPatternNode(IrNode n) => n.Kind switch
+    {
+        IrKind.E_ALT     => true,
+        IrKind.E_ARB     => true,
+        IrKind.E_REM     => true,
+        IrKind.E_FAIL    => true,
+        IrKind.E_SUCCEED => true,
+        IrKind.E_FENCE   => true,
+        IrKind.E_ABORT   => true,
+        IrKind.E_BAL     => true,
+        IrKind.E_ANY     => true,
+        IrKind.E_NOTANY  => true,
+        IrKind.E_SPAN    => true,
+        IrKind.E_BREAK   => true,
+        IrKind.E_BREAKX  => true,
+        IrKind.E_LEN     => true,
+        IrKind.E_TAB     => true,
+        IrKind.E_RTAB    => true,
+        IrKind.E_POS     => true,
+        IrKind.E_RPOS    => true,
+        IrKind.E_ARBNO   => true,
+        IrKind.E_DEFER   => true,
+        IrKind.E_SEQ     => n.Children.Any(IsPatternNode),
+        IrKind.E_CAT     => n.Children.Any(IsPatternNode),
+        // Parenthesised group containing a pattern
+        IrKind.E_CAPT_COND_ASGN  => true,
+        IrKind.E_CAPT_IMMED_ASGN => true,
+        IrKind.E_CAPT_CURSOR      => true,
+        _                          => false
+    };
+
 }
