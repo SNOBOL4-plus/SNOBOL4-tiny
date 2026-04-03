@@ -453,7 +453,12 @@ function engine_ζ(S, n, Π, startPos) {
             else return null;
             break;
 
-        /* ── CAPT_IMM ($) ───────────────────────────────────────────────── */
+        /* ── CAPT_CURSOR (@) ─────────────────────────────────────────────── */
+        case 'CAPT_CURSOR/proceed':
+            _vars_set(ζ[4].v, String(ζ[3]));   /* cursor position as string */
+            ζ = ζ_up(ζ);
+            action = 'succeed';
+            break;
         case 'CAPT_IMM/proceed':
             Ω.push(ζ);
             ζ = ζ_down_to(ζ, ζ[4].p);
@@ -536,6 +541,7 @@ function PAT_bal()        { return {t:'BAL'}; }
 function PAT_arbno(p)     { return {t:'ARBNO',p}; }
 function PAT_capt_imm(p,v){ return {t:'CAPT_IMM', p, v}; }
 function PAT_capt_cond(p,v){ return {t:'CAPT_COND',p, v}; }
+function PAT_capt_cursor(v){ return {t:'CAPT_CURSOR', v}; }
 
 /* ── Public search/match API ─────────────────────────────────────────────── */
 function sno_search(S, Π) { return engine(S, Π, false); }
@@ -547,6 +553,6 @@ module.exports = {
     PAT_span, PAT_break, PAT_arb, PAT_rem,
     PAT_len, PAT_pos, PAT_rpos, PAT_tab, PAT_rtab,
     PAT_fence, PAT_succeed, PAT_fail, PAT_abort, PAT_bal,
-    PAT_arbno, PAT_capt_imm, PAT_capt_cond,
+    PAT_arbno, PAT_capt_imm, PAT_capt_cond, PAT_capt_cursor,
     _set_vars_hook: (fn) => { _vars_set = fn; },
 };

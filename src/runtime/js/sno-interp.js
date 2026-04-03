@@ -32,7 +32,7 @@ const { sno_search, sno_match,
         PAT_span, PAT_break, PAT_arb, PAT_rem,
         PAT_len, PAT_pos, PAT_rpos, PAT_tab, PAT_rtab,
         PAT_fence, PAT_succeed, PAT_fail, PAT_abort, PAT_bal,
-        PAT_arbno, PAT_capt_imm, PAT_capt_cond,
+        PAT_arbno, PAT_capt_imm, PAT_capt_cond, PAT_capt_cursor,
         _set_vars_hook } = sno_eng;
 
 const { _FAIL, _is_fail, _str, _num, _add, _sub, _mul, _div, _pow,
@@ -756,10 +756,11 @@ function label_lookup(name) { return name?label_table[name.toUpperCase()]||null:
 /* Function registry */
 const func_table = Object.create(null);
 function define_fn(spec, entry) {
-  const m=spec.match(/^(\w+)\(([^)]*)\)/); if(!m) return;
+  const m=spec.match(/^(\w+)\(([^)]*)\)(.*)?$/); if(!m) return;
   const fname=m[1].toUpperCase();
-  const params=m[2].split(',').map(s=>s.trim()).filter(Boolean);
-  func_table[fname]={params, entry: entry||fname};
+  const params=m[2].split(',').map(s=>s.trim()).filter(Boolean).map(s=>s.toUpperCase());
+  const locals=(m[3]||'').split(',').map(s=>s.trim()).filter(Boolean).map(s=>s.toUpperCase());
+  func_table[fname]={params, locals, entry: entry||fname};
 }
 
 /* Control-flow signals (thrown as exceptions) */
@@ -775,6 +776,7 @@ const CALL_MAX=256;
 /* ── interp_eval ─────────────────────────────────────────────────────────── */
 function interp_eval(e) {
   if(!e) return null;
+  if(e._val !== undefined) return e._val;  /* pre-evaluated (APPLY args) */
   switch(e.kind) {
     case E_QLIT:    return e.sval;
     case E_ILIT:    return e.ival;
@@ -817,8 +819,13 @@ function interp_eval(e) {
     case E_IDX: {
       const base=interp_eval(e.children[0]); if(_is_fail(base)) return _FAIL;
       const idx=interp_eval(e.children[1]);  if(_is_fail(idx))  return _FAIL;
-      if(Array.isArray(base)) return base[_num(idx)-1]??null;
+      if(base && base.__sno_array) {
+        const n=_num(idx); const d=base.__dims[0];
+        if(n<d.lo||n>d.hi) return _FAIL;
+        return base[n]??base.__defval;
+      }
       if(base instanceof Map) return base.get(_str(idx))??null;
+      if(Array.isArray(base)) return base[_num(idx)-1]??null;
       return null;
     }
     case E_SCAN: {
@@ -845,8 +852,16 @@ function _assign(lhs, val) {
   if(lhs.kind===E_INDIRECT){ const n=_str(interp_eval(lhs.children[0])); _vars[n]=val; return; }
   if(lhs.kind===E_IDX) {
     const base=interp_eval(lhs.children[0]); const idx=interp_eval(lhs.children[1]);
-    if(Array.isArray(base)) { base[_num(idx)-1]=val; return; }
+    if(base && base.__sno_array) { const n=_num(idx); const d=base.__dims[0]; if(n>=d.lo&&n<=d.hi) base[n]=val; return; }
     if(base instanceof Map)  { base.set(_str(idx),val); return; }
+    if(Array.isArray(base))  { base[_num(idx)-1]=val; return; }
+  }
+  if(lhs.kind===E_FNC) {
+    /* DATA field setter: field(obj) = val */
+    const fn=lhs.sval.toUpperCase(); const fd=func_table[fn];
+    if(fd&&fd.__data_field&&lhs.children.length>0) {
+      const obj=interp_eval(lhs.children[0]); if(obj&&typeof obj==='object') obj[fd.field]=val;
+    }
   }
 }
 
@@ -893,6 +908,7 @@ function _build_pat(e) {
     case E_BREAKX: return PAT_break(_str(interp_eval(e.children[0])));
     case E_CAPT_COND_ASGN:  return PAT_capt_cond(_build_pat(e.children[0]), e.children[1]?.sval||'');
     case E_CAPT_IMMED_ASGN: return PAT_capt_imm(_build_pat(e.children[0]),  e.children[1]?.sval||'');
+    case E_CAPT_CURSOR:     return PAT_capt_cursor(e.children[0]?.sval||e.children[0]?.children?.[0]?.sval||'');
     case E_FNC: {
       const fn=e.sval.toUpperCase();
       const a0=()=>_str(interp_eval(e.children[0]));
@@ -957,8 +973,42 @@ function _call(fname, arg_exprs) {
     case 'EQ': { const a=_num(args[0]??0),b=_num(args[1]??0); return a===b?args[1]:_FAIL; }
     case 'NE': { const a=_num(args[0]??0),b=_num(args[1]??0); return a!==b?args[1]:_FAIL; }
     case 'DEFINE':  { const spec=_str(args[0]??''),entry=args[1]?_str(args[1]):null; define_fn(spec,entry); return null; }
-    case 'ARRAY':   { const n=parseInt(_str(args[0]??'1'),10); return new Array(Math.max(1,n)).fill(null); }
-    case 'TABLE':   return new Map();
+    case 'ARRAY': {
+      /* Parse spec: '5' → 1-based [1..5]; '2:8' → [2..8]; '3,4' → 3×4 multi-dim */
+      const spec = _str(args[0]??'1');
+      const dims = spec.split(',').map(s=>{
+        const parts = s.trim().split(':');
+        const lo = parts.length>1 ? parseInt(parts[0],10) : 1;
+        const hi = parts.length>1 ? parseInt(parts[1],10) : parseInt(parts[0],10);
+        return {lo, hi};
+      });
+      const defval = args[1]??null;
+      /* Use a plain object with metadata so E_IDX can do bounds check */
+      const arr = Object.create(null);
+      arr.__sno_array = true;
+      arr.__dims = dims;
+      arr.__defval = defval;
+      arr.__proto_str = dims.map(d=> d.lo===1 ? String(d.hi) : `${d.lo}:${d.hi}`).join(',');
+      return arr;
+    }
+    case 'TABLE':   { const tbl = new Map(); tbl.__sno_table=true; return tbl; }
+    case 'PROTOTYPE': {
+      const v = args[0];
+      if (v && v.__sno_array) return v.__proto_str;
+      if (v instanceof Map)   return '';
+      return _FAIL;
+    }
+    case 'VALUE': {
+      const v = args[0];
+      if (typeof v === 'string') { const r=_vars[v]; return r===undefined||r===null?null:r; }
+      return v??null;
+    }
+    case 'APPLY': {
+      const fn = _str(args[0]??'');
+      if (!fn) return _FAIL;
+      const fnargs = args.slice(1);
+      return _call(fn, fnargs.map(a=>{ const e=expr_new(E_NUL); e._val=a; return e; }));
+    }
     case 'DATA': {
       const spec = _str(args[0]??'');
       const m = spec.match(/^(\w+)\(([^)]*)\)/);
@@ -987,8 +1037,8 @@ function _call(fname, arg_exprs) {
     case 'DATATYPE': {
       const v = args[0];
       if (v === null || v === undefined) return 'STRING';
+      if (v && v.__sno_array) return 'ARRAY';
       if (v instanceof Map)   return 'TABLE';
-      if (Array.isArray(v))   return 'ARRAY';
       if (typeof v === 'object' && v.__datatype) return v.__datatype;
       if (typeof v === 'number') return Number.isInteger(v) ? 'INTEGER' : 'REAL';
       return 'STRING';
@@ -1036,12 +1086,12 @@ function _call(fname, arg_exprs) {
 function _call_user(fname, fd, args) {
   if(call_stack.length>=CALL_MAX){process.stderr.write('sno-interp: stack overflow\n');return _FAIL;}
 
-  /* Save/clear variables */
+  /* Save and clear params + locals + function name var */
   const saved={};
-  const all=[fname,...(fd.params||[])];
-  for(const n of all) saved[n.toUpperCase()]=_vars[n.toUpperCase()]??null;
-  _vars[fname]=null;
-  for(let i=0;i<(fd.params||[]).length;i++) _vars[fd.params[i].toUpperCase()]=args[i]??null;
+  const all=[fname,...(fd.params||[]),...(fd.locals||[])];
+  for(const n of all) { saved[n]=_vars[n]??null; _vars[n]=null; }
+  /* Bind args to params */
+  for(let i=0;i<(fd.params||[]).length;i++) _vars[fd.params[i]]=args[i]??null;
 
   call_stack.push({fname});
   let ret=_FAIL;

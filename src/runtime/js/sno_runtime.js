@@ -62,8 +62,17 @@ const _vars = new Proxy(_store, {
 function _str(v) {
     if (v === null || v === undefined) return '';
     if (v === _FAIL) return '';
-    if (typeof v === 'number' && Number.isInteger(v)) return String(v);
-    if (typeof v === 'number') return String(v);
+    if (typeof v === 'number') {
+        if (Number.isInteger(v)) return String(v);
+        /* SNOBOL4 real format: always has decimal point; 1.0→"1.", 0.5→".5" */
+        let s = String(v);
+        if (s.indexOf('.') < 0 && s.indexOf('e') < 0) s += '.';
+        s = s.replace(/(\.\d*?)0+$/, '$1');
+        s = s.replace(/^0\./, '.');
+        s = s.replace(/^-0\./, '-.');
+        return s;
+    }
+    if (typeof v === 'object') return '';  /* DATA/ARRAY/TABLE objects stringify as '' */
     return String(v);
 }
 
