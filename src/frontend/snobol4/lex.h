@@ -48,8 +48,8 @@ Token lex_next(Lex *lx);
 Token lex_peek(Lex *lx);
 int   lex_at_end(Lex *lx);
 
-/* M-LEX-1: flex body tokeniser — called by lex.c, defined in lex.yy.c */
-void  flex_lex_open   (Lex *lx);
+/* M-LEX-1: flex one-pass lexer — called by lex.c, defined in lex.yy.c */
+void  flex_lex_open   (Lex *lx, FILE *f, const char *fname);
 Token flex_lex_next   (Lex *lx);
 void  flex_lex_destroy(Lex *lx);
 

@@ -463,8 +463,9 @@ extern Program *parse_program_tokens(Lex *lx);    /* new token-stream interface 
 
 Program *snoc_parse(FILE *f, const char *filename) {
     yyfilename=(char*)filename;
-    Q.head=Q.tail=0;
-    process_file(f,filename);
     Lex lx={0};
-    return parse_program_tokens(&lx);
+    flex_lex_open(&lx, f, filename);
+    Program *prog = parse_program_tokens(&lx);
+    flex_lex_destroy(&lx);
+    return prog;
 }
