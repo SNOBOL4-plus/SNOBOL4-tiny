@@ -1,15 +1,17 @@
+package driver.jvm;
+
 /**
- * BbAny.java — ANY: match one char if in set
+ * bb_any.java — ANY: match one char if in set
  * Port of bb_any.c / bb_any.s
  *
  *   ANY_α:  if (Δ>=Ω || chars.indexOf(Σ[Δ])<0)  goto ANY_ω;
  *           ANY=spec(Σ+Δ,1); Δ++;                goto ANY_γ;
  *   ANY_β:  Δ--;                                 goto ANY_ω;
  */
-class BbAny extends BbBox {
+class bb_any extends bb_box {
     private final String chars;
 
-    public BbAny(MatchState ms, String chars) { super(ms); this.chars=chars; }
+    public bb_any(MatchState ms, String chars) { super(ms); this.chars=chars; }
 
     @Override public Spec alpha() {
         if (ms.delta >= ms.omega) return null;

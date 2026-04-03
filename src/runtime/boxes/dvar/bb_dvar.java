@@ -1,29 +1,31 @@
+package driver.jvm;
+
 /**
- * BbDvar.java — DVAR: *VAR — re-resolve live variable value on every α
+ * bb_dvar.java — DVAR: *VAR — re-resolve live variable value on every α
  * Port of bb_dvar.c / bb_dvar.s
  *
  * On each α entry, look up the variable's current value:
  *   - If DT_P (pattern-valued): rebuild child box from live pattern tree
- *   - If DT_S (string-valued):  rebuild child as BbLit with that string
+ *   - If DT_S (string-valued):  rebuild child as bb_lit with that string
  * Then call child(α) / child(β) as normal.
  *
  *   DVAR_α:  resolve name → rebuild child if changed;
  *            DVAR = child(α);  if empty → DVAR_ω;  else → DVAR_γ;
  *   DVAR_β:  DVAR = child(β);  if empty → DVAR_ω;  else → DVAR_γ;
  */
-class BbDvar extends BbBox {
+class bb_dvar extends bb_box {
 
-    /** Callback to resolve variable → current BbBox (handles DT_P and DT_S) */
+    /** Callback to resolve variable → current bb_box (handles DT_P and DT_S) */
     public interface BoxResolver {
-        /** Return a fresh BbBox for the current value of varname, or null if unset */
-        BbBox resolve(String varname, MatchState ms);
+        /** Return a fresh bb_box for the current value of varname, or null if unset */
+        bb_box resolve(String varname, MatchState ms);
     }
 
     private final String      varname;
     private final BoxResolver resolver;
-    private       BbBox       child = null;
+    private       bb_box       child = null;
 
-    public BbDvar(MatchState ms, String varname, BoxResolver resolver) {
+    public bb_dvar(MatchState ms, String varname, BoxResolver resolver) {
         super(ms);
         this.varname  = varname;
         this.resolver = resolver;

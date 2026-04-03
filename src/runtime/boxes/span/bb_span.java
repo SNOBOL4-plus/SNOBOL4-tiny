@@ -1,5 +1,7 @@
+package driver.jvm;
+
 /**
- * BbSpan.java — SPAN: longest prefix of chars in set (≥1 char required)
+ * bb_span.java — SPAN: longest prefix of chars in set (≥1 char required)
  * Port of bb_span.c / bb_span.s
  *
  *   SPAN_α:  δ=0; while (Δ+δ<Ω && chars.has(Σ[Δ+δ])) δ++;
@@ -7,11 +9,11 @@
  *            SPAN=spec(Σ+Δ,δ); Δ+=δ;     goto SPAN_γ;
  *   SPAN_β:  Δ-=δ;                        goto SPAN_ω;
  */
-class BbSpan extends BbBox {
+class bb_span extends bb_box {
     private final String chars;
     private int          delta;   /* saved match length */
 
-    public BbSpan(MatchState ms, String chars) { super(ms); this.chars=chars; }
+    public bb_span(MatchState ms, String chars) { super(ms); this.chars=chars; }
 
     @Override public Spec alpha() {
         delta = 0;

@@ -1,5 +1,7 @@
+package driver.jvm;
+
 /**
- * BbBrk.java — BRK (BREAK): scan to first char in set (zero-width possible)
+ * bb_brk.java — BRK (BREAK): scan to first char in set (zero-width possible)
  * Port of bb_brk.c / bb_brk.s
  *
  *   BRK_α:  δ=0; while (Δ+δ<Ω && !chars.has(Σ[Δ+δ])) δ++;
@@ -7,11 +9,11 @@
  *           BRK=spec(Σ+Δ,δ); Δ+=δ;     goto BRK_γ;
  *   BRK_β:  Δ-=δ;                       goto BRK_ω;
  */
-class BbBrk extends BbBox {
+class bb_brk extends bb_box {
     private final String chars;
     private int          delta;
 
-    public BbBrk(MatchState ms, String chars) { super(ms); this.chars=chars; }
+    public bb_brk(MatchState ms, String chars) { super(ms); this.chars=chars; }
 
     @Override public Spec alpha() {
         delta = 0;

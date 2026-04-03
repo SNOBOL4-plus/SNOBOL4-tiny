@@ -1,5 +1,7 @@
+package driver.jvm;
+
 /**
- * BbCapture.java — CAPTURE: wrap child; $ writes on every γ; . buffers for Phase-5 commit
+ * bb_capture.java — CAPTURE: wrap child; $ writes on every γ; . buffers for Phase-5 commit
  * Port of bb_capture.c / bb_capture.s
  *
  *   CAP_α:       cr = child(α);  if empty → CAP_ω;  else → CAP_γ_core;
@@ -12,14 +14,14 @@
  * The executor calls commitPending() after overall match success to flush
  * deferred (.) captures — mirroring match.clj commit-pending! and stmt_exec.c.
  */
-class BbCapture extends BbBox {
+class bb_capture extends bb_box {
 
     /** Callback interface for variable assignment (NV_SET_fn equivalent) */
     public interface VarSetter {
         void set(String varname, String value);
     }
 
-    private final BbBox     child;
+    private final bb_box     child;
     private final String    varname;
     private final boolean   immediate;   /* true = $var; false = .var */
     private final VarSetter setter;
@@ -28,7 +30,7 @@ class BbCapture extends BbBox {
     private Spec    pending    = null;
     private boolean hasPending = false;
 
-    public BbCapture(MatchState ms, BbBox child, String varname,
+    public bb_capture(MatchState ms, bb_box child, String varname,
                      boolean immediate, VarSetter setter) {
         super(ms);
         this.child     = child;

@@ -1,5 +1,7 @@
+package driver.jvm;
+
 /**
- * BbInterr.java — INTERR: ?X — succeed zero-width if X succeeds; ω if X fails
+ * bb_interr.java — INTERR: ?X — succeed zero-width if X succeeds; ω if X fails
  * Port of bb_interr.c / bb_interr.s
  *
  * o$int semantics: run child; if child γ → discard match, return zero-width
@@ -12,11 +14,11 @@
  *   INT_γ:  return spec(Σ+Δ,0);
  *   INT_ω:  return spec_empty;
  */
-class BbInterr extends BbBox {
-    private final BbBox child;
+class bb_interr extends bb_box {
+    private final bb_box child;
     private int         start;
 
-    public BbInterr(MatchState ms, BbBox child) { super(ms); this.child=child; }
+    public bb_interr(MatchState ms, bb_box child) { super(ms); this.child=child; }
 
     @Override public Spec alpha() {
         start    = ms.delta;

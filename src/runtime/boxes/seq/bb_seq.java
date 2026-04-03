@@ -1,5 +1,7 @@
+package driver.jvm;
+
 /**
- * BbSeq.java — SEQ: concatenation; left then right; β retries right then left
+ * bb_seq.java — SEQ: concatenation; left then right; β retries right then left
  * Port of bb_seq.c / bb_seq.s
  *
  * C original:
@@ -14,11 +16,11 @@
  *   SEQ_γ:                                         return SEQ;
  *   SEQ_ω:                                         return spec_empty;
  */
-class BbSeq extends BbBox {
-    private final BbBox left, right;
+class bb_seq extends bb_box {
+    private final bb_box left, right;
     private int matchedStart, matchedLen;  /* accumulated span */
 
-    public BbSeq(MatchState ms, BbBox left, BbBox right) {
+    public bb_seq(MatchState ms, bb_box left, bb_box right) {
         super(ms);
         this.left  = left;
         this.right = right;

@@ -1,5 +1,7 @@
+package driver.jvm;
+
 /**
- * BbFence.java — FENCE: succeed once; β cuts (no retry)
+ * bb_fence.java — FENCE: succeed once; β cuts (no retry)
  * Port of bb_fence.c / bb_fence.s
  *
  *   FENCE_α:  fired=1;            goto FENCE_γ;
@@ -7,9 +9,9 @@
  *   FENCE_γ:  return spec(Σ+Δ,0);
  *   FENCE_ω:  return spec_empty;
  */
-class BbFence extends BbBox {
+class bb_fence extends bb_box {
 
-    public BbFence(MatchState ms) { super(ms); }
+    public bb_fence(MatchState ms) { super(ms); }
 
     @Override public Spec alpha() { return new Spec(ms.delta, 0); }  // FENCE_γ
 

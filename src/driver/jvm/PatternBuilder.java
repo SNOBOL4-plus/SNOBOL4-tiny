@@ -1,0 +1,238 @@
+package driver.jvm;
+
+import java.util.List;
+
+/**
+ * PatternBuilder.java — walks a Parser.ExprNode pattern tree and
+ * instantiates a bb_box graph using the Java oracle classes.
+ *
+ * All box classes are in the default package (same compilation unit).
+ * The Interpreter supplies VarSetter/IntSetter callbacks for captures.
+ *
+ * EKind → bb_box mapping:
+ *   E_QLIT / E_ILIT / E_FLIT  → bb_lit
+ *   E_NUL                      → bb_lit("") zero-width
+ *   E_ARB  / E_VAR "ARB"       → bb_arb
+ *   E_REM  / E_VAR "REM"       → bb_rem
+ *   E_FAIL / E_VAR "FAIL"      → bb_fail
+ *   E_SUCCEED / E_VAR "SUCCEED"→ bb_succeed
+ *   E_FENCE / E_VAR "FENCE"    → bb_fence
+ *   E_ABORT / E_VAR "ABORT"    → bb_abort
+ *   E_SEQ / E_CAT              → bb_seq chain (left-fold binary tree)
+ *   E_ALT                      → bb_alt(children...)
+ *   E_FNC ANY                  → bb_any
+ *   E_FNC NOTANY               → bb_notany
+ *   E_FNC SPAN                 → bb_span
+ *   E_FNC BREAK                → bb_brk
+ *   E_FNC BREAKX               → bb_breakx
+ *   E_FNC LEN                  → bb_len
+ *   E_FNC POS                  → bb_pos
+ *   E_FNC RPOS                 → bb_rpos
+ *   E_FNC TAB                  → bb_tab
+ *   E_FNC RTAB                 → bb_rtab
+ *   E_FNC ARBNO                → bb_arbno
+ *   E_CAPT_IMMED_ASGN ($var)   → bb_capture(immediate=true)
+ *   E_CAPT_COND_ASGN  (.var)   → bb_capture(immediate=false)
+ *   E_CAPT_CURSOR     (@var)   → bb_atp
+ */
+class PatternBuilder {
+
+    /** Callback for string variable assignment (used by bb_capture). */
+    interface VarSetter {
+        void set(String name, String value);
+    }
+
+    /** Callback for integer variable assignment (used by bb_atp). */
+    interface IntSetter {
+        void set(String name, int value);
+    }
+
+    private final bb_box.MatchState ms;
+    private final VarSetter         varSetter;
+    private final IntSetter         intSetter;
+    private final bb_dvar.BoxResolver varResolver;
+    /** Deferred (.var) captures registered for Phase-5 commit. */
+    private final java.util.List<bb_capture> deferred = new java.util.ArrayList<>();
+
+    PatternBuilder(bb_box.MatchState ms, VarSetter varSetter, IntSetter intSetter,
+                   bb_dvar.BoxResolver varResolver) {
+        this.ms          = ms;
+        this.varSetter   = varSetter;
+        this.intSetter   = intSetter;
+        this.varResolver = varResolver;
+    }
+
+    /** Return list of deferred captures to commit on :S (Phase 5). */
+    java.util.List<bb_capture> deferredCaptures() { return deferred; }
+
+    /** Entry point: build a bb_box graph from a pattern ExprNode. */
+    bb_box build(Parser.ExprNode e) {
+        if (e == null) return new bb_eps(ms);
+
+        switch (e.kind) {
+
+            // ── Literals ─────────────────────────────────────────────────────
+            case E_QLIT:
+                return new bb_lit(ms, e.sval != null ? e.sval : "");
+            case E_ILIT:
+                return new bb_lit(ms, e.sval != null ? e.sval :
+                                      String.valueOf(e.ival));
+            case E_FLIT:
+                return new bb_lit(ms, e.sval != null ? e.sval :
+                                      String.valueOf(e.dval));
+            case E_NUL:
+                return new bb_lit(ms, "");
+
+            // ── Bare pattern keyword nodes ────────────────────────────────────
+            case E_ARB:     return new bb_arb(ms);
+            case E_REM:     return new bb_rem(ms);
+            case E_FAIL:    return new bb_fail(ms);
+            case E_SUCCEED: return new bb_succeed(ms);
+            case E_FENCE:   return new bb_fence(ms);
+            case E_ABORT:   return new bb_abort(ms);
+
+            // ── E_VAR: may be a bare keyword pattern or a pattern-valued var ──
+            case E_VAR: {
+                String name = e.sval != null ? e.sval.toUpperCase() : "";
+                switch (name) {
+                    case "ARB":     return new bb_arb(ms);
+                    case "REM":     return new bb_rem(ms);
+                    case "FAIL":    return new bb_fail(ms);
+                    case "SUCCEED": return new bb_succeed(ms);
+                    case "FENCE":   return new bb_fence(ms);
+                    case "ABORT":   return new bb_abort(ms);
+                    default:
+                        // Pattern-valued variable: dereference at match time via bb_dvar
+                        // bb_dvar looks up the variable each time alpha() is called.
+                        // We pass a supplier lambda as the resolver.
+                        final String varName = e.sval;
+                        return new bb_dvar(ms, varName, varResolver);
+                }
+            }
+
+            // ── Sequence / concatenation ──────────────────────────────────────
+            case E_SEQ:
+            case E_CAT:
+                return buildSeqChain(e.children);
+
+            // ── Alternation ───────────────────────────────────────────────────
+            case E_ALT: {
+                bb_box[] kids = e.children.stream()
+                    .map(this::build)
+                    .toArray(bb_box[]::new);
+                return new bb_alt(ms, kids);
+            }
+
+            // ── Function calls: ANY NOTANY SPAN BREAK BREAKX LEN POS RPOS TAB RTAB ARBNO ──
+            case E_FNC: {
+                String fn = e.sval != null ? e.sval.toUpperCase() : "";
+                List<Parser.ExprNode> args = e.children;
+                switch (fn) {
+                    case "ANY":
+                        return new bb_any(ms, strArg(args, 0));
+                    case "NOTANY":
+                        return new bb_notany(ms, strArg(args, 0));
+                    case "SPAN":
+                        return new bb_span(ms, strArg(args, 0));
+                    case "BREAK":
+                        return new bb_brk(ms, strArg(args, 0));
+                    case "BREAKX":
+                        return new bb_breakx(ms, strArg(args, 0));
+                    case "LEN":
+                        return new bb_len(ms, intArg(args, 0));
+                    case "POS":
+                        return new bb_pos(ms, intArg(args, 0));
+                    case "RPOS":
+                        return new bb_rpos(ms, intArg(args, 0));
+                    case "TAB":
+                        return new bb_tab(ms, intArg(args, 0));
+                    case "RTAB":
+                        return new bb_rtab(ms, intArg(args, 0));
+                    case "ARBNO": {
+                        bb_box body = args.isEmpty() ? new bb_eps(ms) : build(args.get(0));
+                        return new bb_arbno(ms, body);
+                    }
+                    default:
+                        // Unknown function in pattern context — fail safe
+                        return new bb_fail(ms);
+                }
+            }
+
+            // ── Captures ─────────────────────────────────────────────────────
+            case E_CAPT_IMMED_ASGN: {
+                // $var — immediate assign on every gamma
+                String varName = captureVarName(e);
+                bb_box child   = e.children.size() > 0 ? build(e.children.get(0)) : new bb_eps(ms);
+                bb_capture.VarSetter vs = (n, v) -> varSetter.set(n, v);
+                return new bb_capture(ms, child, varName, true, vs);
+            }
+            case E_CAPT_COND_ASGN: {
+                // .var — deferred assign on :S
+                String varName = captureVarName(e);
+                bb_box child   = e.children.size() > 0 ? build(e.children.get(0)) : new bb_eps(ms);
+                bb_capture.VarSetter vs = (n, v) -> varSetter.set(n, v);
+                bb_capture cap = new bb_capture(ms, child, varName, false, vs);
+                deferred.add(cap);
+                return cap;
+            }
+            case E_CAPT_CURSOR: {
+                // @var — write cursor position as integer
+                String varName = captureVarName(e);
+                bb_atp.IntSetter is = (n, v) -> intSetter.set(n, v);
+                return new bb_atp(ms, varName, is);
+            }
+
+            // ── Interrogate (?pat) — succeed/fail inversion ───────────────────
+            case E_INTERROGATE: {
+                bb_box child = e.children.isEmpty() ? new bb_eps(ms) : build(e.children.get(0));
+                return new bb_interr(ms, child);
+            }
+
+            // ── Fallback ─────────────────────────────────────────────────────
+            default:
+                // Unrecognised node in pattern context — treat as failure
+                return new bb_fail(ms);
+        }
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /** Left-fold a list of children into a binary bb_seq chain. */
+    private bb_box buildSeqChain(List<Parser.ExprNode> children) {
+        if (children == null || children.isEmpty()) return new bb_eps(ms);
+        bb_box acc = build(children.get(0));
+        for (int i = 1; i < children.size(); i++) {
+            acc = new bb_seq(ms, acc, build(children.get(i)));
+        }
+        return acc;
+    }
+
+    /** Extract string argument from arg list (literal only). */
+    private String strArg(List<Parser.ExprNode> args, int idx) {
+        if (idx >= args.size()) return "";
+        Parser.ExprNode a = args.get(idx);
+        if (a.sval != null) return a.sval;
+        return "";
+    }
+
+    /** Extract integer argument from arg list (literal only). */
+    private int intArg(List<Parser.ExprNode> args, int idx) {
+        if (idx >= args.size()) return 0;
+        Parser.ExprNode a = args.get(idx);
+        if (a.kind == Parser.EKind.E_ILIT) return (int) a.ival;
+        if (a.sval != null) {
+            try { return Integer.parseInt(a.sval); } catch (NumberFormatException ex) {}
+        }
+        return 0;
+    }
+
+    /** Extract capture variable name from a capture node. */
+    private String captureVarName(Parser.ExprNode e) {
+        // The variable name is in sval, or in a child E_VAR node
+        if (e.sval != null && !e.sval.isEmpty()) return e.sval;
+        for (Parser.ExprNode c : e.children) {
+            if (c.kind == Parser.EKind.E_VAR && c.sval != null) return c.sval;
+        }
+        return "";
+    }
+}

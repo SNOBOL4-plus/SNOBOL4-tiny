@@ -1,16 +1,18 @@
+package driver.jvm;
+
 /**
- * BbTab.java — TAB: advance cursor TO absolute position n
+ * bb_tab.java — TAB: advance cursor TO absolute position n
  * Port of bb_tab.c / bb_tab.s
  *
  *   TAB_α:  if (Δ > n)                      goto TAB_ω;
  *           advance=n-Δ; TAB=spec(Σ+Δ,advance); Δ=n;  goto TAB_γ;
  *   TAB_β:  Δ -= advance;                   goto TAB_ω;
  */
-class BbTab extends BbBox {
+class bb_tab extends bb_box {
     private final int n;
     private int       advance;
 
-    public BbTab(MatchState ms, int n) { super(ms); this.n=n; }
+    public bb_tab(MatchState ms, int n) { super(ms); this.n=n; }
 
     @Override public Spec alpha() {
         if (ms.delta > n) return null;

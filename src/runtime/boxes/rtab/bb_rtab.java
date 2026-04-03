@@ -1,16 +1,18 @@
+package driver.jvm;
+
 /**
- * BbRtab.java — RTAB: advance cursor TO position Ω-n
+ * bb_rtab.java — RTAB: advance cursor TO position Ω-n
  * Port of bb_rtab.c / bb_rtab.s
  *
  *   RTAB_α:  if (Δ > Ω-n)                               goto RTAB_ω;
  *            advance=(Ω-n)-Δ; RTAB=spec(Σ+Δ,advance); Δ=Ω-n;  goto RTAB_γ;
  *   RTAB_β:  Δ -= advance;                              goto RTAB_ω;
  */
-class BbRtab extends BbBox {
+class bb_rtab extends bb_box {
     private final int n;
     private int       advance;
 
-    public BbRtab(MatchState ms, int n) { super(ms); this.n=n; }
+    public bb_rtab(MatchState ms, int n) { super(ms); this.n=n; }
 
     @Override public Spec alpha() {
         int target = ms.omega - n;

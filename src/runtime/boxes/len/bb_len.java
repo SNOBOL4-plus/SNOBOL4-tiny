@@ -1,15 +1,17 @@
+package driver.jvm;
+
 /**
- * BbLen.java — LEN: match exactly n characters
+ * bb_len.java — LEN: match exactly n characters
  * Port of bb_len.c / bb_len.s
  *
  *   LEN_α:  if (Δ+n > Ω)            goto LEN_ω;
  *           LEN=spec(Σ+Δ,n); Δ+=n;  goto LEN_γ;
  *   LEN_β:  Δ-=n;                   goto LEN_ω;
  */
-class BbLen extends BbBox {
+class bb_len extends bb_box {
     private final int n;
 
-    public BbLen(MatchState ms, int n) { super(ms); this.n=n; }
+    public bb_len(MatchState ms, int n) { super(ms); this.n=n; }
 
     @Override public Spec alpha() {
         if (ms.delta + n > ms.omega) return null;

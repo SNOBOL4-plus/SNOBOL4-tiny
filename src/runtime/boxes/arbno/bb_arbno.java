@@ -1,5 +1,7 @@
+package driver.jvm;
+
 /**
- * BbArbno.java — ARBNO: zero-or-more greedy; zero-advance guard; β unwinds stack
+ * bb_arbno.java — ARBNO: zero-or-more greedy; zero-advance guard; β unwinds stack
  * Port of bb_arbno.c / bb_arbno.s
  *
  *   ARBNO_α:   depth=0; fr=stack[0]; fr.matched=spec(Σ+Δ,0); fr.start=Δ;
@@ -16,10 +18,10 @@
  *   ARBNO_γ:                                       return ARBNO;
  *   ARBNO_ω:                                       return spec_empty;
  */
-class BbArbno extends BbBox {
+class bb_arbno extends bb_box {
     private static final int MAX_DEPTH = 64;
 
-    private final BbBox body;
+    private final bb_box body;
 
     /* per-frame saved state */
     private final int[] frameStart   = new int[MAX_DEPTH];
@@ -27,7 +29,7 @@ class BbArbno extends BbBox {
     private final int[] frameMatchLn = new int[MAX_DEPTH]; /* length of accumulated match */
     private int depth;
 
-    public BbArbno(MatchState ms, BbBox body) { super(ms); this.body=body; }
+    public bb_arbno(MatchState ms, bb_box body) { super(ms); this.body=body; }
 
     @Override public Spec alpha() {
         // ARBNO_α

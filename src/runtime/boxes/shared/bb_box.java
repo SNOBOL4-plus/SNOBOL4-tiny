@@ -1,8 +1,10 @@
+package driver.jvm;
+
 /**
- * BbBox.java — JVM Byrd Box Runtime
+ * bb_box.java — JVM Byrd Box Runtime
  *
  * Direct port of bb_box.h / bb_*.c to Java.
- * Every box is a BbBox instance with two entry points: alpha() and beta().
+ * Every box is a bb_box instance with two entry points: alpha() and beta().
  * Return null  → ω fired (failure).
  * Return Spec  → γ fired (success, value = matched substring).
  *
@@ -13,7 +15,7 @@
  *
  * Canonical three-column layout preserved in comments for each box.
  */
-abstract class BbBox {
+abstract class bb_box {
 
     /* ── Entry port constants (mirrors bb_box.h α=0, β=1) ─────────────── */
     public static final int ALPHA = 0;
@@ -37,7 +39,7 @@ abstract class BbBox {
     /* Every box holds a reference to the shared match state */
     protected MatchState ms;
 
-    protected BbBox(MatchState ms) { this.ms = ms; }
+    protected bb_box(MatchState ms) { this.ms = ms; }
 
     /* The two entry ports every subclass must implement */
     public abstract Spec alpha();   /* α — fresh entry      */

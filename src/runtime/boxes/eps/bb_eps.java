@@ -1,15 +1,17 @@
+package driver.jvm;
+
 /**
- * BbEps.java — EPS: zero-width success once; done flag prevents double-γ
+ * bb_eps.java — EPS: zero-width success once; done flag prevents double-γ
  * Port of bb_eps.c / bb_eps.s
  *
  *   EPS_α:  if (done)         goto EPS_ω;
  *           done=1; EPS=spec(Σ+Δ,0); goto EPS_γ;
  *   EPS_β:                    goto EPS_ω;
  */
-class BbEps extends BbBox {
+class bb_eps extends bb_box {
     private boolean done;
 
-    public BbEps(MatchState ms) { super(ms); }
+    public bb_eps(MatchState ms) { super(ms); }
 
     @Override public Spec alpha() {
         if (done) return null;

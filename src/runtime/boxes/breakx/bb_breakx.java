@@ -1,5 +1,7 @@
+package driver.jvm;
+
 /**
- * BbBreakx.java — BREAKX: like BRK but fails on zero advance
+ * bb_breakx.java — BREAKX: like BRK but fails on zero advance
  * Port of bb_breakx.c / bb_breakx.s
  *
  *   BREAKX_α:  δ=0; while (Δ+δ<Ω && !chars.has(Σ[Δ+δ])) δ++;
@@ -7,11 +9,11 @@
  *              BREAKX=spec(Σ+Δ,δ); Δ+=δ;       goto BREAKX_γ;
  *   BREAKX_β:  Δ-=δ;                            goto BREAKX_ω;
  */
-class BbBreakx extends BbBox {
+class bb_breakx extends bb_box {
     private final String chars;
     private int          delta;
 
-    public BbBreakx(MatchState ms, String chars) { super(ms); this.chars=chars; }
+    public bb_breakx(MatchState ms, String chars) { super(ms); this.chars=chars; }
 
     @Override public Spec alpha() {
         delta = 0;

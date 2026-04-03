@@ -1,5 +1,7 @@
+package driver.jvm;
+
 /**
- * BbNot.java — NOT: \X — succeed iff X fails; β always ω
+ * bb_not.java — NOT: \X — succeed iff X fails; β always ω
  * Port of bb_not.c / bb_not.s
  *
  * o$nta/b/c semantics mapped to two-entry BB:
@@ -13,11 +15,11 @@
  *   NOT_γ:  return spec(Σ+Δ,0);
  *   NOT_ω:  return spec_empty;
  */
-class BbNot extends BbBox {
-    private final BbBox child;
+class bb_not extends bb_box {
+    private final bb_box child;
     private int         start;
 
-    public BbNot(MatchState ms, BbBox child) { super(ms); this.child=child; }
+    public bb_not(MatchState ms, bb_box child) { super(ms); this.child=child; }
 
     @Override public Spec alpha() {
         start   = ms.delta;

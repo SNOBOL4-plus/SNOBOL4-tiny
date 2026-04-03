@@ -1,5 +1,7 @@
+package driver.jvm;
+
 /**
- * BbLit.java — LIT: literal string match
+ * bb_lit.java — LIT: literal string match
  * Port of bb_lit.c / bb_lit.s
  *
  * C original:
@@ -10,11 +12,11 @@
  *   LIT_γ:                                       return LIT;
  *   LIT_ω:                                       return spec_empty;
  */
-class BbLit extends BbBox {
+class bb_lit extends bb_box {
     private final String lit;
     private final int    len;
 
-    public BbLit(MatchState ms, String lit) {
+    public bb_lit(MatchState ms, String lit) {
         super(ms);
         this.lit = lit;
         this.len = lit.length();

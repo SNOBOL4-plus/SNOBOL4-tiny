@@ -1,5 +1,7 @@
+package driver.jvm;
+
 /**
- * BbAlt.java — ALT: alternation; try each child on α; β retries same child
+ * bb_alt.java — ALT: alternation; try each child on α; β retries same child
  * Port of bb_alt.c / bb_alt.s
  *
  * C original:
@@ -16,13 +18,13 @@
  *   ALT_γ:                                             return result;
  *   ALT_ω:                                             return spec_empty;
  */
-class BbAlt extends BbBox {
-    private final BbBox[] children;
+class bb_alt extends bb_box {
+    private final bb_box[] children;
     private final int     n;
     private int           current;   /* 1-based index of active child */
     private int           position;  /* saved Δ at ALT entry          */
 
-    public BbAlt(MatchState ms, BbBox... children) {
+    public bb_alt(MatchState ms, bb_box... children) {
         super(ms);
         this.children = children;
         this.n        = children.length;

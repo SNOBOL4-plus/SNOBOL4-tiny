@@ -1,5 +1,7 @@
+package driver.jvm;
+
 /**
- * BbBal.java — BAL: match a balanced parenthesised string
+ * bb_bal.java — BAL: match a balanced parenthesised string
  *
  * No bb_bal.c reference exists; semantics from SPITBOL/SNOBOL4 spec:
  *   Matches a string balanced with respect to '(' and ')'.
@@ -17,10 +19,10 @@
  *           goto BAL_ω;
  *   BAL_β:  Δ -= len;  goto BAL_ω;
  */
-class BbBal extends BbBox {
+class bb_bal extends bb_box {
     private int len;   /* saved match length for β restore */
 
-    public BbBal(MatchState ms) { super(ms); }
+    public bb_bal(MatchState ms) { super(ms); }
 
     @Override public Spec alpha() {
         int depth = 0;

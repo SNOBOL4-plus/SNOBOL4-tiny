@@ -1,5 +1,7 @@
+package driver.jvm;
+
 /**
- * BbArb.java — ARB: match 0..n chars lazily; β extends by 1
+ * bb_arb.java — ARB: match 0..n chars lazily; β extends by 1
  * Port of bb_arb.c / bb_arb.s
  *
  *   ARB_α:  count=0; start=Δ; ARB=spec(Σ+Δ,0);         goto ARB_γ;
@@ -9,11 +11,11 @@
  *   ARB_γ:                                              return ARB;
  *   ARB_ω:                                              return spec_empty;
  */
-class BbArb extends BbBox {
+class bb_arb extends bb_box {
     private int count;
     private int start;
 
-    public BbArb(MatchState ms) { super(ms); }
+    public bb_arb(MatchState ms) { super(ms); }
 
     @Override public Spec alpha() {
         // ARB_α: start lazy (zero-width)

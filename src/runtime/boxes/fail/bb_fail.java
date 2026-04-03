@@ -1,10 +1,12 @@
+package driver.jvm;
+
 /**
- * BbFail.java — FAIL: always ω — force backtrack
+ * bb_fail.java — FAIL: always ω — force backtrack
  * Port of bb_fail.c / bb_fail.s
  */
-class BbFail extends BbBox {
+class bb_fail extends bb_box {
 
-    public BbFail(MatchState ms) { super(ms); }
+    public bb_fail(MatchState ms) { super(ms); }
 
     @Override public Spec alpha() { return null; }
     @Override public Spec beta()  { return null; }
