@@ -502,8 +502,11 @@ function engine_ζ(S, n, Π, startPos) {
         case 'CAPT_COND/succeed': {
             const v    = ζ[4].v;
             const text = S.slice(ζ[1], ζ[3]);
-            // Pop snapshot — succeed is final for this CAPT_COND (no concede/recede follows).
-            const snap = _cc_stack.length ? _cc_stack.pop() : 0;
+            // PEEK (not pop) the snapshot — ARB backtracking can cause succeed to fire
+            // multiple times for the same CAPT_COND (ARB tries len=0,1,2,...; each retry
+            // produces a new succeed after SEQ/concede pops back through Ω).
+            // The snapshot is retired (popped) only at concede/recede time.
+            const snap = _cc_stack.length ? _cc_stack[_cc_stack.length - 1] : 0;
             _pending_cond.length = snap;           // discard stale ARB-retry pushes
             _pending_cond.push({v, text});         // deferred until overall success
             ζ = ζ_up(ζ);

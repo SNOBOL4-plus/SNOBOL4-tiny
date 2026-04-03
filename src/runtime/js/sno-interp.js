@@ -233,6 +233,17 @@ class Lexer {
       if (c === '\n') {
         this._adv(); /* sets _bol=true, increments lineno */
         this._depth = 0;
+        /* Peek: if the next non-empty physical line starts with '+' or '.' (continuation),
+         * suppress this T_NEWLINE so the continuation folds into the current logical line. */
+        let peek = this.pos;
+        while (peek < len && src[peek] === '\n') peek++; /* skip blank lines */
+        if (peek < len && (src[peek] === '+' || src[peek] === '.')) {
+          /* Consume the continuation marker and its leading whitespace now */
+          this.pos = peek + 1; /* skip '+' or '.' */
+          while (this.pos < len && (src[this.pos] === ' ' || src[this.pos] === '\t')) this.pos++;
+          this._bol = false;
+          continue; /* fold: resume tokenizing same logical line */
+        }
         return tok(T_NEWLINE, null, 0, 0, ln);
       }
 
@@ -1234,7 +1245,8 @@ function _exec_from(start) {
       }
     } else if(ok&&s.has_eq) {
       /* Assignment (no pattern) */
-      let repl=s.replacement?interp_eval(s.replacement):null;
+      /* If RHS contains pattern nodes (LEN, TAB, ARB, captures etc.) build a pattern value */
+      let repl=s.replacement?(_expr_is_pat(s.replacement)?_build_pat(s.replacement):interp_eval(s.replacement)):null;
       if(_is_fail(repl)){ok=false;}
       else {
         if(subj_name) _vars[subj_name]=repl;
