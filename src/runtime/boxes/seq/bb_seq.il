@@ -31,7 +31,7 @@
 
   // ── α ───────────────────────────────────────────────────────────────
   .method public virtual instance valuetype Snobol4.Runtime.Boxes.Spec
-          α(class Snobol4.Runtime.Boxes.MatchState ms) cil managed
+          Alpha(class Snobol4.Runtime.Boxes.MatchState ms) cil managed
   {
     .maxstack 4
     .locals init (valuetype Snobol4.Runtime.Boxes.Spec V_lr,
@@ -51,7 +51,7 @@
     ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_seq::_left
     ldarg.1
     callvirt   instance valuetype Snobol4.Runtime.Boxes.Spec
-               Snobol4.Runtime.Boxes.IByrdBox::α(class Snobol4.Runtime.Boxes.MatchState)
+               Snobol4.Runtime.Boxes.IByrdBox::Alpha(class Snobol4.Runtime.Boxes.MatchState)
     stloc.0
     ldloca.s   V_lr
     call       instance bool Snobol4.Runtime.Boxes.Spec::get_IsFail()
@@ -72,7 +72,7 @@
     ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_seq::_right
     ldarg.1
     callvirt   instance valuetype Snobol4.Runtime.Boxes.Spec
-               Snobol4.Runtime.Boxes.IByrdBox::α(class Snobol4.Runtime.Boxes.MatchState)
+               Snobol4.Runtime.Boxes.IByrdBox::Alpha(class Snobol4.Runtime.Boxes.MatchState)
     stloc.1
     ldloca.s   V_rr
     call       instance bool Snobol4.Runtime.Boxes.Spec::get_IsFail()
@@ -84,7 +84,7 @@
     ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_seq::_left
     ldarg.1
     callvirt   instance valuetype Snobol4.Runtime.Boxes.Spec
-               Snobol4.Runtime.Boxes.IByrdBox::β(class Snobol4.Runtime.Boxes.MatchState)
+               Snobol4.Runtime.Boxes.IByrdBox::Beta(class Snobol4.Runtime.Boxes.MatchState)
     stloc.0
     ldloca.s   V_lr
     call       instance bool Snobol4.Runtime.Boxes.Spec::get_IsFail()
@@ -118,7 +118,7 @@
 
   // ── β ────────────────────────────────────────────────────────────────
   .method public virtual instance valuetype Snobol4.Runtime.Boxes.Spec
-          β(class Snobol4.Runtime.Boxes.MatchState ms) cil managed
+          Beta(class Snobol4.Runtime.Boxes.MatchState ms) cil managed
   {
     .maxstack 4
     .locals init (valuetype Snobol4.Runtime.Boxes.Spec V_rr,
@@ -129,7 +129,7 @@
     ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_seq::_right
     ldarg.1
     callvirt   instance valuetype Snobol4.Runtime.Boxes.Spec
-               Snobol4.Runtime.Boxes.IByrdBox::β(class Snobol4.Runtime.Boxes.MatchState)
+               Snobol4.Runtime.Boxes.IByrdBox::Beta(class Snobol4.Runtime.Boxes.MatchState)
     stloc.0
     ldloca.s   V_rr
     call       instance bool Snobol4.Runtime.Boxes.Spec::get_IsFail()
@@ -140,7 +140,7 @@
     ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_seq::_left
     ldarg.1
     callvirt   instance valuetype Snobol4.Runtime.Boxes.Spec
-               Snobol4.Runtime.Boxes.IByrdBox::β(class Snobol4.Runtime.Boxes.MatchState)
+               Snobol4.Runtime.Boxes.IByrdBox::Beta(class Snobol4.Runtime.Boxes.MatchState)
     stloc.1
     ldloca.s   V_lr
     call       instance bool Snobol4.Runtime.Boxes.Spec::get_IsFail()
@@ -157,7 +157,7 @@
     ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_seq::_right
     ldarg.1
     callvirt   instance valuetype Snobol4.Runtime.Boxes.Spec
-               Snobol4.Runtime.Boxes.IByrdBox::α(class Snobol4.Runtime.Boxes.MatchState)
+               Snobol4.Runtime.Boxes.IByrdBox::Alpha(class Snobol4.Runtime.Boxes.MatchState)
     stloc.0
     ldloca.s   V_rr
     call       instance bool Snobol4.Runtime.Boxes.Spec::get_IsFail()

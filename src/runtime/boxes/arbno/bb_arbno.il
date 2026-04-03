@@ -40,7 +40,7 @@
   }
 
   .method public virtual instance valuetype Snobol4.Runtime.Boxes.Spec
-          α(class Snobol4.Runtime.Boxes.MatchState ms) cil managed
+          Alpha(class Snobol4.Runtime.Boxes.MatchState ms) cil managed
   {
     .maxstack 4
     .locals init (int32 V_startHere, valuetype Snobol4.Runtime.Boxes.Spec V_br)
@@ -77,7 +77,7 @@
     ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_arbno::_body
     ldarg.1
     callvirt   instance valuetype Snobol4.Runtime.Boxes.Spec
-               Snobol4.Runtime.Boxes.IByrdBox::α(class Snobol4.Runtime.Boxes.MatchState)
+               Snobol4.Runtime.Boxes.IByrdBox::Alpha(class Snobol4.Runtime.Boxes.MatchState)
     stloc.1
     // if br.IsFail → stop, succeed with top frame
     ldloca.s   V_br
@@ -152,7 +152,7 @@
   }
 
   .method public virtual instance valuetype Snobol4.Runtime.Boxes.Spec
-          β(class Snobol4.Runtime.Boxes.MatchState ms) cil managed
+          Beta(class Snobol4.Runtime.Boxes.MatchState ms) cil managed
   {
     .maxstack 3
     // if _depth <= 0 → fail

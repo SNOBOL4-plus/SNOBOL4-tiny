@@ -20,7 +20,7 @@
   }
 
   .method public virtual instance valuetype Snobol4.Runtime.Boxes.Spec
-          α(class Snobol4.Runtime.Boxes.MatchState ms) cil managed
+          Alpha(class Snobol4.Runtime.Boxes.MatchState ms) cil managed
   {
     .maxstack 2
     ldarg.0
@@ -38,7 +38,7 @@
   }
 
   .method public virtual instance valuetype Snobol4.Runtime.Boxes.Spec
-          β(class Snobol4.Runtime.Boxes.MatchState ms) cil managed
+          Beta(class Snobol4.Runtime.Boxes.MatchState ms) cil managed
   {
     .maxstack 3
     // _count++

@@ -50,6 +50,11 @@
     ret
   }
 
+  .property instance bool IsFail()
+  {
+    .get instance bool Snobol4.Runtime.Boxes.Spec::get_IsFail()
+  }
+
   // static Spec Of(int start, int length)
   .method public static valuetype Snobol4.Runtime.Boxes.Spec Of(int32 start, int32 length) cil managed
   {
@@ -139,6 +144,11 @@
     ret
   }
 
+  .property instance string Subject()
+  {
+    .get instance string Snobol4.Runtime.Boxes.MatchState::get_Subject()
+  }
+
   // int get_Length()
   .method public instance int32 get_Length() cil managed
   {
@@ -147,6 +157,11 @@
     ldfld      string Snobol4.Runtime.Boxes.MatchState::_subject
     callvirt   instance int32 [mscorlib]System.String::get_Length()
     ret
+  }
+
+  .property instance int32 Length()
+  {
+    .get instance int32 Snobol4.Runtime.Boxes.MatchState::get_Length()
   }
 
   // bool MatchesAt(int pos, string lit)
@@ -212,9 +227,9 @@
 {
   .method public virtual abstract instance
           valuetype Snobol4.Runtime.Boxes.Spec
-          α(class Snobol4.Runtime.Boxes.MatchState ms) cil managed {}
+          Alpha(class Snobol4.Runtime.Boxes.MatchState ms) cil managed {}
 
   .method public virtual abstract instance
           valuetype Snobol4.Runtime.Boxes.Spec
-          β(class Snobol4.Runtime.Boxes.MatchState ms) cil managed {}
+          Beta(class Snobol4.Runtime.Boxes.MatchState ms) cil managed {}
 }

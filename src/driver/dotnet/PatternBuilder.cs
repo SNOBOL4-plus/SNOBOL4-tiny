@@ -17,15 +17,19 @@ public sealed class PatternBuilder
     private readonly Func<string, IByrdBox?>  _getPatternVar;
     private readonly Func<IrNode, DESCR>  _evalNode;
 
-    private readonly List<bb_capture> _captures = new();
+    // Shared across outer + all inner builders so that captures from stored
+    // pattern variables (getPatternVar) are visible to ByrdBoxExecutor.
+    private readonly List<bb_capture> _captures;
     public IReadOnlyList<bb_capture> Captures => _captures;
 
     public PatternBuilder(
         Action<string, string>   setVar,
         Func<string, string>     getStringVar,
         Func<string, IByrdBox?>  getPatternVar,
-        Func<IrNode, DESCR>  evalNode)
+        Func<IrNode, DESCR>  evalNode,
+        List<bb_capture>?    sharedCaptures = null)
     {
+        _captures      = sharedCaptures ?? new List<bb_capture>();
         _setVar        = setVar;
         _getStringVar  = getStringVar;
         _getPatternVar = getPatternVar;

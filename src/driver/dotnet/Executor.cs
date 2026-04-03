@@ -177,38 +177,42 @@ public sealed class Executor
                 else _env.Set(n, DESCR.Of(v));
             };
 
+            // Shared captures list — outer builder + all inner builders (stored
+            // pattern variables) register into the SAME list so ByrdBoxExecutor
+            // sees every bb_capture regardless of nesting depth.
+            var sharedCaptures = new List<Snobol4.Runtime.Boxes.bb_capture>();
+
+            // Recursive getPatternVar that always passes sharedCaptures down.
+            Func<string, Snobol4.Runtime.Boxes.IByrdBox?> makeGetPatternVar = null!;
+            makeGetPatternVar = n => {
+                var patIr = _env.GetPattern(n);
+                if (patIr == null) return null;
+                var inner = new PatternBuilder(
+                    setVar:         setVar,
+                    getStringVar:   vn  => _env.Get(vn).ToString(),
+                    getPatternVar:  makeGetPatternVar,
+                    evalNode:       EvalNode,
+                    sharedCaptures: sharedCaptures);
+                return inner.Build(patIr);
+            };
+
             var builder = new PatternBuilder(
-                setVar:        setVar,
-                getStringVar:  n      => _env.Get(n).ToString(),
-                getPatternVar: n      => {
-                    var patIr = _env.GetPattern(n);
-                    if (patIr == null) return null;
-                    var inner = new PatternBuilder(
-                        setVar:        setVar,
-                        getStringVar:  vn      => _env.Get(vn).ToString(),
-                        getPatternVar: vn      => {
-                            var pi = _env.GetPattern(vn);
-                            return pi == null ? null : new PatternBuilder(
-                                setVar,
-                                vn2 => _env.Get(vn2).ToString(),
-                                _ => null,
-                                EvalNode).Build(pi);
-                        },
-                        evalNode:      EvalNode);
-                    return inner.Build(patIr);
-                },
-                evalNode:      EvalNode
+                setVar:         setVar,
+                getStringVar:   n => _env.Get(n).ToString(),
+                getPatternVar:  makeGetPatternVar,
+                evalNode:       EvalNode,
+                sharedCaptures: sharedCaptures
             );
 
             IByrdBox root;
             try   { root = builder.Build(stmt.Pattern); }
             catch { return false; }
 
-            // Phase 3: scan loop
+            // Phase 3: scan loop — use sharedCaptures so inner-pattern captures commit
             var subject = subjVal.ToString();
             var anchor  = _env.Get("&ANCHOR").ToInt() != 0;
             var ms      = new MatchState(subject);
-            var exec    = new ByrdBoxExecutor(root, builder.Captures);
+            var exec    = new ByrdBoxExecutor(root, sharedCaptures);
             var result  = exec.Run(ms, anchor);
 
             if (!result.Success) return false;

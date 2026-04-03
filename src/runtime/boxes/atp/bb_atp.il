@@ -23,7 +23,7 @@
   }
 
   .method public virtual instance valuetype Snobol4.Runtime.Boxes.Spec
-          α(class Snobol4.Runtime.Boxes.MatchState ms) cil managed
+          Alpha(class Snobol4.Runtime.Boxes.MatchState ms) cil managed
   {
     .maxstack 4
     // if SetVar != null && varname != "" → SetVar(varname, cursor.ToString())
@@ -52,6 +52,6 @@
   }
 
   .method public virtual instance valuetype Snobol4.Runtime.Boxes.Spec
-          β(class Snobol4.Runtime.Boxes.MatchState ms) cil managed
+          Beta(class Snobol4.Runtime.Boxes.MatchState ms) cil managed
   { .maxstack 1 ldsfld valuetype Snobol4.Runtime.Boxes.Spec Snobol4.Runtime.Boxes.Spec::Fail ret }
 }

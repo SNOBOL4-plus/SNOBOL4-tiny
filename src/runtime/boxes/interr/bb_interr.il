@@ -16,7 +16,7 @@
     ret
   }
   .method public virtual instance valuetype Snobol4.Runtime.Boxes.Spec
-          α(class Snobol4.Runtime.Boxes.MatchState ms) cil managed
+          Alpha(class Snobol4.Runtime.Boxes.MatchState ms) cil managed
   {
     .maxstack 3
     .locals init (int32 V_saved, valuetype Snobol4.Runtime.Boxes.Spec V_cr)
@@ -27,7 +27,7 @@
     ldfld      class Snobol4.Runtime.Boxes.IByrdBox Snobol4.Runtime.Boxes.bb_interr::_child
     ldarg.1
     callvirt   instance valuetype Snobol4.Runtime.Boxes.Spec
-               Snobol4.Runtime.Boxes.IByrdBox::α(class Snobol4.Runtime.Boxes.MatchState)
+               Snobol4.Runtime.Boxes.IByrdBox::Alpha(class Snobol4.Runtime.Boxes.MatchState)
     stloc.1
     // always restore cursor
     ldarg.1
@@ -45,6 +45,6 @@
     ret
   }
   .method public virtual instance valuetype Snobol4.Runtime.Boxes.Spec
-          β(class Snobol4.Runtime.Boxes.MatchState ms) cil managed
+          Beta(class Snobol4.Runtime.Boxes.MatchState ms) cil managed
   { .maxstack 1 ldsfld valuetype Snobol4.Runtime.Boxes.Spec Snobol4.Runtime.Boxes.Spec::Fail ret }
 }
