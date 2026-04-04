@@ -74,9 +74,52 @@ G       ({WS}|{CONT})*
 <INITIAL>[*!|;]         { BEGIN(SKIP); }
 <INITIAL>[ \t]          { BEGIN(BODY_START); }
 
-<INITIAL>"-"            {
-    /* CTL line: check for INCLUDE/COPY */
-    BEGIN(INCL);
+<INITIAL>"-"[Ii][Nn][Cc][Ll][Uu][Dd][Ee][ \t]+'[^'\n]+'[^\n]*\n  {
+    /* -include 'filename' — single-quoted, whole line consumed */
+    char *q1 = strchr(yytext,'\''); char *q2 = strrchr(yytext,'\'');
+    lineno++;
+    if(q1 && q2 && q2>q1){
+        char iname[4096]; int fi=(int)(q2-q1-1);
+        if(fi>=(int)sizeof iname)fi=(int)sizeof iname-1;
+        memcpy(iname,q1+1,fi);iname[fi]='\0';
+        FILE *inc=fopen(iname,"r");
+        if(!inc){char p[4096];for(int i=0;i<n_inc&&!inc;i++){snprintf(p,sizeof p,"%s/%s",inc_dirs[i],iname);inc=fopen(p,"r");}}
+        if(!inc)sno_error(lineno,"cannot open include '%s'",iname);
+        else yypush_buffer_state(yy_create_buffer(inc,YY_BUF_SIZE,yyscanner),yyscanner);
+    }
+    /* stay in INITIAL — next char is first char of included file */
+}
+<INITIAL>"-"[Ii][Nn][Cc][Ll][Uu][Dd][Ee][ \t]+\"[^\"\n]+\"[^\n]*\n  {
+    /* -include "filename" — double-quoted */
+    char *q1 = strchr(yytext,'"'); char *q2 = strrchr(yytext,'"');
+    lineno++;
+    if(q1 && q2 && q2>q1){
+        char iname[4096]; int fi=(int)(q2-q1-1);
+        if(fi>=(int)sizeof iname)fi=(int)sizeof iname-1;
+        memcpy(iname,q1+1,fi);iname[fi]='\0';
+        FILE *inc=fopen(iname,"r");
+        if(!inc){char p[4096];for(int i=0;i<n_inc&&!inc;i++){snprintf(p,sizeof p,"%s/%s",inc_dirs[i],iname);inc=fopen(p,"r");}}
+        if(!inc)sno_error(lineno,"cannot open include '%s'",iname);
+        else yypush_buffer_state(yy_create_buffer(inc,YY_BUF_SIZE,yyscanner),yyscanner);
+    }
+}
+<INITIAL>"-"[Cc][Oo][Pp][Yy][ \t]+'[^'\n]+'[^\n]*\n  {
+    /* -copy 'filename' — single-quoted */
+    char *q1 = strchr(yytext,'\''); char *q2 = strrchr(yytext,'\'');
+    lineno++;
+    if(q1 && q2 && q2>q1){
+        char iname[4096]; int fi=(int)(q2-q1-1);
+        if(fi>=(int)sizeof iname)fi=(int)sizeof iname-1;
+        memcpy(iname,q1+1,fi);iname[fi]='\0';
+        FILE *inc=fopen(iname,"r");
+        if(!inc){char p[4096];for(int i=0;i<n_inc&&!inc;i++){snprintf(p,sizeof p,"%s/%s",inc_dirs[i],iname);inc=fopen(p,"r");}}
+        if(!inc)sno_error(lineno,"cannot open include '%s'",iname);
+        else yypush_buffer_state(yy_create_buffer(inc,YY_BUF_SIZE,yyscanner),yyscanner);
+    }
+}
+<INITIAL>"-"[^\n]*\n    {
+    /* other CTL line (not include/copy): skip whole line */
+    lineno++;
 }
 
 <INITIAL>[+.]           {
@@ -282,34 +325,7 @@ G       ({WS}|{CONT})*
 <SKIP>[^\n]*            { /* discard */ }
 <SKIP>\n                { lineno++; BEGIN(INITIAL); }
 
-    /* ---- INCL: -INCLUDE / -COPY filename ---- */
-
-<INCL>[ \t]*[Ii][Nn][Cc][Ll][Uu][Dd][Ee][ \t]* |
-<INCL>[ \t]*[Cc][Oo][Pp][Yy][ \t]*             { /* keyword consumed */ }
-
-<INCL>\'[^'\n]*\'   |
-<INCL>\"[^\"\n]*\"  {
-    char iname[4096];
-    int fi = yyleng-2; if(fi>=(int)sizeof iname) fi=(int)sizeof iname-1;
-    memcpy(iname,yytext+1,fi); iname[fi]='\0';
-    FILE *inc = fopen(iname,"r");
-    if(!inc){char p[4096];for(int i=0;i<n_inc&&!inc;i++){snprintf(p,sizeof p,"%s/%s",inc_dirs[i],iname);inc=fopen(p,"r");}}
-    if(!inc) sno_error(lineno,"cannot open include '%s'",iname);
-    else yypush_buffer_state(yy_create_buffer(inc,YY_BUF_SIZE,yyscanner),yyscanner);
-    BEGIN(INITIAL);
-}
-<INCL>[^ \t\n'\"]+  {
-    char iname[4096];
-    int fi=yyleng; if(fi>=(int)sizeof iname) fi=(int)sizeof iname-1;
-    memcpy(iname,yytext,fi); iname[fi]='\0';
-    FILE *inc = fopen(iname,"r");
-    if(!inc){char p[4096];for(int i=0;i<n_inc&&!inc;i++){snprintf(p,sizeof p,"%s/%s",inc_dirs[i],iname);inc=fopen(p,"r");}}
-    if(!inc) sno_error(lineno,"cannot open include '%s'",iname);
-    else yypush_buffer_state(yy_create_buffer(inc,YY_BUF_SIZE,yyscanner),yyscanner);
-    BEGIN(INITIAL);
-}
-<INCL>[^\n]*\n      { lineno++; BEGIN(INITIAL); /* no filename found, skip */ }
-
+    /* ---- INCL state retired: include handled directly in INITIAL ---- */
     /* ---- EOF: pop include stack or done ---- */
 
 <<EOF>>             {

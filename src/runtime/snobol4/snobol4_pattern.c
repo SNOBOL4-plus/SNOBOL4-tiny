@@ -1369,6 +1369,12 @@ static DESCR_t _ev_expr(SnoEvalCtx *e) {
 }
 
 DESCR_t EVAL_fn(DESCR_t expr) {
+    /* DT_E: frozen EXPR_t* — thaw by calling eval_node directly */
+    if (expr.v == DT_E) {
+        extern DESCR_t eval_node(void *e);
+        if (!expr.ptr) return FAILDESCR;
+        return eval_node(expr.ptr);
+    }
     if (expr.v != DT_S && expr.v != DT_SNUL) return expr;
     const char *s = VARVAL_fn(expr);
     if (!s || !*s) return pat_epsilon();

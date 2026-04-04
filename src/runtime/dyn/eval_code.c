@@ -77,7 +77,7 @@ extern int         Δ;
  * eval_node — recursive EXPR_t → DESCR_t evaluator
  * ══════════════════════════════════════════════════════════════════════════ */
 
-static DESCR_t eval_node(EXPR_t *e)
+DESCR_t eval_node(EXPR_t *e)
 {
     if (!e) return NULVCL;
 

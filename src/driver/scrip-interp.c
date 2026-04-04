@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <ctype.h>
 #include <setjmp.h>
 #include <gc.h>
@@ -833,9 +834,16 @@ static DESCR_t interp_eval(EXPR_t *e)
     }
 
     case E_DEFER: {
-        /* *var — indirect/deferred pattern ref: evaluate child to get descriptor */
+        /* *expr — unevaluated expression: produce DT_E descriptor.
+         * EVAL(d) thaws it by calling eval_node on the stored EXPR_t*.
+         * SNOBOL4 freeze operator: expression is NOT evaluated at assignment
+         * time; it is evaluated only when EVAL is called on it. */
         if (e->nchildren < 1) return NULVCL;
-        return interp_eval(e->children[0]);
+        DESCR_t d;
+        d.v    = DT_E;
+        d.ptr  = e->children[0];   /* EXPR_t* — frozen expression tree */
+        d.slen = 0;
+        return d;
     }
 
     case E_NOT: {
@@ -856,9 +864,11 @@ static DESCR_t interp_eval(EXPR_t *e)
         return acc;
     }
     case E_CAPT_COND_ASGN: {
-        /* pat . var — conditional assignment on match success */
+        /* pat . var — conditional assignment on match success.
+         * DYN-68: use interp_eval_pat (not interp_eval) so E_DEFER children
+         * are evaluated in pattern context, not frozen as DT_E. */
         if (e->nchildren < 2) return NULVCL;
-        DESCR_t pat = interp_eval(e->children[0]);
+        DESCR_t pat = interp_eval_pat(e->children[0]);
         const char *nm = e->children[1]->sval;
         return nm ? pat_assign_cond(pat, STRVAL((char *)nm)) : pat;
     }
@@ -1045,6 +1055,13 @@ static DESCR_t interp_eval_pat(EXPR_t *e)
             return interp_eval(e);
         }
         return NULVCL;
+    case E_DEFER:
+        /* *var in pattern context — deferred pattern variable.
+         * Evaluate the child in VALUE context to get the stored pattern/string,
+         * then return it directly (exec_stmt coerces DT_S to lit pattern).
+         * (Contrast: E_DEFER in value/expression context produces DT_E.) */
+        if (e->nchildren < 1) return NULVCL;
+        return interp_eval(e->children[0]);
     default:
         return interp_eval(e);
     }
@@ -1259,6 +1276,45 @@ int main(int argc, char **argv)
     if (argc < 2) {
         fprintf(stderr, "usage: scrip-interp <file.sno>\n");
         return 1;
+    }
+
+    /* Set up include search dirs before parsing:
+     * 1. Directory of the input file itself
+     * 2. SNO_LIB env var (corpus root for 'lib/xxx.sno' includes)
+     * 3. Current working directory */
+    {
+        extern void sno_add_include_dir(const char *d);
+        /* dir of input file */
+        char dirbuf[4096];
+        strncpy(dirbuf, argv[1], sizeof dirbuf - 1);
+        dirbuf[sizeof dirbuf - 1] = '\0';
+        char *sl = strrchr(dirbuf, '/');
+        if (sl) { *sl = '\0'; sno_add_include_dir(dirbuf); }
+        else     { sno_add_include_dir("."); }
+        /* SNO_LIB env var */
+        const char *sno_lib = getenv("SNO_LIB");
+        if (sno_lib && *sno_lib) sno_add_include_dir(sno_lib);
+        /* Auto-detect corpus root: walk up from file dir looking for lib/ subdir.
+         * Handles 'lib/math.sno' style includes without requiring SNO_LIB. */
+        {
+            char walk[4096];
+            strncpy(walk, argv[1], sizeof walk - 1);
+            walk[sizeof walk - 1] = '\0';
+            char *p = strrchr(walk, '/');
+            while (p) {
+                *p = '\0';
+                char probe[4096];
+                snprintf(probe, sizeof probe, "%s/lib", walk);
+                struct stat st;
+                if (stat(probe, &st) == 0 && S_ISDIR(st.st_mode)) {
+                    sno_add_include_dir(walk);
+                    break;
+                }
+                p = strrchr(walk, '/');
+            }
+        }
+        /* cwd fallback */
+        sno_add_include_dir(".");
     }
 
     FILE *f = fopen(argv[1], "r");
