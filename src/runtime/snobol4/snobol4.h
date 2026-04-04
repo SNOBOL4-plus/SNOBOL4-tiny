@@ -83,6 +83,12 @@ static inline size_t descr_slen(DESCR_t d) {
 #define INTVAL(i_) ((DESCR_t){ .v = DT_I,  .i = (i_) })
 #define REALVAL(r_)((DESCR_t){ .v = DT_R, .r = (r_) })
 #define FAILDESCR    ((DESCR_t){ .v = DT_FAIL, .i = 0 })   /* P002/P003 */
+/* NAME descriptor — SIL semantics: value field is DESCR_t* pointing to the live cell.
+ * Read:  if (d.v==DT_N) return *d.ptr;
+ * Write: if (d.v==DT_N) *d.ptr = val;
+ * Mirrors SIL ARYA10/ASSCR/FIELD: SETVC XPTR,N keeps interior pointer as value. */
+#define NAMEPTR(dp_) ((DESCR_t){ .v = DT_N, .ptr = (void*)(dp_) })
+/* Legacy string-name compat — do not use for new code */
 #define NAMEVAL(s_)  ((DESCR_t){ .v = DT_N,    .s = (char *)(s_) })  /* NRETURN lvalue ref */
 #define STYPE(v_)    ((v_).v)
 
@@ -393,6 +399,7 @@ DESCR_t pat_ref(const char *name);
 DESCR_t pat_ref_val(DESCR_t nameVal);
 DESCR_t pat_assign_imm(DESCR_t child, DESCR_t var);
 DESCR_t pat_assign_cond(DESCR_t child, DESCR_t var);
+DESCR_t pat_assign_callcap(DESCR_t child, const char *fnc_name, DESCR_t *args, int nargs);
 DESCR_t var_as_pattern(DESCR_t v);
 DESCR_t pat_user_call(const char *name, DESCR_t *args, int nargs);
 
@@ -407,6 +414,14 @@ int  match_and_replace(DESCR_t *subject, DESCR_t pat, DESCR_t replacement);
 
 DESCR_t array_create(DESCR_t spec);            /* ARRAY('lo:hi') */
 DESCR_t subscript_get(DESCR_t arr, DESCR_t idx);
+DESCR_t *NV_PTR_fn(const char *name);       /* find-or-create NV cell, return &val */
+DESCR_t *array_ptr(ARBLK_t *a, int i);      /* interior pointer to array cell (NULL=OOB) */
+DESCR_t *table_ptr(TBBLK_t *tbl, DESCR_t key_d); /* find-or-create table cell ptr */
+
+/* Hook for interpreter to supply user-function dispatch to the pattern engine.
+ * Set by scrip-interp.c main() before running any program.
+ * Signature: fn(name, args, nargs) → DESCR_t result. */
+extern DESCR_t (*g_user_call_hook)(const char *name, DESCR_t *args, int nargs);
 void   subscript_set(DESCR_t arr, DESCR_t idx, DESCR_t val);
 DESCR_t subscript_get2(DESCR_t arr, DESCR_t i, DESCR_t j);
 void   subscript_set2(DESCR_t arr, DESCR_t i, DESCR_t j, DESCR_t val);

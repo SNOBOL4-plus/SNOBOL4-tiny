@@ -65,6 +65,7 @@ typedef struct DESCR_t {
 extern DESCR_t NV_GET_fn(const char *name);
 extern void    NV_SET_fn(const char *name, DESCR_t val);
 extern char   *VARVAL_fn(DESCR_t d);
+extern DESCR_t (*g_user_call_hook)(const char *name, DESCR_t *args, int nargs);
 
 /* No GC in standalone — use plain malloc */
 #define GC_MALLOC(n)  malloc(n)
@@ -148,7 +149,8 @@ static spec_t bb_deferred_var(void *zeta, int entry);
 typedef struct {
     bb_box_fn    fn;
     void        *state;
-    const char  *varname;
+    const char  *varname;   /* DT_S target: write via NV_SET_fn */
+    DESCR_t     *var_ptr;   /* DT_N target: write directly through ptr (SIL NAME) */
     int          immediate;
     spec_t       pending;
     int          has_pending;
@@ -176,17 +178,18 @@ static spec_t bb_capture(void *zeta, int entry)
                   if (spec_is_empty(child_r))                 goto CAP_ω;
                                                               goto CAP_γ_core;
 
-    CAP_γ_core:   if (ζ->varname && *ζ->varname) {
+    CAP_γ_core:   if (ζ->var_ptr || (ζ->varname && *ζ->varname)) {
+                      char *s = (char *)GC_MALLOC(child_r.δ + 1);
+                      memcpy(s, child_r.σ, (size_t)child_r.δ);
+                      s[child_r.δ] = '\0';
+                      DESCR_t val;
+                      val.v    = DT_S;
+                      val.slen = (uint32_t)child_r.δ;
+                      val.s    = s;
                       if (ζ->immediate) {
                           /* XFNME ($): immediate — write now on every γ */
-                          char *s = (char *)GC_MALLOC(child_r.δ + 1);
-                          memcpy(s, child_r.σ, (size_t)child_r.δ);
-                          s[child_r.δ] = '\0';
-                          DESCR_t val;
-                          val.v    = DT_S;
-                          val.slen = (uint32_t)child_r.δ;
-                          val.s    = s;
-                          NV_SET_fn(ζ->varname, val);
+                          if (ζ->var_ptr)        *ζ->var_ptr = val;
+                          else                   NV_SET_fn(ζ->varname, val);
                       } else {
                           /* XNME (.): conditional — buffer, commit in Phase 5 */
                           ζ->pending     = child_r;
@@ -378,6 +381,119 @@ static spec_t bb_atp(void *zeta, int entry)
 
     ATP_γ:                               return ATP;
     ATP_ω:                               return spec_empty;
+}
+
+/* ── USERCALL box — deferred SNOBOL4 user function call at match time ────────
+ * On alpha: call g_user_call_hook(name, args, nargs) for side effect; succeed epsilon.
+ * On beta: fail — side-effect calls have no backtrack semantics (once-only). */
+typedef struct {
+    const char *name;
+    DESCR_t    *args;
+    int         nargs;
+    int         done;
+} usercall_t;
+
+static spec_t bb_usercall(void *zeta, int entry)
+{
+    usercall_t *ζ = zeta;
+    spec_t UC;
+
+    if (entry == α) goto UC_α;
+                    goto UC_β;
+
+    UC_α:  ζ->done = 1;
+           if (g_user_call_hook && ζ->name)
+               g_user_call_hook(ζ->name, ζ->args, ζ->nargs);
+           UC = spec(Σ + Δ, 0);           goto UC_γ;
+    UC_β:                                  goto UC_ω;
+
+    UC_γ:                                  return UC;
+    UC_ω:                                  return spec_empty;
+}
+
+/* ── CALLCAP box — call func at match time to get DT_N lvalue, capture into it ─
+ * Used for "pat . *func()" where func uses NRETURN to return a NAME.
+ * On γ: call func to get DT_N ptr, store ptr + pending spec for conditional flush.
+ * Conditional (.): flushes on overall match success via flush_pending_callcaps(). */
+#define MAX_CALLCAPS 256
+typedef struct callcap_s callcap_t;
+static callcap_t *g_callcap_list[MAX_CALLCAPS];
+static int        g_callcap_count = 0;
+
+typedef struct callcap_s {
+    bb_box_fn    child_fn;
+    void        *child_state;
+    const char  *fnc_name;
+    DESCR_t     *fnc_args;
+    int          fnc_nargs;
+    int          immediate;
+    spec_t       pending;
+    DESCR_t     *resolved_ptr;  /* set at match time; used at flush */
+    int          has_pending;
+    int          registered;
+} callcap_t;
+
+static spec_t bb_callcap(void *zeta, int entry)
+{
+    callcap_t *ζ = zeta;
+    spec_t child_r;
+
+    if (entry == α) goto CC_α;
+                    goto CC_β;
+
+    CC_α:  if (!ζ->immediate && !ζ->registered && g_callcap_count < MAX_CALLCAPS) {
+               ζ->registered = 1;
+               g_callcap_list[g_callcap_count++] = ζ;
+           }
+           child_r = ζ->child_fn(ζ->child_state, α);
+           if (spec_is_empty(child_r)) goto CC_ω;
+           goto CC_γ_core;
+
+    CC_β:  child_r = ζ->child_fn(ζ->child_state, β);
+           if (spec_is_empty(child_r)) goto CC_ω;
+           goto CC_γ_core;
+
+    CC_γ_core: {
+           /* Call the function NOW to get the DT_N lvalue pointer */
+           DESCR_t name_d = (g_user_call_hook && ζ->fnc_name)
+               ? g_user_call_hook(ζ->fnc_name, ζ->fnc_args, ζ->fnc_nargs)
+               : NULVCL;
+           DESCR_t *cell = (name_d.v == DT_N && name_d.ptr) ? (DESCR_t*)name_d.ptr : NULL;
+           if (ζ->immediate && cell) {
+               /* $ — write immediately */
+               char *s = (char *)GC_MALLOC(child_r.δ + 1);
+               memcpy(s, child_r.σ, (size_t)child_r.δ); s[child_r.δ] = '\0';
+               DESCR_t val = { .v = DT_S, .slen = (uint32_t)child_r.δ, .s = s };
+               *cell = val;
+           } else if (!ζ->immediate) {
+               /* . — buffer for conditional flush */
+               ζ->pending      = child_r;
+               ζ->resolved_ptr = cell;
+               ζ->has_pending  = 1;
+           }
+           return child_r;
+    }
+
+    CC_ω:  ζ->has_pending = 0;
+           return spec_empty;
+}
+
+static void flush_pending_callcaps(void) {
+    for (int i = 0; i < g_callcap_count; i++) {
+        callcap_t *c = g_callcap_list[i];
+        if (!c->immediate && c->has_pending && c->resolved_ptr) {
+            spec_t snap = c->pending;
+            c->has_pending = 0;
+            char *s = (char *)GC_MALLOC(snap.δ + 1);
+            memcpy(s, snap.σ, (size_t)snap.δ); s[snap.δ] = '\0';
+            DESCR_t val = { .v = DT_S, .slen = (uint32_t)snap.δ, .s = s };
+            *c->resolved_ptr = val;
+        } else {
+            c->has_pending = 0;
+        }
+        c->registered = 0;
+    }
+    g_callcap_count = 0;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════ */
@@ -606,6 +722,7 @@ static bb_node_t bb_build(PATND_t *p)
         ζ->fn  = child.fn;
         ζ->state = child.ζ;
         ζ->varname   = (p->var.v == DT_S && p->var.s) ? p->var.s : NULL;
+        ζ->var_ptr   = (p->var.v == DT_N && p->var.ptr) ? (DESCR_t*)p->var.ptr : NULL;
         ζ->immediate = 1;
         register_capture(ζ);
         n.fn = (bb_box_fn)bb_capture;
@@ -621,10 +738,25 @@ static bb_node_t bb_build(PATND_t *p)
         ζ->fn  = child.fn;
         ζ->state = child.ζ;
         ζ->varname   = (p->var.v == DT_S && p->var.s) ? p->var.s : NULL;
+        ζ->var_ptr   = (p->var.v == DT_N && p->var.ptr) ? (DESCR_t*)p->var.ptr : NULL;
         ζ->immediate = 0;
-        /* register_capture deferred to CAP_α (match time) so g_capture_count
-         * reset in stmt_exec_dyn does not lose the node */
         n.fn = (bb_box_fn)bb_capture;
+        n.ζ  = ζ;
+        n.ζ_size = sizeof(*ζ);
+        break;
+    }
+
+    /* ── CALLCAP: pat . *func() — deferred-function capture target ─── */
+    case XCALLCAP: {
+        callcap_t *ζ = calloc(1, sizeof(callcap_t));
+        bb_node_t child = bb_build(p->nchildren > 0 ? p->children[0] : NULL);
+        ζ->child_fn    = child.fn;
+        ζ->child_state = child.ζ;
+        ζ->fnc_name    = p->STRVAL_fn;
+        ζ->fnc_args    = p->args;
+        ζ->fnc_nargs   = p->nargs;
+        ζ->immediate   = 0;
+        n.fn = (bb_box_fn)bb_callcap;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
         break;
@@ -720,12 +852,13 @@ static bb_node_t bb_build(PATND_t *p)
             n.ζ_size = sizeof(atp_t);
             break;
         }
-        /* Other XATP (named function calls): epsilon stub */
-        fprintf(stderr, "stmt_exec: unimplemented XATP '%s' — using epsilon\n",
-                p->STRVAL_fn ? p->STRVAL_fn : "");
-        eps_t *ζ2 = calloc(1, sizeof(eps_t));
-        n.fn = (bb_box_fn)bb_eps;
-        n.ζ  = ζ2;
+        /* Other XATP: deferred user-function call — fire at match time */
+        usercall_t *ζ2 = calloc(1, sizeof(usercall_t));
+        ζ2->name  = p->STRVAL_fn;
+        ζ2->args  = p->args;
+        ζ2->nargs = p->nargs;
+        n.fn     = (bb_box_fn)bb_usercall;
+        n.ζ      = ζ2;
         n.ζ_size = sizeof(*ζ2);
         break;
     }
@@ -891,11 +1024,9 @@ static void flush_pending_captures(void)
 {
     for (int i = 0; i < g_capture_count; i++) {
         capture_t *c = g_capture_list[i];
-        if (!c->immediate && c->has_pending && c->varname && *c->varname) {
-            /* Snapshot before clearing — NV_SET_fn may re-enter bb_capture
-             * (e.g. OUTPUT NV hook) and overwrite ζ->pending with δ=0. */
+        if (!c->immediate && c->has_pending && (c->var_ptr || (c->varname && *c->varname))) {
             spec_t snap = c->pending;
-            c->has_pending = 0;   /* clear before NV_SET_fn to make re-entry a no-op */
+            c->has_pending = 0;
             char *s = (char *)GC_MALLOC(snap.δ + 1);
             memcpy(s, snap.σ, (size_t)snap.δ);
             s[snap.δ] = '\0';
@@ -903,7 +1034,8 @@ static void flush_pending_captures(void)
             val.v    = DT_S;
             val.slen = (uint32_t)snap.δ;
             val.s    = s;
-            NV_SET_fn(c->varname, val);
+            if (c->var_ptr)        *c->var_ptr = val;   /* DT_N NAME target */
+            else                   NV_SET_fn(c->varname, val);
         } else {
             c->has_pending = 0;
         }
@@ -938,6 +1070,7 @@ int exec_stmt(const char  *subj_name,
 {
     /* reset capture registry for this statement */
     g_capture_count = 0;
+    g_callcap_count = 0;   /* DYN-69: callcap (pat . *func()) registry */
 
     /* ── Phase 1: build subject ─────────────────────────────────────── */
     /*
@@ -1021,6 +1154,7 @@ Phase4:
 
     /* Flush XNME (.) conditional captures — overall match succeeded */
     flush_pending_captures();
+    flush_pending_callcaps();   /* DYN-69: callcap (pat . *func()) targets */
 
     if (!has_repl || !repl)                                   goto Success;
 

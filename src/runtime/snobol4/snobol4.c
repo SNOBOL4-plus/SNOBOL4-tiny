@@ -1335,6 +1335,15 @@ void array_set2(ARBLK_t *a, int i, int j, DESCR_t v) {
     a->data[idx] = v;
 }
 
+/* array_ptr — interior pointer to cell (SIL ARYA10: SETVC XPTR,N on computed offset).
+ * Returns NULL if out of bounds. */
+DESCR_t *array_ptr(ARBLK_t *a, int i) {
+    if (!a) return NULL;
+    int idx = i - a->lo;
+    if (idx < 0 || idx >= (a->hi - a->lo + 1)) return NULL;
+    return &a->data[idx];
+}
+
 /* ============================================================
  * Table (hash map)
  * ============================================================ */
@@ -1399,6 +1408,26 @@ int table_has(TBBLK_t *tbl, const char *key) {
     for (TBPAIR_t *e = tbl->buckets[h]; e; e = e->next)
         if (strcmp(e->key, key) == 0) return 1;
     return 0;
+}
+
+/* table_ptr — find-or-create slot, return &e->val (SIL ASSCR/LOCAPV).
+ * Key descriptor used to preserve integer/string type on slot creation. */
+DESCR_t *table_ptr(TBBLK_t *tbl, DESCR_t key_d) {
+    if (!tbl) return NULL;
+    const char *key = VARVAL_fn(key_d);
+    if (!key) key = "";
+    unsigned h = _tbl_hash(key);
+    for (TBPAIR_t *e = tbl->buckets[h]; e; e = e->next)
+        if (strcmp(e->key, key) == 0) return &e->val;
+    /* Not found — create slot (SIL creates on first reference) */
+    TBPAIR_t *e = GC_malloc(sizeof(TBPAIR_t));
+    e->key       = GC_strdup(key);
+    e->key_descr = key_d;
+    e->val       = NULVCL;
+    e->next      = tbl->buckets[h];
+    tbl->buckets[h] = e;
+    tbl->size++;
+    return &e->val;
 }
 
 /* ============================================================
@@ -1611,6 +1640,31 @@ void NV_SET_fn(const char *name, DESCR_t val) {
     /* Also update registered C static if present */
     for (int _ri = 0; _ri < _var_reg_n; _ri++)
         if (strcmp(_var_reg[_ri].name, name) == 0) { *_var_reg[_ri].ptr = val; break; }
+}
+
+/* NV_PTR_fn — return pointer to the live DESCR_t cell for 'name'.
+ * Creates the entry if absent (like SIL LOCAPV for variables).
+ * Special I/O vars (INPUT/OUTPUT) and keywords return NULL — not addressable. */
+DESCR_t *NV_PTR_fn(const char *name) {
+    _var_init();
+    if (!name) return NULL;
+    /* I/O and keyword vars are not addressable as NAME pointers */
+    if (strcasecmp(name, "INPUT")  == 0) return NULL;
+    if (strcasecmp(name, "OUTPUT") == 0) return NULL;
+    if (strcasecmp(name, "STLIMIT")  == 0) return NULL;
+    if (strcasecmp(name, "ANCHOR")   == 0) return NULL;
+    if (strcasecmp(name, "TRIM")     == 0) return NULL;
+    if (strcasecmp(name, "FULLSCAN") == 0) return NULL;
+    unsigned h = _var_hash(name);
+    for (NV_t *e = _var_buckets[h]; e; e = e->next)
+        if (strcmp(e->name, name) == 0) return &e->val;
+    /* Not found — create the entry with null value */
+    NV_t *e = GC_malloc(sizeof(NV_t));
+    e->name = GC_strdup(name);
+    e->val  = NULVCL;
+    e->next = _var_buckets[h];
+    _var_buckets[h] = e;
+    return &e->val;
 }
 
 /* Sync all registered C statics FROM the hash table.
@@ -1965,6 +2019,9 @@ void register_fn_alias(const char *newname, const char *oldname) {
     _func_buckets[hn] = fe;
 }
 
+/* Hook for interpreter to supply user-function dispatch to the pattern engine. */
+DESCR_t (*g_user_call_hook)(const char *name, DESCR_t *args, int nargs) = NULL;
+
 DESCR_t APPLY_fn(const char *name, DESCR_t *args, int nargs) {
     _func_init();
     if (!name) return NULVCL;
@@ -1972,10 +2029,13 @@ DESCR_t APPLY_fn(const char *name, DESCR_t *args, int nargs) {
     for (FNCBLK_t *e = _func_buckets[h]; e; e = e->next) {
         if (strcasecmp(e->name, name) == 0) {
             if (e->fn) return e->fn(args, nargs);
-            /* fn==NULL means SNOBOL4-defined function — fall to S sentinel */
-            break;
+            /* fn==NULL: SNOBOL4-defined function — call via interpreter hook */
+            if (g_user_call_hook) return g_user_call_hook(name, args, nargs);
+            return NULVCL;
         }
     }
+    /* Not found — try interpreter hook (may be a late-defined user fn) */
+    if (g_user_call_hook) return g_user_call_hook(name, args, nargs);
     return NULVCL;
 }
 

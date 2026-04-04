@@ -280,6 +280,20 @@ DESCR_t pat_assign_cond(DESCR_t child, DESCR_t var) {
     return spat_val(p);
 }
 
+/* pat_assign_callcap — builds XCALLCAP node for "pat . *func(args)" patterns.
+ * The function is called at match time (not build time) to get the DT_N lvalue.
+ * fnc_name/args/nargs stored in STRVAL_fn/args/nargs fields of PATND_t. */
+DESCR_t pat_assign_callcap(DESCR_t child, const char *fnc_name, DESCR_t *args, int nargs) {
+    PATND_t *p = spat_new(XCALLCAP);
+    PATND_t *ch = pat_to_patnd(child);
+    PATND_t *arr[1] = { ch };
+    patnd_set_children(p, arr, 1);
+    p->STRVAL_fn = fnc_name ? GC_strdup(fnc_name) : "";
+    p->args  = args;
+    p->nargs = nargs;
+    return spat_val(p);
+}
+
 DESCR_t var_as_pattern(DESCR_t v) {
     /* If v is already a pattern, return it */
     if (v.v == DT_P) return v;

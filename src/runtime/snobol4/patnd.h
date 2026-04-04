@@ -33,6 +33,7 @@ typedef enum {
     XDSAR,         /* deferred var ref: *name                 */
     XFNME,         /* immediate capture: pat $ var            */
     XNME,          /* conditional capture: pat . var          */
+    XCALLCAP,      /* conditional capture: pat . *func()      */
     XVAR,          /* variable holding a pattern              */
     XATP,          /* user-defined pattern function call      */
     XBRKX,         /* BREAKX(chars)                           */

@@ -171,8 +171,16 @@ static void prescan_defines(Program *prog)
 }
 
 /* ── call_user_function — forward decl (needs interp_eval, declared below) ── */
-static DESCR_t interp_eval(EXPR_t *e);      /* forward */
-static DESCR_t interp_eval_pat(EXPR_t *e);  /* forward — pattern context */
+static DESCR_t  interp_eval(EXPR_t *e);      /* forward */
+static DESCR_t  interp_eval_pat(EXPR_t *e);  /* forward — pattern context */
+static DESCR_t *interp_eval_ref(EXPR_t *e);  /* forward — lvalue → DESCR_t* (SIL NAME ptr) */
+
+/* NAME_DEREF: if d is DT_N (SIL NAME = interior pointer), dereference to value.
+ * Used wherever a DT_N might arrive in a value context (arg to builtins, etc.) */
+static inline DESCR_t NAME_DEREF(DESCR_t d) {
+    if (d.v == DT_N && d.ptr) return *(DESCR_t*)d.ptr;
+    return d;
+}
 
 /* DYN-57: E_FNC names that always yield a pattern value.
  * Mirrors PAT_FNC_NAMES in SJ-17 (sno-interp.js ec6c0b3).
@@ -339,8 +347,8 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
                         if (call_depth == 0 && FNCEX_fn(subj_name)
                                 && FUNC_NPARAMS_fn(subj_name) == 0) {
                             DESCR_t fres = call_user_function(subj_name, NULL, 0);
-                            if (fres.v == DT_N && fres.s && *fres.s) {
-                                NV_SET_fn(fres.s, repl_val); succeeded = 1;
+                            if (fres.v == DT_N && fres.ptr) {
+                                *(DESCR_t*)fres.ptr = repl_val; succeeded = 1;
                             } else { NV_SET_fn(subj_name, repl_val); succeeded = 1; }
                         } else { NV_SET_fn(subj_name, repl_val); succeeded = 1; }
                     }
@@ -392,25 +400,36 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
                     /* NRETURN lvalue assign: ref_a() = val  (zero-arg fn call as lvalue)
                      * Call the function; if result is DT_N write through to named variable. */
                     DESCR_t fres = call_user_function(s->subject->sval, NULL, 0);
-                    if (fres.v == DT_N && fres.s && *fres.s) {
+                    if (fres.v == DT_N && fres.ptr) {
                         DESCR_t rv = s->replacement ? interp_eval(s->replacement) : NULVCL;
                         if (IS_FAIL_fn(rv)) succeeded = 0;
-                        else { NV_SET_fn(fres.s, rv); succeeded = 1; }
+                        else { *(DESCR_t*)fres.ptr = rv; succeeded = 1; }
                     } else succeeded = 0;
                 } else if (s->has_eq && s->subject && s->subject->kind == E_INDIRECT) {
                     EXPR_t *ichild = s->subject->nchildren > 0 ? s->subject->children[0] : NULL;
-                    const char *nm = NULL;
-                    if (ichild && ichild->kind == E_CAPT_COND_ASGN && ichild->nchildren == 1
-                            && ichild->children[0]->kind == E_VAR && ichild->children[0]->sval)
-                        nm = ichild->children[0]->sval;
-                    else if (ichild) { DESCR_t nd = interp_eval(ichild); nm = VARVAL_fn(nd); }
-                    DESCR_t name_d = nm ? STRVAL((char*)nm) : NULVCL;
-                    nm = VARVAL_fn(name_d);
-                    if (!nm || !*nm) { succeeded = 0; }
+                    DESCR_t repl_val = s->replacement ? interp_eval(s->replacement) : NULVCL;
+                    if (IS_FAIL_fn(repl_val)) { succeeded = 0; }
                     else {
-                        DESCR_t repl_val = s->replacement ? interp_eval(s->replacement) : NULVCL;
-                        if (IS_FAIL_fn(repl_val)) succeeded = 0;
-                        else { NV_SET_fn(nm, repl_val); succeeded = 1; }
+                        /* Evaluate the inner expr to get a NAME or string to indirect through */
+                        DESCR_t ind_val = ichild ? interp_eval(ichild) : NULVCL;
+                        /* If it's already a DT_N (e.g. $Push where Push = .stk[1]),
+                         * write directly through the pointer — SIL ASGNVV semantics */
+                        if (ind_val.v == DT_N && ind_val.ptr) {
+                            *(DESCR_t*)ind_val.ptr = repl_val; succeeded = 1;
+                        } else {
+                            /* Otherwise treat as string variable name */
+                            const char *nm = VARVAL_fn(ind_val);
+                            if (!nm || !*nm) { succeeded = 0; }
+                            else {
+                                /* If the named variable itself holds a DT_N, write through */
+                                DESCR_t named = NV_GET_fn(nm);
+                                if (named.v == DT_N && named.ptr) {
+                                    *(DESCR_t*)named.ptr = repl_val; succeeded = 1;
+                                } else {
+                                    NV_SET_fn(nm, repl_val); succeeded = 1;
+                                }
+                            }
+                        }
                     }
                 } else if (s->subject && !s->pattern && !s->has_eq) {
                     if (IS_FAIL_fn(subj_val)) succeeded = 0;
@@ -437,12 +456,18 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
                         goto fn_done;
                     }
                     if (strcasecmp(target, "NRETURN") == 0) {
-                        /* Return a name (lvalue ref) — the fn's return variable holds
-                         * a string name; wrap it as DT_N so the caller can dereference
-                         * or assign through it. */
+                        /* NRETURN: the fn's return variable holds a DT_N (from .expr).
+                         * If it already is a DT_N with a live ptr, pass it straight through.
+                         * SIL: GOTL2→exit5 — return the NAME descriptor as-is. */
                         DESCR_t nrv = NV_GET_fn(fr->fname);
-                        const char *nname = (nrv.v == DT_N) ? nrv.s : VARVAL_fn(nrv);
-                        retval = nname ? NAMEVAL(GC_strdup(nname)) : FAILDESCR;
+                        if (nrv.v == DT_N && nrv.ptr) {
+                            retval = nrv;   /* already a proper NAMEPTR — pass through */
+                        } else {
+                            /* Fallback: legacy string-name compat */
+                            const char *nname = VARVAL_fn(nrv);
+                            DESCR_t *cell = nname && *nname ? NV_PTR_fn(nname) : NULL;
+                            retval = cell ? NAMEPTR(cell) : FAILDESCR;
+                        }
                         goto fn_done;
                     }
                     STMT_t *dest = label_lookup(target);
@@ -517,14 +542,17 @@ static DESCR_t interp_eval(EXPR_t *e)
     }
 
     case E_NAME: {
-        /* .X — o$nam: return the name of X as a string descriptor */
+        /* .X — dot operator: return NAME descriptor (DT_N) pointing to X's live cell.
+         * SIL: SETVC XPTR,N stamps the type onto the interior pointer.
+         * interp_eval_ref() computes &cell for E_VAR, E_IDX, nested E_NAME, etc. */
         if (e->nchildren < 1) return FAILDESCR;
+        DESCR_t *cell = interp_eval_ref(e->children[0]);
+        if (cell) return NAMEPTR(cell);
+        /* Fallback for non-addressable: return name string (legacy) */
         EXPR_t *child = e->children[0];
-        const char *nm = NULL;
         if (child->kind == E_VAR || child->kind == E_FNC || child->kind == E_KEYWORD)
-            nm = child->sval;
-        if (nm) return STRVAL((char *)nm);
-        return interp_eval(child);  /* complex lvalue — best effort */
+            if (child->sval) return STRVAL((char *)child->sval);
+        return FAILDESCR;
     }
 
     case E_MNS:
@@ -753,9 +781,14 @@ static DESCR_t interp_eval(EXPR_t *e)
         }
         /* $expr — indirect through runtime string value */
         DESCR_t nd = interp_eval(child);
+        /* If nd is DT_N (e.g. $Push where Push=.stk[1]), dereference the ptr */
+        if (nd.v == DT_N && nd.ptr) return *(DESCR_t*)nd.ptr;
         const char *nm = VARVAL_fn(nd);
         if (!nm || !*nm) return NULVCL;
-        return NV_GET_fn(nm);
+        /* The named variable might also be a DT_N — dereference one more level */
+        DESCR_t named = NV_GET_fn(nm);
+        if (named.v == DT_N && named.ptr) return *(DESCR_t*)named.ptr;
+        return named;
     }
 
     case E_FNC: {
@@ -815,7 +848,7 @@ static DESCR_t interp_eval(EXPR_t *e)
             if (body) {
                 DESCR_t r = call_user_function(e->sval, args, nargs);
                 /* NRETURN: dereference name descriptor in value context */
-                if (r.v == DT_N && r.s && *r.s) return NV_GET_fn(r.s);
+                if (r.v == DT_N && r.ptr) return *(DESCR_t*)r.ptr;
                 return r;
             }
             return bres;  /* builtin returned NULVCL legitimately */
@@ -840,14 +873,39 @@ static DESCR_t interp_eval(EXPR_t *e)
     }
 
     case E_DEFER: {
-        /* *expr — unevaluated expression: produce DT_E descriptor.
-         * EVAL(d) thaws it by calling eval_node on the stored EXPR_t*.
-         * SNOBOL4 freeze operator: expression is NOT evaluated at assignment
-         * time; it is evaluated only when EVAL is called on it. */
+        /* *expr — SIL *X operator. Three sub-cases:
+         *
+         * *var  (E_VAR): deferred variable reference — fetch value NOW.
+         *   "term = *factor" stores factor's current pattern.
+         *
+         * *func(args) (E_FNC): always builds a deferred T_FUNC/XATP pattern
+         *   node via pat_user_call — fires the function at match time.
+         *   This applies in ALL contexts (RHS assignment, pattern expr, etc.).
+         *   "addop = ANY('+-') . *Push()" — *Push() must be a pattern node.
+         *
+         * *complex_expr: freeze as DT_E for EVAL() to thaw later. */
         if (e->nchildren < 1) return NULVCL;
+        EXPR_t *child = e->children[0];
+        if (child->kind == E_VAR && child->sval) {
+            DESCR_t *cell = NV_PTR_fn(child->sval);
+            DESCR_t r = cell ? *cell : NULVCL;
+            if (r.v == DT_N && r.ptr) r = *(DESCR_t*)r.ptr;
+            return r;
+        }
+        if (child->kind == E_FNC && child->sval) {
+            /* *func(args) — build deferred XATP pattern node (same as interp_eval_pat) */
+            int na = child->nchildren;
+            DESCR_t *av = NULL;
+            if (na > 0) {
+                av = GC_malloc(na * sizeof(DESCR_t));
+                for (int i = 0; i < na; i++) av[i] = interp_eval(child->children[i]);
+            }
+            return pat_user_call(child->sval, av, na);
+        }
+        /* Complex expression — freeze as DT_E for EVAL */
         DESCR_t d;
         d.v    = DT_E;
-        d.ptr  = e->children[0];   /* EXPR_t* — frozen expression tree */
+        d.ptr  = child;
         d.slen = 0;
         return d;
     }
@@ -870,18 +928,44 @@ static DESCR_t interp_eval(EXPR_t *e)
         return acc;
     }
     case E_CAPT_COND_ASGN: {
-        /* pat . var — conditional assignment on match success.
-         * DYN-68: use interp_eval_pat (not interp_eval) so E_DEFER children
-         * are evaluated in pattern context, not frozen as DT_E. */
+        /* pat . target — conditional assignment on match success.
+         * target may be:
+         *   E_VAR "name"         → XNME node, assign to named var at flush
+         *   E_DEFER(E_FNC(...))  → XCALLCAP node: call func at match time to
+         *                          get DT_N lvalue, write matched text at flush.
+         *                          Function must NOT be called at build time. */
         if (e->nchildren < 2) return NULVCL;
         DESCR_t pat = interp_eval_pat(e->children[0]);
-        const char *nm = e->children[1]->sval;
+        EXPR_t *tgt = e->children[1];
+        if (tgt->kind == E_DEFER && tgt->nchildren == 1
+                && tgt->children[0]->kind == E_FNC && tgt->children[0]->sval) {
+            /* Deferred-function target — build XCALLCAP, don't call now */
+            EXPR_t *fnc = tgt->children[0];
+            int na = fnc->nchildren;
+            DESCR_t *av = na > 0 ? GC_malloc(na * sizeof(DESCR_t)) : NULL;
+            for (int i = 0; i < na; i++) av[i] = interp_eval(fnc->children[i]);
+            return pat_assign_callcap(pat, fnc->sval, av, na);
+        }
+        const char *nm = tgt->sval;
         return nm ? pat_assign_cond(pat, STRVAL((char *)nm)) : pat;
     }
     case E_CAPT_IMMED_ASGN: {
-        /* pat $ var — immediate assignment during match */
+        /* pat $ target — immediate assignment during match */
         if (e->nchildren < 2) return NULVCL;
-        DESCR_t pat = interp_eval_pat(e->children[0]);  /* DYN-64: must be pattern context */
+        DESCR_t pat = interp_eval_pat(e->children[0]);
+        EXPR_t *tgt = e->children[1];
+        if (tgt->kind == E_DEFER && tgt->nchildren == 1
+                && tgt->children[0]->kind == E_FNC && tgt->children[0]->sval) {
+            EXPR_t *fnc = tgt->children[0];
+            int na = fnc->nchildren;
+            DESCR_t *av = na > 0 ? GC_malloc(na * sizeof(DESCR_t)) : NULL;
+            for (int i = 0; i < na; i++) av[i] = interp_eval(fnc->children[i]);
+            DESCR_t name_d = call_user_function(fnc->sval, av, na);
+            if (name_d.v == DT_N && name_d.ptr)
+                return pat_assign_imm(pat, name_d);
+            const char *nm2 = VARVAL_fn(name_d);
+            return nm2 ? pat_assign_imm(pat, STRVAL((char*)nm2)) : pat;
+        }
         const char *nm = e->children[1]->sval;
         return nm ? pat_assign_imm(pat, STRVAL((char *)nm)) : pat;
     }
@@ -990,33 +1074,33 @@ static DESCR_t interp_eval(EXPR_t *e)
     }
     case E_ANY: {
         if (e->nchildren < 1) return pat_any_cs("");
-        DESCR_t a = interp_eval(e->children[0]);
-        const char *s = (a.v==DT_S||a.v==DT_N) && a.s ? a.s : "";
+        DESCR_t a = NAME_DEREF(interp_eval(e->children[0]));
+        const char *s = (a.v==DT_S||a.v==DT_SNUL) && a.s ? a.s : "";
         return pat_any_cs(s);
     }
     case E_NOTANY: {
         if (e->nchildren < 1) return pat_notany("");
-        DESCR_t a = interp_eval(e->children[0]);
-        const char *s = (a.v==DT_S||a.v==DT_N) && a.s ? a.s : "";
+        DESCR_t a = NAME_DEREF(interp_eval(e->children[0]));
+        const char *s = (a.v==DT_S||a.v==DT_SNUL) && a.s ? a.s : "";
         return pat_notany(s);
     }
     case E_SPAN: {
         if (e->nchildren < 1) return pat_span("");
-        DESCR_t a = interp_eval(e->children[0]);
-        const char *s = (a.v==DT_S||a.v==DT_N) && a.s ? a.s : "";
+        DESCR_t a = NAME_DEREF(interp_eval(e->children[0]));
+        const char *s = (a.v==DT_S||a.v==DT_SNUL) && a.s ? a.s : "";
         return pat_span(s);
     }
     case E_BREAK: {
         if (e->nchildren < 1) return pat_break_("");
-        DESCR_t a = interp_eval(e->children[0]);
-        const char *s = (a.v==DT_S||a.v==DT_N) && a.s ? a.s : "";
+        DESCR_t a = NAME_DEREF(interp_eval(e->children[0]));
+        const char *s = (a.v==DT_S||a.v==DT_SNUL) && a.s ? a.s : "";
         return pat_break_(s);
     }
     case E_BREAKX: {
         extern DESCR_t pat_breakx(const char *);
         if (e->nchildren < 1) return pat_breakx("");
-        DESCR_t a = interp_eval(e->children[0]);
-        const char *s = (a.v==DT_S||a.v==DT_N) && a.s ? a.s : "";
+        DESCR_t a = NAME_DEREF(interp_eval(e->children[0]));
+        const char *s = (a.v==DT_S||a.v==DT_SNUL) && a.s ? a.s : "";
         return pat_breakx(s);
     }
     case E_ARBNO: {
@@ -1030,6 +1114,72 @@ static DESCR_t interp_eval(EXPR_t *e)
     }
 }
 
+
+/* -- interp_eval_ref -- lvalue evaluator → DESCR_t* (SIL NAME semantics) -----
+ * Returns a pointer to the live descriptor cell for the given lvalue expression.
+ * Mirrors SIL: ARYA10 (array), ASSCR (table), FIELD (DATA), GNVARS (variable).
+ * Returns NULL for non-addressable positions (OOB, I/O vars, etc.).
+ * The caller wraps the result as NAMEPTR(ptr) to create a DT_N descriptor.
+ * --------------------------------------------------------------------- */
+static DESCR_t *interp_eval_ref(EXPR_t *e)
+{
+    if (!e) return NULL;
+    switch (e->kind) {
+
+    case E_VAR: {
+        /* Simple variable — find-or-create NV cell */
+        return NV_PTR_fn(e->sval);
+    }
+
+    case E_IDX: {
+        /* arr[idx] or arr[i][j] — return interior cell pointer */
+        if (e->nchildren < 2) return NULL;
+        DESCR_t base = interp_eval(e->children[0]);
+        if (IS_FAIL_fn(base)) return NULL;
+        DESCR_t idx  = interp_eval(e->children[1]);
+        if (IS_FAIL_fn(idx)) return NULL;
+        if (base.v == DT_A) {
+            return array_ptr(base.arr, (int)to_int(idx));
+        }
+        if (base.v == DT_T) {
+            return table_ptr(base.tbl, idx);
+        }
+        return NULL;
+    }
+
+    case E_NAME: {
+        /* .expr — dot operator: evaluate child as lvalue */
+        if (e->nchildren == 1)
+            return interp_eval_ref(e->children[0]);
+        /* .var plain (sval set): NV cell */
+        if (e->sval)
+            return NV_PTR_fn(e->sval);
+        return NULL;
+    }
+
+    case E_CAPT_COND_ASGN: {
+        /* .var (parsed as E_CAPT_COND_ASGN child E_VAR) */
+        if (e->nchildren >= 1 && e->children[0]->kind == E_VAR)
+            return NV_PTR_fn(e->children[0]->sval);
+        if (e->nchildren >= 1)
+            return interp_eval_ref(e->children[0]);
+        return NULL;
+    }
+
+    case E_INDIRECT: {
+        /* $expr — evaluate expr to get name string, then return that var's cell */
+        DESCR_t name_d = interp_eval(e->nchildren >= 1 ? e->children[0] : NULL);
+        const char *nm = (name_d.v == DT_N && name_d.ptr)
+            ? VARVAL_fn(*(DESCR_t*)name_d.ptr)
+            : VARVAL_fn(name_d);
+        if (!nm || !*nm) return NULL;
+        return NV_PTR_fn(nm);
+    }
+
+    default:
+        return NULL;
+    }
+}
 
 /* -- DYN-59: interp_eval_pat -- evaluate expr in PATTERN context ----------
  * Like interp_eval but E_SEQ/E_CAT use pat_cat (not CONCAT_fn) and
@@ -1062,12 +1212,35 @@ static DESCR_t interp_eval_pat(EXPR_t *e)
         }
         return NULVCL;
     case E_DEFER:
-        /* *var in pattern context — deferred pattern variable.
-         * Evaluate the child in VALUE context to get the stored pattern/string,
-         * then return it directly (exec_stmt coerces DT_S to lit pattern).
-         * (Contrast: E_DEFER in value/expression context produces DT_E.) */
-        if (e->nchildren < 1) return NULVCL;
-        return interp_eval(e->children[0]);
+        /* *expr in pattern context — two sub-cases:
+         *
+         * 1. *func(args)  — E_DEFER(E_FNC): build a deferred T_FUNC pattern node
+         *    (XATP via pat_user_call) so the function fires at MATCH time as a
+         *    zero-width side-effect.  Mirrors SIL *X where X is a user function.
+         *
+         * 2. *var         — E_DEFER(E_VAR): look up the variable NOW and return
+         *    its stored pattern value (the pattern was built at assignment time).
+         *    (Contrast: E_DEFER in value context produces DT_E via interp_eval.) */
+        if (e->nchildren < 1) return pat_epsilon();
+        {
+            EXPR_t *child = e->children[0];
+            if (child->kind == E_FNC && child->sval) {
+                /* *func(args) — build deferred XATP pattern node */
+                int na = child->nchildren;
+                DESCR_t *av = NULL;
+                if (na > 0) {
+                    av = GC_malloc(na * sizeof(DESCR_t));
+                    for (int i = 0; i < na; i++)
+                        av[i] = interp_eval(child->children[i]);
+                }
+                return pat_user_call(child->sval, av, na);
+            }
+            /* *var — evaluate child to get stored pattern */
+            DESCR_t r = interp_eval(child);
+            if (r.v == DT_N && r.ptr) r = *(DESCR_t*)r.ptr;
+            return r;
+        }
+
     default:
         return interp_eval(e);
     }
@@ -1238,8 +1411,8 @@ static void execute_program(Program *prog)
             DESCR_t rv = s->replacement ? interp_eval(s->replacement) : NULVCL;
             if (!IS_FAIL_fn(rv)) {
                 DESCR_t fres = call_user_function(s->subject->sval, NULL, 0);
-                if (fres.v == DT_N && fres.s && *fres.s) {
-                    NV_SET_fn(fres.s, rv); succeeded = 1;
+                if (fres.v == DT_N && fres.ptr) {
+                    *(DESCR_t*)fres.ptr = rv; succeeded = 1;
                 } else { succeeded = 0; }
             } else succeeded = 0;
 
@@ -1339,6 +1512,13 @@ int main(int argc, char **argv)
 
     stmt_init();
     g_prog = prog;
+
+    /* Wire user-function dispatch hook so pattern engine deferred calls
+     * (T_FUNC/XATP nodes from *func() in patterns) can invoke SNOBOL4
+     * user-defined functions at match time. */
+    extern DESCR_t (*g_user_call_hook)(const char *, DESCR_t *, int);
+    g_user_call_hook = call_user_function;
+
     execute_program(prog);
     return 0;
 }
