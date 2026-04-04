@@ -1099,6 +1099,21 @@ function _call(fname, arg_exprs) {
   const fn=fname.toUpperCase();
   const args=arg_exprs.map(a=>interp_eval(a));
 
+  /* DATA field accessors and constructors take priority over same-named builtins */
+  { const _fd=func_table[fn];
+    if(_fd&&(_fd.__data_field||_fd.__data_ctor)) {
+      if(_fd.__data_ctor) {
+        const obj=Object.create(null); obj.__datatype=fn;
+        for(let i=0;i<_fd.fields.length;i++) obj[_fd.fields[i]]=args[i]??null;
+        return obj;
+      }
+      /* field accessor */
+      const obj=args[0]; if(!obj||typeof obj!=='object') return _FAIL;
+      if(args.length>1){obj[_fd.field]=args[1];return args[1];}
+      return obj[_fd.field]??null;
+    }
+  }
+
   switch(fn) {
     case 'SIZE':    return _str(args[0]??'').length;
     case 'DUPL':    { const s=_str(args[0]??''),n=Math.max(0,_num(args[1]??0)); return s.repeat(n); }
