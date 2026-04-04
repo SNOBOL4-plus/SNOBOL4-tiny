@@ -607,15 +607,21 @@ static DESCR_t interp_eval(EXPR_t *e)
     case E_CAT:
     case E_SEQ: {
         if (e->nchildren == 0) return NULVCL;
-        /* DYN-59: interp_eval is always STRING context. Pattern context uses
-         * interp_eval_pat() which overrides E_SEQ/E_CAT to call pat_cat.
-         * Removed pat_ctx/_expr_is_pat heuristic (wrong layer — DYN-59). */
+        /* DYN-59: interp_eval is STRING context by default; pattern context
+         * uses interp_eval_pat() which calls pat_cat unconditionally.
+         * DYN-68: mixed-mode: if the accumulated value is DT_P (pattern),
+         * switch to pat_cat so that pattern-building expressions like
+         * "icase = icase (upr(c) | lwr(c))" work correctly in value context.
+         * SNOBOL4 rule: concatenation of pattern with anything yields pattern. */
         DESCR_t acc = interp_eval(e->children[0]);
         if (IS_FAIL_fn(acc)) return FAILDESCR;
         for (int i = 1; i < e->nchildren; i++) {
             DESCR_t nxt = interp_eval(e->children[i]);
             if (IS_FAIL_fn(nxt)) return FAILDESCR;
-            acc = CONCAT_fn(acc, nxt);
+            if (acc.v == DT_P || nxt.v == DT_P)
+                acc = pat_cat(acc, nxt);   /* pattern concat if either side is DT_P */
+            else
+                acc = CONCAT_fn(acc, nxt); /* string concat otherwise */
             if (IS_FAIL_fn(acc)) return FAILDESCR;
         }
         return acc;
