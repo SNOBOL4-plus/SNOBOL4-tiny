@@ -956,9 +956,14 @@ function interp_eval(e) {
       if (_expr_is_pat(e)) return _build_pat(e);
       /* fall through — pure E_SEQ (no pattern nodes) = string concat */
     case E_CAT: {
-      let s='';
-      for(const c of e.children){const v=interp_eval(c);if(_is_fail(v))return _FAIL;s+=_str(v);}
-      return s;
+      /* Evaluate children eagerly; if any is a PAT object, switch to PAT_seq */
+      const parts=[];
+      for(const c of e.children){const v=interp_eval(c);if(_is_fail(v))return _FAIL;parts.push(v);}
+      if(parts.some(v=>v!==null&&typeof v==='object'&&v.__pat)) {
+        /* Dynamic PAT concat: coerce strings to PAT_lit, pass through PAT objects */
+        return PAT_seq(...parts.map(v=>(v!==null&&typeof v==='object'&&v.__pat)?v:PAT_lit(_str(v??''))));
+      }
+      return parts.map(v=>_str(v??'')).join('');
     }
     case E_ASSIGN: {
       const rhs=interp_eval(e.children[1]);
@@ -1021,7 +1026,18 @@ function interp_eval(e) {
         const ea=expr_new(E_NUL); ea._val=a;
         return _call(fn,[ea]);
       }
-      return _build_pat(e);  /* pattern stored as value */
+      /* Build ALT pattern: evaluate each child as a value first.
+       * If the child is already a PAT object (dynamic accumulation) use it directly.
+       * If it's a PAT_KINDS node, route through _build_pat.
+       * Otherwise (value function result, string literal), wrap with PAT_lit. */
+      const arms = e.children.map(c => {
+        if (PAT_KINDS.has(c.kind)) return _build_pat(c);
+        const v = interp_eval(c);
+        if (_is_fail(v)) return PAT_lit('');
+        if (v !== null && typeof v === 'object' && v.__pat) return v;
+        return PAT_lit(_str(v??''));
+      });
+      return PAT_alt(...arms);
     }
     default:
       process.stderr.write(`sno-interp: unhandled expr ${e.kind}\n`);
@@ -1176,9 +1192,21 @@ function _build_pat(e) {
         case 'ABORT':  return PAT_abort();
         case 'BAL':    return PAT_bal();
         default: {
-          /* Generic function in pattern position: predicate — succeeds if fn returns
-           * non-fail (zero-width match), fails otherwise. Evaluated lazily at match time. */
+          /* Dispatch based on whether function is user-defined or builtin.
+           * User-defined functions in pattern position may return a PAT object
+           * (e.g. icase(), mkpat()) — use PAT_deferred so the result is descended into.
+           * Builtins are predicates (differ, eq, etc.) — use PAT_pred (zero-width). */
           const sval=e.sval, ch=e.children;
+          if (func_table[fn]) {
+            /* User-defined: PAT_deferred — call at match time, descend into PAT result */
+            return PAT_deferred(() => {
+              const r = _call(sval, ch);
+              if (_is_fail(r)) return null;
+              if (r !== null && typeof r === 'object' && r.__pat) return r;
+              return PAT_lit(_str(r??''));
+            });
+          }
+          /* Builtin predicate: PAT_pred — zero-width, lazy */
           return PAT_pred(() => _call(sval, ch));
         }
       }
@@ -1268,10 +1296,30 @@ function _call(fname, arg_exprs) {
                         return tbl;
                       }
                       return _FAIL; }
-    case 'IDENT':   { if(_is_fail(args[0])||_is_fail(args[1])) return _FAIL;
-                      return _str(args[0]??'')===_str(args[1]??'')?'':_FAIL; }
-    case 'DIFFER':  { if(_is_fail(args[0])||_is_fail(args[1])) return _FAIL;
-                      return _str(args[0]??'')!==_str(args[1]??'')?'':_FAIL; }
+    case 'IDENT': {
+                    if (args.length < 2 || args[1] === undefined) {
+                      const a = args[0]; if (_is_fail(a)) return _FAIL;
+                      const is_null = (a === null || a === '' || a === 0);
+                      return is_null ? '' : _FAIL;
+                    }
+                    if(_is_fail(args[0])||_is_fail(args[1])) return _FAIL;
+                    /* DATA objects (not real numbers): identity comparison */
+                    if (typeof args[0]==='object'&&args[0]!==null&&args[0].__datatype &&
+                        typeof args[1]==='object'&&args[1]!==null&&args[1].__datatype)
+                      return args[0]===args[1]?'':_FAIL;
+                    return _str(args[0]??'')===_str(args[1]??'')?'':_FAIL; }
+    case 'DIFFER': {
+                    if (args.length < 2 || args[1] === undefined) {
+                      const a = args[0]; if (_is_fail(a)) return _FAIL;
+                      const is_null = (a === null || a === '' || a === 0);
+                      return is_null ? _FAIL : '';
+                    }
+                    if(_is_fail(args[0])||_is_fail(args[1])) return _FAIL;
+                    /* DATA objects (not real numbers): identity comparison */
+                    if (typeof args[0]==='object'&&args[0]!==null&&args[0].__datatype &&
+                        typeof args[1]==='object'&&args[1]!==null&&args[1].__datatype)
+                      return args[0]!==args[1]?'':_FAIL;
+                    return _str(args[0]??'')!==_str(args[1]??'')?'':_FAIL; }
     case 'LT': { const a=_num(args[0]??0),b=_num(args[1]??0); return a< b?args[0]:_FAIL; }
     case 'LE': { const a=_num(args[0]??0),b=_num(args[1]??0); return a<=b?args[0]:_FAIL; }
     case 'GT': { const a=_num(args[0]??0),b=_num(args[1]??0); return a> b?args[0]:_FAIL; }
@@ -1438,7 +1486,7 @@ function _call_user(fname, fd, args) {
     if(body) _exec_from(body);
     ret=_vars[retvar]??null;
   } catch(ex) {
-    if(ex instanceof SnoReturn)  ret=ex.v;
+    if(ex instanceof SnoReturn)  { ret=ex.v; if(retvar==='ICASE') process.stderr.write('ICASE ret='+JSON.stringify(ret).slice(0,150)+'\n'); }
     else if(ex instanceof SnoFReturn) ret=_FAIL;
     else if(ex instanceof SnoNReturn) { call_stack.pop(); for(const [n,v] of Object.entries(saved)) _vars[n]=v; return {__nameref:ex.v}; }
     else throw ex;
