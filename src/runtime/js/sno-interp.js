@@ -90,6 +90,12 @@ const PAT_FNC_NAMES = new Set([
   'ANY','NOTANY','SPAN','BREAK','BREAKX','LEN','POS','RPOS','TAB','RTAB',
   'ARB','ARBNO','REM','FAIL','SUCCEED','FENCE','ABORT','BAL',
 ]);
+/* E_FNC names that are predicates (return '' on success, FAIL on failure).
+ * In "X = guard(args) repl" form, these trigger guard_assign splitting. */
+const GUARD_FNC_NAMES = new Set([
+  'EQ','NE','GT','LT','GE','LE','LGT','LLT','LGE','LLE','LEQ','LNE',
+  'IDENT','DIFFER','APPLY',
+]);
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * IR node constructors — same fields as C EXPR_t / STMT_t
@@ -180,6 +186,7 @@ class Lexer {
   _skip_to_eol() {
     while (this.pos < this.src.length && this.src[this.pos] !== '\n') this.pos++;
     /* leave '\n' for _raw_next to handle as T_NEWLINE */
+    this._prev_ws = true;  /* comment line ends → unary context at BOL */
   }
 
   /* Read rest of physical line as string, consuming the newline */
@@ -247,6 +254,9 @@ class Lexer {
             let fname = rest.slice(7).trim();
             if (fname[0] === "'" || fname[0] === '"') fname = fname.slice(1,-1);
             this._inject(fname);
+            /* _inject replaces this.src — the local 'src' cache is stale.
+             * Restart _raw_next so the new src string is captured fresh. */
+            return this._raw_next();
           }
           /* other control lines silently dropped */
           continue;
@@ -818,9 +828,12 @@ class Parser {
       this.lx.next(); s.has_eq=true;
       if(!this._at_end()) {
         const rhs=this._expr();
-        /* S = P R form: guard(args) split */
+        /* S = P R form: split only when leading fn is a known guard/predicate.
+         * Oracle (snobol4.y:216) handles the no-equals case via E_VAR first-child.
+         * For the T_BIN_EQ case: "X = guard(args) repl" where guard is a predicate fn. */
         if(s.subject && rhs && (rhs.kind===E_SEQ||rhs.kind===E_CAT) && rhs.children.length>=2
-           && rhs.children[0].kind===E_FNC && !this._is_pat(rhs)) {
+           && rhs.children[0].kind===E_FNC
+           && GUARD_FNC_NAMES.has((rhs.children[0].sval||'').toUpperCase())) {
           const kids=rhs.children;
           s.pattern=kids[0];
           let replKid;
