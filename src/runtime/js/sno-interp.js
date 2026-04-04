@@ -118,6 +118,14 @@ const T_COLON=30,T_END=31,T_EOF=32,T_ERR=33;
 const T_NEWLINE=34;   /* logical line boundary — emitted by single-pass lexer */
 const T_GOTO_SEP=35;  /* ':' at depth-0 — body/goto separator                */
 const T_STMT_SEP=36;  /* ';' at depth-0 — multi-statement separator           */
+/* Binary operator tokens (WS op WS) — mirroring snobol4.l W-op-W rules */
+const T_BIN_PLUS=37, T_BIN_MINUS=38, T_BIN_STAR=39, T_BIN_SLASH=40;
+const T_BIN_PCT=41,  T_BIN_CARET=42, T_BIN_BANG=43, T_BIN_STARSTAR=44;
+const T_BIN_AT=45,   T_BIN_TILDE=46, T_BIN_DOLLAR=47, T_BIN_DOT=48;
+const T_BIN_HASH=49, T_BIN_PIPE=50,  T_BIN_EQ=51,  T_BIN_QMARK=52;
+const T_BIN_AMP=53;
+/* T_CONCAT: whitespace between atoms (juxtaposition) */
+const T_CONCAT=54;
 
 function tok(kind, sval, ival, dval, lineno) {
   return { kind, sval:(sval!=null?sval:null), ival:ival||0, dval:dval||0.0, lineno };
@@ -153,6 +161,8 @@ class Lexer {
     this._depth   = 0;
     /* One-token lookahead */
     this._peeked  = null;
+    /* Track whether last emitted token was WS — binary vs unary discrimination */
+    this._prev_ws = true;   /* true at body start = unary context */
   }
 
   _c()  { return this.pos < this.src.length ? this.src[this.pos]   : '\0'; }
@@ -191,7 +201,8 @@ class Lexer {
       const full = path.join(d, fname);
       if (fs.existsSync(full)) {
         const text = fs.readFileSync(full, 'utf8');
-        this.src = this.src.slice(0, this.pos) + text + '\n' + this.src.slice(this.pos);
+        if (text && !text.endsWith('\n')) text += '\n';
+        this.src = this.src.slice(0, this.pos) + text + this.src.slice(this.pos);
         this._bol = true;
         return;
       }
@@ -276,17 +287,57 @@ class Lexer {
         }
         return tok(T_NEWLINE, null, 0, 0, ln);
       }
+      /* reset unary context at start of each logical line */
+      if (this._bol) this._prev_ws = true;
 
       /* ── Whitespace ──────────────────────────────────────────────── */
+      /* Mirrors beauty.sno: $op = *White op *White.
+       * After consuming all whitespace, if the next char is a binary-eligible op
+       * AND followed by whitespace/EOL, emit T_BIN_* directly (White consumed into op).
+       * Otherwise emit T_WS for concatenation context (_e4). */
       if (c === ' ' || c === '\t') {
         while (this.pos < len && (src[this.pos] === ' ' || src[this.pos] === '\t'))
-          this.pos++; /* don't use _adv() — no newline possible in ws run */
+          this.pos++;
+        if (this.pos < len) {
+          const op = src[this.pos];
+          /* ** check first */
+          if (op === '*' && this.pos+1 < len && src[this.pos+1] === '*') {
+            const a2 = this.pos+2 < len ? src[this.pos+2] : '\0';
+            if (a2 === ' ' || a2 === '\t' || a2 === '\n' || a2 === '\0') {
+              this.pos += 2; /* consume ** */
+              while (this.pos < len && (src[this.pos] === ' ' || src[this.pos] === '\t'))
+                this.pos++;
+              this._prev_ws = false;
+              return tok(T_BIN_STARSTAR, null, 0, 0, ln);
+            }
+          }
+          /* Single-char binary ops: must be followed by WS or EOL */
+          const BIN_MAP = {
+            '+':T_BIN_PLUS, '-':T_BIN_MINUS, '*':T_BIN_STAR, '/':T_BIN_SLASH,
+            '%':T_BIN_PCT,  '^':T_BIN_CARET, '!':T_BIN_BANG, '@':T_BIN_AT,
+            '~':T_BIN_TILDE,'$':T_BIN_DOLLAR,'.':T_BIN_DOT,  '#':T_BIN_HASH,
+            '|':T_BIN_PIPE, '=':T_BIN_EQ,    '?':T_BIN_QMARK,'&':T_BIN_AMP
+          };
+          const bk = BIN_MAP[op];
+          if (bk !== undefined) {
+            const after = this.pos+1 < len ? src[this.pos+1] : '\0';
+            if (after === ' ' || after === '\t' || after === '\n' || after === '\0') {
+              this.pos++; /* consume op char */
+              /* consume trailing White — mirrors *White op *White */
+              while (this.pos < len && (src[this.pos] === ' ' || src[this.pos] === '\t'))
+                this.pos++;
+              this._prev_ws = false;
+              return tok(bk, null, 0, 0, ln);
+            }
+          }
+        }
+        this._prev_ws = true;
         return tok(T_WS, null, 0, 0, ln);
       }
 
       /* ── String literals ─────────────────────────────────────────── */
-      if (c === "'") { this._adv(); return this._lex_str("'", ln); }
-      if (c === '"') { this._adv(); return this._lex_str('"', ln); }
+      if (c === "'") { this._adv(); this._prev_ws=false; return this._lex_str("'", ln); }
+      if (c === '"') { this._adv(); this._prev_ws=false; return this._lex_str('"', ln); }
 
       /* ── Number ──────────────────────────────────────────────────── */
       if (c >= '0' && c <= '9') {
@@ -308,6 +359,7 @@ class Lexer {
           }
           return tok(T_REAL, s, 0, parseFloat(s), ln);  /* sval=raw string preserves float marker */
         }
+        this._prev_ws = false;
         return tok(T_INT, null, parseInt(s,10), 0, ln);
       }
 
@@ -317,9 +369,14 @@ class Lexer {
         if (this.pos < len && /\w/.test(src[this.pos])) {
           let s = '';
           while (this.pos < len && /\w/.test(src[this.pos])) { s += src[this.pos]; this._adv(); }
+          this._prev_ws = false;
           return tok(T_KEYWORD, s, 0, 0, ln);
         }
-        return tok(T_AMP, null, 0, 0, ln);
+        /* bare & — check binary/unary */
+        const pw3=this._prev_ws; this._prev_ws=false;
+        const nc4=this.pos<len?src[this.pos]:'\0';
+        const nw3=(nc4===' '||nc4==='\t'||nc4==='\n'||nc4==='\0');
+        return tok((pw3&&nw3)?T_BIN_AMP:T_AMP, null, 0, 0, ln);
       }
 
       /* ── Identifier ──────────────────────────────────────────────── */
@@ -330,12 +387,19 @@ class Lexer {
           if (/[\w.]/.test(cc) || cc.charCodeAt(0) >= 0x80) { s += cc; this._adv(); }
           else break;
         }
-        if (s.toUpperCase() === 'END') return tok(T_END, s, 0, 0, ln);
+        if (s.toUpperCase() === 'END') { this._prev_ws=false; return tok(T_END, s, 0, 0, ln); }
+        this._prev_ws = false;
         return tok(T_IDENT, s, 0, 0, ln);
       }
 
       /* ── ** before * ─────────────────────────────────────────────── */
-      if (c === '*' && this._c1() === '*') { this._adv(); this._adv(); return tok(T_STARSTAR,null,0,0,ln); }
+      if (c === '*' && this._c1() === '*') {
+        this._adv(); this._adv();
+        const pw2=this._prev_ws; this._prev_ws=false;
+        const nc3=this.pos<len?src[this.pos]:'\0';
+        const nw2=(nc3===' '||nc3==='\t'||nc3==='\n'||nc3==='\0');
+        return tok((pw2&&nw2)?T_BIN_STARSTAR:T_STARSTAR,null,0,0,ln);
+      }
 
       /* ── Semicolon — stmt sep or inline comment ──────────────────── */
       if (c === ';') {
@@ -357,29 +421,36 @@ class Lexer {
       }
 
       /* ── Single-char operators ───────────────────────────────────── */
+      /* Mirrors snobol4.l: WS op WS → binary token; bare op → unary token */
       this._adv();
+      const pw = this._prev_ws; /* was previous token whitespace? */
+      this._prev_ws = false;    /* operators are not whitespace */
+      /* peek ahead: is next char whitespace or end-of-body? */
+      const nc2 = this.pos < len ? src[this.pos] : '\0';
+      const nw = (nc2 === ' ' || nc2 === '\t' || nc2 === '\n' || nc2 === '\0');
+      const bin = pw && nw; /* binary: preceded AND followed by whitespace */
       switch (c) {
-        case '+': return tok(T_PLUS,    null,0,0,ln);
-        case '-': return tok(T_MINUS,   null,0,0,ln);
-        case '*': return tok(T_STAR,    null,0,0,ln);
-        case '/': return tok(T_SLASH,   null,0,0,ln);
-        case '%': return tok(T_PCT,     null,0,0,ln);
-        case '^': return tok(T_CARET,   null,0,0,ln);
-        case '!': return tok(T_BANG,    null,0,0,ln);
-        case '@': return tok(T_AT,      null,0,0,ln);
-        case '~': return tok(T_TILDE,   null,0,0,ln);
-        case '$': return tok(T_DOLLAR,  null,0,0,ln);
-        case '.': return tok(T_DOT,     null,0,0,ln);
-        case '#': return tok(T_HASH,    null,0,0,ln);
-        case '|': return tok(T_PIPE,    null,0,0,ln);
-        case '=': return tok(T_EQ,      null,0,0,ln);
-        case '?': return tok(T_QMARK,   null,0,0,ln);
-        case ',': return tok(T_COMMA,   null,0,0,ln);
-        case '(': this._depth++; return tok(T_LPAREN,  null,0,0,ln);
+        case '+': return tok(bin?T_BIN_PLUS   :T_PLUS,    null,0,0,ln);
+        case '-': return tok(bin?T_BIN_MINUS  :T_MINUS,   null,0,0,ln);
+        case '*': return tok(bin?T_BIN_STAR   :T_STAR,    null,0,0,ln);
+        case '/': return tok(bin?T_BIN_SLASH  :T_SLASH,   null,0,0,ln);
+        case '%': return tok(bin?T_BIN_PCT    :T_PCT,     null,0,0,ln);
+        case '^': return tok(bin?T_BIN_CARET  :T_CARET,   null,0,0,ln);
+        case '!': return tok(bin?T_BIN_BANG   :T_BANG,    null,0,0,ln);
+        case '@': return tok(bin?T_BIN_AT     :T_AT,      null,0,0,ln);
+        case '~': return tok(bin?T_BIN_TILDE  :T_TILDE,   null,0,0,ln);
+        case '$': return tok(bin?T_BIN_DOLLAR :T_DOLLAR,  null,0,0,ln);
+        case '.': return tok(bin?T_BIN_DOT    :T_DOT,     null,0,0,ln);
+        case '#': return tok(bin?T_BIN_HASH   :T_HASH,    null,0,0,ln);
+        case '|': return tok(bin?T_BIN_PIPE   :T_PIPE,    null,0,0,ln);
+        case '=': return tok(bin?T_BIN_EQ     :T_EQ,      null,0,0,ln);
+        case '?': return tok(bin?T_BIN_QMARK  :T_QMARK,   null,0,0,ln);
+        case ',': this._prev_ws=true; return tok(T_COMMA,   null,0,0,ln);
+        case '(': this._depth++; this._prev_ws=true; return tok(T_LPAREN,  null,0,0,ln);
         case ')': if(this._depth>0)this._depth--; return tok(T_RPAREN,  null,0,0,ln);
-        case '[': return tok(T_LBRACKET,null,0,0,ln);
+        case '[': this._prev_ws=true; return tok(T_LBRACKET,null,0,0,ln);
         case ']': return tok(T_RBRACKET,null,0,0,ln);
-        case '<': return tok(T_LANGLE,  null,0,0,ln);
+        case '<': this._prev_ws=true; return tok(T_LANGLE,  null,0,0,ln);
         case '>': return tok(T_RANGLE,  null,0,0,ln);
         case ':': return tok(T_COLON,   null,0,0,ln); /* depth>0 colon */
         default:
@@ -397,9 +468,9 @@ class Lexer {
 
   /* Speculative lookahead checkpoint */
   mark()    { return {pos:this.pos,peeked:this._peeked,lineno:this.lineno,
-                      _bol:this._bol,_depth:this._depth}; }
+                      _bol:this._bol,_depth:this._depth,_prev_ws:this._prev_ws}; }
   restore(m){ this.pos=m.pos;this._peeked=m.peeked;this.lineno=m.lineno;
-              this._bol=m._bol;this._depth=m._depth; }
+              this._bol=m._bol;this._depth=m._depth;this._prev_ws=m._prev_ws; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -490,6 +561,7 @@ class Parser {
   /* ── expr14 — unary prefix ──────────────────────────────────────────── */
   _e14() {
     const t=this.lx.peek();
+    /* Bare (unary) tokens only — binary tokens (T_BIN_*) never appear here */
     const MAP={[T_AT]:E_CAPT_CURSOR,[T_TILDE]:E_INDIRECT,[T_QMARK]:E_INTERROGATE,
                [T_AMP]:E_OPSYN,[T_PLUS]:E_PLS,[T_MINUS]:E_MNS,[T_STAR]:E_DEFER,
                [T_DOLLAR]:E_INDIRECT,[T_DOT]:E_NAME,[T_BANG]:E_POW,
@@ -513,51 +585,37 @@ class Parser {
     return e;
   }
 
-  /* ── expr13 — ~ binary ──────────────────────────────────────────────── */
+  /* ── expr13 — ~ binary (T_BIN_TILDE) ───────────────────────────────── */
   _e13() {
     let l=this._e14(); if(!l) return null;
     for(;;) {
-      const m=this.lx.mark();
-      if(this.lx.peek().kind!==T_WS) break;
+      if(this.lx.peek().kind!==T_BIN_TILDE) break;
       this.lx.next();
-      if(this.lx.peek().kind!==T_TILDE){this.lx.restore(m);break;}
-      this.lx.next(); this.skip_ws();
       l=expr_binary(E_CAPT_COND_ASGN, l, this._e13());
     }
     return l;
   }
 
-  /* ── expr12 — $ . binary ────────────────────────────────────────────── */
+  /* ── expr12 — $ . binary (T_BIN_DOLLAR / T_BIN_DOT) ────────────────── */
   _e12() {
     let l=this._e13(); if(!l) return null;
     for(;;) {
-      const m=this.lx.mark();
-      if(this.lx.peek().kind!==T_WS) break;
+      const k=this.lx.peek().kind;
+      if(k!==T_BIN_DOLLAR && k!==T_BIN_DOT) break;
       this.lx.next();
-      const op=this.lx.peek().kind;
-      if(op===T_DOLLAR||op===T_DOT) {
-        this.lx.next(); this.skip_ws();
-        l=expr_binary(op===T_DOLLAR?E_CAPT_IMMED_ASGN:E_CAPT_COND_ASGN, l, this._e13());
-      } else { this.lx.restore(m); break; }
+      l=expr_binary(k===T_BIN_DOLLAR?E_CAPT_IMMED_ASGN:E_CAPT_COND_ASGN, l, this._e13());
     }
     return l;
   }
 
-  /* ── Generic left-associative binary helper ─────────────────────────── */
+  /* ── Generic left-associative binary helper ────────────────────────── */
+  /* White is swallowed into T_BIN_* token by lexer — match directly, no WS peek */
   _lbin(nxt, ops) {
     let l=nxt.call(this); if(!l) return null;
     for(;;) {
-      const m=this.lx.mark();
-      if(this.lx.peek().kind!==T_WS) break;
-      this.lx.next();
       const k=this.lx.peek().kind, ek=ops[k];
-      if(ek===undefined){this.lx.restore(m);break;}
-      if(k===T_STAR) { /* binary * requires WS on right side too */
-        const m2=this.lx.mark(); this.lx.next();
-        const k2=this.lx.peek().kind; this.lx.restore(m2);
-        if(k2!==T_WS){this.lx.restore(m);break;}
-      }
-      this.lx.next(); this.skip_ws();
+      if(ek===undefined) break;
+      this.lx.next();
       l=expr_binary(ek, l, nxt.call(this));
     }
     return l;
@@ -566,32 +624,39 @@ class Parser {
   /* ── Right-associative binary helper ────────────────────────────────── */
   _rbin(nxt, ops) {
     const l=nxt.call(this); if(!l) return null;
-    const m=this.lx.mark();
-    if(this.lx.peek().kind!==T_WS) return l;
-    this.lx.next();
     const k=this.lx.peek().kind, ek=ops[k];
-    if(ek===undefined){this.lx.restore(m);return l;}
-    this.lx.next(); this.skip_ws();
+    if(ek===undefined) return l;
+    this.lx.next();
     return expr_binary(ek, l, this._rbin(nxt, ops));
   }
 
-  _e11() { return this._rbin(this._e12, {[T_CARET]:E_POW,[T_BANG]:E_POW,[T_STARSTAR]:E_POW}); }
-  _e10() { return this._lbin(this._e11, {[T_PCT]:E_MOD}); }
-  _e9()  { return this._lbin(this._e10, {[T_STAR]:E_MUL}); }
-  _e8()  { return this._lbin(this._e9,  {[T_SLASH]:E_DIV}); }
-  _e7()  { return this._lbin(this._e8,  {[T_HASH]:E_MUL}); }
-  _e6()  { return this._lbin(this._e7,  {[T_PLUS]:E_ADD,[T_MINUS]:E_SUB}); }
-  _e5()  { return this._lbin(this._e6,  {[T_AT]:E_CAPT_CURSOR}); }
+  _e11() { return this._rbin(this._e12, {[T_BIN_CARET]:E_POW,[T_BIN_BANG]:E_POW,[T_BIN_STARSTAR]:E_POW}); }
+  _e10() { return this._lbin(this._e11, {[T_BIN_PCT]:E_MOD}); }
+  _e9()  { return this._lbin(this._e10, {[T_BIN_STAR]:E_MUL}); }
+  _e8()  { return this._lbin(this._e9,  {[T_BIN_SLASH]:E_DIV}); }
+  _e7()  { return this._lbin(this._e8,  {[T_BIN_HASH]:E_MUL}); }
+  _e6()  { return this._lbin(this._e7,  {[T_BIN_PLUS]:E_ADD,[T_BIN_MINUS]:E_SUB}); }
+  _e5()  { return this._lbin(this._e6,  {[T_BIN_AT]:E_CAPT_CURSOR}); }
 
   /* ── expr4 — whitespace concatenation ──────────────────────────────── */
   _is_cat_start(k) {
+    /* Binary tokens (T_BIN_*) and boundaries are NOT concatenation starters */
     switch(k) {
+      /* Unary ops that ARE valid cat-starters (begin next subexpr) */
       case T_AT:case T_PLUS:case T_MINUS:case T_HASH:case T_SLASH:case T_PCT:
-      case T_CARET:case T_BANG:case T_STARSTAR:case T_STAR:case T_DOT:case T_TILDE:
-      case T_EQ:case T_QMARK:case T_AMP:case T_PIPE:
+      case T_CARET:case T_BANG:case T_STAR:case T_DOT:case T_TILDE:
+      case T_EQ:case T_QMARK:case T_AMP:case T_PIPE:case T_DOLLAR:
+      case T_STARSTAR:
+        return true;
+      /* Binary ops and boundaries are NOT cat-starters */
+      case T_BIN_PLUS:case T_BIN_MINUS:case T_BIN_STAR:case T_BIN_SLASH:
+      case T_BIN_PCT:case T_BIN_CARET:case T_BIN_BANG:case T_BIN_STARSTAR:
+      case T_BIN_AT:case T_BIN_TILDE:case T_BIN_DOLLAR:case T_BIN_DOT:
+      case T_BIN_HASH:case T_BIN_PIPE:case T_BIN_EQ:case T_BIN_QMARK:
+      case T_BIN_AMP:
       case T_COMMA:case T_RPAREN:case T_RBRACKET:case T_RANGLE:
       case T_COLON:case T_GOTO_SEP:case T_STMT_SEP:case T_NEWLINE:
-      case T_EOF:case T_ERR: return false;
+      case T_WS:case T_EOF:case T_ERR: return false;
       default: return true;
     }
   }
@@ -611,38 +676,29 @@ class Parser {
     const e=expr_new(E_SEQ); e.children=items; return e;
   }
 
-  /* ── expr3 — | alternation (n-ary) ─────────────────────────────────── */
+  /* ── expr3 — | alternation (T_BIN_PIPE) ────────────────────────────── */
   _e3() {
     const first=this._e4(); if(!first) return null;
-    const mc=this.lx.mark();
-    let has_pipe=false;
-    if(this.lx.peek().kind===T_WS){this.lx.next();if(this.lx.peek().kind===T_PIPE)has_pipe=true;this.lx.restore(mc);}
-    if(!has_pipe) return first;
+    if(this.lx.peek().kind!==T_BIN_PIPE) return first;
     const e=expr_new(E_ALT); e.children=[first];
     for(;;) {
-      const m=this.lx.mark();
-      if(this.lx.peek().kind!==T_WS) break;
+      if(this.lx.peek().kind!==T_BIN_PIPE) break;
       this.lx.next();
-      if(this.lx.peek().kind!==T_PIPE){this.lx.restore(m);break;}
-      this.lx.next(); this.skip_ws();
       e.children.push(this._e4()||expr_new(E_NUL));
     }
     return e;
   }
 
   /* ── expr2 — & ──────────────────────────────────────────────────────── */
-  _e2() { return this._lbin(this._e3, {[T_AMP]:E_OPSYN}); }
+  _e2() { return this._lbin(this._e3, {[T_BIN_AMP]:E_OPSYN}); }
 
-  /* ── expr0 — = assignment, ? scan (right-assoc) ─────────────────────── */
+  /* ── expr0 — = assignment, ? scan (right-assoc) ────────────────────── */
   _e0() {
     const l=this._e2(); if(!l) return null;
-    const m=this.lx.mark();
-    if(this.lx.peek().kind!==T_WS) return l;
-    this.lx.next();
     const k=this.lx.peek().kind;
-    if(k===T_EQ)    {this.lx.next();this.skip_ws();return expr_binary(E_ASSIGN,l,this._e0());}
-    if(k===T_QMARK) {this.lx.next();this.skip_ws();return expr_binary(E_CAPT_COND_ASGN,l,this._e0());}
-    this.lx.restore(m); return l;
+    if(k===T_BIN_EQ)    {this.lx.next();return expr_binary(E_ASSIGN,l,this._e0());}
+    if(k===T_BIN_QMARK) {this.lx.next();return expr_binary(E_SCAN,  l,this._e0());}
+    return l;
   }
 
   _expr() { this.skip_ws(); return this._e0(); }
@@ -751,46 +807,51 @@ class Parser {
     s.subject=this._e14();
     this._fixup_val(s.subject);
 
-    /* Pattern / assignment / goto */
-    const have_ws=this.lx.peek().kind===T_WS;
-    let have_qmark=false;
-    if(have_ws){this.lx.next();this.skip_ws();if(this.lx.peek().kind===T_QMARK){have_qmark=true;this.lx.next();this.skip_ws();}}
-    else if(this.lx.peek().kind===T_QMARK){have_qmark=true;this.lx.next();this.skip_ws();}
+    /* Pattern / assignment / goto
+     * With binary-vs-unary lexer: T_BIN_EQ = "subj = repl" assignment;
+     * T_BIN_QMARK = "subj ? pat" match; WS after subject = pattern follows.
+     * No WS-peeking needed — binary tokens are unambiguous. */
+    const k_after=this.lx.peek().kind;
 
-    if(have_ws||have_qmark) {
-      if(have_ws&&!have_qmark&&this.lx.peek().kind===T_EQ) {
-        this.lx.next(); s.has_eq=true; this.skip_ws();
-        if(!this._at_end()) {
-          const rhs=this._expr();
-          /* S = P R form: "subj = guard(args) expr" where guard is a comparison/predicate
-           * function (ne/eq/lt/differ/ident/…) that succeeds/fails and returns its first arg.
-           * The guard is ONLY children[0]; the replacement is children[1..] as a SEQ.
-           * Only split when children[0] is E_FNC and the whole RHS is not a pure pattern.
-           * Works for 2-child (guard + repl) and 3+-child (guard + concat-repl) cases. */
-          if(s.subject && rhs && (rhs.kind===E_SEQ||rhs.kind===E_CAT) && rhs.children.length>=2
-             && rhs.children[0].kind===E_FNC && !this._is_pat(rhs)) {
-            const kids=rhs.children;
-            s.pattern=kids[0];                        /* guard only — never lump more */
-            let replKid;
-            if(kids.length===2){ replKid=kids[1]; }
-            else { const r=expr_new(E_SEQ); r.children=kids.slice(1); replKid=r; }
-            s.replacement=replKid;
-            s.guard_assign=true;                      /* assign to subject, don't splice */
-            if(!this._is_pat(s.replacement)) this._fixup_val(s.replacement);
-          } else {
-            s.replacement=rhs;
-            if(s.replacement&&!this._is_pat(s.replacement)) this._fixup_val(s.replacement);
-          }
+    if(k_after===T_BIN_EQ) {
+      /* Simple assignment: SUBJ = REPL */
+      this.lx.next(); s.has_eq=true;
+      if(!this._at_end()) {
+        const rhs=this._expr();
+        /* S = P R form: guard(args) split */
+        if(s.subject && rhs && (rhs.kind===E_SEQ||rhs.kind===E_CAT) && rhs.children.length>=2
+           && rhs.children[0].kind===E_FNC && !this._is_pat(rhs)) {
+          const kids=rhs.children;
+          s.pattern=kids[0];
+          let replKid;
+          if(kids.length===2){ replKid=kids[1]; }
+          else { const r=expr_new(E_SEQ); r.children=kids.slice(1); replKid=r; }
+          s.replacement=replKid;
+          s.guard_assign=true;
+          if(!this._is_pat(s.replacement)) this._fixup_val(s.replacement);
+        } else {
+          s.replacement=rhs;
+          if(s.replacement&&!this._is_pat(s.replacement)) this._fixup_val(s.replacement);
         }
-      } else if(!this._at_end()) {
+      }
+    } else if(k_after===T_BIN_QMARK) {
+      /* Explicit match: SUBJ ? PAT = REPL */
+      this.lx.next();
+      if(!this._at_end()) s.pattern=this._e3();
+      if(this.lx.peek().kind===T_BIN_EQ) {
+        this.lx.next(); s.has_eq=true;
+        if(!this._at_end()) s.replacement=this._expr();
+        if(s.replacement&&!this._is_pat(s.replacement)) this._fixup_val(s.replacement);
+      }
+    } else if(k_after===T_WS) {
+      /* WS after subject: pattern (and optional = repl) follows */
+      this.lx.next(); this.skip_ws();
+      if(!this._at_end()) {
         s.pattern=this._e3();
-        if(this.lx.peek().kind===T_WS) {
-          this.lx.next(); this.skip_ws();
-          if(this.lx.peek().kind===T_EQ) {
-            this.lx.next(); this.skip_ws(); s.has_eq=true;
-            if(!this._at_end()) s.replacement=this._expr();
-            if(s.replacement&&!this._is_pat(s.replacement)) this._fixup_val(s.replacement);
-          }
+        if(this.lx.peek().kind===T_BIN_EQ) {
+          this.lx.next(); s.has_eq=true;
+          if(!this._at_end()) s.replacement=this._expr();
+          if(s.replacement&&!this._is_pat(s.replacement)) this._fixup_val(s.replacement);
         }
       }
     }
