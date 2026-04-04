@@ -50,8 +50,8 @@ public static class Snobol4Parser
             char c = s[i];
             if (inQ) { if (c == qc) inQ = false; continue; }
             if (c == '\'' || c == '"') { inQ = true; qc = c; continue; }
-            if (c == '(' || c == '<') depth++;
-            else if (c == ')' || c == '>') depth--;
+            if (c == '(' || c == '<' || c == '[') depth++;
+            else if (c == ')' || c == '>' || c == ']') depth--;
             else if (c == ';' && depth == 0)
             {
                 parts.Add(s[start..i].Trim());
@@ -254,8 +254,8 @@ public static class Snobol4Parser
             char c = chars[ci];
             if (inStr) { cur.Append(c); if (c == strCh) inStr = false; ci++; continue; }
             if (c == '\'' || c == '"') { inStr = true; strCh = c; cur.Append(c); ci++; continue; }
-            if (c == '(' || c == '<') { depth++; cur.Append(c); ci++; continue; }
-            if (c == ')' || c == '>') { depth--; cur.Append(c); ci++; continue; }
+            if (c == '(' || c == '<' || c == '[') { depth++; cur.Append(c); ci++; continue; }
+            if (c == ')' || c == '>' || c == ']') { depth--; cur.Append(c); ci++; continue; }
             if ((c == ' ' || c == '\t') && depth == 0) { Push(); ci++; continue; }
             // Treat ** as a single token
             if (c == '*' && ci + 1 < chars.Length && chars[ci + 1] == '*' && depth == 0)
@@ -497,9 +497,13 @@ public static class Snobol4Parser
             return new IrNode(IrKind.E_FNC) { SVal = name, Children = argNodes };
         }
 
-        // Array/table subscript: name<idx,...>
-        int aOpen = src.IndexOf('<');
-        if (aOpen > 0 && src.EndsWith('>'))
+        // Array/table subscript: name<idx,...> or name[idx,...]
+        int aOpen = -1; char aClose = '>';
+        int tryAngle  = src.IndexOf('<');
+        int trySquare = src.IndexOf('[');
+        if (tryAngle  > 0 && src.EndsWith('>')) { aOpen = tryAngle;  aClose = '>'; }
+        if (trySquare > 0 && src.EndsWith(']') && (aOpen < 0 || trySquare < aOpen)) { aOpen = trySquare; aClose = ']'; }
+        if (aOpen > 0 && src[^1] == aClose)
         {
             var baseNode = ParseAtom(src[..aOpen]);
             var inner    = src[(aOpen + 1)..^1];
@@ -551,8 +555,8 @@ public static class Snobol4Parser
         {
             if (inStr) { cur.Append(c); if (c == strCh) inStr = false; continue; }
             if (c == '\'' || c == '"') { inStr = true; strCh = c; cur.Append(c); continue; }
-            if (c == '(' || c == '<') { depth++; cur.Append(c); continue; }
-            if (c == ')' || c == '>') { depth--; cur.Append(c); continue; }
+            if (c == '(' || c == '<' || c == '[') { depth++; cur.Append(c); continue; }
+            if (c == ')' || c == '>' || c == ']') { depth--; cur.Append(c); continue; }
             if (c == sep && depth == 0) { parts.Add(cur.ToString()); cur.Clear(); continue; }
             cur.Append(c);
         }

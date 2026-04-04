@@ -92,21 +92,71 @@ public sealed class SnobolEnv
     private const long TAG_MASK  = 0x7000_0000L;
     private const long IDX_MASK  = 0x0FFF_FFFFL;
 
-    private readonly List<DESCR?[]>                          _arrays = new();
+    // Multi-dim array descriptor
+    private sealed class SnobolArray
+    {
+        public string   Proto;           // dimension string e.g. "3" or "2,2" or "-1:1,2"
+        public int[]    Lo;              // lower bound per dimension (default 1)
+        public int[]    Size;            // size per dimension
+        public DESCR?[] Data;            // flat storage, row-major
+        public SnobolArray(string proto, int[] lo, int[] size, DESCR? def)
+        {
+            Proto = proto; Lo = lo; Size = size;
+            int total = 1; foreach (var s in size) total *= s;
+            Data = new DESCR?[total];
+            if (def != null) for (int i = 0; i < Data.Length; i++) Data[i] = def;
+        }
+        // Convert multi-index to flat index; return -1 if out of bounds
+        public int FlatIdx(long[] indices)
+        {
+            if (indices.Length != Size.Length) return -1;
+            int flat = 0;
+            for (int d = 0; d < Size.Length; d++)
+            {
+                int i = (int)indices[d] - Lo[d];
+                if (i < 0 || i >= Size[d]) return -1;
+                flat = flat * Size[d] + i;
+            }
+            return flat;
+        }
+    }
+
+    private readonly List<SnobolArray>                       _arrays = new();
     private readonly List<Dictionary<string, DESCR>>         _tables = new();
 
-    // ARRAY(n) — 1-indexed numeric array; ARRAY(n,v) with default
+    // Parse dimension spec: "3" or "2,2" or "-1:1,2"
+    private static (int lo, int size) ParseDimSpec(string spec)
+    {
+        var colon = spec.IndexOf(':');
+        if (colon >= 0)
+        {
+            int lo = int.Parse(spec[..colon].Trim());
+            int hi = int.Parse(spec[(colon+1)..].Trim());
+            return (lo, hi - lo + 1);
+        }
+        int n = int.Parse(spec.Trim());
+        return (1, n);  // default lower bound = 1
+    }
+
+    // ARRAY(n) or ARRAY("m,n,...") or ARRAY("lo:hi,...") with optional default
     public DESCR ArrayCreate(DESCR[] args)
     {
-        int size = args.Length >= 1 ? (int)args[0].ToInt() : 0;
-        if (size < 1) return DESCR.Fail;
-        var arr = new DESCR?[size];
-        if (args.Length >= 2)
+        if (args.Length < 1) return DESCR.Fail;
+        var spec  = args[0].ToString();
+        var def   = args.Length >= 2 ? args[1] : (DESCR?)null;
+        var parts = spec.Split(',');
+        var lo    = new int[parts.Length];
+        var size  = new int[parts.Length];
+        for (int d = 0; d < parts.Length; d++)
         {
-            var def = args[1];
-            for (int i = 0; i < arr.Length; i++) arr[i] = def;
+            try { (lo[d], size[d]) = ParseDimSpec(parts[d]); }
+            catch { return DESCR.Fail; }
+            if (size[d] < 1) return DESCR.Fail;
         }
-        _arrays.Add(arr);
+        // Normalise prototype: single dim → just the size number
+        string proto = string.Join(",", size.Select((s,d) =>
+            lo[d] == 1 ? s.ToString() : $"{lo[d]}:{lo[d]+s-1}"));
+        _arrays.Add(new SnobolArray(proto, lo, size, def));
         return DESCR.Of(TAG_ARRAY | (long)(_arrays.Count - 1));
     }
 
@@ -119,21 +169,27 @@ public sealed class SnobolEnv
     public bool IsArray(DESCR v)  => v.Type == DType.Int && (v.Int & TAG_MASK) == TAG_ARRAY && (v.Int & IDX_MASK) < _arrays.Count && (v.Int & IDX_MASK) >= 0;
     public bool IsTable(DESCR v)  => v.Type == DType.Int && (v.Int & TAG_MASK) == TAG_TABLE && (v.Int & IDX_MASK) < _tables.Count;
 
-    public DESCR ArrayGet(DESCR handle, long idx)
+    public string ArrayProto(DESCR handle) => IsArray(handle) ? _arrays[(int)(handle.Int & IDX_MASK)].Proto : "";
+
+    public DESCR ArrayGet(DESCR handle, long idx) => ArrayGetMulti(handle, new[] { idx });
+
+    public DESCR ArrayGetMulti(DESCR handle, long[] indices)
     {
         if (!IsArray(handle)) return DESCR.Null;
         var arr = _arrays[(int)(handle.Int & IDX_MASK)];
-        int i = (int)idx - 1;   // SNOBOL4 is 1-based
-        if (i < 0 || i >= arr.Length) return DESCR.Fail;
-        return arr[i] ?? DESCR.Null;
+        int fi = arr.FlatIdx(indices);
+        if (fi < 0) return DESCR.Fail;
+        return arr.Data[fi] ?? DESCR.Null;
     }
 
-    public void ArraySet(DESCR handle, long idx, DESCR val)
+    public void ArraySet(DESCR handle, long idx, DESCR val) => ArraySetMulti(handle, new[] { idx }, val);
+
+    public void ArraySetMulti(DESCR handle, long[] indices, DESCR val)
     {
         if (!IsArray(handle)) return;
         var arr = _arrays[(int)(handle.Int & IDX_MASK)];
-        int i = (int)idx - 1;
-        if (i >= 0 && i < arr.Length) arr[i] = val;
+        int fi = arr.FlatIdx(indices);
+        if (fi >= 0) arr.Data[fi] = val;
     }
 
     public DESCR TableGet(DESCR handle, string key)
@@ -308,9 +364,11 @@ public sealed class SnobolEnv
             "LCASE"   => args.Length >= 1 ? DESCR.Of(args[0].ToString().ToLowerInvariant()) : DESCR.Null,
             "ARRAY"   => args.Length >= 1 ? this.ArrayCreate(args) : DESCR.Fail,
             "TABLE"   => this.TableCreate(),
-            "PROTOTYPE" => args.Length >= 1 ? DataType(args[0]) : DESCR.Fail,
+            "PROTOTYPE" => args.Length >= 1 ? Prototype(args[0]) : DESCR.Fail,
             "DATATYPE"  => args.Length >= 1 ? DataType(args[0]) : DESCR.Fail,
             "TYPE"      => args.Length >= 1 ? DataType(args[0]) : DESCR.Fail,
+            "ITEM"      => Item(args),
+            "VALUE"     => ValueBuiltin(args),
             "APPLY"   => DESCR.Fail,  // stub
             "EVAL"    => DESCR.Fail,  // stub — M-NET-INTERP-B03
             _         => DESCR.Fail
@@ -324,7 +382,7 @@ public sealed class SnobolEnv
         if (v.IsFail) return DESCR.Fail;
         if (IsTable(v)) return DESCR.Of("TABLE");
         if (IsArray(v)) return DESCR.Of("ARRAY");
-        if (IsDataObj(v)) return DESCR.Of(_dataObjs[(int)v.Int].TypeName.ToUpperInvariant());
+        if (IsDataObj(v)) return DESCR.Of(_dataObjs[(int)(v.Int & IDX_MASK)].TypeName.ToUpperInvariant());  // FIX: was (int)v.Int, missing mask
         return v.Type switch
         {
             DType.Int    => DESCR.Of("INTEGER"),
@@ -332,6 +390,49 @@ public sealed class SnobolEnv
             DType.String => DESCR.Of("STRING"),
             _            => DESCR.Of("STRING")
         };
+    }
+
+    // PROTOTYPE: for arrays returns dimension string e.g. "3" or "2,2"; for tables "TABLE"; strings their length
+    private DESCR Prototype(DESCR v)
+    {
+        if (IsArray(v)) return DESCR.Of(ArrayProto(v));
+        if (IsTable(v)) return DESCR.Of("TABLE");
+        if (IsDataObj(v))
+        {
+            var (typeName, _) = _dataObjs[(int)(v.Int & IDX_MASK)];
+            if (_dataTypes.TryGetValue(typeName, out var def))
+                return DESCR.Of(string.Join(",", def.Fields));
+        }
+        // For strings: PROTOTYPE returns the string length as string
+        return DESCR.Of(v.ToString().Length.ToString());
+    }
+
+    // ITEM(arr, i1, i2, ...) — programmatic multi-dim subscript
+    private DESCR Item(DESCR[] args)
+    {
+        if (args.Length < 2) return DESCR.Fail;
+        var container = args[0];
+        if (IsArray(container))
+        {
+            var indices = args.Skip(1).Select(a => a.ToInt()).ToArray();
+            return ArrayGetMulti(container, indices);
+        }
+        if (IsTable(container)) return TableGet(container, args[1].ToString());
+        return DESCR.Fail;
+    }
+
+    // ITEM lvalue support: ItemSet(arr, indices, val)
+    public DESCR ItemSet(DESCR container, DESCR[] indexArgs, DESCR val)
+    {
+        if (IsArray(container))
+        {
+            var indices = indexArgs.Select(a => a.ToInt()).ToArray();
+            ArraySetMulti(container, indices, val);
+            return val;
+        }
+        if (IsTable(container) && indexArgs.Length >= 1)
+        { TableSet(container, indexArgs[0].ToString(), val); return val; }
+        return DESCR.Fail;
     }
 
     private static DESCR Dupl(DESCR[] args)
@@ -384,11 +485,48 @@ public sealed class SnobolEnv
         return DESCR.Of(right ? s.PadRight(n, pad) : s.PadLeft(n, pad));
     }
 
-    private static DESCR Convert_(DESCR[] args)
+    private DESCR Convert_(DESCR[] args)
     {
         if (args.Length < 2) return DESCR.Fail;
         var val  = args[0];
         var type = args[1].ToString().ToUpperInvariant();
+
+        // TABLE → ARRAY: Nx2 array, row i = [key, value]
+        if (type == "ARRAY" && IsTable(val))
+        {
+            var tbl  = _tables[(int)(val.Int & IDX_MASK)];
+            int n    = tbl.Count;
+            // prototype "n,2"
+            var arr  = new SnobolArray($"{n},2", new[]{1,1}, new[]{n,2}, null);
+            int row  = 0;
+            foreach (var kv in tbl)
+            {
+                arr.Data[row * 2]     = DESCR.Of(kv.Key);
+                arr.Data[row * 2 + 1] = kv.Value;
+                row++;
+            }
+            _arrays.Add(arr);
+            return DESCR.Of(TAG_ARRAY | (long)(_arrays.Count - 1));
+        }
+
+        // ARRAY → TABLE: expects Nx2 array; col1=key, col2=value
+        if (type == "TABLE" && IsArray(val))
+        {
+            var src = _arrays[(int)(val.Int & IDX_MASK)];
+            var d   = new Dictionary<string, DESCR>(StringComparer.Ordinal);
+            if (src.Size.Length == 2 && src.Size[1] == 2)
+            {
+                for (int r = 0; r < src.Size[0]; r++)
+                {
+                    var key = src.Data[r * 2]?.ToString() ?? "";
+                    var v2  = src.Data[r * 2 + 1] ?? DESCR.Null;
+                    d[key]  = v2;
+                }
+            }
+            _tables.Add(d);
+            return DESCR.Of(TAG_TABLE | (long)(_tables.Count - 1));
+        }
+
         return type switch
         {
             "INTEGER" => val.Type == DType.Real
@@ -401,6 +539,15 @@ public sealed class SnobolEnv
             "STRING"  => DESCR.Of(val.ToString()),
             _         => DESCR.Fail
         };
+    }
+
+    // VALUE(name) — dereference a variable by name, fail if unset
+    private DESCR ValueBuiltin(DESCR[] args)
+    {
+        if (args.Length < 1) return DESCR.Fail;
+        var name = args[0].ToString().ToUpperInvariant();
+        var v    = Get(name);
+        return v.IsNull ? DESCR.Fail : v;
     }
 
     // Numeric comparison — both args must be numeric (Int or Real), else Fail

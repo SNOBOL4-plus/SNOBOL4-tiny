@@ -139,7 +139,14 @@ public sealed class Executor
             if (stmt.Subject?.Kind == IrKind.E_FNC && stmt.Subject.Children.Length >= 1)
             {
                 var fieldName = stmt.Subject.SVal?.ToUpperInvariant() ?? "";
-                var objVal    = EvalNode(stmt.Subject.Children[0]);
+                // ITEM(container, i1, i2, ...) as lvalue
+                if (fieldName == "ITEM" && stmt.Subject.Children.Length >= 2)
+                {
+                    var container = EvalNode(stmt.Subject.Children[0]);
+                    var idxArgs   = stmt.Subject.Children.Skip(1).Select(nd => EvalNode(nd)).ToArray();
+                    _env.ItemSet(container, idxArgs, replVal); return true;
+                }
+                var objVal = EvalNode(stmt.Subject.Children[0]);
                 if (_env.IsDataObj(objVal))
                 { _env.DataSetField(objVal, fieldName, replVal); return true; }
             }
@@ -147,7 +154,7 @@ public sealed class Executor
             if (stmt.Subject?.Kind == IrKind.E_IDX && stmt.Subject.Children.Length >= 2)
             {
                 var baseNode = stmt.Subject.Children[0];
-                var idxVal   = EvalNode(stmt.Subject.Children[1]);
+                var idxNodes = stmt.Subject.Children.Skip(1).ToArray();
 
                 DESCR container;
                 if (baseNode.Kind == IrKind.E_VAR)
@@ -158,11 +165,14 @@ public sealed class Executor
                     container = EvalNode(baseNode);
 
                 if (_env.IsArray(container))
-                { _env.ArraySet(container, idxVal.ToInt(), replVal); return true; }
+                {
+                    var indices = idxNodes.Select(n => EvalNode(n).ToInt()).ToArray();
+                    _env.ArraySetMulti(container, indices, replVal); return true;
+                }
                 if (_env.IsTable(container))
-                { _env.TableSet(container, idxVal.ToString(), replVal); return true; }
+                { _env.TableSet(container, EvalNode(idxNodes[0]).ToString(), replVal); return true; }
                 if (_env.IsDataObj(container))
-                { _env.DataSetField(container, idxVal.ToString(), replVal); return true; }
+                { _env.DataSetField(container, EvalNode(idxNodes[0]).ToString(), replVal); return true; }
             }
             return false;
         }
@@ -427,7 +437,7 @@ public sealed class Executor
         // Children[0] = base var, [1..] = indices
         if (n.Children.Length < 2) return DESCR.Null;
         var baseNode = n.Children[0];
-        var idxVal   = EvalNode(n.Children[1]);
+        var idxNodes = n.Children.Skip(1).ToArray();
 
         // Resolve base — may be a direct var, indirect ($var), or a handle
         DESCR baseVal;
@@ -447,9 +457,13 @@ public sealed class Executor
             baseVal = EvalNode(baseNode);
         }
 
-        if (_env.IsArray(baseVal))   return _env.ArrayGet(baseVal, idxVal.ToInt());
-        if (_env.IsTable(baseVal))   return _env.TableGet(baseVal, idxVal.ToString());
-        if (_env.IsDataObj(baseVal)) return _env.DataGetField(baseVal, idxVal.ToString());
+        if (_env.IsArray(baseVal))
+        {
+            var indices = idxNodes.Select(nd => EvalNode(nd).ToInt()).ToArray();
+            return _env.ArrayGetMulti(baseVal, indices);
+        }
+        if (_env.IsTable(baseVal))   return _env.TableGet(baseVal, EvalNode(idxNodes[0]).ToString());
+        if (_env.IsDataObj(baseVal)) return _env.DataGetField(baseVal, EvalNode(idxNodes[0]).ToString());
         return DESCR.Null;
     }
 
