@@ -850,9 +850,16 @@ static DESCR_t interp_eval(EXPR_t *e)
         return nm ? pat_assign_imm(pat, STRVAL((char *)nm)) : pat;
     }
     case E_CAPT_CURSOR: {
-        /* pat @ var — cursor-position capture after matching pat.
-         * children[0] = left pattern, children[1] = variable (E_VAR, sval=name).
-         * Build: pat_cat(pat_left, pat_at_cursor(varname)) */
+        /* Two forms:
+         *   unary:  @var         — E_CAPT_CURSOR(E_VAR)         nchildren==1
+         *   binary: pat @ var    — E_CAPT_CURSOR(pat, E_VAR)    nchildren==2
+         * Both write the cursor position into var as DT_I at match time. */
+        if (e->nchildren == 1) {
+            /* unary @var: epsilon left, cursor capture into var */
+            const char *nm = e->children[0]->sval;
+            if (!nm) return NULVCL;
+            return pat_at_cursor(nm);
+        }
         if (e->nchildren < 2) return NULVCL;
         DESCR_t left_pat = interp_eval(e->children[0]);
         const char *nm   = e->children[1]->sval;
