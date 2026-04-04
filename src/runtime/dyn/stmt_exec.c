@@ -285,8 +285,8 @@ static int patnd_is_invariant(PATND_t *p)
     default:                                          break;
     }
     /* Recurse into children */
-    if (p->left  && !patnd_is_invariant(p->left))    return 0;
-    if (p->right && !patnd_is_invariant(p->right))   return 0;
+    for (int i = 0; i < p->nchildren; i++)
+        if (p->children[i] && !patnd_is_invariant(p->children[i])) return 0;
     return 1;
 }
 
@@ -551,42 +551,34 @@ static bb_node_t bb_build(PATND_t *p)
         break;
     }
 
-    /* ── CONCATENATION (left right) ─────────────────────────────────── */
+    /* ── CONCATENATION (n-ary, fold-right into bb_seq pairs) ────────── */
     case XCAT: {
-        seq_t *ζ = calloc(1, sizeof(seq_t));
-        bb_node_t l = bb_build(p->left);
-        bb_node_t r = bb_build(p->right);
-        ζ->left.fn  = l.fn; ζ->left.state  = l.ζ;
-        ζ->right.fn = r.fn; ζ->right.state = r.ζ;
-        n.fn = (bb_box_fn)bb_seq;
-        n.ζ  = ζ;
-        n.ζ_size = sizeof(*ζ);
+        if (p->nchildren == 0) { n = bb_build(NULL); break; }
+        if (p->nchildren == 1) { n = bb_build(p->children[0]); break; }
+        /* Fold right: seq(children[0], seq(children[1], ...)) */
+        n = bb_build(p->children[p->nchildren - 1]);
+        for (int i = p->nchildren - 2; i >= 0; i--) {
+            seq_t *ζ = calloc(1, sizeof(seq_t));
+            bb_node_t l = bb_build(p->children[i]);
+            ζ->left.fn    = l.fn;  ζ->left.state  = l.ζ;
+            ζ->right.fn   = n.fn;  ζ->right.state = n.ζ;
+            bb_node_t seq_n;
+            seq_n.fn = (bb_box_fn)bb_seq;
+            seq_n.ζ  = ζ;
+            seq_n.ζ_size = sizeof(*ζ);
+            n = seq_n;
+        }
         break;
     }
 
-    /* ── ALTERNATION (left | right) ─────────────────────────────────── */
+    /* ── ALTERNATION (n-ary, direct children[] iteration) ──────────── */
     case XOR: {
-        /*
-         * Flatten nested XOR into a single ALT with N children.
-         * This matches the test_sno_1.c alt_α/alt_β pattern exactly.
-         */
         alt_t *ζ = calloc(1, sizeof(alt_t));
-        /* collect all OR arms by walking right-spine */
-        PATND_t *cur = p;
-        int     nc  = 0;
-        while (cur && cur->kind == XOR && nc < BB_ALT_MAX_S - 1) {
-            bb_node_t arm        = bb_build(cur->left);
-            ζ->children[nc].fn  = arm.fn;
-            ζ->children[nc].state = arm.ζ;
-            nc++;
-            cur = cur->right;
-        }
-        /* last arm (rightmost non-OR node) */
-        if (nc < BB_ALT_MAX_S) {
-            bb_node_t arm        = bb_build(cur);
-            ζ->children[nc].fn  = arm.fn;
-            ζ->children[nc].state = arm.ζ;
-            nc++;
+        int nc = p->nchildren < BB_ALT_MAX_S ? p->nchildren : BB_ALT_MAX_S;
+        for (int i = 0; i < nc; i++) {
+            bb_node_t arm       = bb_build(p->children[i]);
+            ζ->children[i].fn  = arm.fn;
+            ζ->children[i].state = arm.ζ;
         }
         ζ->n = nc;
         n.fn = (bb_box_fn)bb_alt;
@@ -598,7 +590,7 @@ static bb_node_t bb_build(PATND_t *p)
     /* ── ARBNO(body) ────────────────────────────────────────────────── */
     case XARBN: {
         arbno_t *ζ = calloc(1, sizeof(arbno_t));
-        bb_node_t body  = bb_build(p->left);
+        bb_node_t body  = bb_build(p->nchildren > 0 ? p->children[0] : NULL);
         ζ->fn = body.fn;
         ζ->state  = body.ζ;
         n.fn = (bb_box_fn)bb_arbno;
@@ -610,7 +602,7 @@ static bb_node_t bb_build(PATND_t *p)
     /* ── IMMEDIATE CAPTURE: pat $ var ───────────────────────────────── */
     case XFNME: {
         capture_t *ζ = calloc(1, sizeof(capture_t));
-        bb_node_t child = bb_build(p->left);
+        bb_node_t child = bb_build(p->nchildren > 0 ? p->children[0] : NULL);
         ζ->fn  = child.fn;
         ζ->state = child.ζ;
         ζ->varname   = (p->var.v == DT_S && p->var.s) ? p->var.s : NULL;
@@ -625,7 +617,7 @@ static bb_node_t bb_build(PATND_t *p)
     /* ── CONDITIONAL CAPTURE: pat . var ─────────────────────────────── */
     case XNME: {
         capture_t *ζ = calloc(1, sizeof(capture_t));
-        bb_node_t child = bb_build(p->left);
+        bb_node_t child = bb_build(p->nchildren > 0 ? p->children[0] : NULL);
         ζ->fn  = child.fn;
         ζ->state = child.ζ;
         ζ->varname   = (p->var.v == DT_S && p->var.s) ? p->var.s : NULL;
@@ -1090,7 +1082,7 @@ int cache_test_run(const char *lit, int n_iters)
     node.materialising = 0;
     node.STRVAL_fn         = lit;
     node.num          = 0;
-    node.left = node.right = NULL;
+    node.children = NULL; node.nchildren = 0;
     node.args = NULL;
     node.nargs = 0;
 
@@ -1173,7 +1165,7 @@ int deferred_var_test(void)
     static PATND_t dsar_node;
     dsar_node.kind  = XDSAR;
     dsar_node.STRVAL_fn  = "T15_PAT";
-    dsar_node.left  = dsar_node.right = NULL;
+    dsar_node.children = NULL; dsar_node.nchildren = 0;
     dsar_node.args  = NULL;
     dsar_node.nargs = 0;
 

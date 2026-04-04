@@ -845,7 +845,7 @@ static DESCR_t interp_eval(EXPR_t *e)
     case E_CAPT_IMMED_ASGN: {
         /* pat $ var — immediate assignment during match */
         if (e->nchildren < 2) return NULVCL;
-        DESCR_t pat = interp_eval(e->children[0]);
+        DESCR_t pat = interp_eval_pat(e->children[0]);  /* DYN-64: must be pattern context */
         const char *nm = e->children[1]->sval;
         return nm ? pat_assign_imm(pat, STRVAL((char *)nm)) : pat;
     }
@@ -861,7 +861,7 @@ static DESCR_t interp_eval(EXPR_t *e)
             return pat_at_cursor(nm);
         }
         if (e->nchildren < 2) return NULVCL;
-        DESCR_t left_pat = interp_eval(e->children[0]);
+        DESCR_t left_pat = interp_eval_pat(e->children[0]);
         const char *nm   = e->children[1]->sval;
         if (!nm) return left_pat;
         DESCR_t atp = pat_at_cursor(nm);

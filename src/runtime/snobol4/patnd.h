@@ -47,11 +47,18 @@ struct _PATND_t {
     int          materialising;  /* cycle-detection flag */
     const char  *STRVAL_fn;      /* XCHR/XSPNC/XBRKC/XANYC/XNNYC/XDSAR/XATP */
     int64_t      num;            /* XLNTH/XPOSI/XRPSI/XTB/XRTB */
-    PATND_t     *left;           /* XCAT/XOR/XARBN/XFNCE/XFNME/XNME */
-    PATND_t     *right;          /* XCAT/XOR */
+    /* DYN-64: n-ary children replace binary left/right.
+     * XCAT/XOR: 2+ children (flat, no spine-chaining needed).
+     * XARBN/XFNCE/XFNME/XNME: exactly 1 child (children[0]).
+     * Leaf nodes (XCHR, XLNTH, XPOSI, ...): nchildren=0. */
+    PATND_t    **children;       /* heap-allocated array, NULL if nchildren==0 */
+    int          nchildren;
     DESCR_t      var;            /* XFNME/XNME capture target; XVAR value */
     DESCR_t     *args;           /* XATP args */
     int          nargs;          /* XATP nargs */
 };
+
+/* Convenience: single-child access for XARBN/XFNCE/XFNME/XNME */
+#define PATND_CHILD0(p)  ((p)->children ? (p)->children[0] : NULL)
 
 #endif /* PATND_H */

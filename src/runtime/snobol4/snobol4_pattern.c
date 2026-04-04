@@ -35,6 +35,26 @@ static PATND_t *spat_new(XKIND_t kind) {
     return p;
 }
 
+/* Set children array — allocates GC'd array and copies pointers in.
+ * Filters out NULL entries; if all are NULL, children stays NULL/nchildren=0. */
+static void patnd_set_children(PATND_t *p, PATND_t **ch, int n) {
+    int count = 0;
+    for (int i = 0; i < n; i++) if (ch[i]) count++;
+    if (count == 0) return;
+    p->children = (PATND_t **)GC_MALLOC((size_t)count * sizeof(PATND_t *));
+    int j = 0;
+    for (int i = 0; i < n; i++) if (ch[i]) p->children[j++] = ch[i];
+    p->nchildren = count;
+}
+
+/* Append a child to an XCAT or XOR node (used when flattening at build time). */
+static void patnd_append_child(PATND_t *p, PATND_t *ch) {
+    if (!ch) return;
+    p->children = (PATND_t **)GC_REALLOC(p->children,
+                      (size_t)(p->nchildren + 1) * sizeof(PATND_t *));
+    p->children[p->nchildren++] = ch;
+}
+
 /* Wrap a PATND_t in a DESCR_t */
 static inline DESCR_t spat_val(PATND_t *p) {
     DESCR_t v;
@@ -125,11 +145,10 @@ DESCR_t pat_arb(void) {
 
 DESCR_t pat_arbno(DESCR_t inner) {
     PATND_t *p = spat_new(XARBN);
-    p->left = spat_of(inner);
-    /* If inner is not a pattern (e.g. a string), wrap it */
-    if (!p->left && inner.v == DT_S) {
-        p->left = spat_of(pat_lit(inner.s));
-    }
+    PATND_t *ch = spat_of(inner);
+    if (!ch && inner.v == DT_S) ch = spat_of(pat_lit(inner.s));
+    PATND_t *arr[1] = { ch };
+    patnd_set_children(p, arr, 1);
     return spat_val(p);
 }
 
@@ -139,7 +158,9 @@ DESCR_t pat_rem(void) {
 
 DESCR_t pat_fence_p(DESCR_t inner) {
     PATND_t *p = spat_new(XFNCE);
-    p->left = spat_of(inner);
+    PATND_t *ch = spat_of(inner);
+    PATND_t *arr[1] = { ch };
+    patnd_set_children(p, arr, 1);
     return spat_val(p);
 }
 
@@ -167,31 +188,67 @@ DESCR_t pat_epsilon(void) {
     return spat_val(spat_new(XEPS));
 }
 
+/* pat_to_patnd: coerce a DESCR_t to a PATND_t*, handling string literals.
+ * Returns NULL if the value cannot be represented as a pattern. */
+static PATND_t *pat_to_patnd(DESCR_t v) {
+    PATND_t *p = spat_of(v);
+    if (!p && v.v == DT_S && v.s && v.s[0]) p = spat_of(pat_lit(v.s));
+    return p;
+}
+
+/* pat_cat: n-ary concatenation.
+ * If either child is already an XCAT node, flatten its children in.
+ * Degenerate cases (NULL child) are dropped with an assertion to catch
+ * type errors early rather than silently producing wrong trees. */
 DESCR_t pat_cat(DESCR_t left, DESCR_t right) {
+    PATND_t *l = pat_to_patnd(left);
+    PATND_t *r = pat_to_patnd(right);
+    /* DYN-64: assert instead of silent drop — caller must supply valid patterns */
+    if (!l && left.v  != DT_SNUL) {
+        fprintf(stderr, "pat_cat: left is not a pattern (DT=%d) — dropping\n", left.v);
+    }
+    if (!r && right.v != DT_SNUL) {
+        fprintf(stderr, "pat_cat: right is not a pattern (DT=%d) — dropping\n", right.v);
+    }
+    if (!l) return r ? spat_val(r) : pat_epsilon();
+    if (!r) return spat_val(l);
+
     PATND_t *p = spat_new(XCAT);
-    p->left  = spat_of(left);
-    p->right = spat_of(right);
-    /* Handle string literals on either side */
-    if (!p->left  && left.v  == DT_S) p->left  = spat_of(pat_lit(left.s));
-    if (!p->right && right.v == DT_S) p->right = spat_of(pat_lit(right.s));
-    if (!p->left)  return right;   /* degenerate */
-    if (!p->right) return left;
+    /* Flatten: if left is already XCAT, steal its children */
+    if (l->kind == XCAT) {
+        for (int i = 0; i < l->nchildren; i++) patnd_append_child(p, l->children[i]);
+    } else {
+        patnd_append_child(p, l);
+    }
+    if (r->kind == XCAT) {
+        for (int i = 0; i < r->nchildren; i++) patnd_append_child(p, r->children[i]);
+    } else {
+        patnd_append_child(p, r);
+    }
     return spat_val(p);
 }
 
+/* pat_alt: n-ary alternation, flat XOR node. */
 DESCR_t pat_alt(DESCR_t left, DESCR_t right) {
+    PATND_t *l = pat_to_patnd(left);
+    PATND_t *r = pat_to_patnd(right);
+    if (!l && left.v  == DT_SNUL) l = spat_of(pat_epsilon());
+    if (!r && right.v == DT_SNUL) r = spat_of(pat_epsilon());
+    if (!l) return r ? spat_val(r) : pat_epsilon();
+    if (!r) return spat_val(l);
 
     PATND_t *p = spat_new(XOR);
-    p->left  = spat_of(left);
-    p->right = spat_of(right);
-    if (!p->left  && left.v  == DT_S)  p->left  = spat_of(pat_lit(left.s));
-    if (!p->right && right.v == DT_S)  p->right = spat_of(pat_lit(right.s));
-    /* DT_SNUL (uninitialized var) in ALT = epsilon: always succeeds.
-     * e.g. (nl | ';') where nl is uninitialized => ("" | ';') => epsilon. */
-    if (!p->left  && left.v  == DT_SNUL) p->left  = spat_of(pat_epsilon());
-    if (!p->right && right.v == DT_SNUL) p->right = spat_of(pat_epsilon());
-    if (!p->left)  return right;
-    if (!p->right) return left;
+    /* Flatten: if left is already XOR, steal its children */
+    if (l->kind == XOR) {
+        for (int i = 0; i < l->nchildren; i++) patnd_append_child(p, l->children[i]);
+    } else {
+        patnd_append_child(p, l);
+    }
+    if (r->kind == XOR) {
+        for (int i = 0; i < r->nchildren; i++) patnd_append_child(p, r->children[i]);
+    } else {
+        patnd_append_child(p, r);
+    }
     return spat_val(p);
 }
 
@@ -207,16 +264,18 @@ DESCR_t pat_ref_val(DESCR_t nameVal) {
 
 DESCR_t pat_assign_imm(DESCR_t child, DESCR_t var) {
     PATND_t *p = spat_new(XFNME);
-    p->left = spat_of(child);
-    if (!p->left && child.v == DT_S) p->left = spat_of(pat_lit(child.s));
+    PATND_t *ch = pat_to_patnd(child);
+    PATND_t *arr[1] = { ch };
+    patnd_set_children(p, arr, 1);
     p->var  = var;
     return spat_val(p);
 }
 
 DESCR_t pat_assign_cond(DESCR_t child, DESCR_t var) {
     PATND_t *p = spat_new(XNME);
-    p->left = spat_of(child);
-    if (!p->left && child.v == DT_S) p->left = spat_of(pat_lit(child.s));
+    PATND_t *ch = pat_to_patnd(child);
+    PATND_t *arr[1] = { ch };
+    patnd_set_children(p, arr, 1);
     p->var  = var;
     return spat_val(p);
 }
@@ -544,29 +603,37 @@ static Pattern *materialise(PATND_t *sp, MatchCtx *ctx) {
     case XFNCE:
         p->type = T_FENCE;
         p->n    = 0;
-        if (sp->left) {
+        if (sp->nchildren > 0 && sp->children[0]) {
             /* FENCE(p) — fence with sub-pattern */
             p->n = 1;
-            p->children[0] = materialise(sp->left, ctx);
+            p->children[0] = materialise(sp->children[0], ctx);
         }
         return p;
 
     case XARBN:
         p->type = T_ARBNO;
         p->n    = 1;
-        p->children[0] = sp->left ? materialise(sp->left, ctx) : make_epsilon(&ctx->pl);
+        p->children[0] = (sp->nchildren > 0 && sp->children[0])
+                         ? materialise(sp->children[0], ctx)
+                         : make_epsilon(&ctx->pl);
         return p;
 
     case XCAT: {
-        Pattern *l = materialise(sp->left,  ctx);
-        Pattern *r = materialise(sp->right, ctx);
-        return make_seq(&ctx->pl, l, r);
+        /* Fold right: seq(children[0], seq(children[1], ... children[n-1])) */
+        if (sp->nchildren == 0) return make_epsilon(&ctx->pl);
+        Pattern *acc = materialise(sp->children[sp->nchildren - 1], ctx);
+        for (int i = sp->nchildren - 2; i >= 0; i--)
+            acc = make_seq(&ctx->pl, materialise(sp->children[i], ctx), acc);
+        return acc;
     }
 
     case XOR: {
-        Pattern *l = materialise(sp->left,  ctx);
-        Pattern *r = materialise(sp->right, ctx);
-        return make_alt(&ctx->pl, l, r);
+        /* Fold right: alt(children[0], alt(children[1], ... children[n-1])) */
+        if (sp->nchildren == 0) return make_epsilon(&ctx->pl);
+        Pattern *acc = materialise(sp->children[sp->nchildren - 1], ctx);
+        for (int i = sp->nchildren - 2; i >= 0; i--)
+            acc = make_alt(&ctx->pl, materialise(sp->children[i], ctx), acc);
+        return acc;
     }
 
     case XDSAR: {
@@ -633,7 +700,9 @@ static Pattern *materialise(PATND_t *sp, MatchCtx *ctx) {
          */
         if (ctx->ncaptures >= MAX_CAPTURES) {
             /* Too many captures — degrade to no-capture (child only) */
-            return materialise(sp->left, ctx);
+            return (sp->nchildren > 0 && sp->children[0])
+                   ? materialise(sp->children[0], ctx)
+                   : make_epsilon(&ctx->pl);
         }
 
         /* Record capture metadata */
@@ -669,7 +738,9 @@ static Pattern *materialise(PATND_t *sp, MatchCtx *ctx) {
         ctx->ncaptures++;
 
         /* Materialise child */
-        Pattern *child = materialise(sp->left, ctx);
+        Pattern *child = (sp->nchildren > 0 && sp->children[0])
+                         ? materialise(sp->children[0], ctx)
+                         : make_epsilon(&ctx->pl);
 
         /* Wrap in T_CAPTURE node */
         Pattern *cap = pattern_alloc(&ctx->pl);
