@@ -1,5 +1,5 @@
 /*
- * sn4parse.c — Faithful C translation of SNOBOL4 SIL lexer/parser
+ * CMPILE.c — Faithful C translation of SNOBOL4 SIL lexer/parser
  *
  * Follows v311.sil exactly:                    (v311.sil = CSNOBOL4 2.3.3 SIL source)
  *   CMPILE → compile one statement             (v311.sil:1608  "Procedure to compile statement")
@@ -13,10 +13,20 @@
  * stream() lifted verbatim from snobol4-2.3.3/lib/stream.c.
  * SIL names used throughout. Tree nodes carry SIL STYPE token-type codes.
  *
- * Output: s-expression IR tree printed to stdout.
+ * Public types:
+ *   CMPND_t  — parse/expression node (stype = SIL code, children = CMPND_t*)
+ *   CMPILE_t — compiled statement    (subject/pattern/replacement = CMPND_t*)
  *
- * Build:  gcc -O0 -g -Wall -o sn4parse sn4parse.c
- * Usage:  ./sn4parse file.sno   or   cat file.sno | ./sn4parse
+ * Public API: see CMPILE.h
+ *   cmpile_init()         — must call once before any parsing
+ *   cmpile_add_include()  — add -I search path
+ *   cmpile_file_internal()         — parse a FILE*, return CMPILE_t linked list
+ *   cmpile_string()       — parse a string (for EVAL())
+ *   cmpnd_print_sexp()    — dump CMPND_t as S-expression (pretty or flat)
+ *   cmpile_print()        — dump CMPILE_t statement
+ *
+ * No standalone main. Integrated into scrip-interp and scrip-cc.
+ * Use --dump-parse / --dump-parse-flat flags in those drivers.
  *
  * Authors: Lon Jones Cherryholmes · Claude Sonnet 4.6  2026-04-04
  */
@@ -853,36 +863,36 @@ void init_tables(void) {
 /* =========================================================================
  * Tree node — uses SIL names / codes throughout
  *
- * Each NODE corresponds to one SIL "tree node" (NODESZ = 3*DESCR words in SIL).
+ * Each CMPND_t corresponds to one SIL "tree node" (NODESZ = 3*DESCR words in SIL).
  * In SIL the tree is built with ADDSON/ADDSIB; here we use a flat children[] array.
  * stype mirrors the SIL STYPE field: the same integer codes from equ.h that
  * stream() writes into STYPE are stored here to label every node kind.
  * ========================================================================= */
 
-typedef struct NODE NODE;
-struct NODE {
+typedef struct CMPND_t CMPND_t;
+struct CMPND_t {
     int      stype;          /* SIL STYPE code: QLITYP/ILITYP/VARTYP/FNCTYP/ADDFNe tc. */
     char    *text;           /* token text: var name, literal value, operator name */
-    NODE   **children;       /* child nodes (args, operands) — grown with realloc */
+    CMPND_t   **children;       /* child nodes (args, operands) — grown with realloc */
     int      nchildren, nalloc; /* used / allocated slots in children[] */
     /* numeric literal payloads (only one is valid, selected by stype) */
     long long ival;          /* integer value when stype==ILITYP */
     double    fval;          /* float value when stype==FLITYP */
 };
 
-static NODE *node_new(int stype, const char *text, int tlen) {
-    NODE *n  = calloc(1, sizeof *n);
+static CMPND_t *cmpnd_new(int stype, const char *text, int tlen) {
+    CMPND_t *n  = calloc(1, sizeof *n);
     n->stype = stype;
     n->text  = tlen >= 0 ? strndup(text, tlen) : strdup(text ? text : "");
     return n;
 }
 
-static void node_add(NODE *parent, NODE *child) {
+static void cmpnd_add(CMPND_t *parent, CMPND_t *child) {
     if (!child) return;
     if (parent->nchildren >= parent->nalloc) {
         parent->nalloc = parent->nalloc ? parent->nalloc * 2 : 4;
         parent->children = realloc(parent->children,
-                                   parent->nalloc * sizeof(NODE*));
+                                   parent->nalloc * sizeof(CMPND_t*));
     }
     parent->children[parent->nchildren++] = child;
 }
@@ -1213,17 +1223,17 @@ static const char *stype_name(int st) {
  * ELEARY  = array subscript handler
  * ========================================================================= */
 
-NODE *EXPR(void);  /* forward */
-static NODE *EXPR1(void); /* forward */
-static NODE *expr_prec_continue(NODE *left, int min_prec); /* forward */
+CMPND_t *EXPR(void);  /* forward */
+static CMPND_t *EXPR1(void); /* forward */
+static CMPND_t *expr_prec_continue(CMPND_t *left, int min_prec); /* forward */
 
-static NODE *ELEMNT(void) {
+static CMPND_t *ELEMNT(void) {
     if (g_error) return NULL;
 
     /* --- UNOP: collect unary prefix operators (UNOPTB) --- */
     /* SIL: RCALL ELEMND,UNOP,,RTN2  — builds unary operator tree */
-    NODE *unary_chain = NULL;
-    NODE *unary_tail  = NULL;
+    CMPND_t *unary_chain = NULL;
+    CMPND_t *unary_tail  = NULL;
     int   unary_nospace = 0; /* last op had no trailing space (operand follows directly) */
     for (;;) {
         spec_t saved = TEXTSP;
@@ -1277,9 +1287,9 @@ static NODE *ELEMNT(void) {
         };
         const char *nm = (uop >= 301 && uop <= 314)
                          ? uop_names[uop-300] : "UOP?";
-        NODE *unode = node_new(uop, nm, -1);
+        CMPND_t *unode = cmpnd_new(uop, nm, -1);
         if (!unary_chain) { unary_chain = unary_tail = unode; }
-        else              { node_add(unary_tail, unode); unary_tail = unode; }
+        else              { cmpnd_add(unary_tail, unode); unary_tail = unode; }
     }
 
     /* After unary prefix operators, skip any whitespace before the operand.
@@ -1305,7 +1315,7 @@ static NODE *ELEMNT(void) {
     }
     int elem_stype = STYPE;
 
-    NODE *atom = NULL;
+    CMPND_t *atom = NULL;
 
     /* Classify by first character consumed (XSP.ptr[0]),
        since STYPE reflects the terminal table after all GOTO chains:
@@ -1335,7 +1345,7 @@ static NODE *ELEMNT(void) {
         int final_type = STYPE; /* may be ILITYP or FLITYP */
         char buf[64]; memcpy(buf, XSP.ptr, XSP.len < 63 ? XSP.len : 63);
         buf[XSP.len < 63 ? XSP.len : 63] = '\0';
-        atom = node_new(final_type, buf, -1);
+        atom = cmpnd_new(final_type, buf, -1);
         if (final_type == ILITYP) atom->ival = atoll(buf);
         else                      atom->fval = atof(buf);
         break;
@@ -1344,7 +1354,7 @@ static NODE *ELEMNT(void) {
     case FLITYP: {  /* ELEFLT: real literal starting with . */
         char buf[64]; memcpy(buf, XSP.ptr, XSP.len < 63 ? XSP.len : 63);
         buf[XSP.len < 63 ? XSP.len : 63] = '\0';
-        atom = node_new(FLITYP, buf, -1);
+        atom = cmpnd_new(FLITYP, buf, -1);
         atom->fval = atof(buf);
         break;
     }
@@ -1354,7 +1364,7 @@ static NODE *ELEMNT(void) {
         const char *p = XSP.ptr + 1;          /* skip open quote */
         int len = XSP.len - 2;                 /* strip both quotes */
         if (len < 0) len = 0;
-        atom = node_new(QLITYP, p, len);
+        atom = cmpnd_new(QLITYP, p, len);
         break;
     }
 
@@ -1364,7 +1374,7 @@ static NODE *ELEMNT(void) {
         int len = XSP.len;
         /* strip trailing ( or < consumed by VARTB STOP */
         if (final == FNCTYP || final == ARYTYP) len--;
-        atom = node_new(final, p, len);
+        atom = cmpnd_new(final, p, len);
 
         if (final == FNCTYP) {   /* ELEFNC: function call */
             /* SIL ELEMN2: RCALL EXELND,EXPR; FORWRD to get delimiter.
@@ -1379,12 +1389,12 @@ static NODE *ELEMNT(void) {
                 if (BRTYPE == RPTYP) break;  /* ')': end of arg list (zero-arg or after last) */
                 if (BRTYPE == CMATYP) {
                     /* empty arg: F(,x) or F(x,,y) — push NULL, advance past comma */
-                    node_add(atom, node_new(0, "NULL", -1));
+                    cmpnd_add(atom, cmpnd_new(0, "NULL", -1));
                     FORWRD();  /* skip space to next arg or next comma */
                     continue;
                 }
-                NODE *arg = EXPR();
-                node_add(atom, arg);
+                CMPND_t *arg = EXPR();
+                cmpnd_add(atom, arg);
                 FORWRD();  /* get delimiter after arg: CMATYP or RPTYP */
                 if (BRTYPE == RPTYP) break;
                 if (BRTYPE == CMATYP) {
@@ -1404,12 +1414,12 @@ static NODE *ELEMNT(void) {
             while (!g_error) {
                 if (BRTYPE == RBTYP) break;  /* empty subscript: A<> */
                 if (BRTYPE == CMATYP) {
-                    node_add(atom, node_new(0, "NULL", -1));  /* empty slot */
+                    cmpnd_add(atom, cmpnd_new(0, "NULL", -1));  /* empty slot */
                     FORWRD();
                     continue;
                 }
-                NODE *sub = EXPR();
-                node_add(atom, sub);
+                CMPND_t *sub = EXPR();
+                cmpnd_add(atom, sub);
                 /* P2D: A[J=J+1] — CSNOBOL4 ELEARG loop re-enters EXPR after EQTYP.
                  * IBLKTB consumed '='; TEXTSP is at ' J+1>...'.
                  * SIL UNOP calls FORWRD before UNOPTB (v311.sil:2507), so ELEMNT always
@@ -1436,11 +1446,11 @@ static NODE *ELEMNT(void) {
          *   (e1, e2, ..., en) — evaluate left to right until one succeeds.
          * SPITBOL manual §AppC p275: "selection or alternative construction". */
         FORWRD();  /* skip space/tab after '(' to position at first token */
-        NODE *first = EXPR();
+        CMPND_t *first = EXPR();
         if (BRTYPE == CMATYP && !g_error) {
             /* Alternative evaluation — collect all alternatives */
-            atom = node_new(SELTYP, "SELECT", -1);
-            node_add(atom, first);
+            atom = cmpnd_new(SELTYP, "SELECT", -1);
+            cmpnd_add(atom, first);
             while (BRTYPE == CMATYP && !g_error) {
                 /* TEXTSP points to the space-before-comma (BINOP restored saved_text
                  * which was before the blank IBLKTB consumed).
@@ -1451,7 +1461,7 @@ static NODE *ELEMNT(void) {
                  * Mirrors CSNOBOL4: BINOP1 restores; two FORWRDs bridge the gap. */
                 FORWRD();  /* consume the comma; TEXTSP at " <next-expr>" */
                 FORWRD();  /* skip space; TEXTSP at <next-expr> token */
-                node_add(atom, EXPR());
+                cmpnd_add(atom, EXPR());
             }
         } else {
             atom = first;
@@ -1468,7 +1478,7 @@ static NODE *ELEMNT(void) {
 
     /* Wrap atom in unary chain (innermost last) */
     if (unary_tail) {
-        node_add(unary_tail, atom);
+        cmpnd_add(unary_tail, atom);
         atom = unary_chain;
     }
 
@@ -1495,36 +1505,36 @@ static NODE *ELEMNT(void) {
  * expr_prec_continue() builds a CAT node, mirroring SIL's BINCON → CONCL path.
  * ========================================================================= */
 
-static NODE *expr_prec(int min_prec);
+static CMPND_t *expr_prec(int min_prec);
 
-NODE *EXPR(void) {
+CMPND_t *EXPR(void) {
     if (g_error) return NULL;
     /* EXPR: RCALL EXELND,ELEMNT,,(RTN1,EXPNUL) */
     spec_t saved = TEXTSP;
-    NODE *left = ELEMNT();
+    CMPND_t *left = ELEMNT();
     if (!left || g_error) {
         /* EXPNUL: return null node */
         TEXTSP = saved;
-        return node_new(0, "NULL", -1);
+        return cmpnd_new(0, "NULL", -1);
     }
     /* EXPR2: RCALL EXOPCL,BINOP loop */
     return expr_prec_continue(left, 0);
 }
 
-static NODE *EXPR1(void) {
+static CMPND_t *EXPR1(void) {
     /* EXPR1: PUSH EXPRND; RCALL EXELND,ELEMNT; POP EXPRND; → EXPR2 */
     return EXPR();
 }
 
-static NODE *expr_prec_continue(NODE *left, int min_prec);
+static CMPND_t *expr_prec_continue(CMPND_t *left, int min_prec);
 
-static NODE *expr_prec(int min_prec) {
-    NODE *left = ELEMNT();
-    if (!left || g_error) return node_new(0, "NULL", -1);
+static CMPND_t *expr_prec(int min_prec) {
+    CMPND_t *left = ELEMNT();
+    if (!left || g_error) return cmpnd_new(0, "NULL", -1);
     return expr_prec_continue(left, min_prec);
 }
 
-static NODE *expr_prec_continue(NODE *left, int min_prec) {
+static CMPND_t *expr_prec_continue(CMPND_t *left, int min_prec) {
     /* CATFN juxtaposition precedence = 10 (highest — tighter than any explicit op).
      * SIL BINCON path: blank found, no explicit operator char → CONCL concatenation.
      * We use a flat n-ary CAT node: accumulate all juxtaposed elements into one. */
@@ -1553,18 +1563,18 @@ static NODE *expr_prec_continue(NODE *left, int min_prec) {
             /* consume '[' */
             TEXTSP.ptr++; TEXTSP.len--;
             /* build IDX node: left is base, indices are children[1..] */
-            NODE *idx = node_new(ARYTYP, "IDX", -1);
-            node_add(idx, left);
+            CMPND_t *idx = cmpnd_new(ARYTYP, "IDX", -1);
+            cmpnd_add(idx, left);
             FORWRD();  /* skip space to first subscript (or to ']') */
             while (!g_error) {
                 if (BRTYPE == RBTYP) break;   /* ']' or '>' — empty or last index */
                 if (BRTYPE == CMATYP) {
-                    node_add(idx, node_new(0, "NULL", -1));
+                    cmpnd_add(idx, cmpnd_new(0, "NULL", -1));
                     FORWRD();
                     continue;
                 }
-                NODE *sub = EXPR();
-                node_add(idx, sub);
+                CMPND_t *sub = EXPR();
+                cmpnd_add(idx, sub);
                 /* P2D: IBLKTB consumed '='; FORWRD skips space so ELEMNT sees 'J' not space. */
                 if (BRTYPE == EQTYP) { FORWRD(); FORWRD(); continue; }
                 FORWRD();  /* get delimiter: CMATYP or RBTYP */
@@ -1587,15 +1597,15 @@ static NODE *expr_prec_continue(NODE *left, int min_prec) {
         if (op == CATFN) {
             /* Juxtaposition — CATFN_PREC=10, left-associative (collect into flat CAT) */
             if (CATFN_PREC < min_prec) { TEXTSP = saved; break; }
-            NODE *right = expr_prec(CATFN_PREC + 1);
+            CMPND_t *right = expr_prec(CATFN_PREC + 1);
             if (!right) { TEXTSP = saved; break; }
             /* Flatten: if left is already a CAT node, append; else create new CAT */
             if (left->stype == CATFN) {
-                node_add(left, right);
+                cmpnd_add(left, right);
             } else {
-                NODE *cat = node_new(CATFN, "CAT", -1);
-                node_add(cat, left);
-                node_add(cat, right);
+                CMPND_t *cat = cmpnd_new(CATFN, "CAT", -1);
+                cmpnd_add(cat, left);
+                cmpnd_add(cat, right);
                 left = cat;
             }
             continue;
@@ -1606,11 +1616,11 @@ static NODE *expr_prec_continue(NODE *left, int min_prec) {
 
         int next_min = op_right_assoc(op) ? prec : prec + 1;
         FORWRD();  /* skip whitespace after operator before RHS — mirrors CSNOBOL4 IBLKTB call */
-        NODE *right = expr_prec(next_min);
+        CMPND_t *right = expr_prec(next_min);
 
-        NODE *binop = node_new(op, fn_name(op), -1);
-        node_add(binop, left);
-        node_add(binop, right);
+        CMPND_t *binop = cmpnd_new(op, fn_name(op), -1);
+        cmpnd_add(binop, left);
+        cmpnd_add(binop, right);
         left = binop;
     }
 
@@ -1643,21 +1653,21 @@ static NODE *expr_prec_continue(NODE *left, int min_prec) {
  *         in SIL it tracks object-code offset for the compiler's output buffer.
  * ========================================================================= */
 
-/* STMT — one compiled SNOBOL4 statement; mirrors CSNOBOL4's STMT_t (src/frontend/snobol4/scrip_cc.h)
+/* CMPILE_t — one compiled SNOBOL4 statement; mirrors CSNOBOL4's STMT_t (src/frontend/snobol4/scrip_cc.h)
  * and the SIL object-code layout produced by CMPILE. */
-typedef struct STMT STMT;
-struct STMT {
+typedef struct CMPILE_t CMPILE_t;
+struct CMPILE_t {
     char *label;          /* column-1 label text, or NULL if no label */
-    NODE *subject;        /* subject expression (always present per SNOBOL4 grammar) */
-    NODE *pattern;        /* pattern expression, or NULL if no pattern field */
-    NODE *replacement;    /* replacement expression, or NULL (present when has_eq) */
+    CMPND_t *subject;        /* subject expression (always present per SNOBOL4 grammar) */
+    CMPND_t *pattern;        /* pattern expression, or NULL if no pattern field */
+    CMPND_t *replacement;    /* replacement expression, or NULL (present when has_eq) */
     int   has_eq;         /* 1 if '=' was present in source (distinguishes assign from match) */
     int   is_scan;        /* 1 if binary '?' scan operator was used (SUBJECT ? PATTERN) */
     char *go_s;           /* :S(label) success-goto target, or NULL */
     char *go_f;           /* :F(label) failure-goto target, or NULL */
     char *go_u;           /* :(label)  unconditional-goto target, or NULL */
     int   is_end;         /* 1 if this is the END statement (terminates program) */
-    STMT *next;           /* linked-list chain to next statement in program */
+    CMPILE_t *next;           /* linked-list chain to next statement in program */
 };
 
 /* xsp_dup — copy the last token text from XSP into a malloc'd C string.
@@ -1667,9 +1677,9 @@ static char *xsp_dup(void) {
     return strndup(XSP.ptr, XSP.len); /* XSP.ptr/XSP.len = (pointer,length) into source line */
 }
 
-static STMT *CMPILE(void) {
+static CMPILE_t *CMPILE(void) {
     if (g_error) return NULL;
-    STMT *s = calloc(1, sizeof *s);
+    CMPILE_t *s = calloc(1, sizeof *s);
 
     /* CMPIL0: STREAM XSP,TEXTSP,LBLTB,CERR1 — break out label field
      * ST_ERROR → CERR1 (label error); ST_EOS/ST_STOP → fallthrough */
@@ -1716,18 +1726,18 @@ static STMT *CMPILE(void) {
                 break;  /* no chained subscript — done */
             /* consume '[' */
             TEXTSP.ptr++; TEXTSP.len--;
-            NODE *idx = node_new(ARYTYP, "IDX", -1);
-            node_add(idx, s->subject);
+            CMPND_t *idx = cmpnd_new(ARYTYP, "IDX", -1);
+            cmpnd_add(idx, s->subject);
             FORWRD();  /* position to first subscript index */
             while (!g_error) {
                 if (BRTYPE == RBTYP) break;
                 if (BRTYPE == CMATYP) {
-                    node_add(idx, node_new(0, "NULL", -1));
+                    cmpnd_add(idx, cmpnd_new(0, "NULL", -1));
                     FORWRD();
                     continue;
                 }
-                NODE *sub = EXPR();
-                node_add(idx, sub);
+                CMPND_t *sub = EXPR();
+                cmpnd_add(idx, sub);
                 /* P2D: IBLKTB consumed '='; FORWRD skips space so ELEMNT sees 'J' not space. */
                 if (BRTYPE == EQTYP) { FORWRD(); FORWRD(); continue; }
                 FORWRD();
@@ -1821,7 +1831,7 @@ CMPGO: {
          * For UTOTYP, GOTOTB consumed '<'; TEXTSP may have leading space before label.
          * For UGOTYP, GOTOTB consumed '('; TEXTSP is positioned at label. */
         if (gotype == UTOTYP) FORWRD();  /* skip whitespace after '<' */
-        NODE *lbl = EXPR();
+        CMPND_t *lbl = EXPR();
         s->go_u = lbl ? strdup(lbl->text ? lbl->text : "") : NULL;
         FORWRD();   /* consume closing ) or > → BRTYPE=RPTYP or RBTYP */
         return s;
@@ -1830,7 +1840,7 @@ CMPGO: {
     if (gotype == SGOTYP || gotype == STOTYP) {
         /* Success: :S(label) or :S<label> */
         FORWRD();  /* skip whitespace after '(' or '<' to reach label expr */
-        NODE *lbl = EXPR();
+        CMPND_t *lbl = EXPR();
         s->go_s = lbl ? strdup(lbl->text ? lbl->text : "") : NULL;
         FORWRD();   /* consume closing ) or > → TEXTSP now at F, :F, or EOS */
         /* SNOBOL4 allows :S(x)F(y) or :S(x):F(y) — skip optional ':' */
@@ -1842,7 +1852,7 @@ CMPGO: {
             stream_ret_t gr = stream(&XSP, &TEXTSP, &GOTOTB);
             if (gr != ST_ERROR && (STYPE == FGOTYP || STYPE == FTOTYP)) {
                 if (STYPE == FTOTYP) FORWRD();  /* skip whitespace after '<' */
-                NODE *fl = EXPR();
+                CMPND_t *fl = EXPR();
                 s->go_f = fl ? strdup(fl->text ? fl->text : "") : NULL;
                 FORWRD();
             } else {
@@ -1855,7 +1865,7 @@ CMPGO: {
     if (gotype == FGOTYP || gotype == FTOTYP) {
         /* Failure: :F(label) or :F<label> */
         FORWRD();  /* skip whitespace after '(' or '<' to reach label expr */
-        NODE *lbl = EXPR();
+        CMPND_t *lbl = EXPR();
         s->go_f = lbl ? strdup(lbl->text ? lbl->text : "") : NULL;
         FORWRD();   /* consume closing ) or > */
         if (BRTYPE != EOSTYP && BRTYPE != 0 && TEXTSP.len > 0) {
@@ -1866,7 +1876,7 @@ CMPGO: {
             stream_ret_t gr = stream(&XSP, &TEXTSP, &GOTOTB);
             if (gr != ST_ERROR && (STYPE == SGOTYP || STYPE == STOTYP)) {
                 if (STYPE == STOTYP) FORWRD();  /* skip whitespace after '<' */
-                NODE *sl = EXPR();
+                CMPND_t *sl = EXPR();
                 s->go_s = sl ? strdup(sl->text ? sl->text : "") : NULL;
                 FORWRD();
             } else {
@@ -1886,60 +1896,84 @@ CMPGO: {
  * Prints the parse tree to stdout in a Lisp-style nested form for debugging.
  * ========================================================================= */
 
-static void print_node(NODE *n, int depth) {
-    if (!n) { printf("%*s(NULL)\n", depth*2, ""); return; }
-    printf("%*s(%s", depth*2, "", stype_name(n->stype));
+/* cmpnd_print_sexp — dump CMPND_t as S-expression.
+ * oneline=0: indented pretty-print.  oneline=1: flat single line for diff/compare.
+ * depth is the current indent level (callers pass 0 for the root). */
+void cmpnd_print_sexp(CMPND_t *n, FILE *out, int oneline, int depth) {
+    if (!n) { fprintf(out, oneline ? "(NULL)" : "%*s(NULL)\n", oneline ? 0 : depth*2, ""); return; }
+    if (!oneline) fprintf(out, "%*s", depth*2, "");
+    fprintf(out, "(%s", stype_name(n->stype));
     if (n->text && n->text[0])
-        printf(" \"%s\"", n->text);
+        fprintf(out, " \"%s\"", n->text);
     if (n->stype == ILITYP)
-        printf(" ival=%lld", n->ival);
+        fprintf(out, " ival=%lld", n->ival);
     if (n->stype == FLITYP)
-        printf(" fval=%g", n->fval);
+        fprintf(out, " fval=%g", n->fval);
     if (n->nchildren == 0) {
-        printf(")\n");
+        fprintf(out, oneline ? ")" : ")\n");
     } else {
-        printf("\n");
-        for (int i = 0; i < n->nchildren; i++)
-            print_node(n->children[i], depth+1);
-        printf("%*s)\n", depth*2, "");
+        if (!oneline) fprintf(out, "\n");
+        for (int i = 0; i < n->nchildren; i++) {
+            if (oneline && i > 0) fprintf(out, " ");
+            cmpnd_print_sexp(n->children[i], out, oneline, depth+1);
+        }
+        if (!oneline) fprintf(out, "%*s)\n", depth*2, "");
+        else          fprintf(out, ")");
     }
 }
 
-static void print_stmt(STMT *s, int idx) {
-    printf("=== stmt %d ===\n", idx);
-    if (s->is_end)      { printf("  END\n"); return; }
-    if (s->label)         printf("  label:   %s\n", s->label);
-    if (s->subject)     { printf("  subject:\n"); print_node(s->subject, 2); }
-    if (s->is_scan)       printf("  op:      ?\n");
-    if (s->pattern)     { printf("  pattern:\n"); print_node(s->pattern, 2); }
+/* cmpile_print — dump one CMPILE_t statement to out.
+ * oneline=0: labelled fields.  oneline=1: single-line S-expression. */
+void cmpile_print(CMPILE_t *s, FILE *out, int oneline, int idx) {
+    if (oneline) {
+        fprintf(out, "(STMT %d", idx);
+        if (s->is_end)  { fprintf(out, " END)\n"); return; }
+        if (s->label)     fprintf(out, " :label \"%s\"", s->label);
+        if (s->subject)   { fprintf(out, " :subj "); cmpnd_print_sexp(s->subject,  out, 1, 0); }
+        if (s->is_scan)   fprintf(out, " :op ?");
+        if (s->pattern)   { fprintf(out, " :pat ");  cmpnd_print_sexp(s->pattern,  out, 1, 0); }
+        if (s->has_eq && s->replacement)
+                          { fprintf(out, " :repl "); cmpnd_print_sexp(s->replacement, out, 1, 0); }
+        if (s->go_s)      fprintf(out, " :S(%s)", s->go_s);
+        if (s->go_f)      fprintf(out, " :F(%s)", s->go_f);
+        if (s->go_u)      fprintf(out, " :(%s)",  s->go_u);
+        fprintf(out, ")\n");
+        return;
+    }
+    fprintf(out, "=== stmt %d ===\n", idx);
+    if (s->is_end)      { fprintf(out, "  END\n"); return; }
+    if (s->label)         fprintf(out, "  label:   %s\n", s->label);
+    if (s->subject)     { fprintf(out, "  subject:\n"); cmpnd_print_sexp(s->subject,  out, 0, 2); }
+    if (s->is_scan)       fprintf(out, "  op:      ?\n");
+    if (s->pattern)     { fprintf(out, "  pattern:\n"); cmpnd_print_sexp(s->pattern,  out, 0, 2); }
     if (s->has_eq && s->replacement)
-                        { printf("  replace:\n"); print_node(s->replacement, 2); }
-    if (s->go_s)          printf("  :S(%s)\n", s->go_s);
-    if (s->go_f)          printf("  :F(%s)\n", s->go_f);
-    if (s->go_u)          printf("  :(%s)\n",  s->go_u);
+                        { fprintf(out, "  replace:\n"); cmpnd_print_sexp(s->replacement, out, 0, 2); }
+    if (s->go_s)          fprintf(out, "  :S(%s)\n", s->go_s);
+    if (s->go_f)          fprintf(out, "  :F(%s)\n", s->go_f);
+    if (s->go_u)          fprintf(out, "  :(%s)\n",  s->go_u);
 }
 
 /* =========================================================================
- * compile_state — shared mutable state threaded through compile_file().
+ * compile_state — shared mutable state threaded through cmpile_file_internal().
  * No linebuf. No pre-joining. TEXTSP = one physical line. FORWRD calls
  * forrun() on EOS to load the next card, exactly as CSNOBOL4 does. */
 typedef struct {
-    STMT  *head;
-    STMT  *tail;
+    CMPILE_t  *head;
+    CMPILE_t  *tail;
     int    stmt_idx;
     int    done;   /* set to 1 when END statement is seen */
 } compile_state_t;
 
-/* g_cst — pointer to the active compile_state (set by compile_file) */
+/* g_cst — pointer to the active compile_state (set by cmpile_file_internal) */
 static compile_state_t *g_cst = NULL;
 
 /* compile_one_stmt — compile TEXTSP as one statement, append to g_cst.
- * Called from compile_file after TEXTSP is set to a NEWTYP physical line. */
+ * Called from cmpile_file_internal after TEXTSP is set to a NEWTYP physical line. */
 static void compile_one_stmt(void) {
     if (!g_cst || g_cst->done) return;
     g_error = 0;
     STYPE = 0; BRTYPE = 0;
-    STMT *s = CMPILE();
+    CMPILE_t *s = CMPILE();
     if (!s) {
         if (g_error)
             fprintf(stderr, "line %d: %s\n", g_stmt_lineno, g_errmsg);
@@ -1948,9 +1982,9 @@ static void compile_one_stmt(void) {
     s->next = NULL;
     if (!g_cst->head) g_cst->head = s; else g_cst->tail->next = s;
     g_cst->tail = s;
+    g_cst->stmt_idx++;
     if (g_error)
         fprintf(stderr, "line %d: %s\n", g_stmt_lineno, g_errmsg);
-    print_stmt(s, ++g_cst->stmt_idx);
     if (s->is_end) g_cst->done = 1;
 }
 
@@ -2008,8 +2042,8 @@ retry:
                     int save_depth  = g_io_depth;
                     g_io_file = incf; g_io_path = incpath;
                     g_io_lineno = 0; g_io_eof = 0; g_io_depth++;
-                    /* run included file: compile_file equivalent via outer loop */
-                    /* We can't call compile_file here without restructuring;
+                    /* run included file: cmpile_file_internal equivalent via outer loop */
+                    /* We can't call cmpile_file_internal here without restructuring;
                      * instead: drain the included file by calling forrun until EOF,
                      * compiling each NEWTYP statement as we go. */
                     while (!g_io_eof && !(g_cst && g_cst->done)) {
@@ -2129,13 +2163,13 @@ static char *resolve_include_path(const char *base_path, const char *incname) {
     return strdup(result);
 }
 
-/* compile_file — process one source file.
+/* cmpile_file_internal — process one source file.
  *
  * TRUE STREAMING — mirrors CSNOBOL4 XLATNX (snobol4.c line 113).
  * No pre-joining. No linebuf. TEXTSP = one physical line at a time.
  * FORWRD calls forrun() on EOS to load continuations transparently.
  */
-static void compile_file(FILE *f, const char *base_path, compile_state_t *st) {
+static void cmpile_file_internal(FILE *f, const char *base_path, compile_state_t *st) {
     g_io_file   = f;
     g_io_path   = base_path;
     g_io_lineno = 0;
@@ -2183,7 +2217,7 @@ static void compile_file(FILE *f, const char *base_path, compile_state_t *st) {
                         FILE *sv_f=g_io_file; const char *sv_p=g_io_path;
                         int sv_ln=g_io_lineno, sv_eof=g_io_eof, sv_dep=g_io_depth;
                         g_io_depth++;
-                        compile_file(incf, incpath, st);
+                        cmpile_file_internal(incf, incpath, st);
                         fclose(incf); free(incpath);
                         g_io_file=sv_f; g_io_path=sv_p;
                         g_io_lineno=sv_ln; g_io_eof=sv_eof; g_io_depth=sv_dep;
@@ -2258,49 +2292,50 @@ static void compile_file(FILE *f, const char *base_path, compile_state_t *st) {
 }
 
 
-int sno4parse_main(int argc, char **argv) {
+/* =========================================================================
+ * Public API — see CMPILE.h
+ * ========================================================================= */
+
+/* cmpile_init — must be called once before any parsing. */
+void cmpile_init(void) {
     init_tables();
     g_trace_stream = (getenv("SNO_TRACE") != NULL);
+}
 
-    /* Parse flags: -Ipath or -I path adds an include search directory.
-     * Remaining non-flag args are input files (processed in order).
-     * If no input files given, read from stdin. */
-    const char *input_files[256];
-    int n_input_files = 0;
+/* cmpile_add_include — add a -I search directory. */
+void cmpile_add_include(const char *path) {
+    if (path && g_num_include_paths < MAX_INCLUDE_PATHS)
+        g_include_paths[g_num_include_paths++] = path;
+}
 
-    for (int i = 1; i < argc; i++) {
-        if (strncmp(argv[i], "-I", 2) == 0) {
-            const char *path = argv[i] + 2;
-            if (*path == '\0' && i+1 < argc) path = argv[++i]; /* -I path */
-            if (g_num_include_paths < MAX_INCLUDE_PATHS)
-                g_include_paths[g_num_include_paths++] = path;
-        } else if (strcmp(argv[i], "--") == 0) {
-            /* everything after -- is an input file */
-            while (++i < argc && n_input_files < 256)
-                input_files[n_input_files++] = argv[i];
-            break;
-        } else if (argv[i][0] == '-' && argv[i][1] != '\0') {
-            fprintf(stderr, "sno4parse: unknown flag '%s' (use -Idir to add include path)\n", argv[i]);
-        } else {
-            if (n_input_files < 256) input_files[n_input_files++] = argv[i];
-        }
-    }
-
+/* cmpile_file — parse an open FILE*, return linked list of CMPILE_t.
+ * base_path is used to resolve -INCLUDE directives (may be NULL for stdin).
+ * Caller owns the returned list; free with cmpile_free(). */
+CMPILE_t *cmpile_file(FILE *f, const char *base_path) {
     compile_state_t st;
     memset(&st, 0, sizeof st);
+    cmpile_file_internal(f, base_path, &st);
+    return st.head;
+}
 
-    if (n_input_files == 0) {
-        /* stdin mode */
-        compile_file(stdin, NULL, &st);
-    } else {
-        for (int i = 0; i < n_input_files && !st.done; i++) {
-            FILE *f = fopen(input_files[i], "r");
-            if (!f) { perror(input_files[i]); continue; }
-            compile_file(f, input_files[i], &st);
-            fclose(f);
-        }
+/* cmpile_string — parse a source string; returns linked list of CMPILE_t.
+ * Used by EVAL() and --dump-parse on command line. */
+CMPILE_t *cmpile_string(const char *src) {
+    FILE *f = fmemopen((void *)src, strlen(src), "r");
+    if (!f) return NULL;
+    CMPILE_t *result = cmpile_file(f, NULL);
+    fclose(f);
+    return result;
+}
+
+/* cmpile_free — release a linked list of CMPILE_t (shallow: frees nodes,
+ * not the CMPND_t trees; call cmpnd_free() separately if needed). */
+void cmpile_free(CMPILE_t *s) {
+    while (s) {
+        CMPILE_t *next = s->next;
+        free(s->label);
+        free(s->go_s); free(s->go_f); free(s->go_u);
+        free(s);
+        s = next;
     }
-
-    printf("=== %d statements ===\n", st.stmt_idx);
-    return 0;
 }
