@@ -25,6 +25,7 @@
 
 /* ── frontend ─────────────────────────────────────────────────────────── */
 #include "../frontend/snobol4/scrip_cc.h"
+#include "../frontend/snobol4/CMPILE.h"
 extern Program *sno_parse(FILE *f, const char *filename);
 
 /* ── runtime ──────────────────────────────────────────────────────────── */
@@ -1570,12 +1571,61 @@ static DESCR_t _usercall_hook(const char *name, DESCR_t *args, int nargs) {
     return call_user_function(name, args, nargs);
 }
 
+/* ── cmpile_lower: CMPILE_t list → Program* IR ───────────────────────
+ * Walks the CMPILE_t linked list from cmpile_file() and builds the
+ * Program* / STMT_t IR that execute_program() expects.
+ * Bridge that makes CMPILE.c the authoritative top-level parser.
+ * --------------------------------------------------------------------- */
+static Program *cmpile_lower(CMPILE_t *cl)
+{
+    if (!cl) return NULL;
+    Program *prog = GC_malloc(sizeof *prog);
+    prog->head = prog->tail = NULL;
+
+    for (CMPILE_t *s = cl; s; s = s->next) {
+        STMT_t *st = GC_malloc(sizeof *st);
+        memset(st, 0, sizeof *st);
+
+        st->label       = s->label       ? GC_strdup(s->label)       : NULL;
+        st->subject     = s->subject     ? cmpnd_to_expr(s->subject)     : NULL;
+        st->pattern     = s->pattern     ? cmpnd_to_expr(s->pattern)     : NULL;
+        st->replacement = s->replacement ? cmpnd_to_expr(s->replacement) : NULL;
+        st->has_eq      = s->has_eq;
+        st->is_end      = s->is_end;
+        /* Wire goto: CMPILE_t has go_s/go_f/go_u; STMT_t uses SnoGoto */
+        if (s->go_s || s->go_f || s->go_u) {
+            SnoGoto *sg = GC_malloc(sizeof *sg);
+            memset(sg, 0, sizeof *sg);
+            sg->onsuccess = s->go_s ? GC_strdup(s->go_s) : NULL;
+            sg->onfailure = s->go_f ? GC_strdup(s->go_f) : NULL;
+            sg->uncond    = s->go_u ? GC_strdup(s->go_u) : NULL;
+            st->go = sg;
+        }
+        st->next        = NULL;
+
+        if (!prog->head) prog->head = st;
+        else             prog->tail->next = st;
+        prog->tail = st;
+    }
+    return prog;
+}
+
 int main(int argc, char **argv)
 {
-    if (argc < 2) {
-        fprintf(stderr, "usage: scrip-interp <file.sno>\n");
+    /* ── flag parsing ─────────────────────────────────────────────────── */
+    int dump_parse      = 0;   /* --dump-parse      : pretty S-expression dump */
+    int dump_parse_flat = 0;   /* --dump-parse-flat : one-liner per stmt       */
+    int argi = 1;
+    while (argi < argc && argv[argi][0] == '-' && argv[argi][1] == '-') {
+        if      (strcmp(argv[argi], "--dump-parse")      == 0) { dump_parse      = 1; argi++; }
+        else if (strcmp(argv[argi], "--dump-parse-flat") == 0) { dump_parse_flat = 1; argi++; }
+        else break;
+    }
+    if (argi >= argc) {
+        fprintf(stderr, "usage: scrip-interp [--dump-parse|--dump-parse-flat] <file.sno>\n");
         return 1;
     }
+    const char *input_path = argv[argi];
 
     /* Set up include search dirs before parsing:
      * 1. Directory of the input file itself
@@ -1585,7 +1635,7 @@ int main(int argc, char **argv)
         extern void sno_add_include_dir(const char *d);
         /* dir of input file */
         char dirbuf[4096];
-        strncpy(dirbuf, argv[1], sizeof dirbuf - 1);
+        strncpy(dirbuf, input_path, sizeof dirbuf - 1);
         dirbuf[sizeof dirbuf - 1] = '\0';
         char *sl = strrchr(dirbuf, '/');
         if (sl) { *sl = '\0'; sno_add_include_dir(dirbuf); }
@@ -1597,7 +1647,7 @@ int main(int argc, char **argv)
          * Handles 'lib/math.sno' style includes without requiring SNO_LIB. */
         {
             char walk[4096];
-            strncpy(walk, argv[1], sizeof walk - 1);
+            strncpy(walk, input_path, sizeof walk - 1);
             walk[sizeof walk - 1] = '\0';
             char *p = strrchr(walk, '/');
             while (p) {
@@ -1616,17 +1666,36 @@ int main(int argc, char **argv)
         sno_add_include_dir(".");
     }
 
-    FILE *f = fopen(argv[1], "r");
+    FILE *f = fopen(input_path, "r");
     if (!f) {
-        fprintf(stderr, "scrip-interp: cannot open '%s'\n", argv[1]);
+        fprintf(stderr, "scrip-interp: cannot open '%s'\n", input_path);
         return 1;
     }
 
-    Program *prog = sno_parse(f, argv[1]);
+    /* ── parse ──────────────────────────────────────────────────────────
+     * --dump-parse / --dump-parse-flat: use CMPILE path, emit, exit.
+     * Normal execution: sno_parse() (proven path, PASS=190 baseline).
+     * cmpile_lower() wiring for execution is RT-105 step 2 — requires
+     * cmpnd_to_expr() coverage audit before it can replace sno_parse().
+     * ----------------------------------------------------------------- */
+    if (dump_parse || dump_parse_flat) {
+        cmpile_init();
+        cmpile_add_include(".");
+        CMPILE_t *cl = cmpile_file(f, input_path);
+        fclose(f);
+        int oneline = dump_parse_flat ? 1 : 0;
+        int idx = 0;
+        for (CMPILE_t *s = cl; s; s = s->next)
+            cmpile_print(s, stdout, oneline, idx++);
+        cmpile_free(cl);
+        return 0;
+    }
+
+    Program *prog = sno_parse(f, input_path);
     fclose(f);
 
     if (!prog || !prog->head) {
-        fprintf(stderr, "scrip-interp: parse failed for '%s'\n", argv[1]);
+        fprintf(stderr, "scrip-interp: parse failed for '%s'\n", input_path);
         return 1;
     }
 

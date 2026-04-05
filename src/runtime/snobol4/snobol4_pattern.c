@@ -1400,7 +1400,7 @@ static DESCR_t _ev_expr(SnoEvalCtx *e) {
  * Uses SIL stype constants directly — no integer guessing.
  * CMPILE.c is #included above so CMPND_t, stype defines are in this TU. */
 
-static EXPR_t *cmpnd_to_expr(CMPND_t *n) {
+EXPR_t *cmpnd_to_expr(CMPND_t *n) {
     if (!n || n->stype == 0) return NULL;
 
     /* Transparent wrapper: parenthesised sub-expression — unwrap */
