@@ -758,6 +758,52 @@ syntab_t BIOPTB = { "BIOPTB", {
     15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
 }, BIOPTB_actions };
 
+/* ---- BIOPTB_SPITBOL: SPITBOL extension of BIOPTB
+ * Identical to BIOPTB except byte 63 ('?') → action 16 → BISNFN (scan-replace).
+ * In CSNOBOL4 mode '?' is BIQSFN (user-definable, undefined).
+ * In SPITBOL mode '?' is BISNFN (pattern-match, returns matched substring).
+ * The chrs[] arrays differ only at index 63: 14 → 16. ---- */
+static acts_t BIOPTB_SPITBOL_actions[] = {
+    {ADDFN,  ACT_GOTO, &TBLKTB},   /*  1 */
+    {SUBFN,  ACT_GOTO, &TBLKTB},   /*  2 */
+    {NAMFN,  ACT_GOTO, &TBLKTB},   /*  3 */
+    {DOLFN,  ACT_GOTO, &TBLKTB},   /*  4 */
+    {MPYFN,  ACT_GOTO, &STARTB},   /*  5 */
+    {DIVFN,  ACT_GOTO, &TBLKTB},   /*  6 */
+    {BIATFN, ACT_GOTO, &TBLKTB},   /*  7 */
+    {BIPDFN, ACT_GOTO, &TBLKTB},   /*  8 */
+    {BIPRFN, ACT_GOTO, &TBLKTB},   /*  9 */
+    {EXPFN,  ACT_GOTO, &TBLKTB},   /* 10 */
+    {ORFN,   ACT_GOTO, &TBLKTB},   /* 11 */
+    {BIAMFN, ACT_GOTO, &TBLKTB},   /* 12 */
+    {BINGFN, ACT_GOTO, &TBLKTB},   /* 13 */
+    {BIQSFN, ACT_GOTO, &TBLKTB},   /* 14 — kept for completeness, not reachable via chrs[] */
+    {0,      ACT_ERROR, NULL},      /* 15 */
+    {BISNFN, ACT_GOTO, &TBLKTB},   /* 16 — '?' → SPITBOL scan-replace */
+};
+syntab_t BIOPTB_SPITBOL = { "BIOPTB_SPITBOL", {
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 11, 15,  8,  4,  9, 12, 15, 15, 15,  5,  1, 15,  2,  3,  6,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 16,  /* 0x3F '?' → 16 */
+     7, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 13, 15, 10, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 11, 15, 13, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+}, BIOPTB_SPITBOL_actions };
+
+/* Active binary-operator table — &BIOPTB in standard mode,
+ * &BIOPTB_SPITBOL once SPITBOL extensions are enabled.        */
+static syntab_t *g_bioptb = &BIOPTB_SPITBOL;  /* default: SPITBOL mode */
+
 /* ---- GOTOTB: goto field top-level scanner (v311.sil:1730 "STREAM XSP,TEXTSP,GOTOTB")
  * Entered after ':' is detected by FORBLK.  Classifies the goto type:
  *   :( or :< → unconditional;  :S → success (chains to GOTSTB);  :F → failure (chains to GOTFTB).
@@ -1093,7 +1139,7 @@ static int BINOP(void) {
     /* Blank was found, TEXTSP now points past it at the operator or next token.
      * Try BIOPTB to consume the operator character(s). */
     spec_t op_tok;
-    stream_ret_t or_ = stream(&op_tok, &TEXTSP, &BIOPTB);
+    stream_ret_t or_ = stream(&op_tok, &TEXTSP, g_bioptb);
 
     if (or_ == ST_ERROR || or_ == ST_EOS) {
         /* BINCON: no explicit operator → juxtaposition (concatenation) */
@@ -1124,6 +1170,8 @@ static int BINOP(void) {
 static int op_prec(int fn) {
     switch (fn) {
     case BIAMFN: return 1;   /* '&' user-definable — lowest precedence of all */
+    case BISNFN: return 1;   /* '?' SPITBOL scan-replace — same level as & (lowest) */
+    case BIQSFN: return 1;   /* '?' via BIOPTB table (BIQSFN=BISNFN alias) */
     case ORFN:   return 2;   /* '|' pattern alternation — second lowest */
     case ADDFN:
     case SUBFN:  return 3;   /* '+' '-' addition/subtraction */
@@ -1163,6 +1211,7 @@ static const char *fn_name(int fn) {
     case BIPDFN: return "BIPDFN(#)";
     case BIPRFN: return "BIPRFN(%)";
     case BIAMFN: return "BIAMFN(&)";
+    case BISNFN: return "BISNFN(?)";
     case BINGFN: return "BINGFN(~)";
     case BIQSFN: return "BIQSFN(?)";
     default: { static char buf[16]; snprintf(buf,16,"FN(%d)",fn); return buf; }
