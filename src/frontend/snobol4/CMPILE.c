@@ -1638,14 +1638,33 @@ static CMPND_t *expr_prec_continue(CMPND_t *left, int min_prec) {
         int prec  = op_prec(op);
         if (prec < min_prec) { TEXTSP = saved; break; }
 
-        int next_min = op_right_assoc(op) ? prec : prec + 1;
+        /* NAMFN/DOLFN ('.' '$'): right operand must be a single atom (variable
+         * name), not a full concatenation.  "pat . var rest" = "(pat . var) rest".
+         * Force next_min above all operators so only ELEMNT-level atoms consumed. */
+        int next_min = (op == NAMFN || op == DOLFN)
+            ? 99
+            : op_right_assoc(op) ? prec : prec + 1;
         FORWRD();  /* skip whitespace after operator before RHS — mirrors CSNOBOL4 IBLKTB call */
         CMPND_t *right = expr_prec(next_min);
 
         CMPND_t *binop = cmpnd_new(op, fn_name(op), -1);
-        cmpnd_add(binop, left);
-        cmpnd_add(binop, right);
-        left = binop;
+        if ((op == NAMFN || op == DOLFN) && left->stype == CATFN && left->nchildren >= 2) {
+            /* "A B . V" parsed as left=CAT(A,B), op='.', right=V.
+             * SNOBOL4 semantics: '.' binds only its immediate left neighbour.
+             * Restructure: CAT(A, NAMFN(B, V))  — pop last child off the cat. */
+            CMPND_t *new_cat  = cmpnd_new(CATFN, "CAT", -1);
+            for (int _ci = 0; _ci < left->nchildren - 1; _ci++)
+                cmpnd_add(new_cat, left->children[_ci]);
+            CMPND_t *last = left->children[left->nchildren - 1];
+            cmpnd_add(binop, last);
+            cmpnd_add(binop, right);
+            left = new_cat;
+            cmpnd_add(left, binop);
+        } else {
+            cmpnd_add(binop, left);
+            cmpnd_add(binop, right);
+            left = binop;
+        }
     }
 
     /* BRTYPE: set it based on what stopped us */

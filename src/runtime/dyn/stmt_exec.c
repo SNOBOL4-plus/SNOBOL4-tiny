@@ -1263,7 +1263,8 @@ int exec_stmt(const char  *subj_name,
     }
 
     /* match failed → :F */
-    NAM_discard(nam_cookie);       /* RT-4: discard any naming-list entries */
+    NAM_discard(nam_cookie);       /* RT-4: clear naming-list entries */
+    NAM_pop(nam_cookie);           /* RT-4: pop frame (frame-stack design) */
                                                               return 0;
 
 Phase4:

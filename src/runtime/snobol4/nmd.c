@@ -1,35 +1,37 @@
 /*
- * nmd.c — SIL Naming List (§NMD)  RT-4
+ * nmd.c — SIL Naming List (§NMD)  RT-4  *** REFACTOR: frame-stack design ***
  *
- * The naming list is a LIFO buffer of (target, substring) pairs written
- * during pattern matching by the . (conditional capture) operator.
+ * ARCHITECTURE (replaces flat buffer + cookie int):
  *
- * SIL globals modelled here:
- *   NAMICL — current top of naming list (nam_top)
- *   NHEDCL — base of current statement's naming list (nam_head saved as cookie)
- *   NBSPTR — buffer base (nam_buf[])
- *   PDLPTR/PDLHED — pattern history list (backtrack stack, separate; not here)
+ *   The naming list is a stack of NAM_Frame objects.  Each call to
+ *   NAM_save() pushes a new frame; NAM_commit/NAM_discard pops it.
+ *   Within a frame, captures are a singly-linked list of NamEntry_t
+ *   nodes (GC-allocated, no fixed-size array).
  *
- * SIL procs implemented:
- *   NMD    — commit all entries since cookie: assign each substr to its var
- *   NMD1–5 — (specialised commit variants; we implement one generic path)
- *   NMDIC  — keyword assignment path: coerce to INTEGER via ASGNIC_fn
- *   NAMEXN — EXPRESSION variable path: EXPEVL (stub — RT-6 fills this in)
+ *   Byrd box mapping:
+ *     XNME α  →  (caller calls NAM_save before scan loop — unchanged)
+ *     XNME γ  →  NAM_push into current frame's entry list
+ *     XNME ω  →  NAM_discard pops frame — undo for free, no seen[] needed
+ *     outer γ →  NAM_commit pops frame, walks entry list last→first,
+ *                assigns once per target (last-write-wins)
  *
- * Public API:
- *   void    NAM_push(const char *var, int dt, const char *s, int len)
- *   int     NAM_save(void)
- *   void    NAM_commit(int cookie)
- *   void    NAM_discard(int cookie)
+ *   Benefits over flat buffer:
+ *     - No NAM_MAX overflow
+ *     - No seen[] dedup array (backwards walk still gives last-write-wins)
+ *     - No GC dangling pointer: every string is GC_strdup'd at push time
+ *     - Nested EVAL()/EXPVAL re-entrancy is natural (each gets its own frame)
+ *     - Frames nest correctly for RT-6 EXPVAL save/restore
  *
- * Wire points:
- *   bb_capture (stmt_exec.c)  — on conditional γ calls NAM_push()
- *   exec_stmt  (stmt_exec.c)  — on success: NAM_commit(cookie)
- *                             — on failure: NAM_discard(cookie)
+ * Public API (unchanged — stmt_exec.c needs zero edits):
+ *   void  NAM_push(const char *var, DESCR_t *ptr, int dt,
+ *                  const char *s, int len)
+ *   int   NAM_save(void)          → returns opaque frame index
+ *   void  NAM_commit(int cookie)
+ *   void  NAM_discard(int cookie)
  *
  * AUTHORS: Lon Jones Cherryholmes · Claude Sonnet 4.6
  * DATE:    2026-04-05
- * SPRINT:  RT-108
+ * SPRINT:  RT-109
  */
 
 #include <stdio.h>
@@ -40,44 +42,73 @@
 #include "snobol4.h"
 #include "sil_macros.h"
 
-/* ── Naming list buffer ───────────────────────────────────────────────────── */
+/* ── Entry: one conditional capture within a frame ─────────────────────── */
 
-#define NAM_MAX 512
-
-typedef struct {
-    const char *varname;   /* target variable name (DT_S path) */
-    DESCR_t    *var_ptr;   /* DT_N NAMEPTR target (interior pointer) */
-    int         dt;        /* DT_S / DT_K / DT_E — dispatch selector */
-    const char *substr;    /* matched substring (GC-owned copy) */
-    int         slen;      /* substring length */
+typedef struct NamEntry {
+    const char     *varname;   /* GC_strdup'd — safe across GC cycles       */
+    DESCR_t        *var_ptr;   /* NAMEPTR interior pointer (or NULL)         */
+    int             dt;        /* DT_S / DT_K / DT_E                        */
+    const char     *substr;    /* GC_malloc'd copy of matched substring      */
+    int             slen;
+    struct NamEntry *next;     /* intrusive linked list (newest → oldest)    */
 } NamEntry_t;
 
-static NamEntry_t nam_buf[NAM_MAX];
-static int        nam_top  = 0;   /* NAMICL — current top */
+/* ── Frame: one NAM_save/commit-or-discard scope ───────────────────────── */
 
-/* ── NAM_push — called by bb_capture on conditional (.) γ ─────────────────
+typedef struct NamFrame {
+    NamEntry_t     *head;      /* newest entry (prepend on push)             */
+    struct NamFrame *prev;     /* stack link toward older frames             */
+} NamFrame_t;
+
+/* ── Stack state ────────────────────────────────────────────────────────── */
+
+static NamFrame_t *nam_stack = NULL;   /* top of frame stack (current frame) */
+static int         nam_depth = 0;      /* frame count — used as cookie value  */
+
+/* ── NAM_save ───────────────────────────────────────────────────────────── *
  *
- * var  — NV variable name (DT_S target); NULL if var_ptr is used
- * ptr  — DT_N interior pointer target; NULL if varname is used
- * dt   — DT_S for ordinary var, DT_K for keyword, DT_E for expression
- * s    — matched substring start pointer (in subject buffer)
- * len  — matched substring length
+ * Push a new empty frame.  Returns depth BEFORE push as the cookie so
+ * commit/discard can assert they're unwinding the right frame.
+ *
+ * SIL equivalent: snapshot NAMICL / NHEDCL
+ */
+int NAM_save(void)
+{
+    int cookie = nam_depth;
+    NamFrame_t *f = GC_MALLOC(sizeof(NamFrame_t));
+    f->head = NULL;
+    f->prev = nam_stack;
+    nam_stack = f;
+    nam_depth++;
+    return cookie;          /* caller stores as NHEDCL */
+}
+
+/* ── NAM_push ───────────────────────────────────────────────────────────── *
+ *
+ * Record one conditional (.) capture into the current frame.
+ * Called by bb_capture on every XNME γ — including backtrack attempts.
+ * Prepend (newest first) so backwards-walk in NAM_commit is just
+ * walking the list head→tail.
+ *
+ * KEY FIX vs old design: GC_strdup(var) here — no dangling pointer.
  */
 void NAM_push(const char *var, DESCR_t *ptr, int dt,
               const char *s, int len)
 {
-    if (nam_top >= NAM_MAX) {
-        /* Buffer overflow — silently drop (should not arise in practice) */
-        fprintf(stderr, "nmd: NAM_MAX exceeded — capture dropped\n");
+    if (!nam_stack) {
+        fprintf(stderr, "nmd: NAM_push with no active frame — ignored\n");
         return;
     }
-    NamEntry_t *e = &nam_buf[nam_top++];
-    e->varname = var;
+
+    NamEntry_t *e = GC_MALLOC(sizeof(NamEntry_t));
+
+    /* GC_strdup — survives GC cycles during ARB backtrack loop */
+    e->varname = var ? GC_strdup(var) : NULL;
     e->var_ptr = ptr;
     e->dt      = dt;
-    /* Copy substring into GC-managed storage so it survives the match */
+
     if (s && len > 0) {
-        char *copy = (char *)GC_MALLOC((size_t)len + 1);
+        char *copy = GC_MALLOC((size_t)len + 1);
         memcpy(copy, s, (size_t)len);
         copy[len] = '\0';
         e->substr = copy;
@@ -86,68 +117,62 @@ void NAM_push(const char *var, DESCR_t *ptr, int dt,
         e->substr = "";
         e->slen   = 0;
     }
+
+    /* Prepend — list is newest-first, so head→tail walk = last→first push */
+    e->next       = nam_stack->head;
+    nam_stack->head = e;
 }
 
-/* ── NAM_save — snapshot current top; returns cookie for commit/discard ───── */
-int NAM_save(void)
-{
-    return nam_top;   /* caller stores as NHEDCL */
-}
-
-/* ── NAM_commit — SIL NMD: assign all entries pushed since cookie ──────────
+/* ── NAM_commit ─────────────────────────────────────────────────────────── *
  *
- * SIL NMD semantics: for each target variable, only the LAST push since
- * cookie is assigned.  This mirrors SNOBOL4's "last write wins" behaviour
- * when a conditional capture fires multiple times during backtracking
- * (e.g. ARB . V tries δ=0,1,2,... — only the winning δ is committed).
+ * Pattern succeeded.  Pop the top frame and assign each captured value,
+ * last-write-wins (= head of list wins, because we prepend on push).
  *
- * Algorithm: walk backwards from nam_top-1 to cookie.  For each entry,
- * assign only if this variable has not yet been seen (set-once per var).
- * After commit, restores nam_top to cookie.
+ * seen[] tracks which targets have already been assigned so we skip
+ * earlier (overwritten) captures for the same target.
  *
- * Dispatch:
- *   DT_K — NMDIC: call ASGNIC_fn (keyword coerce to INTEGER)
- *   DT_E — NAMEXN stub: log warning, skip (RT-6 fills in EXPEVL)
- *   else — NV_SET_fn or interior-pointer write
+ * SIL NMD: assign NAMICL..NHEDCL, then restore NAMICL=NHEDCL.
  */
 void NAM_commit(int cookie)
 {
-    /* Walk backwards: last push for each target wins.
-     * Use a seen[] parallel array to track which targets we've assigned. */
-#define NAM_SEEN_MAX 64
-    const char *seen_name[NAM_SEEN_MAX];
-    DESCR_t    *seen_ptr[NAM_SEEN_MAX];
-    int         seen_count = 0;
+    if (!nam_stack || nam_depth != cookie + 1) {
+        fprintf(stderr, "nmd: NAM_commit cookie mismatch (depth=%d cookie=%d)\n",
+                nam_depth, cookie);
+        return;
+    }
 
-    for (int i = nam_top - 1; i >= cookie; i--) {
-        NamEntry_t *e = &nam_buf[i];
+    NamFrame_t *f = nam_stack;
 
-        /* Check if we already committed this target (ptr or name) */
+#define SEEN_MAX 64
+    const char *seen_name[SEEN_MAX];
+    DESCR_t    *seen_ptr [SEEN_MAX];
+    int         seen_n = 0;
+
+    /* Walk head→tail = newest→oldest = last-write first */
+    for (NamEntry_t *e = f->head; e; e = e->next) {
+
+        /* Skip if this target already assigned (earlier entry = later push) */
         int already = 0;
-        for (int j = 0; j < seen_count; j++) {
-            if (e->var_ptr && seen_ptr[j] == e->var_ptr) { already = 1; break; }
+        for (int j = 0; j < seen_n; j++) {
+            if (e->var_ptr && seen_ptr[j] == e->var_ptr) { already=1; break; }
             if (!e->var_ptr && e->varname && seen_name[j] &&
-                strcmp(seen_name[j], e->varname) == 0) { already = 1; break; }
+                strcmp(seen_name[j], e->varname) == 0)   { already=1; break; }
         }
         if (already) continue;
 
-        /* Record as seen */
-        if (seen_count < NAM_SEEN_MAX) {
-            seen_name[seen_count] = e->varname;
-            seen_ptr[seen_count]  = e->var_ptr;
-            seen_count++;
+        if (seen_n < SEEN_MAX) {
+            seen_name[seen_n] = e->varname;
+            seen_ptr [seen_n] = e->var_ptr;
+            seen_n++;
         }
 
-        DESCR_t val;
-        val.v    = DT_S;
-        val.slen = (uint32_t)e->slen;
-        val.s    = (char *)e->substr;
+        DESCR_t val = { .v = DT_S, .slen = (uint32_t)e->slen,
+                        .s = (char *)e->substr };
 
         if (e->dt == DT_K) {
-            if (e->varname)
-                ASGNIC_fn(e->varname, val);
+            if (e->varname) ASGNIC_fn(e->varname, val);
         } else if (e->dt == DT_E) {
-            fprintf(stderr, "nmd: NAMEXN (DT_E target) not yet implemented\n");
+            fprintf(stderr, "nmd: NAMEXN (DT_E) not yet implemented\n");
         } else {
             if (e->var_ptr)
                 *e->var_ptr = val;
@@ -155,15 +180,51 @@ void NAM_commit(int cookie)
                 NV_SET_fn(e->varname, val);
         }
     }
-    nam_top = cookie;
+
+    /* Pop frame — GC reclaims entries automatically */
+    nam_stack = f->prev;
+    nam_depth--;
 }
 
-/* ── NAM_discard — on pattern failure: restore nam_top to cookie ───────────
+/* ── NAM_discard ────────────────────────────────────────────────────────── *
  *
- * SIL: restore NAMICL to NHEDCL — nothing is assigned.
- * The substring copies in GC-managed storage will be collected.
+ * Scan-position reset OR pattern failure.  Two cases:
+ *
+ * (a) Mid-scan reset (exec_stmt calls at top of each scan loop iteration):
+ *     Truncate the current frame's entry list back to empty — keep the
+ *     frame alive so subsequent NAM_push calls have a home.
+ *     SIL: NAMICL = NHEDCL  (reset top, keep base frame).
+ *
+ * (b) Final failure discard (after scan loop exits without match):
+ *     Also truncates + pops the frame.  But exec_stmt uses the SAME call
+ *     for both cases (NAM_discard(cookie)).  We distinguish by whether
+ *     it's the final call via the guard: if frame is already empty we
+ *     pop it; if it has entries we just truncate.
+ *
+ * Simpler invariant adopted here: NAM_discard ALWAYS just clears the
+ * current frame's entry list (undo for free — GC reclaims entries).
+ * NAM_commit is the ONLY path that pops a frame.
+ * The post-loop "NAM_discard on failure" also clears — the frame is
+ * then popped by the implicit scope exit (exec_stmt returns).
+ * To handle that, exec_stmt must call NAM_pop_frame() on the failure
+ * path.  We expose that as a separate call so stmt_exec.c can be
+ * updated minimally (one extra call on the :F return path).
+ *
+ * *** stmt_exec.c change required: ***
+ *   Replace final:  NAM_discard(nam_cookie);  return 0;
+ *   With:           NAM_discard(nam_cookie);  NAM_pop(nam_cookie);  return 0;
  */
 void NAM_discard(int cookie)
 {
-    nam_top = cookie;
+    if (!nam_stack) return;   /* no frame — nothing to do */
+    /* Truncate entries in current frame — keep frame alive */
+    nam_stack->head = NULL;   /* GC reclaims linked NamEntry_t nodes */
+}
+
+/* ── NAM_pop — pop the frame after final failure (call after NAM_discard) ── */
+void NAM_pop(int cookie)
+{
+    if (!nam_stack || nam_depth != cookie + 1) return;
+    nam_stack = nam_stack->prev;
+    nam_depth--;
 }

@@ -279,8 +279,10 @@ int     NAM_save(void);
  *   else  → NV_SET_fn or interior-pointer write                             */
 void    NAM_commit(int cookie);
 
-/* NAM_discard: on pattern failure — restore top to cookie, nothing assigned.*/
+/* NAM_discard: mid-scan reset — clear current frame entries, keep frame.    */
 void    NAM_discard(int cookie);
+/* NAM_pop: pop frame after final failure (call once after NAM_discard).     */
+void    NAM_pop(int cookie);
 
 /* ============================================================
  * Counter stack (nPush/nInc/nDec/nTop/nPop)
