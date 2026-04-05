@@ -1409,6 +1409,38 @@ static NODE *expr_prec_continue(NODE *left, int min_prec) {
      * We use a flat n-ary CAT node: accumulate all juxtaposed elements into one. */
 #define CATFN_PREC 10
     for (;;) {
+        /* SPITBOL P2C: postfix [] subscript on any expression — e.g. f(g(x)[i]).
+         * '[' hits FRWDTB action NBTYP (STOPSH) so BRTYPE=1 after FORWRD.
+         * Check TEXTSP directly: if next non-consumed char is '[', treat as subscript. */
+        if (TEXTSP.len > 0 && *TEXTSP.ptr == '[') {
+            /* consume '[' */
+            TEXTSP.ptr++; TEXTSP.len--;
+            /* build IDX node: left is base, indices are children[1..] */
+            NODE *idx = node_new(ARYTYP, "IDX", -1);
+            node_add(idx, left);
+            FORWRD();  /* skip space to first subscript (or to ']') */
+            while (!g_error) {
+                if (BRTYPE == RBTYP) break;   /* ']' or '>' — empty or last index */
+                if (BRTYPE == CMATYP) {
+                    node_add(idx, node_new(0, "NULL", -1));
+                    FORWRD();
+                    continue;
+                }
+                NODE *sub = EXPR();
+                node_add(idx, sub);
+                FORWRD();  /* get delimiter: CMATYP or RBTYP */
+                if (BRTYPE == RBTYP) break;
+                if (BRTYPE == CMATYP) {
+                    FORWRD();  /* skip space after comma */
+                    continue;
+                }
+                sil_error("ELEMNT: expected ] or , in [] subscript, got BRTYPE=%d", BRTYPE);
+                break;
+            }
+            left = idx;
+            continue;
+        }
+
         spec_t saved = TEXTSP;
         int op = BINOP();
         if (!op) { TEXTSP = saved; break; }     /* no operator → done */
