@@ -1301,8 +1301,12 @@ static NODE *ELEMNT(void) {
                     FORWRD();  /* skip space after comma to position at next arg */
                     continue;
                 }
-                sil_error("ELEMNT: expected ) or , in arg list, got BRTYPE=%d", BRTYPE);
-                break;
+                /* SIL v311 ELEMN2 fall-through: any other BRTYPE (e.g. EQTYP from
+                 * 'sno = Pop()' inside arg list) — consume the separator and loop.
+                 * FORWRD stopped short (STOPSH) or consumed; call FORWRD again to
+                 * advance past the separator to the next token. */
+                if (BRTYPE == EOSTYP || BRTYPE == CLNTYP) break; /* true end-of-stmt */
+                FORWRD();  /* skip unexpected separator (e.g. '=') and continue */
             }
         } else if (final == ARYTYP) {  /* ELEARY: array subscript */
             /* Mirror ELEFNC: FORWRD past '<', handle space-after-comma */
