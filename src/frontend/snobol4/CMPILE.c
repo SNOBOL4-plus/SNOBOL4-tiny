@@ -1106,9 +1106,21 @@ static int BINOP(void) {
     spec_t op_tok;
     stream_ret_t or_ = stream(&op_tok, &TEXTSP, &BIOPTB);
 
-    if (or_ == ST_ERROR || or_ == ST_EOS) {
+    if (or_ == ST_ERROR) {
         /* BINCON: no explicit operator → juxtaposition (concatenation) */
         /* Do NOT restore TEXTSP — the blank was real, stay past it */
+        return CATFN;
+    }
+    if (or_ == ST_EOS) {
+        /* BIOPTB (or chained TBLKTB) ran out of input after recognising the operator.
+         * e.g. "CAOP = ('LCL'|'SET') ANY('ABC') |\n+  'AIF'..."
+         * '|' is consumed (ACT_GOTO→TBLKTB), STYPE=ORFN, then TBLKTB hits EOS
+         * (no trailing blank before EOL).  The operator IS valid — STYPE is set.
+         * TEXTSP.len is now 0; the next token comes from the continuation line.
+         * Return the operator; expr_prec_continue will call FORWRD() before fetching
+         * the RHS, which will load the continuation via forrun(). */
+        if (STYPE != 0) return STYPE;   /* operator recognised despite EOS */
+        /* STYPE==0: BIOPTB hit EOS before recognising anything → CATFN */
         return CATFN;
     }
 
@@ -1239,6 +1251,11 @@ static CMPND_t *ELEMNT(void) {
         spec_t saved = TEXTSP;
         spec_t tok;
         stream_ret_t r = stream(&tok, &TEXTSP, &UNOPTB);
+        if (r == ST_EOS) {
+            /* TEXTSP exhausted — no unary op here. Restore and stop chain. */
+            TEXTSP = saved;
+            break;
+        }
         if (r == ST_ERROR) {
             /* UNOPTB→NBLKTB returned ERROR.  Two sub-cases:
              *
@@ -2071,7 +2088,7 @@ retry:
                     g_io_lineno = save_lineno; g_io_eof = save_eof;
                     g_io_depth = save_depth;
                 } else {
-                    fprintf(stderr, "sno4parse: cannot open include '%s': %s\n", incpath, strerror(errno));
+                    sil_error("sno4parse: include not found: %s", incpath);
                     free(incpath);
                 }
             }
@@ -2222,7 +2239,7 @@ static void cmpile_file_internal(FILE *f, const char *base_path, compile_state_t
                         g_io_file=sv_f; g_io_path=sv_p;
                         g_io_lineno=sv_ln; g_io_eof=sv_eof; g_io_depth=sv_dep;
                     } else {
-                        fprintf(stderr,"sno4parse: cannot open include '%s': %s\n",incpath,strerror(errno));
+                        sil_error("sno4parse: include not found: %s", incpath);
                         free(incpath);
                     }
                 }
