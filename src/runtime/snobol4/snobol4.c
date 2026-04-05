@@ -7,6 +7,7 @@
 
 #include "snobol4.h"
 #include "sil_macros.h"   /* SIL macro translations — RT + SM axes */
+#include "utf8_utils.h"   /* P3C: UTF-8 character-aware helpers */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -219,11 +220,11 @@ static DESCR_t _REAL_(DESCR_t *a, int n) {
 }
 static DESCR_t _SIZE_(DESCR_t *a, int n) {
     if (n < 1) return INTVAL(0);
-    /* Binary string (e.g. &ALPHABET-derived): use slen field directly. */
+    /* Binary string (e.g. &ALPHABET-derived): byte count is correct (no UTF-8 here). */
     if (IS_STR(a[0]) && a[0].slen) return INTVAL((int64_t)a[0].slen);
-    /* Normal case: convert to string, measure with strlen. */
+    /* P3C: return Unicode code-point count, not byte count. */
     const char *s = VARVAL_fn(a[0]);
-    return INTVAL((int64_t)(s ? strlen(s) : 0));
+    return INTVAL((int64_t)(s ? utf8_strlen(s) : 0));
 }
 
 /* Sprint 23: IDENT, DIFFER, HOST, ENDFILE, APPLY + string builtins as callable */
@@ -2205,7 +2206,8 @@ const char *FUNC_ENTRY_fn(const char *fname) {
 
 DESCR_t SIZE_fn(DESCR_t s) {
     const char *STRVAL_fn = VARVAL_fn(s);
-    return INTVAL((int64_t)strlen(STRVAL_fn));
+    /* P3C: return Unicode code-point count, not byte count */
+    return INTVAL((int64_t)utf8_strlen(STRVAL_fn));
 }
 
 DESCR_t DUPL_fn(DESCR_t s, DESCR_t n) {
@@ -2254,16 +2256,20 @@ DESCR_t REPLACE_fn(DESCR_t s, DESCR_t from, DESCR_t to) {
 
 DESCR_t SUBSTR_fn(DESCR_t s, DESCR_t i, DESCR_t n) {
     const char *STRVAL_fn = VARVAL_fn(s);
-    int64_t start   = to_int(i);  /* 1-based */
-    int64_t len_    = to_int(n);
-    int64_t slen    = (int64_t)strlen(STRVAL_fn);
+    int64_t start   = to_int(i);  /* 1-based character position */
+    int64_t len_    = to_int(n);  /* character count */
+    /* P3C: work in code points, convert to byte offsets */
+    size_t blen     = strlen(STRVAL_fn);
+    size_t ncpts    = utf8_strlen(STRVAL_fn);
     if (start < 1) start = 1;
-    if (start > slen + 1) return STRVAL(GC_strdup(""));
+    if ((size_t)start > ncpts + 1) return STRVAL(GC_strdup(""));
     if (len_ < 0) len_ = 0;
-    if (start - 1 + len_ > slen) len_ = slen - start + 1;
-    char *r = GC_malloc((size_t)len_ + 1);
-    memcpy(r, STRVAL_fn + start - 1, (size_t)len_);
-    r[len_] = '\0';
+    if ((size_t)(start - 1 + len_) > ncpts) len_ = (int64_t)(ncpts - (size_t)start + 1);
+    size_t boff  = utf8_char_offset(STRVAL_fn, blen, (size_t)start);
+    size_t bspan = utf8_char_bytes(STRVAL_fn, blen, boff, (size_t)len_);
+    char *r = GC_malloc(bspan + 1);
+    memcpy(r, STRVAL_fn + boff, bspan);
+    r[bspan] = '\0';
     return STRVAL(r);
 }
 
