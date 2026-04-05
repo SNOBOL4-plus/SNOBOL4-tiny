@@ -1143,11 +1143,51 @@ static NODE *ELEMNT(void) {
     /* SIL: RCALL ELEMND,UNOP,,RTN2  — builds unary operator tree */
     NODE *unary_chain = NULL;
     NODE *unary_tail  = NULL;
+    int   unary_nospace = 0; /* last op had no trailing space (operand follows directly) */
     for (;;) {
         spec_t saved = TEXTSP;
         spec_t tok;
         stream_ret_t r = stream(&tok, &TEXTSP, &UNOPTB);
-        if (r == ST_ERROR) { TEXTSP = saved; break; }
+        if (r == ST_ERROR) {
+            /* UNOPTB→NBLKTB returned ERROR.  Two sub-cases:
+             *
+             * (a) UNOPTB itself rejected the char (not a unary op): tok.len==0,
+             *     TEXTSP==saved — truly not a unary op, stop the chain.
+             *
+             * (b) UNOPTB recognised the op char (ACT_GOTO→NBLKTB), then NBLKTB
+             *     rejected the next char because there is no space between the op
+             *     and its operand.  In this case UNOPTB.chrs[*TEXTSP.ptr] < 15
+             *     (not the error-value) and the next char is a token starter.
+             *     SPITBOL allows *VAR, $X, .N with no intervening space.
+             *     Manually consume the op char, derive STYPE from the action table,
+             *     and continue. */
+            if (TEXTSP.len >= 2) {
+                unsigned char opc = (unsigned char)TEXTSP.ptr[0];
+                unsigned char nxt = (unsigned char)TEXTSP.ptr[1];
+                unsigned aidx = UNOPTB.chrs[opc];
+                /* aidx==15 means ERROR in UNOPTB itself — not a unary op char */
+                /* nxt must be a token-starting char (letter, digit, quote, paren) */
+                int nxt_is_token = (nxt >= 'A' && nxt <= 'Z') ||
+                                   (nxt >= 'a' && nxt <= 'z') ||
+                                   (nxt >= '0' && nxt <= '9') ||
+                                   nxt == '\'' || nxt == '"'  || nxt == '(';
+                if (aidx != 15 && aidx != 0 && nxt_is_token) {
+                    /* Consume the op char manually */
+                    acts_t *ap = &UNOPTB.actions[aidx - 1];
+                    STYPE = ap->put;   /* e.g. STRFN for '*' */
+                    TEXTSP.ptr++;
+                    TEXTSP.len--;
+                    unary_nospace = 1;
+                    /* fall through to build the unary node */
+                } else {
+                    TEXTSP = saved; break;
+                }
+            } else {
+                TEXTSP = saved; break;
+            }
+        } else {
+            unary_nospace = 0;
+        }
         int uop = STYPE;
         static const char *uop_names[] = {
             "?","UOP_PLS","UOP_MNS","UOP_DOT","UOP_IND","UOP_STR",
@@ -1162,9 +1202,10 @@ static NODE *ELEMNT(void) {
     }
 
     /* After unary prefix operators, skip any whitespace before the operand.
-     * UNOPTB→NBLKTB leaves TEXTSP pointing AT the space (ACT_STOPSH).
-     * FORWRD skips transparent chars and stops short before the token. */
-    if (unary_chain) FORWRD();
+     * When a space separated op from operand (unary_nospace==0), UNOPTB→NBLKTB
+     * left TEXTSP pointing AT the space; FORWRD skips to the token.
+     * When no space (unary_nospace==1), TEXTSP already points at the operand. */
+    if (unary_chain && !unary_nospace) FORWRD();
 
     /* --- STREAM XSP,TEXTSP,ELEMTB — classify element --- */
     stream_ret_t r = stream(&XSP, &TEXTSP, &ELEMTB);
@@ -1561,18 +1602,22 @@ CMPGO: {
 
     /* CMPSGO / CMPFGO / CMPUGO */
     if (gotype == UGOTYP || gotype == UTOTYP) {
-        /* Unconditional: :( label ) */
+        /* Unconditional: :(label) or :<label>
+         * For UTOTYP, GOTOTB consumed '<'; TEXTSP may have leading space before label.
+         * For UGOTYP, GOTOTB consumed '('; TEXTSP is positioned at label. */
+        if (gotype == UTOTYP) FORWRD();  /* skip whitespace after '<' */
         NODE *lbl = EXPR();
         s->go_u = lbl ? strdup(lbl->text ? lbl->text : "") : NULL;
-        FORWRD();   /* consume closing ) → BRTYPE=RPTYP */
+        FORWRD();   /* consume closing ) or > → BRTYPE=RPTYP or RBTYP */
         return s;
     }
 
     if (gotype == SGOTYP || gotype == STOTYP) {
-        /* Success: :S( label ) */
+        /* Success: :S(label) or :S<label> */
+        if (gotype == STOTYP) FORWRD();  /* skip whitespace after '<' */
         NODE *lbl = EXPR();
         s->go_s = lbl ? strdup(lbl->text ? lbl->text : "") : NULL;
-        FORWRD();   /* consume closing ) → TEXTSP now at F, :F, or EOS */
+        FORWRD();   /* consume closing ) or > → TEXTSP now at F, :F, or EOS */
         /* SNOBOL4 allows :S(x)F(y) or :S(x):F(y) — skip optional ':' */
         if (BRTYPE != EOSTYP && BRTYPE != 0 && TEXTSP.len > 0) {
             spec_t saved2 = TEXTSP;
@@ -1581,6 +1626,7 @@ CMPGO: {
             }
             stream_ret_t gr = stream(&XSP, &TEXTSP, &GOTOTB);
             if (gr != ST_ERROR && (STYPE == FGOTYP || STYPE == FTOTYP)) {
+                if (STYPE == FTOTYP) FORWRD();  /* skip whitespace after '<' */
                 NODE *fl = EXPR();
                 s->go_f = fl ? strdup(fl->text ? fl->text : "") : NULL;
                 FORWRD();
@@ -1592,10 +1638,11 @@ CMPGO: {
     }
 
     if (gotype == FGOTYP || gotype == FTOTYP) {
-        /* Failure: :F( label ) */
+        /* Failure: :F(label) or :F<label> */
+        if (gotype == FTOTYP) FORWRD();  /* skip whitespace after '<' */
         NODE *lbl = EXPR();
         s->go_f = lbl ? strdup(lbl->text ? lbl->text : "") : NULL;
-        FORWRD();   /* consume closing ) */
+        FORWRD();   /* consume closing ) or > */
         if (BRTYPE != EOSTYP && BRTYPE != 0 && TEXTSP.len > 0) {
             spec_t saved2 = TEXTSP;
             if (TEXTSP.ptr[0] == ':') {
@@ -1603,6 +1650,7 @@ CMPGO: {
             }
             stream_ret_t gr = stream(&XSP, &TEXTSP, &GOTOTB);
             if (gr != ST_ERROR && (STYPE == SGOTYP || STYPE == STOTYP)) {
+                if (STYPE == STOTYP) FORWRD();  /* skip whitespace after '<' */
                 NODE *sl = EXPR();
                 s->go_s = sl ? strdup(sl->text ? sl->text : "") : NULL;
                 FORWRD();
