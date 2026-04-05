@@ -373,12 +373,14 @@ syntab_t IBLKTB = { "IBLKTB", {
  * sub-scanner.  SIL then does "SELBRA STYPE,(ELEILT,ELEVBL,ELENST,ELEFNC,ELEFLT,ELEARY)"
  * to branch on the resulting STYPE. ---- */
 static acts_t ELEMTB_actions[] = {
-    {ILITYP, ACT_GOTO, NULL},
-    {VARTYP, ACT_GOTO, NULL},
-    {QLITYP, ACT_GOTO, NULL},
-    {QLITYP, ACT_GOTO, NULL},
-    {NSTTYP, ACT_STOP, NULL},
-    {0, ACT_ERROR, NULL},
+    {ILITYP, ACT_GOTO, NULL},   /* 0: digit    → INTGTB */
+    {VARTYP, ACT_GOTO, NULL},   /* 1: letter   → VARTB  */
+    {QLITYP, ACT_GOTO, NULL},   /* 2: '        → SQLITB */
+    {QLITYP, ACT_GOTO, NULL},   /* 3: "        → DQLITB */
+    {NSTTYP, ACT_STOP, NULL},   /* 4: (        → stop   */
+    {0,      ACT_ERROR, NULL},  /* 5: illegal  */
+    {0,      ACT_ERROR, NULL},  /* 6: illegal (gap — action 6 unused in chrs[]) */
+    {VARTYP, ACT_GOTO, NULL},   /* 7: 0x80-0xFF → UTF8TB (P3A) */
 };
 /* Forward declarations for goto targets wired in init_tables() */
 syntab_t VARTB, INTGTB, SQLITB, DQLITB;
@@ -392,14 +394,15 @@ syntab_t ELEMTB = { "ELEMTB", {
      2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  6,  6,  6,  6,  6,
      6,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,
      2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  6,  6,  6,  6,  6,
-     2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,
-     2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,
-     2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,
-     2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,
-     2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,
-     2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,
-     2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,
-     2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,
+    /* 0x80-0xFF: P3A UTF-8 lead/continuation bytes → action 7 → UTF8TB */
+     7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,
+     7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,
+     7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,
+     7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,
+     7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,
+     7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,
+     7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,
+     7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,
 }, ELEMTB_actions };
 
 /* ---- VARTB: variable / function-name scanner (v311.sil:ELEVBL branch)
@@ -846,6 +849,40 @@ syntab_t GOTOTB = { "GOTOTB", {
      5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,
 }, GOTOTB_actions };
 
+/* ---- UTF8TB: P3A — UTF-8 multi-byte sequence absorber (M-SN4PARSE-P3A)
+ *
+ * Purpose: when a UTF-8 lead byte (0xC0-0xFF) starts a token, UTF8TB
+ * absorbs all following continuation bytes (0x80-0xBF) via ACT_CONTIN,
+ * then stops on the next ASCII byte.  This prevents continuation bytes
+ * from being dispatched as individual tokens by ELEMTB.
+ *
+ * chrs[] layout:
+ *   0x00-0x7F: 1 → ACT_STOP  (ASCII byte ends the UTF-8 sequence)
+ *   0x80-0xBF: 0 → ACT_CONTIN (continuation byte — absorb)
+ *   0xC0-0xFF: 0 → ACT_CONTIN (another lead byte — absorb into same token)
+ *
+ * The resulting XSP token is the raw UTF-8 byte sequence; STYPE is set to
+ * VARTYP by ELEMTB (action index 7 → UTF8TB) so it is treated as an
+ * identifier token.  Full Unicode identifier validation is P3B.
+ *
+ * Table authority: new table (not in CSNOBOL4 syn.c) — we own chrs[]. */
+static acts_t UTF8TB_actions[] = {
+    {0,      ACT_CONTIN, NULL},   /* 0: continuation / lead — absorb */
+    {VARTYP, ACT_STOP,   NULL},   /* 1: ASCII byte — stop, emit VARTYP token */
+};
+syntab_t UTF8TB = { "UTF8TB", {
+    /* 0x00-0x7F: stop (ASCII ends sequence) → action 1 */
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+    /* 0x80-0xFF: continuation/lead — absorb → action 0 */
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+}, UTF8TB_actions };
+
 /* Wire up forward-declared goto targets in action tables.
  * These cannot be static initialisers because C does not allow forward references
  * to syntab_t objects in struct literals.  Called once from main() before parsing. */
@@ -854,6 +891,8 @@ void init_tables(void) {
     ELEMTB_actions[1].go  = &VARTB;
     ELEMTB_actions[2].go  = &SQLITB;
     ELEMTB_actions[3].go  = &DQLITB;
+    /* P3A: wire UTF8TB for ELEMTB action index 7 (0x80-0xFF lead bytes) */
+    ELEMTB_actions[7].go  = &UTF8TB;
     INTGTB_actions[1].go  = &FLITB;
     INTGTB_actions[2].go  = &EXPTB;
     FLITB_actions[1].go   = &EXPTB;
@@ -966,14 +1005,12 @@ static int io_read_raw(FILE *f, char *buf, int bufsz) {
     if (!fgets(buf, bufsz, f)) return -1;  /* true EOF/error → -1 */
     int len = (int)strlen(buf);
     while (len > 0 && (buf[len-1]=='\n' || buf[len-1]=='\r')) buf[--len] = '\0';
-    /* Strip non-ASCII bytes (>0x7F) — SNOBOL4 is a 7-bit punch-card system.
-     * UTF-8 multi-byte sequences (e.g. em-dash U+2014 = E2 80 94) in comments
-     * or string literals would otherwise reach ELEMNT and trigger sil_error. */
-    int out = 0;
-    for (int i = 0; i < len; i++)
-        if ((unsigned char)buf[i] <= 0x7F) buf[out++] = buf[i];
-    buf[out] = '\0';
-    return out;  /* 0 = blank line (valid), -1 = EOF */
+    /* Non-ASCII bytes (0x80-0xFF) are preserved:
+     * - *-comment lines never reach ELEMTB (skipped at NEWCRD dispatch)
+     * - SQLITB/DQLITB have ACT_CONTIN for all 0x80-0xFF (string literals pass through)
+     * - ELEMTB ACT_ERROR for high bytes is correct for non-ASCII in identifier context
+     * P3A: UTF8TB dispatch will handle multi-byte sequences explicitly. */
+    return len;  /* 0 = blank line (valid), -1 = EOF */
 }
 
 /* forrun — implements SIL FORRUN: read next physical card and dispatch NEWCRD.
