@@ -1575,6 +1575,10 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    /* Initialise all builtins (GT, LT, SIZE, DATATYPE, etc.) registered in snobol4.c */
+    extern void SNO_INIT_fn(void);
+    SNO_INIT_fn();
+
     stmt_init();
     g_prog = prog;
 
