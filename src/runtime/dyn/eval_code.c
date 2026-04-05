@@ -52,6 +52,7 @@
 
 /* ── runtime ─────────────────────────────────────────────────────────── */
 #include "snobol4.h"
+#include "sil_macros.h"   /* SIL macro translations — RT + SM axes */
 
 /* ── frontend (parse_expr_from_str, sno_parse) ──────────────────────── */
 #include "../../frontend/snobol4/snobol4.h"

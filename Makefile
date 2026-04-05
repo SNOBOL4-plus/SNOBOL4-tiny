@@ -1,0 +1,51 @@
+# Makefile — scrip-interp + scrip-cc
+# Usage: make | make scrip-interp | make scrip-cc | make test | make clean
+# Prerequisites: apt-get install -y libgc-dev flex
+# Authors: Lon Jones Cherryholmes · Claude Sonnet 4.6
+
+ROOT    := $(shell pwd)
+SRC     := $(ROOT)/src
+RT      := $(SRC)/runtime
+BOXES   := $(RT)/boxes
+CORPUS  ?= /home/claude/corpus
+OBJ     := /tmp/si_objs
+CC      := gcc
+WARN    := -Wno-unused-function -Wno-unused-variable -Wno-incompatible-pointer-types
+CBASE   := -O0 -g $(WARN) -I$(SRC) -I$(RT)/snobol4 -I$(RT) -I$(BOXES)/shared
+CRT     := $(CBASE) -I$(RT)/dyn -DDYN_ENGINE_LINKED
+LIBS    := -lgc -lm
+
+.PHONY: all scrip-interp scrip-cc test clean
+
+all: scrip-interp scrip-cc
+
+scrip-interp:
+	@mkdir -p $(OBJ)
+	@rm -f $(OBJ)/*.o
+	$(CC) $(CBASE) -c $(SRC)/frontend/snobol4/snobol4.lex.c -o $(OBJ)/snobol4.lex.o
+	$(CC) $(CBASE) -c $(SRC)/frontend/snobol4/snobol4.tab.c -o $(OBJ)/snobol4.tab.o
+	$(CC) $(CRT)   -c $(RT)/snobol4/snobol4.c               -o $(OBJ)/snobol4.o
+	$(CC) $(CRT)   -c $(RT)/snobol4/snobol4_pattern.c        -o $(OBJ)/snobol4_pattern.o
+	$(CC) $(CRT)   -c $(RT)/snobol4/invoke.c                 -o $(OBJ)/invoke.o
+	$(CC) $(CRT)   -c $(RT)/snobol4/argval.c                 -o $(OBJ)/argval.o
+	$(CC) $(CRT)   -c $(RT)/dyn/stmt_exec.c                  -o $(OBJ)/stmt_exec.o
+	$(CC) $(CRT)   -c $(RT)/dyn/eval_code.c                  -o $(OBJ)/eval_code.o
+	$(CC) $(CRT)   -c $(RT)/asm/x86_stubs_interp.c           -o $(OBJ)/x86_stubs_interp.o
+	$(CC) $(CRT)   -c $(RT)/engine/engine.c                  -o $(OBJ)/engine.o
+	@for f in $$(find $(RT)/boxes -name 'bb_*.c' | grep -v 'bb_dvar\|bb_atp\|bb_capture'); do \
+	    b=$$(basename $$f .c); \
+	    $(CC) $(CBASE) -c $$f -o $(OBJ)/$$b.o; \
+	done
+	$(CC) $(CRT)   -c $(SRC)/driver/scrip-interp.c           -o $(OBJ)/scrip_interp_driver.o
+	$(CC) $(OBJ)/*.o $(LIBS) -o scrip-interp
+	@echo "Built: scrip-interp"
+
+scrip-cc:
+	$(MAKE) -C $(SRC)
+	@echo "Built: scrip-cc"
+
+test: scrip-interp
+	CORPUS=$(CORPUS) bash test/run_interp_broad.sh
+
+clean:
+	rm -rf $(OBJ) scrip-interp

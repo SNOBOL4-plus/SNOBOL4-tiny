@@ -6,6 +6,7 @@
  */
 
 #include "snobol4.h"
+#include "sil_macros.h"   /* SIL macro translations — RT + SM axes */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

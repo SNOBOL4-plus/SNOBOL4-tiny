@@ -29,6 +29,7 @@ extern Program *sno_parse(FILE *f, const char *filename);
 
 /* ── runtime ──────────────────────────────────────────────────────────── */
 #include "../runtime/snobol4/snobol4.h"
+#include "../runtime/snobol4/sil_macros.h"   /* SIL macro translations — both RT and SM axes */
 #include "../runtime/snobol4/runtime_shim.h"
 
 /* pat_at_cursor not exposed in snobol4.h — forward-declare here */
@@ -370,7 +371,15 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
                 } else if (s->has_eq && s->subject && s->subject->kind == E_KEYWORD && s->subject->sval) {
                     DESCR_t repl_val = s->replacement ? interp_eval(s->replacement) : NULVCL;
                     if (IS_FAIL_fn(repl_val)) succeeded = 0;
-                    else { NV_SET_fn(s->subject->sval, repl_val); succeeded = 1; }
+                    else {
+                        /* SIL ASGNIC: keyword assignment routes through INTVAL coercion.
+                         * Keyword globals are always INTEGER — strings like "1" must coerce.
+                         * Note: INTVAL_fn is shadowed by runtime_shim.h macro; use to_int(). */
+                        DESCR_t _kw_coerced;
+                        _kw_coerced = INTVAL(to_int(repl_val));
+                        NV_SET_fn(s->subject->sval, _kw_coerced);
+                        succeeded = 1;
+                    }
                 } else if (s->has_eq && s->subject && s->subject->kind == E_IDX &&
                            s->subject->nchildren >= 2) {
                     DESCR_t base = interp_eval(s->subject->children[0]);
@@ -735,13 +744,39 @@ static DESCR_t interp_eval(EXPR_t *e)
          *   $.var      => NV_GET_fn("var")
          *   $.var<idx> => subscript( NV_GET_fn("var"), idx ) */
         /* $.var<idx> parses as E_INDIRECT(E_NAME(E_CAPT_COND_ASGN(E_VAR,idx)))
-         * — the E_NAME wrapper is from the dot-prefix parse. Unwrap it. */
-        if (child->kind == E_NAME && child->nchildren == 1)
+         * — the E_NAME wrapper is from the dot-prefix parse. Unwrap it.
+         * $X (no dot) parses as E_INDIRECT(E_VAR("X")) — no E_NAME wrapper.
+         * Track whether we unwrapped an E_NAME to distinguish:
+         *   $.var = literal name lookup (return var's value directly)
+         *   $X    = runtime indirect (evaluate X, use its value as lookup name) */
+        int had_name_wrap = 0;
+        if (child->kind == E_NAME && child->nchildren == 1) {
             child = child->children[0];
+            had_name_wrap = 1;
+        }
 
-        /* $.var plain lookup: E_NAME unwrap gives E_VAR directly */
-        if (child->kind == E_VAR && child->sval)
-            return NV_GET_fn(child->sval);
+        /* E_VAR child: $.var (had_name_wrap=1) vs $X (had_name_wrap=0) */
+        if (child->kind == E_VAR && child->sval) {
+            if (had_name_wrap)
+                return NV_GET_fn(child->sval);          /* $.var — literal name */
+            /* $X — evaluate X's runtime value, use it as the variable name.
+             * DT_N discrimination: NAMEPTR has slen=1 (.ptr = live DESCR_t*);
+             *                      NAMEVAL has slen=0 (.s   = variable name string).
+             * Do NOT use ptr!=NULL — for NAMEVAL .s and .ptr alias the same union. */
+            DESCR_t _xv = NV_GET_fn(child->sval);
+            if (_xv.v == DT_N && _xv.slen == 1 && _xv.ptr)
+                return *(DESCR_t*)_xv.ptr;              /* NAMEPTR — interior pointer */
+            if (_xv.v == DT_N && _xv.slen == 0 && _xv.s)
+                return NV_GET_fn(_xv.s);                /* NAMEVAL — look up by name */
+            const char *_xnm = VARVAL_fn(_xv);
+            if (!_xnm || !*_xnm) return NULVCL;
+            DESCR_t _xnamed = NV_GET_fn(_xnm);
+            if (_xnamed.v == DT_N && _xnamed.slen == 1 && _xnamed.ptr)
+                return *(DESCR_t*)_xnamed.ptr;
+            if (_xnamed.v == DT_N && _xnamed.slen == 0 && _xnamed.s)
+                return NV_GET_fn(_xnamed.s);
+            return _xnamed;
+        }
 
         /* E_IDX after E_NAME unwrap: $.var<idx> subscript form
          * children[0]=E_VAR "name", children[1]=index expr */
@@ -780,24 +815,44 @@ static DESCR_t interp_eval(EXPR_t *e)
                 if (IS_FAIL_fn(i1) || IS_FAIL_fn(i2)) return FAILDESCR;
                 return subscript_get2(base, i1, i2);
             }
-            /* $.var case: dot child is plain E_VAR */
-            if (inner->kind == E_VAR && inner->sval)
-                return NV_GET_fn(inner->sval);
+            /* $.var case: dot child is plain E_VAR — but only if this is a
+             * literal $.var (direct name lookup). For $X (runtime indirect),
+             * evaluate X's value and use THAT as the variable name.
+             * Distinction: $.var uses the identifier literally; $X uses X's value.
+             * Since parser wraps both as E_CAPT_COND_ASGN(E_VAR), we must
+             * evaluate the inner var and use its string value as the lookup key. */
+            if (inner->kind == E_VAR && inner->sval) {
+                DESCR_t xval = NV_GET_fn(inner->sval);
+                /* DT_N: NAMEPTR (slen=1) vs NAMEVAL (slen=0) — .ptr/.s alias same union */
+                if (xval.v == DT_N && xval.slen == 1 && xval.ptr) return *(DESCR_t*)xval.ptr;
+                if (xval.v == DT_N && xval.slen == 0 && xval.s)   return NV_GET_fn(xval.s);
+                const char *nm2 = VARVAL_fn(xval);
+                if (!nm2 || !*nm2) return NULVCL;
+                DESCR_t named = NV_GET_fn(nm2);
+                if (named.v == DT_N && named.slen == 1 && named.ptr) return *(DESCR_t*)named.ptr;
+                if (named.v == DT_N && named.slen == 0 && named.s)   return NV_GET_fn(named.s);
+                return named;
+            }
             /* fallback: evaluate inner directly */
             DESCR_t nd = interp_eval(inner);
             const char *nm2 = VARVAL_fn(nd);
             if (!nm2 || !*nm2) return NULVCL;
-            return NV_GET_fn(nm2);
+            DESCR_t named2 = NV_GET_fn(nm2);
+            if (named2.v == DT_N && named2.slen == 1 && named2.ptr) return *(DESCR_t*)named2.ptr;
+            if (named2.v == DT_N && named2.slen == 0 && named2.s)   return NV_GET_fn(named2.s);
+            return named2;
         }
-        /* $expr — indirect through runtime string value */
+        /* $expr — indirect through runtime string/name value */
         DESCR_t nd = interp_eval(child);
-        /* If nd is DT_N (e.g. $Push where Push=.stk[1]), dereference the ptr */
-        if (nd.v == DT_N && nd.ptr) return *(DESCR_t*)nd.ptr;
+        /* DT_N: discriminate NAMEPTR (slen=1) from NAMEVAL (slen=0) */
+        if (nd.v == DT_N && nd.slen == 1 && nd.ptr) return *(DESCR_t*)nd.ptr;
+        if (nd.v == DT_N && nd.slen == 0 && nd.s)   return NV_GET_fn(nd.s);
         const char *nm = VARVAL_fn(nd);
         if (!nm || !*nm) return NULVCL;
         /* The named variable might also be a DT_N — dereference one more level */
         DESCR_t named = NV_GET_fn(nm);
-        if (named.v == DT_N && named.ptr) return *(DESCR_t*)named.ptr;
+        if (named.v == DT_N && named.slen == 1 && named.ptr) return *(DESCR_t*)named.ptr;
+        if (named.v == DT_N && named.slen == 0 && named.s)   return NV_GET_fn(named.s);
         return named;
     }
 

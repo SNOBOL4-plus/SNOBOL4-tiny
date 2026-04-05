@@ -1435,14 +1435,14 @@ static EXPR_t *node_to_expr(NODE *n) {
     return e;
 }
 
+/* eval_node lives in eval_code.c (separate TU) */
+extern DESCR_t eval_node(EXPR_t *e);
+
 static DESCR_t eval_via_sno4parse(const char *s) {
-    extern DESCR_t eval_node(void *e);
     init_tables();
     /* Set up TEXTSP and call EXPR() — mirrors SIL CONVEX path exactly */
-    extern spec_t TEXTSP;
-    extern spec_t XSP;
-    extern int BRTYPE, STYPE, g_error;
-    extern void FORWRD(void);
+    /* TEXTSP, XSP, BRTYPE, STYPE, g_error, FORWRD are in the same TU
+     * via #include "../../frontend/snobol4/sno4parse.c" — no extern needed */
     g_error = 0;
     TEXTSP.ptr = s; TEXTSP.len = (int)strlen(s);
     XSP.ptr = s; XSP.len = 0;
@@ -1459,7 +1459,6 @@ static DESCR_t eval_via_sno4parse(const char *s) {
 DESCR_t EVAL_fn(DESCR_t expr) {
     /* DT_E: frozen EXPR_t* — thaw by calling eval_node directly */
     if (expr.v == DT_E) {
-        extern DESCR_t eval_node(void *e);
         if (!expr.ptr) return FAILDESCR;
         DESCR_t _res = eval_node(expr.ptr);
         if (IS_FAIL_fn(_res)) return FAILDESCR;

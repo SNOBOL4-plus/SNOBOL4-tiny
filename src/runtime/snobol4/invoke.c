@@ -49,6 +49,7 @@
 #include <gc.h>
 
 #include "snobol4.h"
+#include "sil_macros.h"   /* SIL macro translations — RT + SM axes */
 
 /* ── INVOKE_fn ────────────────────────────────────────────────────────────
  *
