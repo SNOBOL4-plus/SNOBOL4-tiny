@@ -373,12 +373,11 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
                     DESCR_t repl_val = s->replacement ? interp_eval(s->replacement) : NULVCL;
                     if (IS_FAIL_fn(repl_val)) succeeded = 0;
                     else {
-                        /* SIL ASGNIC: keyword assignment routes through INTVAL coercion.
-                         * Keyword globals are always INTEGER — strings like "1" must coerce.
-                         * Note: INTVAL_fn is shadowed by runtime_shim.h macro; use to_int(). */
-                        DESCR_t _kw_coerced;
-                        _kw_coerced = INTVAL(to_int(repl_val));
-                        NV_SET_fn(s->subject->sval, _kw_coerced);
+                        /* SIL ASGNIC: delegate to ASGNIC_fn (snobol4.c export).
+                         * Coerces to INTEGER and writes keyword global.
+                         * Falls back to NV_SET_fn for unrecognised names (safety). */
+                        if (!ASGNIC_fn(s->subject->sval, repl_val))
+                            NV_SET_fn(s->subject->sval, repl_val);
                         succeeded = 1;
                     }
                 } else if (s->has_eq && s->subject && s->subject->kind == E_IDX &&
@@ -559,17 +558,16 @@ static DESCR_t interp_eval(EXPR_t *e)
     }
 
     case E_NAME: {
-        /* .X — dot operator: return NAME descriptor (DT_N).
-         * For E_VAR/E_FNC/E_KEYWORD children, return NAMEVAL (name-string form,
-         * GC-stable). NAMEPTR (interior pointer) is unsafe: Boehm conservative
-         * scanner may not recognise &e->val as keeping NV_t alive → GC collects
-         * the entry → pointer stale → VARVAL_fn returns "". NAMEVAL avoids this.
-         * NAMEPTR kept only for E_IDX (array/table cells whose parent is live). */
+        /* .X — dot operator: delegate to NAME_fn (snobol4.c export).
+         * NAME_fn returns NAMEVAL for keywords/IO vars (not addressable by ptr)
+         * and NAMEPTR (interior ptr) for ordinary NV cells.
+         * E_IDX (array/table subscript) still uses interp_eval_ref directly
+         * since the cell lifetime is guaranteed by the live array object. */
         if (e->nchildren < 1) return FAILDESCR;
         EXPR_t *child = e->children[0];
         if ((child->kind == E_VAR || child->kind == E_FNC || child->kind == E_KEYWORD)
                 && child->sval)
-            return NAMEVAL(child->sval);
+            return NAME_fn(child->sval);
         DESCR_t *cell = interp_eval_ref(child);
         if (cell) return NAMEPTR(cell);
         return FAILDESCR;

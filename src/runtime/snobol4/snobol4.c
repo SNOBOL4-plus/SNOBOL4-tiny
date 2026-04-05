@@ -1712,6 +1712,51 @@ void INDR_SET_fn(const char *name, DESCR_t val) {
     NV_SET_fn(target, val);
 }
 
+/* NAME_fn — SIL NAME proc: .X
+ * Returns a DT_N descriptor for varname.
+ * Keywords (STLIMIT, ANCHOR, TRIM, FULLSCAN, STCOUNT, STNO, ALPHABET)
+ * are not addressable via interior pointer; return NAMEVAL so the name
+ * string is preserved and NV_GET_fn/NV_SET_fn handle dispatch on use.
+ * Ordinary variables: find-or-create the NV cell and return NAMEPTR
+ * (interior pointer, slen=1) so write-through works without a name lookup. */
+DESCR_t NAME_fn(const char *varname) {
+    if (!varname || !*varname) return FAILDESCR;
+    /* Keywords: not addressable by pointer — use NAMEVAL */
+    if (strcasecmp(varname, "STLIMIT")  == 0 ||
+        strcasecmp(varname, "ANCHOR")   == 0 ||
+        strcasecmp(varname, "TRIM")     == 0 ||
+        strcasecmp(varname, "FULLSCAN") == 0 ||
+        strcasecmp(varname, "STCOUNT")  == 0 ||
+        strcasecmp(varname, "STNO")     == 0 ||
+        strcasecmp(varname, "ALPHABET") == 0 ||
+        strcasecmp(varname, "INPUT")    == 0 ||
+        strcasecmp(varname, "OUTPUT")   == 0)
+        return NAMEVAL(GC_strdup(varname));
+    /* Ordinary variable: find-or-create cell, return interior pointer */
+    DESCR_t *cell = NV_PTR_fn(varname);
+    if (cell) return NAMEPTR(cell);
+    /* Fallback (shouldn't happen if NV_PTR_fn always creates) */
+    return NAMEVAL(GC_strdup(varname));
+}
+
+/* ASGNIC_fn — SIL ASGNIC: keyword assignment with INTEGER coercion.
+ * Mirrors the inline path in scrip-interp.c stmt executor.
+ * Returns 1 if kw_name is a known writable keyword, 0 otherwise
+ * (caller should use NV_SET_fn for ordinary variables). */
+int ASGNIC_fn(const char *kw_name, DESCR_t val) {
+    if (!kw_name) return 0;
+    int64_t iv = (val.v == DT_I) ? val.i : (int64_t)to_real(val);
+    if (strcasecmp(kw_name, "STLIMIT")  == 0) { kw_stlimit  = iv; return 1; }
+    if (strcasecmp(kw_name, "ANCHOR")   == 0) { kw_anchor   = iv; return 1; }
+    if (strcasecmp(kw_name, "TRIM")     == 0) { kw_trim     = iv; return 1; }
+    if (strcasecmp(kw_name, "FULLSCAN") == 0) { kw_fullscan = iv; return 1; }
+    /* STCOUNT/STNO/ALPHABET are protected — assignment is a no-op, not an error */
+    if (strcasecmp(kw_name, "STCOUNT")  == 0) return 1;
+    if (strcasecmp(kw_name, "STNO")     == 0) return 1;
+    if (strcasecmp(kw_name, "ALPHABET") == 0) return 1;
+    return 0;  /* not a keyword */
+}
+
 /* DUMP implementation — used by _DUMP_ above */
 static void var_dump(void) {
     fprintf(stderr, "[DUMP start]\n");

@@ -249,6 +249,17 @@ void    NV_SYNC_fn(void);
 DESCR_t  INDR_GET_fn(const char *name);  /* $name */
 void    INDR_SET_fn(const char *name, DESCR_t val);
 
+/* SIL NAME proc: .X — return DT_N descriptor for variable/keyword name.
+ * Returns NAMEVAL (slen=0, GC-safe name string) for ordinary variables and
+ * keywords; NAMEPTR (slen=1, interior ptr) for addressable NV cells.
+ * Keywords are not addressable via interior pointer — returns NAMEVAL. */
+DESCR_t  NAME_fn(const char *varname);
+
+/* SIL ASGNIC: keyword assignment — coerce val to INTEGER then store.
+ * Returns 1 on success, 0 if varname is not a known keyword (caller
+ * should fall back to NV_SET_fn for ordinary variables). */
+int      ASGNIC_fn(const char *kw_name, DESCR_t val);
+
 /* ============================================================
  * Counter stack (nPush/nInc/nDec/nTop/nPop)
  * ============================================================ */
