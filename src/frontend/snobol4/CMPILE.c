@@ -1033,6 +1033,7 @@ static int    BRTYPE;    /* break type from FORWRD/FORBLK */
 
 /* Error reporting */
 static int  g_error;
+static int  g_in_replacement = 0;  /* P2D */
 static char g_errmsg[256];
 static void sil_error(const char *fmt, ...) {
     va_list ap; va_start(ap, fmt);
@@ -1224,7 +1225,10 @@ static int BINOP(void) {
     if (stype_after_blank == EOSTYP || stype_after_blank == CLNTYP ||
         stype_after_blank == EQTYP  || stype_after_blank == RPTYP  ||
         stype_after_blank == CMATYP || stype_after_blank == RBTYP) {
-        /* Field delimiter after blank → end of expression */
+        /* Field delimiter after blank → end of expression.
+         * P2D: for EQTYP, propagate into BRTYPE so expr_prec_continue
+         * can detect chained assignment (A = B = C+1). */
+        if (stype_after_blank == EQTYP) BRTYPE = EQTYP;
         TEXTSP = saved_text;
         return 0;
     }
@@ -1274,6 +1278,7 @@ static int BINOP(void) {
  * Higher number = binds tighter.  BIAMFN(&) is lowest; NAMFN/DOLFN are highest. */
 static int op_prec(int fn) {
     switch (fn) {
+    case BIEQFN: return 0;   /* P2D: '=' chained assignment — lowest of all, right-assoc */
     case BIAMFN: return 1;   /* '&' user-definable — lowest precedence of all */
     case BISNFN: return 1;   /* '?' SPITBOL scan-replace — same level as & (lowest) */
     case BIQSFN: return 1;   /* '?' via BIOPTB table (BIQSFN=BISNFN alias) */
@@ -1296,7 +1301,8 @@ static int op_prec(int fn) {
  * nodes at the right spine of the tree.  We replicate this with next_min=prec
  * instead of prec+1 in expr_prec_continue(). */
 static int op_right_assoc(int fn) {
-    return fn == EXPFN  /* '**' — 2**3**2 = 2**(3**2)=512, not (2**3)**2=64 */
+    return fn == BIEQFN /* P2D: '=' right-associative chained assignment */
+        || fn == EXPFN  /* '**' — 2**3**2 = 2**(3**2)=512, not (2**3)**2=64 */
         || fn == NAMFN  /* '.'  — A.B.C → A.(B.C) */
         || fn == DOLFN  /* '$'  — immediate naming, same right-spine rule */
         || fn == BIATFN;/* '@'  — cursor capture, right-associative */
@@ -1319,6 +1325,7 @@ static const char *fn_name(int fn) {
     case BISNFN: return "BISNFN(?)";
     case BINGFN: return "BINGFN(~)";
     case BIQSFN: return "BIQSFN(?)";
+    case BIEQFN: return "BIEQFN(=)";  /* P2D */
     default: { static char buf[16]; snprintf(buf,16,"FN(%d)",fn); return buf; }
     }
 }
@@ -1811,7 +1818,27 @@ static CMPND_t *expr_prec_continue(CMPND_t *left, int min_prec) {
         }
         spec_t saved = TEXTSP;
         int op = BINOP();
-        if (!op) { TEXTSP = saved; break; }     /* no operator → done */
+        if (!op) {
+            /* P2D: chained assignment A=B=C+1 — BINOP() returns 0 when
+             * FRWDTB consumed '=' and set BRTYPE=EQTYP.  Treat as BIEQFN
+             * (right-assoc, prec 0) only when prec 0 >= min_prec (always true
+             * since min_prec starts at 0 and chaining = calls prec=0). */
+            if (BRTYPE == EQTYP && 0 >= min_prec && g_in_replacement) {
+                /* BINOP() restored TEXTSP to before the blank, but FRWDTB
+                 * already consumed '='.  FORWRD() skips the blank and stops
+                 * on '=' (EQTYP again); second FORWRD() moves past '=' to
+                 * the RHS token.  Mirrors CSNOBOL4 two-FORWRD bridge. */
+                FORWRD();   /* skip blank → land on '=' */
+                FORWRD();   /* skip '='  → land on RHS token */
+                CMPND_t *rhs = expr_prec(0);  /* right-assoc: same prec */
+                CMPND_t *asgn = cmpnd_new(BIEQFN, "BIEQFN(=)", -1);
+                cmpnd_add(asgn, left);
+                cmpnd_add(asgn, rhs);
+                left = asgn;
+                continue;
+            }
+            TEXTSP = saved; break;
+        }     /* no operator → done */
 
         if (op == CATFN) {
             /* Juxtaposition — CATFN_PREC=10, left-associative (collect into flat CAT) */
@@ -2038,7 +2065,7 @@ CMPFRM:  /* SUBJECT = REPLACEMENT */
     FORWRD();  /* '=' already consumed; position to replacement value (no mandatory blank) */
     if (BRTYPE == EOSTYP || BRTYPE == 0) return s;   /* null replacement: X = */
     if (BRTYPE == CLNTYP) goto CMPGO;
-    s->replacement = EXPR();
+    g_in_replacement = 1; s->replacement = EXPR(); g_in_replacement = 0;
     if (g_error) return s;
     FORBLK();
     if (BRTYPE == CLNTYP) goto CMPGO;
@@ -2049,7 +2076,7 @@ CMPASP:  /* SUBJECT PATTERN = REPLACEMENT (= consumed; position to replacement) 
     FORWRD();  /* '=' consumed; use FORWRD not FORBLK — no mandatory blank required */
     if (BRTYPE == EOSTYP || BRTYPE == 0) return s;   /* null replacement: X PAT = */
     if (BRTYPE == CLNTYP) goto CMPGO;
-    s->replacement = EXPR();
+    g_in_replacement = 1; s->replacement = EXPR(); g_in_replacement = 0;
     if (g_error) return s;
     FORBLK();
     if (BRTYPE == CLNTYP) goto CMPGO;

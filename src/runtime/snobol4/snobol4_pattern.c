@@ -1512,6 +1512,7 @@ EXPR_t *cmpnd_to_expr(CMPND_t *n) {
         case NAMFN:  e->kind = E_CAPT_COND_ASGN;  break;
         case DOLFN:  e->kind = E_CAPT_IMMED_ASGN; break;
         case BIQSFN: e->kind = E_SCAN;    break;
+        case BIEQFN: e->kind = E_ASSIGN;  break;  /* P2D: chained assignment */
         /* Unary */
         case PLSFN:  e->kind = E_PLS;     break;
         case MNSFN:  e->kind = E_MNS;     break;
