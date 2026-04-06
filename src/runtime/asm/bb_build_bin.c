@@ -562,6 +562,48 @@ typedef struct {
 
 /* Forward declaration for mutual recursion in XCAT */
 extern spec_t bb_seq(void *zeta, int entry);
+extern spec_t bb_len(void *zeta, int entry);
+
+/*
+ * bb_len_emit_binary(int n) — M-DYN-B5
+ *
+ * LEN(n) needs a runtime-mutable `bspan` field (UTF-8 byte span of last
+ * match, written in α, read back in β for backtrack). Trampoline strategy
+ * identical to TAB/RTAB (M-DYN-B4):
+ *   calloc a heap len_t, set ->n = n (->bspan = 0 from calloc).
+ *   Emit 22-byte trampoline:
+ *     mov rdi, imm64(z)       ; bake zeta ptr
+ *     mov rax, imm64(bb_len)  ; bake fn ptr
+ *     jmp rax                 ; tail call — esi/entry unchanged
+ * bb_len C logic handles all UTF-8 accounting at match time via the heap ζ.
+ */
+static bb_box_fn bb_len_emit_binary(int n)
+{
+#define LEN_TRAM_SIZE 32
+    len_t *z = calloc(1, sizeof(len_t));
+    if (!z) return NULL;
+    z->n = n;
+
+    bb_buf_t tbuf = bb_alloc(LEN_TRAM_SIZE);
+    if (!tbuf) { free(z); return NULL; }
+    bb_emit_mode = EMIT_BINARY;
+    bb_emit_begin(tbuf, LEN_TRAM_SIZE);
+
+    /* mov rdi, imm64(z) */
+    bb_emit_byte(0x48); bb_emit_byte(0xBF);
+    bb_emit_u64((uint64_t)(uintptr_t)z);
+    /* mov rax, imm64(bb_len) */
+    bb_emit_byte(0x48); bb_emit_byte(0xB8);
+    bb_emit_u64((uint64_t)(uintptr_t)bb_len);
+    /* jmp rax */
+    bb_emit_byte(0xFF); bb_emit_byte(0xE0);
+
+    int nb = bb_emit_end();
+    if (nb <= 0 || nb > LEN_TRAM_SIZE) { bb_free(tbuf, LEN_TRAM_SIZE); free(z); return NULL; }
+    bb_seal(tbuf, (size_t)nb);
+    return (bb_box_fn)tbuf;
+#undef LEN_TRAM_SIZE
+}
 
 /*
  * bb_tab_emit_binary(int n) — M-DYN-B4
@@ -669,6 +711,10 @@ static bb_box_fn bb_build_binary_node(PATND_t *p)
     /* ── M-DYN-B4: RTAB(n) — trampoline to heap rtab_t + bb_rtab ── */
     case XRTB:
         return bb_rtab_emit_binary((int)p->num);
+
+    /* ── M-DYN-B5: LEN(n) — trampoline to heap len_t + bb_len ─────── */
+    case XLNTH:
+        return bb_len_emit_binary((int)p->num);
 
     /* ── M-DYN-B3: XCAT — recursive hybrid seq ──────────────────────
      * Build left and right children as binary; wire into heap seq_t;
