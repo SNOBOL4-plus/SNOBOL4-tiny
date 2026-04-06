@@ -753,6 +753,31 @@ static bb_box_fn bb_alt_emit_binary(PATND_t *p)
 #undef ALT_TRAM_SIZE
 }
 
+/* M-DYN-B9b: XFARB (ARB) and XBRKX (BREAKX) */
+extern spec_t bb_arb(void *zeta, int entry);
+extern spec_t bb_breakx(void *zeta, int entry);
+
+/* bb_arb_emit_binary() — XFARB (ARB matches 0..Ω-Δ chars, grows on β)
+ * arb_t = { int count; int start; } — both runtime-mutable, reset each α.
+ * Simple trampoline: calloc(arb_t), mov rdi,imm64(z); mov rax,imm64(bb_arb); jmp rax. */
+static bb_box_fn bb_arb_emit_binary(void)
+{
+    arb_t *z = calloc(1, sizeof(arb_t));
+    if (!z) return NULL;
+    return charset_emit_trampoline(z, bb_arb);
+}
+
+/* bb_breakx_emit_binary(chars) — XBRKX (BREAKX: scan to first char in set, retry on β)
+ * brkx_t = { const char *chars; int δ; } — same layout as brk_t / span_t.
+ * Reuses charset_emit_trampoline(). */
+static bb_box_fn bb_breakx_emit_binary(const char *chars)
+{
+    brkx_t *z = calloc(1, sizeof(brkx_t));
+    if (!z) return NULL;
+    z->chars = chars;
+    return charset_emit_trampoline(z, bb_breakx);
+}
+
 /*
  * bb_nme_emit_binary(PATND_t *p) — M-DYN-B7
  * bb_fnme_emit_binary(PATND_t *p) — M-DYN-B7
@@ -1010,6 +1035,14 @@ static bb_box_fn bb_build_binary_node(PATND_t *p)
     /* ── M-DYN-B9: XOR — alternation ───────────────────────────────── */
     case XOR:
         return bb_alt_emit_binary(p);
+
+    /* ── M-DYN-B9b: XFARB — ARB (zero-to-N char match) ────────────── */
+    case XFARB:
+        return bb_arb_emit_binary();
+
+    /* ── M-DYN-B9b: XBRKX — BREAKX(chars) ─────────────────────────── */
+    case XBRKX:
+        return bb_breakx_emit_binary(p->STRVAL_fn ? p->STRVAL_fn : "");
 
     /* ── M-DYN-B7: XNME — pat . var  conditional capture ─────────── */
     case XNME:
