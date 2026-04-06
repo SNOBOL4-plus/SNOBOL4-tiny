@@ -464,6 +464,7 @@ static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
         return;
 
     /* ── Pattern primitives used as values (not already handled above) ── */
+    case E_ALT:
     case E_ARB:  case E_REM:  case E_FAIL: case E_SUCCEED:
     case E_FENCE: case E_ABORT: case E_BAL:
     case E_ANY:  case E_NOTANY: case E_SPAN: case E_BREAK: case E_BREAKX:
