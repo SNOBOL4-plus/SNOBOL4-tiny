@@ -22,8 +22,8 @@
 #include "sil_arith.h"
 
 /* ── Forward declarations for §8 functions (M6) ─────────────────────── */
-extern SilResult XYARGS_fn(void);   /* v311.sil §8 XYARGS — eval X and Y args */
-extern SilResult ARGVAL_fn(void);   /* v311.sil §8 ARGVAL — eval one arg      */
+extern SIL_result XYARGS_fn(void);   /* v311.sil §8 XYARGS — eval X and Y args */
+extern SIL_result ARGVAL_fn(void);   /* v311.sil §8 ARGVAL — eval one arg      */
 
 /* ── File-static scratch (DTCL: data type pair descriptor) ──────────── */
 /* v311.sil line 10815: DTCL DESCR 0,0,0 — used only inside ARITH */
@@ -40,11 +40,11 @@ static volatile int math_error_flag;
  * For now they abort; the error subsystem (M22+) will replace these.  */
 #include <stdio.h>
 #include <stdlib.h>
-static SilResult aerror(void) {
+static SIL_result aerror(void) {
     fprintf(stderr, "sil_arith: arithmetic error (overflow/div-zero)\n");
     exit(2);
 }
-static SilResult intr1(void) {
+static SIL_result intr1(void) {
     fprintf(stderr, "sil_arith: illegal data type\n");
     exit(1);
 }
@@ -103,7 +103,7 @@ static int exreal(DESCR_t *res, const DESCR_t *x, const DESCR_t *y)
  *   Dispatch on DTCL to type-coercion block
  *   Then dispatch on SCL to actual operation
  * ════════════════════════════════════════════════════════════════════════ */
-static SilResult ARITH_fn(void)
+static SIL_result ARITH_fn(void)
 {
     /* ── evaluate arguments (§8 XYARGS) ── */
     if (XYARGS_fn() == FAIL) return FAIL;
@@ -249,24 +249,24 @@ do_rr:
 }
 
 /* ── Entry point shims: set SCL, call ARITH_fn ───────────────────────── */
-SilResult ADD_fn(void)   { SCL.a.i = 1;  return ARITH_fn(); }
-SilResult DIV_fn(void)   { SCL.a.i = 2;  return ARITH_fn(); }
-SilResult EXPOP_fn(void) { SCL.a.i = 3;  return ARITH_fn(); }
-SilResult MPY_fn(void)   { SCL.a.i = 4;  return ARITH_fn(); }
-SilResult SUB_fn(void)   { SCL.a.i = 5;  return ARITH_fn(); }
-SilResult EQ_fn(void)    { SCL.a.i = 6;  return ARITH_fn(); }
-SilResult GE_fn(void)    { SCL.a.i = 7;  return ARITH_fn(); }
-SilResult GT_fn(void)    { SCL.a.i = 8;  return ARITH_fn(); }
-SilResult LE_fn(void)    { SCL.a.i = 9;  return ARITH_fn(); }
-SilResult LT_fn(void)    { SCL.a.i = 10; return ARITH_fn(); }
-SilResult NE_fn(void)    { SCL.a.i = 11; return ARITH_fn(); }
-SilResult REMDR_fn(void) { SCL.a.i = 12; return ARITH_fn(); }
+SIL_result ADD_fn(void)   { SCL.a.i = 1;  return ARITH_fn(); }
+SIL_result DIV_fn(void)   { SCL.a.i = 2;  return ARITH_fn(); }
+SIL_result EXPOP_fn(void) { SCL.a.i = 3;  return ARITH_fn(); }
+SIL_result MPY_fn(void)   { SCL.a.i = 4;  return ARITH_fn(); }
+SIL_result SUB_fn(void)   { SCL.a.i = 5;  return ARITH_fn(); }
+SIL_result EQ_fn(void)    { SCL.a.i = 6;  return ARITH_fn(); }
+SIL_result GE_fn(void)    { SCL.a.i = 7;  return ARITH_fn(); }
+SIL_result GT_fn(void)    { SCL.a.i = 8;  return ARITH_fn(); }
+SIL_result LE_fn(void)    { SCL.a.i = 9;  return ARITH_fn(); }
+SIL_result LT_fn(void)    { SCL.a.i = 10; return ARITH_fn(); }
+SIL_result NE_fn(void)    { SCL.a.i = 11; return ARITH_fn(); }
+SIL_result REMDR_fn(void) { SCL.a.i = 12; return ARITH_fn(); }
 
 /* ════════════════════════════════════════════════════════════════════════
  * INTGER_fn — INTEGER(X) conversion function
  * v311.sil INTGER (line ~3050)
  * ════════════════════════════════════════════════════════════════════════ */
-SilResult INTGER_fn(void)
+SIL_result INTGER_fn(void)
 {
     if (ARGVAL_fn() == FAIL) return FAIL;
     if (XPTR.v == I) return OK;
@@ -279,7 +279,7 @@ SilResult INTGER_fn(void)
  * MNS_fn — unary negation (-X)
  * v311.sil MNS (line ~3068)
  * ════════════════════════════════════════════════════════════════════════ */
-SilResult MNS_fn(void)
+SIL_result MNS_fn(void)
 {
     if (ARGVAL_fn() == FAIL) return FAIL;
 
@@ -314,7 +314,7 @@ SilResult MNS_fn(void)
  * PLS_fn — unary plus (+X)
  * v311.sil PLS (line ~3091)
  * ════════════════════════════════════════════════════════════════════════ */
-SilResult PLS_fn(void)
+SIL_result PLS_fn(void)
 {
     if (ARGVAL_fn() == FAIL) return FAIL;
 
