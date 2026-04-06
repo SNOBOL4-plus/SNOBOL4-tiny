@@ -368,6 +368,26 @@ extern DESCR_t UNDFCL;   /* undefined-function sentinel descriptor        */
 extern SPEC_t  REALSP;   /* scratch SPEC for REAL→STRING conversion       */
 extern DESCR_t ZSPPTR;   /* pointer-to-ZSP scratch (mirrors XSPPTR)      */
 
+/* ── M12: sil_func globals ───────────────────────────────────────────── */
+extern DESCR_t DTATL;    /* data-type attribute list head                 */
+extern DESCR_t INCL;     /* global function descriptor (APPLY)           */
+extern DESCR_t A2PTR;    /* scratch pointer A2 (DT proc)                 */
+extern DESCR_t A3PTR;    /* scratch pointer A3 (DT proc)                 */
+extern DESCR_t DEFCL;    /* defined-function sentinel (ARG/LOCAL)        */
+extern DESCR_t DT1CL;    /* data-type scratch (DT proc)                  */
+extern DESCR_t ETMCL;    /* elapsed-time descriptor (TIME)               */
+extern DESCR_t DMPPTR;   /* bin pointer for DUMP                         */
+extern SPEC_t  DMPSP;    /* dump output buffer specifier                 */
+extern SPEC_t  PROTSP;   /* prototype buffer specifier                   */
+extern SPEC_t  QTSP;     /* quote specifier                              */
+extern SPEC_t  BLEQSP;   /* " = " specifier                              */
+extern SPEC_t  AMPSP;    /* "&" specifier                                */
+extern SPEC_t  CMASP;    /* "," specifier                                */
+extern DESCR_t FORMND;   /* compiler object node (CONVERT/CODER)         */
+extern DESCR_t ALCL;     /* ARG(F,N) entry indicator                     */
+#define BUFLEN  256         /* max dump line length                       */
+/* LNKFLD already defined in sil_types.h as (3*DESCR) */
+
 /* ── TRCBLK — trace function skeleton ───────────────────────────────── */
 
 extern DESCR_t TRCBLK[6];   /* trace block: [0]=fn descr, [1]=LIT1 fn,   */
