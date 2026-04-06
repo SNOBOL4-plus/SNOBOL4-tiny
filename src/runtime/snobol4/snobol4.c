@@ -266,6 +266,44 @@ static DESCR_t _VDIFFER_(DESCR_t *a, int n) {
     }
     return equal ? FAILDESCR : a[0];
 }
+/* NUMERIC(x) — SIL PLB32/CNV1: succeed (returning coerced value) if x is or can be
+ * converted to a number; fail otherwise.  Mirrors CONVERT(x,'NUMERIC') logic exactly. */
+static DESCR_t _NUMERIC_(DESCR_t *a, int n) {
+    if (n < 1) return FAILDESCR;
+    DESCR_t val = a[0];
+    if (IS_INT(val))  return val;
+    if (IS_REAL(val)) return val;
+    if (IS_STR(val) || val.v == DT_SNUL) {
+        const char *s = val.s ? val.s : "";
+        while (*s == ' ') s++;
+        if (!*s) return INTVAL(0);          /* SIL SPCINT: empty string → 0 */
+        char *end = NULL;
+        long long iv = strtoll(s, &end, 10);
+        while (*end == ' ') end++;
+        if (*end == '\0') return INTVAL((int64_t)iv);
+        double rv = strtod(s, &end);
+        while (*end == ' ') end++;
+        if (*end == '\0') return REALVAL(rv);
+    }
+    return FAILDESCR;
+}
+
+/* NAME(x) — SIL: return the name of variable x as a string.
+ * If x is already DT_N (a name descriptor), extract its string.
+ * Otherwise coerce to string via VARVAL and return that name. */
+static DESCR_t _NAME_(DESCR_t *a, int n) {
+    if (n < 1) return FAILDESCR;
+    DESCR_t val = a[0];
+    if (IS_NAME(val)) {
+        /* IS_NAME covers both NAMEPTR (slen==1) and NAMEVAL (slen==0) */
+        const char *nm = val.s ? val.s : "";
+        return STRVAL(GC_strdup(nm));
+    }
+    /* Fallback: coerce to string — returns the string representation as name */
+    const char *s = VARVAL_fn(val);
+    return STRVAL(GC_strdup(s ? s : ""));
+}
+
 /* Lexical string comparators — return first arg on success, FAILDESCR on failure */
 static DESCR_t _LGT_(DESCR_t *a, int n) {
     if (n < 2) return FAILDESCR;
@@ -1165,6 +1203,8 @@ void SNO_INIT_fn(void) {
     register_fn("IDENT",    _IDENT_,    0, 2);
     register_fn("DIFFER",   _DIFFER_,   0, 2);
     register_fn("VDIFFER",  _VDIFFER_,  0, 2);
+    register_fn("NUMERIC",  _NUMERIC_,  1, 1);
+    register_fn("NAME",     _NAME_,     1, 1);
     register_fn("LGT",      _LGT_,      2, 2);
     register_fn("LLT",      _LLT_,      2, 2);
     register_fn("LGE",      _LGE_,      2, 2);
