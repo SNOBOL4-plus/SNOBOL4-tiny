@@ -426,6 +426,14 @@ extern SPEC_t  RNOSP;    /* right listing number specifier               */
 extern SPEC_t  BLNSP;    /* blank specifier                              */
 extern DESCR_t LNBFSP_d; /* line buffer (DESCR form) for STREAD          */
 /* TEXTSP NEXTSP LNBFSP already in sil_data.h as SPEC_t */
+
+/* M18c: sil_cmpile */
+extern SPEC_t  CERRSP;   /* compiler error message accumulator           */
+extern SPEC_t  ERRSP;    /* error pointer line specifier                 */
+extern SPEC_t  STARSP;   /* "***" attention getter specifier             */
+extern DESCR_t EOSTB;    /* end-of-statement scan table                  */
+extern char    INBUF[];  /* compiler input buffer (raw card image)       */
+extern char    ERRBUF[]; /* error pointer buffer (spaces + '^')          */
 /* Tree node field offsets — already #define'd in sil_types.h:
  *   FATHER=DESCR  LSON=2*DESCR  RSIB=3*DESCR  CODE=4*DESCR            */
 extern DESCR_t BOSCL;    /* offset of beginning of current statement     */
