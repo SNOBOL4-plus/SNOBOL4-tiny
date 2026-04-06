@@ -434,6 +434,21 @@ extern SPEC_t  STARSP;   /* "***" attention getter specifier             */
 extern DESCR_t EOSTB;    /* end-of-statement scan table                  */
 extern char    INBUF[];  /* compiler input buffer (raw card image)       */
 extern char    ERRBUF[]; /* error pointer buffer (spaces + '^')          */
+
+/* M18d: sil_expr */
+extern DESCR_t ELEMND;   /* element tree node scratch                    */
+extern DESCR_t ELEXND;   /* element temp node scratch                    */
+extern DESCR_t ELEYND;   /* element temp node scratch 2                  */
+extern DESCR_t EXELND;   /* expression element node                      */
+extern DESCR_t EXEXND;   /* expression temp node                         */
+extern DESCR_t EXOPCL;   /* binary operator descriptor                   */
+extern DESCR_t LITCL;    /* LIT function code descriptor                 */
+extern DESCR_t ITEMCL;   /* ITEM (array ref) function code descriptor    */
+extern DESCR_t BISRFN;   /* SPITBOL SCAN+REPLACE operator descriptor     */
+extern DESCR_t BIEQFN;   /* SPITBOL assignment operator descriptor       */
+extern DESCR_t BISNFN;   /* SPITBOL SCAN operator descriptor             */
+extern DESCR_t ELEMTB;   /* element scan table                           */
+extern DESCR_t GOTSTB;   /* peek-ahead table for '<' and '['             */
 /* Tree node field offsets — already #define'd in sil_types.h:
  *   FATHER=DESCR  LSON=2*DESCR  RSIB=3*DESCR  CODE=4*DESCR            */
 extern DESCR_t BOSCL;    /* offset of beginning of current statement     */
