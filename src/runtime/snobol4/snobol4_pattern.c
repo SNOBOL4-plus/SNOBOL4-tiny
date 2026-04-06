@@ -1657,6 +1657,8 @@ DESCR_t sort_fn(DESCR_t arr) {
     a->lo   = 1;
     a->hi   = n;
     a->ndim = 2;   /* 2 columns */
+    a->lo2  = 1;
+    a->hi2  = 2;   /* cols 1..2 */
     a->data = GC_malloc(n * 2 * sizeof(DESCR_t));
     for (int i = 0; i < n; i++) {
         a->data[i * 2 + 0] = key_descrs[order[i]];  /* preserve integer/string type */

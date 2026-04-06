@@ -175,8 +175,9 @@ static inline TREEBLK_t       *c_i(TREEBLK_t *x, int i) {  /* c(x)[i], 1-based *
  * ============================================================ */
 
 typedef struct _ARBLK_t {
-    int     lo, hi;      /* ARRAY('lo:hi') bounds */
-    int     ndim;        /* number of dimensions */
+    int     lo, hi;      /* ARRAY('lo:hi') bounds, dim 1 */
+    int     ndim;        /* number of dimensions (1 or 2) */
+    int     lo2, hi2;   /* dim 2 bounds (ndim==2 only); cols = hi2-lo2+1 */
     DESCR_t *data;        /* lo..hi, 0-based offset by lo */
 } ARBLK_t;
 
@@ -203,9 +204,11 @@ typedef struct _TBBLK_tEntry {
 typedef struct _TBBLK_t {
     TBPAIR_t *buckets[TABLE_BUCKETS];
     int            size;
+    int            init, inc;   /* constructor args for stringify: TABLE(init,inc) */
 } TBBLK_t;
 
 TBBLK_t *table_new(void);
+TBBLK_t *table_new_args(int init, int inc);
 DESCR_t    table_get(TBBLK_t *tbl, const char *key);
 void      table_set(TBBLK_t *tbl, const char *key, DESCR_t val);
 void      table_set_descr(TBBLK_t *tbl, const char *key, DESCR_t key_d, DESCR_t val);

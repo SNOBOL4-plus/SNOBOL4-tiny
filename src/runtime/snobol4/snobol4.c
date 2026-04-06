@@ -457,8 +457,9 @@ static DESCR_t _ARRAY_(DESCR_t *a, int n) {
 
 /* TABLE(initial_size, increment) — both args optional */
 static DESCR_t _TABLE_(DESCR_t *a, int n) {
-    (void)a; (void)n;
-    return TABLE_VAL(table_new());
+    int init = (n >= 1) ? (int)to_int(a[0]) : 10;
+    int inc  = (n >= 2) ? (int)to_int(a[1]) : 10;
+    return TABLE_VAL(table_new_args(init, inc));
 }
 
 /* CONVERT(val, type) */
@@ -865,13 +866,14 @@ static DESCR_t _PROTOTYPE_(DESCR_t *a, int n) {
         ARBLK_t *arr = v.arr;
         char buf[128];
         if (arr->ndim > 1) {
-            int rows = arr->hi - arr->lo + 1;
-            int cols = arr->ndim;
-            if (arr->lo == 1)
-                snprintf(buf, sizeof(buf), "%d,%d", rows, cols);
+            int cols = arr->hi2 - arr->lo2 + 1;
+            /* 2D: "lo1:hi1,lo2:hi2" or "rows,cols" when both lo=1 */
+            if (arr->lo == 1 && arr->lo2 == 1)
+                snprintf(buf, sizeof(buf), "%d,%d",
+                         arr->hi - arr->lo + 1, cols);
             else
-                snprintf(buf, sizeof(buf), "%d:%d,%d",
-                         arr->lo, arr->hi, cols);
+                snprintf(buf, sizeof(buf), "%d:%d,%d:%d",
+                         arr->lo, arr->hi, arr->lo2, arr->hi2);
         } else {
             if (arr->lo == 1)
                 snprintf(buf, sizeof(buf), "%d", arr->hi);
@@ -1146,10 +1148,34 @@ char *VARVAL_fn(DESCR_t v) {
             return v.u ? GC_strdup(v.u->type->name) : GC_strdup("");
         case DT_P:
             return GC_strdup("PATTERN");
-        case DT_A:
-            return GC_strdup("ARRAY");
-        case DT_T:
-            return GC_strdup("TABLE");
+        case DT_A: {
+            /* csnobol4 format: ARRAY('n') or ARRAY('lo:hi') or ARRAY('lo1:hi1,lo2:hi2') */
+            if (!v.arr) return GC_strdup("ARRAY");
+            ARBLK_t *arr = v.arr;
+            char buf[128];
+            if (arr->ndim > 1) {
+                int cols = arr->hi2 - arr->lo2 + 1;
+                if (arr->lo == 1 && arr->lo2 == 1)
+                    snprintf(buf, sizeof(buf), "ARRAY('%d,%d')",
+                             arr->hi - arr->lo + 1, cols);
+                else
+                    snprintf(buf, sizeof(buf), "ARRAY('%d:%d,%d:%d')",
+                             arr->lo, arr->hi, arr->lo2, arr->hi2);
+            } else {
+                if (arr->lo == 1)
+                    snprintf(buf, sizeof(buf), "ARRAY('%d')", arr->hi);
+                else
+                    snprintf(buf, sizeof(buf), "ARRAY('%d:%d')", arr->lo, arr->hi);
+            }
+            return GC_strdup(buf);
+        }
+        case DT_T: {
+            /* csnobol4 format: TABLE(init,inc) */
+            if (!v.tbl) return GC_strdup("TABLE");
+            char buf[64];
+            snprintf(buf, sizeof(buf), "TABLE(%d,%d)", v.tbl->init, v.tbl->inc);
+            return GC_strdup(buf);
+        }
         case DT_N:
             if (v.s) return GC_strdup(v.s);
             if (v.ptr) {
@@ -1286,10 +1312,12 @@ ARBLK_t *array_new(int lo, int hi) {
 }
 
 ARBLK_t *array_new2d(int lo1, int hi1, int lo2, int hi2) {
-    /* Stored as flat row-major: INDEX_fn = (i-lo1)*(hi2-lo2+1) + (j-lo2) */
+    /* Stored as flat row-major: index = (i-lo1)*cols + (j-lo2) */
     ARBLK_t *a = GC_malloc(sizeof(ARBLK_t));
     a->lo   = lo1;
     a->hi   = hi1;
+    a->lo2  = lo2;
+    a->hi2  = hi2;
     a->ndim = 2;
     int rows = hi1 - lo1 + 1;
     int cols = hi2 - lo2 + 1;
@@ -1297,12 +1325,6 @@ ARBLK_t *array_new2d(int lo1, int hi1, int lo2, int hi2) {
     if (cols < 1) cols = 1;
     a->data = GC_malloc(rows * cols * sizeof(DESCR_t));
     for (int i = 0; i < rows * cols; i++) a->data[i] = NULVCL;
-    /* Store hi2/lo2 in spare fields — abuse: hi=hi2 in a second slot.
-     * For simplicity, encode cols in a separate field. */
-    /* Use tag trick: store cols count in a DESCR_t at position -1.
-     * Simpler: always allocate +1 and store cols at INDEX_fn 0. */
-    /* Actually: store lo2/hi2 by repurposing ndim as cols */
-    a->ndim = cols;  /* repurpose: ndim = cols for 2D arrays */
     return a;
 }
 
@@ -1322,10 +1344,9 @@ void array_set(ARBLK_t *a, int i, DESCR_t v) {
 
 DESCR_t array_get2(ARBLK_t *a, int i, int j) {
     if (!a) return FAILDESCR;
-    int cols = a->ndim;  /* cols stored in ndim for 2D */
+    int cols = a->hi2 - a->lo2 + 1;
     int row  = i - a->lo;
-    /* j-origin: assume lo2 = 1 (SNOBOL4 default) */
-    int col  = j - 1;
+    int col  = j - a->lo2;
     int idx  = row * cols + col;
     int total = (a->hi - a->lo + 1) * cols;
     if (row < 0 || row >= (a->hi - a->lo + 1) || col < 0 || col >= cols || idx < 0 || idx >= total)
@@ -1335,9 +1356,9 @@ DESCR_t array_get2(ARBLK_t *a, int i, int j) {
 
 void array_set2(ARBLK_t *a, int i, int j, DESCR_t v) {
     if (!a) return;
-    int cols = a->ndim;
+    int cols = a->hi2 - a->lo2 + 1;
     int row  = i - a->lo;
-    int col  = j - 1;
+    int col  = j - a->lo2;
     int idx  = row * cols + col;
     a->data[idx] = v;
 }
@@ -1365,6 +1386,15 @@ TBBLK_t *table_new(void) {
     TBBLK_t *t = GC_malloc(sizeof(TBBLK_t));
     memset(t->buckets, 0, sizeof(t->buckets));
     t->size = 0;
+    t->init = 10;  /* csnobol4 default: TABLE(10,10) */
+    t->inc  = 10;
+    return t;
+}
+
+TBBLK_t *table_new_args(int init, int inc) {
+    TBBLK_t *t = table_new();
+    t->init = (init > 0) ? init : 10;
+    t->inc  = (inc  > 0) ? inc  : 10;
     return t;
 }
 
