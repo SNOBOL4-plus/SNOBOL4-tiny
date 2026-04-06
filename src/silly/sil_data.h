@@ -418,7 +418,8 @@ extern DESCR_t ISPPTR;   /* pointer-to-IOSP scratch                      */
 #define UNITI   1        /* default input  unit number                   */
 #define UNITO   2        /* default output unit number                   */
 
-/* ── M16: sil_trace globals ──────────────────────────────────────────── */
+/* ── M17: sil_extern globals ─────────────────────────────────────────── */
+extern DESCR_t LODCL;    /* LOAD procedure descriptor (external fn)      */
 extern DESCR_t TRATL;    /* trace attribute list head                    */
 extern DESCR_t VALTRS;   /* VALUE trace type string descriptor           */
 extern DESCR_t FUNTCL;   /* FUNCTION trace type constant                 */
