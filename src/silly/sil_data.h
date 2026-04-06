@@ -86,6 +86,7 @@ extern DESCR_t EXECCL;    /* EXECUTE switch (init=1)                      */
 extern DESCR_t FNVLCL;    /* FUNCTION-VALUE switch for trace              */
 extern DESCR_t HIDECL;    /* hide statement numbers [PLB102]              */
 extern DESCR_t INICOM;    /* initialization switch [E3.10.6]              */
+extern DESCR_t MAXLEN;    /* maximum length for pattern matching          */
 extern DESCR_t LENFCL;    /* length failure switch                        */
 extern DESCR_t LISTCL;    /* compiler listing switch                      */
 extern DESCR_t LLIST;     /* left listing switch (init=1) [PLB12]         */
