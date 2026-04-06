@@ -418,6 +418,29 @@ extern DESCR_t ISPPTR;   /* pointer-to-IOSP scratch                      */
 #define UNITI   1        /* default input  unit number                   */
 #define UNITO   2        /* default output unit number                   */
 
+/* ── M16: sil_trace globals ──────────────────────────────────────────── */
+extern DESCR_t TRATL;    /* trace attribute list head                    */
+extern DESCR_t VALTRS;   /* VALUE trace type string descriptor           */
+extern DESCR_t FUNTCL;   /* FUNCTION trace type constant                 */
+extern DESCR_t TFNCLP;   /* CALL trace list pair-list pointer            */
+extern DESCR_t TFNRLP;   /* RETURN trace list pair-list pointer          */
+extern SPEC_t  TRACSP;   /* value-trace output buffer specifier          */
+extern SPEC_t  COLSP;    /* ":" specifier                                */
+extern SPEC_t  TRSTSP;   /* " Trace at statement " specifier            */
+extern SPEC_t  TRLVSP;   /* " Level " specifier                          */
+extern SPEC_t  LPRNSP;   /* "(" specifier                                */
+extern SPEC_t  RPRNSP;   /* ")" specifier                                */
+extern SPEC_t  ETIMSP;   /* " at " time-message specifier                */
+extern SPEC_t  EQLSP;    /* "=" specifier                                */
+extern SPEC_t  BLSP;     /* " " (blank) specifier                        */
+extern SPEC_t  OFSP;     /* " OF " specifier                             */
+extern SPEC_t  SPCSP;    /* space specifier [PLB95]                      */
+extern SPEC_t  XFERSP;   /* "Label " specifier for LABTR                 */
+extern DESCR_t XITPTR;   /* SETEXIT handler pointer                      */
+/* SETEXIT save-area descriptors */
+extern DESCR_t XFILEN, XLNNOC, XSTNOC, XLSFLN, XLSLNC;
+extern DESCR_t XERRTY, XOCBSC, XFRTNC, XOCICL;
+
 /* ── TRCBLK — trace function skeleton ───────────────────────────────── */
 
 extern DESCR_t TRCBLK[6];   /* trace block: [0]=fn descr, [1]=LIT1 fn,   */
