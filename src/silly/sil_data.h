@@ -403,6 +403,9 @@ extern DESCR_t F1PTR, F2PTR;
 extern DESCR_t LPTR;
 /* DATSIZ, EXTSIZ, LPTYP already #define'd in sil_types.h */
 
+/* ── M14: sil_define globals ─────────────────────────────────────────── */
+extern DESCR_t FNCLKY;   /* &FNCLEVEL keyword descriptor (trace)         */
+
 /* ── TRCBLK — trace function skeleton ───────────────────────────────── */
 
 extern DESCR_t TRCBLK[6];   /* trace block: [0]=fn descr, [1]=LIT1 fn,   */
