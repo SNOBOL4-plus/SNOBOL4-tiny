@@ -70,14 +70,8 @@ DESCR_t INVOKE_fn(const char *name, DESCR_t *args, int nargs)
 
     /* GETDC XPTR,INCL,0 — fetch procedure descriptor (= APPLY_fn lookup) */
     /* BRANIC INCL,0 — branch indirect: call the function */
-    DESCR_t result = APPLY_fn(name, args, nargs);
-
-    /* APPLY_fn returns NULVCL for "not found" — but NULVCL is also a valid
-     * successful return value (empty string).  We can't distinguish here,
-     * so we trust APPLY_fn: if it returned without calling FAILDESCR,
-     * it succeeded.  The failure path (ARGNER) is: APPLY_fn itself returns
-     * FAILDESCR when the underlying fn returns FAILDESCR. */
-    return result;
+    /* APPLY_fn dispatches: C builtins directly, user-defined via g_user_call_hook. */
+    return APPLY_fn(name, args, nargs);
 }
 
 /* ── ARGVAL_fn ────────────────────────────────────────────────────────────

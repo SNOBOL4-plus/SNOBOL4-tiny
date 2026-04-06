@@ -1921,7 +1921,13 @@ int main(int argc, char **argv)
     }
 
     if (mode_hybrid) {
-        /* M-SCRIP-U3: SM-LOWER path — IR → SM_Program → sm_interp_run */
+        /* M-SCRIP-U3: SM-LOWER path — IR → SM_Program → sm_interp_run.
+         * Must mirror execute_program setup: build label table and register
+         * DEFINE'd functions so call_user_function can find bodies via
+         * g_user_call_hook → _usercall_hook → label_lookup. */
+        label_table_build(prog);
+        prescan_defines(prog);
+        g_sno_err_active = 1;   /* arm so sno_runtime_error longjmps safely */
         SM_Program *sm = sm_lower(prog);
         if (!sm) {
             fprintf(stderr, "scrip: sm_lower failed\n");
