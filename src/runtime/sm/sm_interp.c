@@ -446,10 +446,15 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
                 break;
             }
             if (name && strcmp(name, "NAME_PUSH") == 0) {
-                /* .X: pop name string, push DT_N name descriptor */
+                /* .X: pop name string, push DT_N NAMEVAL descriptor.
+                 * Use NAMEVAL (slen=0, name in .s) so VARVAL_fn returns the
+                 * name string correctly. NAMEPTR (interior ptr) would cause
+                 * VARVAL_fn to do NV_name_from_ptr which fails for names not
+                 * yet in the NV table (e.g. OPSYN(.facto,'fact') before facto
+                 * is ever read/written). */
                 DESCR_t name_d = sm_pop(st);
                 const char *vname = VARVAL_fn(name_d);
-                sm_push(st, NAME_fn(vname ? vname : ""));
+                sm_push(st, NAMEVAL(GC_strdup(vname ? vname : "")));
                 st->last_ok = 1;
                 break;
             }
