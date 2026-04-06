@@ -125,7 +125,15 @@ static DESCR_t sm_arith(DESCR_t l, DESCR_t r, sm_opcode_t op)
         case SM_DIV:
             if (r.i == 0) { fprintf(stderr, "Error 2: division by zero\n"); return FAILDESCR; }
             return INTVAL(l.i / r.i);
-        case SM_EXP: return REALVAL(pow((double)l.i, (double)r.i));
+        case SM_EXP: {
+            /* integer ** non-negative integer → integer if result fits */
+            if (r.i >= 0) {
+                int64_t base = l.i, exp = r.i, res = 1;
+                while (exp-- > 0) res *= base;
+                return INTVAL(res);
+            }
+            return REALVAL(pow((double)l.i, (double)r.i));
+        }
         default: break;
         }
     }
@@ -351,10 +359,16 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
             break;
         }
         case SM_PAT_CAPTURE: {
-            /* a[0].s = variable name; child pat on pat-stack */
+            /* a[0].s = variable name; a[1].i = 0=cond 1=imm 2=cursor
+             * pat_assign_cond/imm expects a NAME descriptor (DT_N). */
             DESCR_t child = pat_pop();
-            DESCR_t var   = NV_GET_fn(ins->a[0].s ? ins->a[0].s : "");
-            pat_push(pat_assign_cond(child, var));
+            const char *vname = ins->a[0].s ? ins->a[0].s : "";
+            DESCR_t var = NAME_fn(vname);
+            int kind = (int)ins->a[1].i;
+            if (kind == 1)
+                pat_push(pat_assign_imm(child, var));
+            else
+                pat_push(pat_assign_cond(child, var));  /* 0=cond, 2=cursor both use cond for now */
             break;
         }
 
@@ -386,11 +400,22 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
         /* ── Functions (stubs — wired in U3) ───────────────────────── */
 
         case SM_CALL: {
-            /* stub: call via INVOKE_fn */
             const char *name  = ins->a[0].s;
             int         nargs = (int)ins->a[1].i;
+
+            /* Special pseudo-calls handled inline */
+            if (name && strcmp(name, "ASGN_INDIR") == 0) {
+                /* args[0]=name_descr, args[1]=value (pushed: value first, then name) */
+                DESCR_t name_d = sm_pop(st);   /* indirect name expr */
+                DESCR_t val    = sm_pop(st);   /* rhs value */
+                const char *vname = VARVAL_fn(name_d);
+                if (vname && *vname) NV_SET_fn(vname, val);
+                sm_push(st, val);
+                st->last_ok = 1;
+                break;
+            }
+
             DESCR_t args[32];
-            /* args on stack: top = last arg */
             for (int k = nargs - 1; k >= 0; k--)
                 args[k] = sm_pop(st);
             DESCR_t result = INVOKE_fn(name, args, nargs);

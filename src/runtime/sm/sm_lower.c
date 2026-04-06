@@ -238,20 +238,27 @@ static void lower_pat_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
 
     /* Captures */
     case E_CAPT_COND_ASGN:
-        /* child[0] = sub-pattern, child[1] = variable */
+        /* child[0] = sub-pattern, child[1] = variable; a[1].i=0 → cond (.V) */
         lower_pat_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
-        if (e->nchildren > 1 && e->children[1])
-            sm_emit_s(p, SM_PAT_CAPTURE, e->children[1]->sval);
+        if (e->nchildren > 1 && e->children[1]) {
+            int idx = sm_emit_s(p, SM_PAT_CAPTURE, e->children[1]->sval);
+            p->instrs[idx].a[1].i = 0;  /* conditional */
+        }
         return;
     case E_CAPT_IMMED_ASGN:
+        /* a[1].i=1 → immediate ($V) */
         lower_pat_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
-        if (e->nchildren > 1 && e->children[1])
-            sm_emit_s(p, SM_PAT_CAPTURE, e->children[1]->sval);
+        if (e->nchildren > 1 && e->children[1]) {
+            int idx = sm_emit_s(p, SM_PAT_CAPTURE, e->children[1]->sval);
+            p->instrs[idx].a[1].i = 1;  /* immediate */
+        }
         return;
     case E_CAPT_CURSOR:
         lower_pat_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
-        if (e->nchildren > 1 && e->children[1])
-            sm_emit_s(p, SM_PAT_CAPTURE, e->children[1]->sval);
+        if (e->nchildren > 1 && e->children[1]) {
+            int idx = sm_emit_s(p, SM_PAT_CAPTURE, e->children[1]->sval);
+            p->instrs[idx].a[1].i = 2;  /* cursor (@V) */
+        }
         return;
 
     /* Deferred pattern reference: *VAR */
@@ -435,8 +442,9 @@ static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
 
     /* ── Scan E ? E ── */
     case E_SCAN:
-        lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
         lower_pat_expr(p, lt, e->nchildren > 1 ? e->children[1] : NULL);
+        lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
+        sm_emit_i(p, SM_PUSH_LIT_I, 0);   /* no replacement */
         sm_emit(p, SM_EXEC_STMT);
         return;
 
@@ -484,20 +492,25 @@ static void lower_stmt(SM_Program *p, LabelTable *lt, const STMT_t *s)
      * 2. Pattern match statement:
      *      subject  pattern  [= replacement]  :(goto)
      *
-     * SM layout:
-     *   eval subject → stack
-     *   lower pattern tree → SM_PAT_* sequence → stack
-     *   [eval replacement → stack]            (if has_eq)
-     *   SM_EXEC_STMT  (runs BB-DRIVER; pops subject+pat[+repl])
-     *   SM_JUMP_S / SM_JUMP_F / SM_JUMP for gotos
+     * SM layout (Option A — pattern tree emitted FIRST):
+     *   lower pattern tree → SM_PAT_* sequence
+     *     (parameterised ops like SM_PAT_LEN pop their args from value stack;
+     *      those args are pushed by lower_pat_expr via lower_expr internally,
+     *      so they are consumed before subject is on the stack)
+     *   eval subject → value stack
+     *   eval replacement → value stack  (or INTVAL(0) if no replacement)
+     *   SM_EXEC_STMT  (value stack top: repl; below: subj; pat-stack: built pat)
+     *
+     * This avoids interleaving parameterised-pattern value-stack args
+     * with the subject descriptor.
      */
     if (s->pattern) {
+        lower_pat_expr(p, lt, s->pattern);
+
         if (s->subject)
             lower_expr(p, lt, s->subject);
         else
             sm_emit(p, SM_PUSH_NULL);
-
-        lower_pat_expr(p, lt, s->pattern);
 
         if (s->has_eq && s->replacement)
             lower_expr(p, lt, s->replacement);
@@ -522,16 +535,26 @@ static void lower_stmt(SM_Program *p, LabelTable *lt, const STMT_t *s)
      *      or just:  expr         :(goto)
      */
     if (s->subject) {
-        lower_expr(p, lt, s->subject);
-        if (s->has_eq && s->replacement) {
-            /* Assignment: subject is lhs, replacement is rhs */
-            lower_expr(p, lt, s->replacement);
-            if (s->subject->kind == E_VAR || s->subject->kind == E_KEYWORD)
-                sm_emit_s(p, SM_STORE_VAR, s->subject->sval ? s->subject->sval : "");
+        if (s->has_eq) {
+            /* Assignment: rhs is replacement (or null if omitted) */
+            if (s->replacement)
+                lower_expr(p, lt, s->replacement);
             else
+                sm_emit(p, SM_PUSH_NULL);   /* X =   → assign null */
+            /* lhs */
+            if (s->subject->kind == E_VAR || s->subject->kind == E_KEYWORD) {
+                sm_emit_s(p, SM_STORE_VAR, s->subject->sval ? s->subject->sval : "");
+            } else if (s->subject->kind == E_INDIRECT) {
+                /* $expr = rhs: eval the indirect name, then ASGN(name, rhs) */
+                lower_expr(p, lt, s->subject->nchildren > 0 ? s->subject->children[0] : NULL);
+                sm_emit_si(p, SM_CALL, "ASGN_INDIR", 2);
+            } else {
+                lower_expr(p, lt, s->subject);
                 sm_emit_si(p, SM_CALL, "ASGN", 2);
+            }
         } else {
-            sm_emit(p, SM_POP);  /* result unused */
+            lower_expr(p, lt, s->subject);
+            sm_emit(p, SM_POP);  /* expression statement, result unused */
         }
     }
 
