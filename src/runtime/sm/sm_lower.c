@@ -472,6 +472,7 @@ static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
     case E_ARBNO:
     case E_CAPT_COND_ASGN: case E_CAPT_IMMED_ASGN: case E_CAPT_CURSOR:
         lower_pat_expr(p, lt, e);
+        sm_emit(p, SM_PAT_BOXVAL);  /* bridge: pop pat-stack → push DT_P on value-stack */
         return;
 
     default:

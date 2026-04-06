@@ -364,8 +364,11 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
             pat_push(pat_alt(left, right));
             break;
         }
+        case SM_PAT_BOXVAL:
+            /* pop pat-stack top, push as DT_P onto value-stack */
+            sm_push(st, pat_pop());
+            break;
         case SM_PAT_DEREF: {
-            /* value on value stack — coerce to pattern */
             DESCR_t v = sm_pop(st);
             if (v.v == DT_P) {
                 pat_push(v);                        /* already a pattern */

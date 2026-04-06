@@ -96,6 +96,8 @@ typedef enum {
     SM_SPCINT,
     SM_SPREAL,
 
+    SM_PAT_BOXVAL,  /* pop pat-stack top → push as DT_P onto value-stack */
+
     SM_OPCODE_COUNT
 } sm_opcode_t;
 
