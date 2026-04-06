@@ -406,6 +406,18 @@ extern DESCR_t LPTR;
 /* ── M14: sil_define globals ─────────────────────────────────────────── */
 extern DESCR_t FNCLKY;   /* &FNCLEVEL keyword descriptor (trace)         */
 
+/* ── M15: sil_io globals ─────────────────────────────────────────────── */
+extern DESCR_t IO1PTR;   /* I/O scratch 1 (block/recl)                   */
+extern DESCR_t IO2PTR;   /* I/O scratch 2 (variable/value)               */
+extern DESCR_t IO3PTR;   /* I/O scratch 3 (unit)                         */
+extern DESCR_t IO4PTR;   /* I/O scratch 4 (preallocated buf)             */
+extern SPEC_t  IOSP;     /* I/O string specifier                         */
+extern DESCR_t DFLFST;   /* default output format                        */
+/* VLRECL already #define'd in sil_types.h as 0 */
+extern DESCR_t ISPPTR;   /* pointer-to-IOSP scratch                      */
+#define UNITI   1        /* default input  unit number                   */
+#define UNITO   2        /* default output unit number                   */
+
 /* ── TRCBLK — trace function skeleton ───────────────────────────────── */
 
 extern DESCR_t TRCBLK[6];   /* trace block: [0]=fn descr, [1]=LIT1 fn,   */
