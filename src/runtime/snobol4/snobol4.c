@@ -2385,8 +2385,14 @@ DESCR_t APPLY_fn(const char *name, DESCR_t *args, int nargs) {
         }
     }
     /* Not found — try interpreter hook (may be a late-defined user fn) */
-    if (g_user_call_hook) return g_user_call_hook(name, args, nargs);
-    return NULVCL;
+    if (g_user_call_hook) {
+        DESCR_t r = g_user_call_hook(name, args, nargs);
+        /* hook returns NULVCL when function body not found either */
+        if (!IS_FAIL_fn(r)) return r;
+    }
+    /* SIL UNDF → ERRTYP,5 → FTLTST: undefined function is a soft error */
+    sno_runtime_error(5, NULL);
+    return FAILDESCR;
 }
 
 /* ARG(fname, n) — return uppercase name of nth parameter (1-based).

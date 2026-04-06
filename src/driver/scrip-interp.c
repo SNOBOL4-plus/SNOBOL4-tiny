@@ -318,6 +318,14 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
         if (!body) body = label_lookup(fname);
         if (!body) body = label_lookup(ufname);
 
+        /* SIL UNDF: no body label AND not a registered builtin → Error 5 (soft) */
+        if (!body && !FNCEX_fn(fname) && !FNCEX_fn(ufname)) {
+            sno_runtime_error(5, NULL);
+            /* longjmp taken above; this line only reached if !g_sno_err_active */
+            retval = FAILDESCR;
+            goto fn_done;
+        }
+
         if (body) {
             STMT_t *s = body;
             int step_limit = 5000000;
