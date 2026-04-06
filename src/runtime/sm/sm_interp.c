@@ -404,6 +404,23 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
             int         nargs = (int)ins->a[1].i;
 
             /* Special pseudo-calls handled inline */
+            if (name && strcmp(name, "INDIR_GET") == 0) {
+                /* $expr: pop name string from value stack, look up variable, push its value */
+                DESCR_t name_d = sm_pop(st);
+                const char *vname = VARVAL_fn(name_d);
+                DESCR_t val = (vname && *vname) ? NV_GET_fn(vname) : NULVCL;
+                sm_push(st, val);
+                st->last_ok = 1;
+                break;
+            }
+            if (name && strcmp(name, "NAME_PUSH") == 0) {
+                /* .X: pop name string, push DT_N name descriptor */
+                DESCR_t name_d = sm_pop(st);
+                const char *vname = VARVAL_fn(name_d);
+                sm_push(st, NAME_fn(vname ? vname : ""));
+                st->last_ok = 1;
+                break;
+            }
             if (name && strcmp(name, "ASGN_INDIR") == 0) {
                 DESCR_t name_d = sm_pop(st);
                 DESCR_t val    = sm_pop(st);

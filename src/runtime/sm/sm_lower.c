@@ -128,6 +128,10 @@ static int emit_goto(SM_Program *p, LabelTable *lt,
     if (strcmp(target, "FRETURN") == 0) {
         return sm_emit(p, SM_FRETURN);
     }
+    if (strcmp(target, "NRETURN") == 0) {
+        /* NRETURN: semantics owned by call_user_function tree-walk; SM just needs to halt */
+        return sm_emit(p, SM_RETURN);
+    }
 
     /* Emit the jump with a placeholder target (0) */
     int idx = sm_emit_i(p, op, 0);
@@ -312,9 +316,9 @@ static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
         sm_emit_s(p, SM_PUSH_VAR, e->sval ? e->sval : "");
         return;
     case E_INDIRECT:
-        /* $expr — eval then indirect deref */
+        /* $expr — eval name-string, look up variable → push value on value stack */
         lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
-        sm_emit(p, SM_PAT_DEREF);   /* reuse DEREF for indirect lookup */
+        sm_emit_si(p, SM_CALL, "INDIR_GET", 1);
         return;
     case E_DEFER:
         lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
@@ -434,11 +438,15 @@ static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
         /* result already on stack; success/failure propagates */
         return;
 
-    /* ── Name reference .X ── */
-    case E_NAME:
-        lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
-        sm_emit_si(p, SM_CALL, "NAME", 1);
+    /* ── Name reference .X — push DT_N name descriptor onto value stack ── */
+    case E_NAME: {
+        /* Push the variable name as a string, then NAME_PUSH converts to DT_N */
+        const char *vname = (e->nchildren > 0 && e->children[0] && e->children[0]->sval)
+                            ? e->children[0]->sval : "";
+        sm_emit_s(p, SM_PUSH_LIT_S, vname);
+        sm_emit_si(p, SM_CALL, "NAME_PUSH", 1);
         return;
+    }
 
     /* ── Scan E ? E ── */
     case E_SCAN:
