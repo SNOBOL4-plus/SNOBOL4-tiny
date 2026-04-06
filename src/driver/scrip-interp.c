@@ -1905,5 +1905,9 @@ int main(int argc, char **argv)
     }
 
     execute_program(prog);
+    if (getenv("SNO_BINARY_BOXES")) {
+        extern void bin_audit_print(void);
+        bin_audit_print();
+    }
     return 0;
 }

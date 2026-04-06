@@ -785,6 +785,8 @@ static bb_box_fn bb_build_binary_node(PATND_t *p)
 
     default:
         /* Not yet implemented in binary path — signal fallback to C bb_build */
+        if (getenv("SNO_BIN_MISS_LOG"))
+            fprintf(stderr, "BIN_MISS: kind=%d\n", (int)p->kind);
         return NULL;
     }
 }

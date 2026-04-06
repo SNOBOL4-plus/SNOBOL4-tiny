@@ -314,6 +314,11 @@ static cache_slot_t g_node_cache[DYNC_CACHE_CAP];
 static int          g_cache_hits   = 0;
 static int          g_cache_misses = 0;
 
+/* M-DYN-B6: binary box coverage audit — printed when SNO_BINARY_BOXES set */
+static int          g_bin_hits     = 0;  /* bb_build_binary() returned non-NULL */
+static int          g_bin_misses   = 0;  /* bb_build_binary() returned NULL (C path) */
+static int          g_bin_str_hits = 0;  /* DT_S literal path took binary */
+
 static cache_slot_t *cache_find(PATND_t *key)
 {
     if (!key) return NULL;
@@ -362,6 +367,21 @@ void cache_stats(int *hits, int *misses)
 {
     if (hits)   *hits   = g_cache_hits;
     if (misses) *misses = g_cache_misses;
+}
+
+/* M-DYN-B6: print binary coverage audit to stderr (call at program end) */
+void bin_audit_print(void)
+{
+    int pat_total = g_bin_hits + g_bin_misses;
+    int all_total = pat_total + g_bin_str_hits;
+    if (all_total == 0) return;
+    fprintf(stderr,
+        "BINARY_AUDIT: DT_P hits=%d misses=%d (%.0f%%)  DT_S hits=%d  total_binary=%d/%d (%.0f%%)\n",
+        g_bin_hits, g_bin_misses,
+        pat_total ? 100.0 * g_bin_hits / pat_total : 0.0,
+        g_bin_str_hits,
+        g_bin_hits + g_bin_str_hits, all_total,
+        100.0 * (g_bin_hits + g_bin_str_hits) / all_total);
 }
 
 /* ── ATP box (@var) — cursor-position capture ───────────────────────────────
@@ -1226,6 +1246,9 @@ int exec_stmt(const char  *subj_name,
                 root.fn  = bfn;
                 root.ζ   = NULL;
                 bin_done = 1;
+                g_bin_hits++;
+            } else {
+                g_bin_misses++;
             }
         }
         if (!bin_done) {
@@ -1239,6 +1262,7 @@ int exec_stmt(const char  *subj_name,
                 root.fn  = bfn;
                 root.ζ   = NULL;
                 bin_done = 1;
+                g_bin_str_hits++;
             }
         }
         if (!bin_done) {
