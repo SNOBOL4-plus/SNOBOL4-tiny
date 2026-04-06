@@ -260,36 +260,34 @@ static void flat_emit_alt(PATND_t *p,
         return;
     }
 
-    /* β entry: try child 0 β (simplified — only first child β tracked flat) */
-    bb_label_t c0_beta, c0_fail;
-    bb_label_initf(&c0_beta, "alt%d_c0b", id);
-    bb_label_initf(&c0_fail, "alt%d_c0f", id);
-
-    /* Δ save slot for ALT reset */
-    flat_slot_t dslot = flat_alloc_slot();
-    (void)dslot;  /* slot index reserved; actual data patched post-emit */
-
-    bb_label_define(lbl_beta);
-    bb_insn_jmp_rel32(&c0_beta);
-
-    /* Child 0 α */
-    flat_emit_node(p->children[0], lbl_succ, &c0_fail, &c0_beta);
-
-    /* c0 failed: try remaining children sequentially */
-    for (int i = 1; i < nc; i++) {
-        bb_label_define(&c0_fail);
-        /* Reset Δ to alt entry Δ — load from global (Δ was restored by child β) */
-        /* For the flat model: emit each subsequent child with its own fail chain */
-        bb_label_t ci_beta, ci_fail;
-        bb_label_initf(&ci_beta, "alt%d_c%db", id, i);
-        bb_label_initf(&ci_fail, "alt%d_c%df", id, i);
-        c0_fail = ci_fail;   /* chain next fail */
-        flat_emit_node(p->children[i], lbl_succ, &ci_fail, &ci_beta);
+    /* ALT: emit children sequentially; each failure tries next child.
+     * All labels allocated up front in arrays — no value-alias bug. */
+    bb_label_t *ci_betas = alloca((size_t)nc * sizeof(bb_label_t));
+    bb_label_t *ci_fails = alloca((size_t)nc * sizeof(bb_label_t));
+    for (int i = 0; i < nc; i++) {
+        bb_label_initf(&ci_betas[i], "alt%d_c%db", id, i);
+        bb_label_initf(&ci_fails[i], "alt%d_c%df", id, i);
     }
 
-    /* Final fail → lbl_fail */
-    bb_label_define(&c0_fail);
+    /* Emit each child α-first; β entry defined AFTER children */
+    for (int i = 0; i < nc; i++) {
+        bb_label_t *s = lbl_succ;
+        bb_label_t alt_ω_lbl;
+        bb_label_initf(&alt_ω_lbl, "alt%d_c%do", id, i);
+        bb_label_t *f = (i < nc-1) ? &ci_fails[i] : &alt_ω_lbl;
+        flat_emit_node(p->children[i], s, f, &ci_betas[i]);
+        if (i < nc-1) {
+            bb_label_define(&ci_fails[i]);
+            /* next child α falls through */
+        } else {
+            bb_label_define(&alt_ω_lbl);
+        }
+    }
     bb_insn_jmp_rel32(lbl_fail);
+
+    /* β entry: AFTER all α code — reachable only via entry jmp */
+    bb_label_define(lbl_beta);
+    bb_insn_jmp_rel32(&ci_betas[0]);
 }
 
 /* ── Leaf node emitters ─────────────────────────────────────────────────── */
@@ -516,9 +514,14 @@ static int flat_is_eligible(PATND_t *p)
     case XDSAR: case XVAR: case XATP:
     case XFNME: case XNME: case XFARB:
     case XSTAR: case XARBN: case XCALLCAP:
+    case XLNTH: case XTB:  case XRTB: case XBRKX:
+    case XSPNC: case XANYC: case XBRKC: case XNNYC:  /* mutable ζ delta — unsafe to cache */
+    case XFNCE:  /* FENCE fired flag — mutable */
         return 0;
     default: break;
     }
+    /* n>2 XCAT: n-ary chain label management not yet implemented */
+    if (p->kind == XCAT && p->nchildren > 2) return 0;
     for (int i = 0; i < p->nchildren; i++)
         if (!flat_is_eligible(p->children[i])) return 0;
     return 1;
