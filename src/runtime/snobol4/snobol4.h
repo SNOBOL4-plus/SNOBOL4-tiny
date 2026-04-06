@@ -409,12 +409,34 @@ extern int64_t kw_code;      /* &CODE     - program exit code */
 extern int64_t kw_fnclevel;  /* &FNCLEVEL - function nesting depth */
 extern char    kw_rtntype[16]; /* &RTNTYPE  - RETURN/FRETURN/NRETURN */
 
-/* GAP 4 - runtime error infrastructure */
+/* GAP 4 - runtime error infrastructure
+ * Mirrors v311.sil error routing:
+ *   SNO_ERR_TERMINAL: codes 20,21,22,23,26,27,29,30,31,39 → FTLEND (exit immediately)
+ *   SNO_ERR_FATAL:    codes 19,24,25,35                   → FTLERR (exit, respects &FATALLIMIT)
+ *   SNO_ERR_SOFT:     everything else                     → FTLTST (longjmp, :F catchable)
+ */
 #include <setjmp.h>
 void sno_runtime_error(int code, const char *msg);
 extern jmp_buf g_sno_err_jmp;
 extern int     g_sno_err_active;
 extern int     g_sno_err_stmt;
+
+static inline int sno_err_is_terminal(int code) {
+    switch (code) {
+        case 20: case 21: case 22: case 23:   /* storage/stack/stlimit/size */
+        case 26: case 27: case 29: case 30:   /* compile-limit/end/include  */
+        case 31: case 39:                     /* line-stmt / cant-continue  */
+            return 1;
+        default: return 0;
+    }
+}
+static inline int sno_err_is_fatal(int code) {
+    switch (code) {
+        case 19: case 24: case 25: case 35:   /* fail-goto/bad-goto/args/no-setexit */
+            return 1;
+        default: return 0;
+    }
+}
 
 /* Global character sets */
 extern char ucase[27];   /* &UCASE */

@@ -98,6 +98,7 @@ static void mon_send(const char *kind, const char *name, const char *value) {
 
 void comm_stno(int n) {
     ++kw_stcount;
+    g_sno_err_stmt = n;          /* keep error reporter in sync with current stmt */
     if (kw_stlimit >= 0 && kw_stcount > kw_stlimit) {
         fprintf(stderr, "\n** &STLIMIT exceeded at statement %d"
                         " (&STCOUNT=%lld &STLIMIT=%lld)\n",
@@ -1343,9 +1344,61 @@ jmp_buf g_sno_err_jmp;
 int     g_sno_err_active = 0;
 int     g_sno_err_stmt   = 0;
 
+/* Canonical error message table — v311.sil lines 12195-12233 */
+static const char *sno_err_msgs[40] = {
+    /* 0  */ NULL,
+    /* 1  */ "Illegal data type",
+    /* 2  */ "Error in arithmetic operation",
+    /* 3  */ "Erroneous array or table reference",
+    /* 4  */ "Null string in illegal context",
+    /* 5  */ "Undefined function or operation",
+    /* 6  */ "Erroneous prototype",
+    /* 7  */ "Unknown keyword",
+    /* 8  */ "Variable not present where required",
+    /* 9  */ "Entry point of function not label",
+    /* 10 */ "Illegal argument to primitive function",
+    /* 11 */ "Reading error",
+    /* 12 */ "Illegal i/o unit",
+    /* 13 */ "Limit on defined data types exceeded",
+    /* 14 */ "Negative number in illegal context",
+    /* 15 */ "String overflow",
+    /* 16 */ "Overflow during pattern matching",
+    /* 17 */ "Error in SNOBOL4 system",
+    /* 18 */ "Return from level zero",
+    /* 19 */ "Failure during goto evaluation",
+    /* 20 */ "Insufficient storage to continue",
+    /* 21 */ "Stack overflow",
+    /* 22 */ "Limit on statement execution exceeded",
+    /* 23 */ "Object exceeds size limit",
+    /* 24 */ "Undefined or erroneous goto",
+    /* 25 */ "Incorrect number of arguments",
+    /* 26 */ "Limit on compilation errors exceeded",
+    /* 27 */ "Erroneous END statement",
+    /* 28 */ "Execution of statement with compilation error",
+    /* 29 */ "Erroneous INCLUDE statement",
+    /* 30 */ "Cannot open INCLUDE file",
+    /* 31 */ "Erroneous LINE statement",
+    /* 32 */ "Missing END statement",
+    /* 33 */ "Output error",
+    /* 34 */ "User interrupt",
+    /* 35 */ "Not in a SETEXIT handler",
+    /* 36 */ "Error in BLOCKS",
+    /* 37 */ "Too many warnings in BLOCKS",
+    /* 38 */ "Mystery error in BLOCKS",
+    /* 39 */ "Cannot CONTINUE from FATAL error",
+};
+
 void sno_runtime_error(int code, const char *msg) {
+    /* Use canonical message from table if caller passed NULL */
+    if (!msg && code >= 1 && code <= 39)
+        msg = sno_err_msgs[code];
     fprintf(stderr, "\n** Error %d in statement %d\n   %s\n",
             code, g_sno_err_stmt, msg ? msg : "");
+    /* Terminal errors (storage/stack/stlimit/compile): exit immediately */
+    if (sno_err_is_terminal(code)) exit(1);
+    /* Fatal errors (bad goto, wrong args, etc.): exit, no longjmp recovery */
+    if (sno_err_is_fatal(code))    exit(1);
+    /* Soft errors: longjmp to statement executor for :F branch handling */
     if (g_sno_err_active) longjmp(g_sno_err_jmp, code);
     exit(1);
 }
@@ -1364,7 +1417,7 @@ int64_t to_int(DESCR_t v) {
         case DT_K:  /* SIL: keyword → dereference via NV_GET, then coerce */
             return to_int(NV_GET_fn(v.s));
         default:
-            sno_runtime_error(1, "Illegal data type");
+            sno_runtime_error(1, NULL);
             return 0;
     }
 }
@@ -1381,7 +1434,7 @@ double to_real(DESCR_t v) {
         case DT_K:  /* SIL: keyword → dereference via NV_GET, then coerce */
             return to_real(NV_GET_fn(v.s));
         default:
-            sno_runtime_error(1, "Illegal data type");
+            sno_runtime_error(1, NULL);
             return 0.0;
     }
 }

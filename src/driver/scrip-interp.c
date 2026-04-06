@@ -1356,10 +1356,33 @@ static void execute_program(Program *prog)
     STMT_t *s = prog->head;
     int step_limit = 10000000;   /* guard against infinite loops in smoke tests */
 
-    int stno = 0;
+    /* Arm runtime-error longjmp.  sno_runtime_error() prints the message
+     * and longjmps here with the error code.  We treat it as statement
+     * failure (SNOBOL4 spec: runtime error → fail branch, then END).    */
+    g_sno_err_active = 1;
+
+    /* Hoist per-iteration state above setjmp: C99 forbids goto crossing an
+     * initializer, and longjmp re-enters at the setjmp call each iteration. */
+    int         stno      = 0;
+    int         succeeded = 1;
+    DESCR_t     subj_val  = NULVCL;
+    const char *subj_name = NULL;
+    const char *target    = NULL;
+
     while (s && step_limit-- > 0) {
         if (s->is_end) break;
         comm_stno(++stno);
+
+        /* Catch runtime errors (longjmp from sno_runtime_error).
+         * On error: take :F branch if present, else advance to next stmt. */
+        if (setjmp(g_sno_err_jmp) != 0) {
+            /* message already printed by sno_runtime_error() */
+            succeeded = 0;
+            target    = NULL;
+            if (s->go && s->go->onfailure && *s->go->onfailure)
+                target = s->go->onfailure;
+            goto do_goto;
+        }
 
         /* Skip Prolog/Icon nodes that sneak in via shared parser */
         if (s->subject && (s->subject->kind == E_CHOICE ||
@@ -1369,8 +1392,8 @@ static void execute_program(Program *prog)
         }
 
         /* ── evaluate subject ──────────────────────────────────────── */
-        DESCR_t     subj_val  = NULVCL;
-        const char *subj_name = NULL;
+        subj_val  = NULVCL;
+        subj_name = NULL;
 
         if (s->subject) {
             if (s->subject->kind == E_VAR && s->subject->sval) {
@@ -1381,7 +1404,7 @@ static void execute_program(Program *prog)
             }
         }
 
-        int succeeded = 1;
+        succeeded = 1;
 
         /* ── pattern match ─────────────────────────────────────────── */
         if (s->pattern) {
@@ -1522,7 +1545,7 @@ static void execute_program(Program *prog)
             if (IS_FAIL_fn(subj_val)) succeeded = 0;
         }
         /* ── goto resolution ───────────────────────────────────────── */
-        const char *target = NULL;
+        target = NULL;
         if (s->go) {
             if (s->go->uncond && *s->go->uncond)
                 target = s->go->uncond;
@@ -1532,6 +1555,7 @@ static void execute_program(Program *prog)
                 target = s->go->onfailure;
         }
 
+        do_goto:
         if (target) {
             /* Check for END pseudo-label */
             if (strcasecmp(target, "END") == 0) break;
@@ -1539,7 +1563,8 @@ static void execute_program(Program *prog)
             if (strcasecmp(target, "RETURN") == 0 || strcasecmp(target, "FRETURN") == 0) break;
             STMT_t *dest = label_lookup(target);
             if (dest) { s = dest; continue; }
-            /* Unknown label — treat as program end */
+            /* Unknown label — Error 24: Undefined or erroneous goto */
+            sno_runtime_error(24, NULL);
             break;
         }
 
