@@ -545,9 +545,14 @@ static void lower_stmt(SM_Program *p, LabelTable *lt, const STMT_t *s)
             if (s->subject->kind == E_VAR || s->subject->kind == E_KEYWORD) {
                 sm_emit_s(p, SM_STORE_VAR, s->subject->sval ? s->subject->sval : "");
             } else if (s->subject->kind == E_INDIRECT) {
-                /* $expr = rhs: eval the indirect name, then ASGN(name, rhs) */
                 lower_expr(p, lt, s->subject->nchildren > 0 ? s->subject->children[0] : NULL);
                 sm_emit_si(p, SM_CALL, "ASGN_INDIR", 2);
+            } else if (s->subject->kind == E_IDX) {
+                /* a<i> = rhs  or  a<i,j> = rhs — stack: rhs already pushed above.
+                 * Push base, then indices; sm_interp IDX_SET pops all and calls subscript_set. */
+                int nc = s->subject->nchildren;  /* child[0]=base, child[1]=i, [2]=j */
+                for (int ci = 0; ci < nc; ci++) lower_expr(p, lt, s->subject->children[ci]);
+                sm_emit_si(p, SM_CALL, "IDX_SET", (int64_t)(nc + 1)); /* +1 for rhs */
             } else {
                 lower_expr(p, lt, s->subject);
                 sm_emit_si(p, SM_CALL, "ASGN", 2);

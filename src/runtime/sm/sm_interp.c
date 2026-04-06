@@ -405,13 +405,48 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
 
             /* Special pseudo-calls handled inline */
             if (name && strcmp(name, "ASGN_INDIR") == 0) {
-                /* args[0]=name_descr, args[1]=value (pushed: value first, then name) */
-                DESCR_t name_d = sm_pop(st);   /* indirect name expr */
-                DESCR_t val    = sm_pop(st);   /* rhs value */
+                DESCR_t name_d = sm_pop(st);
+                DESCR_t val    = sm_pop(st);
                 const char *vname = VARVAL_fn(name_d);
                 if (vname && *vname) NV_SET_fn(vname, val);
                 sm_push(st, val);
                 st->last_ok = 1;
+                break;
+            }
+            if (name && strcmp(name, "IDX") == 0) {
+                /* subscript read: stack top=last_idx ... base; nargs=nchildren */
+                if (nargs == 2) {
+                    DESCR_t idx  = sm_pop(st);
+                    DESCR_t base = sm_pop(st);
+                    DESCR_t r = subscript_get(base, idx);
+                    sm_push(st, r);
+                    st->last_ok = (r.v != DT_FAIL);
+                } else if (nargs == 3) {
+                    DESCR_t j    = sm_pop(st); DESCR_t i = sm_pop(st);
+                    DESCR_t base = sm_pop(st);
+                    DESCR_t r = subscript_get2(base, i, j);
+                    sm_push(st, r);
+                    st->last_ok = (r.v != DT_FAIL);
+                } else { sm_push(st, FAILDESCR); st->last_ok = 0; }
+                break;
+            }
+            if (name && strcmp(name, "IDX_SET") == 0) {
+                /* sm_lower emits: rhs, then base, then i [, j]
+                 * Stack top-to-bottom at IDX_SET: i [j], base, rhs
+                 * Pop: indices first (top), then base, then rhs (bottom). */
+                if (nargs == 3) {        /* 1D: children=2, nc+1=3 */
+                    DESCR_t i    = sm_pop(st);
+                    DESCR_t base = sm_pop(st);
+                    DESCR_t val  = sm_pop(st);
+                    subscript_set(base, i, val);
+                    sm_push(st, val); st->last_ok = 1;
+                } else if (nargs == 4) { /* 2D: children=3, nc+1=4 */
+                    DESCR_t j    = sm_pop(st); DESCR_t i = sm_pop(st);
+                    DESCR_t base = sm_pop(st);
+                    DESCR_t val  = sm_pop(st);
+                    subscript_set2(base, i, j, val);
+                    sm_push(st, val); st->last_ok = 1;
+                } else { st->last_ok = 0; }
                 break;
             }
 
