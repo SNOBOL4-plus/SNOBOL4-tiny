@@ -300,6 +300,7 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
 
     /* ── Push call frame ── */
     CallFrame *fr = &call_stack[call_depth++];
+    kw_fnclevel = call_depth;  /* &FNCLEVEL tracks live nesting depth */
     strncpy(fr->fname, retname, sizeof(fr->fname)-1);
     fr->fname[sizeof(fr->fname)-1] = '\0';
     fr->saved_names = snames;
@@ -478,10 +479,12 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
                         if (strcasecmp(target, "END") == 0) break;
                     if (strcasecmp(target, "RETURN") == 0) {
                         retval = NV_GET_fn(fr->fname);
+                        strncpy(kw_rtntype, "RETURN",  sizeof(kw_rtntype)-1);
                         goto fn_done;
                     }
                     if (strcasecmp(target, "FRETURN") == 0) {
                         retval = FAILDESCR;
+                        strncpy(kw_rtntype, "FRETURN", sizeof(kw_rtntype)-1);
                         goto fn_done;
                     }
                     if (strcasecmp(target, "NRETURN") == 0) {
@@ -489,6 +492,7 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
                          * caller (E_FNC) applies NAME_DEREF (slen discriminates
                          * NAMEPTR from NAMEVAL). */
                         retval = NV_GET_fn(fr->fname);
+                        strncpy(kw_rtntype, "NRETURN", sizeof(kw_rtntype)-1);
                         goto fn_done;
                     }
                     STMT_t *dest = label_lookup(target);
@@ -500,10 +504,13 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
         }
         /* fell off body without RETURN — return function's name variable */
         retval = NV_GET_fn(fr->fname);
+        strncpy(kw_rtntype, "RETURN",  sizeof(kw_rtntype)-1);
     } else if (ret_kind == 1) {
         retval = NV_GET_fn(fr->fname);
+        strncpy(kw_rtntype, "RETURN",  sizeof(kw_rtntype)-1);
     } else {
         retval = FAILDESCR;
+        strncpy(kw_rtntype, "FRETURN", sizeof(kw_rtntype)-1);
     }
 
 fn_done:
@@ -511,6 +518,7 @@ fn_done:
     for (int i = 0; i < nsaved; i++)
         NV_SET_fn(snames[i], svals[i]);
     call_depth--;
+    kw_fnclevel = call_depth;
     return retval;
 }
 

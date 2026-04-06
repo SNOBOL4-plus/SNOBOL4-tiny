@@ -403,6 +403,11 @@ extern int64_t kw_anchor;
 extern int64_t kw_trim;
 extern int64_t kw_stlimit;
 extern int64_t kw_stcount;   /* &STCOUNT — incremented every statement */
+extern int64_t kw_ftrace;    /* &FTRACE   - function trace counter */
+extern int64_t kw_errlimit;  /* &ERRLIMIT - max compile errors */
+extern int64_t kw_code;      /* &CODE     - program exit code */
+extern int64_t kw_fnclevel;  /* &FNCLEVEL - function nesting depth */
+extern char    kw_rtntype[16]; /* &RTNTYPE  - RETURN/FRETURN/NRETURN */
 
 /* Global character sets */
 extern char ucase[27];   /* &UCASE */

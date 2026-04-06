@@ -125,6 +125,11 @@ int64_t kw_anchor   = 0;
 int64_t kw_trim     = 1;
 int64_t kw_stlimit  = -1;
 int64_t kw_case     = 0;   /* &CASE: 0=fold to upper (default), non-0=sensitive */
+int64_t kw_ftrace   = 0;   /* &FTRACE   - function trace counter */
+int64_t kw_errlimit = 0;   /* &ERRLIMIT - max compile errors before abort */
+int64_t kw_code     = 0;   /* &CODE     - program exit code (set before END) */
+int64_t kw_fnclevel = 0;   /* &FNCLEVEL - current function nesting depth */
+char    kw_rtntype[16] = "";/* &RTNTYPE  - RETURN/FRETURN/NRETURN */
 
 char ucase[27]    = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 char lcase[27]    = "abcdefghijklmnopqrstuvwxyz";
@@ -1687,6 +1692,13 @@ DESCR_t NV_GET_fn(const char *name) {
     if (strcasecmp(name, "ANCHOR")   == 0) return INTVAL(kw_anchor);
     if (strcasecmp(name, "TRIM")     == 0) return INTVAL(kw_trim);
     if (strcasecmp(name, "FULLSCAN") == 0) return INTVAL(kw_fullscan);
+    if (strcasecmp(name, "CASE")     == 0) return INTVAL(kw_case);
+    if (strcasecmp(name, "MAXLNGTH") == 0) return INTVAL(kw_maxlngth);
+    if (strcasecmp(name, "FTRACE")   == 0) return INTVAL(kw_ftrace);
+    if (strcasecmp(name, "ERRLIMIT") == 0) return INTVAL(kw_errlimit);
+    if (strcasecmp(name, "CODE")     == 0) return INTVAL(kw_code);
+    if (strcasecmp(name, "FNCLEVEL") == 0) return INTVAL(kw_fnclevel);
+    if (strcasecmp(name, "RTNTYPE")  == 0) return STRVAL(kw_rtntype);
     if (strcasecmp(name, "ALPHABET") == 0) return BSTRVAL(alphabet, 256);
     unsigned h = _var_hash(name);
     for (NV_t *e = _var_buckets[h]; e; e = e->next)
@@ -1718,6 +1730,12 @@ void NV_SET_fn(const char *name, DESCR_t val) {
     if (strcasecmp(name, "ANCHOR")   == 0) { kw_anchor   = (val.v==DT_I)?val.i:(int64_t)to_real(val); return; }
     if (strcasecmp(name, "TRIM")     == 0) { kw_trim     = (val.v==DT_I)?val.i:(int64_t)to_real(val); return; }
     if (strcasecmp(name, "FULLSCAN") == 0) { kw_fullscan = (val.v==DT_I)?val.i:(int64_t)to_real(val); return; }
+    if (strcasecmp(name, "CASE")     == 0) { kw_case     = (val.v==DT_I)?val.i:(int64_t)to_real(val); return; }
+    if (strcasecmp(name, "MAXLNGTH") == 0) { kw_maxlngth = (val.v==DT_I)?val.i:(int64_t)to_real(val); return; }
+    if (strcasecmp(name, "FTRACE")   == 0) { kw_ftrace   = (val.v==DT_I)?val.i:(int64_t)to_real(val); return; }
+    if (strcasecmp(name, "ERRLIMIT") == 0) { kw_errlimit = (val.v==DT_I)?val.i:(int64_t)to_real(val); return; }
+    if (strcasecmp(name, "CODE")     == 0) { kw_code     = (val.v==DT_I)?val.i:(int64_t)to_real(val); return; }
+    /* &FNCLEVEL and &RTNTYPE: interpreter-controlled, user writes silently ignored */
     unsigned h = _var_hash(name);
     for (NV_t *e = _var_buckets[h]; e; e = e->next) {
         if (strcmp(e->name, name) == 0) {
@@ -1750,6 +1768,13 @@ DESCR_t *NV_PTR_fn(const char *name) {
     if (strcasecmp(name, "ANCHOR")   == 0) return NULL;
     if (strcasecmp(name, "TRIM")     == 0) return NULL;
     if (strcasecmp(name, "FULLSCAN") == 0) return NULL;
+    if (strcasecmp(name, "CASE")     == 0) return NULL;
+    if (strcasecmp(name, "MAXLNGTH") == 0) return NULL;
+    if (strcasecmp(name, "FTRACE")   == 0) return NULL;
+    if (strcasecmp(name, "ERRLIMIT") == 0) return NULL;
+    if (strcasecmp(name, "CODE")     == 0) return NULL;
+    if (strcasecmp(name, "FNCLEVEL") == 0) return NULL;
+    if (strcasecmp(name, "RTNTYPE")  == 0) return NULL;
     unsigned h = _var_hash(name);
     for (NV_t *e = _var_buckets[h]; e; e = e->next)
         if (strcmp(e->name, name) == 0) return &e->val;
@@ -1813,6 +1838,13 @@ DESCR_t NAME_fn(const char *varname) {
         strcasecmp(varname, "STCOUNT")  == 0 ||
         strcasecmp(varname, "STNO")     == 0 ||
         strcasecmp(varname, "ALPHABET") == 0 ||
+        strcasecmp(varname, "CASE")     == 0 ||
+        strcasecmp(varname, "MAXLNGTH") == 0 ||
+        strcasecmp(varname, "FTRACE")   == 0 ||
+        strcasecmp(varname, "ERRLIMIT") == 0 ||
+        strcasecmp(varname, "CODE")     == 0 ||
+        strcasecmp(varname, "FNCLEVEL") == 0 ||
+        strcasecmp(varname, "RTNTYPE")  == 0 ||
         strcasecmp(varname, "INPUT")    == 0 ||
         strcasecmp(varname, "OUTPUT")   == 0)
         return NAMEVAL(GC_strdup(varname));
@@ -1834,10 +1866,17 @@ int ASGNIC_fn(const char *kw_name, DESCR_t val) {
     if (strcasecmp(kw_name, "ANCHOR")   == 0) { kw_anchor   = iv; return 1; }
     if (strcasecmp(kw_name, "TRIM")     == 0) { kw_trim     = iv; return 1; }
     if (strcasecmp(kw_name, "FULLSCAN") == 0) { kw_fullscan = iv; return 1; }
-    /* STCOUNT/STNO/ALPHABET are protected — assignment is a no-op, not an error */
+    if (strcasecmp(kw_name, "CASE")     == 0) { kw_case     = iv; return 1; }
+    if (strcasecmp(kw_name, "MAXLNGTH") == 0) { kw_maxlngth = iv; return 1; }
+    if (strcasecmp(kw_name, "FTRACE")   == 0) { kw_ftrace   = iv; return 1; }
+    if (strcasecmp(kw_name, "ERRLIMIT") == 0) { kw_errlimit = iv; return 1; }
+    if (strcasecmp(kw_name, "CODE")     == 0) { kw_code     = iv; return 1; }
+    /* STCOUNT/STNO/ALPHABET/FNCLEVEL/RTNTYPE are protected — assignment is a no-op */
     if (strcasecmp(kw_name, "STCOUNT")  == 0) return 1;
     if (strcasecmp(kw_name, "STNO")     == 0) return 1;
     if (strcasecmp(kw_name, "ALPHABET") == 0) return 1;
+    if (strcasecmp(kw_name, "FNCLEVEL") == 0) return 1;  /* protected */
+    if (strcasecmp(kw_name, "RTNTYPE")  == 0) return 1;  /* protected */
     return 0;  /* not a keyword */
 }
 
