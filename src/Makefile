@@ -6,7 +6,7 @@ CFLAGS = -Wall -Wno-unused-function -g -O0 \
          -I frontend/prolog \
          -I frontend/icon \
          -I frontend/rebus \
-         -I backend/c \
+         -I backend \
          -I backend
 
 FRONTEND_SNO = \
@@ -34,8 +34,8 @@ FRONTEND_REBUS = \
     frontend/rebus/rebus_print.c
 
 BACKEND_C = \
-    backend/c/emit_cnode.c \
-    backend/c/emit_byrd_c.c
+    emit_cnode.c \
+    emit_byrd_c.c
 
 BACKEND_X64 = \
     backend/emit_x64.c \
@@ -115,8 +115,8 @@ backend/emit_x64.o: backend/emit_x64_prolog.c
 %.o: %.c \
      frontend/snobol4/scrip_cc.h \
      frontend/snobol4/snobol4.h \
-     backend/c/emit_cnode.h \
-     backend/c/emit_pretty.h
+     emit_cnode.h \
+     emit_pretty.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:

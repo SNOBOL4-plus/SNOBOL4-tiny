@@ -118,7 +118,7 @@ if [[ $SKIP_FIX -eq 0 && $ONLY_BASELINE -eq 0 ]]; then
   # Try to build with ASan for better crash diagnosis
   info "Building with AddressSanitizer for crash diagnosis..."
   ASAN_BIN="$ROOT/scrip-cc_asan"
-  if (cd "$ROOT/src" && make -j4 -s CFLAGS="-Wall -Wno-unused-function -g -O0 -I. -Ifrontend/snobol4 -Ifrontend/snocone -Ifrontend/prolog -Ifrontend/icon -Ibackend/c -Ibackend/x64 -fsanitize=address,undefined" 2>/dev/null && cp "$ROOT/scrip-cc" "$ASAN_BIN") 2>/dev/null; then
+  if (cd "$ROOT/src" && make -j4 -s CFLAGS="-Wall -Wno-unused-function -g -O0 -I. -Ifrontend/snobol4 -Ifrontend/snocone -Ifrontend/prolog -Ifrontend/icon -Ibackend -Ibackend/x64 -fsanitize=address,undefined" 2>/dev/null && cp "$ROOT/scrip-cc" "$ASAN_BIN") 2>/dev/null; then
     ok "ASan binary: $ASAN_BIN"
     info "Running crash pair under ASan..."
     ASAN_OPTIONS=abort_on_error=0 "$ASAN_BIN" -asm "$F013" "$F014" > /dev/null 2>&1 || true

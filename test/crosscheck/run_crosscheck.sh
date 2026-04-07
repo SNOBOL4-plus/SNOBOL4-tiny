@@ -13,7 +13,7 @@ STOP_ON_FAIL="${STOP_ON_FAIL:-1}"
 TIMEOUT=5
 TMPDIR_RUN=$(mktemp -d); trap "rm -rf $TMPDIR_RUN" EXIT
 
-BACKEND_C="$TINY/src/backend/c"
+BACKEND_C="$TINY/src/backend"
 
 # Precompile runtime into a static archive once — 5x faster per-test gcc link.
 RTLIB="$TMPDIR_RUN/libsnobol4rt.a"

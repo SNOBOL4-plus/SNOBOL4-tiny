@@ -36,7 +36,7 @@
  *   It #includes emit_pretty.h from the C backend for the PLG/PL/PS/PG macros.
  *   Compile with:
  *     gcc -I src/frontend/snobol4 -I src/frontend/prolog \
- *         -I src/backend/c pl_emit.c prolog_atom.c -c
+ *         -I src/backend pl_emit.c prolog_atom.c -c
  */
 
 #define EMIT_BYRD_PL_C
