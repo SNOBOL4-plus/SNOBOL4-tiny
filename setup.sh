@@ -12,7 +12,10 @@ ROOT="$(cd "$SNOBOL4X/.." && pwd)"
 CORPUS="$ROOT/corpus"
 X64="$ROOT/x64"
 CSNOBOL4_SRC="$ROOT/csnobol4-src"
-TARBALL="/mnt/user-data/uploads/snobol4-2_3_3_tar.gz"
+
+# Local uploads folder — change this if your tarballs are elsewhere
+UPLOADS="/home/satirical/claude"
+TARBALL="$UPLOADS/snobol4-2_3_3_tar.gz"
 
 GREEN='\033[0;32m'; YELLOW='\033[0;33m'; RED='\033[0;31m'; RESET='\033[0m'
 ok()   { echo -e "${GREEN}OK${RESET}  $*"; }
