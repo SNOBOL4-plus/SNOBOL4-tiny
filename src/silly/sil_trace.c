@@ -74,7 +74,11 @@ static RESULT_t tracep(DESCR_t xptr, DESCR_t yptr, DESCR_t wptr, DESCR_t zptr)
             PUTDC_B(TPTR, 2*DESCR, XCL);
             MOVD(XPTR, NULVCL); return OK;
         }
-        AUGATL_fn(D_A(TPTR), xptr, XCL); /* AUGATL */
+        /* TRAC3: RCALL TPTR,AUGATL,(TPTR,XPTR,XCL) — augment list, result in TPTR */
+        int32_t new_list = AUGATL_fn(D_A(TPTR), xptr, XCL);
+        SETAC(TPTR, new_list);
+        /* TRAC6: PUTDC YPTR,0,TPTR — link augmented list back */
+        PUTDC_B(yptr, 0, TPTR);
         MOVD(XPTR, NULVCL); return OK;
     }
     int32_t pb = BLOCK_fn(2*DESCR, B); /* TRAC4: allocate new pair list */
