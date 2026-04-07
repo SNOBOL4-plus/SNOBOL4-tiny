@@ -2157,7 +2157,7 @@ int main(int argc, char **argv)
                        sm->instrs[st.pc].op != SM_HALT)
                     st.pc++;
             }
-            int rc = sm_jit_run_plain(sm, &st);
+            int rc = sm_jit_run(sm, &st);
             if (rc == 0 || rc < -1) break;
             if (st.pc >= sm->count) break;
         }

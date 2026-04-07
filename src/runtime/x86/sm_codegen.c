@@ -142,7 +142,15 @@ static DESCR_t jit_arith(DESCR_t l, DESCR_t r, sm_opcode_t op)
         case SM_SUB: return INTVAL(l.i - r.i);
         case SM_MUL: return INTVAL(l.i * r.i);
         case SM_DIV: return (r.i == 0) ? FAILDESCR : INTVAL(l.i / r.i);
-        case SM_EXP: { double v = pow((double)l.i, (double)r.i); return REALVAL(v); }
+        case SM_EXP: {
+            /* integer ** non-negative integer → integer (mirrors sm_interp.c) */
+            if (r.i >= 0) {
+                int64_t base = l.i, exp = r.i, res = 1;
+                while (exp-- > 0) res *= base;
+                return INTVAL(res);
+            }
+            return REALVAL(pow((double)l.i, (double)r.i));
+        }
         default: break;
         }
     }
@@ -493,38 +501,25 @@ static void init_handler_table(void)
 
 /* ── x86-64 dispatch stub emitter ────────────────────────────────────── */
 /*
- * Emit into SEG_DISPATCH a tiny stub that calls handler fn via absolute ptr:
+ * Emit into SEG_DISPATCH a 12-byte tail-call stub for handler fn:
  *
- *   push rbp
- *   mov  rbp, rsp
- *   sub  rsp, 8            ; align stack to 16 bytes before call
- *   mov  rax, <imm64>      ; handler address
- *   call rax
- *   add  rsp, 8
- *   pop  rbp
- *   ret
+ *   mov  rax, <imm64>      ; handler address (10 bytes)
+ *   jmp  rax               ; tail-call, no frame (2 bytes)
+ *
+ * No stack frame: the stub is called via CALL from sm_jit_run's dispatch
+ * loop, which already has a 16-byte-aligned stack at that point.  Adding
+ * push/sub here broke alignment for any handler that itself issues a CALL
+ * (e.g. NV_SET_fn → printf).  Tail-call avoids the problem entirely.
  */
 static uint8_t *emit_dispatch_stub(handler_fn_t fn)
 {
     uint8_t *entry = scrip_segs[SEG_DISPATCH].top;
 
-    /* push rbp */
-    seg_byte(SEG_DISPATCH, 0x55);
-    /* mov rbp, rsp */
-    seg_byte(SEG_DISPATCH, 0x48); seg_byte(SEG_DISPATCH, 0x89); seg_byte(SEG_DISPATCH, 0xe5);
-    /* sub rsp, 8 */
-    seg_byte(SEG_DISPATCH, 0x48); seg_byte(SEG_DISPATCH, 0x83); seg_byte(SEG_DISPATCH, 0xec); seg_byte(SEG_DISPATCH, 0x08);
     /* mov rax, imm64 */
     seg_byte(SEG_DISPATCH, 0x48); seg_byte(SEG_DISPATCH, 0xb8);
     seg_u64(SEG_DISPATCH, (uint64_t)(uintptr_t)fn);
-    /* call rax */
-    seg_byte(SEG_DISPATCH, 0xff); seg_byte(SEG_DISPATCH, 0xd0);
-    /* add rsp, 8 */
-    seg_byte(SEG_DISPATCH, 0x48); seg_byte(SEG_DISPATCH, 0x83); seg_byte(SEG_DISPATCH, 0xc4); seg_byte(SEG_DISPATCH, 0x08);
-    /* pop rbp */
-    seg_byte(SEG_DISPATCH, 0x5d);
-    /* ret */
-    seg_byte(SEG_DISPATCH, 0xc3);
+    /* jmp rax */
+    seg_byte(SEG_DISPATCH, 0xff); seg_byte(SEG_DISPATCH, 0xe0);
 
     return entry;
 }
