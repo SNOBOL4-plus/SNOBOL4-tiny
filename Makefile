@@ -86,6 +86,8 @@ scrip: $(SNO_RT_WASM)
 	$(CC) $(CRT)   -c $(RT)/x86/sm_prog.c    -o $(OBJ)/sm_prog.o
 	$(CC) $(CRT)   -c $(RT)/x86/sm_interp.c  -o $(OBJ)/sm_interp.o
 	$(CC) $(CRT)   -c $(RT)/x86/sm_lower.c   -o $(OBJ)/sm_lower.o
+	$(CC) $(CRT)   -c $(RT)/x86/sm_image.c   -o $(OBJ)/sm_image.o
+	$(CC) $(CRT)   -c $(RT)/x86/sm_codegen.c -o $(OBJ)/sm_codegen.o
 	cd $(SRC) && $(CC) -O0 -g -w \
 	    -I . -I frontend/snobol4 -I frontend/icon \
 	    -I frontend/prolog -I frontend/snocone \

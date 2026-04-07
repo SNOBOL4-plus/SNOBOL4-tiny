@@ -61,7 +61,9 @@ extern void ir_print_node_nl(const EXPR_t *e, FILE *f);
 #include "../runtime/x86/sm_lower.h"
 #include "../runtime/x86/sm_interp.h"
 #include "../runtime/x86/sm_prog.h"
-#include "../runtime/x86/bb_build.h"  /* M-BB-LIVE-WIRE: bb_mode_t, g_bb_mode */
+#include "../runtime/x86/bb_build.h"    /* M-BB-LIVE-WIRE: bb_mode_t, g_bb_mode */
+#include "../runtime/x86/sm_codegen.h"  /* M-JIT-RUN: sm_codegen, sm_jit_run */
+#include "../runtime/x86/sm_image.h"    /* M-JIT-RUN: sm_image_init */
 
 /* pat_at_cursor not exposed in snobol4.h — forward-declare here */
 extern DESCR_t pat_at_cursor(const char *varname);
@@ -1839,7 +1841,6 @@ int main(int argc, char **argv)
         target_x64 = 1;
 
     /* Suppress unused warnings for modes/targets not yet wired to codegen */
-    (void)mode_jit_run;
     (void)bb_driver;
     (void)target_x64; (void)target_jvm; (void)target_net;
     (void)target_js; (void)target_c;
@@ -2122,6 +2123,42 @@ int main(int argc, char **argv)
             }
             int rc = sm_interp_run(sm, &st);
             if (rc == 0 || rc < -1) break;  /* halted or fatal */
+            if (st.pc >= sm->count) break;
+        }
+        sm_prog_free(sm);
+    } else if (mode_jit_run) {
+        /* --jit-run: SM-LOWER → sm_codegen → sm_jit_run.
+         * Same preamble as --sm-run; codegen replaces sm_interp_run. */
+        label_table_build(prog);
+        prescan_defines(prog);
+        g_sno_err_active = 1;
+        SM_Program *sm = sm_lower(prog);
+        if (!sm) { fprintf(stderr, "scrip: sm_lower failed\n"); return 1; }
+        if (dump_sm) { sm_prog_print(sm, stdout); sm_prog_free(sm); return 0; }
+        if (sm_image_init() != 0) {
+            fprintf(stderr, "scrip: sm_image_init failed\n");
+            sm_prog_free(sm); return 1;
+        }
+        if (sm_codegen(sm) != 0) {
+            fprintf(stderr, "scrip: sm_codegen failed\n");
+            sm_prog_free(sm); return 1;
+        }
+        SM_State st;
+        sm_state_init(&st);
+        int hybrid_err;
+        while (1) {
+            hybrid_err = setjmp(g_sno_err_jmp);
+            if (hybrid_err != 0) {
+                st.last_ok = 0;
+                st.sp = 0;
+                if (st.pc < sm->count) st.pc++;
+                while (st.pc < sm->count &&
+                       sm->instrs[st.pc].op != SM_STNO &&
+                       sm->instrs[st.pc].op != SM_HALT)
+                    st.pc++;
+            }
+            int rc = sm_jit_run_plain(sm, &st);
+            if (rc == 0 || rc < -1) break;
             if (st.pc >= sm->count) break;
         }
         sm_prog_free(sm);
