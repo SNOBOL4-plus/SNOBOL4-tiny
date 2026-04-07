@@ -1838,10 +1838,10 @@ int main(int argc, char **argv)
         target_x64 = 1;
 
     /* Suppress unused warnings for modes/targets not yet wired to codegen */
-    (void)mode_jit_run; (void)mode_jit_emit;
+    (void)mode_jit_run;
     (void)bb_driver; (void)bb_live;
     (void)target_x64; (void)target_jvm; (void)target_net;
-    (void)target_js; (void)target_c; (void)target_wasm;
+    (void)target_js; (void)target_c;
 
     if (argi >= argc) {
         fprintf(stderr,
@@ -2051,6 +2051,28 @@ int main(int argc, char **argv)
         if (!sm0) { fprintf(stderr, "scrip: sm_lower failed\n"); return 1; }
         sm_prog_print(sm0, stdout);
         sm_prog_free(sm0);
+        return 0;
+    }
+
+    /* ── --jit-emit --wasm: IR → WAT text file ──────────────────────── */
+    if (mode_jit_emit && target_wasm) {
+        extern void emit_wasm(Program *prog, FILE *out, const char *filename);
+        /* Determine output filename: replace .sno/.spt/etc with .wat,
+         * or append .wat if no recognised extension found. */
+        char wat_path[4096];
+        strncpy(wat_path, input_path, sizeof wat_path - 5);
+        wat_path[sizeof wat_path - 5] = '\0';
+        char *dot = strrchr(wat_path, '.');
+        if (dot) *dot = '\0';
+        strncat(wat_path, ".wat", 4);
+        FILE *wat_out = fopen(wat_path, "w");
+        if (!wat_out) {
+            fprintf(stderr, "scrip: cannot open output '%s'\n", wat_path);
+            return 1;
+        }
+        emit_wasm(prog, wat_out, wat_path);
+        fclose(wat_out);
+        fprintf(stderr, "scrip: wrote %s\n", wat_path);
         return 0;
     }
 

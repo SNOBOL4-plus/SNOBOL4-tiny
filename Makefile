@@ -54,9 +54,16 @@ SCRIP_CC_BIN := $(ROOT)/scrip-cc
 
 all: scrip
 
+# ── sno_runtime.wasm — WASM runtime binary (required by run_wasm.js) ─────────
+SNO_RT_WAT  := $(SRC)/runtime/wasm/snobol4_runtime.wat
+SNO_RT_WASM := $(SRC)/runtime/wasm/sno_runtime.wasm
+
+$(SNO_RT_WASM): $(SNO_RT_WAT)
+	wat2wasm $< -o $@
+
 # ── scrip — unified driver (all modes, all frontends) ────────────────────────
 
-scrip:
+scrip: $(SNO_RT_WASM)
 	@mkdir -p $(OBJ)
 	@rm -f $(OBJ)/*.o
 	$(CC) $(CBASE) -c $(SRC)/frontend/snobol4/snobol4.lex.c -o $(OBJ)/snobol4.lex.o
@@ -79,6 +86,11 @@ scrip:
 	$(CC) $(CRT)   -c $(RT)/x86/sm_prog.c    -o $(OBJ)/sm_prog.o
 	$(CC) $(CRT)   -c $(RT)/x86/sm_interp.c  -o $(OBJ)/sm_interp.o
 	$(CC) $(CRT)   -c $(RT)/x86/sm_lower.c   -o $(OBJ)/sm_lower.o
+	cd $(SRC) && $(CC) -O0 -g -w \
+	    -I . -I frontend/snobol4 -I frontend/icon \
+	    -I frontend/prolog -I frontend/snocone \
+	    -I frontend/rebus -I backend \
+	    -c backend/emit_wasm.c -o $(OBJ)/emit_wasm.o
 	$(CC) $(CRT)   -c $(SRC)/driver/scrip.c  -o $(OBJ)/scrip_driver.o
 	$(CC) $(OBJ)/*.o $(LIBS) -o scrip
 	@echo "Built: scrip"
