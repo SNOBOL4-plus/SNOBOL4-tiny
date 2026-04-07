@@ -11,8 +11,8 @@
 
 #include "bb_flat.h"
 #include "bb_emit.h"
-#include "../snobol4/snobol4.h"   /* defines DESCR_t; pulls patnd.h internally */
-#include "../boxes/shared/bb_box.h"
+#include "snobol4.h"   /* defines DESCR_t; pulls patnd.h internally */
+#include "bb_box.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>

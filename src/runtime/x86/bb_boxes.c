@@ -3,6 +3,8 @@
  * AUTHORS: Lon Jones Cherryholmes · Jeffrey Cooper M.D. · Claude Sonnet 4.6
  */
 #include "bb_box.h"
+#include "snobol4.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 

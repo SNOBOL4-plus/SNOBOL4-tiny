@@ -9,15 +9,15 @@
  *   Shared EKinds (E_QLIT/ILIT/FLIT, arithmetic) live in emit_wasm.c (SW session).
  *   All Prolog-specific EKinds handled here only.
  *   Byrd-box ports encoded as WAT tail-call functions (WASM has no goto).
- *   Runtime imports from "pl" namespace (pl_runtime.wat).
+ *   Runtime imports from "pl" namespace (prolog_runtime.wat).
  *
  * Memory layout used by this emitter:
- *   [0..8191]       output buffer (pl_runtime.wat)
+ *   [0..8191]       output buffer (prolog_runtime.wat)
  *   [8192..32767]   atom table: atom_id*8 → {i32 str_off, i32 str_len}
  *                   (emitted as (data) block by emit_pl_atom_table())
  *   [32768..49151]  variable env frames: slot_addr = 32768 + env_idx*64 + slot*4
- *   [49152..57343]  trail stack (pl_runtime.wat)
- *   [57344..131071] term heap (pl_runtime.wat)
+ *   [49152..57343]  trail stack (prolog_runtime.wat)
+ *   [57344..131071] term heap (prolog_runtime.wat)
  *   [65536..]       string literal data (emit_wasm.c STR_DATA_BASE)
  *
  * Variable binding:
@@ -140,7 +140,7 @@ static const char *pl_mangle(const char *functor, int arity) {
 
 /* ── Runtime imports ───────────────────────────────────────────────────── */
 static void emit_pl_runtime_imports(void) {
-    W(";; Prolog WASM runtime imports (pl_runtime.wat)\n");
+    W(";; Prolog WASM runtime imports (prolog_runtime.wat)\n");
     W("  (import \"pl\" \"memory\"         (memory 3))\n");
     W("  (import \"pl\" \"trail_mark\"      (func $trail_mark      (result i32)))\n");
     W("  (import \"pl\" \"trail_unwind\"    (func $trail_unwind    (param i32)))\n");

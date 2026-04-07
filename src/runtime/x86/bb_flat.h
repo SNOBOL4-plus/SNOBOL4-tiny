@@ -29,8 +29,8 @@
 #define BB_FLAT_H
 
 #include "bb_pool.h"
-#include "../snobol4/snobol4.h"
-#include "../boxes/shared/bb_box.h"
+#include "snobol4.h"
+#include "bb_box.h"
 
 /*
  * Build a flat-globbed blob for an entire invariant PATND_t tree.

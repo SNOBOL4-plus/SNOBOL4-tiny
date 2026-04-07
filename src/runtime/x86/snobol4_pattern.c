@@ -18,7 +18,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "snobol4.h"
-#include "../engine.h"
+#include "engine.h"
 #include "../../ir/ir.h"         /* ir.h first — sets EXPR_T_DEFINED so scrip_cc.h skips its own EXPR_t */
 #include "../../frontend/snobol4/scrip_cc.h"
 #include "../../frontend/snobol4/CMPILE.c"

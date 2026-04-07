@@ -1,11 +1,11 @@
 /*
- * bb_build_bin.h — Binary x86-64 Byrd Box Emitter (M-DYN-B1 / M-DYN-B2)
+ * bb_build.h — Binary x86-64 Byrd Box Emitter (M-DYN-B1 / M-DYN-B2)
  */
 #ifndef BB_BUILD_BIN_H
 #define BB_BUILD_BIN_H
 
-#include "../boxes/shared/bb_box.h"
-#include "../snobol4/patnd.h"
+#include "bb_box.h"
+#include "snobol4_patnd.h"
 
 /*
  * M-DYN-B1: Emit the LIT box as executable x86-64 bytes into bb_pool.

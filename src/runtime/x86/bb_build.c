@@ -1,5 +1,5 @@
 /*
- * bb_build_bin.c — Binary x86-64 Byrd Box Emitter (M-DYN-B1)
+ * bb_build.c — Binary x86-64 Byrd Box Emitter (M-DYN-B1)
  *
  * Emits Byrd boxes as raw x86-64 bytes into bb_pool pages.
  * Each function mirrors the corresponding .s file byte-for-byte.
@@ -27,13 +27,13 @@
 
 #include "bb_pool.h"
 #include "bb_emit.h"
-#include "../boxes/shared/bb_box.h"   /* spec_t, bb_box_fn, Σ/Δ/Ω externs */
+#include "bb_box.h"   /* spec_t, bb_box_fn, Σ/Δ/Ω externs */
 
 /* M-DYN-B2: PATND_t needs DESCR_t first — pull in snobol4.h which
- * provides both.  bb_build_bin.c is compiled as part of the full runtime
+ * provides both.  bb_build.c is compiled as part of the full runtime
  * (not standalone), so snobol4.h is available via the -I flags in the
  * Makefile.  We include it here only for the type definitions; no GC. */
-#include "../snobol4/snobol4.h"
+#include "snobol4.h"
 /* patnd.h is already included transitively by snobol4.h — don't include again */
 
 #include <string.h>
@@ -174,7 +174,7 @@ typedef struct {
     bb_box_fn    child_fn;
     void        *child_state;
     const char  *fnc_name;
-    void        *fnc_args;    /* DESCR_t* — opaque to bb_build_bin.c */
+    void        *fnc_args;    /* DESCR_t* — opaque to bb_build.c */
     int          fnc_nargs;
     int          immediate;
     /* remaining fields (pending, has_pending, registered, last_gen,
@@ -468,7 +468,7 @@ bb_box_fn bb_eps_emit_binary(void)
  * Returns a callable bb_box_fn, or NULL if this node (or any child)
  * cannot be emitted as binary yet.  NULL → caller uses C path for whole tree.
  */
-#include "../snobol4/patnd.h"
+#include "snobol4_patnd.h"
 
 /* ── M-DYN-B3: bb_pos_emit_binary ──────────────────────────────────────── */
 /*
@@ -607,7 +607,7 @@ bb_box_fn bb_rpos_emit_binary(int n)
 
 /* ── seq_t / bchild_t — mirror of stmt_exec.c definitions ─────────────── */
 /* These must match the layouts used by bb_seq.s and bb_seq.c exactly.
- * Kept local to bb_build_bin.c to avoid cross-file dependency. */
+ * Kept local to bb_build.c to avoid cross-file dependency. */
 typedef struct { bb_box_fn fn; void *state; } bin_bchild_t;
 typedef struct {
     bin_bchild_t left;       /* @0: fn@0, state@8  */

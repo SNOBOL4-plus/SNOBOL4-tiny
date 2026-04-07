@@ -17,8 +17,8 @@
 #include <math.h>
 
 /* ── Pattern runtime (M-SCRIP-U4) ──────────────────────────────────────── */
-#include "../../runtime/snobol4/snobol4.h"   /* DESCR_t, PATND_t, DT_* */
-#include "../../runtime/snobol4/sil_macros.h" /* IS_NAMEPTR, NAME_DEREF_PTR, IS_NAMEVAL, etc. */
+#include "snobol4.h"   /* DESCR_t, PATND_t, DT_* */
+#include "sil_macros.h" /* IS_NAMEPTR, NAME_DEREF_PTR, IS_NAMEVAL, etc. */
 
 /* Pattern constructors from snobol4_pattern.c */
 extern DESCR_t pat_lit(const char *s);

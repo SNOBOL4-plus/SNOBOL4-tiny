@@ -1,13 +1,13 @@
 /*
  * scrip_image.c — Unified SCRIP In-Memory Program Image (M-SCRIP-U1)
  *
- * See scrip_image.h for design notes.
+ * See sm_image.h for design notes.
  *
  * Authors: Lon Jones Cherryholmes · Claude Sonnet 4.6
  * Date: 2026-04-06 (M-SCRIP-U1)
  */
 
-#include "scrip_image.h"
+#include "sm_image.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,7 +52,7 @@ static const char *seg_names[SEG_COUNT] = {
     "SEG_STUBS", "SEG_DISPATCH", "SEG_CODE", "SEG_DATA"
 };
 
-int scrip_image_init(void)
+int sm_image_init(void)
 {
     page_sz = sysconf(_SC_PAGESIZE);
     if (page_sz <= 0) page_sz = 4096;
@@ -66,7 +66,7 @@ int scrip_image_init(void)
                        PROT_READ | PROT_WRITE,
                        MAP_ANON | MAP_PRIVATE, -1, 0);
         if (m == MAP_FAILED) {
-            fprintf(stderr, "scrip_image_init: mmap %s (%zu bytes) failed: %s\n",
+            fprintf(stderr, "sm_image_init: mmap %s (%zu bytes) failed: %s\n",
                     seg_names[i], sz, strerror(errno));
             /* roll back already-mapped segments */
             for (int j = 0; j < i; j++) {
@@ -86,7 +86,7 @@ int scrip_image_init(void)
     return 0;
 }
 
-void scrip_image_destroy(void)
+void sm_image_destroy(void)
 {
     for (int i = 0; i < SEG_COUNT; i++) {
         if (scrip_segs[i].base) {

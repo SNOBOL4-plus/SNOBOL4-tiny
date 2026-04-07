@@ -13,7 +13,7 @@
 #define SM_INTERP_H
 
 #include "sm_prog.h"
-#include "../../runtime/snobol4/snobol4.h"
+#include "snobol4.h"
 
 /* Value stack depth */
 #define SM_STACK_MAX 256

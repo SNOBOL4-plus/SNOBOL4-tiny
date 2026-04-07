@@ -7,7 +7,7 @@
 
 #include "snobol4.h"
 #include "sil_macros.h"   /* SIL macro translations — RT + SM axes */
-#include "utf8_utils.h"   /* P3C: UTF-8 character-aware helpers */
+#include "snobol4_utf8.h"   /* P3C: UTF-8 character-aware helpers */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

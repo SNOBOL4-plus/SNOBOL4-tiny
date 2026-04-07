@@ -52,14 +52,14 @@ extern void ir_print_node   (const EXPR_t *e, FILE *f);
 extern void ir_print_node_nl(const EXPR_t *e, FILE *f);
 
 /* ── runtime ──────────────────────────────────────────────────────────── */
-#include "../runtime/snobol4/snobol4.h"
-#include "../runtime/snobol4/sil_macros.h"   /* SIL macro translations — both RT and SM axes */
-#include "../runtime/snobol4/runtime_shim.h"
+#include "../runtime/x86/snobol4.h"
+#include "../runtime/x86/sil_macros.h"   /* SIL macro translations — both RT and SM axes */
+#include "../runtime/x86/snobol4_runtime_shim.h"
 
 /* ── SM stack machine (M-SCRIP-U3) ───────────────────────────────────── */
-#include "../runtime/sm/sm_lower.h"
-#include "../runtime/sm/sm_interp.h"
-#include "../runtime/sm/sm_prog.h"
+#include "../runtime/x86/sm_lower.h"
+#include "../runtime/x86/sm_interp.h"
+#include "../runtime/x86/sm_prog.h"
 
 /* pat_at_cursor not exposed in snobol4.h — forward-declare here */
 extern DESCR_t pat_at_cursor(const char *varname);

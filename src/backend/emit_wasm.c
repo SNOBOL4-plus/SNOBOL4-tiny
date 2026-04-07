@@ -2,7 +2,7 @@
 /*
  * emit_wasm.c — WebAssembly text-format emitter for scrip-cc
  *
- * Memory layout (matches sno_runtime.wat):
+ * Memory layout (matches snobol4_runtime.wat):
  *   [0..32767]   output buffer  (written by $sno_output_*; runtime page 0 lower)
  *   [32768..65535] string heap  ($sno_str_alloc bump pointer; runtime page 0 upper)
  *   [65536..]    string literal data segment (STR_DATA_BASE; program page 1)

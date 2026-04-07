@@ -45,7 +45,7 @@ struct _ARBLK_t;
 struct _TBBLK_t;
 struct _DATINST_t;
 
-struct _PATND_t;  /* defined in patnd.h — included below */
+struct _PATND_t;  /* defined in snobol4_patnd.h — included below */
 typedef struct DESCR_t {
     DTYPE_t v;             /* type tag — SIL v field (DTYPE_t enum) */
     uint32_t slen;         /* binary string byte length; 0 = use strlen (fits in padding) */
@@ -61,7 +61,7 @@ typedef struct DESCR_t {
     };
 } DESCR_t;
 
-#include "patnd.h"  /* XKIND_t + PATND_t — requires DESCR_t */
+#include "snobol4_patnd.h"  /* XKIND_t + PATND_t — requires DESCR_t */
 
 /* descr_slen: byte length of a string descriptor.
  * If slen field is nonzero, use it (binary string with possible embedded NULs).
@@ -537,10 +537,10 @@ const char *setexit_label_get(void);
 #define ARRAY_VAL(a_)   ((DESCR_t){ .v = DT_A, .arr = (a_)   })
 
 /* ============================================================
- * Pattern matching interface (matches existing runtime.h)
+ * Pattern matching interface (matches engine_runtime.h)
  * ============================================================ */
 
-#include "../runtime.h"
+#include "engine_runtime.h"
 
 #endif /* SNOBOL4_H */
 void indirect_goto(const char *varname);

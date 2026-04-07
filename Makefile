@@ -27,13 +27,13 @@
 ROOT    := $(shell pwd)
 SRC     := $(ROOT)/src
 RT      := $(SRC)/runtime
-BOXES   := $(RT)/boxes
+BOXES   := $(RT)/x86
 CORPUS  ?= $(ROOT)/../corpus
 OBJ     := /tmp/si_objs
 CC      := gcc
 WARN    := -w
-CBASE   := -O0 -g $(WARN) -I$(SRC) -I$(RT)/snobol4 -I$(RT) -I$(BOXES)/shared
-CRT     := $(CBASE) -I$(RT)/dyn -DDYN_ENGINE_LINKED
+CBASE   := -O0 -g $(WARN) -I$(SRC) -I$(RT)/x86 -I$(RT) -I$(RT)/x86
+CRT     := $(CBASE) -I$(RT)/x86 -DDYN_ENGINE_LINKED
 LIBS    := -lgc -lm
 
 # Runner defaults
@@ -61,27 +61,24 @@ scrip:
 	@rm -f $(OBJ)/*.o
 	$(CC) $(CBASE) -c $(SRC)/frontend/snobol4/snobol4.lex.c -o $(OBJ)/snobol4.lex.o
 	$(CC) $(CBASE) -c $(SRC)/frontend/snobol4/snobol4.tab.c -o $(OBJ)/snobol4.tab.o
-	$(CC) $(CRT)   -c $(RT)/snobol4/snobol4.c               -o $(OBJ)/snobol4.o
-	$(CC) $(CRT)   -c $(RT)/snobol4/snobol4_pattern.c        -o $(OBJ)/snobol4_pattern.o
-	$(CC) $(CRT)   -c $(RT)/snobol4/invoke.c                 -o $(OBJ)/invoke.o
-	$(CC) $(CRT)   -c $(RT)/snobol4/argval.c                 -o $(OBJ)/argval.o
-	$(CC) $(CRT)   -c $(RT)/snobol4/nmd.c                    -o $(OBJ)/nmd.o
-	$(CC) $(CRT)   -c $(RT)/dyn/stmt_exec.c                  -o $(OBJ)/stmt_exec.o
-	$(CC) $(CRT)   -c $(RT)/dyn/eval_code.c                  -o $(OBJ)/eval_code.o
-	$(CC) $(CRT)   -c $(RT)/engine/engine.c                  -o $(OBJ)/engine.o
+	$(CC) $(CRT)   -c $(RT)/x86/snobol4.c               -o $(OBJ)/snobol4.o
+	$(CC) $(CRT)   -c $(RT)/x86/snobol4_pattern.c        -o $(OBJ)/snobol4_pattern.o
+	$(CC) $(CRT)   -c $(RT)/x86/snobol4_invoke.c                 -o $(OBJ)/snobol4_invoke.o
+	$(CC) $(CRT)   -c $(RT)/x86/snobol4_argval.c                 -o $(OBJ)/snobol4_argval.o
+	$(CC) $(CRT)   -c $(RT)/x86/snobol4_nmd.c                    -o $(OBJ)/snobol4_nmd.o
+	$(CC) $(CRT)   -c $(RT)/x86/stmt_exec.c                  -o $(OBJ)/stmt_exec.o
+	$(CC) $(CRT)   -c $(RT)/x86/eval_code.c                  -o $(OBJ)/eval_code.o
+	$(CC) $(CRT)   -c $(RT)/x86/engine.c                  -o $(OBJ)/engine.o
 	$(CC) $(CRT)   -c $(RT)/x86/bb_pool.c                    -o $(OBJ)/bb_pool.o
 	$(CC) $(CRT)   -c $(RT)/x86/bb_emit.c                    -o $(OBJ)/bb_emit.o
-	$(CC) $(CRT)   -c $(RT)/x86/bb_build_bin.c               -o $(OBJ)/bb_build_bin.o
+	$(CC) $(CRT)   -c $(RT)/x86/bb_build.c               -o $(OBJ)/bb_build.o
 	$(CC) $(CRT)   -c $(RT)/x86/bb_flat.c                    -o $(OBJ)/bb_flat.o
-	@for f in $$(find $(RT)/boxes -name 'bb_*.c' | grep -v 'bb_dvar\|bb_capture'); do \
-	    b=$$(basename $$f .c); \
-	    $(CC) $(CBASE) -c $$f -o $(OBJ)/$$b.o; \
-	done
+	$(CC) $(CRT) -c $(RT)/x86/bb_boxes.c -o $(OBJ)/bb_boxes.o
 	$(CC) $(CBASE) -I$(SRC)/frontend/snobol4 -DIR_DEFINE_NAMES \
 	    -c $(SRC)/ir/ir_print.c -o $(OBJ)/ir_print.o
-	$(CC) $(CRT)   -c $(RT)/sm/sm_prog.c    -o $(OBJ)/sm_prog.o
-	$(CC) $(CRT)   -c $(RT)/sm/sm_interp.c  -o $(OBJ)/sm_interp.o
-	$(CC) $(CRT)   -c $(RT)/sm/sm_lower.c   -o $(OBJ)/sm_lower.o
+	$(CC) $(CRT)   -c $(RT)/x86/sm_prog.c    -o $(OBJ)/sm_prog.o
+	$(CC) $(CRT)   -c $(RT)/x86/sm_interp.c  -o $(OBJ)/sm_interp.o
+	$(CC) $(CRT)   -c $(RT)/x86/sm_lower.c   -o $(OBJ)/sm_lower.o
 	$(CC) $(CRT)   -c $(SRC)/driver/scrip.c  -o $(OBJ)/scrip_driver.o
 	$(CC) $(OBJ)/*.o $(LIBS) -o scrip
 	@echo "Built: scrip"

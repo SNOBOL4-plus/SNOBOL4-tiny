@@ -53,7 +53,7 @@
 #include <string.h>
 #include <gc.h>
 #include "snobol4.h"
-#include "runtime_shim.h"
+#include "snobol4_runtime_shim.h"
 
 /* ---- init ---- */
 

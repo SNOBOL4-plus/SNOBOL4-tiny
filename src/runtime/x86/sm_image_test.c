@@ -6,7 +6,7 @@
  * Run:     ./scrip_image_test
  */
 
-#include "scrip_image.h"
+#include "sm_image.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,8 +24,8 @@ static int failures = 0;
 
 static void test_init_destroy(void)
 {
-    int r = scrip_image_init();
-    CHECK(r == 0, "scrip_image_init returns 0");
+    int r = sm_image_init();
+    CHECK(r == 0, "sm_image_init returns 0");
 
     for (int i = 0; i < SEG_COUNT; i++) {
         CHECK(scrip_segs[i].base  != NULL, "segment base non-null");
@@ -34,13 +34,13 @@ static void test_init_destroy(void)
         CHECK(scrip_segs[i].sealed == 0, "segment starts unsealed");
     }
 
-    scrip_image_destroy();
+    sm_image_destroy();
     CHECK(scrip_segs[0].base == NULL, "destroy clears base");
 }
 
 static void test_alloc_and_write(void)
 {
-    scrip_image_init();
+    sm_image_init();
 
     /* seg_byte into SEG_DATA */
     size_t before = seg_used(SEG_DATA);
@@ -74,12 +74,12 @@ static void test_alloc_and_write(void)
     uint8_t *pb = scrip_segs[SEG_DATA].base + patch_off;
     CHECK(pb[0] == 0x78 && pb[3] == 0x12, "seg_patch_u32 writes correctly");
 
-    scrip_image_destroy();
+    sm_image_destroy();
 }
 
 static void test_seal_and_execute(void)
 {
-    scrip_image_init();
+    sm_image_init();
 
     /*
      * Emit a trivial x86-64 function into SEG_CODE:
@@ -99,12 +99,12 @@ static void test_seal_and_execute(void)
     int result = fn();
     CHECK(result == 42, "sealed SEG_CODE fn returns 42");
 
-    scrip_image_destroy();
+    sm_image_destroy();
 }
 
 static void test_stubs(void)
 {
-    scrip_image_init();
+    sm_image_init();
 
     /* Register two fake fn ptrs in stub table */
     void *fake_a = (void*)0xAAAAAAAAAAAAAAAAULL;
@@ -116,19 +116,19 @@ static void test_stubs(void)
     CHECK(*seg_stubs_slot(off_b) == fake_b, "stub slot B reads back correctly");
     CHECK(off_b == off_a + 8, "stub slots are 8 bytes apart");
 
-    scrip_image_destroy();
+    sm_image_destroy();
 }
 
 static void test_seg_offset(void)
 {
-    scrip_image_init();
+    sm_image_init();
 
     size_t o0 = seg_offset(SEG_DATA);
     seg_byte(SEG_DATA, 0xFF);
     size_t o1 = seg_offset(SEG_DATA);
     CHECK(o1 == o0 + 1, "seg_offset tracks bytes written");
 
-    scrip_image_destroy();
+    sm_image_destroy();
 }
 
 /* ── main ────────────────────────────────────────────────────────────── */

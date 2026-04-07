@@ -1,5 +1,5 @@
 /*
- * scrip_image.h — Unified SCRIP In-Memory Program Image (M-SCRIP-U1)
+ * sm_image.h — Unified SCRIP In-Memory Program Image (M-SCRIP-U1)
  *
  * Manages the 5 mmap'd segments that make up a running SCRIP program:
  *
@@ -64,12 +64,12 @@ extern scrip_seg_t scrip_segs[SEG_COUNT];
  * Allocate all segments. Must be called once before any seg_*() calls.
  * Returns 0 on success, -1 on mmap failure (prints errno to stderr).
  */
-int scrip_image_init(void);
+int sm_image_init(void);
 
 /*
  * Release all segment slabs. Call once at shutdown.
  */
-void scrip_image_destroy(void);
+void sm_image_destroy(void);
 
 /* ── Per-segment operations ─────────────────────────────────────────── */
 

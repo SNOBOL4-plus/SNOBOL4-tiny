@@ -46,7 +46,7 @@
 #ifdef STMT_EXEC_STANDALONE
 /* ── Standalone build: define the types that snobol4.h would provide ─── */
 #include <stdint.h>
-#include "../boxes/shared/bb_box.h"   /* spec_t, spec_empty, α, β, spec_is_empty, bb_box_fn */
+#include "bb_box.h"   /* spec_t, spec_empty, α, β, spec_is_empty, bb_box_fn */
 
 /* Minimal DESCR_t for standalone use */
 typedef enum { DT_SNUL=0, DT_S=1, DT_P=3, DT_I=6, DT_FAIL=99 } DTYPE_t;
@@ -76,14 +76,14 @@ extern DESCR_t (*g_user_call_hook)(const char *name, DESCR_t *args, int nargs);
  * It also transitively includes engine/runtime.h which defines its own spec_t.
  * We must NOT include bb_box.h after snobol4.h (spec_t conflict).
  * Instead we redeclare bb_box.h's types manually here. */
-#include "../snobol4/snobol4.h"
-#include "../snobol4/sil_macros.h"   /* SIL macro translations — RT + SM axes */
-#include "../x86/bb_build_bin.h"
+#include "snobol4.h"
+#include "sil_macros.h"   /* SIL macro translations — RT + SM axes */
+#include "bb_build.h"
 #include "../x86/bb_flat.h"     /* bb_lit_emit_binary — M-DYN-B1 */
 
 /* In the full-runtime build, include bb_box.h after snobol4.h.
  * bb_box.h now uses spec_t (not spec_t) so no collision with engine. */
-#include "../boxes/shared/bb_box.h"
+#include "bb_box.h"
 /* bb_box.h already defines α/β — only define here if not already defined */
 #ifndef BB_ALPHA_DEFINED
 static const int α = 0;
@@ -107,7 +107,7 @@ int         Ω = 0;
  * (used by bb_build below; the dyn/ box files are the canonical forms)
  * ══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Simple boxes — defined in runtime/boxes/bb_boxes.c (consolidated) ────────── */
+/* ── Simple boxes — defined in runtime/x86/bb_boxes.c ────────── */
 /* Types shared with bb_*.c via bb_box.h — do NOT redefine here.           */
 extern spec_t bb_lit(void *zeta, int entry);
 extern spec_t bb_len(void *zeta, int entry);
