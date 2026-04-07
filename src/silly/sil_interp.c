@@ -116,7 +116,7 @@ Sil_result GOTL_fn(void)
     }
 
     /* Label trace */
-    if (!ACOMPC(TRAPCL, 0)) {
+    if (D_A(TRAPCL) > 0) {
         int32_t assoc = locapt_fn(D_A(TLABL), &XPTR);
         if (assoc) {
             DESCR_t save_x = XPTR;
@@ -204,14 +204,14 @@ Sil_result INIT_fn(void)
 
     INCRA(EXN2CL, 1);   /* &STEXEC */
 
-    /* Check &STLIMIT */
-    if (ACOMPC(EXLMCL, 0) >= 0) {
-        if (ACOMP(EXNOCL, EXLMCL) >= 0) { exex(); return FAIL; }
+    /* Check &STLIMIT (oracle: ACOMPC EXLMCL,0,,,RTNUL3 then ACOMP EXNOCL,EXLMCL,EXEX,EXEX) */
+    if (D_A(EXLMCL) >= 0) {
+        if (D_A(EXNOCL) >= D_A(EXLMCL)) { exex(); return FAIL; }
         INCRA(EXNOCL, 1);   /* &STCOUNT */
     }
 
     /* &TRACE checks */
-    if (!ACOMPC(TRAPCL, 0)) {
+    if (D_A(TRAPCL) > 0) {
         /* Check for breakpoint */
         /* XCALLC chk_break — stub */
 
@@ -254,7 +254,7 @@ Sil_result INTERP_fn(void)
             MOVD(OCICL, FRTNCL);
             INCRA(FALCL, 1);   /* &STFCOUNT */
             /* &TRACE check on failure */
-            if (!ACOMPC(TRAPCL, 0)) {
+            if (D_A(TRAPCL) > 0) {
                 int32_t assoc = locapt_fn(D_A(TKEYL), &FALKY);
                 if (assoc) { SETAC(ATPTR, assoc); TRPHND_fn(ATPTR); }
             }
@@ -291,8 +291,8 @@ Sil_result INVOKE_fn(void)
         if (TESTF(XPTR, FNC)) {
             /* variable argument function — pass as-is */
         } else {
-            /* ARGNER: argument count mismatch */
-            SETAC(ERRTYP, 10); return FAIL;
+            /* ARGNER: incorrect number of arguments (v311.sil line 10344) */
+            SETAC(ERRTYP, 25); return FAIL;
         }
     }
 
