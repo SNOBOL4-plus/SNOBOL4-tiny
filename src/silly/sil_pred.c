@@ -56,7 +56,7 @@ static inline DESCR_t pred_pop(void)       { return pred_stk[--pred_top]; }
 Sil_result DIFFER_fn(void)
 {
     if (XYARGS_fn() == FAIL) return FAIL;
-    if (deql(XPTR, YPTR)) { MOVD(XPTR, NULVCL); return OK; }  /* DEQL XPTR,YPTR,RETNUL,FAIL — equal→null, differ→FAIL */
+    if (deql(XPTR, YPTR)) { MOVD(XPTR, NULVCL); return OK; } /* DEQL XPTR,YPTR,RETNUL,FAIL — equal→null, differ→FAIL */
     return FAIL;
 }
 
@@ -70,7 +70,7 @@ Sil_result FUNCTN_fn(void)
         SETAC(XPTR, assoc);
         GETDC_B(XPTR, XPTR, DESCR); /* get function descriptor */
         GETDC_B(XPTR, XPTR, 0); /* get link descriptor     */
-        if (deql(XPTR, UNDFCL)) { MOVD(XPTR, NULVCL); return OK; }                    /* AEQL XPTR,UNDFCL,RETNUL,FAIL */
+        if (deql(XPTR, UNDFCL)) { MOVD(XPTR, NULVCL); return OK; } /* AEQL XPTR,UNDFCL,RETNUL,FAIL */
         return FAIL;
     }
 }
@@ -79,7 +79,7 @@ Sil_result FUNCTN_fn(void)
 Sil_result IDENT_fn(void)
 {
     if (XYARGS_fn() == FAIL) return FAIL;
-    if (deql(XPTR, YPTR)) return FAIL;                        /* DEQL XPTR,YPTR,FAIL,RETNUL — equal→FAIL, differ→null */
+    if (deql(XPTR, YPTR)) return FAIL; /* DEQL XPTR,YPTR,FAIL,RETNUL — equal→FAIL, differ→null */
     MOVD(XPTR, NULVCL); return OK;
 }
 
@@ -184,11 +184,11 @@ Sil_result LLT_fn(void)
 Sil_result NEG_fn(void)
 {
     DESCR_t save_base = OCBSCL, save_idx = OCICL;
-    Sil_result rc = ARGVAL_fn();                                          /* RCALL ,ARGVAL,,(,FAIL) — fail on success */
+    Sil_result rc = ARGVAL_fn(); /* RCALL ,ARGVAL,,(,FAIL) — fail on success */
     MOVD(OCBSCL, save_base);
     MOVD(OCICL, save_idx);
     if (rc == OK) return FAIL; /* argument succeeded → NEG fails */
-    CODSKP_fn(D_A(ONECL));                                               /* argument failed → skip it and return null */
+    CODSKP_fn(D_A(ONECL)); /* argument failed → skip it and return null */
     MOVD(XPTR, NULVCL);
     return OK;
 }
@@ -207,19 +207,19 @@ Sil_result CHAR_fn(void)
 {
     if (INTVAL_fn() == FAIL) return FAIL;
     MOVD(XCL, XPTR); /* INTVAL result → XCL */
-    if (ACOMPC(XCL, 0) <= 0) { SETAC(ERRTYP, ERR_NEGATIVE); return FAIL; }     /* ACOMPC XCL,0,,,LENERR — must be > 0 */
-    if (ACOMPC(XCL, 256) >= 0) { SETAC(ERRTYP, ERR_ILLEGAL_ARG); return FAIL; }  /* ACOMPC XCL,256,INTR30,INTR30 — must be < 256 */
-    {                                                              /* RCALL XPTR,CONVAR,ONECL — allocate 1-char space */
+    if (ACOMPC(XCL, 0) <= 0) { SETAC(ERRTYP, ERR_NEGATIVE); return FAIL; } /* ACOMPC XCL,0,,,LENERR — must be > 0 */
+    if (ACOMPC(XCL, 256) >= 0) { SETAC(ERRTYP, ERR_ILLEGAL_ARG); return FAIL; } /* ACOMPC XCL,256,INTR30,INTR30 — must be < 256 */
+    { /* RCALL XPTR,CONVAR,ONECL — allocate 1-char space */
         int32_t soff = CONVAR_fn(1);
         if (!soff) return FAIL;
         SETAC(XPTR, soff); SETVC(XPTR, S);
     }
-    LOCSP_fn(&XSP, &XPTR);                                                              /* LOCSP XSP,XPTR; store char */
+    LOCSP_fn(&XSP, &XPTR); /* LOCSP XSP,XPTR; store char */
     {
         char *p = (char*)A2P(XSP.a) + XSP.o;
         *p = (char)(D_A(XCL) & 0xFF);
     }
-    {                                                           /* RCALL XPTR,GNVARS,ONECL — intern the 1-char string */
+    { /* RCALL XPTR,GNVARS,ONECL — intern the 1-char string */
         char ch = (char)(D_A(XCL) & 0xFF);
         int32_t off = GNVARS_fn(&ch, 1);
         if (!off) return FAIL;
@@ -235,29 +235,29 @@ Sil_result RPAD_fn(void) { SETAC(SCL, 1); return rpad_common(); }
 static Sil_result rpad_common(void)
 {
     pred_push(SCL);
-    if (VARVAL_fn() == FAIL) { pred_top--; return FAIL; }                                           /* Get string arg */
+    if (VARVAL_fn() == FAIL) { pred_top--; return FAIL; } /* Get string arg */
     pred_push(XPTR);
-    if (INTVAL_fn() == FAIL) { pred_top -= 2; return FAIL; }                                    /* Get integer length */
+    if (INTVAL_fn() == FAIL) { pred_top -= 2; return FAIL; } /* Get integer length */
     MOVD(ZPTR, XPTR);
     pred_push(ZPTR);
-    if (VARVAL_fn() == FAIL) { pred_top -= 3; return FAIL; }                                     /* Get pad character */
+    if (VARVAL_fn() == FAIL) { pred_top -= 3; return FAIL; } /* Get pad character */
     MOVD(WPTR, XPTR);
     ZPTR = pred_pop(); XPTR = pred_pop(); SCL = pred_pop();
-    if (ACOMP(ZPTR, MLENCL) > 0) { SETAC(ERRTYP, 8); return FAIL; }                        /* ACOMP ZPTR,MLENCL,INTR8 */
-    if (ACOMP(ZEROCL, ZPTR) > 0) { SETAC(ERRTYP, ERR_NEGATIVE); return FAIL; }  /* ACOMP ZEROCL,ZPTR,LENERR — negative length */
+    if (ACOMP(ZPTR, MLENCL) > 0) { SETAC(ERRTYP, 8); return FAIL; } /* ACOMP ZPTR,MLENCL,INTR8 */
+    if (ACOMP(ZEROCL, ZPTR) > 0) { SETAC(ERRTYP, ERR_NEGATIVE); return FAIL; } /* ACOMP ZEROCL,ZPTR,LENERR — negative length */
     LOCSP_fn(&VSP, &WPTR); /* pad character spec */
     LOCSP_fn(&XSP, &XPTR); /* subject string spec */
-    D_A(YPTR) = XSP.l;                                                                              /* GETLG YPTR,XSP */
+    D_A(YPTR) = XSP.l; /* GETLG YPTR,XSP */
     if (ACOMP(YPTR, ZPTR) >= 0) return OK; /* return XPTR unchanged */  /* ACOMP YPTR,ZPTR,RTXPTR,RTXPTR — already long enough? */
-    MOVA(XCL, ZPTR);                                                                               /* Allocate result */
+    MOVA(XCL, ZPTR); /* Allocate result */
     {
         int32_t soff = CONVAR_fn(D_A(XCL));
         if (!soff) return FAIL;
         SETAC(ZPTR, soff); SETVC(ZPTR, S);
     }
     LOCSP_fn(&TSP, &ZPTR);
-    PAD_fn(D_A(SCL), &TSP, &XSP, &VSP);                                                /* PAD_fn(dir, out, subj, pad) */
-    {                                                                                        /* GENVSZ: intern result */
+    PAD_fn(D_A(SCL), &TSP, &XSP, &VSP); /* PAD_fn(dir, out, subj, pad) */
+    { /* GENVSZ: intern result */
         int32_t off = GNVARS_fn((const char*)A2P(TSP.a) + TSP.o, D_A(XCL));
         if (!off) return FAIL;
         SETAC(XPTR, off); SETVC(XPTR, S);

@@ -105,7 +105,7 @@ Sil_result VDIFFR_fn(void)
 {
     if (XYARGS_fn() == FAIL) return FAIL;
     if (deql(XPTR, YPTR)) return FAIL;
-    return OK;                                                                       /* return XPTR — already in XPTR */
+    return OK; /* return XPTR — already in XPTR */
 }
 
 /* ── DUPL(S,N) ───────────────────────────────────────────────────────── */
@@ -115,11 +115,11 @@ Sil_result DUPL_fn(void)
     fn_push(XPTR);
     if (INTVAL_fn() == FAIL) { fn_top--; return FAIL; }
     MOVD(YPTR, XPTR); XPTR = fn_pop();
-    if (D_A(YPTR) == 0) { MOVD(XPTR, NULVCL); return OK; }                              /* ACOMPC YPTR,0,,RETNUL,FAIL */
+    if (D_A(YPTR) == 0) { MOVD(XPTR, NULVCL); return OK; } /* ACOMPC YPTR,0,,RETNUL,FAIL */
     if (D_A(YPTR) < 0) return FAIL;
     LOCSP_fn(&XSP, &XPTR);
     D_A(XCL) = XSP.l;
-    {                                                                                            /* MULT XCL,XCL,YPTR */
+    { /* MULT XCL,XCL,YPTR */
         int64_t prod = (int64_t)D_A(XCL) * D_A(YPTR);
         if (prod > D_A(MLENCL)) return FAIL; /* INTR8 */
         D_A(XCL) = (int32_t)prod;
@@ -162,10 +162,10 @@ Sil_result RPLACE_fn(void)
     if (VARVAL_fn() == FAIL) { fn_top -= 2; return FAIL; }
     MOVD(ZPTR, XPTR);
     YPTR = fn_pop(); XPTR = fn_pop();
-    if (AEQLC(XPTR, 0)) return OK;                               /* AEQLC XPTR,0,,RTXPTR — null subject: return as-is */
+    if (AEQLC(XPTR, 0)) return OK; /* AEQLC XPTR,0,,RTXPTR — null subject: return as-is */
     LOCSP_fn(&YSP, &YPTR);
     LOCSP_fn(&ZSP, &ZPTR);
-    if (ZSP.l != YSP.l) return FAIL;                                /* LCOMP ZSP,YSP,FAIL,,FAIL — must be same length */
+    if (ZSP.l != YSP.l) return FAIL; /* LCOMP ZSP,YSP,FAIL,,FAIL — must be same length */
     if (AEQLC(YPTR, 0)) return FAIL;
     LOCSP_fn(&XSP, &XPTR);
     D_A(XCL) = XSP.l;
@@ -188,13 +188,13 @@ Sil_result SUBSTR_fn(void)
     if (INTVAL_fn() == FAIL) { fn_top -= 2; return FAIL; }
     MOVD(ZPTR, XPTR);
     YPTR = fn_pop(); XPTR = fn_pop();
-    if (D_A(YPTR) < 1) return FAIL;                                   /* ACOMPC YPTR,1,,,FAIL — position must be >= 1 */
+    if (D_A(YPTR) < 1) return FAIL; /* ACOMPC YPTR,1,,,FAIL — position must be >= 1 */
     DECRA(YPTR, 1); /* make zero-based */
     LOCSP_fn(&XSP, &XPTR);
     D_A(WPTR) = XSP.l;
     SUBTRT(WPTR, WPTR, YPTR);
     if (ACOMP(ZPTR, WPTR) > 0) return FAIL;
-    if (D_A(ZPTR) < 0) return FAIL;                                                     /* ACOMPC ZPTR,0,SSNOFX,,FAIL */
+    if (D_A(ZPTR) < 0) return FAIL; /* ACOMPC ZPTR,0,SSNOFX,,FAIL */
     if (D_A(ZPTR) == 0) MOVA(ZPTR, WPTR);
     if (D_A(ZPTR) == 0) { MOVD(XPTR, NULVCL); return OK; }
     MOVA(XCL, ZPTR);
@@ -223,7 +223,7 @@ Sil_result DT_fn(void)
     {
         int32_t assoc = locapt_fn(D_A(DTATL), &DT1CL);
         if (!assoc) {
-            MOVD(A3PTR, EXTPTR);                                                        /* DTEXTN: external data type */
+            MOVD(A3PTR, EXTPTR); /* DTEXTN: external data type */
         } else {
             SETAC(A3PTR, assoc);
             GETDC_B(A3PTR, A3PTR, 2*DESCR);
@@ -256,7 +256,7 @@ Sil_result COLECT_fn(void)
 Sil_result COPY_fn(void)
 {
     if (ARGVAL_fn() == FAIL) return FAIL;
-    switch (D_V(XPTR)) {                                                               /* types that cannot be copied */
+    switch (D_V(XPTR)) { /* types that cannot be copied */
     case S: case I: case R: case N: case K: case E: case T:
         return FAIL;
     default: break;
@@ -276,10 +276,10 @@ Sil_result CLEAR_fn(void)
     if (ARGVAL_fn() == FAIL) return FAIL;
     SETAC(DMPPTR, D_A(OBLIST_arr[0]) - DESCR); /* OBLIST-DESCR */    /* Walk every bin in OBLIST, null every variable */
     while (1) {
-        if (D_A(DMPPTR) >= D_A(OBEND)) { MOVD(XPTR, NULVCL); return OK; }                /* PCOMP DMPPTR,OBEND,RETNUL */
+        if (D_A(DMPPTR) >= D_A(OBEND)) { MOVD(XPTR, NULVCL); return OK; } /* PCOMP DMPPTR,OBEND,RETNUL */
         INCRA(DMPPTR, DESCR);
         MOVD(YPTR, DMPPTR);
-        while (1) {                                                                                     /* Walk chain */
+        while (1) { /* Walk chain */
             int32_t next;
             GETAC_B(next, YPTR, LNKFLD);
             if (next == 0) break;
@@ -300,7 +300,7 @@ Sil_result CMA_fn(void)
         MOVD(OCBSCL, fn_pop());
         MOVD(ZCL, fn_pop());
         if (rc == OK) {
-            CODSKP_fn(D_A(ZCL));                                                     /* success — skip remaining args */
+            CODSKP_fn(D_A(ZCL)); /* success — skip remaining args */
             return OK;
         }
         DECRA(ZCL, 1);
@@ -322,7 +322,7 @@ Sil_result APPLY_fn(void)
     if (!assoc) return FAIL; /* UNDF */
     SETAC(XPTR, assoc);
     GETDC_B(INCL, XPTR, DESCR);
-    D_V(INCL) = D_A(XCL);                                                 /* SETVA INCL,XCL — insert actual arg count */
+    D_V(INCL) = D_A(XCL); /* SETVA INCL,XCL — insert actual arg count */
     if (INVOKE_fn() == FAIL) return FAIL;
     MOVD(XPTR, ZPTR);
     return OK;
@@ -343,7 +343,7 @@ Sil_result DMP_fn(void)
 {
     if (INTVAL_fn() == FAIL) return FAIL;
     if (AEQLC(XPTR, 0)) { MOVD(XPTR, NULVCL); return OK; }
-    MOVD(XPTR, NULVCL); return OK;                                                            /* stub: no actual dump */
+    MOVD(XPTR, NULVCL); return OK; /* stub: no actual dump */
 }
 Sil_result DUMP_fn(void) { MOVD(XPTR, NULVCL); return OK; }
 

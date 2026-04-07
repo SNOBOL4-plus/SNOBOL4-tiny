@@ -75,7 +75,7 @@ void CODSKP_fn(int32_t n)
         INCRA(OCICL, DESCR);
         GETD_B(XCL, OCBSCL, OCICL);
         if (TESTF(XCL, FNC)) {
-            int32_t nargs = D_V(XCL);                                      /* Function: recurse to skip its arguments */
+            int32_t nargs = D_V(XCL); /* Function: recurse to skip its arguments */
             fw_push(YCL);
             CODSKP_fn(nargs);
             YCL = fw_pop();
@@ -101,7 +101,7 @@ Sil_result FORWRD_fn(void)
             SETAC(BRTYPE, stype);
             return OK; /* FORJRN */
         }
-        rc = forrun();                                                                      /* FORRUN: read next card */
+        rc = forrun(); /* FORRUN: read next card */
         if (rc == FAIL) return FAIL; /* COMP1/COMP3 */
     }
 }
@@ -130,25 +130,25 @@ Sil_result FORBLK_fn(void)
 /* forrun — internal: read a new card, handle listing, set BRTYPE=EOS on EOF */
 static Sil_result forrun(void)
 {
-    if (AEQLC(UNIT, 0)) {                                                                   /* Check for input stream */
+    if (AEQLC(UNIT, 0)) { /* Check for input stream */
         MOVD(BRTYPE, EOSCL);
         return OK; /* FOREOS */
     }
-    if (!AEQLC(LISTCL, 0)) {                                                              /* Print listing if enabled */
+    if (!AEQLC(LISTCL, 0)) { /* Print listing if enabled */
         STPRNT_fn(D_A(IOKEY), OUTBLK, &LNBFSP);
     }
-    TEXTSP = NEXTSP;                                              /* SETSP TEXTSP,NEXTSP — switch to next-line buffer */
-    Sil_result rc = STREAD_fn(&TEXTSP, UNIT);                                                        /* Read new card */
+    TEXTSP = NEXTSP; /* SETSP TEXTSP,NEXTSP — switch to next-line buffer */
+    Sil_result rc = STREAD_fn(&TEXTSP, UNIT); /* Read new card */
     if (rc == FAIL) {
-        return FILCHK_fn();                                                                        /* EOF: try FILCHK */
+        return FILCHK_fn(); /* EOF: try FILCHK */
     }
-    D_A(TMVAL) = TEXTSP.l + STNOSZ;                                          /* Update line-buffer length for listing */
+    D_A(TMVAL) = TEXTSP.l + STNOSZ; /* Update line-buffer length for listing */
     LNBFSP.l = D_A(TMVAL);
     INCRA(LNNOCL, 1);
-    SPEC_t xsp; int stype;                                                                      /* Classify card type */
+    SPEC_t xsp; int stype; /* Classify card type */
     rc = STREAM_fn(&xsp, &TEXTSP, &CARDTB, &stype);
     if (rc == FAIL) return forrun(); /* blank card → recurse */
-    return NEWCRD_fn();                                                                                     /* NEWCRD */
+    return NEWCRD_fn(); /* NEWCRD */
 }
 
 /* ── NEWCRD — process card image after type classification ───────────── */
@@ -164,7 +164,7 @@ Sil_result NEWCRD_fn(void)
 {
     int32_t stype = D_A(STYPE);
     if (stype == CMTTYP) {
-        if (!AEQLC(LISTCL, 0)) {                                                                      /* Comment card */
+        if (!AEQLC(LISTCL, 0)) { /* Comment card */
             SETLC_sp(&LNOSP, 0); SETLC_sp(&RNOSP, 0);
             APDSP_fn(&LNOSP, &BLNSP);
             APDSP_fn(&RNOSP, &BLNSP);
@@ -172,7 +172,7 @@ Sil_result NEWCRD_fn(void)
         return OK; /* RTN1 — don't advance further */
     }
     if (stype == CNTTYP) {
-        TEXTSP.o++; TEXTSP.l--;                                                   /* Continue card: strip leading '-' */
+        TEXTSP.o++; TEXTSP.l--; /* Continue card: strip leading '-' */
         if (!AEQLC(LISTCL, 0)) {
             INTSPC_fn(&TSP, &CSTNCL);
             if (!AEQLC(LLIST, 0)) {
@@ -201,9 +201,9 @@ Sil_result NEWCRD_fn(void)
         if (st2 != NBTYP) goto cmtclr;
         if (STREAM_fn(&xsp, &TEXTSP, &LBLXTB, &st2) == FAIL) goto cmtclr;
         XCALL_XRAISP(&xsp);
-        if (LEXCMP_fn(&xsp, &UNLSP_sp) == 0) { SETAC(LISTCL, 0); goto cmtret1; }  /* LEXCMP chain — compare xsp against each command string */
+        if (LEXCMP_fn(&xsp, &UNLSP_sp) == 0) { SETAC(LISTCL, 0); goto cmtret1; } /* LEXCMP chain — compare xsp against each command string */
         if (LEXCMP_fn(&xsp, &LISTSP_sp) == 0) {
-            SETAC(LISTCL, 1); SETAC(HIDECL, 0);            /* LIST: turn on listing, clear HIDE, check for LEFT/RIGHT */
+            SETAC(LISTCL, 1); SETAC(HIDECL, 0); /* LIST: turn on listing, clear HIDE, check for LEFT/RIGHT */
             if (STREAM_fn(&xsp, &TEXTSP, &FRWDTB, &st2) == FAIL) goto cmtclr;
             if (st2 != NBTYP) goto cmtclr;
             if (STREAM_fn(&xsp, &TEXTSP, &LBLXTB, &st2) == FAIL) goto cmtclr;
@@ -220,7 +220,7 @@ Sil_result NEWCRD_fn(void)
         if (LEXCMP_fn(&xsp, &NERRSP_sp) == 0) { SETAC(NERRCL, 1); goto cmtclr; }
         if (LEXCMP_fn(&xsp, &HIDESP_sp) == 0) { SETAC(HIDECL, 1); goto cmtret1; }
         if (LEXCMP_fn(&xsp, &CASESP_sp) == 0) {
-            if (STREAM_fn(&xsp, &TEXTSP, &FRWDTB, &st2) == FAIL) goto case1;  /* -CASE [n]: optional integer → CASECL */
+            if (STREAM_fn(&xsp, &TEXTSP, &FRWDTB, &st2) == FAIL) goto case1; /* -CASE [n]: optional integer → CASECL */
             if (st2 != NBTYP) goto case1;
             if (STREAM_fn(&xsp, &TEXTSP, &ELEMTB, &st2) == FAIL) goto case1;
             if (st2 == ILITYP) { SPCINT_fn(&CASECL, &xsp); goto cmtclr; }
@@ -228,7 +228,7 @@ Sil_result NEWCRD_fn(void)
         }
         if (LEXCMP_fn(&xsp, &INCLSP_sp) == 0 ||
             LEXCMP_fn(&xsp, &COPYSP_sp) == 0) {
-            Sil_result ictmp = CTLADV_fn(&xsp);                                            /* INCLUDE / COPY filename */
+            Sil_result ictmp = CTLADV_fn(&xsp); /* INCLUDE / COPY filename */
             if (ictmp == FAIL) { SETAC(ERRTYP, 29); return FAIL; }
             if (XCALL_XINCLD(UNIT, &xsp) == FAIL) { SETAC(ERRTYP, 30); return FAIL; }
             TRIMSP_fn(&xsp, &xsp);
@@ -246,7 +246,7 @@ Sil_result NEWCRD_fn(void)
             goto cmtclr;
         }
         if (LEXCMP_fn(&xsp, &SPITSP_sp) == 0) {
-            if (STREAM_fn(&xsp, &TEXTSP, &FRWDTB, &st2) == FAIL) goto plsop2;                          /* PLUSOPS [n] */
+            if (STREAM_fn(&xsp, &TEXTSP, &FRWDTB, &st2) == FAIL) goto plsop2; /* PLUSOPS [n] */
             if (st2 != NBTYP) goto plsop2;
             if (STREAM_fn(&xsp, &TEXTSP, &INTGTB, &st2) == FAIL) goto plsop1;
             if (st2 == ILITYP) { plsop1: SPCINT_fn(&SPITCL, &xsp); goto cmtclr; }
@@ -255,7 +255,7 @@ Sil_result NEWCRD_fn(void)
         if (LEXCMP_fn(&xsp, &EXECSP_sp) == 0) { SETAC(EXECCL, 1); goto cmtclr; }
         if (LEXCMP_fn(&xsp, &NEXESP_sp) == 0) { SETAC(EXECCL, 0); goto cmtclr; }
         if (LEXCMP_fn(&xsp, &LINESP_sp) == 0) {
-            if (STREAM_fn(&xsp, &TEXTSP, &FRWDTB, &st2) == FAIL) goto comp12;              /* -LINE lineno ["filenm"] */
+            if (STREAM_fn(&xsp, &TEXTSP, &FRWDTB, &st2) == FAIL) goto comp12; /* -LINE lineno ["filenm"] */
             if (st2 != NBTYP) goto comp12;
             if (STREAM_fn(&xsp, &TEXTSP, &INTGTB, &st2) == FAIL) goto comp12;
             if (st2 != ILITYP) goto comp12;
@@ -269,16 +269,16 @@ Sil_result NEWCRD_fn(void)
             goto cmtclr;
             comp12: SETAC(ERRTYP, 31); return FAIL;
         }
-        goto cmtclr;                                                     /* None of the above — no-op (BRANCH CMTCLR) */
+        goto cmtclr; /* None of the above — no-op (BRANCH CMTCLR) */
     cmtret1:
         return OK; /* RTN1 */
     cmtclr:
-        SETLC_sp(&LNOSP, 0); SETLC_sp(&RNOSP, 0);                             /* Clear listing number fields (CMTCLR) */
+        SETLC_sp(&LNOSP, 0); SETLC_sp(&RNOSP, 0); /* Clear listing number fields (CMTCLR) */
         APDSP_fn(&LNOSP, &BLNSP);
         APDSP_fn(&RNOSP, &BLNSP);
         return OK;
     }
-    if (!AEQLC(LISTCL, 0)) {                    /* Normal card (stype == 0 or other): update listing statement number */
+    if (!AEQLC(LISTCL, 0)) { /* Normal card (stype == 0 or other): update listing statement number */
         MOVD(XCL, CSTNCL); INCRA(XCL, 1);
         INTSPC_fn(&TSP, &XCL);
         if (!AEQLC(LLIST, 0)) {
@@ -328,12 +328,12 @@ Sil_result CTLADV_fn(SPEC_t *out)
 Sil_result FILCHK_fn(void)
 {
     if (!AEQLC(INCSTK, 0)) {
-        GETDC_B(LNNOCL, INCSTK, 2*DESCR);                                                        /* Pop include stack */
+        GETDC_B(LNNOCL, INCSTK, 2*DESCR); /* Pop include stack */
         GETDC_B(FILENM, INCSTK, 3*DESCR);
         GETDC_B(INCSTK, INCSTK, DESCR);
         return OK; /* RTN2 */
     }
-    SPEC_t fname_sp;                                                                     /* Query I/O for file change */
+    SPEC_t fname_sp; /* Query I/O for file change */
     if (XCALL_IO_FILE(UNIT, &fname_sp) == FAIL) return FAIL; /* RTN1 */
     int32_t off = GENVAR_fn(&fname_sp);
     if (off) { SETAC(FILENM, off); SETVC(FILENM, S); }

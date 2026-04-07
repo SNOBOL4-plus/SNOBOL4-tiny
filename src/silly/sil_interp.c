@@ -108,11 +108,11 @@ Sil_result GOTL_fn(void)
 {
     INCRA(OCICL, DESCR);
     GETD_B(XPTR, OCBSCL, OCICL);
-    if (TESTF(XPTR, FNC)) {                                                                   /* Evaluate if function */
+    if (TESTF(XPTR, FNC)) { /* Evaluate if function */
         if (INVOKE_fn() == FAIL) { intr5(); return FAIL; }
         if (!VEQLC(XPTR, S)) { intr4(); return FAIL; }
     }
-    if (D_A(TRAPCL) > 0) {                                                                             /* Label trace */
+    if (D_A(TRAPCL) > 0) { /* Label trace */
         int32_t assoc = locapt_fn(D_A(TLABL), &XPTR);
         if (assoc) {
             DESCR_t save_x = XPTR;
@@ -128,7 +128,7 @@ Sil_result GOTL_fn(void)
         if (AEQLC(XOCBSC, 0)) { cnterr(); return FAIL; }
         MOVD(ERRTYP, XERRTY); MOVD(FILENM, XFILEN);
         MOVD(LNNOCL, XLNNOC); MOVD(STNOCL, XSTNOC);
-        SETAC(ERRTYP, 255); return FAIL;                                           /* FTLEND path — fatal termination */
+        SETAC(ERRTYP, 255); return FAIL; /* FTLEND path — fatal termination */
     }
     if (deql(XPTR, SCNTCL)) {
         if (AEQLC(FATLCL, 0)) { cfterr(); return FAIL; }
@@ -148,7 +148,7 @@ restore_and_go:
         if (!AEQLC(ERRTYP, 0)) MOVD(ERRTYP, XERRTY);
         return FAIL;
     }
-    GETDC_B(OCBSCL, XPTR, ATTRIB);                                   /* Normal label: get code base from ATTRIB field */
+    GETDC_B(OCBSCL, XPTR, ATTRIB); /* Normal label: get code base from ATTRIB field */
     if (AEQLC(OCBSCL, 0)) { intr4(); return FAIL; }
     SETAC(OCICL, 0);
     return OK; /* RTNUL3 */
@@ -179,19 +179,19 @@ Sil_result INIT_fn(void)
     MOVD(LSTNCL, STNOCL);
     MOVA(LSFLNM, FILENM);
     MOVA(LSLNCL, LNNOCL);
-    if (!AEQLC(UINTCL, 0)) { usrint(); return FAIL; }                                         /* Check user interrupt */
-    INCRA(OCICL, DESCR); GETD_B(XCL, OCBSCL, OCICL);  /* Load statement number, failure offset, line, file from object code */
+    if (!AEQLC(UINTCL, 0)) { usrint(); return FAIL; } /* Check user interrupt */
+    INCRA(OCICL, DESCR); GETD_B(XCL, OCBSCL, OCICL); /* Load statement number, failure offset, line, file from object code */
     MOVA(STNOCL, XCL);
     SETAV(FRTNCL, XCL);
     INCRA(OCICL, DESCR); GETD_B(LNNOCL, OCBSCL, OCICL);
     INCRA(OCICL, DESCR); GETD_B(FILENM, OCBSCL, OCICL);
     INCRA(EXN2CL, 1); /* &STEXEC */
-    if (D_A(EXLMCL) >= 0) {   /* Check &STLIMIT (oracle: ACOMPC EXLMCL,0,,,RTNUL3 then ACOMP EXNOCL,EXLMCL,EXEX,EXEX) */
+    if (D_A(EXLMCL) >= 0) { /* Check &STLIMIT (oracle: ACOMPC EXLMCL,0,,,RTNUL3 then ACOMP EXNOCL,EXLMCL,EXEX,EXEX) */
         if (D_A(EXNOCL) >= D_A(EXLMCL)) { exex(); return FAIL; }
         INCRA(EXNOCL, 1); /* &STCOUNT */
     }
-    if (D_A(TRAPCL) > 0) {                                                                           /* &TRACE checks */
-        int32_t assoc = locapt_fn(D_A(TKEYL), &STNOKY);              /* Check for breakpoint  XCALLC chk_break — stub */
+    if (D_A(TRAPCL) > 0) { /* &TRACE checks */
+        int32_t assoc = locapt_fn(D_A(TKEYL), &STNOKY); /* Check for breakpoint  XCALLC chk_break — stub */
         if (assoc) { SETAC(ATPTR, assoc); TRPHND_fn(ATPTR); }
         assoc = locapt_fn(D_A(TKEYL), &STCTKY);
         if (assoc) { SETAC(ATPTR, assoc); TRPHND_fn(ATPTR); }
@@ -213,16 +213,16 @@ Sil_result INTERP_fn(void)
         INCRA(OCICL, DESCR);
         GETD_B(XPTR, OCBSCL, OCICL);
         if (!TESTF(XPTR, FNC)) {
-            continue;  /* Literal value — push onto operand stack and continue  (The operand stack is managed implicitly through INCL/ARGVAL) */
+            continue; /* Literal value — push onto operand stack and continue  (The operand stack is managed implicitly through INCL/ARGVAL) */
         }
-        Sil_result rc = INVOKE_fn();                                                               /* Call via INVOKE */
+        Sil_result rc = INVOKE_fn(); /* Call via INVOKE */
         switch ((int)rc) {
         case OK: /* exits 1,2,3 — continue */
             continue;
         case FAIL: /* exit 4 — failure */
             MOVD(OCICL, FRTNCL);
             INCRA(FALCL, 1); /* &STFCOUNT */
-            if (D_A(TRAPCL) > 0) {                                                         /* &TRACE check on failure */
+            if (D_A(TRAPCL) > 0) { /* &TRACE check on failure */
                 int32_t assoc = locapt_fn(D_A(TKEYL), &FALKY);
                 if (assoc) { SETAC(ATPTR, assoc); TRPHND_fn(ATPTR); }
             }
@@ -251,13 +251,13 @@ Sil_result INTERP_fn(void)
 Sil_result INVOKE_fn(void)
 {
     GETDC_B(XPTR, INCL, 0); /* procedure descriptor */     /* INCL already loaded by caller (from object code stream) */
-    if (D_V(INCL) != D_V(XPTR)) {                                     /* VEQL INCL,XPTR — check arg counts (V fields) */
-        if (TESTF(XPTR, FNC)) {                                                 /* INVK2: TESTF XPTR,FNC,ARGNER,INVK1 */
-        } else {                                                           /* variable argument function — pass as-is */
-            SETAC(ERRTYP, 25); return FAIL;            /* ARGNER: incorrect number of arguments (v311.sil line 10344) */
+    if (D_V(INCL) != D_V(XPTR)) { /* VEQL INCL,XPTR — check arg counts (V fields) */
+        if (TESTF(XPTR, FNC)) { /* INVK2: TESTF XPTR,FNC,ARGNER,INVK1 */
+        } else { /* variable argument function — pass as-is */
+            SETAC(ERRTYP, 25); return FAIL; /* ARGNER: incorrect number of arguments (v311.sil line 10344) */
         }
     }
-    int32_t idx = D_A(INCL);                                                  /* INVK1: BRANIC INCL,0 — indirect call */
+    int32_t idx = D_A(INCL); /* INVK1: BRANIC INCL,0 — indirect call */
     if ((uint32_t)idx >= INVOKE_TABLE_SZ || !invoke_table[idx].fn) {
         SETAC(ERRTYP, 13); return FAIL; /* undefined function */
     }

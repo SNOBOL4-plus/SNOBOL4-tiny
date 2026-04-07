@@ -671,30 +671,30 @@ static void init_actions(void)
     FRWDTB_actions[4] = (struct sil_acts){CLNTYP, AC_STOP, NULL};
     FRWDTB_actions[5] = (struct sil_acts){EOSTYP, AC_STOP, NULL};
     FRWDTB_actions[6] = (struct sil_acts){NBTYP, AC_STOPSH, NULL};
-    CARDTB_actions[0] = (struct sil_acts){CMTTYP, AC_STOPSH, NULL};  /* CARDTB: [0]=CMTTYP/STOPSH [1]=CTLTYP/STOPSH [2]=CNTTYP/STOPSH [3]=NEWTYP/STOPSH */
+    CARDTB_actions[0] = (struct sil_acts){CMTTYP, AC_STOPSH, NULL}; /* CARDTB: [0]=CMTTYP/STOPSH [1]=CTLTYP/STOPSH [2]=CNTTYP/STOPSH [3]=NEWTYP/STOPSH */
     CARDTB_actions[1] = (struct sil_acts){CTLTYP, AC_STOPSH, NULL};
     CARDTB_actions[2] = (struct sil_acts){CNTTYP, AC_STOPSH, NULL};
     CARDTB_actions[3] = (struct sil_acts){NEWTYP, AC_STOPSH, NULL};
-    IBLKTB_actions[0] = (struct sil_acts){0, AC_GOTO, &FRWDTB_st};  /* IBLKTB: [0]=goto FRWDTB [1]=EOSTYP/STOP [2]=ERROR */
+    IBLKTB_actions[0] = (struct sil_acts){0, AC_GOTO, &FRWDTB_st}; /* IBLKTB: [0]=goto FRWDTB [1]=EOSTYP/STOP [2]=ERROR */
     IBLKTB_actions[1] = (struct sil_acts){EOSTYP, AC_STOP, NULL};
     IBLKTB_actions[2] = (struct sil_acts){0, AC_ERROR, NULL};
-    EOSTB_actions[0] = (struct sil_acts){0, AC_STOP, NULL};                                        /* EOSTB: [0]=STOP */
-    GOTSTB_actions[0] = (struct sil_acts){SGOTYP, AC_STOP, NULL};  /* GOTSTB: [0]=SGOTYP/STOP [1]=STOTYP/STOP [2]=ERROR */
+    EOSTB_actions[0] = (struct sil_acts){0, AC_STOP, NULL}; /* EOSTB: [0]=STOP */
+    GOTSTB_actions[0] = (struct sil_acts){SGOTYP, AC_STOP, NULL}; /* GOTSTB: [0]=SGOTYP/STOP [1]=STOTYP/STOP [2]=ERROR */
     GOTSTB_actions[1] = (struct sil_acts){STOTYP, AC_STOP, NULL};
     GOTSTB_actions[2] = (struct sil_acts){0, AC_ERROR, NULL};
-    GOTOTB_actions[0] = (struct sil_acts){0, AC_GOTO, &GOTSTB_st};  /* GOTOTB: [0]=goto GOTSTB [1]=goto GOTFTB [2]=UGOTYP/STOP [3]=UTOTYP/STOP [4]=ERROR */
+    GOTOTB_actions[0] = (struct sil_acts){0, AC_GOTO, &GOTSTB_st}; /* GOTOTB: [0]=goto GOTSTB [1]=goto GOTFTB [2]=UGOTYP/STOP [3]=UTOTYP/STOP [4]=ERROR */
     GOTOTB_actions[1] = (struct sil_acts){0, AC_GOTO, &GOTFTB_st};
     GOTOTB_actions[2] = (struct sil_acts){UGOTYP, AC_STOP, NULL};
     GOTOTB_actions[3] = (struct sil_acts){UTOTYP, AC_STOP, NULL};
     GOTOTB_actions[4] = (struct sil_acts){0, AC_ERROR, NULL};
-    GOTFTB_actions[0] = (struct sil_acts){FGOTYP, AC_STOP, NULL};  /* GOTFTB: [0]=FGOTYP/STOP [1]=FTOTYP/STOP [2]=ERROR */
+    GOTFTB_actions[0] = (struct sil_acts){FGOTYP, AC_STOP, NULL}; /* GOTFTB: [0]=FGOTYP/STOP [1]=FTOTYP/STOP [2]=ERROR */
     GOTFTB_actions[1] = (struct sil_acts){FTOTYP, AC_STOP, NULL};
     GOTFTB_actions[2] = (struct sil_acts){0, AC_ERROR, NULL};
-    LBLTB_actions[0] = (struct sil_acts){0, AC_GOTO, &LBLXTB_st};      /* LBLTB: [0]=goto LBLXTB [1]=STOPSH [2]=ERROR */
+    LBLTB_actions[0] = (struct sil_acts){0, AC_GOTO, &LBLXTB_st}; /* LBLTB: [0]=goto LBLXTB [1]=STOPSH [2]=ERROR */
     LBLTB_actions[1] = (struct sil_acts){0, AC_STOPSH, NULL};
     LBLTB_actions[2] = (struct sil_acts){0, AC_ERROR, NULL};
-    LBLXTB_actions[0] = (struct sil_acts){0, AC_STOPSH, NULL};                                  /* LBLXTB: [0]=STOPSH */
-    NUMBTB_actions[0] = (struct sil_acts){0, AC_GOTO, &NUMCTB_st};  /* NUMBTB: [0]=goto NUMCTB [1]=CMATYP/STOPSH [2]=DIMTYP/STOPSH [3]=ERROR */
+    LBLXTB_actions[0] = (struct sil_acts){0, AC_STOPSH, NULL}; /* LBLXTB: [0]=STOPSH */
+    NUMBTB_actions[0] = (struct sil_acts){0, AC_GOTO, &NUMCTB_st}; /* NUMBTB: [0]=goto NUMCTB [1]=CMATYP/STOPSH [2]=DIMTYP/STOPSH [3]=ERROR */
     NUMBTB_actions[1] = (struct sil_acts){CMATYP, AC_STOPSH, NULL};
     NUMBTB_actions[2] = (struct sil_acts){DIMTYP, AC_STOPSH, NULL};
     NUMBTB_actions[3] = (struct sil_acts){0, AC_ERROR, NULL};
@@ -719,13 +719,13 @@ static void init_actions(void)
          3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
          3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3
     }, NUMCTB_actions };
-    ELEMTB_actions[0] = (struct sil_acts){ILITYP, AC_GOTO, &INTGTB_st};                             /* ELEMTB actions */
+    ELEMTB_actions[0] = (struct sil_acts){ILITYP, AC_GOTO, &INTGTB_st}; /* ELEMTB actions */
     ELEMTB_actions[1] = (struct sil_acts){VARTYP, AC_GOTO, &VARTB_st};
     ELEMTB_actions[2] = (struct sil_acts){QLITYP, AC_GOTO, &SQLITB_st};
     ELEMTB_actions[3] = (struct sil_acts){QLITYP, AC_GOTO, &DQLITB_st};
     ELEMTB_actions[4] = (struct sil_acts){NSTTYP, AC_STOP, NULL};
     ELEMTB_actions[5] = (struct sil_acts){0, AC_ERROR, NULL};
-    SQLITB_actions[0] = (struct sil_acts){0, AC_STOP, NULL};                                       /* SQLITB / DQLITB */
+    SQLITB_actions[0] = (struct sil_acts){0, AC_STOP, NULL}; /* SQLITB / DQLITB */
     DQLITB_actions[0] = (struct sil_acts){0, AC_STOP, NULL};
     SQLITB_st = (struct sil_syntab){ "SQLITB", {
         0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -747,7 +747,7 @@ static void init_actions(void)
         0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
         0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
     }, DQLITB_actions };
-    VARTB_actions[0] = (struct sil_acts){VARTYP, AC_STOPSH, NULL};                                           /* VARTB */
+    VARTB_actions[0] = (struct sil_acts){VARTYP, AC_STOPSH, NULL}; /* VARTB */
     VARTB_actions[1] = (struct sil_acts){FNCTYP, AC_STOP, NULL};
     VARTB_actions[2] = (struct sil_acts){ARYTYP, AC_STOP, NULL};
     VARTB_actions[3] = (struct sil_acts){0, AC_ERROR, NULL};
@@ -761,7 +761,7 @@ static void init_actions(void)
         4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
         4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4
     }, VARTB_actions };
-    VARATB_actions[0] = (struct sil_acts){0, AC_GOTO, &VARBTB_st};                                 /* VARATB / VARBTB */
+    VARATB_actions[0] = (struct sil_acts){0, AC_GOTO, &VARBTB_st}; /* VARATB / VARBTB */
     VARATB_actions[1] = (struct sil_acts){CMATYP, AC_STOPSH, NULL};
     VARATB_actions[2] = (struct sil_acts){RPTYP, AC_STOPSH, NULL};
     VARATB_actions[3] = (struct sil_acts){0, AC_ERROR, NULL};
@@ -789,7 +789,7 @@ static void init_actions(void)
         4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
         4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4
     }, VARBTB_actions };
-    INTGTB_actions[0] = (struct sil_acts){ILITYP, AC_STOPSH, NULL};                                         /* INTGTB */
+    INTGTB_actions[0] = (struct sil_acts){ILITYP, AC_STOPSH, NULL}; /* INTGTB */
     INTGTB_actions[1] = (struct sil_acts){FLITYP, AC_GOTO, &FLITB_st};
     INTGTB_actions[2] = (struct sil_acts){FLITYP, AC_GOTO, &EXPTB_st};
     INTGTB_actions[3] = (struct sil_acts){0, AC_ERROR, NULL};
@@ -803,7 +803,7 @@ static void init_actions(void)
         4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
         4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4
     }, INTGTB_actions };
-    FLITB_actions[0] = (struct sil_acts){0, AC_STOPSH, NULL};                               /* FLITB / EXPTB / EXPBTB */
+    FLITB_actions[0] = (struct sil_acts){0, AC_STOPSH, NULL}; /* FLITB / EXPTB / EXPBTB */
     FLITB_actions[1] = (struct sil_acts){0, AC_GOTO, &EXPTB_st};
     FLITB_actions[2] = (struct sil_acts){0, AC_ERROR, NULL};
     EXPTB_actions[0] = (struct sil_acts){0, AC_GOTO, &EXPBTB_st};
@@ -840,7 +840,7 @@ static void init_actions(void)
         2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
         2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2
     }, EXPBTB_actions };
-    NBLKTB_actions[0] = (struct sil_acts){0, AC_ERROR, NULL};                                               /* NBLKTB */
+    NBLKTB_actions[0] = (struct sil_acts){0, AC_ERROR, NULL}; /* NBLKTB */
     NBLKTB_actions[1] = (struct sil_acts){0, AC_STOPSH, NULL};
     NBLKTB_st = (struct sil_syntab){ "NBLKTB", {
         2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
@@ -852,7 +852,7 @@ static void init_actions(void)
         2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
         2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2
     }, NBLKTB_actions };
-    TBLKTB_actions[0] = (struct sil_acts){0, AC_STOP, NULL};                                       /* TBLKTB / STARTB */
+    TBLKTB_actions[0] = (struct sil_acts){0, AC_STOP, NULL}; /* TBLKTB / STARTB */
     TBLKTB_actions[1] = (struct sil_acts){0, AC_ERROR, NULL};
     TBLKTB_st = (struct sil_syntab){ "TBLKTB", {
         2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
@@ -864,7 +864,7 @@ static void init_actions(void)
         2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
         2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2
     }, TBLKTB_actions };
-    STARTB_actions[0] = (struct sil_acts){0, AC_STOP, NULL};      /* STARTB: [0]=STOP [1]=EXPFN/goto TBLKTB [2]=ERROR */
+    STARTB_actions[0] = (struct sil_acts){0, AC_STOP, NULL}; /* STARTB: [0]=STOP [1]=EXPFN/goto TBLKTB [2]=ERROR */
     STARTB_actions[1] = (struct sil_acts){0, AC_GOTO, &TBLKTB_st}; /* put filled below */
     STARTB_actions[2] = (struct sil_acts){0, AC_ERROR, NULL};
     STARTB_st = (struct sil_syntab){ "STARTB", {
@@ -877,7 +877,7 @@ static void init_actions(void)
         3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,
         3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3
     }, STARTB_actions };
-    SPANTB_actions[0] = (struct sil_acts){0, AC_STOP, NULL};  /* SPANTB / BRKTB actions (chrs[] are runtime-filled by clertb/plugtb) */
+    SPANTB_actions[0] = (struct sil_acts){0, AC_STOP, NULL}; /* SPANTB / BRKTB actions (chrs[] are runtime-filled by clertb/plugtb) */
     SPANTB_actions[1] = (struct sil_acts){0, AC_STOPSH, NULL};
     SPANTB_actions[2] = (struct sil_acts){0, AC_ERROR, NULL};
     BRKTB_actions[0] = (struct sil_acts){0, AC_STOP, NULL};
@@ -938,7 +938,7 @@ static void reg_tbl(DESCR_t *d, struct sil_syntab *st)
 void init_syntab(void)
 {
     init_actions();
-    BIOPTB_actions[ 0].put = P2A(&ADDFN);             /* Bind operator fn arena offsets into BIOPTB/UNOPTB put fields */
+    BIOPTB_actions[ 0].put = P2A(&ADDFN); /* Bind operator fn arena offsets into BIOPTB/UNOPTB put fields */
     BIOPTB_actions[ 1].put = P2A(&SUBFN);
     BIOPTB_actions[ 2].put = P2A(&NAMFN);
     BIOPTB_actions[ 3].put = P2A(&DOLFN);
@@ -967,7 +967,7 @@ void init_syntab(void)
     UNOPTB_actions[11].put = P2A(&BARFN);
     UNOPTB_actions[12].put = P2A(&QUESFN);
     UNOPTB_actions[13].put = P2A(&AROWFN);
-    reg_tbl(&FRWDTB, &FRWDTB_st);                                                              /* Register all tables */
+    reg_tbl(&FRWDTB, &FRWDTB_st); /* Register all tables */
     reg_tbl(&CARDTB, &CARDTB_st);
     reg_tbl(&IBLKTB, &IBLKTB_st);
     reg_tbl(&ELEMTB, &ELEMTB_st);
@@ -993,7 +993,7 @@ static struct sil_syntab *lookup_tbl(const DESCR_t *d)
         int idx = (int)(-a) - 1;
         if (idx < tbl_reg_n) return tbl_reg[idx].st;
     }
-    return (struct sil_syntab *)A2P(a);                                       /* fallback: A is a direct arena offset */
+    return (struct sil_syntab *)A2P(a); /* fallback: A is a direct arena offset */
 }
 
 /* Rewrite STREAM_fn to use lookup_tbl instead of A2P directly */
@@ -1048,7 +1048,7 @@ void XCALL_MSTIME(DESCR_t *res)
 {
     struct timeval tv;
     gettimeofday(&tv, NULL);
-    res->f = (uint8_t)R;                                                             /* return milliseconds as real_t */
+    res->f = (uint8_t)R; /* return milliseconds as real_t */
     *(real_t *)&res->a.i = (real_t)(tv.tv_sec * 1000.0 + tv.tv_usec / 1000.0);
 }
 
@@ -1060,7 +1060,7 @@ void XCALL_ZERBLK(DESCR_t *dst, DESCR_t size)
 
 void XCALL_GETPARM(SPEC_t *sp)
 {
-    sp->a = 0; sp->o = 0; sp->l = 0;                                     /* Return empty string — no argv support yet */
+    sp->a = 0; sp->o = 0; sp->l = 0; /* Return empty string — no argv support yet */
 }
 void XCALL_FREEPARM(SPEC_t *sp) { (void)sp; }
 
@@ -1108,7 +1108,7 @@ void XCALL_XRAISP(SPEC_t *sp)
 }
 void XCALL_REVERSE(SPEC_t *dst, SPEC_t *src)
 {
-    int32_t off = D_A(FRSGPT);                                      /* copy src reversed into dst — naive arena alloc */
+    int32_t off = D_A(FRSGPT); /* copy src reversed into dst — naive arena alloc */
     D_A(FRSGPT) += src->l;
     char *d = A2P(off);
     const char *s = (const char *)A2P(src->a) + src->o + src->l - 1;
@@ -1138,7 +1138,7 @@ void XCALL_DATE(SPEC_t *sp)
 {
     time_t t = time(NULL);
     struct tm *tm = localtime(&t);
-    int32_t off = D_A(FRSGPT);                                       /* Arena-allocate 9-char date string "MM/DD/YY " */
+    int32_t off = D_A(FRSGPT); /* Arena-allocate 9-char date string "MM/DD/YY " */
     D_A(FRSGPT) += 12;
     char *buf = A2P(off);
 #pragma GCC diagnostic push
@@ -1152,7 +1152,7 @@ void XCALL_DATE(SPEC_t *sp)
 Sil_result STREAD_fn(SPEC_t *dst, DESCR_t unit)
 {
     (void)unit;
-    static char linebuf[4096];                                                   /* Read a line from stdin into arena */
+    static char linebuf[4096]; /* Read a line from stdin into arena */
     if (!fgets(linebuf, (int)sizeof linebuf, stdin)) return FAIL;
     int n = (int)strlen(linebuf);
     if (n > 0 && linebuf[n-1] == '\n') n--;
@@ -1334,7 +1334,7 @@ int32_t stream_fn(SPEC_t *res, const SPEC_t *src, const DESCR_t *table)
 /* clertb_fn — takes (table*, fill_DESCR) where fill identifies action */
 void clertb_fn(DESCR_t *tbl_descr, DESCR_t fill)
 {
-    struct sil_syntab *tp = lookup_tbl(tbl_descr);        /* fill.a.i == 0 → CONTIN; fill.a.i == AC_STOPSH+1 → STOPSH */
+    struct sil_syntab *tp = lookup_tbl(tbl_descr); /* fill.a.i == 0 → CONTIN; fill.a.i == AC_STOPSH+1 → STOPSH */
     enum sil_action act = (enum sil_action)fill.a.i;
     int j = 0;
     if (act != AC_CONTIN) {

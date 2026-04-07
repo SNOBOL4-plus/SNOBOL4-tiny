@@ -58,7 +58,7 @@ void APDSP_fn(SPEC_t *base, const SPEC_t *str)
  * ════════════════════════════════════════════════════════════════════════ */
 void REMSP_fn(SPEC_t *dst, const SPEC_t *src, const SPEC_t *match)
 {
-    SPEC_t tmp = *src;                                   /* copy all fields from src first (handles dst == src alias) */
+    SPEC_t tmp = *src; /* copy all fields from src first (handles dst == src alias) */
     tmp.o += match->l;
     tmp.l -= match->l;
     *dst = tmp;
@@ -105,7 +105,7 @@ Sil_result SPCINT_fn(DESCR_t *dp, const SPEC_t *sp)
     const char *cp = sp_ptr(sp);
     long val;
     char *end;
-    while (len > 0 && (*cp == ' '  || *cp == '\t')) { cp++; len--; }  /* strip leading whitespace (SPITBOL-compatible, always) */
+    while (len > 0 && (*cp == ' '   || *cp == '\t')) { cp++; len--; } /* strip leading whitespace (SPITBOL-compatible, always) */
     if (len == 0) return FAIL;
     if (len > sizeof(buf) - 1) len = sizeof(buf) - 1;
     memcpy(buf, cp, len);
@@ -133,7 +133,7 @@ Sil_result SPREAL_fn(DESCR_t *dp, const SPEC_t *sp)
     const char *cp = sp_ptr(sp);
     double d;
     char t;
-    while (len > 0 && (*cp == ' '  || *cp == '\t')) { cp++; len--; }                      /* strip leading whitespace */
+    while (len > 0 && (*cp == ' '   || *cp == '\t')) { cp++; len--; } /* strip leading whitespace */
     if (len == 0) {
         dp->a.f = 0.0f;
         dp->f = 0;
@@ -162,7 +162,7 @@ void REALST_fn(SPEC_t *sp, const DESCR_t *dp)
     static char strbuf[64];
     char *bp;
     sprintf(strbuf, "%g", (double)dp->a.f);
-    bp = strbuf;                                          /* ensure dot or exponent present (matching v311 behaviour) */
+    bp = strbuf; /* ensure dot or exponent present (matching v311 behaviour) */
     while (*bp && (isdigit((unsigned char)*bp) || *bp == '-')) bp++;
     if (*bp == '\0') { *bp++ = '.'; *bp = '\0'; }
     sp->a = (int32_t)(intptr_t)strbuf; /* raw C ptr, not arena offset */
@@ -200,7 +200,7 @@ void LOCSP_fn(SPEC_t *sp, const DESCR_t *dp)
         sp->l = 0;
         return;
     }
-    DESCR_t *title = (DESCR_t *)A2P(dp->a.i);                       /* title DESCR's V field holds string byte length */
+    DESCR_t *title = (DESCR_t *)A2P(dp->a.i); /* title DESCR's V field holds string byte length */
     sp->a = dp->a.i;
     sp->f = dp->f;
     sp->v = dp->v;

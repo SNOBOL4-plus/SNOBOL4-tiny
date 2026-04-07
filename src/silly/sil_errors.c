@@ -32,13 +32,13 @@ extern DESCR_t GCTTTL;
 void FTLEND_fn(void)
 {
     XCALL_io_flushall();
-    {                                                                   /* Print fatal error message from MSGNO table */
+    { /* Print fatal error message from MSGNO table */
         int32_t ety = D_A(ERRTYP);
         if (ety >= 0 && MSGNO[ety]) {
             fprintf(stderr, "%s\n", MSGNO[ety]);
         }
     }
-    exit(D_A(RETCOD) ? D_A(RETCOD) : 1);  /* ISTACK: reset system stack (no-op in C — stack is native)  Statistics omitted for brevity in this stub */
+    exit(D_A(RETCOD) ? D_A(RETCOD) : 1); /* ISTACK: reset system stack (no-op in C — stack is native)  Statistics omitted for brevity in this stub */
 }
 
 /* ── FTLTST — non-fatal test ─────────────────────────────────────────── */
@@ -55,13 +55,13 @@ void FTLEND_fn(void)
 void FTLTST_fn(void)
 {
     SETAC(FATLCL, 0);
-    if (ACOMPC(ERRLCL, 0) <= 0) { FTLEND_fn(); return; }                                                   /* FTERST: */
+    if (ACOMPC(ERRLCL, 0) <= 0) { FTLEND_fn(); return; } /* FTERST: */
     DECRA(ERRLCL, 1);
     SETAC(ERRTYP, 0); SETAC(ERRTXT, 0);
     MOVD(FRTNCL, OCICL); DECRA(FRTNCL, DESCR);
     MOVD(LSTNCL, STNOCL);
     MOVA(LSLNCL, LNNOCL); MOVA(LSFLNM, FILENM);
-    if (XITHND_fn() == FAIL) { FTLEND_fn(); }                                                  /* Try SETEXIT handler */
+    if (XITHND_fn() == FAIL) { FTLEND_fn(); } /* Try SETEXIT handler */
 }
 
 /* ── FTLERR — check &FATALLIMIT ─────────────────────────────────────── */
@@ -74,7 +74,7 @@ void FTLERR_fn(void)
 /* ── END — normal program end ────────────────────────────────────────── */
 void END_fn(void)
 {
-    if (ACOMPC(ERRLCL, 0) > 0) {                                                      /* Check &ERRLIMIT for re-entry */
+    if (ACOMPC(ERRLCL, 0) > 0) { /* Check &ERRLIMIT for re-entry */
         DECRA(ERRLCL, 1);
         SETAC(ERRTYP, 0); SETAC(ERRTXT, 0);
         MOVD(FRTNCL, OCICL); DECRA(FRTNCL, DESCR);
@@ -84,7 +84,7 @@ void END_fn(void)
     }
     XCALL_io_flushall();
     if (!AEQLC(BANRCL, 0)) {
-        XCALL_OUTPUT_fmt(PUNCH, "Normal termination at level %d\n",               /* Print normal termination message */
+        XCALL_OUTPUT_fmt(PUNCH, "Normal termination at level %d\n", /* Print normal termination message */
                          (int)D_A(LVLCL));
         XCALL_OUTPUT_fmt(PUNCH, "%s:%d: Last statement executed was %d\n",
                          (char*)A2P(D_A(FILENM)),

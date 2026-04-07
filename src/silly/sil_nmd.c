@@ -56,38 +56,38 @@ static inline void getspc(SPEC_t *sp, DESCR_t base, int32_t off)
 /* ── NMD_fn ──────────────────────────────────────────────────────────── */
 Sil_result NMD_fn(void)
 {
-    MOVD(TCL, NHEDCL);                                                     /* MOVD TCL,NHEDCL — start from saved head */
+    MOVD(TCL, NHEDCL); /* MOVD TCL,NHEDCL — start from saved head */
     for (;;) {
-        if (ACOMP(TCL, NAMICL) >= 0)                         /* NMD1: ACOMP TCL,NAMICL — past end? → RTN2 (return OK) */
+        if (ACOMP(TCL, NAMICL) >= 0) /* NMD1: ACOMP TCL,NAMICL — past end? → RTN2 (return OK) */
             return OK;
-        SUM(TPTR, NBSPTR, TCL);                                                /* SUM TPTR,NBSPTR,TCL — entry address */
-        getspc(&TSP, TPTR, DESCR);                                      /* GETSPC TSP,TPTR,DESCR — captured substring */
-        GETDC_B(TVAL, TPTR, DESCR + (int32_t)sizeof(SPEC_t));         /* GETDC TVAL,TPTR,DESCR+SPEC — target variable */
-        D_A(XCL) = TSP.l;                                                               /* GETLG XCL,TSP — get length */
-        if (ACOMP(XCL, MLENCL) > 0) {                                     /* ACOMP XCL,MLENCL,INTR8 — check &MAXLNGTH */
-            INCRA(TCL, DESCR + (int32_t)sizeof(SPEC_t));   /* INTR8: string overflow — treat as non-fatal, skip entry */
+        SUM(TPTR, NBSPTR, TCL); /* SUM TPTR,NBSPTR,TCL — entry address */
+        getspc(&TSP, TPTR, DESCR); /* GETSPC TSP,TPTR,DESCR — captured substring */
+        GETDC_B(TVAL, TPTR, DESCR + (int32_t)sizeof(SPEC_t)); /* GETDC TVAL,TPTR,DESCR+SPEC — target variable */
+        D_A(XCL) = TSP.l; /* GETLG XCL,TSP — get length */
+        if (ACOMP(XCL, MLENCL) > 0) { /* ACOMP XCL,MLENCL,INTR8 — check &MAXLNGTH */
+            INCRA(TCL, DESCR + (int32_t)sizeof(SPEC_t)); /* INTR8: string overflow — treat as non-fatal, skip entry */
             continue;
         }
-        if (VEQLC(TVAL, E)) {                                            /* VEQLC TVAL,E,,NAMEXN — EXPRESSION target? */
+        if (VEQLC(TVAL, E)) { /* VEQLC TVAL,E,,NAMEXN — EXPRESSION target? */
             MOVD(XPTR, TVAL); /* EXPEVL reads from XPTR in our impl */  /* NAMEXN: RCALL TVAL,EXPEVL,TVAL,(FAIL,NMD5,NEMO) */
             Sil_result rc = EXPEVL_fn();
             if (rc == FAIL) {
-                INCRA(TCL, DESCR + (int32_t)sizeof(SPEC_t));                         /* FAIL exit — skip this capture */
+                INCRA(TCL, DESCR + (int32_t)sizeof(SPEC_t)); /* FAIL exit — skip this capture */
                 continue;
             }
-            MOVD(TVAL, XPTR);                                      /* XPTR now holds evaluated result; fall into NMD5 */
+            MOVD(TVAL, XPTR); /* XPTR now holds evaluated result; fall into NMD5 */
         }
 nmd5:
-        if (VEQLC(TVAL, K)) {                                                /* VEQLC TVAL,K,,NMDIC — KEYWORD target? */
+        if (VEQLC(TVAL, K)) { /* VEQLC TVAL,K,,NMDIC — KEYWORD target? */
             /* NMDIC: SPCINT VVAL,TSP,INTR1,NMD4
              * Convert captured substring to integer for keyword assign */
             if (SPCINT_fn(&VVAL, &TSP) == FAIL) {
-                INCRA(TCL, DESCR + (int32_t)sizeof(SPEC_t));                       /* INTR1: illegal data type — skip */
+                INCRA(TCL, DESCR + (int32_t)sizeof(SPEC_t)); /* INTR1: illegal data type — skip */
                 continue;
             }
             goto nmd4;
         }
-        {                                                         /* Normal string target: RCALL VVAL,GENVAR,(TSPPTR) */
+        { /* Normal string target: RCALL VVAL,GENVAR,(TSPPTR) */
             int32_t off = GENVAR_fn(&TSP);
             if (!off) {
                 INCRA(TCL, DESCR + (int32_t)sizeof(SPEC_t));
@@ -97,8 +97,8 @@ nmd5:
             SETVC(VVAL, S);
         }
 nmd4:
-        PUTDC_B(TVAL, DESCR, VVAL);                        /* PUTDC TVAL,DESCR,VVAL — assign value to target variable */
-        if (!AEQLC(OUTSW, 0)) {                                                /* AEQLC OUTSW,0,,NMD3 — check &OUTPUT */
+        PUTDC_B(TVAL, DESCR, VVAL); /* PUTDC TVAL,DESCR,VVAL — assign value to target variable */
+        if (!AEQLC(OUTSW, 0)) { /* AEQLC OUTSW,0,,NMD3 — check &OUTPUT */
             int32_t assoc = locapv_fn(D_A(OUTATL), &TVAL);
             if (assoc) {
                 DESCR_t zptr; SETAC(zptr, assoc); SETVC(zptr, S);
@@ -106,10 +106,10 @@ nmd4:
                 PUTOUT_fn(zptr, VVAL);
             }
         }
-        if (!ACOMPC(TRAPCL, 0)) {                                  /* NMD3: ACOMPC TRAPCL,0,,NMD2,NMD2 — check &TRACE */
+        if (!ACOMPC(TRAPCL, 0)) { /* NMD3: ACOMPC TRAPCL,0,,NMD2,NMD2 — check &TRACE */
             int32_t assoc = locapt_fn(D_A(TVALL), &TVAL);
             if (assoc) {
-                DESCR_t save_TCL = TCL, save_NAMICL = NAMICL,                 /* PUSH (TCL,NAMICL,NHEDCL); trace; POP */
+                DESCR_t save_TCL = TCL, save_NAMICL = NAMICL, /* PUSH (TCL,NAMICL,NHEDCL); trace; POP */
                         save_NHEDCL = NHEDCL;
                 MOVD(NHEDCL, NAMICL);
                 SETAC(ATPTR, assoc);
@@ -119,8 +119,8 @@ nmd4:
                 MOVD(NHEDCL, save_NHEDCL);
             }
         }
-        INCRA(TCL, DESCR + (int32_t)sizeof(SPEC_t));            /* NMD2: INCRA TCL,DESCR+SPEC — advance to next entry */
-        continue;                                                                               /* BRANCH NMD1 — loop */
-        (void) && nmd5;                              /* Suppress unused-label warning — nmd5 is jumped to from NAMEXN */
+        INCRA(TCL, DESCR + (int32_t)sizeof(SPEC_t)); /* NMD2: INCRA TCL,DESCR+SPEC — advance to next entry */
+        continue; /* BRANCH NMD1 — loop */
+        (void) && nmd5; /* Suppress unused-label warning — nmd5 is jumped to from NAMEXN */
     }
 }

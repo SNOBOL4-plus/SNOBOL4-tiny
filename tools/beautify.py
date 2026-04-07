@@ -162,12 +162,7 @@ def is_pure_comment(line):
 
 def attach_comment(code_line, cmt, width):
     if not cmt: return code_line
-    rendered = '/* ' + cmt + ' */'
-    bare = code_line.rstrip()
-    needed = len(bare) + 1 + len(rendered)
-    if needed >= width:
-        return bare + '  ' + rendered
-    return bare + ' ' * (width - len(bare) - len(rendered)) + rendered
+    return code_line.rstrip() + ' /* ' + cmt + ' */'
 
 # ── main transform ───────────────────────────────────────────────────────────
 

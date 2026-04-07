@@ -77,7 +77,7 @@ Sil_result ARGVAL_fn(void)
 {
     XPTR = oc_fetch();
     if (D_F(XPTR) & FNC) {
-        switch (INVOKE_fn()) {                                                   /* function descriptor — call INVOKE */
+        switch (INVOKE_fn()) { /* function descriptor — call INVOKE */
         case FAIL: return FAIL;
         case OK: goto argv1; /* exit 2: name returned, dereference  */
         default: return OK; /* exit 3: value returned directly      */
@@ -86,7 +86,7 @@ Sil_result ARGVAL_fn(void)
 argv1:
     if (check_input_assoc(&XPTR)) {
         ZPTR = *(DESCR_t *)A2P(ZPTR.a.i + DESCR);
-        switch (PUTIN_fn()) {                                           /* RCALL XPTR,PUTIN,(ZPTR,XPTR),(FAIL,RTXNAM) */
+        switch (PUTIN_fn()) { /* RCALL XPTR,PUTIN,(ZPTR,XPTR),(FAIL,RTXNAM) */
         case FAIL: return FAIL;
         default: return OK; /* RTXNAM: value in XPTR */
         }
@@ -102,7 +102,7 @@ argv1:
  * ════════════════════════════════════════════════════════════════════════ */
 Sil_result EXPVAL_fn(void)
 {
-    DESCR_t sv_ocbscl = OCBSCL, sv_ocicl = OCICL;                   /* save interpreter state — mirrors SIL PUSH list */
+    DESCR_t sv_ocbscl = OCBSCL, sv_ocicl = OCICL; /* save interpreter state — mirrors SIL PUSH list */
     DESCR_t sv_patbcl = PATBCL, sv_paticl = PATICL;
     DESCR_t sv_wptr = WPTR, sv_xcl = XCL;
     DESCR_t sv_ycl = YCL, sv_tcl = TCL;
@@ -113,11 +113,11 @@ Sil_result EXPVAL_fn(void)
     SPEC_t sv_txsp = TXSP, sv_xsp = XSP;
     int scl_entry = SCL.a.i; /* save entry indicator */
     Sil_result rc;
-    OCBSCL = XPTR;                                                                  /* set up new code base from XPTR */
+    OCBSCL = XPTR; /* set up new code base from XPTR */
     OCICL.a.i = DESCR;
     PDLHED = PDLPTR;
     NHEDCL = NAMICL;
-    {                                                                                       /* fetch first descriptor */
+    { /* fetch first descriptor */
         DESCR_t d = *(DESCR_t *)A2P(OCBSCL.a.i + OCICL.a.i);
         XPTR = d;
     }
@@ -128,9 +128,9 @@ Sil_result EXPVAL_fn(void)
             SCL.a.i = 1;
             break;
         case OK:
-            SCL.a.i = saved_scl;                                                         /* exit 2: came back as name */
+            SCL.a.i = saved_scl; /* exit 2: came back as name */
             if (SCL.a.i == 0) {
-                deref_name(&XPTR);                                                    /* EXPEVL entry: just get value */
+                deref_name(&XPTR); /* EXPEVL entry: just get value */
                 SCL.a.i = 2;
             } else {
                 ZPTR = XPTR;
@@ -138,7 +138,7 @@ Sil_result EXPVAL_fn(void)
             }
             break;
         default:
-            SCL.a.i = saved_scl;                                                              /* exit 3: value direct */
+            SCL.a.i = saved_scl; /* exit 3: value direct */
             if (SCL.a.i == 0) {
                 SCL.a.i = 2;
             } else {
@@ -148,8 +148,8 @@ Sil_result EXPVAL_fn(void)
             break;
         }
     } else {
-        if (scl_entry == 0) {                                                                       /* not a function */
-            if (INSW.a.i != 0 && check_input_assoc(&XPTR)) {                                           /* EXPEVL path */
+        if (scl_entry == 0) { /* not a function */
+            if (INSW.a.i != 0 && check_input_assoc(&XPTR)) { /* EXPEVL path */
                 ZPTR = *(DESCR_t *)A2P(ZPTR.a.i + DESCR);
                 switch (PUTIN_fn()) {
                 case FAIL: SCL.a.i = 1; break;
@@ -172,7 +172,7 @@ Sil_result EXPVAL_fn(void)
             }
         }
     }
-    OCBSCL = sv_ocbscl; OCICL = sv_ocicl;                                                /* restore interpreter state */
+    OCBSCL = sv_ocbscl; OCICL = sv_ocicl; /* restore interpreter state */
     PATBCL = sv_patbcl; PATICL = sv_paticl;
     WPTR = sv_wptr; XCL = sv_xcl;
     YCL = sv_ycl; TCL = sv_tcl;
@@ -258,23 +258,23 @@ patv1:
 patv3:
     if (XPTR.v == P || XPTR.v == S) return OK;
     if (XPTR.v == I) {
-        int32_t off = GNVARI_fn(XPTR.a.i);                                                 /* GENVIX: GNVARI → string */
+        int32_t off = GNVARI_fn(XPTR.a.i); /* GENVIX: GNVARI → string */
         if (off == 0) return FAIL;
         XPTR.a.i = off; XPTR.f = 0; XPTR.v = S;
         return OK;
     }
     if (XPTR.v == R) {
-        REALST_fn(&XSP, &XPTR);                                                             /* PATVR: REALST → GENVAR */
+        REALST_fn(&XSP, &XPTR); /* PATVR: REALST → GENVAR */
         int32_t off = GENVAR_fn(&XSP);
         if (off == 0) return FAIL;
         XPTR.a.i = off; XPTR.f = 0; XPTR.v = S;
         return OK;
     }
     if (XPTR.v == E) {
-        int32_t blk = BLOCK_fn(STARSZ.a.i, P);                              /* wrap in STARPT expression pattern node */
+        int32_t blk = BLOCK_fn(STARSZ.a.i, P); /* wrap in STARPT expression pattern node */
         if (blk == 0) return FAIL;
-        memcpy(A2P(blk), A2P(STRPAT.a.i), (size_t)STARSZ.a.i);                 /* copy STRPAT template into new block */
-        *(DESCR_t *)A2P(blk + 4 * DESCR) = XPTR;                    /* insert expression descriptor at offset 4*DESCR */
+        memcpy(A2P(blk), A2P(STRPAT.a.i), (size_t)STARSZ.a.i); /* copy STRPAT template into new block */
+        *(DESCR_t *)A2P(blk + 4 * DESCR) = XPTR; /* insert expression descriptor at offset 4*DESCR */
         XPTR.a.i = blk; XPTR.f = 0; XPTR.v = P;
         return OK;
     }
@@ -335,22 +335,22 @@ Sil_result VPXPTR_fn(void)
 {
     LOCSP_fn(&SPECR1, &XPTR);
     if (SPECR1.l == 0) return OK; /* null string: return unchanged */
-    int32_t len = SPECR1.l;                                   /* allocate scratch space at FRSGPT for upper-case copy */
+    int32_t len = SPECR1.l; /* allocate scratch space at FRSGPT for upper-case copy */
     int32_t scratch = CONVAR_fn(len);
     if (scratch == 0) return FAIL;
     LOCSP_fn(&XSP, &FRSGPT);
-    const char *src = SP_PTR(&SPECR1);                                                /* copy and raise to upper-case */
+    const char *src = SP_PTR(&SPECR1); /* copy and raise to upper-case */
     char *dst = SP_PTR(&XSP);
     int raised = 0;
     for (int32_t i = 0; i < len; i++) {
         unsigned char c = (unsigned char)src[i];
-        if (c >= 'a'  && c <= 'z') { dst[i] = (char)(c - 32); raised++; }
+        if (c >= 'a'   && c <= 'z') { dst[i] = (char)(c - 32); raised++; }
         else dst[i] = (char)c;
     }
     if (!raised) return OK; /* no lower-case chars: return unchanged */
-    *(DESCR_t *)A2P(scratch + DESCR) = *(DESCR_t *)A2P(XPTR.a.i + DESCR);  /* copy value and label fields from original */
+    *(DESCR_t *)A2P(scratch + DESCR) = *(DESCR_t *)A2P(XPTR.a.i + DESCR); /* copy value and label fields from original */
     *(DESCR_t *)A2P(scratch + ATTRIB) = *(DESCR_t *)A2P(XPTR.a.i + ATTRIB);
-    int32_t off = GNVARS_fn(dst, len);                                                /* intern the upper-case string */
+    int32_t off = GNVARS_fn(dst, len); /* intern the upper-case string */
     if (off == 0) return FAIL;
     XPTR.a.i = off; XPTR.f = 0; XPTR.v = S;
     return OK;
@@ -376,7 +376,7 @@ next_arg:
             XPTR = saved_xptr;
             return FAIL;
         case OK:
-            SCL = saved_scl;                                   /* exit 2: returned as name — dereference and continue */
+            SCL = saved_scl; /* exit 2: returned as name — dereference and continue */
             XPTR = saved_xptr;
             if (INSW.a.i != 0 && check_input_assoc(&YPTR)) {
                 ZPTR = *(DESCR_t *)A2P(ZPTR.a.i + DESCR);
@@ -399,9 +399,9 @@ next_arg:
         }
     }
     if (pass != 0) {
-        return OK;                                                 /* second arg done — XPTR=first, YPTR=second, RTN2 */
+        return OK; /* second arg done — XPTR=first, YPTR=second, RTN2 */
     }
-    XPTR = YPTR;                                                       /* first arg done → save in XPTR, fetch second */
+    XPTR = YPTR; /* first arg done → save in XPTR, fetch second */
     pass = 1;
     goto next_arg;
 }

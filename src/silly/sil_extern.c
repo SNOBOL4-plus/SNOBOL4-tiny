@@ -56,11 +56,11 @@ Sil_result LOAD_fn(void) { return FAIL; }
 Sil_result UNLOAD_fn(void)
 {
     if (VARVUP_fn() == FAIL) return FAIL;
-    int32_t zcl_off = FINDEX_fn(&XPTR);                                           /* FINDEX — get function descriptor */
+    int32_t zcl_off = FINDEX_fn(&XPTR); /* FINDEX — get function descriptor */
     if (!zcl_off) return FAIL;
     SETAC(ZCL, zcl_off);
-    PUTDC_B(ZCL, 0, UNDFCL);                                                                       /* Reset to UNDFCL */
-    LOCSP_fn(&XSP, &XPTR);                                                                         /* Platform unload */
+    PUTDC_B(ZCL, 0, UNDFCL); /* Reset to UNDFCL */
+    LOCSP_fn(&XSP, &XPTR); /* Platform unload */
     XCALL_UNLOAD(&XSP);
     MOVD(XPTR, NULVCL); return OK;
 }
@@ -84,14 +84,14 @@ Sil_result LNKFNC_fn(void)
     int stack_base = ext_top;
     DESCR_t TCL_d; SETAC(TCL_d, 2*DESCR); /* offset into def block */
     int32_t nactual = D_A(XCL);
-    for (int32_t i = 0; i < nactual; i++) {                               /* Evaluate and coerce each actual argument */
+    for (int32_t i = 0; i < nactual; i++) { /* Evaluate and coerce each actual argument */
         ext_push(XCL); ext_push(ZCL_d); ext_push(TCL_d);
         ext_push(YPTR_d); ext_push(WCL_d); ext_push(YCL); ext_push(WPTR_d);
         if (ARGVAL_fn() == FAIL) { ext_top = stack_base; return FAIL; }
         WPTR_d = ext_pop(); YCL = ext_pop(); WCL_d = ext_pop();
         YPTR_d = ext_pop(); TCL_d = ext_pop(); ZCL_d = ext_pop(); XCL = ext_pop();
         DECRA(WCL_d, 1);
-        if (D_A(WCL_d) >= 0) {                                    /* Coerce if within formal range and type specified */
+        if (D_A(WCL_d) >= 0) { /* Coerce if within formal range and type specified */
             DESCR_t ZPTR_d; GETD_B(ZPTR_d, ZCL_d, TCL_d);
             if (!AEQLC(ZPTR_d, 0) && !VEQLC(ZPTR_d, D_V(XPTR))) {
                 SETAV(DTCL, XPTR); MOVV(DTCL, ZPTR_d);
@@ -104,7 +104,7 @@ Sil_result LNKFNC_fn(void)
                     if (off) { SETAC(XPTR, off); SETVC(XPTR, S); }
                 }
                 else if (deql(DTCL, RIDTP)) { /* REAL→INTEGER */
-                    D_A(XPTR) = (int32_t)D_R(XPTR); SETVC(XPTR, I);              /* RLINT stub — truncate real to int */
+                    D_A(XPTR) = (int32_t)D_R(XPTR); SETVC(XPTR, I); /* RLINT stub — truncate real to int */
                 }
                 else if (deql(DTCL, IRDTP)) { /* INTEGER→REAL */
                     D_R(XPTR) = (float)D_A(XPTR); SETVC(XPTR, R);
@@ -126,22 +126,22 @@ Sil_result LNKFNC_fn(void)
         INCRA(TCL_d, DESCR);
         INCRA(WPTR_d, 1);
     }
-    while (D_A(WCL_d) > 0) {                                                    /* Pad with nulls for omitted formals */
+    while (D_A(WCL_d) > 0) { /* Pad with nulls for omitted formals */
         ext_push(NULVCL);
         INCRA(WPTR_d, 1);
         DECRA(WCL_d, 1);
     }
-    int32_t sz = x_bksize(D_A(ZCL_d));                       /* Get definition block end: entry point and target type */
+    int32_t sz = x_bksize(D_A(ZCL_d)); /* Get definition block end: entry point and target type */
     DESCR_t xptr2; GETDC_B(xptr2, ZCL_d, sz - DESCR); /* target type   */
     DESCR_t zcl2; GETDC_B(zcl2, ZCL_d, DESCR); /* entry address */
-    int32_t nargs = ext_top - stack_base;                                  /* Pointer to argument list on our ext_stk */
+    int32_t nargs = ext_top - stack_base; /* Pointer to argument list on our ext_stk */
     DESCR_t *arg_base = &ext_stk[stack_base];
-    if (XCALL_LINK(&ZPTR, arg_base, nargs, zcl2) == FAIL) {                           /* LINK: call external function */
+    if (XCALL_LINK(&ZPTR, arg_base, nargs, zcl2) == FAIL) { /* LINK: call external function */
         ext_top = stack_base; return FAIL;
     }
     ext_top = stack_base;
-    if (D_V(ZPTR) == M) {                                                                      /* Handle return value */
-        LOCSP_fn(&ZSP, &ZPTR);                                                     /* malloc'd linked string [PLB130] */
+    if (D_V(ZPTR) == M) { /* Handle return value */
+        LOCSP_fn(&ZSP, &ZPTR); /* malloc'd linked string [PLB130] */
         int32_t off = GENVAR_fn(&ZSP);
         DESCR_t old_zptr = ZPTR;
         if (off) { SETAC(ZPTR, off); SETVC(ZPTR, S); }
@@ -149,12 +149,12 @@ Sil_result LNKFNC_fn(void)
         MOVD(XPTR, ZPTR); return OK;
     }
     if (D_V(ZPTR) == L) {
-        LOCSP_fn(&ZSP, &ZPTR);                                                                       /* linked string */
+        LOCSP_fn(&ZSP, &ZPTR); /* linked string */
         int32_t off = GENVAR_fn(&ZSP);
         if (off) { SETAC(ZPTR, off); SETVC(ZPTR, S); }
         MOVD(XPTR, ZPTR); return OK;
     }
-    LOCSP_fn(&ZSP, &ZPTR);                                                              /* Generate variable from ZSP */
+    LOCSP_fn(&ZSP, &ZPTR); /* Generate variable from ZSP */
     int32_t off = GENVAR_fn(&ZSP);
     if (!off) return FAIL;
     SETAC(ZPTR, off); SETVC(ZPTR, S);

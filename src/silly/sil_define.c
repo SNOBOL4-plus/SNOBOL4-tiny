@@ -75,15 +75,15 @@ static inline int deql_fn(DESCR_t a, DESCR_t b)
  */
 Sil_result DEFINE_fn(void)
 {
-    if (VARVAL_fn() == FAIL) return FAIL;                                                            /* Get prototype */
+    if (VARVAL_fn() == FAIL) return FAIL; /* Get prototype */
     def_push(XPTR);
-    if (VARVUP_fn() == FAIL) { def_top--; return FAIL; }                /* Get entry point (may be NULVCL if omitted) */
+    if (VARVUP_fn() == FAIL) { def_top--; return FAIL; } /* Get entry point (may be NULVCL if omitted) */
     MOVD(YPTR, XPTR);
     XPTR = def_pop();
     LOCSP_fn(&XSP, &XPTR);
     const char *src = (const char*)A2P(XSP.a) + XSP.o;
     int32_t slen = XSP.l;
-    int32_t ni = 0;                            /* ── Parse function name ──────────────────────────────────────────── */
+    int32_t ni = 0; /* ── Parse function name ──────────────────────────────────────────── */
     while (ni < slen && src[ni] != '(') ni++;
     if (ni == 0 || ni >= slen) return FAIL;
     SPEC_t name_sp; name_sp.a = XSP.a; name_sp.o = XSP.o;
@@ -91,10 +91,10 @@ Sil_result DEFINE_fn(void)
     int32_t fn_off = GENVUP_fn(&name_sp);
     if (!fn_off) return FAIL;
     SETAC(XPTR, fn_off); SETVC(XPTR, S);
-    int32_t zcl_off = FINDEX_fn(&XPTR);                                    /* FINDEX — get/create function descriptor */
+    int32_t zcl_off = FINDEX_fn(&XPTR); /* FINDEX — get/create function descriptor */
     if (!zcl_off) return FAIL;
     SETAC(ZCL, zcl_off);
-    if (deql_fn(YPTR, NULVCL)) MOVD(YPTR, XPTR);                         /* If entry point omitted, use function name */
+    if (deql_fn(YPTR, NULVCL)) MOVD(YPTR, XPTR); /* If entry point omitted, use function name */
     def_push(YPTR); /* save entry point */
     int32_t pos = ni + 1; /* skip '(' */        /* ── Parse formals and locals ────────────────────────────────────── */
     DESCR_t YCL_d; MOVD(YCL_d, ZEROCL);
@@ -102,15 +102,15 @@ Sil_result DEFINE_fn(void)
     int nformals = 0;
     def_push(XPTR); /* save function name descriptor */
     while (pos < slen) {
-        while (pos < slen && src[pos] == ' ') pos++;                                               /* skip whitespace */
+        while (pos < slen && src[pos] == ' ') pos++; /* skip whitespace */
         if (pos >= slen) break;
         char c = src[pos];
         if (c == ')') { pos++; break; }
         if (c == ':') { in_locals = 1; pos++; continue; }
         if (c == ',') { pos++; continue; }
-        int32_t id_start = pos;                                                                    /* read identifier */
-        while (pos < slen && src[pos] != ','  && src[pos] != ':'  &&
-               src[pos] != ')'  && src[pos] != ' ') pos++;
+        int32_t id_start = pos; /* read identifier */
+        while (pos < slen && src[pos] != ','   && src[pos] != ':'   &&
+               src[pos] != ')'   && src[pos] != ' ') pos++;
         int32_t id_len = pos - id_start;
         if (id_len == 0) continue;
         SPEC_t id_sp; id_sp.a = XSP.a; id_sp.o = XSP.o + id_start;
@@ -122,23 +122,23 @@ Sil_result DEFINE_fn(void)
         INCRA(YCL_d, 1);
         if (!in_locals) nformals++;
     }
-    D_V(DEFCL) = D_A(YCL_d);                                                                       /* SETVA DEFCL,YCL */
-    INCRA(YCL_d, 2);                                                   /* DEF11: INCRA YCL,2 for name and entry label */
+    D_V(DEFCL) = D_A(YCL_d); /* SETVA DEFCL,YCL */
+    INCRA(YCL_d, 2); /* DEF11: INCRA YCL,2 for name and entry label */
     int32_t blk_bytes = D_A(YCL_d) * DESCR;
     SETVC(XCL, B);
     SETAC(XCL, blk_bytes);
     int32_t blk = BLOCK_fn(blk_bytes, B);
     if (!blk) { def_top -= (int)(YCL_d.a.i - 2 + 2); return FAIL; }
     SETAC(XPTR, blk);
-    PUTDC_B(ZCL, 0, DEFCL);                                                         /* Update function descriptor ZCL */
+    PUTDC_B(ZCL, 0, DEFCL); /* Update function descriptor ZCL */
     PUTDC_B(ZCL, DESCR, XPTR);
-    int32_t fill_idx = D_A(YCL_d) - 1;  /* Fill definition block from stack (in reverse)  Block layout: [0]=title, [1]=entry label, [2]=fn name, [3..]=args+locals */
-    while (fill_idx >= 2) {                                                               /* Pop all args+locals+name */
+    int32_t fill_idx = D_A(YCL_d) - 1; /* Fill definition block from stack (in reverse)  Block layout: [0]=title, [1]=entry label, [2]=fn name, [3..]=args+locals */
+    while (fill_idx >= 2) { /* Pop all args+locals+name */
         DESCR_t v = def_pop();
         PUTDC_B(XPTR, fill_idx * DESCR, v);
         fill_idx--;
     }
-    DESCR_t entry_pt = def_pop();                                                                /* [1] = entry point */
+    DESCR_t entry_pt = def_pop(); /* [1] = entry point */
     PUTDC_B(XPTR, DESCR, entry_pt);
     MOVD(XPTR, NULVCL); return OK;
 }
@@ -154,5 +154,5 @@ Sil_result DEFINE_fn(void)
  */
 Sil_result DEFFNC_fn(void)
 {
-    return FAIL;                                        /* TODO M19: full argument-binding save/restore + INTERP call */
+    return FAIL; /* TODO M19: full argument-binding save/restore + INTERP call */
 }

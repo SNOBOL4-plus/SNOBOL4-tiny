@@ -54,20 +54,20 @@ static Sil_result valtr4(void);
 /* ── TRACEP — shared subentry for TRACE/STOPTR ───────────────────────── */
 static Sil_result tracep(DESCR_t xptr, DESCR_t yptr, DESCR_t wptr, DESCR_t zptr)
 {
-    GETDC_B(TPTR, yptr, DESCR);                                       /* GETDC TPTR,YPTR,DESCR — get default function */
-    if (!deql(zptr, NULVCL)) {                                             /* Use supplied trace function if non-null */
+    GETDC_B(TPTR, yptr, DESCR); /* GETDC TPTR,YPTR,DESCR — get default function */
+    if (!deql(zptr, NULVCL)) { /* Use supplied trace function if non-null */
         int32_t off = FINDEX_fn(&zptr);
         if (off) SETAC(TPTR, off);
     }
-    int32_t blk = BLOCK_fn(5*DESCR, C);                          /* Allocate 5*DESCR code block, copy TRCBLK skeleton */
+    int32_t blk = BLOCK_fn(5*DESCR, C); /* Allocate 5*DESCR code block, copy TRCBLK skeleton */
     if (!blk) return FAIL;
     SETAC(XCL, blk);
     memcpy(A2P(blk), TRCBLK, 6 * sizeof(DESCR_t));
-    SETVC(TPTR, 2);                                                                     /* SETVC TPTR,2 — 2 arguments */
+    SETVC(TPTR, 2); /* SETVC TPTR,2 — 2 arguments */
     PUTDC_B(XCL, 1*DESCR, TPTR); /* function descriptor */
     PUTDC_B(XCL, 3*DESCR, xptr); /* name to trace       */
     PUTDC_B(XCL, 5*DESCR, wptr); /* tag                 */
-    GETDC_B(TPTR, yptr, 0);                                 /* GETDC TPTR,YPTR,0 — attribute list for this trace type */
+    GETDC_B(TPTR, yptr, 0); /* GETDC TPTR,YPTR,0 — attribute list for this trace type */
     if (!AEQLC(TPTR, 0)) {
         int32_t found = locapt_fn(D_A(TPTR), &xptr);
         if (found) {
@@ -75,10 +75,10 @@ static Sil_result tracep(DESCR_t xptr, DESCR_t yptr, DESCR_t wptr, DESCR_t zptr)
             PUTDC_B(TPTR, 2*DESCR, XCL);
             MOVD(XPTR, NULVCL); return OK;
         }
-        AUGATL_fn(D_A(TPTR), xptr, XCL);                                                                    /* AUGATL */
+        AUGATL_fn(D_A(TPTR), xptr, XCL); /* AUGATL */
         MOVD(XPTR, NULVCL); return OK;
     }
-    int32_t pb = BLOCK_fn(2*DESCR, B);                                               /* TRAC4: allocate new pair list */
+    int32_t pb = BLOCK_fn(2*DESCR, B); /* TRAC4: allocate new pair list */
     if (!pb) return FAIL;
     SETAC(TPTR, pb);
     PUTDC_B(TPTR, DESCR, xptr);
@@ -99,14 +99,14 @@ Sil_result TRACE_fn(void)
     if (VARVUP_fn() == FAIL) { tr_top -= 3; return FAIL; }
     MOVD(ZPTR, XPTR);
     MOVD(WPTR, tr_pop()); MOVD(YPTR, tr_pop()); XPTR = tr_pop();
-    if (deql(YPTR, NULVCL)) MOVD(YPTR, VALTRS);                                               /* Default type → VALUE */
-    int32_t assoc = locapv_fn(D_A(TRATL), &YPTR);                                      /* Look up trace type in TRATL */
+    if (deql(YPTR, NULVCL)) MOVD(YPTR, VALTRS); /* Default type → VALUE */
+    int32_t assoc = locapv_fn(D_A(TRATL), &YPTR); /* Look up trace type in TRATL */
     if (assoc) {
         SETAC(YPTR, assoc);
         GETDC_B(YPTR, YPTR, DESCR);
         return tracep(XPTR, YPTR, WPTR, ZPTR);
     }
-    if (deql(YPTR, FUNTCL)) {                                                                        /* FUNCTION type */
+    if (deql(YPTR, FUNTCL)) { /* FUNCTION type */
         MOVD(YPTR, TFNCLP);
         if (tracep(XPTR, YPTR, WPTR, ZPTR) == FAIL) return FAIL;
         MOVD(YPTR, TFNRLP);
@@ -129,7 +129,7 @@ Sil_result STOPTR_fn(void)
         SETAC(yptr2, assoc);
         GETDC_B(yptr2, yptr2, DESCR);
     } else if (deql(YPTR, FUNTCL)) {
-        for (int i = 0; i < 2; i++) {                                          /* FUNCTION: stop both CALL and RETURN */
+        for (int i = 0; i < 2; i++) { /* FUNCTION: stop both CALL and RETURN */
             DESCR_t lp = (i == 0) ? TFNCLP : TFNRLP;
             GETDC_B(yptr2, lp, 0);
             int32_t found = locapt_fn(D_A(yptr2), &XPTR);
@@ -206,7 +206,7 @@ static Sil_result fentr_common(void)
     SETAC(WCL, 0);
     while (1) {
         INCRA(WCL, 1);
-        Sil_result rc = ARGINT_fn(WPTR, WCL);                                             /* Get argument WCL of WPTR */
+        Sil_result rc = ARGINT_fn(WPTR, WCL); /* Get argument WCL of WPTR */
         if (rc == FAIL) break;
         GETDC_B(ZPTR, XPTR, DESCR);
         SPEC_t vsp;
@@ -269,18 +269,18 @@ Sil_result TRPHND_fn(DESCR_t atptr)
 {
     MOVD(ATPTR, atptr);
     DECRA(TRAPCL, 1);
-    DESCR_t sv_filenm = FILENM, sv_lnnocl = LNNOCL, sv_lstncl = LSTNCL;                          /* Save system state */
+    DESCR_t sv_filenm = FILENM, sv_lnnocl = LNNOCL, sv_lstncl = LSTNCL; /* Save system state */
     DESCR_t sv_stnocl = STNOCL, sv_frtncl = FRTNCL;
     DESCR_t sv_ocbscl = OCBSCL, sv_ocicl = OCICL;
     DESCR_t sv_trapcl = TRAPCL, sv_tracl = TRACL;
     DESCR_t sv_lsflnm = LSFLNM, sv_lslncl = LSLNCL;
-    GETDC_B(OCBSCL, ATPTR, 2*DESCR);                                         /* Set up new code base from trace block */
+    GETDC_B(OCBSCL, ATPTR, 2*DESCR); /* Set up new code base from trace block */
     SETAC(OCICL, DESCR);
     memcpy(&XPTR, (char*)A2P(D_A(OCBSCL)) + D_A(OCICL), sizeof(DESCR_t));
     SETAC(TRAPCL, 0);
     SETAC(TRACL, 0);
     INVOKE_fn(); /* execute trace function (ignore return value) */
-    MOVD(LSLNCL, sv_lslncl); MOVD(LSFLNM, sv_lsflnm);                                                      /* Restore */
+    MOVD(LSLNCL, sv_lslncl); MOVD(LSFLNM, sv_lsflnm); /* Restore */
     MOVD(TRACL, sv_tracl); MOVD(TRAPCL, sv_trapcl);
     MOVD(OCICL, sv_ocicl); MOVD(OCBSCL, sv_ocbscl);
     MOVD(FRTNCL, sv_frtncl); MOVD(STNOCL, sv_stnocl);
@@ -332,7 +332,7 @@ static Sil_result valtr4(void)
     APDSP_fn(&TRACSP, &COLSP);
     APDSP_fn(&TRACSP, &SPCSP);
     if (!AEQLC(FNVLCL, 0)) {
-        if (VEQLC(XPTR, S)) {                                                    /* value trace: append variable name */
+        if (VEQLC(XPTR, S)) { /* value trace: append variable name */
             LOCSP_fn(&XSP, &ZPTR);
         } else {
             LOCSP_fn(&XSP, &XPTR);
@@ -343,7 +343,7 @@ static Sil_result valtr4(void)
         APDSP_fn(&TRACSP, &BLEQSP);
         GETDC_B(YPTR, XPTR, DESCR);
     } else {
-        APDSP_fn(&TRACSP, &TRLVSP);                       /* return trace: append level + return type + function name */
+        APDSP_fn(&TRACSP, &TRLVSP); /* return trace: append level + return type + function name */
         MOVD(XCL, LVLCL); DECRA(XCL, 1);
         INTSPC_fn(&XSP, &XCL);
         APDSP_fn(&TRACSP, &XSP);
@@ -362,7 +362,7 @@ static Sil_result valtr4(void)
         trace_print(&TRACSP);
         return OK;
     }
-    switch (D_V(YPTR)) {                                                                              /* Append value */
+    switch (D_V(YPTR)) { /* Append value */
     case S: {
         LOCSP_fn(&XSP, &YPTR);
         D_A(SCL) = XSP.l;
