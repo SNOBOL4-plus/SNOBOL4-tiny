@@ -31,8 +31,6 @@ extern void       SHORTN_fn(SPEC_t *sp, int32_t n);
     memcpy(&(dst), (char*)A2P(D_A(base_d)) + (off_i), sizeof(DESCR_t))
 #define PUTDC_B(base_d, off_i, src) \
     memcpy((char*)A2P(D_A(base_d)) + (off_i), &(src),  sizeof(DESCR_t))
-#define ATTRIB  (2 * DESCR)
-
 static inline int deql(DESCR_t a, DESCR_t b)
 {
     return D_A(a) == D_A(b) && D_V(a) == D_V(b);
@@ -269,6 +267,7 @@ RESULT_t LABTR_fn(void)
     SETSP_fn(&XSP, &XFERSP);
     trace_prefix();
     APDSP_fn(&PROTSP, &XSP);
+    APDSP_fn(&PROTSP, &BLSP);   /* KEYTR4: APDSP PROTSP,BLSP */
     APDSP_fn(&PROTSP, &YSP);
     trace_print(&PROTSP);
     return OK;
