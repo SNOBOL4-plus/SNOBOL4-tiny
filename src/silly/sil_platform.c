@@ -1194,7 +1194,10 @@ void XCALL_DATE(SPEC_t *sp)
     int32_t off = D_A(FRSGPT);
     D_A(FRSGPT) += 12;
     char *buf = A2P(off);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-truncation"
     snprintf(buf, 12, "%02d/%02d/%02d", tm->tm_mon+1, tm->tm_mday, tm->tm_year%100);
+#pragma GCC diagnostic pop
     sp->a = off; sp->o = 0; sp->l = 8;
 }
 
