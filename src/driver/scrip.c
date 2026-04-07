@@ -1771,6 +1771,7 @@ int main(int argc, char **argv)
     int target_jvm         = 0;  /* --jvm  */
     int target_net         = 0;  /* --net  */
     int target_js          = 0;  /* --js   */
+    int target_c           = 0;  /* --c    */
     int target_wasm        = 0;  /* --wasm */
 
     /* Diagnostic options */
@@ -1798,6 +1799,7 @@ int main(int argc, char **argv)
         else if (strcmp(argv[argi], "--jvm")           == 0) { target_jvm         = 1; argi++; }
         else if (strcmp(argv[argi], "--net")           == 0) { target_net         = 1; argi++; }
         else if (strcmp(argv[argi], "--js")            == 0) { target_js          = 1; argi++; }
+        else if (strcmp(argv[argi], "--c")             == 0) { target_c           = 1; argi++; }
         else if (strcmp(argv[argi], "--wasm")          == 0) { target_wasm        = 1; argi++; }
         /* diagnostic */
         else if (strcmp(argv[argi], "--dump-parse")      == 0) { dump_parse      = 1; argi++; }
@@ -1823,14 +1825,14 @@ int main(int argc, char **argv)
 
     /* Default emit target: --x64 */
     if (mode_jit_emit && !target_x64 && !target_jvm && !target_net &&
-        !target_js && !target_wasm)
+        !target_js && !target_c && !target_wasm)
         target_x64 = 1;
 
     /* Suppress unused warnings for modes/targets not yet wired to codegen */
     (void)mode_jit_run; (void)mode_jit_emit;
     (void)bb_driver; (void)bb_live;
     (void)target_x64; (void)target_jvm; (void)target_net;
-    (void)target_js; (void)target_wasm;
+    (void)target_js; (void)target_c; (void)target_wasm;
     (void)dump_sm; (void)dump_bb; (void)opt_trace; (void)opt_bench;
 
     if (argi >= argc) {
@@ -1848,7 +1850,7 @@ int main(int argc, char **argv)
             "  --bb-live        live-wired in exec memory (--jit-run/--jit-emit only)\n"
             "\n"
             "Target (default: --x64):\n"
-            "  --x64  --jvm  --net  --js  --wasm\n"
+            "  --x64  --jvm  --net  --js  --c  --wasm\n"
             "\n"
             "Diagnostic options:\n"
             "  --dump-ir        print IR after frontend\n"
