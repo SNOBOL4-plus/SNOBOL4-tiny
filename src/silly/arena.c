@@ -77,16 +77,18 @@ void arena_init(void)
 
 int32_t BLOCK_fn(int32_t size, int32_t typetag)
 {
-    if (size > SIZLIM) { /* PCOMP ARG1CL,SIZLMT — check against size limit [PLB132] */
+    if (size > SIZLIM) { /* PCOMP ARG1CL,SIZLMT — check against size limit [PLB132].
+         * Oracle uses D_PTR(ARG1CL) >= D_PTR(SIZLMT) (void* cast of A-field).
+         * Ours uses integer > on arena offsets. Identical semantics in arena model. */
         extern void error(int code); /* SIZERR */
         error(23); /* ERR_OBJ_TOO_LARGE */
         return 0; /* not reached */
     }
 retry:
-    D_A(BLOCL) = D_A(FRSGPT); /* BLOCK1: MOVD BLOCL,FRSGPT */
+    D_A(BLOCL) = D_A(FRSGPT); /* BLOCK1: MOVD BLOCL,FRSGPT — FRSGPT.f/v always 0, A-copy sufficient */
     D_V(BLOCL) = typetag;
-    D_A(FRSGPT) += DESCR + size; /* FRSGPT += DESCR + size */
-    if (D_A(TLSGP1) < D_A(FRSGPT)) { /* PCOMP TLSGP1,FRSGPT — check end of region [PLB125] */
+    D_A(FRSGPT) += DESCR + size;
+    if (D_A(TLSGP1) < D_A(FRSGPT)) { /* PCOMP TLSGP1,FRSGPT — oracle D_PTR, ours D_A; same result */
         D_A(FRSGPT) = D_A(BLOCL); /* BLOGC: restore and call GC */
         int32_t got = GC_fn(size);
         if (got >= size)
@@ -167,16 +169,16 @@ int32_t GENVAR_fn(const SPEC_t *sp)
     /* LOCA5: bukptr = node we stopped at (0 = end of chain, or overshot node) */
     int32_t len = SP_LEN(sp); /* LOCA5: not found — allocate new STRING block */
     int32_t blk_sz = x_getlth(len);
-    if (blk_sz > SIZLIM) {
+    if (blk_sz > SIZLIM) { /* PCOMP BKLTCL,SIZLMT: oracle D_PTR (void* cast); ours integer. Same. */
         extern void error(int);
         error(23);
         return 0;
     }
-retry_alloc: /* LOCA7: MOVD LCPTR,FRSGPT */
+retry_alloc: /* LOCA7: MOVD LCPTR,FRSGPT — oracle full DESCR copy; FRSGPT.f/v always 0 so A-only equiv. */
     {
         int32_t lcptr = D_A(FRSGPT);
         D_A(FRSGPT) += DESCR + blk_sz;
-        if (D_A(TLSGP1) < D_A(FRSGPT)) {
+        if (D_A(TLSGP1) < D_A(FRSGPT)) { /* PCOMP TLSGP1,FRSGPT: oracle D_PTR; ours D_A. Same. */
             D_A(FRSGPT) = lcptr; /* LOCA4: restore and GC */
             int32_t got = GC_fn(blk_sz);
             if (got >= blk_sz)
@@ -438,25 +440,29 @@ int32_t GC_fn(int32_t required)
         D_A(CPYCL) = cpycl;
     }
     { /* ── GCBB: compact OBLIST chains — remove dead strings ────────────── */
-        /* Oracle GCBB1-GCBB5: for each bin chain, unlink unmarked entries. */
+        /* Oracle GCBB1-GCBB5: for each bin chain, unlink unmarked entries.
+         * lnk_addr = arena offset of the .a field that holds the next chain ptr.
+         * For the bin slot: lnk_addr = OBSLOT_OFF(bi) (bin DESCR .a = chain head).
+         * For in-chain nodes: lnk_addr = node + LNKFLD.
+         * This mirrors the lstptr_lnk pattern in GENVAR_fn. */
         int32_t bi;
         D_A(NODPCL) = 1;
         for (bi = 0; bi < OBSIZ; bi++) {
-            int32_t st2ptr = OBSLOT_OFF(bi); /* previous LNKFLD holder = bin slot itself */
+            int32_t lnk_addr = OBSLOT_OFF(bi); /* LNKFLD .a holder = bin slot .a field */
             int32_t st1ptr = OBSLOT(bi).a.i;
             while (st1ptr != 0) {
                 DESCR_t *ent = (DESCR_t *)A2P(st1ptr);
                 int32_t next = ((DESCR_t *)A2P(st1ptr + LNKFLD))->a.i;
                 if (ent->f & MARK) {
-                    /* live: update st2 link to compacted address of st1 */
+                    /* live: write compacted address into previous valid link holder */
                     int32_t new_addr = ent->a.i; /* forward addr set in GCLAD */
-                    ((DESCR_t *)A2P(st2ptr + LNKFLD))->a.i = new_addr;
-                    st2ptr = st1ptr;
+                    ((DESCR_t *)A2P(lnk_addr))->a.i = new_addr;
+                    lnk_addr = st1ptr + LNKFLD; /* advance: next prev = this node's LNKFLD */
                 }
-                /* dead: simply skip — st2ptr stays, st2's link will be patched next iter or at GCBB5 */
+                /* dead: simply skip — lnk_addr stays, link patched next iter or at GCBB5 */
                 st1ptr = next;
             }
-            ((DESCR_t *)A2P(st2ptr + LNKFLD))->a.i = 0; /* GCBB5: terminate chain */
+            ((DESCR_t *)A2P(lnk_addr))->a.i = 0; /* GCBB5: zero-terminate chain */
         }
     }
     { /* ── Pass 3 (GCLAP): update PTR descriptors to new addresses ─────── */
@@ -534,7 +540,8 @@ int32_t GC_fn(int32_t required)
             }
             ttlcl += bkdxu;
         }
-        if (topcl != 0) { /* Update FRSGPT to end of last live block */
+        if (topcl != 0) { /* Update FRSGPT: oracle D(FRSGPT)=D(TOPCL); D_A+=BKDX copies F/V from
+             * last block's title, then clears FNC. We only set A-field; F/V not used as pointer reg. */
             int32_t last_sz = x_bksize(topcl);
             D_A(FRSGPT) = topcl + last_sz;
         } else {
