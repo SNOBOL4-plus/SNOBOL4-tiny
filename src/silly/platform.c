@@ -27,6 +27,7 @@
 
 #include "types.h"
 #include "data.h"
+#include "arena.h"
 
 /* ── I/O read EOF/ERR flag (set by STREAD_fn, read by callers) ───────── */
 /* 1 = EOF (oracle IO_EOF → XLATIN/FILCHK), 0 = I/O error (oracle IO_ERR → COMP1) */

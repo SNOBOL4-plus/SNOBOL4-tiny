@@ -26,6 +26,7 @@
 #include "arena.h"
 #include "strings.h"
 #include "symtab.h"
+#include "errors.h"
 
 /* Stream tables (§24 — extern stubs) */
 extern DESCR_t BIOPTB;   /* binary operator table                        */
@@ -372,7 +373,7 @@ static RESULT_t expr_continue(DESCR_t *out)
             GETDC_B(EXEXND, EXPRND, T_FATHER);
             GETDC_B(XPTR, EXEXND, T_CODE);
             GETDC_B(prec_ex, XPTR, 2*DESCR);
-            if (ACOMP(prec_ex, prec_op) < 0) {
+            if (ACOMP(prec_ex, prec_op) > 0) { /* EXPR3: ACOMP XPTR,EXOPCL,EXPR4 — branch if XPTR > EXOPCL */
                 ADDSIB_fn(EXPRND, EXELND); /* EXPR4: add current as sibling */
 expr5_loop:
                 while (!AEQLIC(EXPRND, T_FATHER, 0)) {
@@ -381,7 +382,7 @@ expr5_loop:
                     GETDC_B(EXEXND, EXPRND, T_FATHER);
                     GETDC_B(XPTR, EXEXND, T_CODE);
                     GETDC_B(prec_ex, XPTR, 2*DESCR);
-                    if (ACOMP(prec_ex, prec_op) >= 0) goto expr5_loop;
+                    if (ACOMP(prec_ex, prec_op) > 0) goto expr5_loop; /* EXPR5: loop if XPTR > EXOPCL */
                     INSERT_fn(EXPRND, EXOPND);
                     if (EXPR1_fn(out) == FAIL) return FAIL;
                     return OK;
@@ -429,7 +430,13 @@ RESULT_t BINOP_fn(DESCR_t *out)
     /* BINOP: RCALL ,FORBLK,,BINOP1. BINOP1 fires on FORBLK RTN1 = ST_ERROR from IBLKTB.
      * Our STREAM_fn calls error()→exit(1) on AC_ERROR before returning; FAIL here is
      * only reachable on the same fatal path. Functionally equivalent. */
-    if (FORBLK_fn() == FAIL) return FAIL;
+    if (FORBLK_fn() == FAIL) { /* BINOP1: FORBLK failed — call FORWRD to find next char */
+        if (FORWRD_fn() == FAIL) { COMP3_fn(); return FAIL; } /* EOF mid-expr → fatal */
+        /* Oracle switch: BRTYPE 2,3,6,7 → RTN2 (no op); else ILLBIN → RTN1 (error) */
+        int32_t bt = D_A(BRTYPE);
+        if (bt==EQTYP || bt==NBTYP || bt==RPTYP || bt==RBTYP) return FAIL; /* RTN2 */
+        SETAC(EMSGCL, (intptr_t)ILLBIN); return FAIL; /* RTN1 → caller treats as error */
+    }
     SPEC_t xsp; int stype;
     if (AEQLC(BRTYPE, EQTYP) && !AEQLC(SPITCL, 0)) {
         /* BINOP2: SPITBOL '=' op. Oracle: D_A(STYPE)=(int_t)BIEQFN (addr of descriptor).
