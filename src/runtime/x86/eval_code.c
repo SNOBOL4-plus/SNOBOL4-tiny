@@ -504,3 +504,95 @@ const char *exec_code(DESCR_t code_block)
 
     return "";  /* ran off end of block */
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * RT-6: EXPVAL_fn — execute a DT_E EXPRESSION with full save/restore
+ *
+ * SIL EXPVAL: saves system state (NAM frame, subject globals), executes
+ * the frozen EXPR_t* child via eval_node, then restores state on exit.
+ * Fully re-entrant — nested EVAL() calls stack save frames correctly.
+ *
+ * DT_E holds ptr = frozen EXPR_t* (set by E_DEFER in eval_node above).
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+DESCR_t EXPVAL_fn(DESCR_t expr_d)
+{
+    if (expr_d.v == DT_E) {
+        /* Frozen EXPR_t* — thaw and evaluate with NAM frame isolation */
+        if (!expr_d.ptr) return FAILDESCR;
+
+        /* Save subject globals (SIL: WPTR/XCL/YCL/TCL) */
+        const char *save_sigma = Σ;
+        int         save_omega = Ω;
+        int         save_delta = Δ;
+
+        /* Save NAM frame (SIL: NAMICL/NHEDCL) — push fresh frame */
+        int nam_cookie = NAM_save();
+
+        DESCR_t result = eval_node((EXPR_t *)expr_d.ptr);
+
+        /* Restore NAM frame — discard any captures from this expression's
+         * internal patterns, then pop the frame (do NOT commit — captures
+         * inside an EXPRESSION are local and must not propagate out). */
+        NAM_discard(nam_cookie);
+        NAM_pop(nam_cookie);   /* pop frame without assigning */
+
+        /* Restore subject globals */
+        Σ = save_sigma;
+        Ω = save_omega;
+        Δ = save_delta;
+
+        return result;
+    }
+    if (expr_d.v == DT_C) {
+        /* DT_C code block — run via exec_code (no save/restore needed;
+         * exec_code is a full statement executor with its own frame) */
+        exec_code(expr_d);
+        return NULVCL;
+    }
+    /* Anything else: evaluate as expression string */
+    const char *s = VARVAL_fn(expr_d);
+    if (!s || !*s) return NULVCL;
+    return eval_expr(s);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * RT-7: CONVE_fn — compile a string to a DT_E EXPRESSION descriptor
+ *
+ * SIL CONVE/CONVEX: parse the string as an expression via CMPILE,
+ * lower to EXPR_t IR, wrap in a DT_E descriptor (frozen EXPR_t*).
+ * Returns FAILDESCR on parse failure.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+DESCR_t CONVE_fn(DESCR_t str_d)
+{
+    const char *s = VARVAL_fn(str_d);
+    if (!s || !*s) return FAILDESCR;
+
+    CMPND_t *cmpnd = cmpile_eval_expr(s);
+    if (!cmpnd) return FAILDESCR;
+
+    EXPR_t *tree = cmpnd_to_expr(cmpnd);
+    if (!tree) return FAILDESCR;
+
+    DESCR_t d;
+    d.v    = DT_E;
+    d.ptr  = tree;   /* frozen EXPR_t* */
+    d.slen = 0;
+    d.s    = NULL;
+    return d;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * RT-7: CODE_fn — compile a string to a DT_C CODE descriptor
+ *
+ * SIL CODER: parse string as SNOBOL4 statements, return DT_C.
+ * This wraps the existing code() function with the DESCR_t input sig.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+DESCR_t CODE_fn(DESCR_t str_d)
+{
+    const char *s = VARVAL_fn(str_d);
+    if (!s || !*s) return FAILDESCR;
+    return code(s);
+}

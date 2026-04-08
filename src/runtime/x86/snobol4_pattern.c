@@ -1574,38 +1574,68 @@ static DESCR_t eval_via_cmpile(const char *s) {
 }
 
 DESCR_t EVAL_fn(DESCR_t expr) {
-    /* DT_E: frozen EXPR_t* — thaw by calling eval_node directly */
+    /* RT-8: SIL EVAL — full type dispatch matching SIL EVAL/EVAL1.
+     *
+     * DT_E  → EXPVAL_fn (execute frozen EXPR_t* with save/restore)
+     * DT_I  → idempotent (return as-is)
+     * DT_R  → idempotent (return as-is)
+     * DT_P  → run pattern hook (existing behaviour)
+     * DT_S/DT_SNUL:
+     *   empty  → idempotent (NULVCL)
+     *   numeric string → DT_I if integer, DT_R if real (SIL SPCINT/SPREAL)
+     *   else → CONVE_fn (compile to DT_E) → EXPVAL_fn (execute)
+     */
+
+    /* DT_E: frozen expression — execute via EXPVAL_fn (RT-6) */
     if (expr.v == DT_E) {
-        if (!expr.ptr) return FAILDESCR;
-        DESCR_t _res = eval_node(expr.ptr);
-        if (IS_FAIL_fn(_res)) return FAILDESCR;
-        return _res;
+        return EXPVAL_fn(expr);
     }
+
+    /* DT_I / DT_R: idempotent (SIL EVAL1 path) */
+    if (expr.v == DT_I) return expr;
+    if (expr.v == DT_R) return expr;
+
+    /* DT_P: pattern — run via hook (unchanged) */
     if (expr.v == DT_P) {
-        /* DT_P: pattern from *func(). Run against empty subject via hook.
-         * If function fails at match time, EVAL fails. */
         if (g_eval_pat_hook) return g_eval_pat_hook(expr);
-        return expr;  /* no hook — treat as success (fallback) */
+        return expr;
     }
-    if (expr.v != DT_S && expr.v != DT_SNUL) return expr;
+
+    /* DT_S / DT_SNUL / anything else: evaluate as string */
     const char *s = VARVAL_fn(expr);
-    if (!s || !*s) return pat_epsilon();
-    /* If the expression is a quoted string literal ('...' or "..."),
-     * EVAL returns the string value — not a pattern.
-     * SNOBOL4: EVAL("'STMT_t'") => "STMT_t" */
-    size_t sl = strlen(s);
-    if (sl >= 2 && (s[0] == '\'' || s[0] == '"') && s[sl-1] == s[0]) {
-        char *inner = GC_malloc(sl - 1);
-        memcpy(inner, s + 1, sl - 2);
-        inner[sl - 2] = '\0';
-        return STRVAL(inner);
+
+    /* Empty string → idempotent null */
+    if (!s || !*s) return NULVCL;
+
+    /* Numeric-string shortcut (SIL SPCINT): pure integer? */
+    {
+        char *endp = NULL;
+        int64_t iv = (int64_t)strtoll(s, &endp, 10);
+        if (endp && *endp == '\0') return INTVAL(iv);
     }
-    /* Use CMPILE EXPR() — direct SIL CONVEX path, handles "x + 4" correctly */
-    DESCR_t full = eval_via_cmpile(s);
-    if (!IS_FAIL_fn(full)) return full;
-    /* Fallback: old _ev_expr for pattern-context strings */
-    SnoEvalCtx ctx = { s, 0 };
-    return _ev_expr(&ctx);
+
+    /* Numeric-string shortcut (SIL SPREAL): real number? */
+    {
+        char *endp = NULL;
+        double rv = strtod(s, &endp);
+        if (endp && *endp == '\0') return REALVAL(rv);
+    }
+
+    /* Quoted string literal ('...' or "..."): return inner string value */
+    {
+        size_t sl = strlen(s);
+        if (sl >= 2 && (s[0] == '\'' || s[0] == '"') && s[sl-1] == s[0]) {
+            char *inner = GC_malloc(sl - 1);
+            memcpy(inner, s + 1, sl - 2);
+            inner[sl - 2] = '\0';
+            return STRVAL(inner);
+        }
+    }
+
+    /* General string: compile to DT_E (RT-7 CONVE_fn) then execute (RT-6) */
+    DESCR_t compiled = CONVE_fn(expr);
+    if (IS_FAIL_fn(compiled)) return FAILDESCR;
+    return EXPVAL_fn(compiled);
 }
 
 /* opsyn — OPSYN(new, old, type)

@@ -524,6 +524,12 @@ void   define_spec(DESCR_t spec);
 DESCR_t apply_val(DESCR_t fnval, DESCR_t *args, int nargs);
 DESCR_t EVAL_fn(DESCR_t expr);
 DESCR_t compile_to_expression(const char *src); /* SIL CONVE: parse→DT_E, no eval */
+/* RT-6: EXPVAL_fn — execute DT_E/DT_C/string with NAM frame save/restore */
+DESCR_t EXPVAL_fn(DESCR_t expr_d);
+/* RT-7: CONVE_fn — string → DT_E (compile without evaluating) */
+DESCR_t CONVE_fn(DESCR_t str_d);
+/* RT-7: CODE_fn  — string → DT_C (compile statements) */
+DESCR_t CODE_fn(DESCR_t str_d);
 DESCR_t opsyn(DESCR_t newname, DESCR_t oldname, DESCR_t type);
 /* 2-arg convenience — type defaults to NULVCL */
 static inline DESCR_t opsyn2(DESCR_t a, DESCR_t b) { return opsyn(a, b, NULVCL); }
