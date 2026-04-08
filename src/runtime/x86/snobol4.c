@@ -926,6 +926,11 @@ static void _make_fset(int slot, DESCR_t obj, DESCR_t val) {
 static DESCR_t _facc_get_##idx(DESCR_t *a, int n) { \
     return n>=1 ? _make_fget(idx, a[0]) : NULVCL; }
 
+#define FACC_SET_FN(idx) \
+static DESCR_t _facc_set_##idx(DESCR_t *a, int n) { \
+    if (n>=2) _make_fset(idx, a[1], a[0]); \
+    return n>=1 ? a[0] : NULVCL; }
+
 FACC_FN(0)   FACC_FN(1)   FACC_FN(2)   FACC_FN(3)
 FACC_FN(4)   FACC_FN(5)   FACC_FN(6)   FACC_FN(7)
 FACC_FN(8)   FACC_FN(9)   FACC_FN(10)  FACC_FN(11)
@@ -958,6 +963,74 @@ FACC_FN(112) FACC_FN(113) FACC_FN(114) FACC_FN(115)
 FACC_FN(116) FACC_FN(117) FACC_FN(118) FACC_FN(119)
 FACC_FN(120) FACC_FN(121) FACC_FN(122) FACC_FN(123)
 FACC_FN(124) FACC_FN(125) FACC_FN(126) FACC_FN(127)
+
+FACC_SET_FN(0)   FACC_SET_FN(1)   FACC_SET_FN(2)   FACC_SET_FN(3)
+FACC_SET_FN(4)   FACC_SET_FN(5)   FACC_SET_FN(6)   FACC_SET_FN(7)
+FACC_SET_FN(8)   FACC_SET_FN(9)   FACC_SET_FN(10)  FACC_SET_FN(11)
+FACC_SET_FN(12)  FACC_SET_FN(13)  FACC_SET_FN(14)  FACC_SET_FN(15)
+FACC_SET_FN(16)  FACC_SET_FN(17)  FACC_SET_FN(18)  FACC_SET_FN(19)
+FACC_SET_FN(20)  FACC_SET_FN(21)  FACC_SET_FN(22)  FACC_SET_FN(23)
+FACC_SET_FN(24)  FACC_SET_FN(25)  FACC_SET_FN(26)  FACC_SET_FN(27)
+FACC_SET_FN(28)  FACC_SET_FN(29)  FACC_SET_FN(30)  FACC_SET_FN(31)
+FACC_SET_FN(32)  FACC_SET_FN(33)  FACC_SET_FN(34)  FACC_SET_FN(35)
+FACC_SET_FN(36)  FACC_SET_FN(37)  FACC_SET_FN(38)  FACC_SET_FN(39)
+FACC_SET_FN(40)  FACC_SET_FN(41)  FACC_SET_FN(42)  FACC_SET_FN(43)
+FACC_SET_FN(44)  FACC_SET_FN(45)  FACC_SET_FN(46)  FACC_SET_FN(47)
+FACC_SET_FN(48)  FACC_SET_FN(49)  FACC_SET_FN(50)  FACC_SET_FN(51)
+FACC_SET_FN(52)  FACC_SET_FN(53)  FACC_SET_FN(54)  FACC_SET_FN(55)
+FACC_SET_FN(56)  FACC_SET_FN(57)  FACC_SET_FN(58)  FACC_SET_FN(59)
+FACC_SET_FN(60)  FACC_SET_FN(61)  FACC_SET_FN(62)  FACC_SET_FN(63)
+FACC_SET_FN(64)  FACC_SET_FN(65)  FACC_SET_FN(66)  FACC_SET_FN(67)
+FACC_SET_FN(68)  FACC_SET_FN(69)  FACC_SET_FN(70)  FACC_SET_FN(71)
+FACC_SET_FN(72)  FACC_SET_FN(73)  FACC_SET_FN(74)  FACC_SET_FN(75)
+FACC_SET_FN(76)  FACC_SET_FN(77)  FACC_SET_FN(78)  FACC_SET_FN(79)
+FACC_SET_FN(80)  FACC_SET_FN(81)  FACC_SET_FN(82)  FACC_SET_FN(83)
+FACC_SET_FN(84)  FACC_SET_FN(85)  FACC_SET_FN(86)  FACC_SET_FN(87)
+FACC_SET_FN(88)  FACC_SET_FN(89)  FACC_SET_FN(90)  FACC_SET_FN(91)
+FACC_SET_FN(92)  FACC_SET_FN(93)  FACC_SET_FN(94)  FACC_SET_FN(95)
+FACC_SET_FN(96)  FACC_SET_FN(97)  FACC_SET_FN(98)  FACC_SET_FN(99)
+FACC_SET_FN(100) FACC_SET_FN(101) FACC_SET_FN(102) FACC_SET_FN(103)
+FACC_SET_FN(104) FACC_SET_FN(105) FACC_SET_FN(106) FACC_SET_FN(107)
+FACC_SET_FN(108) FACC_SET_FN(109) FACC_SET_FN(110) FACC_SET_FN(111)
+FACC_SET_FN(112) FACC_SET_FN(113) FACC_SET_FN(114) FACC_SET_FN(115)
+FACC_SET_FN(116) FACC_SET_FN(117) FACC_SET_FN(118) FACC_SET_FN(119)
+FACC_SET_FN(120) FACC_SET_FN(121) FACC_SET_FN(122) FACC_SET_FN(123)
+FACC_SET_FN(124) FACC_SET_FN(125) FACC_SET_FN(126) FACC_SET_FN(127)
+
+static DESCR_t (*_facc_set_fns[FIELD_ACCESSOR_MAX])(DESCR_t *, int) = {
+    _facc_set_0,   _facc_set_1,   _facc_set_2,   _facc_set_3,
+    _facc_set_4,   _facc_set_5,   _facc_set_6,   _facc_set_7,
+    _facc_set_8,   _facc_set_9,   _facc_set_10,  _facc_set_11,
+    _facc_set_12,  _facc_set_13,  _facc_set_14,  _facc_set_15,
+    _facc_set_16,  _facc_set_17,  _facc_set_18,  _facc_set_19,
+    _facc_set_20,  _facc_set_21,  _facc_set_22,  _facc_set_23,
+    _facc_set_24,  _facc_set_25,  _facc_set_26,  _facc_set_27,
+    _facc_set_28,  _facc_set_29,  _facc_set_30,  _facc_set_31,
+    _facc_set_32,  _facc_set_33,  _facc_set_34,  _facc_set_35,
+    _facc_set_36,  _facc_set_37,  _facc_set_38,  _facc_set_39,
+    _facc_set_40,  _facc_set_41,  _facc_set_42,  _facc_set_43,
+    _facc_set_44,  _facc_set_45,  _facc_set_46,  _facc_set_47,
+    _facc_set_48,  _facc_set_49,  _facc_set_50,  _facc_set_51,
+    _facc_set_52,  _facc_set_53,  _facc_set_54,  _facc_set_55,
+    _facc_set_56,  _facc_set_57,  _facc_set_58,  _facc_set_59,
+    _facc_set_60,  _facc_set_61,  _facc_set_62,  _facc_set_63,
+    _facc_set_64,  _facc_set_65,  _facc_set_66,  _facc_set_67,
+    _facc_set_68,  _facc_set_69,  _facc_set_70,  _facc_set_71,
+    _facc_set_72,  _facc_set_73,  _facc_set_74,  _facc_set_75,
+    _facc_set_76,  _facc_set_77,  _facc_set_78,  _facc_set_79,
+    _facc_set_80,  _facc_set_81,  _facc_set_82,  _facc_set_83,
+    _facc_set_84,  _facc_set_85,  _facc_set_86,  _facc_set_87,
+    _facc_set_88,  _facc_set_89,  _facc_set_90,  _facc_set_91,
+    _facc_set_92,  _facc_set_93,  _facc_set_94,  _facc_set_95,
+    _facc_set_96,  _facc_set_97,  _facc_set_98,  _facc_set_99,
+    _facc_set_100, _facc_set_101, _facc_set_102, _facc_set_103,
+    _facc_set_104, _facc_set_105, _facc_set_106, _facc_set_107,
+    _facc_set_108, _facc_set_109, _facc_set_110, _facc_set_111,
+    _facc_set_112, _facc_set_113, _facc_set_114, _facc_set_115,
+    _facc_set_116, _facc_set_117, _facc_set_118, _facc_set_119,
+    _facc_set_120, _facc_set_121, _facc_set_122, _facc_set_123,
+    _facc_set_124, _facc_set_125, _facc_set_126, _facc_set_127,
+};
 
 static DESCR_t (*_facc_fns[FIELD_ACCESSOR_MAX])(DESCR_t *, int) = {
     _facc_get_0,   _facc_get_1,   _facc_get_2,   _facc_get_3,
@@ -1050,6 +1123,10 @@ static DESCR_t _DATA_(DESCR_t *a, int n) {
          * it is defined later in this file and forward-declared below. */
         const char *fname = _data_types[tidx].fields[fi];
         register_fn(fname, _facc_fns[slot], 1, 1);
+        /* Register field setter: fname_SET(val, obj) — for lhs accessor assignment */
+        char setname[256];
+        snprintf(setname, sizeof(setname), "%s_SET", fname);
+        register_fn(setname, _facc_set_fns[slot], 2, 2);
     }
 
     return NULVCL;

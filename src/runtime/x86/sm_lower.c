@@ -398,7 +398,14 @@ static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
             const EXPR_t *lhs = e->children[0];
             if (lhs->kind == E_VAR || lhs->kind == E_KEYWORD)
                 sm_emit_s(p, SM_STORE_VAR, lhs->sval ? lhs->sval : "");
-            else {
+            else if (lhs->kind == E_FNC && lhs->sval) {
+                /* Field mutator: fname(obj) = val  →  push obj, SM_CALL fname_SET 2
+                 * Stack on entry to setter: [val, obj] (val pushed first above) */
+                lower_expr(p, lt, lhs->nchildren > 0 ? lhs->children[0] : NULL);
+                char setname[256];
+                snprintf(setname, sizeof(setname), "%s_SET", lhs->sval);
+                sm_emit_si(p, SM_CALL, setname, 2);
+            } else {
                 /* Computed lhs — push lhs expr, then generic store */
                 lower_expr(p, lt, lhs);
                 sm_emit_si(p, SM_CALL, "ASGN", 2);
@@ -605,6 +612,13 @@ static void lower_stmt(SM_Program *p, LabelTable *lt, const STMT_t *s)
                 int nc = s->subject->nchildren;  /* child[0]=base, child[1]=i, [2]=j */
                 for (int ci = 0; ci < nc; ci++) lower_expr(p, lt, s->subject->children[ci]);
                 sm_emit_si(p, SM_CALL, "IDX_SET", (int64_t)(nc + 1)); /* +1 for rhs */
+            } else if (s->subject->kind == E_FNC && s->subject->sval) {
+                /* Field mutator: fname(obj) = rhs
+                 * rhs already on stack; push obj, call fname_SET(rhs, obj) */
+                lower_expr(p, lt, s->subject->nchildren > 0 ? s->subject->children[0] : NULL);
+                char _setname[256];
+                snprintf(_setname, sizeof(_setname), "%s_SET", s->subject->sval);
+                sm_emit_si(p, SM_CALL, _setname, 2);
             } else {
                 lower_expr(p, lt, s->subject);
                 sm_emit_si(p, SM_CALL, "ASGN", 2);
