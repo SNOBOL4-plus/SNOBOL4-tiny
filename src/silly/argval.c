@@ -224,18 +224,19 @@ intv1:
     if (check_input_assoc(&XPTR)) {
         ZPTR = *(DESCR_t *)A2P(ZPTR.a.i + DESCR);
         if (PUTIN_fn() == FAIL) return FAIL;
-    } else {
-        deref_name(&XPTR);
+        /* INTVAL PUTIN exit: (ZPTR,XPTR),FAIL — success falls to INTV (string parse), not INTV2 */
+        goto intv_str;
     }
+    deref_name(&XPTR); /* INTV3: GETDC XPTR,XPTR,DESCR */
 intv2:
-    if (XPTR.v == I) return OK;
-    if (XPTR.v == R) return rlint(&XPTR);
-    if (XPTR.v == S) {
-        LOCSP_fn(&XSP, &XPTR);
-        if (SPCINT_fn(&XPTR, &XSP) == OK) return OK;
-        if (SPREAL_fn(&XPTR, &XSP) == OK) return rlint(&XPTR);
-    }
-    return FAIL; /* INTR1 — caller handles type error */
+    if (XPTR.v == I) return OK;   /* VEQLC I → RTXNAM */
+    if (XPTR.v == R) return rlint(&XPTR); /* VEQLC R → INTRI */
+    if (XPTR.v != S) return FAIL; /* INTR1 */
+intv_str: /* INTV: LOCSP + SPCINT + SPREAL + RLINT */
+    LOCSP_fn(&XSP, &XPTR);
+    if (SPCINT_fn(&XPTR, &XSP) == OK) return OK;
+    if (SPREAL_fn(&XPTR, &XSP) == OK) return rlint(&XPTR);
+    return FAIL; /* INTR1 */
 }
 
 /*====================================================================================================================*/
@@ -307,13 +308,12 @@ RESULT_t VARVAL_fn(void)
 varv1:
     if (check_input_assoc(&XPTR)) {
         ZPTR = *(DESCR_t *)A2P(ZPTR.a.i + DESCR);
-        switch (PUTIN_fn()) {
+        switch (PUTIN_fn()) { /* RCALL XPTR,PUTIN,(ZPTR,XPTR),(FAIL,RTXNAM) */
         case FAIL: return FAIL;
-        default: break;
+        default: return OK; /* RTXNAM: PUTIN success — value already in XPTR, no type coerce */
         }
-    } else {
-        deref_name(&XPTR);
     }
+    deref_name(&XPTR); /* VARV4: GETDC XPTR,XPTR,DESCR */
 varv2:
     if (XPTR.v == S) return OK; /* VEQLC S → RTXNAM */
     if (XPTR.v == I) { /* VEQLC I → GENVIX */
