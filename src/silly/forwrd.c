@@ -151,7 +151,10 @@ static RESULT_t forrun(void)
     INCRA(LNNOCL, 1);
     SPEC_t xsp; int stype; /* Classify card type */
     rc = STREAM_fn(&xsp, &TEXTSP, &CARDTB, &stype);
-    if (rc == FAIL) return forrun(); /* blank card → recurse */
+    if (rc == FAIL) {
+        if (stype == 0) return FAIL; /* ST_ERROR → COMP3 */
+        return forrun();             /* ST_EOS → blank card, loop (L_FORRN0) */
+    }
     return NEWCRD_fn(); /* NEWCRD */
 }
 

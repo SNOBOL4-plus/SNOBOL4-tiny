@@ -27,6 +27,7 @@
 
 /* Stream tables (§24 — extern stubs) */
 extern DESCR_t BIOPTB;   /* binary operator table                        */
+extern DESCR_t SBIPTB;   /* SPITBOL binary operator table                */
 extern DESCR_t UNOPTB;   /* unary operator table                         */
 extern RESULT_t STREAM_fn(SPEC_t *res, SPEC_t *src,
                               DESCR_t *tbl, int *stype_out);
@@ -151,7 +152,7 @@ RESULT_t ELEMNT_fn(DESCR_t *out)
     if (alloc_node(&ELEXND) == FAIL) return FAIL;
     SETAC(ELEYND, 0);
     switch (stype) {
-    case 0: /* ELEILT: integer literal */
+    case ILITYP: /* ELEILT: integer literal — STYPE=2 */
         {
             DESCR_t ival;
             if (SPCINT_fn(&ival, &xsp) == FAIL) {
@@ -163,7 +164,7 @@ RESULT_t ELEMNT_fn(DESCR_t *out)
             addson(ELEXND, ELEYND);
         }
         break;
-    case 1: /* ELEVBL: variable */
+    case 3: /* ELEVBL: variable — STYPE=3 */
         {
             int32_t voff = GENVUP_fn(&xsp);
             if (!voff) return FAIL;
@@ -171,7 +172,7 @@ RESULT_t ELEMNT_fn(DESCR_t *out)
             PUTDC_B(ELEXND, T_CODE, XPTR);
         }
         break;
-    case 2: /* ELENST: nested expression (e) */
+    case 4: /* ELENST: nested expression (e) — STYPE=4 */
         {
             DESCR_t nested;
             if (EXPR_fn(&nested) == FAIL) return FAIL;
@@ -188,7 +189,7 @@ RESULT_t ELEMNT_fn(DESCR_t *out)
             }
         }
         break;
-    case 3: /* ELEFNC: function call — XSP has name (minus trailing '(') */
+    case 5: /* ELEFNC: function call — STYPE=5, XSP has name (minus trailing '(') */
         {
             xsp.l--; /* SHORTN XSP,1 */
             int32_t foff = GENVUP_fn(&xsp);
@@ -199,12 +200,13 @@ RESULT_t ELEMNT_fn(DESCR_t *out)
             SETAC(XCL, fcl_off);
             PUTDC_B(ELEXND, T_CODE, XCL);
             if (!AEQLC(ELEMND, 0)) addson(ELEMND, ELEXND);
+            MOVD(ELEMND, ELEXND);
             DESCR_t arg1; /* First argument */
             if (EXPR_fn(&arg1) == FAIL) {
                 if (!AEQLC(BRTYPE, RPTYP)) { SETAC(EMSGCL, (intptr_t)ILLBRK); return FAIL; } /* empty arg list ok */
                 goto fn_pad;
             }
-            MOVD(ELEMND, ELEXND); addson(ELEMND, arg1); MOVD(ELEMND, arg1);
+            addson(ELEMND, arg1); MOVD(ELEMND, arg1);
             int32_t nargs = 1;
             while (AEQLC(BRTYPE, CMATYP)) {
                 DESCR_t argn;
@@ -212,27 +214,34 @@ RESULT_t ELEMNT_fn(DESCR_t *out)
                 ADDSIB_fn(ELEMND, argn); MOVD(ELEMND, argn); nargs++;
             }
             if (!AEQLC(BRTYPE, RPTYP)) { SETAC(EMSGCL, (intptr_t)ILLBRK); return FAIL; }
-fn_pad: { /* Pad with null args if too few */
-                GETDC_B(XPTR, XCL, 0);
-                if (TESTF(XPTR, FNC)) {
-                    int32_t expected = D_V(XCL);
-                    while (nargs < expected) {
-                        DESCR_t lit_nd, null_nd;
-                        if (alloc_node(&lit_nd) == FAIL) return FAIL;
-                        if (alloc_node(&null_nd) == FAIL) return FAIL;
-                        PUTDC_B(lit_nd, T_CODE, LITCL);
-                        PUTDC_B(null_nd, T_CODE, NULVCL);
-                        addson(lit_nd, null_nd);
-                        ADDSIB_fn(ELEMND, lit_nd); MOVD(ELEMND, lit_nd);
-                        nargs++;
+fn_pad: { /* Pad with null args if too few — oracle L_ELEMN3/L_ELEMN4 */
+                /* Climb to function node: ELEMND.FATHER = fn node, get its CODE */
+                DESCR_t fn_nd; GETDC_B(fn_nd, ELEMND, T_FATHER);
+                DESCR_t xcl2;  GETDC_B(xcl2,  fn_nd,  T_CODE);
+                DESCR_t ycl;   GETDC_B(ycl,   xcl2,   0);
+                if (TESTF(ycl, FNC)) {
+                    /* nargs_expected in D_V(xcl2); actual in D_A(xcl2) after clearing */
+                    int32_t xcl_a = D_A(xcl2); D_F(xcl2) = D_V(xcl2) = 0;
+                    int32_t ycl_a = D_A(ycl);  D_F(ycl)  = D_V(ycl)  = 0;
+                    while (xcl_a < ycl_a) {
+                        /* oracle: BLOCK ELEYND (outer=LIT), BLOCK ELEXND (inner=NULVCL) */
+                        DESCR_t eleynd, elexnd;
+                        if (alloc_node(&eleynd) == FAIL) return FAIL;
+                        if (alloc_node(&elexnd) == FAIL) return FAIL;
+                        PUTDC_B(eleynd, T_CODE, LITCL);
+                        PUTDC_B(elexnd, T_CODE, NULVCL);
+                        addson(eleynd, elexnd);
+                        ADDSIB_fn(ELEMND, eleynd); MOVD(ELEMND, eleynd);
+                        xcl_a++;
                     }
                 }
             }
-            while (!AEQLIC(ELEXND, T_FATHER, 0)) /* Climb to function node root */
+            /* Climb to function node root (ELEXND = fn node base) */
+            while (!AEQLIC(ELEXND, T_FATHER, 0))
                 GETDC_B(ELEXND, ELEXND, T_FATHER);
         }
         goto elem_exit;
-    case 4: /* ELEFLT: real literal */
+    case 6: /* ELEFLT: real literal — STYPE=6 */
         {
             DESCR_t rval;
             if (SPREAL_fn(&rval, &xsp) == FAIL) {
@@ -244,19 +253,19 @@ fn_pad: { /* Pad with null args if too few */
             addson(ELEXND, ELEYND);
         }
         break;
-    case 5: /* ELEARY: array/table subscript */
+    case 7: /* ELEARY: array/table subscript — STYPE=7 */
         {
             xsp.l--; /* SHORTN XSP,1 — remove '[' */
             int32_t voff = GENVUP_fn(&xsp);
             if (!voff) return FAIL;
             SETAC(XPTR, voff); SETVC(XPTR, S);
             PUTDC_B(ELEXND, T_CODE, XPTR);
-            MOVD(ELEXND, ELEXND); /* ELEAR2: build ITEM function node with args */
+            /* ELEAR2: build ITEM function node with args */
             if (elearg(ITEMCL) == FAIL) return FAIL;
             if (!AEQLC(BRTYPE, RBTYP)) { SETAC(EMSGCL, (intptr_t)ILLBRK); return FAIL; }
         }
         goto elem_exit;
-    default: /* literal string (quoted) */
+    default: /* literal string (quoted) — STYPE=QLITYP=1 or other */
         {
             xsp.o++; xsp.l -= 2; /* Strip surrounding quotes */
             int32_t soff = GENVAR_fn(&xsp);
@@ -314,7 +323,7 @@ RESULT_t EXPR1_fn(DESCR_t *out)
     DESCR_t saved = EXPRND;
     if (ELEMNT_fn(&EXELND) == FAIL) {
         if (!AEQLC(SPITCL, 0) && /* EXPR12: SPITBOL null-right-operand handling */
-            (deql(EXOPND, BISRFN) || deql(EXOPND, BISNFN))) {
+            (deql(EXOPND, BISRFN) || deql(EXOPND, BIEQFN))) {
             if (NULNOD_fn(&EXELND) == FAIL) return FAIL; /* default null right operand */
             MOVD(EXPRND, saved);
             goto do_expr7;
@@ -421,7 +430,9 @@ RESULT_t BINOP_fn(DESCR_t *out)
         return OK;
     }
     if (AEQLC(BRTYPE, NBTYP)) return FAIL; /* RTN2 — no operator */
-    RESULT_t rc = STREAM_fn(&xsp, &TEXTSP, &BIOPTB, &stype);
+    /* Select table: SPITCL!=0 → SBIPTB; else BIOPTB. BLOKCL ignored (BLOCKS skipped). */
+    DESCR_t *optb = (!AEQLC(SPITCL, 0)) ? &SBIPTB : &BIOPTB;
+    RESULT_t rc = STREAM_fn(&xsp, &TEXTSP, optb, &stype);
     if (rc == FAIL) {
         *out = CONCL; /* BINCON: concatenation */
         return OK;

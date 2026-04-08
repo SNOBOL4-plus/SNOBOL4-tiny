@@ -718,6 +718,7 @@ DESCR_t NUMBTB  = {.a={.i=0},.f=0,.v=0};
 DESCR_t SPANTB  = {.a={.i=0},.f=0,.v=0};
 DESCR_t BRKTB   = {.a={.i=0},.f=0,.v=0};
 DESCR_t BIOPTB  = {.a={.i=0},.f=0,.v=0};
+DESCR_t SBIPTB  = {.a={.i=0},.f=0,.v=0};
 DESCR_t UNOPTB  = {.a={.i=0},.f=0,.v=0};
 DESCR_t BBIOPTB = {.a={.i=0},.f=0,.v=0};
 DESCR_t BSBIPTB = {.a={.i=0},.f=0,.v=0};
@@ -1233,6 +1234,7 @@ void init_syntab(void)
     reg_tbl(&SPANTB, &SPANTB_st);
     reg_tbl(&BRKTB, &BRKTB_st);
     reg_tbl(&BIOPTB, &BIOPTB_st);
+    reg_tbl(&SBIPTB, &SBIPTB_st);
     reg_tbl(&UNOPTB, &UNOPTB_st);
     reg_tbl(&INTGTB, &INTGTB_st);
 }
