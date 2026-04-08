@@ -486,6 +486,30 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
                 st->last_ok = 1;
                 break;
             }
+            if (name && strcmp(name, "NRETURN_ASGN") == 0) {
+                /* NRETURN lvalue assignment: fname() = rhs
+                 * a[0].i = nargs (1), a[1].s = function name
+                 * Stack: [rhs]  (1 item, already popped via nargs loop below)
+                 * Call zero-param user fn; if it returns DT_N write through name,
+                 * else try fname_SET(rhs, result) field-mutator convention. */
+                const char *fname = ins->a[1].s;
+                DESCR_t rhs = sm_pop(st);
+                DESCR_t fres = INVOKE_fn(fname, NULL, 0);
+                int ok = 0;
+                if (IS_NAMEPTR(fres)) { NAME_DEREF_PTR(fres) = rhs; ok = 1; }
+                else if (IS_NAMEVAL(fres)) { NV_SET_fn(fres.s, rhs); ok = 1; }
+                else {
+                    /* Field mutator fallback: fname_SET(rhs, obj) */
+                    char setname[256];
+                    snprintf(setname, sizeof(setname), "%s_SET", fname ? fname : "");
+                    DESCR_t sargs[2] = { rhs, fres };
+                    DESCR_t sr = INVOKE_fn(setname, sargs, 2);
+                    ok = (sr.v != DT_FAIL);
+                }
+                sm_push(st, rhs);
+                st->last_ok = ok;
+                break;
+            }
             if (name && strcmp(name, "IDX") == 0) {
                 /* subscript read: stack top=last_idx ... base; nargs=nchildren */
                 if (nargs == 2) {

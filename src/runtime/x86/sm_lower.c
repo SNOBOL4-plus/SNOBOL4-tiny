@@ -28,6 +28,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <gc/gc.h>
+#include "snobol4.h"   /* FNCEX_fn, FUNC_NPARAMS_fn */
 
 /* ── Label resolution table ─────────────────────────────────────────────── */
 
@@ -613,12 +615,23 @@ static void lower_stmt(SM_Program *p, LabelTable *lt, const STMT_t *s)
                 for (int ci = 0; ci < nc; ci++) lower_expr(p, lt, s->subject->children[ci]);
                 sm_emit_si(p, SM_CALL, "IDX_SET", (int64_t)(nc + 1)); /* +1 for rhs */
             } else if (s->subject->kind == E_FNC && s->subject->sval) {
-                /* Field mutator: fname(obj) = rhs
-                 * rhs already on stack; push obj, call fname_SET(rhs, obj) */
-                lower_expr(p, lt, s->subject->nchildren > 0 ? s->subject->children[0] : NULL);
-                char _setname[256];
-                snprintf(_setname, sizeof(_setname), "%s_SET", s->subject->sval);
-                sm_emit_si(p, SM_CALL, _setname, 2);
+                /* NRETURN lvalue or field mutator: fname(...) = rhs
+                 * If fname is a zero-param user function (NRETURN path), emit
+                 * NRETURN_ASGN pseudo-call: stack = [rhs], fname in a[0].s.
+                 * Otherwise field mutator: push obj, call fname_SET(rhs, obj). */
+                if (s->subject->nchildren == 0) {
+                    /* Zero-arg call on LHS: NRETURN path (forward-declared fns allowed).
+                     * NRETURN_ASGN calls fn at runtime; if it returns DT_N writes through
+                     * the name, else falls back to fname_SET field-mutator convention. */
+                    sm_emit_si(p, SM_CALL, "NRETURN_ASGN", 1);
+                    p->instrs[p->count - 1].a[1].s = GC_strdup(s->subject->sval);
+                } else {
+                    /* Multi-arg LHS: field mutator fname(obj,...) = rhs */
+                    lower_expr(p, lt, s->subject->nchildren > 0 ? s->subject->children[0] : NULL);
+                    char _setname[256];
+                    snprintf(_setname, sizeof(_setname), "%s_SET", s->subject->sval);
+                    sm_emit_si(p, SM_CALL, _setname, 2);
+                }
             } else {
                 lower_expr(p, lt, s->subject);
                 sm_emit_si(p, SM_CALL, "ASGN", 2);
