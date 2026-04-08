@@ -143,11 +143,10 @@ RESULT_t ELEMNT_fn(DESCR_t *out)
     RESULT_t rc = STREAM_fn(&xsp, &TEXTSP, &ELEMTB, &stype);
     SETAC(STYPE, stype);
     if (rc == FAIL) {
-        if (stype == 0) { SETAC(EMSGCL, (intptr_t)ILCHAR); return FAIL; } /* ELEILI / ELEICH */
-        if (stype == QLITYP) {
-        } else { /* quoted literal run-out — fall through */
-            SETAC(EMSGCL, (intptr_t)OPNLIT); return FAIL;
-        }
+        /* ELEILI: stream EOS — determine cause */
+        if (stype == 0)      { SETAC(EMSGCL, (intptr_t)ILCHAR); return FAIL; } /* ELEICH */
+        if (stype == QLITYP) { SETAC(EMSGCL, (intptr_t)OPNLIT); return FAIL; } /* unclosed literal */
+        /* non-zero, non-QLITYP: ELEMN9 — fall through to dispatch */
     }
     if (alloc_node(&ELEXND) == FAIL) return FAIL;
     SETAC(ELEYND, 0);
@@ -354,8 +353,8 @@ static RESULT_t expr_continue(DESCR_t *out)
         }
         if (alloc_node(&EXOPND) == FAIL) return FAIL; /* EXPR14: allocate operator node */
         PUTDC_B(EXOPND, T_CODE, EXOPCL);
-        if (AEQLC(EXPRND, 0)) {
-            DESCR_t prec_op, prec_ex; /* EXPR3: empty tree — compare precedences */
+        if (!AEQLC(EXPRND, 0)) {
+            DESCR_t prec_op, prec_ex; /* EXPR3: non-empty tree — compare precedences */
             GETDC_B(prec_op, EXOPCL, 2*DESCR); SETAV(prec_op, prec_op);
             GETDC_B(EXEXND, EXPRND, T_FATHER);
             GETDC_B(XPTR, EXEXND, T_CODE);
@@ -386,7 +385,7 @@ expr11:
             if (EXPR1_fn(out) == FAIL) return FAIL;
             return OK;
         } else {
-            addson(EXOPND, EXELND); /* Non-empty tree */
+            addson(EXOPND, EXELND); /* EXPR14: empty tree — simple addson */
             MOVD(EXPRND, EXELND);
             if (EXPR1_fn(out) == FAIL) return FAIL;
             return OK;
@@ -398,10 +397,10 @@ expr11:
 /*====================================================================================================================*/
 static RESULT_t expr7(DESCR_t *out)
 {
-    if (AEQLC(EXPRND, 0)) { /* EXPR7: assemble result */
-        ADDSIB_fn(EXPRND, EXELND); /* EXPR10: add as sibling */
+    if (!AEQLC(EXPRND, 0)) { /* EXPR7: non-empty tree → EXPR10 */
+        ADDSIB_fn(EXPRND, EXELND); /* add element as sibling */
         MOVD(XPTR, EXPRND);
-    } else {
+    } else { /* EXPR7: empty tree → XPTR = EXELND directly */
         MOVD(XPTR, EXELND);
     }
     while (!AEQLIC(XPTR, T_FATHER, 0)) /* EXPR9: climb to root */
