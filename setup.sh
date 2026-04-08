@@ -25,7 +25,7 @@ step() { echo -e "\n── $* ──"; }
 
 # ── 1. System packages ────────────────────────────────────────────────────────
 step "System packages"
-PKGS="build-essential libgmp-dev m4 nasm libgc-dev"
+PKGS="build-essential libgmp-dev m4 nasm libgc-dev wabt"
 MISSING=""
 for p in $PKGS; do
     dpkg -s "$p" &>/dev/null || MISSING="$MISSING $p"
