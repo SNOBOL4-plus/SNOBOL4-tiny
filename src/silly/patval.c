@@ -191,7 +191,7 @@ static RESULT_t lprtnd(const DESCR_t *ycl)
         return intr1();
     }
     if (XPTR.a.i < 0) return lenerr(); /* LPRTNI: check non-negative; if LEN, use value as min-length */
-    if (DEQL(*ycl, LNTHCL)) ZCL.a.i = XPTR.a.i; /* LEN: if fn descriptor == LNTHCL, use N as min-length */
+    if (!DEQL(*ycl, LNTHCL)) ZCL.a.i = XPTR.a.i; /* MOVA ZCL,XPTR: non-LEN fns use N as min-length; LEN skips (ZCL stays 0) */
 patnod:
     { /* null string check — XPTR with zero arena offset and STRING type */
         DESCR_t nulvcl = NULVCL;
@@ -270,7 +270,7 @@ RESULT_t ATOP_fn(void)
     if (D_F(YPTR) & FNC) {
         switch (INVOKE_fn()) {
         case FAIL: return FAIL;
-        case NRETURN: break; /* name in YPTR, skip type check (oracle: goto ATOP1) */
+        case OK: break; /* exit 2: name in YPTR, skip type check (oracle: goto ATOP1) */
         default:
             if (YPTR.v != E) return nemo();
             break;
@@ -297,7 +297,7 @@ static RESULT_t nam_dol(const DESCR_t *op_cl)
         int rc = INVOKE_fn();
         XPTR = saved_xptr; /* NAM4: restore first argument */
         if (rc == FAIL) return FAIL;
-        if (rc == NRETURN) goto nam3; /* NRETURN (name result): skip NEMO check, join NAM3 */
+        if (rc == OK) goto nam3; /* OK = exit 2: name result → restore XPTR (oracle: NAM4), join NAM3 */
         if (YPTR.v != E) return nemo(); /* OK path: only EXPRESSION valid */
     }
 nam3:;
