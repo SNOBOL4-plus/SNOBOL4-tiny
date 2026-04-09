@@ -1375,6 +1375,25 @@ void init_syntab(void)
     TKEYPL[0].a.i = P2A(TKEYPL);
     VALBLK[0].a.i = P2A(VALBLK);
 
+    /* INITLS [v311.sil line 11399]: DESCR INITLS,TTL+MARK,8*DESCR + 8 sublist ptrs.
+     * Allocate 8-slot arena block; fill with pointers to the 8 runtime lists.
+     * Order: DTLIST FNLIST INLIST KNLIST KVLIST OTLIST OTSATL TRLIST */
+    {
+        int32_t ilblk = BLOCK_fn(8 * DESCR, 0);
+        DESCR_t *il = (DESCR_t *)A2P(ilblk + DESCR); /* body starts after title DESCR */
+        il[0].a.i = P2A(&DTLIST);
+        il[1].a.i = P2A(&FNLIST);
+        il[2].a.i = P2A(&INLIST);
+        il[3].a.i = P2A(&KNLIST);
+        il[4].a.i = P2A(&KVLIST);
+        il[5].a.i = P2A(&OTLIST);
+        il[6].a.i = P2A(&OTSATL);
+        il[7].a.i = P2A(&TRLIST);
+        INITLS.a.i = ilblk;
+        INITLS.f   = TTL | MARK;
+        INITLS.v   = 8 * DESCR;
+    }
+
     /* Primitive pattern node self-ptrs + fn-code slot ptrs [v311.sil §24] */
     /* FAILPT: [0]=self-ptr, [1].a=P2A(&SALFFN) */
     FAILPT[0].a.i = P2A(FAILPT);
