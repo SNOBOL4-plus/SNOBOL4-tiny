@@ -614,7 +614,7 @@ extern const char FTLCF[];   /* "%s:%d: Error %d in statement %d at level %d\n" 
 extern const char GCFMT[];   /* "%s:%d: GC %.3f ms %d free\n"            */
 extern const char INCGCF[];  /* "INCOMPLETE STORAGE REGENERATION.\n"      */
 extern const char INTIME[];  /* "%.3f ms. Execution time\n"               */
-extern const char KSTSTF[];  /* "%.3f Thousand statements per second\n"   */
+extern const char KSTSF[];  /* "%.3f Thousand statements per second\n"   */
 extern const char LASTSF[];  /* "%s:%d: Last statement executed was %d\n" */
 extern const char NODMPF[];  /* "TERMINAL DUMP NOT POSSIBLE.\n"           */
 extern const char NRMEND[];  /* "Normal termination at level %d\n"        */
