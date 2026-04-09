@@ -473,9 +473,14 @@ extern DESCR_t EXEXND;   /* expression temp node                         */
 extern DESCR_t EXOPCL;   /* binary operator descriptor                   */
 extern DESCR_t LITCL;    /* LIT function code descriptor                 */
 extern DESCR_t ITEMCL;   /* ITEM (array ref) function code descriptor    */
-extern DESCR_t BISRFN;   /* SPITBOL SCAN+REPLACE operator descriptor     */
-extern DESCR_t BIEQFN;   /* SPITBOL assignment operator descriptor       */
-extern DESCR_t BISNFN;   /* SPITBOL SCAN operator descriptor             */
+extern DESCR_t BISRFN[];   /* SPITBOL SCAN+REPLACE operator descriptor (SJSRFN alias)   */
+extern DESCR_t BIEQFN[];   /* SPITBOL assignment operator descriptor (ASGNFN alias)      */
+extern DESCR_t BISNFN[];   /* SPITBOL SCAN operator descriptor (SCANFN alias)            */
+extern DESCR_t CONFN[];    /* concatenation operator descriptor                          */
+/* LHERE macro aliases (SIL: BISNFN is LHERE before SCANFN DESCR — same address) */
+#define SCANFN BISNFN
+#define SJSRFN BISRFN
+#define ASGNFN BIEQFN
 extern DESCR_t ELEMTB;   /* element scan table                           */
 extern DESCR_t INTGTB;   /* integer scan table                           */
 extern DESCR_t GOTSTB;   /* peek-ahead table for '<' and '['             */

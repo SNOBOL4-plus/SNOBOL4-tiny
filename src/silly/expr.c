@@ -331,7 +331,7 @@ RESULT_t EXPR1_fn(DESCR_t *out)
     DESCR_t saved = EXPRND;
     if (ELEMNT_fn(&EXELND) == FAIL) {
         if (!AEQLC(SPITCL, 0) && /* EXPR12: SPITBOL null-right-operand handling */
-            (deql(EXOPND, BISRFN) || deql(EXOPND, BIEQFN))) {
+            (deql(EXOPND, BISRFN[0]) || deql(EXOPND, BIEQFN[0]))) {
             if (NULNOD_fn(&EXELND) == FAIL) return FAIL; /* default null right operand */
             MOVD(EXPRND, saved);
             goto do_expr7;
@@ -363,7 +363,7 @@ static RESULT_t expr_continue(DESCR_t *out)
                 MOVD(EXEXND, EXOPND);
                 if (AEQLIC(EXEXND, T_FATHER, 0)) break;
                 GETDC_B(EXOPND, EXEXND, T_FATHER);
-                if (deql(EXOPND, BISNFN)) {
+                if (deql(EXOPND, BISNFN[0])) {
                     PUTAC_B(EXOPND, T_CODE, D_A(SJSRCL)); /* Convert SCAN → SJSR */
                     ADDSIB_fn(EXPRND, EXELND);
                     MOVD(EXPRND, EXELND);
@@ -449,8 +449,8 @@ RESULT_t BINOP_fn(DESCR_t *out)
     SPEC_t xsp; int stype;
     if (AEQLC(BRTYPE, EQTYP) && !AEQLC(SPITCL, 0)) {
         /* BINOP2: SPITBOL '=' op. Oracle: D_A(STYPE)=(int_t)BIEQFN (addr of descriptor).
-         * Ours: P2A(&BIEQFN) = arena offset of the BIEQFN global DESCR. Then return STYPE. */
-        SETAC(STYPE, P2A(&BIEQFN));
+         * Ours: P2A(BIEQFN) = arena offset of the BIEQFN global DESCR. Then return STYPE. */
+        SETAC(STYPE, P2A(BIEQFN));
         *out = STYPE;
         return OK;
     }

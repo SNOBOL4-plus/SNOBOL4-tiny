@@ -508,9 +508,14 @@ DESCR_t BIQSFN[3] = {
     {{.i=0},0,0},
     {{.i=70},0,69}
 };
-DESCR_t BIEQFN = {{.i=0}, 0, 2};
-DESCR_t BISNFN = {{.i=0}, 0, 2};
-DESCR_t BISRFN = {{.i=0}, 0, 2};
+/* v311.sil §24 lines 11655–11671: 3-slot binary op-fns (LHERE aliases point here) */
+/* BISNFN is the primary name; SCANFN is a macro alias (LHERE BISNFN, then SCANFN DESCR) */
+DESCR_t BISNFN[3] = { {{.i=0},0,2}, {{.i=0},0,0}, {{.i=3},0,2} };   /* SCAN,   prec 3/2  */
+DESCR_t BISRFN[3] = { {{.i=0},0,3}, {{.i=0},0,0}, {{.i=3},0,2} };   /* SJSR,   prec 3/2  */
+DESCR_t BIEQFN[3] = { {{.i=0},0,2}, {{.i=0},0,0}, {{.i=1},0,1} };   /* ASGN,   prec 1/1  */
+DESCR_t CONFN[3]  = { {{.i=0},0,2}, {{.i=0},0,0}, {{.i=20},0,19} }; /* CONCAT, prec 20/19 */
+/* LHERE aliases resolved: BISNFN=SCANFN[0], BISRFN=SJSRFN[0], BIEQFN=ASGNFN[0] */
+/* SCANFN/SJSRFN/ASGNFN macro aliases defined in data.h */
 DESCR_t DIVFN[3] = {
     {{.i=0},0,2},
     {{.i=0},0,0},
@@ -1093,10 +1098,10 @@ static void init_actions(void)
     SBIPTB_actions[12].put = P2A(BINGFN);
     SBIPTB_actions[12].act = AC_GOTO;
     SBIPTB_actions[12].go = &TBLKTB_st;
-    SBIPTB_actions[13].put = P2A(&BISNFN);
+    SBIPTB_actions[13].put = P2A(SCANFN);
     SBIPTB_actions[13].act = AC_GOTO;
     SBIPTB_actions[13].go = &TBLKTB_st;
-    SBIPTB_actions[14].put = P2A(&BIEQFN);
+    SBIPTB_actions[14].put = P2A(ASGNFN);
     SBIPTB_actions[14].act = AC_GOTO;
     SBIPTB_actions[14].go = &TBLKTB_st;
     SBIPTB_actions[15].act = AC_CONTIN; /* HW-5: arg3=arg4 in all STREAM calls */
@@ -1139,10 +1144,10 @@ static void init_actions(void)
     BSBIPTB_actions[12].put = P2A(BINGFN);
     BSBIPTB_actions[12].act = AC_GOTO;
     BSBIPTB_actions[12].go = &TBLKTB_st;
-    BSBIPTB_actions[13].put = P2A(&BISNFN);
+    BSBIPTB_actions[13].put = P2A(SCANFN);
     BSBIPTB_actions[13].act = AC_GOTO;
     BSBIPTB_actions[13].go = &TBLKTB_st;
-    BSBIPTB_actions[14].put = P2A(&BIEQFN);
+    BSBIPTB_actions[14].put = P2A(ASGNFN);
     BSBIPTB_actions[14].act = AC_GOTO;
     BSBIPTB_actions[14].go = &TBLKTB_st;
     BSBIPTB_actions[15].act = AC_CONTIN; /* HW-7: arg3=arg4 */
@@ -1230,10 +1235,10 @@ static void init_actions(void)
     BSBIPTB_actions[12].put = P2A(BINGFN);
     BSBIPTB_actions[12].act = AC_GOTO;
     BSBIPTB_actions[12].go = &TBLKTB_st;
-    BSBIPTB_actions[13].put = P2A(&BISNFN);
+    BSBIPTB_actions[13].put = P2A(SCANFN);
     BSBIPTB_actions[13].act = AC_GOTO;
     BSBIPTB_actions[13].go = &TBLKTB_st;
-    BSBIPTB_actions[14].put = P2A(&BIEQFN);
+    BSBIPTB_actions[14].put = P2A(ASGNFN);
     BSBIPTB_actions[14].act = AC_GOTO;
     BSBIPTB_actions[14].go = &TBLKTB_st;
     BSBIPTB_actions[15].act = AC_CONTIN; /* HW-7: arg3=arg4 */
@@ -1913,6 +1918,8 @@ DESCR_t POSIFN = {.a={.i=XPOSI},  .f=0, .v=3}; /* POS(n)               */
 DESCR_t RPSIFN = {.a={.i=XRPSI},  .f=0, .v=3}; /* RPOS(n)              */
 DESCR_t SCFLFN = {.a={.i=XFAIL},  .f=0, .v=2}; /* scan fail            */
 DESCR_t SCONFN = {.a={.i=XSCON},  .f=0, .v=2}; /* scan continue        */
+
+/* SCANFN/SJSRFN/ASGNFN/CONFN: declared in operator-fn block above (before init_syntab) */
 DESCR_t SPNCFN = {.a={.i=XSPNC},  .f=0, .v=3}; /* SPAN(cset)           */
 DESCR_t TBFN   = {.a={.i=XTB},    .f=0, .v=3}; /* TAB(n)               */
 DESCR_t FNCFFN = {.a={.i=XRTNL3}, .f=0, .v=2}; /* FENCE failure        */
