@@ -474,7 +474,7 @@ RESULT_t SJSR_fn(void)
         GETDC_BLK(XPTR, WPTR, DESCR); /* SJSR1A: get value from variable */
     } else {
         /* SC-6: INVOKE returns: 1=FAIL, 2=SJSR1 (check INSW), 3=NEMO (error 8) */
-        INCL = XPTR;
+        INCL = WPTR;
         RESULT_t inv_rc = INVOKE_fn();
         if (inv_rc == FAIL) return FAIL;
         if (inv_rc == NEMO) { scan_error(8); return FAIL; } /* case 3 → NEMO */
@@ -492,7 +492,7 @@ RESULT_t SJSR_fn(void)
 sjsr1b:
     opush(WPTR); opush(XPTR);
     if (PATVAL_fn() == FAIL) { optop -= 2; return FAIL; }
-    XPTR = opop(); WPTR = opop();
+    XPTR = opop(); /* restore subject value; WPTR stays on opstack — popped at sjss1 (oracle: POP WPTR at SJSS1A) */
     if (D_V(XPTR) == I) { /* Coerce subject */
         int32_t off = GNVARI_fn(D_A(XPTR));
         if (!off) return FAIL;
