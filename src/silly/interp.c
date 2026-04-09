@@ -238,7 +238,7 @@ RESULT_t INTERP_fn(void)
         /* Oracle: case2,3=loop; case4=RTN1(fail up); case5=RTN2; case6=RTN3.
          * Our RESULT_t: OK=1(success→loop), FAIL=0(failure path),
          * NRETURN=5 / VRETURN=6 propagate out of INTERP to caller. */
-        if (rc == OK) continue;
+        if (rc == OK || rc == NEMO) continue; /* oracle case 2,3 → loop (goto L_INTRP0) */
         if (rc == FAIL_UP) return FAIL;  /* oracle case 4 → RTN1: propagate FAIL up */
         if (rc == NRETURN || rc == VRETURN) return rc;
         /* FAIL (case 1 fall-through) → statement-level failure path */
