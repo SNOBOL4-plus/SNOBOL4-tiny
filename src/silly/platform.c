@@ -1268,6 +1268,10 @@ void init_syntab(void)
     /* Trace/literal fn DESCRs: fn-ptr fills (LABTR_fn etc are defined in trace.c/asgn.c) */
     extern RESULT_t LABTR_fn(void), VALTR_fn(void), LIT_fn(void), KEYTR_fn(void), INIT_fn(void), GOTO_fn(void);
     extern RESULT_t GOTG_fn(void), GOTL_fn(void), FENTR_fn(void), FNEXTR_fn(void);
+    extern RESULT_t ITEM_fn(void), BASE_fn(void), CMA_fn(void), ARGNER_fn(void), END_fn(void), EROR_fn(void);
+    AREFN.a.i   = P2A(&ITEM_fn);   BASEFN.a.i  = P2A(&BASE_fn);
+    CMAFN.a.i   = P2A(&CMA_fn);    ENDAFN.a.i  = P2A(&ARGNER_fn);
+    ENDFN.a.i   = P2A(&END_fn);    ERORFN.a.i  = P2A(&EROR_fn);
     FNTRFN.a.i  = P2A(&FENTR_fn);  FXTRFN.a.i = P2A(&FNEXTR_fn);
     GOTGFN.a.i  = P2A(&GOTG_fn);   GOTLFN.a.i = P2A(&GOTL_fn);
     GOTOFN.a.i  = P2A(&GOTO_fn);
@@ -1849,6 +1853,12 @@ DESCR_t SPNCFN = {.a={.i=XSPNC},  .f=0, .v=3}; /* SPAN(cset)           */
 DESCR_t TBFN   = {.a={.i=XTB},    .f=0, .v=3}; /* TAB(n)               */
 DESCR_t FNCFFN = {.a={.i=XRTNL3}, .f=0, .v=2}; /* FENCE failure        */
 /* Trace/literal fn DESCRs (a=fn-ptr filled at init, flag=0) */
+DESCR_t AREFN   = {.a={.i=0}, .f=FNC, .v=1}; /* array/table ref (ITEM_fn)  */
+DESCR_t BASEFN  = {.a={.i=0}, .f=0,   .v=0}; /* base obj code   (BASE_fn)  */
+DESCR_t CMAFN   = {.a={.i=0}, .f=FNC, .v=1}; /* CMA             (CMA_fn)   */
+DESCR_t ENDAFN  = {.a={.i=0}, .f=0,   .v=0}; /* trace safety    (ARGNER_fn)*/
+DESCR_t ENDFN   = {.a={.i=0}, .f=0,   .v=0}; /* end of program  (END_fn)   */
+DESCR_t ERORFN  = {.a={.i=0}, .f=0,   .v=1}; /* erroneous stmt  (EROR_fn)  */
 DESCR_t FNTRFN  = {.a={.i=0}, .f=0, .v=2}; /* call trace  (FENTR_fn)   */
 DESCR_t FXTRFN  = {.a={.i=0}, .f=0, .v=2}; /* return trace(FNEXTR_fn)  */
 DESCR_t GOTGFN  = {.a={.i=0}, .f=0, .v=1}; /* :<X> goto   (GOTG_fn)    */
