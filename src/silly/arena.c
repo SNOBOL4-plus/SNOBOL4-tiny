@@ -458,7 +458,7 @@ int32_t GC_fn(int32_t required)
                     /* live: write compacted address into previous valid link holder */
                     int32_t new_addr = ent->a.i; /* forward addr set in GCLAD */
                     ((DESCR_t *)A2P(lnk_addr))->a.i = new_addr;
-                    lnk_addr = st1ptr + LNKFLD; /* advance: next prev = this node's LNKFLD */
+                    lnk_addr = new_addr + LNKFLD; /* GCBB3: ST2PTR=ST1PTR → prev link is at new location */
                 }
                 /* dead: simply skip — lnk_addr stays, link patched next iter or at GCBB5 */
                 st1ptr = next;
