@@ -426,6 +426,7 @@ RESULT_t SCAN_fn(void)
         if (!off) return FAIL;
         D_A(XPTR) = off; D_V(XPTR) = S;
     }
+    if (D_V(XPTR) != S) scan_error(SCAN_ERR_ILLEGAL_TYPE); /* INTR1: invalid subject type after coerce */
     if (D_V(XPTR) == S && D_V(YPTR) == S) { /* STRING-STRING: inline scan */
         sp_setfrom_descr(&XSP, XPTR);
         sp_setfrom_descr(&YSP, YPTR);
