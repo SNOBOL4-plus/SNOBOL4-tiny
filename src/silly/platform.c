@@ -1812,7 +1812,7 @@ DESCR_t STARPT[12] = {
     {.a={.i=1}, .f=0,        .v=0},          /* [3]  counter = 1                 */
     {0},                                     /* [4]  (zero)                      */
     {.a={.i=0}, .f=FNC,      .v=2},         /* [5]  SCOKFN ptr at init          */
-    {.a={.i=0}, .f=0,        .v=7*DESCR},   /* [6]  success-link offset 7*DESCR */
+    {.a={.i=7*DESCR}, .f=0,  .v=0},          /* [6]  success-link: A=7*DESCR     */
     {0},                                     /* [7]  (zero)                      */
     {.a={.i=0}, .f=FNC,      .v=3},         /* [8]  DSARFN ptr at init          */
     {.a={.i=0}, .f=0,        .v=4*DESCR},   /* [9]  nval offset = 4*DESCR       */
