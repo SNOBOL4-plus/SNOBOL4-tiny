@@ -1288,6 +1288,11 @@ void init_syntab(void)
     SUCCPT[1].a.i = P2A(&SUCFFN);
     /* STRPAT: arena offset of STARPT template (used by SJSR/ASGN for *X wrapping) */
     STRPAT.a.i = P2A(STARPT);
+    /* BALPT: [0]=self-ptr, [1].a=P2A(&SCOKFN), [4].a=P2A(&BALFN), [7].a=P2A(&BALFFN) */
+    BALPT[0].a.i = P2A(BALPT);
+    BALPT[1].a.i = P2A(&SCOKFN);
+    BALPT[4].a.i = P2A(&BALFN);
+    BALPT[7].a.i = P2A(&BALFFN);
 }
 
 /*====================================================================================================================*/
@@ -1780,6 +1785,8 @@ DESCR_t STARFN = {.a={.i=XSTAR}, .f=0, .v=3}; /* *X expression        */
 DESCR_t FNCEFN = {.a={.i=XFNCE}, .f=0, .v=2}; /* FENCE                */
 DESCR_t RTBFN  = {.a={.i=XRTB},  .f=0, .v=3}; /* RTAB(n)              */
 DESCR_t DSARFN = {.a={.i=XDSAR}, .f=0, .v=3}; /* deferred expression  */
+DESCR_t BALFN  = {.a={.i=XBAL},  .f=0, .v=2}; /* BAL match            */
+DESCR_t BALFFN = {.a={.i=XBALF}, .f=0, .v=2}; /* BAL failure          */
 
 /* ── Primitive pattern nodes [v311.sil §24] ──────────────────────────────── */
 /* Slot[0]: self-ptr (A filled by init_syntab) / TTL|MARK / size-in-bytes    */
@@ -1832,3 +1839,17 @@ DESCR_t TLABPL[3] = { {.a={.i=0},.f=TTL|MARK,.v=2*DESCR}, {0}, {0} };
 DESCR_t TFENPL[3] = { {.a={.i=0},.f=TTL|MARK,.v=2*DESCR}, {0}, {0} };
 DESCR_t TFEXPL[3] = { {.a={.i=0},.f=TTL|MARK,.v=2*DESCR}, {0}, {0} };
 DESCR_t TKEYPL[3] = { {.a={.i=0},.f=TTL|MARK,.v=2*DESCR}, {0}, {0} };
+/* BALPT — BAL: 9*DESCR body (10 slots total) [v311.sil line 12080]         */
+/* Slots [5],[8]: A=6*DESCR (relative link offset within node)               */
+DESCR_t BALPT[10] = {
+    {.a={.i=0}, .f=TTL|MARK, .v=9*DESCR},  /* [0] hdr: self-ptr at init        */
+    {.a={.i=0}, .f=FNC,      .v=2},         /* [1] SCOKFN ptr at init           */
+    {.a={.i=0}, .f=0,        .v=3*DESCR},   /* [2] nval offset V=3*DESCR        */
+    {0},                                     /* [3] zero                         */
+    {.a={.i=0}, .f=FNC,      .v=2},         /* [4] BALFN ptr at init            */
+    {.a={.i=6*DESCR}, .f=0,  .v=0},         /* [5] link A=6*DESCR               */
+    {0},                                     /* [6] zero                         */
+    {.a={.i=0}, .f=FNC,      .v=2},         /* [7] BALFFN ptr at init           */
+    {.a={.i=6*DESCR}, .f=0,  .v=0},         /* [8] link A=6*DESCR               */
+    {0}                                      /* [9] zero                         */
+};

@@ -292,12 +292,15 @@ extern DESCR_t STARFN;    /* * expr scan fn (opcode XSTAR=32)             */
 extern DESCR_t FNCEFN;    /* FENCE scan fn  (opcode XFNCE=35)             */
 extern DESCR_t RTBFN;     /* RTAB scan fn   (opcode XRTB=26)              */
 extern DESCR_t DSARFN;    /* deferred-expr scan fn (opcode XDSAR=14)      */
+extern DESCR_t BALFN;     /* BAL match scan fn (opcode XBAL=6)            */
+extern DESCR_t BALFFN;    /* BAL failure scan fn (opcode XBALF=7)         */
 /* Primitive pattern nodes (v311.sil §24 — static arena blocks)             */
 extern DESCR_t FAILPT[4];    /* FAIL pattern node  (3*DESCR body)            */
 extern DESCR_t FNCEPT[4];    /* FENCE pattern node (3*DESCR body)            */
 extern DESCR_t REMPT[5];     /* RTAB pattern node  (4*DESCR body)            */
 extern DESCR_t STARPT[12];   /* * expression pattern node (11*DESCR body)    */
 extern DESCR_t SUCCPT[4];    /* SUCCEED pattern node (3*DESCR body)          */
+extern DESCR_t BALPT[10];    /* BAL pattern node (9*DESCR body)              */
 extern DESCR_t TVALPL[3];    /* value trace pair list                        */
 extern DESCR_t TLABPL[3];    /* label trace pair list                        */
 extern DESCR_t TFENPL[3];    /* call trace pair list                         */
