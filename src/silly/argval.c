@@ -68,8 +68,13 @@ static void deref_name(DESCR_t *dp)
  * Returns 1 if found (ZPTR set), 0 if not.                             */
 static int check_input_assoc(const DESCR_t *dp)
 {
+    /* SIL: AEQLC INSW,0,,skip + LOCAPV ZPTR,INATL,dp,skip
+     * LOCAPV result goes into ZPTR (oracle: LOCAPV(ZPTR,INATL,XPTR)). */
     if (INSW.a.i == 0) return 0;
-    return locapv_fn(P2A(&INATL), (DESCR_t *)dp) != 0;
+    int32_t off = locapv_fn(P2A(&INATL), (DESCR_t *)dp);
+    if (off == 0) return 0;
+    ZPTR.a.i = off; ZPTR.f = 0; ZPTR.v = 0;
+    return 1;
 }
 
 /*====================================================================================================================*/
