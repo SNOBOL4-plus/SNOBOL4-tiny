@@ -206,7 +206,7 @@ RESULT_t NEWCRD_fn(void)
                 APDSP_fn(&LNOSP, &TSP);
             }
         }
-        return FAIL; /* RTN2 — continue-card: proceed to CMPILE (oracle: falls through, not re-read) */
+        MOVD(BRTYPE, EOSCL); return OK; /* RTN2 — continue-card: set BRTYPE=EOSCL, FORBLK loop continues */
     }
     if (stype == CTLTYP) {
         /* CTLCRD: v311.sil line 2313
@@ -312,7 +312,12 @@ RESULT_t NEWCRD_fn(void)
             APDSP_fn(&LNOSP, &TSP);
         }
     }
-    return FAIL; /* RTN3 — normal card: proceed to CMPILE (oracle: falls through, not re-read) */
+    /* RTN3 — normal card. Oracle FORRUN: falls out of switch(NEWCRD) → L_FOREOS →
+     * sets BRTYPE=EOSCL, returns RTN2 to FORBLK. FORBLK sees "EOS" → continue loop
+     * to scan the card content. We replicate: set BRTYPE=EOSCL, return OK so forrun()
+     * returns OK and FORBLK_fn continues (not aborts). */
+    MOVD(BRTYPE, EOSCL);
+    return OK;
 }
 
 /*====================================================================================================================*/

@@ -17,6 +17,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#ifdef MON_ENABLED
+#include "mon_hooks.h"
+#endif
 
 #include "types.h"
 #include "data.h"
@@ -73,6 +76,9 @@ static void sighandler(int sig)
 /* ── BEGIN — system initialisation ──────────────────────────────────── */
 static void BEGIN_fn(void)
 {
+#ifdef MON_ENABLED
+    MON_ENTER("BEGIN");
+#endif
     XCALL_ISTACK();
     if (!AEQLC(BANRCL, 0)) {
         XCALL_OUTPUT_fmt(PUNCH, "SNOBOL4 (Version 3.11, May 19, 1975)\n");
@@ -293,6 +299,10 @@ int main(int argc, char *argv[])
     signal(SIGFPE, sighandler);
 #endif
     arena_init(); /* Initialise the arena */
+#ifdef MON_ENABLED
+    { const char *_e = getenv("MON_EVT"), *_a = getenv("MON_ACK");
+      if (_e && _a) mon_open(_e, _a); }
+#endif
     data_init(); /* Initialise all static data */
     BEGIN_fn(); /* Run the interpreter */
     compile_loop();

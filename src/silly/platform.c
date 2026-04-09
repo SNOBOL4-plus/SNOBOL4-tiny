@@ -1299,12 +1299,15 @@ RESULT_t STREAM_fn(SPEC_t *sp1, SPEC_t *sp2, DESCR_t *tbl_descr, int *stype_out)
         }
     }
     {
-        /* ST_EOS: no break found. sp2 (subject) is left intact — len==0 at exhaustion.
-         * Real stream.c: S_L(sp2) -= len (= 0), sp2 unchanged. sp1 gets zero-length prefix.
-         * HW-13: was "sp2->l = 0" which destroyed subject (TEXTSP consumed). */
-        int match = sp2->l - len; /* match==0 when exhausted */
+        /* ST_EOS: no STOP/STOPSH found — reached end of subject.
+         * Oracle stream.c always executes S_L(sp2) -= len after break_loop,
+         * even for ST_EOS. len==0 here (loop exhausted), so match = sp2->l.
+         * sp2->l becomes 0 (all consumed). sp2->o NOT bumped (no STOP accepted char).
+         * sp1 gets the full prefix (everything scanned). */
+        int match = sp2->l - len; /* = sp2->l when len==0 (fully exhausted) */
         *sp1 = *sp2; sp1->l = match;
-        /* do NOT modify sp2 on ST_EOS */
+        /* sp2->o NOT bumped (ST_EOS = no accepted char), but sp2->l IS decremented */
+        sp2->l = len;  /* = 0: subject fully consumed */
         D_A(STYPE) = put;
         if (stype_out) *stype_out = (int)put;
         return FAIL;
