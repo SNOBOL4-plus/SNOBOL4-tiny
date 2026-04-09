@@ -1265,6 +1265,9 @@ void init_syntab(void)
     PRMTBL[0].a.i = P2A(PRMTBL); PRMTBL[0].f = TTL|MARK;
     /* DTEND: single DESCR, A=EFFCL ptr [v311.sil line 11990] */
     DTEND.a.i = P2A(&EFFCL);
+    /* Trace/literal fn DESCRs: fn-ptr fills (LABTR_fn etc are defined in trace.c/asgn.c) */
+    extern RESULT_t LABTR_fn(void), VALTR_fn(void), LIT_fn(void);
+    LABTFN.a.i = P2A(&LABTR_fn); LITFN.a.i = P2A(&LIT_fn); VLTRFN.a.i = P2A(&VALTR_fn);
     PRMTBL[1].a.i = P2A(&DTLIST);
     PRMTBL[2].a.i = P2A(&FNLIST);
     PRMTBL[3].a.i = P2A(&FTABLE);
@@ -1818,6 +1821,32 @@ DESCR_t STARFN = {.a={.i=XSTAR}, .f=0, .v=3}; /* *X expression        */
 DESCR_t FNCEFN = {.a={.i=XFNCE}, .f=0, .v=2}; /* FENCE                */
 DESCR_t RTBFN  = {.a={.i=XRTB},  .f=0, .v=3}; /* RTAB(n)              */
 DESCR_t DSARFN = {.a={.i=XDSAR}, .f=0, .v=3}; /* deferred expression  */
+/* Scan fn DESCRs with X-opcodes (flag=0, a=opcode, v=arity) */
+DESCR_t ANYCFN = {.a={.i=XANYC},  .f=0, .v=3}; /* ANY(cset)            */
+DESCR_t ATOPFN = {.a={.i=XATP},   .f=0, .v=3}; /* @X cursor capture    */
+DESCR_t CHRFN  = {.a={.i=XCHR},   .f=0, .v=3}; /* single char match    */
+DESCR_t BRKCFN = {.a={.i=XBRKC},  .f=0, .v=3}; /* BREAK(cset)          */
+DESCR_t BRXCFN = {.a={.i=XBRKX},  .f=0, .v=3}; /* BREAKX(cset)         */
+DESCR_t BRFCFN = {.a={.i=XBRKXF}, .f=0, .v=2}; /* BREAKX rematching    */
+DESCR_t DNMEFN = {.a={.i=XDNME},  .f=0, .v=2}; /* $ immediate assign   */
+DESCR_t DNMIFN = {.a={.i=XDNME1}, .f=0, .v=2}; /* $ imm alternate      */
+DESCR_t ENMEFN = {.a={.i=XENME},  .f=0, .v=3}; /* . cond assign expr   */
+DESCR_t ENMIFN = {.a={.i=XENMI},  .f=0, .v=3}; /* . imm cond assign    */
+DESCR_t FNMEFN = {.a={.i=XFNME},  .f=0, .v=2}; /* fn call in pattern   */
+DESCR_t LNTHFN = {.a={.i=XLNTH},  .f=0, .v=3}; /* LEN(n)               */
+DESCR_t NMEFN  = {.a={.i=XNME},   .f=0, .v=2}; /* . cond value assign  */
+DESCR_t NNYCFN = {.a={.i=XNNYC},  .f=0, .v=3}; /* NOTANY(cset)         */
+DESCR_t POSIFN = {.a={.i=XPOSI},  .f=0, .v=3}; /* POS(n)               */
+DESCR_t RPSIFN = {.a={.i=XRPSI},  .f=0, .v=3}; /* RPOS(n)              */
+DESCR_t SCFLFN = {.a={.i=XFAIL},  .f=0, .v=2}; /* scan fail            */
+DESCR_t SCONFN = {.a={.i=XSCON},  .f=0, .v=2}; /* scan continue        */
+DESCR_t SPNCFN = {.a={.i=XSPNC},  .f=0, .v=3}; /* SPAN(cset)           */
+DESCR_t TBFN   = {.a={.i=XTB},    .f=0, .v=3}; /* TAB(n)               */
+DESCR_t FNCFFN = {.a={.i=XRTNL3}, .f=0, .v=2}; /* FENCE failure        */
+/* Trace/literal fn DESCRs (a=fn-ptr filled at init, flag=0) */
+DESCR_t LABTFN = {.a={.i=0}, .f=0, .v=2}; /* label trace (LABTR_fn)   */
+
+DESCR_t VLTRFN = {.a={.i=0}, .f=0, .v=2}; /* value trace (VALTR_fn)   */
 DESCR_t BALFN  = {.a={.i=XBAL},  .f=0, .v=2}; /* BAL match            */
 DESCR_t BALFFN = {.a={.i=XBALF}, .f=0, .v=2}; /* BAL failure          */
 DESCR_t EARBFN = {.a={.i=XEARB},  .f=0, .v=2}; /* ARB extended         */
