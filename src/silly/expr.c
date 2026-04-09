@@ -349,7 +349,13 @@ static RESULT_t expr_continue(DESCR_t *out)
 {
     while (1) {
         DESCR_t op; /* EXPR2: get binary operator */
-        if (BINOP_fn(&op) == FAIL) break; /* EXPR7 */
+        /* Oracle: BINOP RTN1=fatal error, RTN2=normal end (terminator seen).
+         * BINOP_fn sets EMSGCL on RTN1 (ILLBIN); leaves it alone on RTN2. */
+        int32_t emsg_before = D_A(EMSGCL);
+        if (BINOP_fn(&op) == FAIL) {
+            if (D_A(EMSGCL) != emsg_before) return FAIL; /* RTN1: propagate error */
+            break; /* RTN2: normal end → EXPR7 */
+        }
         MOVD(EXOPCL, op);
         if (!AEQLC(SPITCL, 0) && deql(EXOPCL, ASGNCL) && !AEQLC(EXPRND, 0)) { /* SPITBOL: check for ASGNCL + SCAN-in-tree → convert to SJSR */
             MOVD(EXOPND, EXPRND); /* Walk up tree looking for BISNFN (SCAN) */
