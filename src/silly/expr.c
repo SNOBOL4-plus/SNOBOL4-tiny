@@ -432,9 +432,9 @@ RESULT_t BINOP_fn(DESCR_t *out)
      * only reachable on the same fatal path. Functionally equivalent. */
     if (FORBLK_fn() == FAIL) { /* BINOP1: FORBLK failed — call FORWRD to find next char */
         if (FORWRD_fn() == FAIL) { COMP3_fn(); return FAIL; } /* EOF mid-expr → fatal */
-        /* Oracle switch: BRTYPE 2,3,6,7 → RTN2 (no op); else ILLBIN → RTN1 (error) */
+        /* Oracle BINOP1 switch: cases 2(CMATYP),3(RPTYP),6(EOSTYP),7(RBTYP) → RTN2; else ILLBIN */
         int32_t bt = D_A(BRTYPE);
-        if (bt==EQTYP || bt==NBTYP || bt==RPTYP || bt==RBTYP) return FAIL; /* RTN2 */
+        if (bt==2 || bt==3 || bt==6 || bt==7) return FAIL; /* RTN2 — terminator, no binary op */
         SETAC(EMSGCL, (intptr_t)ILLBIN); return FAIL; /* RTN1 → caller treats as error */
     }
     SPEC_t xsp; int stype;
@@ -445,7 +445,7 @@ RESULT_t BINOP_fn(DESCR_t *out)
         *out = STYPE;
         return OK;
     }
-    if (AEQLC(BRTYPE, NBTYP)) return FAIL; /* RTN2 — no operator */
+    if (!AEQLC(BRTYPE, NBTYP)) return FAIL; /* BINOP4: RTN2 — BRTYPE!=NBTYP means no nonbreak char found */
     /* Select table: SPITCL!=0 → SBIPTB; else BIOPTB. BLOKCL ignored (BLOCKS skipped). */
     DESCR_t *optb = (!AEQLC(SPITCL, 0)) ? &SBIPTB : &BIOPTB;
     RESULT_t rc = STREAM_fn(&xsp, &TEXTSP, optb, &stype);
