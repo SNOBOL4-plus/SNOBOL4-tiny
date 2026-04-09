@@ -140,4 +140,14 @@ static inline int32_t x_bksize(int32_t title_off)
 }
 
 /*====================================================================================================================*/
+/* X_BKDATA: get DATA-ONLY size from block title (= SIL GETSIZ result = title->v).
+ * Used for CPYPAT counts and pattern-block size arithmetic.
+ * Contrast x_bksize() which adds DESCR for the title itself (used by GC walker). */
+static inline int32_t x_bkdata(int32_t title_off)
+{
+    DESCR_t *t = (DESCR_t *)A2P(title_off);
+    return D_V(*t);  /* title.v = data size set by BLOCK_fn: title->v = size */
+}
+
+/*====================================================================================================================*/
 #endif /* SIL_ARENA_H */

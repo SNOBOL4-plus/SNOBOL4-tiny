@@ -242,14 +242,14 @@ RESULT_t ARBNO_fn(void)
     } else if (XPTR.v != P) {
         return intr1();
     }
-    XSIZ.a.i = x_bksize(XPTR.a.i); XSIZ.f = 0; XSIZ.v = 0; /* ARBP: compute sizes and assemble ARBNO block */
+    XSIZ.a.i = x_bkdata(XPTR.a.i); XSIZ.f = 0; XSIZ.v = 0; /* ARBP: compute sizes and assemble ARBNO block */
     TSIZ.a.i = XSIZ.a.i + ARBSIZ.a.i;
     TSIZ.f = 0; TSIZ.v = P;
     int32_t blk = BLOCK_fn(TSIZ.a.i, P);
     if (blk == 0) return FAIL;
     TPTR.a.i = blk; TPTR.f = 0; TPTR.v = P;
     ZPTR = TPTR;
-    TSIZ.a.i = x_bksize(ARHEAD.a.i); TSIZ.f = 0; TSIZ.v = 0; /* copy ARHEAD, then pattern, then ARTAIL, then ARBACK */
+    TSIZ.a.i = x_bkdata(ARHEAD.a.i); TSIZ.f = 0; TSIZ.v = 0; /* copy ARHEAD, then pattern, then ARTAIL, then ARBACK */
     DESCR_t zero = ZEROCL;
     cpypat_fn(&TPTR, &ARHEAD, &zero, &zero, &zero, &TSIZ);
     ZSIZ.a.i = XSIZ.a.i + TSIZ.a.i;
@@ -323,9 +323,9 @@ static RESULT_t nam_dol(const DESCR_t *op_cl)
     TPTR.a.i = blk; TPTR.f = 0; TPTR.v = P;
     DESCR_t tval = *op_cl;
     maknod_fn(&YPTR, &TPTR, &ZEROCL, &ZEROCL, &tval, &YPTR);
-    XSIZ.a.i = x_bksize(XPTR.a.i); XSIZ.f = 0; XSIZ.v = 0; /* compute sizes */
+    XSIZ.a.i = x_bkdata(XPTR.a.i); XSIZ.f = 0; XSIZ.v = 0; /* compute sizes */
     YSIZ.a.i = XSIZ.a.i + NODSIZ.a.i;
-    TSIZ.a.i = x_bksize(YPTR.a.i); TSIZ.f = 0; TSIZ.v = 0;
+    TSIZ.a.i = x_bkdata(YPTR.a.i); TSIZ.f = 0; TSIZ.v = 0;
     ZSIZ.a.i = YSIZ.a.i + TSIZ.a.i;
     ZSIZ.v = P;
     blk = BLOCK_fn(ZSIZ.a.i, P); /* allocate final block */
@@ -373,8 +373,8 @@ RESULT_t OR_fn(void)
         maknod_fn(&YPTR, &TPTR, &TMVAL, &ZEROCL, &CHRCL, &YPTR);
     }
     if (XPTR.v != P || YPTR.v != P) return intr1();
-    XSIZ.a.i = x_bksize(XPTR.a.i); XSIZ.f = 0; XSIZ.v = 0; /* ORPP: assemble alternation block */
-    YSIZ.a.i = x_bksize(YPTR.a.i); YSIZ.f = 0; YSIZ.v = 0;
+    XSIZ.a.i = x_bkdata(XPTR.a.i); XSIZ.f = 0; XSIZ.v = 0; /* ORPP: assemble alternation block */
+    YSIZ.a.i = x_bkdata(YPTR.a.i); YSIZ.f = 0; YSIZ.v = 0;
     TSIZ.a.i = XSIZ.a.i + YSIZ.a.i; TSIZ.f = 0; TSIZ.v = P;
     int32_t blk = BLOCK_fn(TSIZ.a.i, P);
     if (blk == 0) return FAIL;
