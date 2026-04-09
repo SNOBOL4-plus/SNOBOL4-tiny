@@ -293,17 +293,20 @@ elem_exit:
     /* ELEMRR: climb to root of tree */
     while (!AEQLIC(ZPTR, T_FATHER, 0))
         GETDC_B(ZPTR, ZPTR, T_FATHER);
-    { /* ELEM10: peek-ahead for '<' or '[' (ITEM subscription) */
+    { /* ELEM10: peek-ahead for '[' (ITEM subscription). Oracle: STREAM GOTSTB;
+       * ST_ERROR|ST_EOS → RTZPTR (return ZPTR as-is); STYPE==SGOTYP → ELECMA error;
+       * else → build ITEM node with existing tree as first arg. */
         SPEC_t peek; int pstype;
         if (STREAM_fn(&peek, &TEXTSP, &GOTSTB, &pstype) == OK) {
-            if (pstype != SGOTYP) {
-                SETAC(ELEMND, 0); /* Array reference on result */
-                MOVD(ELEXND, ZPTR);
-                if (elearg(ITEMCL) == FAIL) return FAIL;
-                while (!AEQLIC(ELEXND, T_FATHER, 0))
-                    GETDC_B(ELEXND, ELEXND, T_FATHER);
-                MOVD(ZPTR, ELEXND);
+            if (pstype == SGOTYP) { /* oracle: AEQLC STYPE,SGOTYP,,ELECMA */
+                SETAC(EMSGCL, (intptr_t)ILLBRK); return FAIL;
             }
+            SETAC(ELEMND, 0); /* Array reference on result */
+            MOVD(ELEXND, ZPTR);
+            if (elearg(ITEMCL) == FAIL) return FAIL;
+            while (!AEQLIC(ELEXND, T_FATHER, 0))
+                GETDC_B(ELEXND, ELEXND, T_FATHER);
+            MOVD(ZPTR, ELEXND);
         }
     }
     *out = ZPTR;
