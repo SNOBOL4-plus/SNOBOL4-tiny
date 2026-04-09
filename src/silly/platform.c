@@ -1293,6 +1293,28 @@ void init_syntab(void)
     BALPT[1].a.i = P2A(&SCOKFN);
     BALPT[4].a.i = P2A(&BALFN);
     BALPT[7].a.i = P2A(&BALFFN);
+    /* ARTAL: [0]=self-ptr, [1]=EARBFN, [4]=SCOKFN */
+    ARTAL[0].a.i = P2A(ARTAL);
+    ARTAL[1].a.i = P2A(&EARBFN);
+    ARTAL[4].a.i = P2A(&SCOKFN);
+    /* ARHED: [0]=self-ptr, [1]=SCOKFN, [4]=SCOKFN, [7]=ARBNFN, [10]=ARBFFN */
+    ARHED[0].a.i = P2A(ARHED);
+    ARHED[1].a.i = P2A(&SCOKFN);
+    ARHED[4].a.i = P2A(&SCOKFN);
+    ARHED[7].a.i = P2A(&ARBNFN);
+    ARHED[10].a.i = P2A(&ARBFFN);
+    /* ARBPT: [0]=self-ptr, [1]=SCOKFN, [4]=SCOKFN, [7]=FARBFN */
+    ARBPT[0].a.i = P2A(ARBPT);
+    ARBPT[1].a.i = P2A(&SCOKFN);
+    ARBPT[4].a.i = P2A(&SCOKFN);
+    ARBPT[7].a.i = P2A(&FARBFN);
+    /* ARBAK: [0]=self-ptr, [1]=ONARFN, [4]=ONRFFN */
+    ARBAK[0].a.i = P2A(ARBAK);
+    ARBAK[1].a.i = P2A(&ONARFN);
+    ARBAK[4].a.i = P2A(&ONRFFN);
+    /* ABORPT: [0]=self-ptr, [1]=ABORFN */
+    ABORPT[0].a.i = P2A(ABORPT);
+    ABORPT[1].a.i = P2A(&ABORFN);
 }
 
 /*====================================================================================================================*/
@@ -1787,6 +1809,13 @@ DESCR_t RTBFN  = {.a={.i=XRTB},  .f=0, .v=3}; /* RTAB(n)              */
 DESCR_t DSARFN = {.a={.i=XDSAR}, .f=0, .v=3}; /* deferred expression  */
 DESCR_t BALFN  = {.a={.i=XBAL},  .f=0, .v=2}; /* BAL match            */
 DESCR_t BALFFN = {.a={.i=XBALF}, .f=0, .v=2}; /* BAL failure          */
+DESCR_t EARBFN = {.a={.i=XEARB},  .f=0, .v=2}; /* ARB extended         */
+DESCR_t ARBNFN = {.a={.i=XARBN},  .f=0, .v=2}; /* ARBNO                */
+DESCR_t ARBFFN = {.a={.i=XARBF},  .f=0, .v=2}; /* ARB failure          */
+DESCR_t FARBFN = {.a={.i=XFARB},  .f=0, .v=2}; /* ARB first try        */
+DESCR_t ONARFN = {.a={.i=XONAR},  .f=0, .v=2}; /* ARBNO predecessor    */
+DESCR_t ONRFFN = {.a={.i=XONRF},  .f=0, .v=2}; /* ARBNO predecessor rf */
+DESCR_t ABORFN = {.a={.i=XRTNL3}, .f=0, .v=3}; /* ABORT (rtnl3)        */
 
 /* ── Primitive pattern nodes [v311.sil §24] ──────────────────────────────── */
 /* Slot[0]: self-ptr (A filled by init_syntab) / TTL|MARK / size-in-bytes    */
@@ -1852,4 +1881,59 @@ DESCR_t BALPT[10] = {
     {.a={.i=0}, .f=FNC,      .v=2},         /* [7] BALFFN ptr at init           */
     {.a={.i=6*DESCR}, .f=0,  .v=0},         /* [8] link A=6*DESCR               */
     {0}                                      /* [9] zero                         */
+};
+/* ARTAL — ARB tail: 6*DESCR body (7 slots) [v311.sil line 12072]           */
+DESCR_t ARTAL[7] = {
+    {.a={.i=0}, .f=TTL|MARK, .v=6*DESCR},  /* [0] hdr: self-ptr at init        */
+    {.a={.i=0}, .f=FNC,      .v=2},         /* [1] EARBFN ptr at init           */
+    {.a={.i=0}, .f=0,        .v=3*DESCR},   /* [2] nval V=3*DESCR               */
+    {0},                                     /* [3] zero                         */
+    {.a={.i=0}, .f=FNC,      .v=2},         /* [4] SCOKFN ptr at init           */
+    {.a={.i=6*DESCR}, .f=0,  .v=0},         /* [5] link A=6*DESCR               */
+    {0}                                      /* [6] zero                         */
+};
+/* ARHED — ARB head: 12*DESCR body (13 slots) [v311.sil line 12058]         */
+/* slot[8]: A=9*DESCR, V=12*DESCR (both set per oracle)                     */
+DESCR_t ARHED[13] = {
+    {.a={.i=0}, .f=TTL|MARK, .v=12*DESCR}, /* [0]  hdr: self-ptr at init       */
+    {.a={.i=0}, .f=FNC,      .v=2},         /* [1]  SCOKFN ptr at init          */
+    {.a={.i=0}, .f=0,        .v=3*DESCR},   /* [2]  V=3*DESCR                   */
+    {0},                                     /* [3]  zero                        */
+    {.a={.i=0}, .f=FNC,      .v=2},         /* [4]  SCOKFN ptr at init          */
+    {.a={.i=6*DESCR}, .f=0,  .v=0},         /* [5]  A=6*DESCR                   */
+    {0},                                     /* [6]  zero                        */
+    {.a={.i=0}, .f=FNC,      .v=2},         /* [7]  ARBNFN ptr at init          */
+    {.a={.i=9*DESCR}, .f=0,  .v=12*DESCR},  /* [8]  A=9*DESCR, V=12*DESCR       */
+    {0},                                     /* [9]  zero                        */
+    {.a={.i=0}, .f=FNC,      .v=2},         /* [10] ARBFFN ptr at init          */
+    {0}, {0}                                 /* [11][12] zero                    */
+};
+/* ARBPT — ARB: 9*DESCR body (10 slots) [v311.sil line 12047]               */
+DESCR_t ARBPT[10] = {
+    {.a={.i=0}, .f=TTL|MARK, .v=9*DESCR},  /* [0] hdr: self-ptr at init        */
+    {.a={.i=0}, .f=FNC,      .v=2},         /* [1] SCOKFN ptr at init           */
+    {.a={.i=0}, .f=0,        .v=3*DESCR},   /* [2] V=3*DESCR                    */
+    {0},                                     /* [3] zero                         */
+    {.a={.i=0}, .f=FNC,      .v=2},         /* [4] SCOKFN ptr at init           */
+    {.a={.i=6*DESCR}, .f=0,  .v=0},         /* [5] A=6*DESCR                    */
+    {0},                                     /* [6] zero                         */
+    {.a={.i=0}, .f=FNC,      .v=2},         /* [7] FARBFN ptr at init           */
+    {.a={.i=6*DESCR}, .f=0,  .v=0},         /* [8] A=6*DESCR                    */
+    {0}                                      /* [9] zero                         */
+};
+/* ARBAK — ARBNO back: 6*DESCR body (7 slots) [v311.sil line 12039]         */
+/* slot[2]: A=3*DESCR (link), not V */
+DESCR_t ARBAK[7] = {
+    {.a={.i=0}, .f=TTL|MARK, .v=6*DESCR},  /* [0] hdr: self-ptr at init        */
+    {.a={.i=0}, .f=FNC,      .v=2},         /* [1] ONARFN ptr at init           */
+    {.a={.i=3*DESCR}, .f=0,  .v=0},         /* [2] A=3*DESCR                    */
+    {0},                                     /* [3] zero                         */
+    {.a={.i=0}, .f=FNC,      .v=2},         /* [4] ONRFFN ptr at init           */
+    {0}, {0}                                 /* [5][6] zero                      */
+};
+/* ABORPT — ABORT: 3*DESCR body (4 slots) [v311.sil line 12034]             */
+DESCR_t ABORPT[4] = {
+    {.a={.i=0}, .f=TTL|MARK, .v=3*DESCR},  /* [0] hdr: self-ptr at init        */
+    {.a={.i=0}, .f=FNC,      .v=2},         /* [1] ABORFN ptr at init           */
+    {0}, {0}
 };

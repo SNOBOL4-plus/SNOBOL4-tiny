@@ -294,6 +294,13 @@ extern DESCR_t RTBFN;     /* RTAB scan fn   (opcode XRTB=26)              */
 extern DESCR_t DSARFN;    /* deferred-expr scan fn (opcode XDSAR=14)      */
 extern DESCR_t BALFN;     /* BAL match scan fn (opcode XBAL=6)            */
 extern DESCR_t BALFFN;    /* BAL failure scan fn (opcode XBALF=7)         */
+extern DESCR_t EARBFN;    /* ARB extended scan fn (XEARB=13)              */
+extern DESCR_t ARBNFN;    /* ARBNO scan fn (XARBN=3)                      */
+extern DESCR_t ARBFFN;    /* ARB failure scan fn (XARBF=2)                */
+extern DESCR_t FARBFN;    /* ARB first try scan fn (XFARB=17)             */
+extern DESCR_t ONARFN;    /* ARBNO predecessor scan fn (XONAR=22)         */
+extern DESCR_t ONRFFN;    /* ARBNO predecessor rf scan fn (XONRF=23)      */
+extern DESCR_t ABORFN;    /* ABORT scan fn (XRTNL3=34)                    */
 /* Primitive pattern nodes (v311.sil §24 — static arena blocks)             */
 extern DESCR_t FAILPT[4];    /* FAIL pattern node  (3*DESCR body)            */
 extern DESCR_t FNCEPT[4];    /* FENCE pattern node (3*DESCR body)            */
@@ -301,6 +308,11 @@ extern DESCR_t REMPT[5];     /* RTAB pattern node  (4*DESCR body)            */
 extern DESCR_t STARPT[12];   /* * expression pattern node (11*DESCR body)    */
 extern DESCR_t SUCCPT[4];    /* SUCCEED pattern node (3*DESCR body)          */
 extern DESCR_t BALPT[10];    /* BAL pattern node (9*DESCR body)              */
+extern DESCR_t ARTAL[7];     /* ARB tail pattern node (6*DESCR body)         */
+extern DESCR_t ARHED[13];    /* ARB head pattern node (12*DESCR body)        */
+extern DESCR_t ARBPT[10];    /* ARB pattern node (9*DESCR body)              */
+extern DESCR_t ARBAK[7];     /* ARBNO back pattern node (6*DESCR body)       */
+extern DESCR_t ABORPT[4];    /* ABORT pattern node (3*DESCR body)            */
 extern DESCR_t TVALPL[3];    /* value trace pair list                        */
 extern DESCR_t TLABPL[3];    /* label trace pair list                        */
 extern DESCR_t TFENPL[3];    /* call trace pair list                         */
