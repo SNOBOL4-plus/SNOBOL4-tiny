@@ -273,7 +273,9 @@ RESULT_t ATOP_fn(void)
     if (D_F(YPTR) & FNC) {
         INCL = YPTR;
         switch (INVOKE_fn()) {
-        default:
+        case FAIL: return FAIL;           /* exit 1: propagate failure */
+        case OK:   break;                 /* exit 2: name result → ATOP1, no E check */
+        default:                          /* exit 3: value result → must be EXPRESSION */
             if (YPTR.v != E) return nemo();
             break;
         }
@@ -301,7 +303,7 @@ static RESULT_t nam_dol(const DESCR_t *op_cl)
         int rc = INVOKE_fn();
         XPTR = saved_xptr; /* NAM4: restore first argument */
         if (rc == FAIL) return FAIL;
-        if (YPTR.v != E) return nemo(); /* VEQLC YPTR,E,NEMO — verify EXPRESSION */
+        if (rc != OK && YPTR.v != E) return nemo(); /* exit3 value: must be EXPRESSION; exit2 name: skip E check */
     }
     if (XPTR.v == S) { /* NAM3: coerce STRING first-arg to pattern node if needed */
         LOCSP_fn(&TSP, &XPTR); /* NAMV: convert string to pattern */
