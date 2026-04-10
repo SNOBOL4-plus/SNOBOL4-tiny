@@ -224,10 +224,19 @@ static RESULT_t fentr_common(void)
         INCRA(WCL, 1);
         RESULT_t rc = ARGINT_fn(WPTR, WCL);
         if (rc == FAIL) break;
-        GETDC_B(ZPTR, XPTR, DESCR);
+        GETDC_B(ZPTR, ZPTR, DESCR); /* SIL: GETDC ZPTR,ZPTR,DESCR — source is ZPTR not XPTR */
         SPEC_t vsp;
         switch (D_V(ZPTR)) {
-        case S: LOCSP_fn(&vsp, &ZPTR); break;
+        case S: /* DEFTV: wrap string in quotes */
+            LOCSP_fn(&vsp, &ZPTR);
+            D_A(SCL) = vsp.l;
+            SUM(TCL, TCL, SCL);
+            if (D_A(TCL) >= BUFLEN) { XCALL_OUTPUT(D_A(OUTPUT), "***PRINT REQUEST TOO LONG***\n"); return OK; }
+            APDSP_fn(&PROTSP, &QTSP);
+            APDSP_fn(&PROTSP, &vsp);
+            APDSP_fn(&PROTSP, &QTSP);
+            APDSP_fn(&PROTSP, &CMASP);
+            continue;
         case I: INTSPC_fn(&vsp, &ZPTR); break;
         default:
             if (DTREP_fn3(&XPTR, ZPTR) == FAIL) break;
