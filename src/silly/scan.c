@@ -756,8 +756,8 @@ lprrri:
         if (scl == 3) {
             if (n < 0) scan_error(SCAN_ERR_NEGATIVE); /* RPOS */
             int32_t desired = XSP.l - n;
-            if (TXSP.l < desired) GOTO_TSALT;
-            if (TXSP.l > desired) GOTO_TSALF;
+            if (TXSP.l < desired) GOTO_TSALF;  /* cursor before target: already past (TSALF) */
+            if (TXSP.l > desired) GOTO_TSALT;  /* cursor after target: length fail (TSALT) */
             GOTO_TSCOK;
         }
         if (scl == 4) {
