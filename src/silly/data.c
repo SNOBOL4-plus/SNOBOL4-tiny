@@ -552,6 +552,7 @@ void data_init(void)
     OCALIM.a.i = (int_t)(OCASIZ * DESCR); OCALIM.v = C;
     STARSZ.a.i = (int_t)(11 * DESCR); STARSZ.v = P;
     COMDCT.a.i = (int_t)(15 * DESCR);
+    COMREG.a.i = P2A(&ELEMND);   /* SIL: COMREG DESCR ELEMND,0,0 — A=ELEMND */
     SIZLMT.a.i = (int_t)(0x7fffffff);
     /* OBEND and OBPTR set by arena_init() — OBLIST now lives in arena */
     OUTBLK.a.i = P2A(&OUTPUT) - DESCR; /* OUTBLK = OUTPUT - DESCR  (pointer arithmetic on unit DESCRs) */
