@@ -268,6 +268,17 @@ static int _expr_is_pat(EXPR_t *e) {
     return 0;
 }
 
+/* BP-1: return interior ptr into DATA instance field, or NULL if not found */
+static DESCR_t *data_field_ptr(const char *fname, DESCR_t inst) {
+    if (inst.v < DT_DATA || !inst.u) return NULL;
+    DATBLK_t *blk = inst.u->type;
+    if (!blk) return NULL;
+    for (int i = 0; i < blk->nfields; i++)
+        if (blk->fields[i] && strcasecmp(blk->fields[i], fname) == 0)
+            return &inst.u->fields[i];
+    return NULL;
+}
+
 static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
 {
     if (call_depth >= CALL_STACK_MAX) return FAILDESCR;
@@ -637,11 +648,16 @@ static DESCR_t interp_eval(EXPR_t *e)
         /* .X — dot operator: delegate to NAME_fn (snobol4.c export).
          * NAME_fn returns NAMEVAL for keywords/IO vars (not addressable by ptr)
          * and NAMEPTR (interior ptr) for ordinary NV cells.
-         * E_IDX (array/table subscript) still uses interp_eval_ref directly
-         * since the cell lifetime is guaranteed by the live array object. */
+         * BP-1: .field(x) — E_FNC child with one arg — must return NAMEPTR into
+         * the DATA struct field cell, not a name-table lookup. */
         if (e->nchildren < 1) return FAILDESCR;
         EXPR_t *child = e->children[0];
-        if ((child->kind == E_VAR || child->kind == E_FNC || child->kind == E_KEYWORD)
+        if (child->kind == E_FNC && child->sval && child->nchildren == 1) {
+            DESCR_t inst = interp_eval(child->children[0]);
+            DESCR_t *cell = data_field_ptr(child->sval, inst);
+            if (cell) return NAMEPTR(cell);
+        }
+        if ((child->kind == E_VAR || child->kind == E_KEYWORD)
                 && child->sval)
             return NAME_fn(child->sval);
         DESCR_t *cell = interp_eval_ref(child);
