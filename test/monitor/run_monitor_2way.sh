@@ -5,6 +5,9 @@
 # Exit 0 = agree. Exit 1 = diverge. Exit 2 = timeout.
 
 set -uo pipefail
+# PREREQUISITE: bootsbl must be built in the x64 repo before first use.
+#   cd /home/claude/x64 && make bootsbl
+# bin/sbl lacks EXTFUN/LOAD support; bootsbl is built with -DEXTFUN=1 -ldl.
 SNO=${1:?usage: run_monitor_2way.sh <sno_file> [tracepoints_conf]}
 CONF=${2:-$(dirname "$0")/tracepoints.conf}
 MDIR=$(cd "$(dirname "$0")" && pwd)
