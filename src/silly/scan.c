@@ -1227,12 +1227,40 @@ enmi3:
 }
 
 /*====================================================================================================================*/
-/* SUCF — SUCCEED failure: reenter SCON */
+/* SUCE — SUCCEED match entry (v311.sil 4204)
+ *   INCRA   PDLPTR,3*DESCR
+ *   ACOMP   PDLPTR,PDLEND,INTR31   (oracle uses >, not >=)
+ *   PUTDC   PDLPTR,DESCR,SUCFCL    slot 1 = SUCCEED failure fn
+ *   GETLG   TMVAL,TXSP             length matched so far
+ *   PUTDC   PDLPTR,2*DESCR,TMVAL   slot 2 = saved length
+ *   PUTDC   PDLPTR,3*DESCR,LENFCL  slot 3 = saved length-failure flag
+ *   SETAC   LENFCL,1
+ *   BRANCH  SCOK
+ */
+static void do_SUCE(void)
+{
+    D_A(PDLPTR) += 3*DESCR;
+    if (D_A(PDLPTR) > D_A(PDLEND)) { SETAC(ERRTYP, 0); GOTO_TSALF; } /* INTR31 */
+    PUTDC_BLK(PDLPTR, DESCR,   SUCFCL);
+    D_A(TMVAL) = (int32_t)TXSP.l;
+    D_F(TMVAL) = D_V(TMVAL) = 0;
+    PUTDC_BLK(PDLPTR, 2*DESCR, TMVAL);
+    PUTDC_BLK(PDLPTR, 3*DESCR, LENFCL);
+    D_A(LENFCL) = 1;
+    GOTO_SCOK;
+}
+
+/*====================================================================================================================*/
+/* SUCF — SUCCEED failure: restore XCL/YCL, re-enter SUCE (v311.sil 4217)
+ *   GETDC   XCL,PDLPTR,DESCR
+ *   GETDC   YCL,PDLPTR,2*DESCR
+ *   BRANCH  SUCE
+ */
 static void do_SUCF(void)
 {
-    GETDC_BLK(XCL, PDLPTR, DESCR);    /* SC-31: slot 1 (oracle: D_A(PDLPTR)+DESCR) */
+    GETDC_BLK(XCL, PDLPTR, DESCR);
     GETDC_BLK(YCL, PDLPTR, 2*DESCR);
-    do_SCON(); /* BRANCH SUCE — re-enter SUCCEED path */
+    do_SUCE();
 }
 
 /*====================================================================================================================*/

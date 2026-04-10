@@ -1427,6 +1427,7 @@ void init_syntab(void)
     /* SUCCPT: [0]=self-ptr, [1].a=P2A(&SUCFFN) */
     SUCCPT[0].a.i = P2A(SUCCPT);
     SUCCPT[1].a.i = P2A(&SUCFFN);
+    SUCFCL.a.i    = P2A(&SUCFFN); /* SUCFCL = DESCR SUCFFN,FNC,2 (v311.sil 10800) */
     /* STRPAT: arena offset of STARPT template (used by SJSR/ASGN for *X wrapping) */
     STRPAT.a.i = P2A(STARPT);
     /* BALPT: [0]=self-ptr, [1].a=P2A(&SCOKFN), [4].a=P2A(&BALFN), [7].a=P2A(&BALFFN) */
@@ -1943,6 +1944,7 @@ int deql_fn(DESCR_t a, DESCR_t b)
 /* ── Scan function-code descriptors [v311.sil §24: DESCR Xfoo,0,narg]       */
 /* A-field = integer opcode (XSUCF etc); flag=0; v=arg count.               */
 DESCR_t SUCFFN = {.a={.i=XSUCF}, .f=0, .v=2}; /* SUCCEED              */
+DESCR_t SUCFCL = {.a={.i=0},     .f=FNC, .v=2}; /* SUCFCL: ptr→SUCFFN, filled at init (v311.sil 10800) */
 DESCR_t SALFFN = {.a={.i=XSALF}, .f=0, .v=2}; /* SALF link            */
 DESCR_t SCOKFN = {.a={.i=XSCOK}, .f=0, .v=2}; /* scan-ok continuation */
 DESCR_t STARFN = {.a={.i=XSTAR}, .f=0, .v=3}; /* *X expression        */
