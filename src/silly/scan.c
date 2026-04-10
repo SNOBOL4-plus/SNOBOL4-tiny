@@ -794,7 +794,7 @@ static void do_ARBF(void) { TMVAL = opop(); do_ONAR2(); }
 
 static void do_ONAR2(void)
 {
-    if (AEQLC(LENFCL, 0)) GOTO_TSALT;
+    if (D_A(LENFCL) != 0) GOTO_TSALT; /* AEQLC LENFCL,0,TSALT: arg3=false → LENFCL!=0 → TSALT */
     GOTO_SALF;
 }
 
@@ -839,7 +839,7 @@ static void do_FARB(void)
     int32_t nval;
     if (!AEQLC(FULLCL, 0)) { nval = 0; goto farb3; } /* FARB: FULLCL!=0 → nval=0 → FARB3 */
     /* FARB2: FULLCL==0 */
-    if (AEQLC(LENFCL, 0)) goto farb1;
+    if (D_A(LENFCL) != 0) goto farb1; /* AEQLC LENFCL,0,FARB1: arg3=false → LENFCL!=0 → FARB1 */
     nval = D_A(YCL);
 farb3:
     {   /* FARB3 */
