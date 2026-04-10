@@ -368,8 +368,7 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
 
         if (body) {
             STMT_t *s = body;
-            int step_limit = 5000000;
-            while (s && step_limit-- > 0) {
+            while (s) {
                 if (s->is_end) break;
                 if (s->subject && (s->subject->kind == E_CHOICE ||
                                    s->subject->kind == E_UNIFY  ||
@@ -1433,11 +1432,15 @@ static void execute_program(Program *prog)
     prescan_defines(prog);
 
     STMT_t *s = prog->head;
-    int step_limit = 10000000;   /* guard against infinite loops in smoke tests */
+    /* No hardcoded step_limit — &STLIMIT (kw_stlimit) governs via comm_stno().
+     * comm_stno() increments kw_stcount and fires sno_runtime_error(22) when
+     * kw_stlimit >= 0 && kw_stcount > kw_stlimit.  The setjmp handler below
+     * breaks the loop for terminal error codes (22 = STLIMIT exceeded). */
 
     /* Arm runtime-error longjmp.  sno_runtime_error() prints the message
      * and longjmps here with the error code.  We treat it as statement
-     * failure (SNOBOL4 spec: runtime error → fail branch, then END).    */
+     * failure (SNOBOL4 spec: runtime error → fail branch, then END).
+     * Terminal errors (code 20-23, 26-27, 29-31, 39) exit the loop. */
     g_sno_err_active = 1;
 
     /* Hoist per-iteration state above setjmp: C99 forbids goto crossing an
@@ -1448,7 +1451,7 @@ static void execute_program(Program *prog)
     const char *subj_name = NULL;
     const char *target    = NULL;
 
-    while (s && step_limit-- > 0) {
+    while (s) {
         if (s->is_end) break;
         comm_stno(++stno);
 
@@ -1457,9 +1460,12 @@ static void execute_program(Program *prog)
             fprintf(stderr, "TRACE stmt %d\n", stno);
 
         /* Catch runtime errors (longjmp from sno_runtime_error).
-         * On error: take :F branch if present, else advance to next stmt. */
-        if (setjmp(g_sno_err_jmp) != 0) {
+         * Terminal errors (stlimit, storage, etc.) break the loop.
+         * Soft errors: take :F branch if present, else advance. */
+        int _err = setjmp(g_sno_err_jmp);
+        if (_err != 0) {
             /* message already printed by sno_runtime_error() */
+            if (sno_err_is_terminal(_err)) break;   /* &STLIMIT, storage, etc. */
             succeeded = 0;
             target    = NULL;
             if (s->go && s->go->onfailure && *s->go->onfailure)
