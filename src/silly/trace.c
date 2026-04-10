@@ -62,7 +62,7 @@ static RESULT_t tracep(DESCR_t xptr, DESCR_t yptr, DESCR_t wptr, DESCR_t zptr)
     int32_t blk = BLOCK_fn(5*DESCR, C); /* Allocate 5*DESCR code block, copy TRCBLK skeleton */
     if (!blk) return FAIL;
     SETAC(XCL, blk);
-    memcpy(A2P(blk), TRCBLK, 6 * sizeof(DESCR_t));
+    memcpy(A2P(blk), TRCBLK, 5 * sizeof(DESCR_t)); /* MOVBLK XCL,TRCBLK,XSIZ (XSIZ=5*DESCR) */
     SETVC(TPTR, 2); /* SETVC TPTR,2 — 2 arguments */
     PUTDC_B(XCL, 1*DESCR, TPTR); /* function descriptor */
     PUTDC_B(XCL, 3*DESCR, xptr); /* name to trace       */
