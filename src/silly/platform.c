@@ -757,6 +757,9 @@ DESCR_t OUTATL = {.a={.i=0},.f=0,.v=0};         /* SIL: DESCR OTLIST,0,0  — A 
 DESCR_t KNATL  = {.a={.i=0},.f=0,.v=0};          /* SIL: DESCR KNLIST,0,0 */
 DESCR_t KVATL  = {.a={.i=0},.f=0,.v=0};          /* SIL: DESCR KVLIST,0,0 */
 DESCR_t DTATL  = {.a={.i=0},.f=0,.v=0};          /* SIL: DESCR DTLIST,0,0 */
+DESCR_t VARATB  = {.a={.i=0},.f=0,.v=0};          /* SIL STREAM table — populated by reg_tbl in init_syntab() */
+DESCR_t DATSEG  = {.a={.i=0},.f=0,.v=DATSTA};    /* SIL 10813: DATSEG DESCR 0,0,DATSTA — bumped by DATDEF */
+DESCR_t FLDCL   = {.a={.i=0},.f=0,.v=1};          /* SIL 10852: FLDCL DESCR FIELD,0,1 — .a patched in init_syntab() */
 DESCR_t DTLIST = {.a={.i=0},.f=TTL|MARK,.v=0};
 DESCR_t TRLVLIST = {.a={.i=0},.f=0,.v=0};
 DESCR_t TKRL   = {.a={.i=0},.f=0,.v=0};
@@ -1322,6 +1325,8 @@ void init_syntab(void)
     reg_tbl(&SBIPTB, &SBIPTB_st);
     reg_tbl(&UNOPTB, &UNOPTB_st);
     reg_tbl(&INTGTB, &INTGTB_st);
+    reg_tbl(&VARATB, &VARATB_st);
+    { extern RESULT_t FIELD_fn(void); D_A(FLDCL) = P2A(FIELD_fn); }  /* patch FLDCL.a = arena offset of FIELD_fn */
 
     /* BUG-CERRSP: CERRSP needs an arena-backed buffer (oracle: ERRBUF CARDSZ+STNOSZ+1).
      * Without this, sp_ptr(&CERRSP) = A2P(0) = arena_base and APDSP corrupts it. */

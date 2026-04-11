@@ -28,6 +28,12 @@ extern RESULT_t INTVAL_fn(void);
 extern void       PSTACK_fn(DESCR_t *pos);
 extern RESULT_t MULT_fn(DESCR_t *out, DESCR_t a, DESCR_t b);
 extern void       VPXPTR_fn2(void);
+/* DATDEF_fn needs: STREAM_fn, VARATB, LOCSP_fn, GENVUP_fn, error() */
+extern RESULT_t   STREAM_fn(SPEC_t *sp1, SPEC_t *sp2, DESCR_t *tbl_descr, int *stype_out);
+extern DESCR_t    VARATB;
+extern void       LOCSP_fn(SPEC_t *sp, const DESCR_t *dp);
+extern int32_t    GENVUP_fn(const SPEC_t *sp);
+extern void       error(int);
 
 #define GETDC_B(dst, base_d, off_i) \
     memcpy(&(dst), (char*)A2P(D_A(base_d)) + (off_i), sizeof(DESCR_t))
@@ -290,9 +296,247 @@ RESULT_t THAW_fn(void)
 
 /*====================================================================================================================*/
 /* ── DATDEF — DATA(P) ────────────────────────────────────────────────── */
-/* Complex: requires STREAM/VARATB, AUGATL, FINDEX, PSTACK.
- * Stubbed until those infrastructure pieces are in place. */
-RESULT_t DATDEF_fn(void) { return FAIL; }
+/*
+ * v311.sil §14 line 4748.  Three-way faithful translation:
+ *
+ * VARVAL → get prototype string into XPTR.
+ * SETAC DATACL,0           — D_A(DATACL)=0: prototype-end not yet seen.
+ * LOCSP XSP,XPTR           — XSP = specifier of XPTR string.
+ * STREAM YSP,XSP,VARATB    — break on '(' → YSP = name part.
+ * AEQLC STYPE,LPTYP,PROTER — must have stopped on '('.
+ * GENVUP(YSPPTR) → XPTR    — intern the data-type name.
+ * FINDEX(XPTR)   → ZCL     — get/create fn descriptor.
+ * INCRV DATSEG,1            — bump data-type code.
+ * check DATSEG == DATSIZ   — too many types → INTR27.
+ * MOVD YCL,ZEROCL           — field count = 0.
+ * AUGATL(DTATL, DATSEG, XPTR) — add (code,name) to data-type list.
+ * PSTACK WPTR               — record stack depth (wptr_idx = ar_top).
+ * PUSH(DATSEG); PUSH(XPTR)  — save code and name on local stack.
+ *
+ * DATA3 loop (field scan):
+ *   FSHRTN XSP,1            — consume the break char '(' or ','.
+ *   if DATACL != 0 → DAT5  — prototype end already signalled.
+ *   STREAM YSP,XSP,VARATB  — break on next ',' or ')'.
+ *   SELBRA STYPE:
+ *     LPTYP(1) → PROTER     — unexpected '(' = error.
+ *     RPTYP(3) → DATA6      — ')' = set DATACL=1, join DATA4.
+ *   DATA4:
+ *     LEQLC YSP,0 → DATA3  — zero-length field name: skip.
+ *     GENVUP(YSPPTR)→XPTR  — intern field name.
+ *     PUSH XPTR             — save field name.
+ *     FINDEX(XPTR)→XCL     — get/create field fn descriptor.
+ *     GETDC WCL,XCL,0       — WCL = procedure slot of descriptor.
+ *     DEQL WCL,FLDCL → DAT6 — if already FIELD, go DAT6.
+ *     GETDC ZPTR,XCL,DESCR  — ZPTR = field-def block pointer.
+ *     MULTC TCL,YCL,DESCR   — TCL = field_index * DESCR.
+ *     AUGATL(ZPTR, DATSEG, TCL) → ZPTR.
+ *   DAT7: PUTDC XCL,DESCR,ZPTR; INCRA YCL,1; → DATA3.
+ *   DATA6: SETAC DATACL,1; → DATA4.
+ *
+ * DAT5 (end of prototype):
+ *   LEQLC XSP,0,PROTER       — prototype must be fully consumed.
+ *   AEQLC YCL,0,,PROTER      — must have ≥1 field.
+ *   SETVA DATCL,YCL           — DATCL.v = YCL.a (field count as type-code).
+ *   PUTDC ZCL,0,DATCL         — store procedure descriptor.
+ *   MULTC YCL,YCL,DESCR; INCRA YCL,2*DESCR — total block bytes.
+ *   MOVV YCL,DATSEG            — YCL.v = DATSEG.v (data type code).
+ *   BLOCK(YCL)→ZPTR           — allocate definition block.
+ *   INCRA WPTR,DESCR           — skip DATSEG slot, point at XPTR slot.
+ *   MOVBLK ZPTR,WPTR,YCL      — copy (nfields+2)*DESCR bytes from stack.
+ *   PUTDC ZCL,DESCR,ZPTR      — store definition block in fn descriptor.
+ *   → RETNUL.
+ *
+ * DAT6: PUTDC XCL,0,FLDCL; BLOCK(TWOCL)→ZPTR;
+ *       PUTDC ZPTR,DESCR,DATSEG; MULTC TCL,YCL,DESCR; PUTDC ZPTR,2*DESCR,TCL;
+ *       → DAT7.
+ */
+RESULT_t DATDEF_fn(void)
+{
+    /* VARVAL → XPTR */
+    if (VARVAL_fn() == FAIL) return FAIL;
+    /* SETAC DATACL,0 */
+    D_A(DATACL) = 0; D_F(DATACL) = 0; D_V(DATACL) = 0;
+    /* LOCSP XSP,XPTR */
+    LOCSP_fn(&XSP, &XPTR);
+
+    /* STREAM YSP,XSP,VARATB,PROTER,PROTER — break on '(' */
+    { int stype = 0;
+      RESULT_t sr = STREAM_fn(&YSP, &XSP, &VARATB, &stype);
+      if (sr == FAIL) return FAIL; /* ST_EOS = PROTER */
+      if (D_A(STYPE) != LPTYP) return FAIL; /* not '(' = PROTER */
+    }
+
+    /* GENVUP(YSPPTR) → XPTR — intern data-type name */
+    { int32_t off = GENVUP_fn(&YSP);
+      if (!off) return FAIL;
+      SETAC(XPTR, off); SETVC(XPTR, S);
+    }
+
+    /* FINDEX(XPTR) → ZCL */
+    { int32_t foff = FINDEX_fn(&XPTR);
+      if (!foff) return FAIL;
+      SETAC(ZCL, foff); D_F(ZCL) = 0; SETVC(ZCL, 0);
+    }
+
+    /* INCRV DATSEG,1 */
+    D_V(DATSEG)++;
+    /* VEQLC DATSEG,DATSIZ,,INTR27 */
+    if ((int32_t)D_V(DATSEG) == DATSIZ) { error(27); return FAIL; }
+
+    /* MOVD YCL,ZEROCL — field count = 0 */
+    MOVD(YCL, ZEROCL);
+
+    /* AUGATL(DTATL, DATSEG, XPTR) — add data-type pair (code, name) */
+    { int32_t newlist = AUGATL_fn(D_A(DTATL), DATSEG, XPTR);
+      if (!newlist) return FAIL;
+      SETAC(DTATL, newlist);
+    }
+
+    /* PSTACK WPTR — record stack depth before pushes */
+    int wptr_idx = ar_top;   /* our PSTACK equivalent */
+
+    /* PUSH(DATSEG); PUSH(XPTR) — save code and name */
+    ar_push(DATSEG);
+    ar_push(XPTR);
+
+data3:;
+    /* FSHRTN XSP,1 — consume the break character */
+    if (XSP.l > 0) { XSP.l--; XSP.o++; }
+
+    /* AEQLC DATACL,0,DAT5 — if DATACL != 0, go to end-of-prototype */
+    if (D_A(DATACL) != 0) goto dat5;
+
+    /* STREAM YSP,XSP,VARATB — break on ',' or ')' */
+    { int stype2 = 0;
+      RESULT_t sr2 = STREAM_fn(&YSP, &XSP, &VARATB, &stype2);
+      if (sr2 == FAIL) return FAIL; /* ST_EOS = PROTER */
+      int st = D_A(STYPE);
+      if (st == LPTYP) return FAIL;           /* '(' unexpected = PROTER */
+      if (st == RPTYP) goto data6;            /* ')' = end of prototype */
+      /* fall-through: CMATYP or other = DATA4 */
+    }
+
+data4:;
+    /* LEQLC YSP,0,,DATA3 — zero-length field name: skip */
+    if (YSP.l == 0) goto data3;
+
+    /* GENVUP(YSPPTR) → XPTR — intern field name */
+    { int32_t foff2 = GENVUP_fn(&YSP);
+      if (!foff2) return FAIL;
+      SETAC(XPTR, foff2); SETVC(XPTR, S);
+    }
+
+    /* PUSH XPTR — save field name on local stack */
+    ar_push(XPTR);
+
+    /* FINDEX(XPTR) → XCL — get/create field fn descriptor */
+    { int32_t xoff = FINDEX_fn(&XPTR);
+      if (!xoff) { ar_pop(); return FAIL; }
+      SETAC(XCL, xoff); D_F(XCL) = 0; SETVC(XCL, 0);
+    }
+
+    /* GETDC WCL,XCL,0 — WCL = procedure slot (slot 0 of descriptor block) */
+    memcpy(&WCL, A2P(D_A(XCL)), sizeof(DESCR_t));
+
+    /* DEQL WCL,FLDCL,DAT6 — if procedure is FIELD, goto DAT6 */
+    if (deql(WCL, FLDCL)) goto dat6;
+
+    /* GETDC ZPTR,XCL,DESCR — ZPTR = field-def block (slot 1) */
+    memcpy(&ZPTR, (char*)A2P(D_A(XCL)) + DESCR, sizeof(DESCR_t));
+
+    /* MULTC TCL,YCL,DESCR — TCL = field_index * DESCR */
+    MOVD(TCL, YCL); D_A(TCL) *= DESCR; D_F(TCL) = D_V(TCL) = 0;
+
+    /* AUGATL(ZPTR, DATSEG, TCL) → ZPTR */
+    { int32_t newz = AUGATL_fn(D_A(ZPTR), DATSEG, TCL);
+      if (!newz) return FAIL;
+      SETAC(ZPTR, newz);
+    }
+
+dat7:;
+    /* PUTDC XCL,DESCR,ZPTR — store updated def-block in field descriptor slot 1 */
+    memcpy((char*)A2P(D_A(XCL)) + DESCR, &ZPTR, sizeof(DESCR_t));
+    /* INCRA YCL,1 — bump field count */
+    D_A(YCL)++;
+    goto data3;
+
+data6:;
+    /* SETAC DATACL,1 — note end of prototype */
+    D_A(DATACL) = 1;
+    goto data4;
+
+dat5:;
+    /* LEQLC XSP,0,PROTER — prototype must be fully consumed */
+    if (XSP.l != 0) return FAIL;
+    /* AEQLC YCL,0,,PROTER — must have at least one field */
+    if (D_A(YCL) == 0) return FAIL;
+
+    /* SETVA DATCL,YCL — DATCL.v = field count */
+    D_V(DATCL) = (int16_t)D_A(YCL);
+
+    /* PUTDC ZCL,0,DATCL — store procedure descriptor in fn block slot 0 */
+    memcpy(A2P(D_A(ZCL)), &DATCL, sizeof(DESCR_t));
+
+    /* MULTC YCL,YCL,DESCR; INCRA YCL,2*DESCR — total copy size */
+    D_A(YCL) *= DESCR;
+    D_A(YCL) += 2 * DESCR;
+    D_F(YCL) = D_V(YCL) = 0;
+
+    /* MOVV YCL,DATSEG — YCL.v = data type code */
+    D_V(YCL) = D_V(DATSEG);
+
+    /* BLOCK(YCL) → ZPTR — allocate definition block */
+    { int32_t blk = BLOCK_fn(D_A(YCL), (int)D_V(YCL));
+      if (!blk) return FAIL;
+      SETAC(ZPTR, blk); D_F(ZPTR) = 0; D_V(ZPTR) = D_V(YCL);
+    }
+
+    /* INCRA WPTR,DESCR — skip the DATSEG slot, point at XPTR slot.
+     * Oracle: WPTR.a was cstack-1 (0-based top before push),
+     * after INCRA it skips the first push (DATSEG) to reach XPTR.
+     * Our equivalent: wptr_idx+1 = index of XPTR in ar_stk. */
+    int copy_from = wptr_idx + 1; /* skip DATSEG slot (wptr_idx+0) */
+
+    /* MOVBLK ZPTR,WPTR,YCL — copy (nfields+2) DESCRs from stack into block.
+     * Oracle copies: XPTR (name), then field XPTRs pushed during loop.
+     * YCL = (nfields+2)*DESCR bytes total (nfields+1 names + 1 slot for something).
+     * We copy ar_stk[copy_from .. ar_top-1] → block slots 0..n. */
+    { int n = ar_top - copy_from;
+      for (int i = 0; i < n; i++)
+          memcpy((char*)A2P(D_A(ZPTR)) + i * DESCR,
+                 &ar_stk[copy_from + i], sizeof(DESCR_t));
+    }
+
+    /* PUTDC ZCL,DESCR,ZPTR — store definition block in fn descriptor slot 1 */
+    memcpy((char*)A2P(D_A(ZCL)) + DESCR, &ZPTR, sizeof(DESCR_t));
+
+    /* Restore stack — pop everything pushed since PSTACK */
+    ar_top = wptr_idx;
+
+    /* BRANCH RETNUL */
+    MOVD(XPTR, NULVCL); return OK;
+
+dat6:;
+    /* PUTDC XCL,0,FLDCL — mark as FIELD procedure */
+    memcpy(A2P(D_A(XCL)), &FLDCL, sizeof(DESCR_t));
+
+    /* BLOCK(TWOCL) → ZPTR — allocate 2-slot field definition block */
+    { int32_t blk2 = BLOCK_fn(D_A(TWOCL), 0);
+      if (!blk2) return FAIL;
+      SETAC(ZPTR, blk2); D_F(ZPTR) = D_V(ZPTR) = 0;
+    }
+
+    /* PUTDC ZPTR,DESCR,DATSEG — store data type code in slot 1 */
+    memcpy((char*)A2P(D_A(ZPTR)) + DESCR, &DATSEG, sizeof(DESCR_t));
+
+    /* MULTC TCL,YCL,DESCR */
+    MOVD(TCL, YCL); D_A(TCL) *= DESCR; D_F(TCL) = D_V(TCL) = 0;
+
+    /* PUTDC ZPTR,2*DESCR,TCL — store field offset in slot 2 */
+    memcpy((char*)A2P(D_A(ZPTR)) + 2*DESCR, &TCL, sizeof(DESCR_t));
+
+    goto dat7;
+}
 
 /* ── DEFDAT — create defined data object ─────────────────────────────── */
 RESULT_t DEFDAT_fn(void)
