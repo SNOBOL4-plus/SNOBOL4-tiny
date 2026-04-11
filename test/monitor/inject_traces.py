@@ -88,14 +88,31 @@ RE_LABEL_LINE = re.compile(r'^[A-Za-z][A-Za-z0-9]*[\s]')
 INTERNAL_FNS = {'MONCALL', 'MONRET', 'MONVAL'}
 
 
-def scan_sno(lines, include_rules, exclude_rules):
-    functions = []
-    variables = []
-    seen_fn   = set()
-    seen_var  = set()
+RE_INCLUDE = re.compile(r"^-INCLUDE\s+'([^']+)'", re.IGNORECASE)
 
+def _scan_lines(lines, include_rules, exclude_rules, seen_fn, seen_var,
+                functions, variables, search_dirs, visited):
     for line in lines:
         stripped = line.strip()
+
+        # Follow -INCLUDE directives into included files
+        m_inc = RE_INCLUDE.match(stripped)
+        if m_inc:
+            fname = m_inc.group(1)
+            for d in search_dirs:
+                candidate = os.path.join(d, fname)
+                if candidate in visited:
+                    break
+                if os.path.isfile(candidate):
+                    visited.add(candidate)
+                    with open(candidate) as fh:
+                        inc_lines = fh.readlines()
+                    _scan_lines(inc_lines, include_rules, exclude_rules,
+                                seen_fn, seen_var, functions, variables,
+                                search_dirs, visited)
+                    break
+            continue
+
         if stripped.startswith('*') or stripped.startswith('-'):
             continue
 
@@ -115,6 +132,28 @@ def scan_sno(lines, include_rules, exclude_rules):
                     seen_var.add(var)
                     variables.append(var)
 
+
+def scan_sno(lines, include_rules, exclude_rules, sno_path=None):
+    functions = []
+    variables = []
+    seen_fn   = set()
+    seen_var  = set()
+
+    # Build search path: driver dir + INC env var dirs
+    search_dirs = []
+    if sno_path:
+        search_dirs.append(os.path.dirname(os.path.abspath(sno_path)))
+    inc_env = os.environ.get('SNO_LIB') or os.environ.get('INC') or ''
+    for d in inc_env.split(':'):
+        if d and os.path.isdir(d):
+            search_dirs.append(d)
+
+    visited = set()
+    if sno_path:
+        visited.add(os.path.abspath(sno_path))
+
+    _scan_lines(lines, include_rules, exclude_rules, seen_fn, seen_var,
+                functions, variables, search_dirs, visited)
     return functions, variables
 
 
@@ -187,10 +226,21 @@ MONVAL_END
 
 def build_trace_registrations(functions, variables):
     lines = ['* --- MONITOR: TRACE registrations ---\n']
+    # &FTRACE activates C-native comm_call/comm_return in scrip.
+    # 4-arg TRACE CALL/RETURN activates SNOBOL MONCALL/MONRET for SPITBOL.
+    # Both coexist: scrip ignores LOAD (silent fail), uses &FTRACE + comm_call.
+    # SPITBOL ignores &FTRACE, uses LOAD + MONCALL/MONRET callbacks.
+    if functions:
+        lines.append("        &FTRACE        =  16000000\n")
     for fn in functions:
         lines.append(f"        TRACE('{fn}','CALL',   '','MONCALL')\n")
         lines.append(f"        TRACE('{fn}','RETURN', '','MONRET')\n")
+    # 2-arg TRACE(var,'VALUE') → trace_set[] → C-native comm_var (scrip).
+    # 4-arg TRACE(var,'VALUE','',MONVAL) → SNOBOL MONVAL callback (SPITBOL).
+    # Emit both: scrip executes first TRACE (2-arg, sets trace_set), ignores 2nd.
+    # SPITBOL executes both; 2nd overrides with MONVAL callback.
     for var in variables:
+        lines.append(f"        TRACE('{var}','VALUE')\n")
         lines.append(f"        TRACE('{var}','VALUE',  '','MONVAL')\n")
     lines.append('* --- MONITOR: end TRACE registrations ---\n')
     return lines
@@ -244,7 +294,7 @@ def main():
     with open(sno_path) as f:
         lines = f.readlines()
 
-    functions, variables = scan_sno(lines, include_rules, exclude_rules)
+    functions, variables = scan_sno(lines, include_rules, exclude_rules, sno_path=sno_path)
     emit_instrumented(lines, functions, variables, ignore_rules, sys.stdout)
 
 

@@ -36,7 +36,7 @@ STDIN="${SNO%.sno}.input"; [ -f "$STDIN" ] || STDIN=/dev/null
     > "$TMP/spl.out" 2>"$TMP/spl.err") &
 SPL_PID=$!
 
-# Step 4: launch scrip --ir-run (uses C-native monitor in snobol4.c)
+# Step 4: launch scrip --ir-run (C-native monitor via comm_var/comm_call in snobol4.c)
 SNO_LIB="$INC" \
     MONITOR_READY_PIPE="$TMP/scrip.ready" MONITOR_GO_PIPE="$TMP/scrip.go" \
     "$DIR/scrip" --ir-run "$TMP/instr.sno" < "$STDIN" \
