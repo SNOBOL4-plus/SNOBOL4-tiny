@@ -233,6 +233,7 @@ extern DESCR_t UINTCL;    /* user interrupt flag [PLB109]                 */
 
 extern DESCR_t ERRTYP;    /* &ERRTYPE      (init=0)                       */
 extern DESCR_t ERRTXT;    /* &ERRTEXT      (init="") [PLB38]              */
+extern DESCR_t ETXTKY;    /* &ERRTEXT name-spec [PLB38]                   */
 extern DESCR_t ARBPAT;    /* &ARB          pattern descriptor             */
 extern DESCR_t BALPAT;    /* &BAL          pattern descriptor             */
 extern DESCR_t FNCPAT;    /* &FENCE        pattern descriptor             */

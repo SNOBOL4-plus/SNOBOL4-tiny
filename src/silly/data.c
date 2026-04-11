@@ -111,6 +111,8 @@ DESCR_t UINTCL = D0;
 
 DESCR_t ERRTYP    = D(0, 0, I);  /* &ERRTYPE                            */
 DESCR_t ERRTXT    = D(0, 0, S);  /* &ERRTEXT [PLB38]                    */
+/* SIL: ETXTKY DESCR ERTXSP,0,0 — name-spec for &ERRTEXT [PLB38] */
+DESCR_t ETXTKY    = D0;           /* .a filled at runtime */
 DESCR_t ARBPAT    = D(0, 0, P);   /* &ARB    — .a filled in data_init */
 DESCR_t BALPAT    = D(0, 0, P);   /* &BAL    — .a filled in data_init */
 DESCR_t FNCPAT    = D(0, 0, P);   /* &FENCE  — .a filled in data_init */
