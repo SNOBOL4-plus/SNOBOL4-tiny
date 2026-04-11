@@ -131,15 +131,19 @@ DESCR_t LVLCL    = D(0, 0, I);   /* &FNCLEVEL                           */
 DESCR_t LCASVL   = D0;            /* &LCASE [PLB18]                      */
 DESCR_t UCASVL   = D0;            /* &UCASE [PLB18]                      */
 DESCR_t PARMVL   = D(0, 0, S);   /* &PARM [PLB39]                       */
-DESCR_t DIGSVL   = D0;            /* &DIGITS [PLB105]                    */
+/* SIL: DIGSVL DESCR 0,0,0 — &DIGITS value cell [PLB105] */
+DESCR_t DIGSVL   = D0;            /* &DIGITS [PLB105] — D0 = 0,0,0 correct */
 DESCR_t EXN2CL   = D(0, 0, I);   /* &STEXEC [PLB107]                    */
-DESCR_t GCTTTL   = D0;            /* &GCTIME [PLB107]                    */
+/* SIL: GCTTTL REAL 0.0 — real-typed DESCR slot [PLB92][PLB107] */
+DESCR_t GCTTTL   = {.a={.f=0.0f}, .f=0, .v=R};
+/* SIL: gctttl+2  DESCR SMAXINT,0,I — &MAXINT initial value [PLB108][PLB116] */
+DESCR_t MAXICL   = {.a={.i=0x7FFFFFFF}, .f=0, .v=I};
 DESCR_t FATLCL   = D(0, 0, I);   /* &FATAL [PLB128]                     */
 
 /* ── Real-valued keywords ────────────────────────────────────────────── */
 
-real_t PI_val    = 3.14159265358979323846f;   /* &PI [PLB106]            */
-real_t GCTTTL_val = 0.0f;                      /* GC total time           */
+/* SIL: digsvl+2  REAL 3.14159... — &PI value cell [PLB106] */
+DESCR_t PIVCL    = {.a={.f=3.14159265358979323846f}, .f=0, .v=R};
 DESCR_t RZERCL   = {.a={.f=0.0f},  .f=0, .v=R}; /* real zero [PLB104]  */
 DESCR_t R1MCL    = {.a={.f=1.0e6f},.f=0, .v=R}; /* 1e6 [PLB107]        */
 
@@ -188,7 +192,7 @@ DESCR_t BUKPTR = {.a={.i=0},.f=PTR,.v=S}, /* SIL: DESCR 0,PTR,S */
 
 /* ── Compiler working storage ────────────────────────────────────────── */
 
-DESCR_t STNOCL = D0, LNNOCL = D0, FILENM = D0, CSTNCL = D0;
+DESCR_t STNOCL = D0, LNNOCL = D0, FILENM = D0, CSTNCL = D(0, 0, I);
 DESCR_t STYPE = D0, BRTYPE = D0;
 DESCR_t FBLOCK = D0, NEXFCL = D0;
 DESCR_t FNLIST = D0;
