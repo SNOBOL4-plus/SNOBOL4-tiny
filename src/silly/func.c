@@ -493,8 +493,8 @@ L_DMPA:
     LOCSP_fn(&YSP, &yptr);
 
     /* GETLG YCL,YSP; ACOMPC YCL,BUFLEN,DMPOVR,DMPOVR */
-    DESCR_t ycl; ycl.a.i = YSP.l; ycl.f = 0; ycl.v = 0; /* YCL = name len */
-    if (ycl.a.i >= BUFLEN) goto L_DMPOVR;
+    int32_t ycl_name = YSP.l;                  /* YCL = name length — kept for SUM at DMPX */
+    if (ycl_name >= BUFLEN) goto L_DMPOVR;
 
     APDSP_fn(&DMPSP, &YSP);                    /* APDSP DMPSP,YSP */
     APDSP_fn(&DMPSP, &BLEQSP);                 /* APDSP DMPSP,BLEQSP */
@@ -508,9 +508,10 @@ L_DMPA:
       else     YSP.l = 0; }
 
 L_DMPX: {
-    DESCR_t xcl; xcl.a.i = YSP.l; xcl.f = 0; xcl.v = 0; /* GETLG XCL,YSP */
-    ycl.a.i += xcl.a.i;                        /* SUM YCL,YCL,XCL — running total */
-    if (ycl.a.i > BUFLEN) goto L_DMPOVR;       /* ACOMPC YCL,BUFLEN,DMPOVR */
+    int32_t xcl_val = YSP.l;                   /* GETLG XCL,YSP */
+    int32_t ycl_total = ycl_name + xcl_val;    /* SUM YCL,YCL,XCL — name_len + val_len */
+    if (ycl_total > BUFLEN) goto L_DMPOVR;     /* ACOMPC YCL,BUFLEN,DMPOVR */
+    { DESCR_t xcl; xcl.a.i = xcl_val; xcl.f = 0; xcl.v = 0; (void)xcl; }
     APDSP_fn(&DMPSP, &YSP);                    /* APDSP DMPSP,YSP */
     /* VEQLC XPTR,T,DMPRT — table? */
     if (XPTR.v != T) goto L_DMPRT;
@@ -527,9 +528,8 @@ L_DMPRT:
 L_DMPV: {
     SPEC_t ysp2;
     LOCSP_fn(&ysp2, &XPTR);                    /* LOCSP YSP,XPTR */
-    DESCR_t xcl; xcl.a.i = ysp2.l; xcl.f = 0; xcl.v = 0;
-    ycl.a.i += xcl.a.i;                        /* SUM YCL,YCL,XCL — running total */
-    if (ycl.a.i > BUFLEN) goto L_DMPOVR;
+    int32_t xcl_str = ysp2.l;                  /* GETLG XCL,YSP */
+    if (ycl_name + xcl_str > BUFLEN) goto L_DMPOVR; /* SUM YCL,YCL,XCL; ACOMPC */
     APDSP_fn(&DMPSP, &QTSP);                   /* APDSP DMPSP,QTSP */
     APDSP_fn(&DMPSP, &ysp2);                   /* APDSP DMPSP,YSP */
     APDSP_fn(&DMPSP, &QTSP);                   /* APDSP DMPSP,QTSP */
@@ -555,9 +555,8 @@ RESULT_t DMK_fn(void)
 
     /* GETSIZ XCL,KNLIST — XCL.a = KNLIST.v (size of pair list in bytes) */
     DESCR_t xcl;
-    { DESCR_t *kn = (DESCR_t *)A2P(KNLIST.a.i);  /* GETSIZ: deref KNLIST.a */
-      xcl.a.i = kn->v; }                          /* then read v-field (size) */
-    xcl.f = 0; xcl.v = 0;
+    xcl.a.i = KNLIST.v;
+    xcl.f   = 0; xcl.v = 0;
 
 L_DMPK1: {
     /* GETD XPTR,KNLIST,XCL — get name entry at offset XCL */
