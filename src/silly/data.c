@@ -698,6 +698,19 @@ void data_init(void)
     { static const char alph_lit[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
       ALPHSP.a = P2A(alph_lit); ALPHSP.o = 0;
       ALPHSP.l = (int32_t)(sizeof(alph_lit)-1); ALPHSP.v = S; }
+    /* Static string SPECs — v311.sil §24 STRING definitions */
+    { static const char qt_lit[]   = "\"";
+      QTSP.a = P2A(qt_lit);     QTSP.o = 0;  QTSP.l = 1; }
+    { static const char amp_lit[]  = "&";
+      AMPSP.a = P2A(amp_lit);   AMPSP.o = 0; AMPSP.l = 1; }
+    { static const char bleq_lit[] = " = ";
+      BLEQSP.a = P2A(bleq_lit); BLEQSP.o = 0;
+      BLEQSP.l = (int32_t)(sizeof(bleq_lit)-1); }
+    { static const char bl_lit[]   = " ";
+      BLSP.a = P2A(bl_lit);     BLSP.o = 0;  BLSP.l = 1; }
+    { static const char frzn_lit[] = " - FROZEN";
+      FRZNSP.a = P2A(frzn_lit); FRZNSP.o = 0;
+      FRZNSP.l = (int32_t)(sizeof(frzn_lit)-1); }
     /* Register all platform scan tables (CARDTB, IBLKTB, ELEMTB, etc.)
      * Must be called after arena_init() sets arena_base. */
     extern void init_syntab(void);

@@ -37,6 +37,7 @@ RESULT_t DATE_fn(void);
 RESULT_t DT_fn(void);
 RESULT_t DMP_fn(void);
 RESULT_t DUMP_fn(void);
+RESULT_t DMK_fn(void);
 RESULT_t DUPL_fn(void);
 RESULT_t OPSYN_fn(void);
 RESULT_t RPLACE_fn(void);

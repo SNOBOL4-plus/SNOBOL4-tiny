@@ -415,6 +415,7 @@ extern DESCR_t DT1CL;    /* data-type scratch (DT proc)                  */
 extern DESCR_t ETMCL;    /* elapsed-time descriptor (TIME)               */
 extern DESCR_t DMPPTR;   /* bin pointer for DUMP                         */
 extern SPEC_t  DMPSP;    /* dump output buffer specifier                 */
+extern SPEC_t  FRZNSP;   /* " - FROZEN" specifier [PLB34]                */
 extern SPEC_t  PROTSP;   /* prototype buffer specifier                   */
 extern SPEC_t  QTSP;     /* quote specifier                              */
 extern SPEC_t  BLEQSP;   /* " = " specifier                              */

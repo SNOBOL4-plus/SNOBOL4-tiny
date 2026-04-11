@@ -7,6 +7,7 @@
  */
 
 #include <string.h>
+#include <stdio.h>
 #include <time.h>
 
 #include "types.h"
@@ -35,7 +36,7 @@ extern void       XCALL_SBREAL(DESCR_t *out, DESCR_t a, DESCR_t b);
 extern void       XCALL_RPLACE(SPEC_t *dst, SPEC_t *tbl, SPEC_t *rep);
 extern void       XCALL_REVERSE(SPEC_t *dst, SPEC_t *src);
 extern void       XCALL_XSUBSTR(SPEC_t *dst, SPEC_t *src, int32_t off);
-extern void       STPRNT_fn(int32_t key, void *blk, SPEC_t *sp);
+extern void       STPRNT_fn(int32_t key, DESCR_t blk, SPEC_t *sp);
 /* ICNVTA_fn, CNVTA_fn, CNVAT_fn — TABLE↔ARRAY conversions — in arrays.c */
 
 #define GETDC_B(dst, base_d, off_i) \
@@ -445,17 +446,146 @@ RESULT_t FIELDS_fn(void)
     return arg2();
 }
 
-/* ── DMP(N) / DUMP() — stub ──────────────────────────────────────────
- * Full implementation needs STPRNT, DTREP, formatted I/O.
- * Returns null (no-op) for now. */
+/* ── DMP(N) — v311.sil §19 line 6699 ────────────────────────────────
+ * INTVAL XPTR → if 0, null (no dump); else fall into DUMP. */
 RESULT_t DMP_fn(void)
 {
-    if (INTVAL_fn() == FAIL) return FAIL;
-    if (AEQLC(XPTR, 0)) { MOVD(XPTR, NULVCL); return OK; }
-    MOVD(XPTR, NULVCL); return OK; /* stub: no actual dump */
+    if (INTVAL_fn() == FAIL) return FAIL;       /* RCALL XPTR,INTVAL,,FAIL */
+    if (XPTR.a.i == 0) { MOVD(XPTR, NULVCL); return OK; } /* AEQLC XPTR,0,,RETNUL */
+    return DUMP_fn();                            /* BRANCH DUMP */
 }
-/*====================================================================================================================*/
-RESULT_t DUMP_fn(void) { MOVD(XPTR, NULVCL); return OK; }
+
+/* ── DUMP() — v311.sil §19 line 6702 ────────────────────────────────
+ * Walk OBLIST bins; for each non-null string value, print "name = value".
+ * snobol4.c: DUMP(ret_t retval) lines 9201-9264. */
+RESULT_t DUMP_fn(void)
+{
+    /* SETAC WPTR,OBLIST-DESCR — WPTR = OBPTR.a - DESCR (one slot before first bin) */
+    DESCR_t wptr, yptr;
+    wptr.a.i = OBPTR.a.i - DESCR;
+    wptr.f = 0; wptr.v = 0;
+
+L_DMPB:
+    /* PCOMP WPTR,OBEND,RETNUL — if WPTR.a > OBEND.a, done */
+    if (wptr.a.i > OBEND.a.i) { MOVD(XPTR, NULVCL); return OK; }
+    wptr.a.i += DESCR;                          /* INCRA WPTR,DESCR */
+    yptr = wptr;                                /* MOVD YPTR,WPTR */
+
+L_DMPA:
+    /* GETAC YPTR,YPTR,LNKFLD — follow link field */
+    {
+        int32_t link;
+        memcpy(&link, A2P(yptr.a.i + LNKFLD), sizeof(int32_t));
+        yptr.a.i = link;
+    }
+    if (yptr.a.i == 0) goto L_DMPB;            /* AEQLC YPTR,0,,DMPB */
+
+    /* GETDC XPTR,YPTR,DESCR — get value (one DESCR past node head) */
+    memcpy(&XPTR, A2P(yptr.a.i + DESCR), sizeof(DESCR_t));
+
+    /* DEQL XPTR,NULVCL,,DMPA — skip null values */
+    if (deql(XPTR, NULVCL)) goto L_DMPA;
+
+    /* SETLC DMPSP,0 — clear output buffer */
+    DMPSP.l = 0;
+
+    /* LOCSP YSP,YPTR — get name specifier from node */
+    LOCSP_fn(&YSP, &yptr);
+
+    /* GETLG YCL,YSP; ACOMPC YCL,BUFLEN,DMPOVR,DMPOVR */
+    { DESCR_t ycl; ycl.a.i = YSP.l; ycl.f = 0; ycl.v = 0;
+      if (ycl.a.i >= BUFLEN) goto L_DMPOVR; }
+
+    APDSP_fn(&DMPSP, &YSP);                    /* APDSP DMPSP,YSP */
+    APDSP_fn(&DMPSP, &BLEQSP);                 /* APDSP DMPSP,BLEQSP */
+
+    if (XPTR.v == S) goto L_DMPV;              /* VEQLC XPTR,S,,DMPV */
+    if (XPTR.v == I) goto L_DMPI;              /* VEQLC XPTR,I,,DMPI */
+
+    /* Else: get type representation via DTREP */
+    { SPEC_t *rep = DTREP_fn(&XPTR);           /* RCALL A1PTR,DTREP,XPTR */
+      if (rep) YSP = *rep;                     /* GETSPC YSP,A1PTR,0 */
+      else     YSP.l = 0; }
+
+L_DMPX: {
+    DESCR_t xcl, ycl2;
+    xcl.a.i = YSP.l; xcl.f = 0; xcl.v = 0;   /* GETLG XCL,YSP */
+    /* YCL is already set from above — but regenerate from DMPSP */
+    ycl2.a.i = DMPSP.l + xcl.a.i;             /* SUM YCL,YCL,XCL */
+    if (ycl2.a.i > BUFLEN) goto L_DMPOVR;     /* ACOMPC YCL,BUFLEN,DMPOVR */
+    APDSP_fn(&DMPSP, &YSP);                    /* APDSP DMPSP,YSP */
+    /* VEQLC XPTR,T,DMPRT — table? */
+    if (XPTR.v != T) goto L_DMPRT;
+    /* TESTFI XPTR,FRZN,DMPRT — frozen? */
+    { DESCR_t *hdr = (DESCR_t *)A2P(XPTR.a.i);
+      if (!(hdr->f & FRZN)) goto L_DMPRT; }
+    APDSP_fn(&DMPSP, &FRZNSP);                 /* APDSP DMPSP,FRZNSP */
+    }
+
+L_DMPRT:
+    STPRNT_fn(IOKEY.a.i, OUTBLK, &DMPSP);     /* STPRNT IOKEY,OUTBLK,DMPSP */
+    goto L_DMPA;
+
+L_DMPV: {
+    SPEC_t ysp2;
+    LOCSP_fn(&ysp2, &XPTR);                    /* LOCSP YSP,XPTR */
+    DESCR_t xcl, ycl2;
+    xcl.a.i = ysp2.l;
+    ycl2.a.i = DMPSP.l + xcl.a.i;
+    if (ycl2.a.i > BUFLEN) goto L_DMPOVR;
+    APDSP_fn(&DMPSP, &QTSP);                   /* APDSP DMPSP,QTSP */
+    APDSP_fn(&DMPSP, &ysp2);                   /* APDSP DMPSP,YSP */
+    APDSP_fn(&DMPSP, &QTSP);                   /* APDSP DMPSP,QTSP */
+    goto L_DMPRT; }
+
+L_DMPI:
+    INTSPC_fn(&YSP, &XPTR);                    /* INTSPC YSP,XPTR */
+    goto L_DMPX;
+
+L_DMPOVR:
+    /* OUTPUT OUTPUT,PRTOVF — print overflow message */
+    { size_t n = strlen(PRTOVF); fwrite(PRTOVF, 1, n, stdout); fputc('\n', stdout); }
+    goto L_DMPA;
+}
+
+/* ── DMK — v311.sil §19 line 6747 ───────────────────────────────────
+ * Dump all keywords from KNLIST pair list.
+ * snobol4.c: DMK(ret_t retval) lines 9270-9307. */
+RESULT_t DMK_fn(void)
+{
+    /* OUTPUT OUTPUT,PKEYF — print caption */
+    { size_t n = strlen(PKEYF); fwrite(PKEYF, 1, n, stdout); fputc('\n', stdout); }
+
+    /* GETSIZ XCL,KNLIST — XCL.a = KNLIST.v (size of pair list in bytes) */
+    DESCR_t xcl;
+    xcl.a.i = KNLIST.v;
+    xcl.f   = 0; xcl.v = 0;
+
+L_DMPK1: {
+    /* GETD XPTR,KNLIST,XCL — get name entry at offset XCL */
+    memcpy(&XPTR, A2P(KNLIST.a.i + xcl.a.i), sizeof(DESCR_t));
+    xcl.a.i -= DESCR;                          /* DECRA XCL,DESCR */
+    /* GETD YPTR,KNLIST,XCL — get value entry */
+    memcpy(&YPTR, A2P(KNLIST.a.i + xcl.a.i), sizeof(DESCR_t));
+
+    INTSPC_fn(&YSP, &YPTR);                    /* INTSPC YSP,YPTR (convert integer) */
+    LOCSP_fn(&XSP, &XPTR);                     /* LOCSP XSP,XPTR */
+    DMPSP.l = 0;                               /* SETLC DMPSP,0 */
+    APDSP_fn(&DMPSP, &AMPSP);                  /* APDSP DMPSP,AMPSP */
+    APDSP_fn(&DMPSP, &XSP);                    /* APDSP DMPSP,XSP */
+    APDSP_fn(&DMPSP, &BLEQSP);                 /* APDSP DMPSP,BLEQSP */
+
+    /* .IF BLOCKS: VEQLC YPTR,S,,DMPKV — string? (BLOCKS only, skip non-BLOCKS) */
+    APDSP_fn(&DMPSP, &YSP);                    /* APDSP DMPSP,YSP */
+    /* DMPK2: STPRNT IOKEY,OUTBLK,DMPSP */
+    STPRNT_fn(IOKEY.a.i, OUTBLK, &DMPSP);
+    xcl.a.i -= DESCR;                          /* DECRA XCL,DESCR */
+    /* AEQLC XCL,0,DMPK1,RTN1 — if not zero, loop; else return */
+    if (xcl.a.i != 0) goto L_DMPK1;
+    }
+
+    MOVD(XPTR, NULVCL); return OK;             /* RTN1 */
+}
 
 /* ── CONVERT(X,T) / CODE(S) — stubs ─────────────────────────────────
  * Require compiler re-entry (CMPILE, EXPR, TREPUB) and type-conversion
