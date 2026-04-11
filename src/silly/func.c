@@ -277,7 +277,7 @@ RESULT_t COPY_fn(void)
         INTR1_fn(); return FAIL;
     default: break;
     }
-    int32_t sz = x_bksize(D_A(XPTR));
+    int32_t sz = x_bkdata(D_A(XPTR));  /* GETSIZ XCL,XPTR — D_V of block header */
     SETAC(XCL, sz); MOVV(XCL, XPTR);
     int32_t blk = BLOCK_fn(sz, D_V(XPTR));
     if (!blk) return FAIL;
