@@ -2014,8 +2014,36 @@ void PAD_fn(int32_t dir, SPEC_t *out, SPEC_t *subj, SPEC_t *pad)
 }
 
 /*====================================================================================================================*/
-/* KEYT_fn */
-RESULT_t KEYT_fn(void) { return FAIL; }
+/* KEYT_fn — keyword lookup for trace (v311.sil KEYT line 6026 → KEYN line 6006)
+ * SIL: POP XPTR (name already in XPTR in Silly calling convention); BRANCH KEYN.
+ * KEYN: LOCAPV XPTR,KNATL,XPTR → if found: SETVC XPTR,K; BRANCH RTXNAM (name in XPTR).
+ *       else: LOCAPV ATPTR,KVATL,XPTR → if found: GETDC ZPTR,ATPTR,DESCR; return value.
+ *       else: UNKNKW → FAIL.
+ * snobol4.c KEYT/KEYN lines 8134-8130. */
+RESULT_t KEYT_fn(void)
+{
+    /* KEYN: look up in unprotected keyword list */
+    int32_t pair = locapv_fn(D_A(KNATL), &XPTR);
+    if (pair) {
+        /* Found: get value descriptor at pair+DESCR to check type */
+        DESCR_t yptr;
+        memcpy(&yptr, A2P(pair + DESCR), sizeof(DESCR_t));
+        if ((int32_t)yptr.v != I) {
+            D_V(XPTR) = N;   /* non-integer keyword → type N */
+        } else {
+            D_V(XPTR) = K;   /* integer keyword → type K */
+        }
+        return OK;           /* RTXNAM: name descriptor in XPTR */
+    }
+    /* KEYV: look up in protected keyword list */
+    pair = locapv_fn(D_A(KVATL), &XPTR);
+    if (pair) {
+        memcpy(&ZPTR, A2P(pair + DESCR), sizeof(DESCR_t));
+        MOVD(XPTR, ZPTR);    /* caller (trace.c) uses XPTR */
+        return OK;           /* RTZPTR: value in ZPTR/XPTR */
+    }
+    return FAIL;             /* UNKNKW */
+}
 
 /* SHORTN_fn */
 void SHORTN_fn(SPEC_t *sp, int32_t n) { if (sp->l > n) sp->l = n; }
