@@ -412,6 +412,23 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
                         /* Only read value when needed for pattern match */
                         if (s->pattern)
                             subj_val = NV_GET_fn(subj_name);
+                    } else if (s->subject->kind == E_INDIRECT && s->subject->nchildren > 0) {
+                        /* $'$B' or $X as subject — resolve to variable name for write-back.
+                         * child is E_QLIT "$B" (literal) or E_VAR X (runtime indirect). */
+                        EXPR_t *ic = s->subject->children[0];
+                        if (ic->kind == E_QLIT && ic->sval) {
+                            subj_name = ic->sval;              /* $'name' — literal */
+                        } else if (ic->kind == E_VAR && ic->sval) {
+                            DESCR_t xv = NV_GET_fn(ic->sval); /* $X — indirect */
+                            subj_name = VARVAL_fn(xv);
+                        } else {
+                            DESCR_t nd = interp_eval(ic);
+                            subj_name = VARVAL_fn(nd);
+                        }
+                        if (subj_name && s->pattern)
+                            subj_val = NV_GET_fn(subj_name);
+                        else if (!subj_name)
+                            subj_val = interp_eval(s->subject);
                     } else {
                         subj_val = interp_eval(s->subject);
                     }
@@ -1176,6 +1193,18 @@ static DESCR_t interp_eval(EXPR_t *e)
             return pat_assign_callcap(pat, fnc->sval, av, na);
         }
         const char *nm = tgt->sval;
+        if (!nm && tgt->kind == E_INDIRECT && tgt->nchildren > 0) {
+            /* REM . $'$B' — target is E_INDIRECT(E_QLIT "$B").
+             * We need the *variable name* ("$B"), not the value of $'$B'.
+             * The name is the evaluated string of the child expression. */
+            EXPR_t *ichild = tgt->children[0];
+            if (ichild->kind == E_QLIT || ichild->kind == E_VAR)
+                nm = ichild->sval;                     /* literal name: $'$B' or $.X */
+            else {
+                DESCR_t nd = interp_eval(ichild);      /* runtime indirect: $X */
+                nm = VARVAL_fn(nd);
+            }
+        }
         return nm ? pat_assign_cond(pat, STRVAL((char *)nm)) : pat;
     }
     case E_CAPT_IMMED_ASGN: {
@@ -1195,7 +1224,14 @@ static DESCR_t interp_eval(EXPR_t *e)
             const char *nm2 = VARVAL_fn(name_d);
             return nm2 ? pat_assign_imm(pat, STRVAL((char*)nm2)) : pat;
         }
-        const char *nm = e->children[1]->sval;
+        EXPR_t *tgt2 = e->children[1];
+        const char *nm = tgt2->sval;
+        if (!nm && tgt2->kind == E_INDIRECT && tgt2->nchildren > 0) {
+            EXPR_t *ichild = tgt2->children[0];
+            if (ichild->kind == E_QLIT || ichild->kind == E_VAR)
+                nm = ichild->sval;
+            else { DESCR_t nd = interp_eval(ichild); nm = VARVAL_fn(nd); }
+        }
         return nm ? pat_assign_imm(pat, STRVAL((char *)nm)) : pat;
     }
     case E_CAPT_CURSOR: {
@@ -1586,6 +1622,22 @@ static void execute_program(Program *prog)
                  * zero-arg call (APPLY_fn → g_user_call_hook), causing Error 5. */
                 if (s->pattern)
                     subj_val = NV_GET_fn(subj_name);
+            } else if (s->subject->kind == E_INDIRECT && s->subject->nchildren > 0) {
+                /* $'$B' or $X as subject — resolve to variable name for write-back */
+                EXPR_t *ic = s->subject->children[0];
+                if (ic->kind == E_QLIT && ic->sval) {
+                    subj_name = ic->sval;
+                } else if (ic->kind == E_VAR && ic->sval) {
+                    DESCR_t xv = NV_GET_fn(ic->sval);
+                    subj_name = VARVAL_fn(xv);
+                } else {
+                    DESCR_t nd = interp_eval(ic);
+                    subj_name = VARVAL_fn(nd);
+                }
+                if (subj_name && s->pattern)
+                    subj_val = NV_GET_fn(subj_name);
+                else if (!subj_name)
+                    subj_val = interp_eval(s->subject);
             } else {
                 subj_val = interp_eval(s->subject);
             }
