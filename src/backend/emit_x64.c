@@ -8608,14 +8608,6 @@ void icn_emit_file(EXPR_t **nodes, int count, FILE *outf) {
     fputs(body,real); free(body);
 }
 
-/* =========================================================================
- * Public API
- * ======================================================================= */
-void icn_emit_expr(EXPR_t *n,
-                      const char *γ, const char *ω, char *oa, char *ob) {
-    icn_emit_expr(n, γ, ω, oa,ob);
-}
-
 /* ═══════════════════════════════════════════════════════════════════════════
  * Snocone × x64 emitter — formerly emit_x64_snocone.c
  * ═══════════════════════════════════════════════════════════════════════════ */

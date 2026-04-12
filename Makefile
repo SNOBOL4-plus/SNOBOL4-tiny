@@ -91,12 +91,6 @@ scrip:
 scrip-interp: scrip
 	@ln -sf scrip scrip-interp
 
-# ── scrip (legacy compiler driver — kept until all --jit-emit targets land)
-
-scrip:
-	$(MAKE) -C $(SRC)
-	@echo "Built: scrip (legacy)"
-
 # ── monitor_ipc.so ────────────────────────────────────────────────────────────
 
 monitor-ipc:
