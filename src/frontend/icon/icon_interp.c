@@ -5,6 +5,7 @@
  * (cross-product), mirroring the alpha/beta Byrd box wiring in the emitter.
  */
 #include "icon_interp.h"
+#include "icon_lex.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,6 +29,27 @@ static EXPR_t *icn_lookup(const char *n) {
 }
 
 #define ICN_ENV_MAX 64
+
+/* ── Scan state (mirrors icn_subject/icn_pos BSS in emitter) ─────────────── */
+static const char *g_scan_subj = NULL;
+static int         g_scan_pos  = 0;   /* 1-based, 0 = no scan active */
+#define SCAN_STACK_MAX 16
+static struct { const char *subj; int pos; } g_scan_stack[SCAN_STACK_MAX];
+static int g_scan_depth = 0;
+
+/* ── Loop-break machinery (mirrors loop_push/loop_pop in emitter) ─────────── */
+#define LOOP_STACK_MAX 16
+static int g_loop_break[LOOP_STACK_MAX];  /* 1 = break signalled */
+static int g_loop_depth = 0;
+#define LOOP_PUSH() do { if(g_loop_depth<LOOP_STACK_MAX) g_loop_break[g_loop_depth++]=0; } while(0)
+#define LOOP_POP()  do { if(g_loop_depth>0) g_loop_depth--; } while(0)
+#define LOOP_BREAK_SET() do { if(g_loop_depth>0) g_loop_break[g_loop_depth-1]=1; } while(0)
+#define LOOP_BREAK_CHK() (g_loop_depth>0 && g_loop_break[g_loop_depth-1])
+
+/* ── Return value for early return from procedures ───────────────────────── */
+static IcnVal g_return_val;
+static int    g_returning = 0;  /* 1 = return in progress */
+
 static int  icn_exec(EXPR_t *e, IcnVal *env, int nenv, IcnVal *out);
 static int  icn_call(EXPR_t *proc, IcnVal *args, int nargs, IcnVal *out);
 
@@ -241,6 +263,59 @@ static int icn_exec(EXPR_t *e, IcnVal *env, int nenv, IcnVal *out) {
                 *out=a; return 1;
             }
             if (!strcmp(fn,"read"))  {*out=icn_null();return 1;}
+
+            /* ── Scan-context builtins — mirror icn_any/many/upto/find/match/move/tab ── */
+            if (!strcmp(fn,"any") && nargs==1 && g_scan_pos>0) {
+                IcnVal cs; icn_exec(e->children[1],env,nenv,&cs);
+                const char *s=g_scan_subj; int p=g_scan_pos-1; /* 0-based */
+                if (!s||!cs.sval||p>=(int)strlen(s)) return 0;
+                if (!strchr(cs.sval, s[p])) return 0;
+                g_scan_pos++; *out=icn_int(g_scan_pos); return 1;
+            }
+            if (!strcmp(fn,"many") && nargs==1 && g_scan_pos>0) {
+                IcnVal cs; icn_exec(e->children[1],env,nenv,&cs);
+                const char *s=g_scan_subj; int p=g_scan_pos-1;
+                if (!s||!cs.sval||p>=(int)strlen(s)||!strchr(cs.sval,s[p])) return 0;
+                while(p<(int)strlen(s) && strchr(cs.sval,s[p])) p++;
+                g_scan_pos=p+1; *out=icn_int(g_scan_pos); return 1;
+            }
+            if (!strcmp(fn,"upto") && nargs==1 && g_scan_pos>0) {
+                IcnVal cs; icn_exec(e->children[1],env,nenv,&cs);
+                const char *s=g_scan_subj; int p=g_scan_pos-1;
+                if (!s||!cs.sval) return 0;
+                while(p<(int)strlen(s) && !strchr(cs.sval,s[p])) p++;
+                if(p>=(int)strlen(s)) return 0;
+                g_scan_pos=p+1; *out=icn_int(g_scan_pos); return 1;
+            }
+            if (!strcmp(fn,"move") && nargs==1 && g_scan_pos>0) {
+                IcnVal n_; icn_exec(e->children[1],env,nenv,&n_);
+                int newp = g_scan_pos + (int)n_.ival;
+                if (!g_scan_subj||newp<1||newp>(int)strlen(g_scan_subj)+1) return 0;
+                int old=g_scan_pos; g_scan_pos=newp;
+                *out=icn_str(strndup(g_scan_subj+old-1,(int)n_.ival)); return 1;
+            }
+            if (!strcmp(fn,"tab") && nargs==1 && g_scan_pos>0) {
+                IcnVal n_; icn_exec(e->children[1],env,nenv,&n_);
+                int newp=(int)n_.ival;
+                if (!g_scan_subj||newp<g_scan_pos||newp>(int)strlen(g_scan_subj)+1) return 0;
+                int old=g_scan_pos; g_scan_pos=newp;
+                *out=icn_str(strndup(g_scan_subj+old-1,newp-old)); return 1;
+            }
+            if (!strcmp(fn,"find") && nargs==2) {
+                IcnVal s1,s2; icn_exec(e->children[1],env,nenv,&s1); icn_exec(e->children[2],env,nenv,&s2);
+                const char *needle=s1.sval?s1.sval:""; const char *hay=s2.sval?s2.sval:"";
+                char *p=strstr(hay,needle);
+                if(!p) return 0;
+                *out=icn_int((long)(p-hay)+1); return 1;
+            }
+            if (!strcmp(fn,"match") && nargs>0 && g_scan_pos>0) {
+                IcnVal s1; icn_exec(e->children[1],env,nenv,&s1);
+                const char *needle=s1.sval?s1.sval:"";
+                const char *hay=g_scan_subj?g_scan_subj:"";
+                int p=g_scan_pos-1; int nl=strlen(needle);
+                if(strncmp(hay+p,needle,nl)!=0) return 0;
+                g_scan_pos+=nl; *out=icn_int(g_scan_pos); return 1;
+            }
             if (!strcmp(fn,"stop"))  {exit(0);}
 
             /* User procedure */
@@ -253,6 +328,163 @@ static int icn_exec(EXPR_t *e, IcnVal *env, int nenv, IcnVal *out) {
             }
             fprintf(stderr,"icon: undefined '%s'\n",fn);
             return 0;
+        }
+
+        /* ── E_RETURN: return [expr] from procedure ─────────────────────── */
+        case E_RETURN: {
+            if (e->nchildren > 0) icn_exec(e->children[0], env, nenv, &g_return_val);
+            else g_return_val = icn_null();
+            g_returning = 1;
+            *out = g_return_val; return 1;
+        }
+
+        /* ── E_LOOP_BREAK: break [expr] from loop ───────────────────────── */
+        case E_LOOP_BREAK: {
+            if (e->nchildren > 0) icn_exec(e->children[0], env, nenv, out);
+            else *out = icn_null();
+            LOOP_BREAK_SET();
+            return 1;
+        }
+
+        /* ── E_NOT: not E — succeed iff E fails ────────────────────────── */
+        case E_NOT: {
+            IcnVal v;
+            int r = (e->nchildren > 0) ? icn_exec(e->children[0], env, nenv, &v) : 0;
+            if (r) return 0;
+            *out = icn_null(); return 1;
+        }
+
+        /* ── E_REPEAT: repeat body — loop until break ───────────────────── */
+        case E_REPEAT: {
+            EXPR_t *body = (e->nchildren > 0) ? e->children[0] : NULL;
+            LOOP_PUSH();
+            while (!LOOP_BREAK_CHK()) {
+                if (!body) continue;
+                IcnVal v; icn_exec(body, env, nenv, &v);
+                if (g_returning) break;
+            }
+            LOOP_POP();
+            *out = icn_null(); return 1;
+        }
+
+        /* ── E_UNTIL: until cond do body ────────────────────────────────── */
+        case E_UNTIL: {
+            EXPR_t *cond = (e->nchildren > 0) ? e->children[0] : NULL;
+            EXPR_t *body = (e->nchildren > 1) ? e->children[1] : NULL;
+            LOOP_PUSH();
+            while (!LOOP_BREAK_CHK()) {
+                IcnVal cv;
+                if (cond && icn_exec(cond, env, nenv, &cv)) break; /* cond succeeded → exit */
+                if (g_returning) break;
+                if (body) { IcnVal bv; icn_exec(body, env, nenv, &bv); }
+                if (g_returning || LOOP_BREAK_CHK()) break;
+            }
+            LOOP_POP();
+            *out = icn_null(); return 1;
+        }
+
+        /* ── E_AUGOP: x op:= y  ─────────────────────────────────────────── */
+        case E_AUGOP: {
+            if (e->nchildren < 2) { *out = icn_null(); return 0; }
+            EXPR_t *lhs = e->children[0];
+            EXPR_t *rhs_e = e->children[1];
+            IcnVal lval, rval;
+            if (!icn_exec(lhs, env, nenv, &lval)) return 0;
+            if (!icn_exec(rhs_e, env, nenv, &rval)) return 0;
+            /* Map ival (IcnTkKind) to binop index */
+            int op = -1; int is_mod=0; int is_cat=0;
+            IcnTkKind tk=(IcnTkKind)e->ival;
+            if      (tk==TK_AUGPLUS)   op=0;
+            else if (tk==TK_AUGMINUS)  op=1;
+            else if (tk==TK_AUGSTAR)   op=2;
+            else if (tk==TK_AUGSLASH)  op=3;
+            else if (tk==TK_AUGMOD)  { op=3; is_mod=1; }
+            else if (tk==TK_AUGCONCAT){ op=0; is_cat=1; }
+            else op=0;
+            IcnVal result;
+            if (is_cat) {
+                char *buf = malloc(512);
+                snprintf(buf, 512, "%s%s",
+                    lval.is_str?(lval.sval?lval.sval:""):"",
+                    rval.is_str?(rval.sval?rval.sval:""):"");
+                result = icn_str(buf);
+            } else if (is_mod) {
+                long d = rval.ival; result = d ? icn_int(lval.ival % d) : icn_int(0);
+            } else {
+                int ok = icn_binop(op, lval, rval, &result);
+                if (!ok) return 0;
+            }
+            /* Store back to lhs variable */
+            if (lhs->kind == E_VAR) {
+                int slot = (int)lhs->ival;
+                if (slot >= 0 && slot < nenv) env[slot] = result;
+            }
+            *out = result; return 1;
+        }
+
+        /* ── String relational ops (E_LEQ == etc.) ────────────────────────
+         * Mirror emit_seq / emit_strrelop in emitter.
+         * Succeed and return rhs when comparison holds. */
+        case E_LEQ: { /* == string eq */
+            IcnVal l, r;
+            if (!icn_exec(e->children[0],env,nenv,&l)) return 0;
+            if (!icn_exec(e->children[1],env,nenv,&r)) return 0;
+            const char *ls = l.is_str?(l.sval?l.sval:""):"";
+            const char *rs = r.is_str?(r.sval?r.sval:""):"";
+            if (strcmp(ls,rs)!=0) return 0;
+            *out = r; return 1;
+        }
+        case E_LNE: { /* ~== string ne */
+            IcnVal l, r;
+            if (!icn_exec(e->children[0],env,nenv,&l)) return 0;
+            if (!icn_exec(e->children[1],env,nenv,&r)) return 0;
+            const char *ls = l.is_str?(l.sval?l.sval:""):"";
+            const char *rs = r.is_str?(r.sval?r.sval:""):"";
+            if (strcmp(ls,rs)==0) return 0;
+            *out = r; return 1;
+        }
+        case E_LLT: case E_LLE: case E_LGT: case E_LGE: {
+            IcnVal l, r;
+            if (!icn_exec(e->children[0],env,nenv,&l)) return 0;
+            if (!icn_exec(e->children[1],env,nenv,&r)) return 0;
+            const char *ls = l.is_str?(l.sval?l.sval:""):"";
+            const char *rs = r.is_str?(r.sval?r.sval:""):"";
+            int cmp = strcmp(ls,rs);
+            int ok = (e->kind==E_LLT)?(cmp<0):(e->kind==E_LLE)?(cmp<=0):
+                     (e->kind==E_LGT)?(cmp>0):(cmp>=0);
+            if (!ok) return 0;
+            *out = r; return 1;
+        }
+
+        /* ── E_SCAN: s ? expr — string scanning ─────────────────────────── */
+        case E_SCAN: {
+            if (e->nchildren < 1) { *out = icn_null(); return 0; }
+            IcnVal subj;
+            if (!icn_exec(e->children[0], env, nenv, &subj)) return 0;
+            /* Push scan state */
+            if (g_scan_depth < SCAN_STACK_MAX) {
+                g_scan_stack[g_scan_depth].subj = g_scan_subj;
+                g_scan_stack[g_scan_depth].pos  = g_scan_pos;
+                g_scan_depth++;
+            }
+            g_scan_subj = subj.is_str ? (subj.sval ? subj.sval : "") : "";
+            g_scan_pos  = 1;
+            int r = 0;
+            if (e->nchildren >= 2) r = icn_exec(e->children[1], env, nenv, out);
+            else { *out = icn_null(); r = 1; }
+            /* Pop scan state */
+            if (g_scan_depth > 0) {
+                g_scan_depth--;
+                g_scan_subj = g_scan_stack[g_scan_depth].subj;
+                g_scan_pos  = g_scan_stack[g_scan_depth].pos;
+            }
+            return r;
+        }
+
+        /* ── E_ITERATE: !E generate list/string elements ─────────────────── */
+        case E_ITERATE: {
+            /* Simplified: for lists not yet implemented, just fail */
+            *out = icn_null(); return 0;
         }
         default:
             *out=icn_null(); return 1;
