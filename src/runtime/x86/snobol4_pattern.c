@@ -852,6 +852,9 @@ static Pattern *materialise(PATND_t *sp, MatchCtx *ctx) {
                 ctx->captures[slot].var_fn   = NULL;
                 ctx->captures[slot].var_data = d;
             }
+        } else if (vv.v == DT_N && vv.s) {
+            /* Name descriptor from $'varname' — extract variable name string */
+            ctx->captures[slot].var_name = GC_strdup(vv.s);
         }
         ctx->captures[slot].is_imm        = (sp->kind == XFNME);
         ctx->captures[slot].is_cursor_cap  = 0;
