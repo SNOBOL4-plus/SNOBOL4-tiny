@@ -175,13 +175,23 @@ DESCR_t eval_node(EXPR_t *e)
     /* ── string concatenation ────────────────────────────────────────── */
     case E_CAT:
     case E_SEQ: {
+        /* S-9 fix: EVAL("LEN(1) LEN(1)") must return PATTERN not STRING.
+         * In SNOBOL4, space-separated terms in an expression are concatenation.
+         * When the accumulated value is a pattern, concatenation is pat_cat (pattern
+         * concatenation), not CONCAT_fn (string concatenation).  CONCAT_fn coerces
+         * patterns to strings, destroying the type. */
         if (e->nchildren == 0) return NULVCL;
         DESCR_t acc = eval_node(e->children[0]);
         if (IS_FAIL_fn(acc)) return FAILDESCR;
         for (int i = 1; i < e->nchildren; i++) {
             DESCR_t next = eval_node(e->children[i]);
             if (IS_FAIL_fn(next)) return FAILDESCR;
-            acc = CONCAT_fn(acc, next);
+            if (acc.v == DT_P || next.v == DT_P) {
+                extern DESCR_t pat_cat(DESCR_t a, DESCR_t b);
+                acc = pat_cat(acc, next);
+            } else {
+                acc = CONCAT_fn(acc, next);
+            }
             if (IS_FAIL_fn(acc)) return FAILDESCR;
         }
         return acc;

@@ -948,6 +948,33 @@ static Pattern *materialise(PATND_t *sp, MatchCtx *ctx) {
             }
         }
 
+        /* S-10 fix: IDENT/DIFFER are scrip.c-only builtins unknown to APPLY_fn.
+         * Evaluate them NOW at materialise time (args snapshotted by interp_eval_pat)
+         * and return T_SUCCEED or T_FAIL immediately. */
+        if (strcasecmp(nm, "IDENT") == 0 || strcasecmp(nm, "DIFFER") == 0) {
+            int is_ident = (strcasecmp(nm, "IDENT") == 0);
+            int result = 0;
+            int na = sp->nargs;
+            DESCR_t *a = sp->args;
+            if (na == 1) {
+                result = is_ident ? IS_NULL_fn(a[0]) : !IS_NULL_fn(a[0]);
+            } else if (na >= 2) {
+                int a0n = IS_NULL_fn(a[0]), a1n = IS_NULL_fn(a[1]);
+                int same;
+                if (a0n && a1n) same = 1;
+                else if (a0n || a1n) same = 0;
+                else if (a[0].v != a[1].v) same = 0;
+                else {
+                    const char *sa = VARVAL_fn(a[0]), *sb = VARVAL_fn(a[1]);
+                    if (!sa) sa = ""; if (!sb) sb = "";
+                    same = (strcmp(sa, sb) == 0);
+                }
+                result = is_ident ? same : !same;
+            }
+            p->type = result ? T_SUCCEED : T_FAIL;
+            return p;
+        }
+
         /* All other calls (nInc, nPush, nPop, Reduce, match, etc.):
          * Defer to match time via T_FUNC — side-effect calls must fire
          * when the engine reaches this node, NOT during materialise(). */

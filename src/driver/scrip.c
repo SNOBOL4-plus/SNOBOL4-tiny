@@ -1594,8 +1594,9 @@ static void execute_program(Program *prog)
 
         /* ── pattern match ─────────────────────────────────────────── */
         if (s->pattern) {
-            /* Build pattern descriptor via interp_eval then exec_stmt */
-            DESCR_t pat_d = interp_eval(s->pattern);
+            /* S-10 fix: pattern must be evaluated in pattern context so *func()
+             * produces XATP nodes, not frozen DT_E expressions. */
+            DESCR_t pat_d = interp_eval_pat(s->pattern);
             /* ── --dump-bb: print PATND tree before match ─────────── */
             if (g_opt_dump_bb && pat_d.v == DT_P && pat_d.p)
                 patnd_print((PATND_t *)pat_d.p, stderr);
@@ -1792,10 +1793,18 @@ static int _label_exists_fn(const char *name) {
     return label_lookup(name) != NULL;
 }
 
+/* S-10: forward declarations so _usercall_hook can call them */
+static DESCR_t _builtin_IDENT(DESCR_t *args, int nargs);
+static DESCR_t _builtin_DIFFER(DESCR_t *args, int nargs);
+
 /* _usercall_hook: calls user functions via call_user_function;
  * for pure builtins (FNCEX_fn && no body label) uses APPLY_fn directly
  * so FAILDESCR propagates correctly (DYN-74: fixes *ident(1,2) in EVAL). */
 static DESCR_t _usercall_hook(const char *name, DESCR_t *args, int nargs) {
+    /* S-10 fix: handle scrip.c-only predicates directly so *IDENT(x)/*DIFFER(x)
+     * in pattern context correctly fail/succeed via bb_usercall -> g_user_call_hook. */
+    if (strcasecmp(name, "IDENT") == 0)  return _builtin_IDENT(args, nargs);
+    if (strcasecmp(name, "DIFFER") == 0) return _builtin_DIFFER(args, nargs);
     /* Check for a body label (user-defined function) */
     const char *_entry = FUNC_ENTRY_fn(name);
     STMT_t *_body = _entry ? label_lookup(_entry) : NULL;
@@ -1903,6 +1912,39 @@ static void ir_dump_program(Program *prog, FILE *f) {
     if (!prog) { fprintf(f, "(NULL-PROGRAM)\n"); return; }
     for (STMT_t *st = prog->head; st; st = st->next)
         ir_print_stmt(st, f);
+}
+
+/* ── S-10 fix: IDENT/DIFFER wrappers for register_fn ──────────────────────
+ * IDENT and DIFFER are scrip.c-only builtins not in the binary runtime's
+ * APPLY_fn table.  When *IDENT(x) fires at match time via deferred_call_fn,
+ * APPLY_fn("IDENT",...) returns non-FAILDESCR for unknown names → T_FUNC
+ * always succeeds.  Registering these wrappers makes APPLY_fn dispatch them
+ * correctly so *IDENT(n(x)) fails when n(x) is not the null string. */
+static DESCR_t _builtin_IDENT(DESCR_t *args, int nargs) {
+    if (nargs == 1) return IS_NULL_fn(args[0]) ? NULVCL : FAILDESCR;
+    if (nargs >= 2) {
+        int a_null = IS_NULL_fn(args[0]), b_null = IS_NULL_fn(args[1]);
+        if (a_null && b_null) return NULVCL;
+        if (a_null || b_null) return FAILDESCR;
+        if (args[0].v != args[1].v) return FAILDESCR;
+        const char *sa = VARVAL_fn(args[0]), *sb = VARVAL_fn(args[1]);
+        if (!sa) sa = ""; if (!sb) sb = "";
+        return strcmp(sa, sb) == 0 ? NULVCL : FAILDESCR;
+    }
+    return FAILDESCR;
+}
+static DESCR_t _builtin_DIFFER(DESCR_t *args, int nargs) {
+    if (nargs == 1) return IS_NULL_fn(args[0]) ? FAILDESCR : NULVCL;
+    if (nargs >= 2) {
+        int a_null = IS_NULL_fn(args[0]), b_null = IS_NULL_fn(args[1]);
+        if (a_null && b_null) return FAILDESCR;
+        if (a_null || b_null) return NULVCL;
+        if (args[0].v != args[1].v) return NULVCL;
+        const char *sa = VARVAL_fn(args[0]), *sb = VARVAL_fn(args[1]);
+        if (!sa) sa = ""; if (!sb) sb = "";
+        return strcmp(sa, sb) != 0 ? NULVCL : FAILDESCR;
+    }
+    return FAILDESCR;
 }
 
 int main(int argc, char **argv)
@@ -2154,6 +2196,11 @@ int main(int argc, char **argv)
 
     stmt_init();
     g_prog = prog;
+
+    /* S-10 fix: register scrip.c-only builtins so APPLY_fn can dispatch them
+     * at match time (used by *IDENT(x) / *DIFFER(x) in pattern position). */
+    register_fn("IDENT",  _builtin_IDENT,  1, 2);
+    register_fn("DIFFER", _builtin_DIFFER, 1, 2);
 
     /* Wire user-function dispatch hook (wrapper defined above main) */
     extern DESCR_t (*g_user_call_hook)(const char *, DESCR_t *, int);
