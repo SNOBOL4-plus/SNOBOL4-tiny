@@ -1,7 +1,7 @@
 #!/bin/bash
 # run_rung15.sh — rung15_real_swap JVM corpus runner
 set -euo pipefail
-DRIVER="${1:-/tmp/scrip}"
+DRIVER="${1:-/tmp/scrip-cc}"
 JASMIN="$(dirname "$0")/../../../src/backend/jasmin.jar"
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 CORPUS="${CORPUS_REPO:-$(cd "$SCRIPT_DIR/../../.." && pwd)/corpus}/programs/icon"

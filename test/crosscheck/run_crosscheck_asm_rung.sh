@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # run_crosscheck_asm_rung.sh — ASM backend corpus ladder driver
 #
-# Compiles each .sno in a given directory via scrip -asm, assembles,
+# Compiles each .sno in a given directory via scrip-cc -asm, assembles,
 # links against stmt_rt + snobol4 runtime, runs, diffs vs .ref oracle.
 #
 # Usage:
@@ -14,7 +14,7 @@
 #       /home/claude/corpus/crosscheck/output
 #
 # Environment overrides:
-#   SCRIP   — path to scrip binary     (default: ./scrip)
+#   SCRIP_CC   — path to scrip-cc binary     (default: ./scrip-cc)
 #   INC     — SNOBOL4 include dir      (default: demo/inc)
 #   STOP_ON_FAIL=1  — stop at first failure (default: 0 = keep going)
 
@@ -22,7 +22,7 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TINY="$(cd "$SCRIPT_DIR/../.." && pwd)"
-SCRIP="${SCRIP:-$TINY/scrip}"
+SCRIP_CC="${SCRIP_CC:-$TINY/scrip-cc}"
 RT="$TINY/src/runtime"
 INC="${INC:-$TINY/demo/inc}"
 STOP_ON_FAIL="${STOP_ON_FAIL:-0}"
@@ -35,8 +35,8 @@ if [[ $# -eq 0 ]]; then
     exit 1
 fi
 
-if [[ ! -x "$SCRIP" ]]; then
-    echo "ERROR: scrip not found at $SCRIP"
+if [[ ! -x "$SCRIP_CC" ]]; then
+    echo "ERROR: scrip-cc not found at $SCRIP_CC"
     exit 1
 fi
 
@@ -72,10 +72,10 @@ run_test() {
     local o_file="$WORK/${base}.o"
     local bin="$WORK/${base}_bin"
 
-    # scrip -asm
-    if ! "$SCRIP" -asm -I"$INC" "$sno" > "$s_file" 2>"$WORK/${base}.scrip_err"; then
-        echo -e "${RED}FAIL${RESET} $base  [scrip error]"
-        cat "$WORK/${base}.scrip_err" | head -3
+    # scrip-cc -asm
+    if ! "$SCRIP_CC" -asm -I"$INC" "$sno" > "$s_file" 2>"$WORK/${base}.scrip-cc_err"; then
+        echo -e "${RED}FAIL${RESET} $base  [scrip-cc error]"
+        cat "$WORK/${base}.scrip-cc_err" | head -3
         FAIL=$((FAIL+1))
         [[ "$STOP_ON_FAIL" == "1" ]] && exit 1
         return 0
