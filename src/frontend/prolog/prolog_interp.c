@@ -420,63 +420,60 @@ static void pl_fail_to_cp(void) {
     longjmp(cp_stack[cp_top-1].jb, 1);
 }
 
-static int pl_call(PredTable *pt, const char *key, int arity,
-                   Term **args, Trail *trail, int start) {
-    EXPR_t *choice = pred_table_lookup(pt, key);
-    if (!choice) { fprintf(stderr, "prolog: undefined predicate %s\n", key); return -1; }
-    int nclauses = choice->nchildren;
-    if (nclauses == 0) return -1;
-
-    /* Push a choice point */
-    if (cp_top >= CP_STACK_MAX) { fprintf(stderr, "prolog: CP stack overflow\n"); return -1; }
-    int cp_idx = cp_top++;
-    ChoicePoint *cp = &cp_stack[cp_idx];
-    cp->pt          = pt;
-    cp->key         = key;
-    cp->arity       = arity;
-    cp->args        = args;
-    cp->trail       = trail;
-    cp->trail_mark  = trail_mark(trail);
-    cp->next_clause = start;
-    cp->cut         = 0;
-
-    /* setjmp — longjmp here on continuation failure */
-    setjmp(cp->jb);
-
-    /* Try clauses from next_clause onward */
-    while (cp->next_clause < nclauses && !cp->cut) {
-        int ci = cp->next_clause;
-        /* Restore trail to entry mark before each attempt */
-        trail_unwind(trail, cp->trail_mark);
-        EXPR_t *ec = choice->children[ci];
-        if (!ec) { cp->next_clause = ci + 1; continue; }
-
-        int clause_cut = 0;
-        if (pl_exec_clause(ec, arity, args, pt, trail, &clause_cut)) {
-            /* γ — clause succeeded; advance so β knows where to resume */
-            cp->next_clause = ci + 1;
-            if (clause_cut) cp->cut = 1;
-            /* Return success; CP stays on stack so continuation can longjmp back */
-            /* We do NOT pop here — pop happens on ω or when caller decides done */
-            cp_top--;   /* temporarily pop so nested calls get their own CP slot */
-            return 1;   /* γ */
-        }
-        if (clause_cut) break;
-        cp->next_clause = ci + 1;
-    }
-
-    /* ω — all clauses exhausted */
-    trail_unwind(trail, cp->trail_mark);
-    cp_top--;   /* pop */
-    return -1;
-}
-
 /*===========================================================================
- * pl_exec_body — drives goals left-to-right; uses CP stack for user calls
+ * pl_exec_body — mirrors emit_body() Proebsting retry chain
  *=========================================================================*/
 static int pl_exec_body(EXPR_t **goals, int ngoals, Term **env,
                         PredTable *pt, Trail *trail, int *cut_flag) {
-    if (ngoals ==
+    if (ngoals==0) return 1;
+    EXPR_t *g=goals[0];
+
+    if (is_user_call(g)) {
+        const char *fn=g->sval; int arity=g->nchildren;
+        char key[256]; snprintf(key,sizeof key,"%s/%d",fn,arity);
+        int mark=trail_mark(trail), start=0;
+        for (;;) {
+            trail_unwind(trail,mark);
+            /* Rebuild args from env each retry — trail unwind resets bound vars */
+            Term **args=malloc(arity*sizeof(Term*));
+            for (int i=0;i<arity;i++) args[i]=pl_term_from_expr(g->children[i],env);
+            int r=pl_call(pt,key,arity,args,trail,start);
+            free(args);
+            if (r<0) return 0;
+            start=r+1;
+            int cut2=0;
+            int ok=pl_exec_body(goals+1,ngoals-1,env,pt,trail,&cut2);
+            if (cut2) { if (cut_flag)*cut_flag=1; return ok; }
+            if (ok) return 1;
+            /* rest failed — loop back, trail_unwind resets bindings, retry */
+        }
+    }
+
+    if (!pl_exec_goal(g,env,pt,trail,cut_flag)) return 0;
+    /* cut_flag may now be set — continue body; cut stops retry not forward exec */
+    return pl_exec_body(goals+1,ngoals-1,env,pt,trail,cut_flag);
+}
+
+/*===========================================================================
+ * pl_call — resumable four-port predicate dispatcher (mirrors _r functions)
+ *   returns clause_idx >= 0 on γ,  -1 on ω
+ *=========================================================================*/
+static int pl_call(PredTable *pt, const char *key, int arity,
+                   Term **args, Trail *trail, int start) {
+    EXPR_t *choice=pred_table_lookup(pt,key);
+    if (!choice) { fprintf(stderr,"prolog: undefined predicate %s\n",key); return -1; }
+    int nclauses=choice->nchildren;
+    int mark=trail_mark(trail);
+    for (int ci=start;ci<nclauses;ci++) {
+        if (ci>start) trail_unwind(trail,mark);
+        EXPR_t *ec=choice->children[ci]; if (!ec) continue;
+        int clause_cut=0;  /* cut is LOCAL to this predicate call — never escapes */
+        if (pl_exec_clause(ec,arity,args,pt,trail,&clause_cut)) return ci;
+        if (clause_cut) break;  /* cut: stop trying further clauses, but don't propagate */
+    }
+    trail_unwind(trail,mark);
+    return -1;
+}
 
 /*===========================================================================
  * pl_execute_program — entry point
