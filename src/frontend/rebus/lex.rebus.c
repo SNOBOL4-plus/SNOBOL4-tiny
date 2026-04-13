@@ -1,6 +1,3 @@
-#line 2 "lex.rebus.c"
-
-#line 4 "lex.rebus.c"
 
 #define  YY_INT_ALIGNED short int
 
@@ -781,8 +778,6 @@ int yy_flex_debug = 0;
 #define YY_MORE_ADJ 0
 #define YY_RESTORE_YY_MORE_OFFSET
 char *yytext;
-#line 1 "rebus.l"
-#line 2 "rebus.l"
 /*
  * rebus.l  —  Flex lexer for the Rebus language (Griswold TR 84-9)
  */
@@ -890,8 +885,6 @@ static int needs_semi(int tok) {
         default: return 0;
     }
 }
-#line 894 "lex.rebus.c"
-#line 895 "lex.rebus.c"
 
 #define INITIAL 0
 
@@ -1108,10 +1101,6 @@ YY_DECL
 		}
 
 	{
-#line 118 "rebus.l"
-
-
-#line 1115 "lex.rebus.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -1176,300 +1165,241 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 120 "rebus.l"
 { }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 121 "rebus.l"
 { }
 	YY_BREAK
 case 3:
 /* rule 3 can match eol */
 YY_RULE_SETUP
-#line 122 "rebus.l"
 { if(needs_semi(last_tok)&&!next_is_continuation()){last_tok=';';return ';';} }
 	YY_BREAK
 case 4:
 /* rule 4 can match eol */
 YY_RULE_SETUP
-#line 124 "rebus.l"
 { yylval.sval=rebus_intern_n(yytext+1,yyleng-2); last_tok=T_STR; return T_STR; }
 	YY_BREAK
 case 5:
 /* rule 5 can match eol */
 YY_RULE_SETUP
-#line 125 "rebus.l"
 { yylval.sval=rebus_intern_n(yytext+1,yyleng-2); last_tok=T_STR; return T_STR; }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 127 "rebus.l"
 { yylval.dval=atof(yytext); last_tok=T_REAL; return T_REAL; }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 128 "rebus.l"
 { yylval.dval=atof(yytext); last_tok=T_REAL; return T_REAL; }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 129 "rebus.l"
 { yylval.ival=atol(yytext); last_tok=T_INT; return T_INT; }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 131 "rebus.l"
 { yylval.sval=upcase(yytext+1); last_tok=T_KEYWORD; return T_KEYWORD; }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 132 "rebus.l"
 { last_tok='&'; return '&'; }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 134 "rebus.l"
 { char *up=upcase(yytext); int kw=lookup_kw(up);
                   if(kw){free(up);last_tok=kw;return kw;}
                   yylval.sval=up; last_tok=T_IDENT; return T_IDENT; }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 138 "rebus.l"
 { last_tok=T_EXCHANGE;   return T_EXCHANGE;  }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 139 "rebus.l"
 { last_tok=T_CATASSIGN;  return T_CATASSIGN; }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 140 "rebus.l"
 { last_tok=T_ADDASSIGN;  return T_ADDASSIGN; }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 141 "rebus.l"
 { last_tok=T_SUBASSIGN;  return T_SUBASSIGN; }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 142 "rebus.l"
 { last_tok=T_ASSIGN;     return T_ASSIGN;    }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 143 "rebus.l"
 { last_tok=T_QUESTMINUS; return T_QUESTMINUS;}
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 144 "rebus.l"
 { last_tok=T_ARROW;      return T_ARROW;     }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 145 "rebus.l"
 { last_tok=T_STRCAT;     return T_STRCAT;    }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 146 "rebus.l"
 { last_tok=T_STARSTAR;   return T_STARSTAR;  }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 147 "rebus.l"
 { last_tok=T_SNE;        return T_SNE;       }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 148 "rebus.l"
 { last_tok=T_NE;         return T_NE;        }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 149 "rebus.l"
 { last_tok=T_SGE;        return T_SGE;       }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 150 "rebus.l"
 { last_tok=T_SLE;        return T_SLE;       }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 151 "rebus.l"
 { last_tok=T_SGT;        return T_SGT;       }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 152 "rebus.l"
 { last_tok=T_SLT;        return T_SLT;       }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 153 "rebus.l"
 { last_tok=T_GE;         return T_GE;        }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 154 "rebus.l"
 { last_tok=T_LE;         return T_LE;        }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 155 "rebus.l"
 { last_tok=T_SEQ;        return T_SEQ;       }
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 156 "rebus.l"
 { last_tok=T_PLUSCOLON;  return T_PLUSCOLON; }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 158 "rebus.l"
 { last_tok='('; return '('; }
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 159 "rebus.l"
 { last_tok=')'; return ')'; }
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 160 "rebus.l"
 { last_tok='['; return '['; }
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 161 "rebus.l"
 { last_tok=']'; return ']'; }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 162 "rebus.l"
 { last_tok='{'; return '{'; }
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 163 "rebus.l"
 { last_tok='}'; return '}'; }
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 164 "rebus.l"
 { last_tok=','; return ','; }
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 165 "rebus.l"
 { last_tok=';'; return ';'; }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 166 "rebus.l"
 { last_tok=':'; return ':'; }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 167 "rebus.l"
 { last_tok='?'; return '?'; }
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 168 "rebus.l"
 { last_tok='='; return '='; }
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 169 "rebus.l"
 { last_tok='+'; return '+'; }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 170 "rebus.l"
 { last_tok='-'; return '-'; }
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 171 "rebus.l"
 { last_tok='*'; return '*'; }
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
-#line 172 "rebus.l"
 { last_tok='/'; return '/'; }
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 173 "rebus.l"
 { last_tok='%'; return '%'; }
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
-#line 174 "rebus.l"
 { last_tok='^'; return '^'; }
 	YY_BREAK
 case 48:
 YY_RULE_SETUP
-#line 175 "rebus.l"
 { last_tok='|'; return '|'; }
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
-#line 176 "rebus.l"
 { last_tok='.'; return '.'; }
 	YY_BREAK
 case 50:
 YY_RULE_SETUP
-#line 177 "rebus.l"
 { last_tok='$'; return '$'; }
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
-#line 178 "rebus.l"
 { last_tok='@'; return '@'; }
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
-#line 179 "rebus.l"
 { last_tok='~'; return '~'; }
 	YY_BREAK
 case 53:
 YY_RULE_SETUP
-#line 180 "rebus.l"
 { last_tok='<'; return '<'; }
 	YY_BREAK
 case 54:
 YY_RULE_SETUP
-#line 181 "rebus.l"
 { last_tok='>'; return '>'; }
 	YY_BREAK
 case 55:
 YY_RULE_SETUP
-#line 182 "rebus.l"
 { last_tok='!'; return '!'; }
 	YY_BREAK
 case 56:
 YY_RULE_SETUP
-#line 183 "rebus.l"
 { last_tok='\\'; return '\\'; }
 	YY_BREAK
 case 57:
 YY_RULE_SETUP
-#line 185 "rebus.l"
 { rebus_error(yylineno,"unexpected character '%s'",yytext); }
 	YY_BREAK
 case 58:
 YY_RULE_SETUP
-#line 187 "rebus.l"
 ECHO;
 	YY_BREAK
-#line 1473 "lex.rebus.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2486,9 +2416,6 @@ void yyfree (void * ptr )
 }
 
 #define YYTABLES_NAME "yytables"
-
-#line 187 "rebus.l"
-
 
 void rebus_yyerror(const char *msg) { rebus_error(yylineno,"%s",msg); }
 

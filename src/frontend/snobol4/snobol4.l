@@ -452,6 +452,19 @@ void lex_open_str(Lex *lx, const char *s, int len, int ln) {
     lx->_extra   = NULL;
 }
 
+/* lex_open_str_initial — like lex_open_str but starts in INITIAL (col-1 dispatch).
+ * Use for full multi-statement programs (sno_parse_string in polyglot context).
+ * lex_open_str starts in BODY — correct for single-expression parsing only. */
+void lex_open_str_initial(Lex *lx, const char *s, int len, int ln) {
+    yyscan_t sc;
+    yylex_init(&sc);
+    yy_scan_bytes(s, len, sc);
+    lineno = ln;
+    /* Leave scanner in INITIAL (the default start state) — no push needed. */
+    lx->_scanner = sc;
+    lx->_extra   = NULL;
+}
+
 Token lex_next(Lex *lx) {
     if (lx->peeked) { lx->peeked=0; return lx->peek; }
     return flex_lex_next(lx);

@@ -2716,7 +2716,36 @@ static void execute_program(Program *prog)
             goto do_goto;
         }
 
-        /* Skip Prolog/Icon nodes that sneak in via shared parser */
+        /* ── U-15: per-statement dispatch by st->lang ─────────────── */
+        if (s->lang == LANG_ICN) {
+            /* Icon statement: evaluate in Icon context, restore SNOBOL4 state */
+            if (s->subject) {
+                DESCR_t *sv_env = icn_env;
+                int      sv_n   = icn_env_n;
+                int      sv_ret = icn_returning;
+                icn_env       = NULL;
+                icn_env_n     = 0;
+                icn_returning = 0;
+                icn_interp_eval(s->subject, s->subject);
+                icn_env       = sv_env;
+                icn_env_n     = sv_n;
+                icn_returning = sv_ret;
+            }
+            s = s->next; continue;
+        }
+        if (s->lang == LANG_PL) {
+            /* Prolog statement: evaluate subject as a goal with pl active */
+            if (s->subject) {
+                int sv_pl = g_pl_active;
+                g_pl_active = 1;
+                interp_eval(s->subject);
+                g_pl_active = sv_pl;
+            }
+            s = s->next; continue;
+        }
+        /* LANG_SNO (0): fall through to existing SNOBOL4 path below.
+         * Also skip any stray Prolog/Icon IR nodes that have lang==LANG_SNO
+         * (shouldn't happen after U-12/U-13, but keep guard for safety). */
         if (s->subject && (s->subject->kind == E_CHOICE ||
                            s->subject->kind == E_UNIFY  ||
                            s->subject->kind == E_CLAUSE)) {

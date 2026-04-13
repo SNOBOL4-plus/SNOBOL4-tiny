@@ -281,3 +281,47 @@ Program *parse_program(LineArray *lines){(void)lines;return calloc(1,sizeof(Prog
 EXPR_t *parse_expr_from_str(const char *src){
     if(!src||!*src) return NULL;Lex lx={0};lex_open_str(&lx,src,(int)strlen(src),0);return parse_expr(&lx);
 }
+/* parse_expr_pat_from_str — parse a bare expression string using the bison
+ * parser in BODY start state (lex_open_str). Returns s->pattern if the
+ * scan-split fired, else s->subject. Used by _eval_str_impl_fn and snobol4_pattern.c. */
+EXPR_t *parse_expr_pat_from_str(const char *src) {
+    if (!src || !*src) return NULL;
+    int slen = (int)strlen(src);
+    char *buf = malloc(slen + 2);
+    if (!buf) return NULL;
+    memcpy(buf, src, slen);
+    buf[slen]   = '\n';
+    buf[slen+1] = '\0';
+    Lex lx = {0};
+    lex_open_str(&lx, buf, slen + 1, 0);
+    Program *prog = calloc(1, sizeof *prog);
+    PP p = {prog, NULL};
+    g_lx = &lx;
+    snobol4_parse(&p);
+    free(buf);
+    if (!prog->head) return NULL;
+    STMT_t *s = prog->head;
+    if (s->pattern) return s->pattern;
+    return s->subject;
+}
+/* sno_parse_string — parse a multi-statement SNOBOL4 string via bison.
+ * Uses lex_open_str_initial (INITIAL/col-1 start) so indented and labelled
+ * statements are handled correctly.  lex_open_str pushes BODY — correct for
+ * single-expression parsing only. */
+Program *sno_parse_string(const char *src) {
+    if (!src) return calloc(1, sizeof(Program));
+    int slen = (int)strlen(src);
+    char *buf = malloc(slen + 2);
+    if (!buf) return calloc(1, sizeof(Program));
+    memcpy(buf, src, slen);
+    buf[slen]   = '\n';
+    buf[slen+1] = '\0';
+    Lex lx = {0};
+    lex_open_str_initial(&lx, buf, slen + 1, 0);
+    Program *prog = calloc(1, sizeof *prog);
+    PP p = {prog, NULL};
+    g_lx = &lx;
+    snobol4_parse(&p);
+    free(buf);
+    return prog;
+}

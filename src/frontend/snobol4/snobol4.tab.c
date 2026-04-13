@@ -2152,17 +2152,11 @@ Program *parse_program(LineArray *lines){(void)lines;return calloc(1,sizeof(Prog
 EXPR_t *parse_expr_from_str(const char *src){
     if(!src||!*src) return NULL;Lex lx={0};lex_open_str(&lx,src,(int)strlen(src),0);return parse_expr(&lx);
 }
-
 /* parse_expr_pat_from_str — parse a bare expression string using the bison
- * parser. Passes src directly — no dummy prefix. Bison puts a bare expr
- * in s->subject; pattern-context exprs (with $ @ *) also land in subject.
- * Returns s->pattern if set (scan-split case), else s->subject.
- * No CMPILE/CMPND_t bridge — all kinds are valid EKind values.
- * Used by _eval_str_impl_fn in scrip.c and snobol4_pattern.c. */
+ * parser in BODY start state (lex_open_str). Returns s->pattern if the
+ * scan-split fired, else s->subject. Used by _eval_str_impl_fn and snobol4_pattern.c. */
 EXPR_t *parse_expr_pat_from_str(const char *src) {
     if (!src || !*src) return NULL;
-    /* Append \n so the BODY-state lexer emits T_STMT_END before EOF.
-     * Without it bison never reduces the stmt rule and prog->head stays NULL. */
     int slen = (int)strlen(src);
     char *buf = malloc(slen + 2);
     if (!buf) return NULL;
@@ -2178,14 +2172,13 @@ EXPR_t *parse_expr_pat_from_str(const char *src) {
     free(buf);
     if (!prog->head) return NULL;
     STMT_t *s = prog->head;
-    /* Return pattern slot if the scan-split fired, else subject has the expr */
     if (s->pattern) return s->pattern;
     return s->subject;
 }
-
 /* sno_parse_string — parse a multi-statement SNOBOL4 string via bison.
- * Appends \n so the BODY-state lexer emits T_STMT_END before EOF.
- * Returns a Program* (caller owns). Used by code() in eval_code.c (S-3). */
+ * Uses lex_open_str_initial (INITIAL/col-1 start) so indented and labelled
+ * statements are handled correctly.  lex_open_str pushes BODY — correct for
+ * single-expression parsing only. */
 Program *sno_parse_string(const char *src) {
     if (!src) return calloc(1, sizeof(Program));
     int slen = (int)strlen(src);
@@ -2195,7 +2188,7 @@ Program *sno_parse_string(const char *src) {
     buf[slen]   = '\n';
     buf[slen+1] = '\0';
     Lex lx = {0};
-    lex_open_str(&lx, buf, slen + 1, 0);
+    lex_open_str_initial(&lx, buf, slen + 1, 0);
     Program *prog = calloc(1, sizeof *prog);
     PP p = {prog, NULL};
     g_lx = &lx;

@@ -23,6 +23,7 @@ typedef struct Lex {
 } Lex;
 
 void  lex_open_str(Lex *lx, const char *s, int len, int lineno);
+void  lex_open_str_initial(Lex *lx, const char *s, int len, int lineno); /* INITIAL start — full-program parsing */
 Token lex_next    (Lex *lx);
 Token lex_peek    (Lex *lx);
 int   lex_at_end  (Lex *lx);

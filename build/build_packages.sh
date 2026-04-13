@@ -3,7 +3,7 @@
 # Idempotent. Safe to run multiple times.
 # Usage: bash build/build_packages.sh
 set -euo pipefail
-PKGS="build-essential libgmp-dev m4 nasm libgc-dev wabt"
+PKGS="build-essential libgmp-dev m4 nasm libgc-dev wabt bison flex"
 MISSING=""
 for p in $PKGS; do
     dpkg -s "$p" &>/dev/null || MISSING="$MISSING $p"
