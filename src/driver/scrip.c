@@ -444,12 +444,48 @@ static icn_gen_t icn_make_oneshot(DESCR_t val) {
     return (icn_gen_t){ icn_oneshot_box, s };
 }
 
+/* ── icn_is_gen_node: true if this EXPR_t node is itself a generator ───── */
+static int icn_is_gen_node(EXPR_t *e) {
+    if (!e) return 0;
+    if (e->kind == E_TO || e->kind == E_TO_BY || e->kind == E_ITERATE) return 1;
+    if (e->kind == E_FNC && e->nchildren >= 1 && e->children[0] && e->children[0]->sval) {
+        const char *fn = e->children[0]->sval;
+        if (strcmp(fn, "find") == 0) return 1;
+        for (int i = 0; i < icn_proc_count; i++)
+            if (strcmp(icn_proc_table[i].name, fn) == 0 && icn_has_suspend(icn_proc_table[i].proc))
+                return 1;
+    }
+    return 0;
+}
+/* ── icn_find_gen_node: find first generator node in subtree ────────────── */
+static EXPR_t *icn_find_gen_node(EXPR_t *e) {
+    if (!e) return NULL;
+    if (icn_is_gen_node(e)) return e;
+    for (int i = 0; i < e->nchildren; i++) {
+        EXPR_t *found = icn_find_gen_node(e->children[i]);
+        if (found) return found;
+    }
+    return NULL;
+}
+/* ── icn_wrapped_body_cb: body callback for wrapped (E_FNC+generator) ───── */
+typedef struct {
+    EXPR_t *gen_node; EXPR_t *outer; EXPR_t *body;
+    int *ret; int *brk; int is_str;
+} wrapped_every_ctx_t;
+static void icn_wrapped_body_cb(DESCR_t val, void *arg) {
+    wrapped_every_ctx_t *c = (wrapped_every_ctx_t *)arg;
+    if (*c->ret || *c->brk) return;
+    if (c->is_str && val.v == DT_S && val.s)
+        icn_gen_push(c->gen_node, 0, val.s);
+    else
+        icn_gen_push(c->gen_node, val.i, NULL);
+    interp_eval(c->outer);
+    icn_gen_pop();
+    if (!*c->ret && !*c->brk && c->body) interp_eval(c->body);
+}
 icn_gen_t icn_eval_gen(EXPR_t *e) {
     if (!e) return ICN_FAIL_GEN;
-
     switch (e->kind) {
-
-    /* ── E_TO: (lo to hi) ─────────────────────────────────────────────── */
     case E_TO: {
         if (e->nchildren < 2) return ICN_FAIL_GEN;
         DESCR_t lo_d = interp_eval(e->children[0]);
@@ -459,8 +495,6 @@ icn_gen_t icn_eval_gen(EXPR_t *e) {
         s->lo = lo_d.i; s->hi = hi_d.i;
         return (icn_gen_t){ icn_bb_to, s };
     }
-
-    /* ── E_TO_BY: (lo to hi by step) ──────────────────────────────────── */
     case E_TO_BY: {
         if (e->nchildren < 3) return ICN_FAIL_GEN;
         DESCR_t lo_d = interp_eval(e->children[0]);
@@ -471,8 +505,6 @@ icn_gen_t icn_eval_gen(EXPR_t *e) {
         s->lo = lo_d.i; s->hi = hi_d.i; s->step = st_d.i ? st_d.i : 1;
         return (icn_gen_t){ icn_bb_to_by, s };
     }
-
-    /* ── E_ITERATE: (!str) ─────────────────────────────────────────────── */
     case E_ITERATE: {
         if (e->nchildren < 1) return ICN_FAIL_GEN;
         DESCR_t sv = interp_eval(e->children[0]);
@@ -482,14 +514,10 @@ icn_gen_t icn_eval_gen(EXPR_t *e) {
         s->str = str; s->len = (long)strlen(str); s->pos = 0;
         return (icn_gen_t){ icn_bb_iterate, s };
     }
-
-    /* ── E_FNC: find() or user generator proc ──────────────────────────── */
     case E_FNC: {
         if (e->nchildren < 1 || !e->children[0] || !e->children[0]->sval) break;
         const char *fname = e->children[0]->sval;
         int nargs = e->nchildren - 1;
-
-        /* find(needle, haystack) → icn_bb_find */
         if (strcmp(fname, "find") == 0 && nargs >= 2) {
             DESCR_t s1 = interp_eval(e->children[1]);
             DESCR_t s2 = interp_eval(e->children[2]);
@@ -501,12 +529,9 @@ icn_gen_t icn_eval_gen(EXPR_t *e) {
             s->nlen = (int)strlen(needle); s->next = hay;
             return (icn_gen_t){ icn_bb_find, s };
         }
-
-        /* User generator proc (has E_SUSPEND in body) → icn_bb_suspend */
         for (int i = 0; i < icn_proc_count; i++) {
             if (strcmp(icn_proc_table[i].name, fname) == 0
                 && icn_has_suspend(icn_proc_table[i].proc)) {
-                /* Reuse existing coro if already active for this call node */
                 Icn_coro_entry *ce = icn_coro_find(e);
                 if (!ce) {
                     if (icn_coro_count >= ICN_CORO_MAX) return ICN_FAIL_GEN;
@@ -522,7 +547,6 @@ icn_gen_t icn_eval_gen(EXPR_t *e) {
                     ce->gen_ctx.uc_link          = NULL;
                     makecontext(&ce->gen_ctx, icn_coro_trampoline, 0);
                 }
-                /* Build a suspend box that uses this coro entry directly */
                 typedef struct { Icn_coro_entry *ce; } proc_coro_state_t;
                 proc_coro_state_t *ps = GC_malloc(sizeof(*ps));
                 ps->ce = ce;
@@ -531,21 +555,34 @@ icn_gen_t icn_eval_gen(EXPR_t *e) {
         }
         break;
     }
-
-    /* ── E_SUSPEND: bare suspend in body context — one-shot eval ────────── */
     case E_SUSPEND:
-        /* suspend expr — eval the value, wrap as one-shot */
         if (e->nchildren > 0) return icn_make_oneshot(interp_eval(e->children[0]));
         return ICN_FAIL_GEN;
-
-    default:
-        break;
+    default: break;
     }
-
-    /* Non-generator: wrap interp_eval result as one-shot box */
+    /* Fallback: search subtree for a generator node (e.g. write(1 to 5)).
+     * Return sentinel fn=NULL with wrapped_every_ctx_t* as zeta. */
+    {
+        EXPR_t *gen_node = icn_find_gen_node(e);
+        if (gen_node) {
+            icn_gen_t sub = icn_eval_gen(gen_node);
+            if (sub.fn) {
+                wrapped_every_ctx_t *wc = GC_malloc(sizeof(*wc));
+                wc->gen_node = gen_node; wc->outer = e; wc->body = NULL;
+                wc->ret = &icn_returning; wc->brk = &icn_loop_break;
+                wc->is_str = (gen_node->kind == E_ITERATE) ? 1 :
+                             (gen_node->kind == E_FNC)      ? 2 : 0;
+                /* Encode sub-gen in zeta field of a special sentinel */
+                /* Use a two-field struct: first field = sub icn_gen_t */
+                typedef struct { icn_gen_t sub; wrapped_every_ctx_t *wc; } wrap_sentinel_t;
+                wrap_sentinel_t *ws = GC_malloc(sizeof(*ws));
+                ws->sub = sub; ws->wc = wc;
+                return (icn_gen_t){ NULL, ws };
+            }
+        }
+    }
     return icn_make_oneshot(interp_eval(e));
 }
-
 /* icn_collect_names: walk proc body to collect all E_VAR names into names[].
  * Returns count. Used by icn_call_proc to build save/restore list. */
 static int icn_collect_names(EXPR_t *e, const char **names, int *n, int max) {
@@ -2041,11 +2078,26 @@ static DESCR_t interp_eval(EXPR_t *e)
         if (e->nchildren < 1) return NULVCL;
         EXPR_t *gen  = e->children[0];
         EXPR_t *body = (e->nchildren > 1) ? e->children[1] : NULL;
-        /* B-9: route all E_EVERY through icn_broker via icn_eval_gen. */
-        typedef struct { EXPR_t *body; int *ret; int *brk; } every_ctx_t;
-        every_ctx_t ctx = { body, &icn_returning, &icn_loop_break };
         icn_gen_t g = icn_eval_gen(gen);
-        icn_broker(g, icn_every_body_cb, &ctx);
+        if (g.fn == NULL && g.zeta != NULL) {
+            /* Wrapped sentinel: sub-gen inside outer expr (e.g. write(1 to 5)) */
+            typedef struct { icn_gen_t sub; wrapped_every_ctx_t *wc; } wrap_sentinel_t;
+            wrap_sentinel_t *ws = (wrap_sentinel_t *)g.zeta;
+            if (ws->wc->is_str == 2) {
+                /* user-gen-proc wrapped: fall back to direct loop */
+                while (!icn_returning && !icn_loop_break) {
+                    DESCR_t v = interp_eval(gen);
+                    if (IS_FAIL_fn(v)) break;
+                    if (body) interp_eval(body);
+                }
+            } else {
+                ws->wc->body = body;
+                icn_broker(ws->sub, icn_wrapped_body_cb, ws->wc);
+            }
+        } else {
+            every_ctx_t ctx = { body, &icn_returning, &icn_loop_break };
+            icn_broker(g, icn_every_body_cb, &ctx);
+        }
         return NULVCL;
     }
 
