@@ -50,8 +50,133 @@ static int g_loop_depth = 0;
 static IcnVal g_return_val;
 static int    g_returning = 0;  /* 1 = return in progress */
 
+/* Forward declarations — needed by icn_exec_driven */
 static int  icn_exec(EXPR_t *e, IcnVal *env, int nenv, IcnVal *out);
 static int  icn_call(EXPR_t *proc, IcnVal *args, int nargs, IcnVal *out);
+
+/* =========================================================================
+ * icn_exec_driven -- drive all generators embedded in expr `e`, calling
+ * icn_exec on the root expression `root` for each combination of generator
+ * values. This is the β re-entry loop, mirroring pl_exec_choice's for-loop
+ * over clauses: each generator tick re-executes the full expression with live env.
+ *
+ * Strategy (Prolog model): for each generator node found in `e`, replace its
+ * behaviour with a C for-loop. Instead of evaluating E_TO once (returning lo),
+ * we loop lo..hi and for each i, temporarily patch env/context so that when
+ * the parent expression re-evaluates E_TO it sees value i.
+ *
+ * Implementation: we carry a "substitution" — the currently active E_TO node
+ * and its current counter value — passed as context to icn_exec via a
+ * thread-local-style global (no threads here). The E_TO case in icn_exec
+ * checks this substitution first.
+ *
+ * This is the minimal correct fix for rung02_proc_locals:
+ *   every total := total + (1 to n)
+ * E_EVERY(child=E_ASSIGN(total, E_ADD(total, E_TO(1,n))))
+ * We drive E_TO(1,n) as a for-loop, re-executing the full child each tick.
+ * ========================================================================= */
+
+/* =========================================================================
+ * icn_exec_driven -- drive all generators embedded in expr `e`.
+ *
+ * Uses a substitution stack: each active E_TO/E_TO_BY is pushed with its
+ * current counter value. When icn_exec hits an E_TO node, it checks the
+ * stack; if found, returns the substituted value. This correctly handles
+ * cross-products: outer E_TO drives inner E_TO recursively, each on the stack.
+ *
+ * Prolog model: icn_exec_driven(root, root) ~ pl_exec_choice iterating clauses;
+ * each tick re-executes root (potentially driving further nested generators).
+ * ========================================================================= */
+
+#define GEN_SUB_MAX 16
+typedef struct { EXPR_t *node; long cur; } IcnGenEntry;
+static IcnGenEntry g_gen_stack[GEN_SUB_MAX];
+static int         g_gen_depth = 0;
+
+static void gen_push(EXPR_t *node, long cur) {
+    if (g_gen_depth < GEN_SUB_MAX) { g_gen_stack[g_gen_depth].node=node; g_gen_stack[g_gen_depth].cur=cur; g_gen_depth++; }
+}
+static void gen_pop(void) { if (g_gen_depth>0) g_gen_depth--; }
+static int  gen_lookup(EXPR_t *node, long *out_cur) {
+    for (int i=g_gen_depth-1;i>=0;i--) if(g_gen_stack[i].node==node){*out_cur=g_gen_stack[i].cur;return 1;}
+    return 0;
+}
+static int  gen_active(EXPR_t *node) { /* is this node already being driven? */
+    for (int i=0;i<g_gen_depth;i++) if(g_gen_stack[i].node==node) return 1; return 0;
+}
+
+static int icn_exec_driven(EXPR_t *root, EXPR_t *e,
+                            IcnVal *env, int nenv, IcnVal *out) {
+    if (!e) return 0;
+
+    /* Skip nodes already on the substitution stack (already being driven) */
+    if (gen_active(e)) return 0;
+
+    /* E_TO: loop lo..hi, substituting cur each tick, re-exec root */
+    if (e->kind == E_TO && e->nchildren >= 2) {
+        IcnVal lo_v, hi_v;
+        if (!icn_exec(e->children[0], env, nenv, &lo_v)) return 0;
+        if (!icn_exec(e->children[1], env, nenv, &hi_v)) return 0;
+        long lo=lo_v.ival, hi=hi_v.ival;
+        int ticks=0;
+        LOOP_PUSH();
+        for (long i=lo; i<=hi && !LOOP_BREAK_CHK() && !g_returning; i++) {
+            gen_push(e, i);
+            /* Drive remaining generators in root; if none, exec directly */
+            int inner = icn_exec_driven(root, root, env, nenv, out);
+            if (!inner) icn_exec(root, env, nenv, out);
+            gen_pop();
+            ticks++;
+            if (g_returning) break;
+        }
+        LOOP_POP();
+        return ticks;
+    }
+
+    /* E_TO_BY: loop with step */
+    if (e->kind == E_TO_BY && e->nchildren >= 3) {
+        IcnVal lo_v, hi_v, st_v;
+        icn_exec(e->children[0], env, nenv, &lo_v);
+        icn_exec(e->children[1], env, nenv, &hi_v);
+        icn_exec(e->children[2], env, nenv, &st_v);
+        long lo=lo_v.ival, hi=hi_v.ival, st=st_v.ival?st_v.ival:1;
+        int ticks=0;
+        LOOP_PUSH();
+        if (st>0) {
+            for(long i=lo;i<=hi&&!LOOP_BREAK_CHK()&&!g_returning;i+=st){
+                gen_push(e,i);
+                int inner=icn_exec_driven(root,root,env,nenv,out);
+                if(!inner) icn_exec(root,env,nenv,out);
+                gen_pop(); ticks++; if(g_returning)break;
+            }
+        } else {
+            for(long i=lo;i>=hi&&!LOOP_BREAK_CHK()&&!g_returning;i+=st){
+                gen_push(e,i);
+                int inner=icn_exec_driven(root,root,env,nenv,out);
+                if(!inner) icn_exec(root,env,nenv,out);
+                gen_pop(); ticks++; if(g_returning)break;
+            }
+        }
+        LOOP_POP();
+        return ticks;
+    }
+
+    /* Recurse into children to find first undriven generator */
+    for (int i = 0; i < e->nchildren; i++) {
+        int ticks = icn_exec_driven(root, e->children[i], env, nenv, out);
+        if (ticks > 0) return ticks;
+    }
+    return 0;
+}
+
+/* TEMP: AST dump for debugging E_EVERY structure */
+static void icn_dump_expr(EXPR_t *e, int d) {
+    if (!e) return;
+    for(int i=0;i<d;i++) fprintf(stderr,"  ");
+    fprintf(stderr,"kind=%d sval=%s ival=%lld nch=%d\n",
+        e->kind, e->sval?e->sval:"_", (long long)e->ival, e->nchildren);
+    for(int i=0;i<e->nchildren;i++) icn_dump_expr(e->children[i], d+1);
+}
 
 /* =========================================================================
  * icn_binop -- apply binary op; returns 1=success 0=fail (for comparisons)
@@ -194,34 +319,76 @@ static int icn_exec(EXPR_t *e, IcnVal *env, int nenv, IcnVal *out) {
             if(!icn_exec(e->children[1],env,nenv,&r)) return 0;
             return icn_binop(op,l,r,out);
         }
-        /* E_TO scalar: return lo value */
+        /* E_TO scalar: return lo value — OR current substituted value if being driven */
         case E_TO: case E_TO_BY: {
+            long cur;
+            if (gen_lookup(e, &cur)) { *out = icn_int(cur); return 1; }
             if(e->nchildren<1){*out=icn_null();return 1;}
             return icn_exec(e->children[0],env,nenv,out);
         }
-        /* E_EVERY -- drive generator; mirror of emit_every */
+        /* E_EVERY -- drive generator; β re-entry as for-loop (Prolog pl_exec_choice model).
+         * DO NOT use icn_collect: body re-reads env each tick (e.g. total := total + (1 to n)).
+         * Mirrors emit_every + emit_to in emit_x64.c: gen-α → body → gen-β → body → ... → ω
+         *
+         * AST shape: `every expr` has ONE child = the entire expression.
+         * `every gen do body` has TWO children = gen, body.
+         * In both cases icn_exec_driven finds the embedded generator and loops. */
         case E_EVERY: {
             if (e->nchildren<1){*out=icn_null();return 1;}
             EXPR_t *gen  = e->children[0];
             EXPR_t *body = (e->nchildren>1)?e->children[1]:NULL;
 
-            /* every write(gen): special case -- collect gen, write each */
-            if (gen->kind==E_FNC && gen->nchildren>=2 &&
-                gen->children[0]->sval &&
-                strcmp(gen->children[0]->sval,"write")==0) {
-                IcnVal buf[MAX_GEN]; int n=0;
-                EXPR_t *arg=gen->children[1];
-                n=icn_collect(arg,env,nenv,buf,MAX_GEN);
-                if (!n) { IcnVal v; if(icn_exec(arg,env,nenv,&v)){buf[0]=v;n=1;} }
-                for (int i=0;i<n;i++) icn_write(buf[i]);
+            /* Two-child form: `every gen do body` — separate gen and body.
+             * E_TO generator: for-loop i = lo..hi, run full body each tick with live env. */
+            if (body && gen->kind==E_TO && gen->nchildren>=2) {
+                IcnVal lo_v, hi_v;
+                if (!icn_exec(gen->children[0],env,nenv,&lo_v)) { *out=icn_null(); return 1; }
+                if (!icn_exec(gen->children[1],env,nenv,&hi_v)) { *out=icn_null(); return 1; }
+                long lo=lo_v.ival, hi=hi_v.ival;
+                IcnVal bv=icn_null();
+                LOOP_PUSH();
+                for (long i=lo; i<=hi && !LOOP_BREAK_CHK() && !g_returning; i++) {
+                    icn_exec(body, env, nenv, &bv);
+                }
+                LOOP_POP();
                 *out=icn_null(); return 1;
             }
-            /* General every: collect gen values, run body for each */
-            IcnVal buf[MAX_GEN]; int n=icn_collect(gen,env,nenv,buf,MAX_GEN);
-            if (!n) { IcnVal v; if(icn_exec(gen,env,nenv,&v)){buf[0]=v;n=1;} }
-            IcnVal bv=icn_null();
-            for (int i=0;i<n;i++)
-                if (body) icn_exec(body,env,nenv,&bv);
+            if (body && gen->kind==E_TO_BY && gen->nchildren>=3) {
+                IcnVal lo_v, hi_v, st_v;
+                if (!icn_exec(gen->children[0],env,nenv,&lo_v)) { *out=icn_null(); return 1; }
+                if (!icn_exec(gen->children[1],env,nenv,&hi_v)) { *out=icn_null(); return 1; }
+                if (!icn_exec(gen->children[2],env,nenv,&st_v)) { *out=icn_null(); return 1; }
+                long lo=lo_v.ival, hi=hi_v.ival, st=st_v.ival?st_v.ival:1;
+                IcnVal bv=icn_null();
+                LOOP_PUSH();
+                if (st>0) { for(long i=lo;i<=hi&&!LOOP_BREAK_CHK()&&!g_returning;i+=st){icn_exec(body,env,nenv,&bv);} }
+                else       { for(long i=lo;i>=hi&&!LOOP_BREAK_CHK()&&!g_returning;i+=st){icn_exec(body,env,nenv,&bv);} }
+                LOOP_POP();
+                *out=icn_null(); return 1;
+            }
+
+            /* One-child form: `every expr` — generator embedded inside expr.
+             *
+             * Both cases use icn_exec_driven: finds the innermost E_TO/E_TO_BY,
+             * loops it, and re-executes the full expr each tick with live env.
+             * This handles:
+             *   A) `every total := total + (1 to n)` — assign, env updates each tick
+             *   B) `every write(1 to 5)` — write side-effect fires each tick
+             *
+             * Cross-products (e.g. `every write((1 to 3) + (1 to 3))`): driven
+             * recursively — outer call drives first E_TO; inner calls drive second. */
+            if (!body) {
+                int ticks = icn_exec_driven(gen, gen, env, nenv, out);
+                if (!ticks) icn_exec(gen, env, nenv, out);
+                *out=icn_null(); return 1;
+            }
+
+            /* Two-child form with non-TO gen: scalar gen, run body once if succeeds */
+            IcnVal gv=icn_null();
+            if (icn_exec(gen,env,nenv,&gv)) {
+                IcnVal bv=icn_null();
+                icn_exec(body,env,nenv,&bv);
+            }
             *out=icn_null(); return 1;
         }
         /* E_WHILE -- while E [do body]; mirror of emit_while */
