@@ -161,6 +161,14 @@ static int        call_depth = 0;
 /* The program being interpreted (set in main before execute_program) */
 static Program *g_prog = NULL;
 
+/* ── Prolog type forward declarations ───────────────────────────────────────
+ * Full definitions appear in the pl_ block below; globals declared here so
+ * they sit alongside the Icon globals at file scope (same pattern). */
+#define PL_PRED_TABLE_SIZE_FWD 256
+typedef struct Pl_PredEntry_t { const char *key; EXPR_t *choice; struct Pl_PredEntry_t *next; } Pl_PredEntry;
+typedef struct { Pl_PredEntry *buckets[PL_PRED_TABLE_SIZE_FWD]; } Pl_PredTable;
+/* Trail is defined in prolog_runtime.h (already included) */
+
 /* ── Icon unified interpreter state ────────────────────────────────────────
  * Icon procedures use name-based NV store, same as SNOBOL4.
  * On procedure entry each param/local name is saved from NV and replaced;
@@ -198,7 +206,23 @@ static struct { const char *subj; int pos; } icn_scan_stack[ICN_SCAN_STACK_MAX];
 static int         icn_scan_depth = 0;
 static int         icn_loop_break = 0; /* E_LOOP_BREAK signal for repeat/while/until */
 static DESCR_t icn_call_proc(EXPR_t *proc, DESCR_t *args, int nargs); /* forward */
-static DESCR_t interp_eval(EXPR_t *e); /* forward — needed by icn_drive */
+static DESCR_t  interp_eval(EXPR_t *e); /* forward — needed by icn_drive */
+static Term    *pl_unified_term_from_expr(EXPR_t *e, Term **env); /* forward — needed by E_UNIFY in interp_eval */
+static Term   **pl_env_new(int n); /* forward — needed by E_CHOICE in interp_eval */
+static EXPR_t  *pl_pred_table_lookup(Pl_PredTable *pt, const char *key); /* forward */
+static int      is_pl_user_call(EXPR_t *goal); /* forward */
+static int      pl_unified_exec_goal(EXPR_t *goal, Term **env, Pl_PredTable *pt, Trail *trail, int *cut_flag); /* forward */
+static int     pl_unified_exec_goal(EXPR_t *goal, Term **env, Pl_PredTable *pt, Trail *trail, int *cut_flag); /* forward */
+
+/* ── Prolog global execution state (mirrors icn_proc_table pattern) ────────
+ * Initialised by pl_execute_program_unified() at program start.
+ * Read/written by interp_eval() E_CHOICE/E_CLAUSE/E_UNIFY/E_CUT/E_TRAIL_* cases.
+ * g_pl_active gates Prolog dispatch inside interp_eval. */
+static Pl_PredTable g_pl_pred_table;
+static Trail        g_pl_trail;
+static int          g_pl_cut_flag = 0;    /* set by E_CUT */
+static Term       **g_pl_env      = NULL; /* current clause variable env */
+static int          g_pl_active   = 0;    /* 1 when executing Prolog */
 
 /* icn_drive: drive generators embedded in e, re-executing root each tick.
  * Returns tick count. Mirrors icn_exec_driven in icon_interp.c but uses DESCR_t. */
@@ -1854,6 +1878,104 @@ static DESCR_t interp_eval(EXPR_t *e)
     case E_SUSPEND:
         return (e->nchildren > 0) ? interp_eval(e->children[0]) : NULVCL;
 
+    /* ── Prolog IR nodes — S-1C-2/3 ───────────────────────────────────────
+     * Only reached when g_pl_active is set.
+     * E_UNIFY/E_CUT/E_TRAIL_* are leaf goal nodes.
+     * E_CHOICE iterates clauses with backtracking via g_pl_trail.
+     * E_CLAUSE unifies head args from g_pl_env, runs body via interp_eval. */
+    case E_UNIFY: {
+        if (!g_pl_active) return NULVCL;
+        Term *t1 = pl_unified_term_from_expr(e->children[0], g_pl_env);
+        Term *t2 = pl_unified_term_from_expr(e->children[1], g_pl_env);
+        int mark = trail_mark(&g_pl_trail);
+        if (!unify(t1, t2, &g_pl_trail)) { trail_unwind(&g_pl_trail, mark); return FAILDESCR; }
+        return INTVAL(1);
+    }
+    case E_CUT:
+        if (g_pl_active) g_pl_cut_flag = 1;
+        return INTVAL(1);
+    case E_TRAIL_MARK:
+    case E_TRAIL_UNWIND:
+        return NULVCL;
+
+    case E_CLAUSE:
+        /* Clauses are iterated inline by E_CHOICE — never dispatched standalone. */
+        return NULVCL;
+
+    case E_CHOICE: {
+        /* Iterate clauses of a predicate with backtracking.
+         * e->sval = "functor/arity", e->children[i] = E_CLAUSE nodes.
+         * Caller has placed Term** args in g_pl_env (arity slots). */
+        if (!g_pl_active) return NULVCL;
+        int nclauses = e->nchildren;
+        /* parse arity from sval "name/N" */
+        int arity = 0;
+        if (e->sval) { const char *sl = strrchr(e->sval, '/'); if (sl) arity = atoi(sl+1); }
+        int mark = trail_mark(&g_pl_trail);
+        int saved_cut = g_pl_cut_flag; g_pl_cut_flag = 0;
+        int result = 0;
+        for (int ci = 0; ci < nclauses && !g_pl_cut_flag; ci++) {
+            if (ci > 0) trail_unwind(&g_pl_trail, mark);
+            EXPR_t *ec = e->children[ci];
+            if (!ec || ec->kind != E_CLAUSE) continue;
+            int n_vars = (int)ec->ival;
+            Term **cenv = pl_env_new(n_vars);
+            /* unify head args */
+            int head_mark = trail_mark(&g_pl_trail); int head_ok = 1;
+            for (int i = 0; i < arity && i < ec->nchildren; i++) {
+                Term *ha = pl_unified_term_from_expr(ec->children[i], cenv);
+                Term *ca = (g_pl_env && i < arity) ? g_pl_env[i] : term_new_var(i);
+                if (!unify(ca, ha, &g_pl_trail)) { head_ok = 0; break; }
+            }
+            if (!head_ok) { trail_unwind(&g_pl_trail, head_mark); free(cenv); continue; }
+            /* run body — E_FNC (Prolog builtins/user calls) via pl_unified_exec_goal,
+             * structural nodes (E_UNIFY, E_CUT, E_TRAIL_*) via interp_eval */
+            Term **saved_env = g_pl_env; g_pl_env = cenv;
+            int clause_cut = 0; int saved_cf = g_pl_cut_flag; g_pl_cut_flag = 0;
+            int ok = 1;
+            for (int i = arity; i < ec->nchildren && ok && !g_pl_cut_flag; i++) {
+                EXPR_t *goal = ec->children[i];
+                if (!goal) continue;
+                /* All Prolog goal nodes now go through interp_eval:
+                 * E_UNIFY/E_CUT/E_TRAIL_* handled by cases above.
+                 * E_CHOICE handled by case above (user predicate call).
+                 * E_FNC: builtins and user calls — route through pl_unified_exec_goal
+                 * for now; S-1C-4 final step will inline builtins into interp_eval. */
+                if (goal->kind == E_FNC) {
+                    /* user-defined predicate: look up E_CHOICE, call interp_eval */
+                    if (is_pl_user_call(goal)) {
+                        char key[256]; snprintf(key, sizeof key, "%s/%d", goal->sval ? goal->sval : "", goal->nchildren);
+                        EXPR_t *choice = pl_pred_table_lookup(&g_pl_pred_table, key);
+                        if (!choice) { fprintf(stderr, "prolog: undefined predicate %s\n", key); ok = 0; continue; }
+                        /* build caller arg terms into a fresh env slot for E_CHOICE */
+                        int carity = goal->nchildren;
+                        Term **call_args = carity ? malloc(carity * sizeof(Term *)) : NULL;
+                        for (int a = 0; a < carity; a++) call_args[a] = pl_unified_term_from_expr(goal->children[a], cenv);
+                        Term **saved_env2 = g_pl_env; g_pl_env = call_args;
+                        DESCR_t r = interp_eval(choice);
+                        g_pl_env = saved_env2;
+                        if (call_args) free(call_args);
+                        if (IS_FAIL_fn(r)) ok = 0;
+                    } else {
+                        /* builtin — still through pl_unified_exec_goal until inlined */
+                        if (!pl_unified_exec_goal(goal, cenv, &g_pl_pred_table, &g_pl_trail, &g_pl_cut_flag))
+                            ok = 0;
+                    }
+                } else {
+                    DESCR_t r = interp_eval(goal);
+                    if (IS_FAIL_fn(r)) ok = 0;
+                }
+            }
+            clause_cut = g_pl_cut_flag;
+            g_pl_env = saved_env; g_pl_cut_flag = saved_cf;
+            free(cenv);
+            if (ok) { result = 1; if (clause_cut) g_pl_cut_flag = 1; break; }
+            if (clause_cut) break;
+        }
+        if (!result) { trail_unwind(&g_pl_trail, mark); g_pl_cut_flag = saved_cut; }
+        return result ? INTVAL(1) : FAILDESCR;
+    }
+
     default:
         return NULVCL;
     }
@@ -2037,10 +2159,8 @@ static DESCR_t interp_eval_pat(EXPR_t *e)
  * prolog_interp.c and prolog_interp.h are deleted after this.
  * ══════════════════════════════════════════════════════════════════════════ */
 
-/*---- Predicate table ----*/
-#define PL_PRED_TABLE_SIZE 256
-typedef struct Pl_PredEntry { const char *key; EXPR_t *choice; struct Pl_PredEntry *next; } Pl_PredEntry;
-typedef struct { Pl_PredEntry *buckets[PL_PRED_TABLE_SIZE]; } Pl_PredTable;
+/*---- Predicate table — typedefs hoisted to file scope (see forward decls above) ----*/
+#define PL_PRED_TABLE_SIZE PL_PRED_TABLE_SIZE_FWD
 
 static unsigned pl_pred_hash(const char *s) {
     unsigned h = 5381;
@@ -2513,18 +2633,32 @@ static int pl_unified_exec_body(EXPR_t **goals, int ngoals, Term **env, Pl_PredT
     return pl_unified_exec_body_k(goals,ngoals,env,pt,trail,cut_flag,pl_cont_done);
 }
 
-/*---- pl_execute_program_unified — entry point (replaces pl_execute_program) ----*/
+/*---- pl_execute_program_unified — entry point ----*/
+/* S-1C-3: calls interp_eval() on the main/0 E_CHOICE node directly.
+ * pl_unified_call no longer drives top-level execution.
+ * User-defined predicate calls within body goals still go through
+ * pl_unified_exec_goal → pl_unified_call (S-1C-4 will eliminate those). */
 static void pl_execute_program_unified(Program *prog) {
     if (!prog) return;
     prolog_atom_init();
-    Pl_PredTable pt; memset(&pt,0,sizeof pt);
-    for(STMT_t *s=prog->head;s;s=s->next){
-        EXPR_t *subj=s->subject;
-        if(subj&&(subj->kind==E_CHOICE||subj->kind==E_CLAUSE)&&subj->sval)
-            pl_pred_table_insert(&pt,subj->sval,subj);
+    memset(&g_pl_pred_table, 0, sizeof g_pl_pred_table);
+    for (STMT_t *s = prog->head; s; s = s->next) {
+        EXPR_t *subj = s->subject;
+        if (subj && (subj->kind==E_CHOICE||subj->kind==E_CLAUSE) && subj->sval)
+            pl_pred_table_insert(&g_pl_pred_table, subj->sval, subj);
     }
-    Trail trail; trail_init(&trail);
-    pl_unified_call(&pt,"main/0",0,NULL,&trail,0);
+    trail_init(&g_pl_trail);
+    g_pl_cut_flag = 0;
+    g_pl_env      = NULL;
+    g_pl_active   = 1;
+    /* Find main/0 E_CHOICE node and dispatch through interp_eval */
+    EXPR_t *main_choice = pl_pred_table_lookup(&g_pl_pred_table, "main/0");
+    if (main_choice) {
+        interp_eval(main_choice);
+    } else {
+        fprintf(stderr, "prolog: no main/0 predicate\n");
+    }
+    g_pl_active = 0;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
