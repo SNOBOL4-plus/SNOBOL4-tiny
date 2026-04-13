@@ -369,6 +369,7 @@ Program *prolog_lower(PlProgram *pl_prog) {
                 STMT_t *s = stmt_new();
                 s->subject = lower_term(goal);
                 s->lineno  = cl->lineno;
+                s->lang    = LANG_PL;  /* U-12 */
                 if (!prog->head) prog->head = s;
                 else             prog->tail->next = s;
                 prog->tail = s;
@@ -382,6 +383,7 @@ Program *prolog_lower(PlProgram *pl_prog) {
         STMT_t *s = stmt_new();
         s->subject = choices[i];
         s->lineno  = 0;
+        s->lang    = LANG_PL;  /* U-12 */
         if (!prog->head) prog->head = s;
         else             prog->tail->next = s;
         prog->tail = s;

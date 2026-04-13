@@ -95,6 +95,11 @@ typedef struct {
 typedef struct EXPR_t EXPR_t;
 #endif
 
+/* ---- source language tags (U-12) ---- */
+#define LANG_SNO  0   /* SNOBOL4 */
+#define LANG_ICN  1   /* Icon    */
+#define LANG_PL   2   /* Prolog  */
+
 /* ---- statement ---- */
 typedef struct STMT_t STMT_t;
 struct STMT_t {
@@ -106,6 +111,7 @@ struct STMT_t {
     int      lineno;
     int      is_end;
     int      has_eq;
+    int      lang;    /* LANG_SNO / LANG_ICN / LANG_PL  (U-12) */
     STMT_t  *next;
 };
 

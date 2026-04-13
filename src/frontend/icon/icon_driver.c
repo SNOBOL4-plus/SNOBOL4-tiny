@@ -47,6 +47,7 @@ Program *icon_compile(const char *source, const char *filename) {
         STMT_t *st = calloc(1, sizeof(STMT_t));
         st->subject = lowered[i];
         st->lineno  = 0;
+        st->lang    = LANG_ICN;  /* U-12 */
         if (!prog->head) prog->head = prog->tail = st;
         else           { prog->tail->next = st; prog->tail = st; }
         prog->nstmts++;
