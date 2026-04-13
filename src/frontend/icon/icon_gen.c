@@ -1,9 +1,12 @@
 /*============================================================================================================================
- * icon_gen.c — Icon Value-Generator Byrd Box Broker + Box Implementations (GOAL-ICN-BROKER)
+ * icon_gen.c — Icon Value-Generator Byrd Box Broker + Box Implementations (GOAL-ICN-BROKER, GOAL-UNIFIED-BROKER U-7)
+ *
+ * U-7: icn_broker is now a thin wrapper around bb_broker(..., BB_PUMP, ...).
+ *      icn_gen_t → bb_node_t; icn_box_fn → bb_box_fn throughout.
  *
  * Architecture mirrors SNOBOL4's exec_stmt Phase 3 broker loop (stmt_exec.c):
  *   Phase 3 (SNOBOL4):  root.fn(ζ,α) → body → root.fn(ζ,β) → … → ω
- *   icn_broker (Icon):  gen.fn(ζ,α)  → body → gen.fn(ζ,β)  → … → ω
+ *   icn_broker (Icon):  gen.fn(ζ,α)  → body → gen.fn(ζ,β)  → … → ω  (via bb_broker BB_PUMP)
  *
  * Value type: DESCR_t (not spec_t).  Failure sentinel: FAILDESCR / IS_FAIL_fn().
  *============================================================================================================================*/
@@ -16,36 +19,13 @@
 #include <ucontext.h>
 
 /*============================================================================================================================
- * B-2: icn_broker — drive a generator through all its values
+ * U-7: icn_broker — thin wrapper around bb_broker(gen, BB_PUMP, body_fn, arg)
  *
- * Mirrors exec_stmt Phase 3:
- *   gen.fn(ζ, α)  — fresh entry; if not FAIL → body_fn(val), then gen.fn(ζ, β) loop
- *   gen.fn(ζ, β)  — re-entry (backtrack); if not FAIL → body_fn(val), continue
- *   gen.fn(ζ, β)  → FAIL (ω) → done
- *
- * Returns: number of values produced (tick count).
+ * Kept for backward compatibility with existing call sites in icon_gen.c unit tests.
+ * New call sites should use bb_broker directly with BB_PUMP mode.
  *============================================================================================================================*/
-int icn_broker(icn_gen_t gen, void (*body_fn)(DESCR_t val, void *arg), void *arg) {
-    if (!gen.fn) return 0;
-
-    int ticks = 0;
-
-    /* α — fresh entry */
-    DESCR_t val = gen.fn(gen.zeta, α);
-    if (IS_FAIL_fn(val)) return 0;
-
-    body_fn(val, arg);
-    ticks++;
-
-    /* β loop — re-entries until ω */
-    for (;;) {
-        val = gen.fn(gen.zeta, β);
-        if (IS_FAIL_fn(val)) break;
-        body_fn(val, arg);
-        ticks++;
-    }
-
-    return ticks;
+int icn_broker(bb_node_t gen, void (*body_fn)(DESCR_t val, void *arg), void *arg) {
+    return bb_broker(gen, BB_PUMP, body_fn, arg);
 }
 
 /*============================================================================================================================
@@ -189,7 +169,7 @@ int main(void) {
     {
         const_box_state_t *s = calloc(1, sizeof(*s));
         s->value = (DESCR_t){ .v = DT_I, .i = 42 };
-        icn_gen_t gen = { const_box_fn, s };
+        bb_node_t gen = { const_box_fn, s, 0 };
         long vals[8]; collector_t c = { vals, 0, 8 };
         int ticks = icn_broker(gen, collect_int, &c);
         ASSERT(ticks == 1, "B-2: ticks==1");
@@ -201,7 +181,7 @@ int main(void) {
     {
         icn_to_state_t *s = calloc(1, sizeof(*s));
         s->lo = 1; s->hi = 5;
-        icn_gen_t gen = { icn_bb_to, s };
+        bb_node_t gen = { icn_bb_to, s, 0 };
         long vals[8]; collector_t c = { vals, 0, 8 };
         int ticks = icn_broker(gen, collect_int, &c);
         ASSERT(ticks == 5, "B-3: ticks==5");
@@ -213,7 +193,7 @@ int main(void) {
     {
         icn_to_by_state_t *s = calloc(1, sizeof(*s));
         s->lo = 1; s->hi = 10; s->step = 2;
-        icn_gen_t gen = { icn_bb_to_by, s };
+        bb_node_t gen = { icn_bb_to_by, s, 0 };
         long vals[8]; collector_t c = { vals, 0, 8 };
         int ticks = icn_broker(gen, collect_int, &c);
         ASSERT(ticks == 5, "B-4: ticks==5");
@@ -225,7 +205,7 @@ int main(void) {
     {
         icn_iterate_state_t *s = calloc(1, sizeof(*s));
         s->str = "abc"; s->len = 3;
-        icn_gen_t gen = { icn_bb_iterate, s };
+        bb_node_t gen = { icn_bb_iterate, s, 0 };
         char got[4] = {0};
         str_collector_t sc = { got, 0, 3 };
         icn_broker(gen, collect_str, &sc);
@@ -237,7 +217,7 @@ int main(void) {
     {
         icn_find_state_t *s = calloc(1, sizeof(*s));
         s->needle = "is"; s->hay = "this is it"; s->nlen = 2; s->next = s->hay;
-        icn_gen_t gen = { icn_bb_find, s };
+        bb_node_t gen = { icn_bb_find, s, 0 };
         long vals[8]; collector_t c = { vals, 0, 8 };
         int ticks = icn_broker(gen, collect_int, &c);
         ASSERT(ticks == 2, "B-7: find ticks==2");
