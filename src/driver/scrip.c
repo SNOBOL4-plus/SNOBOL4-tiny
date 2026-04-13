@@ -2028,6 +2028,41 @@ static DESCR_t interp_eval(EXPR_t *e)
         return pat_arbno(inner);
     }
 
+    /* ── Prolog IR nodes — S-1C-2/3 ──────────────────────────────────────────
+     * Only reached when g_pl_active is set (Prolog program running).
+     * E_CHOICE drives clause selection via the Byrd box broker (pl_broker.c).
+     * E_UNIFY/E_CUT/E_TRAIL_* are leaf goal nodes evaluated inline. */
+    case E_UNIFY: {
+        if (!g_pl_active) return NULVCL;
+        Term *t1 = pl_unified_term_from_expr(e->children[0], g_pl_env);
+        Term *t2 = pl_unified_term_from_expr(e->children[1], g_pl_env);
+        int mark = trail_mark(&g_pl_trail);
+        if (!unify(t1, t2, &g_pl_trail)) { trail_unwind(&g_pl_trail, mark); return FAILDESCR; }
+        return INTVAL(1);
+    }
+    case E_CUT:
+        if (g_pl_active) g_pl_cut_flag = 1;
+        return INTVAL(1);
+    case E_TRAIL_MARK:
+    case E_TRAIL_UNWIND:
+        return NULVCL;
+    case E_CLAUSE:
+        /* Clauses are iterated by E_CHOICE — never dispatched standalone. */
+        return NULVCL;
+    case E_CHOICE: {
+        /* Drive clause selection via the Byrd box broker.
+         * pl_box_choice builds the full OR/CAT/head-unify box tree.
+         * pl_exec_goal drives α — OR-box retries β internally per clause.
+         * g_pl_env holds the caller's arg Term** array (arity slots).
+         * Returns INTVAL(1) on first solution (γ), FAILDESCR on ω. */
+        if (!g_pl_active) return NULVCL;
+        int arity = 0;
+        if (e->sval) { const char *sl = strrchr(e->sval, '/'); if (sl) arity = atoi(sl+1); }
+        Pl_GoalBox root = pl_box_choice(e, g_pl_env, arity);
+        int ok = pl_exec_goal(root);
+        return ok ? INTVAL(1) : FAILDESCR;
+    }
+
     default:
         return NULVCL;
     }
@@ -2095,8 +2130,7 @@ static DESCR_t *interp_eval_ref(EXPR_t *e)
         return NV_PTR_fn(nm);
     }
 
-    default:
-        return NULL;
+    default: return NULL;
     }
 }
 
@@ -2259,8 +2293,7 @@ Term **pl_env_new(int n) {
 /*---- Forward declarations ----*/
 Term *pl_unified_term_from_expr(EXPR_t *e, Term **env);
 static Term *pl_unified_deep_copy(Term *t);
-int          interp_exec_pl_builtin(EXPR_t *goal, Term **env); /* non-static — also declared in prolog_builtin.h */
-static int   pl_exec_body(EXPR_t **goals, int ngoals, Term **env);
+int          interp_exec_pl_builtin(EXPR_t *goal, Term **env);
 
 
 
@@ -2353,125 +2386,9 @@ static int is_pl_user_call(EXPR_t *goal) {
     return 1;
 }
 
-/*---- pl_exec_one_goal — dispatch a single goal, return 1=success 0=fail ----*/
-/* Forward-declared here; interp_exec_pl_builtin defined below. */
-static int pl_exec_one_goal(EXPR_t *goal, Term **env);
-
-/*---- pl_exec_body — recursive body executor with backtracking (S-1C-5) ----*/
-/* Executes goals[0..ngoals-1] left-to-right with full backtracking.
- * When goals[i] is a user predicate (E_CHOICE), interp_eval drives all
- * clause alternatives via the E_CHOICE trail loop.  Backtracking into an
- * earlier goal is achieved by the recursive structure: if the suffix
- * pl_exec_body(goals+1, ngoals-1) fails, we return 0 so the caller
- * (the E_CHOICE clause loop) retries from the next clause.
- * For goals that themselves produce multiple solutions (user predicates),
- * we need to loop over their solutions here — we do that by re-calling
- * interp_eval after trail_unwind, matching the same retry pattern the
- * E_CHOICE loop uses for clauses. */
-static int pl_exec_body(EXPR_t **goals, int ngoals, Term **env) {
-    if (ngoals == 0) return 1;
-    EXPR_t *g = goals[0];
-    if (!g) return pl_exec_body(goals + 1, ngoals - 1, env);
-
-    /* Flatten conjunction: treat `,` children as inline goals */
-    if (g->kind == E_FNC && g->sval && strcmp(g->sval, ",") == 0) {
-        /* Build flattened array: conj children + remaining goals */
-        int nc = g->nchildren;
-        int total = nc + ngoals - 1;
-        EXPR_t **flat = malloc(total * sizeof(EXPR_t *));
-        for (int i = 0; i < nc; i++) flat[i] = g->children[i];
-        for (int i = 0; i < ngoals - 1; i++) flat[nc + i] = goals[i + 1];
-        int r = pl_exec_body(flat, total, env);
-        free(flat);
-        return r;
-    }
-
-    /* Disjunction `;`: try left, on failure try right, each with suffix */
-    if (g->kind == E_FNC && g->sval && strcmp(g->sval, ";") == 0 && g->nchildren >= 2) {
-        EXPR_t *left = g->children[0], *right = g->children[1];
-        /* if-then-else: (Cond -> Then ; Else) */
-        if (left && left->kind == E_FNC && left->sval && strcmp(left->sval, "->") == 0
-                && left->nchildren >= 2) {
-            int mark = trail_mark(&g_pl_trail); int cut2 = 0; (void)cut2;
-            if (pl_exec_one_goal(left->children[0], env)) {
-                /* condition succeeded — commit, run then-branch + suffix */
-                int nc2 = left->nchildren - 1;
-                int total = nc2 + ngoals - 1;
-                EXPR_t **flat = malloc(total * sizeof(EXPR_t *));
-                for (int i = 0; i < nc2; i++) flat[i] = left->children[i + 1];
-                for (int i = 0; i < ngoals - 1; i++) flat[nc2 + i] = goals[i + 1];
-                int r = pl_exec_body(flat, total, env);
-                free(flat);
-                return r;
-            }
-            trail_unwind(&g_pl_trail, mark);
-            /* condition failed — run else-branch + suffix */
-            EXPR_t *suffix_goals[1]; suffix_goals[0] = right; /* reuse disjunction right */
-            int total = 1 + ngoals - 1;
-            EXPR_t **flat = malloc(total * sizeof(EXPR_t *));
-            flat[0] = right;
-            for (int i = 0; i < ngoals - 1; i++) flat[1 + i] = goals[i + 1];
-            int r = pl_exec_body(flat, total, env);
-            free(flat);
-            return r;
-        }
-        /* plain disjunction: try left then right */
-        int mark = trail_mark(&g_pl_trail);
-        EXPR_t *lgoals[1]; lgoals[0] = left;
-        int total = 1 + ngoals - 1;
-        EXPR_t **flat = malloc(total * sizeof(EXPR_t *));
-        flat[0] = left;
-        for (int i = 0; i < ngoals - 1; i++) flat[1 + i] = goals[i + 1];
-        if (pl_exec_body(flat, total, env)) { free(flat); return 1; }
-        trail_unwind(&g_pl_trail, mark);
-        flat[0] = right;
-        int r = pl_exec_body(flat, total, env);
-        free(flat);
-        return r;
-    }
-
-    /* User-defined predicate: route through Byrd box broker (S-BB-8).
-     * pl_box_choice_call builds the OR-box; pl_exec_goal drives it.
-     * The raw for-ci clause loop is deleted — broker owns backtracking. */
-    if (g->kind == E_FNC && is_pl_user_call(g)) {
-        Pl_GoalBox box = pl_box_choice_call(g, env);
-        int saved_cf = g_pl_cut_flag; g_pl_cut_flag = 0;
-        int ok = pl_exec_goal(box);
-        int cut = g_pl_cut_flag;
-        g_pl_cut_flag = saved_cf | cut;
-        if (!ok) return 0;
-        int suf_ok = pl_exec_body(goals + 1, ngoals - 1, env);
-        return suf_ok;
-    }
-
-    /* Builtin or structural node: deterministic — run it, then suffix */
-    if (!pl_exec_one_goal(g, env)) return 0;
-    return pl_exec_body(goals + 1, ngoals - 1, env);
-}
-
-static int pl_exec_one_goal(EXPR_t *goal, Term **env) {
-    if (!goal) return 1;
-    if (goal->kind == E_FNC && is_pl_user_call(goal)) {
-        /* S-BB-8: route through broker */
-        Pl_GoalBox box = pl_box_choice_call(goal, env);
-        int saved_cf = g_pl_cut_flag; g_pl_cut_flag = 0;
-        int ok = pl_exec_goal(box);
-        int cut = g_pl_cut_flag;
-        g_pl_cut_flag = saved_cf | cut;
-        return ok;
-    }
-    if (goal->kind == E_FNC || goal->kind == E_UNIFY || goal->kind == E_CUT ||
-        goal->kind == E_TRAIL_MARK || goal->kind == E_TRAIL_UNWIND)
-        return interp_exec_pl_builtin(goal, env);
-    DESCR_t r = interp_eval(goal);
-    return !IS_FAIL_fn(r);
-}
-
-/*---- interp_exec_pl_builtin — S-1C-5 ----*/
-/* Execute one Prolog builtin goal. Uses file-scope globals g_pl_trail,
- * g_pl_cut_flag, g_pl_pred_table, g_pl_env. Returns 1=success, 0=fail.
- * User-defined predicate calls (E_FNC not in builtin list) are NOT handled
- * here — the E_CHOICE body loop dispatches those via interp_eval(). */
+/*---- interp_exec_pl_builtin — execute one Prolog builtin goal ----*/
+/* Uses file-scope globals g_pl_trail, g_pl_cut_flag, g_pl_pred_table, g_pl_env.
+ * Returns 1=success, 0=fail. Called by pl_box_builtin in pl_broker.c. */
 int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
     if (!goal) return 1;
     Trail *trail = &g_pl_trail;
@@ -2705,11 +2622,11 @@ static void pl_execute_program_unified(Program *prog) {
     g_pl_cut_flag = 0;
     g_pl_env      = NULL;
     g_pl_active   = 1;
-    /* S-BB-7: route main/0 through the Byrd box broker instead of interp_eval */
+    /* S-1C-3 restored: main/0 dispatches through interp_eval() — the ONE interpreter.
+     * E_CHOICE case in interp_eval uses pl_box_choice+pl_exec_goal for backtracking. */
     EXPR_t *main_choice = pl_pred_table_lookup(&g_pl_pred_table, "main/0");
     if (main_choice) {
-        Pl_GoalBox root = pl_box_choice(main_choice, NULL, 0);
-        pl_exec_goal(root);
+        interp_eval(main_choice);
     } else {
         fprintf(stderr, "prolog: no main/0 predicate\n");
     }

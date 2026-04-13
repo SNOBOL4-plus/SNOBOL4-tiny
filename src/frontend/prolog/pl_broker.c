@@ -266,7 +266,8 @@ static DESCR_t pl_head_unify_fn(void *zeta, int entry) {
  * env is the clause's cenv (populated after head unification succeeds).
  * For user calls (S-BB-5), we forward to pl_box_choice_call.
  *--------------------------------------------------------------------------------------------------------------------*/
-static int pl_is_builtin_goal(EXPR_t *g);   /* forward */
+static int pl_is_builtin_goal(EXPR_t *g);                              /* forward */
+static Pl_GoalBox pl_box_alt(Pl_GoalBox left, Pl_GoalBox right);       /* forward */
 
 static Pl_GoalBox pl_box_goal_from_ir(EXPR_t *g, Term **env) {
     if (!g) return pl_box_true();
@@ -275,6 +276,27 @@ static Pl_GoalBox pl_box_goal_from_ir(EXPR_t *g, Term **env) {
     if (g->kind == E_FNC) {
         if (g->sval && strcmp(g->sval, "true") == 0) return pl_box_true();
         if (g->sval && strcmp(g->sval, "fail") == 0) return pl_box_fail();
+        /* `,/2` — conjunction: CAT-box of two sub-goals */
+        if (g->sval && strcmp(g->sval, ",") == 0 && g->nchildren == 2)
+            return pl_box_cat(pl_box_goal_from_ir(g->children[0], env),
+                              pl_box_goal_from_ir(g->children[1], env));
+        /* `;/2` — disjunction or if-then-else */
+        if (g->sval && strcmp(g->sval, ";") == 0 && g->nchildren == 2) {
+            EXPR_t *lc = g->children[0];
+            /* if-then-else: (Cond -> Then ; Else) */
+            if (lc && lc->kind == E_FNC && lc->sval &&
+                strcmp(lc->sval, "->") == 0 && lc->nchildren == 2)
+                return pl_box_alt(
+                    pl_box_cat(pl_box_goal_from_ir(lc->children[0], env),
+                               pl_box_goal_from_ir(lc->children[1], env)),
+                    pl_box_goal_from_ir(g->children[1], env));
+            return pl_box_alt(pl_box_goal_from_ir(g->children[0], env),
+                              pl_box_goal_from_ir(g->children[1], env));
+        }
+        /* `->/2` standalone: CAT(cond, then) */
+        if (g->sval && strcmp(g->sval, "->") == 0 && g->nchildren == 2)
+            return pl_box_cat(pl_box_goal_from_ir(g->children[0], env),
+                              pl_box_goal_from_ir(g->children[1], env));
         if (pl_is_builtin_goal(g)) return pl_box_builtin(g, env);
         return pl_box_choice_call(g, env);   /* user predicate — S-BB-5 */
     }
@@ -289,7 +311,7 @@ static int pl_is_builtin_goal(EXPR_t *g) {
         "<",">","=<",">=","=:=","=\\=","=","\\=","==","\\==",
         "@<","@>","@=<","@>=",
         "var","nonvar","atom","integer","float","compound","atomic","callable","is_list",
-        "functor","arg","=..","\\+","not",",",";","->","findall",
+        "functor","arg","=..","\\+","not","findall",
         "assert","assertz","asserta","retract","retractall","abolish",
         NULL
     };
@@ -384,6 +406,50 @@ Pl_GoalBox pl_box_cut(void) {
     return (Pl_GoalBox){ pl_cut_fn, NULL };
 }
 
+/*======================================================================================================================
+ * pl_box_alt — disjunction (;/2) box: try left, on ω try right (once each)
+ *
+ * α: try left(α); if γ → return γ; else try right(α).
+ * β: left already done — try right(β); if γ → return γ; else ω.
+ * This gives ; the same semantics as bb_alt in stmt_exec.c.
+ *====================================================================================================================*/
+typedef struct { Pl_GoalBox left; Pl_GoalBox right; int phase; } pl_alt_zeta_t;
+/* phase: 0=left not tried, 1=left failed try right α, 2=right active */
+
+static DESCR_t pl_alt_fn(void *zeta, int entry) {
+    pl_alt_zeta_t *ζ = (pl_alt_zeta_t *)zeta;
+    DESCR_t r;
+    if (entry == α) {
+        r = ζ->left.fn(ζ->left.zeta, α);
+        if (!IS_FAIL_fn(r)) { ζ->phase = 0; return r; }   /* left γ */
+        /* left ω — try right */
+        ζ->phase = 2;
+        return ζ->right.fn(ζ->right.zeta, α);
+    }
+    /* β: retry whichever branch is active */
+    if (ζ->phase == 0) {
+        /* left is still active — retry it */
+        r = ζ->left.fn(ζ->left.zeta, β);
+        if (!IS_FAIL_fn(r)) return r;
+        /* left exhausted — fall through to right */
+        ζ->phase = 2;
+        return ζ->right.fn(ζ->right.zeta, α);
+    }
+    /* right is active */
+    return ζ->right.fn(ζ->right.zeta, β);
+}
+
+static Pl_GoalBox pl_box_alt(Pl_GoalBox left, Pl_GoalBox right) {
+    pl_alt_zeta_t *ζ = malloc(sizeof(pl_alt_zeta_t));
+    ζ->left = left; ζ->right = right; ζ->phase = 0;
+    return (Pl_GoalBox){ pl_alt_fn, ζ };
+}
+
+/*======================================================================================================================
+ * pl_box_seq — conjunction (,/2) as a CAT-box alias
+ * Conjunctions in the body are already handled by pl_box_cat_list in pl_box_clause,
+ * but `,/2` appearing as an E_FNC goal node needs this explicit builder.
+ *====================================================================================================================*/
 /*======================================================================================================================
  * S-BB-5 — pl_box_choice and pl_box_choice_call (OR-box over predicate clauses)
  *
