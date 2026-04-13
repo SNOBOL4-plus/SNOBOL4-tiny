@@ -313,24 +313,28 @@ def dump_val_to_snobol(name, raw_val):
 # ── Run 1: Oracle gauntlet ────────────────────────────────────────────────────
 
 MS = 'XGSSTART'; ME = 'XGSEND'
-MT = 'XGSTYPE';  MV = 'XGSVAL'   # type and value markers
+
+PROBE_HELPER = """        DEFINE('SNBprobe(SNBx)SNBdt,SNBvs')     :(SNBprobeEnd)
+SNBprobe
+        SNBdt = DATATYPE(SNBx)
+        SNBvs = IDENT(SNBdt, 'pattern') 'PAT'
+        SNBvs = IDENT(SNBdt, 'expression') 'EXPR'
+        SNBvs = IDENT(SNBdt, 'code') 'CODE'
+        SNBvs = DIFFER(SNBvs) SNBvs
+        SNBvs = IDENT(SNBvs) SNBdt '|' SNBx
+        OUTPUT = 'XGSSTART|' SNBdt '|' SNBvs '|XGSEND'
+        SNBprobe = SNBdt                            :(NRETURN)
+SNBprobeEnd"""
 
 def build_gauntlet_lines(subexprs, label_base):
     """
-    For each sub-expression emit:
-      1. DATATYPE probe: always a string, captures type (pattern/string/integer/name)
-      2. Value probe via temp var: captures actual value for non-pattern types
-    Patterns cannot be concatenated into OUTPUT strings — they become the pattern.
-    Assign to temp var first, then output.
+    One SNBprobe() call per sub-expression.
+    Output format: XGSSTART|type|value|XGSEND
+    Pattern objects stringify as 'pattern' in the value slot — acceptable.
     """
-    lines = []
-    for i, sub in enumerate(subexprs):
-        tv = f'SNBtv{i}'  # temp var
-        lines.append(f"        {tv} = ({sub})")
-        lines.append(f"        OUTPUT = '{MT}{i}|' DATATYPE({tv}) '{ME}'")
-        lines.append(f"        OUTPUT = '{MV}{i}|' {tv} '{ME}'  :(SNBgn{i})")
-        lines.append(f"SNBgf{i} OUTPUT = '{MV}{i}|FAIL{ME}'")
-        lines.append(f"SNBgn{i}")
+    lines = [PROBE_HELPER]
+    for sub in subexprs:
+        lines.append(f"        SNBprobe({sub})")
     return lines
 
 def run_oracle_gauntlet(driver_src, stlimit, subexprs, beauty_dir):
@@ -358,24 +362,24 @@ def run_oracle_gauntlet(driver_src, stlimit, subexprs, beauty_dir):
     # Parse DUMP
     scalars = parse_dump(out)
 
-    # Parse gauntlet: collect type and value for each sub-expression
-    expr_vals = {}   # sub -> value string to assert
+    # Parse gauntlet: one XGSSTART|type|value|XGSEND line per sub-expression
+    # Match them in order of appearance
+    # Format: XGSSTART|type|PAT|XGSEND  (pattern/expression/code)
+    #      or XGSSTART|type|type|value|XGSEND  (string/integer/name)
+    probe_re = re.compile(
+        r'XGSSTART\|([^|]+)\|(.+?)\|XGSEND', re.MULTILINE)
+    matches = probe_re.findall(out)
+    expr_vals = {}
     for i, sub in enumerate(subexprs):
-        # Get type
-        tpat = re.compile(re.escape(f'{MT}{i}|') + r'(.*?)' + re.escape(ME), re.DOTALL)
-        tm = tpat.search(out)
-        typ = tm.group(1).strip() if tm else None
-
-        if typ == 'pattern':
-            # Assert DATATYPE = 'pattern' — not the value
-            expr_vals[sub] = ('__PATTERN__', 'pattern')
-        elif typ in ('string', 'integer', 'name'):
-            # Get actual value
-            vpat = re.compile(re.escape(f'{MV}{i}|') + r'(.*?)' + re.escape(ME), re.DOTALL)
-            vm = vpat.search(out)
-            if vm:
-                expr_vals[sub] = ('__VALUE__', vm.group(1))
-        # else: no oracle value captured — skip
+        if i >= len(matches): break
+        typ, rest = matches[i]
+        if typ in ('pattern', 'expression', 'code'):
+            expr_vals[sub] = ('__TYPE__', typ)
+        else:
+            # rest = "type|value" — extract value after second |
+            pipe = rest.find('|')
+            val = rest[pipe+1:] if pipe >= 0 else rest
+            expr_vals[sub] = ('__VALUE__', val)
 
     return scalars, expr_vals
 
@@ -385,19 +389,30 @@ def make_alias(name):
     """Make a safe SNOBOL4 variable alias for indirect names like $B, #L, @S."""
     return 'SNB' + re.sub(r'[^A-Za-z0-9]', 'x', name)
 
+# Assert helper — defined once per test, absorbs all label noise.
+# SNBassert(actual, expected, n): compares, outputs FAIL n on mismatch, else silent.
+# After all SNBassert calls, OUTPUT = 'PASS' if nothing failed.
+ASSERT_HELPER = """        DEFINE('SNBassert(SNBav,SNBev,SNBn)')    :(SNBaEnd)
+SNBassert
+        IDENT(SNBav, SNBev)                        :S(RETURN)
+        OUTPUT = 'FAIL ' SNBn
+        :(RETURN)
+SNBaEnd"""
+
+
 def emit_snippet(out_dir, test_name, scalars, subexprs, expr_vals,
                  source_file, line_no, raw_line, driver_src, stlimit):
     """
     Emit in-context regression test: driver runs to stlimit=N,
-    then assert block evaluates each sub-expression.
-    No state block needed — driver context IS the state.
+    then one SNBassert() call per sub-expression (single line each).
+    Helper defined once at top of assert block — no label clutter per assert.
     """
     safe_driver = '\n'.join(
         line for line in driver_src.splitlines()
         if not any(ci in line for ci in CRASH_INCLUDES)
     )
 
-    assert_lines = [
+    lines = [
         f"* In-context snippet: {Path(source_file).name} line {line_no}",
         f"* Statement: {raw_line.strip()[:100]}",
         f"        &STLIMIT = {stlimit}",
@@ -405,38 +420,36 @@ def emit_snippet(out_dir, test_name, scalars, subexprs, expr_vals,
         f"        &TRIM = 1",
         safe_driver,
         f"        &STLIMIT = 10000000",
-        f"* ── asserts ──",
+        f"* ── assert helper ──",
+        ASSERT_HELPER,
+        f"* ── asserts: one line per sub-expression ──",
     ]
 
-    label_n = 1
+    n = 1
     has_assert = False
 
-    for i, sub in enumerate(subexprs):
+    for sub in subexprs:
         entry = expr_vals.get(sub)
         if entry is None: continue
         kind, val = entry
 
-        lpass = f'SNT{label_n}p'; lfail = f'SNT{label_n}f'
-
-        if kind == '__PATTERN__':
-            assert_lines.append(
-                f"        IDENT(DATATYPE({sub}), 'pattern')   :S({lpass})F({lfail})"
+        if kind == '__TYPE__':
+            # Assert DATATYPE(expr) = type string
+            lines.append(
+                f"        SNBassert(DATATYPE({sub}), '{val}', {n})"
             )
         else:
-            safe_val = val.replace("'","''")
-            assert_lines.append(
-                f"        IDENT(({sub}), '{safe_val}')   :S({lpass})F({lfail})"
+            safe_val = val.replace("'", "''")
+            lines.append(
+                f"        SNBassert(({sub}), '{safe_val}', {n})"
             )
-
-        assert_lines.append(f"{lfail}   OUTPUT = 'FAIL {label_n}'   :(SNTend)")
-        assert_lines.append(f"{lpass}")
-        label_n += 1
+        n += 1
         has_assert = True
 
     if not has_assert: return False
 
-    assert_lines += ["        OUTPUT = 'PASS'", "SNTend", "END"]
-    sno = '\n'.join(assert_lines) + '\n'
+    lines += ["        OUTPUT = 'PASS'", "END"]
+    sno = '\n'.join(lines) + '\n'
     Path(out_dir, f'{test_name}.sno').write_text(sno)
     Path(out_dir, f'{test_name}.ref').write_text('PASS\n')
     return True
@@ -493,10 +506,6 @@ def find_stlimit_for_line(driver_src, target_source_file, target_line_no, beauty
         f.write('\n'.join(modified))
         inst_path = f.name
 
-    fn_name, dummy_args = enclosing_function(lines, target_line_no)
-    call_line = (f"        dummy = {fn_name}({dummy_args})"
-                 if fn_name else "")
-
     prog = (
         f"-INCLUDE '{beauty_dir}/global.sno'\n"
         f"-INCLUDE '{inst_path}'\n"
@@ -508,7 +517,6 @@ def find_stlimit_for_line(driver_src, target_source_file, target_line_no, beauty
         f"        $'$C' =\n"
         f"        $'@S' =\n"
         f"        $'#N' =\n"
-        f"{call_line}\n"
         f"END\n"
     )
     out = run_sbl(prog, timeout=20)
