@@ -52,7 +52,7 @@ LIT_γ:  mov     rax, qword [rsp+0]      ; return LIT.σ
         pop     r12
         pop     rbx
         ret
-LIT_ω:  xor     eax, eax                ; return spec_empty
+LIT_ω:  mov     eax, 99                    ; return FAILDESCR (DT_FAIL=99) — U-6
         xor     edx, edx
         add     rsp, 16
         pop     r12
@@ -151,7 +151,7 @@ SEQ_γ:  add     rsp, 8
         pop     r12
         pop     rbx
         ret
-SEQ_ω:  xor     eax, eax
+SEQ_ω:  mov     eax, 99
         xor     edx, edx
         add     rsp, 8
         pop     r15
@@ -256,7 +256,7 @@ ALT_γ:  mov     rax, qword [rbx+272]    ; return ζ->result
         pop     r12
         pop     rbx
         ret
-ALT_ω:  xor     eax, eax
+ALT_ω:  mov     eax, 99
         xor     edx, edx
         add     rsp, 8
         pop     r13
@@ -303,7 +303,7 @@ ARB_β:  ; ζ->count++
         jmp     ARB_γ
 ARB_γ:  pop     rbx
         ret
-ARB_ω:  xor     eax, eax
+ARB_ω:  mov     eax, 99
         xor     edx, edx
         pop     rbx
         ret
@@ -425,7 +425,7 @@ ARBNO_γ:
         pop     rbx
         ret
 ARBNO_ω:
-        xor     eax, eax
+        mov     eax, 99
         xor     edx, edx
         add     rsp, 8
         pop     r15
@@ -472,7 +472,7 @@ ANY_β:  sub     dword [rel Δ], 1        ; Δ--
 ANY_γ:  pop     r12
         pop     rbx
         ret
-ANY_ω:  xor     eax, eax
+ANY_ω:  mov     eax, 99
         xor     edx, edx
         pop     r12
         pop     rbx
@@ -518,7 +518,7 @@ NOTANY_γ:
         pop     rbx
         ret
 NOTANY_ω:
-        xor     eax, eax
+        mov     eax, 99
         xor     edx, edx
         pop     r12
         pop     rbx
@@ -573,7 +573,7 @@ SPAN_γ: pop     r13
         pop     r12
         pop     rbx
         ret
-SPAN_ω: xor     eax, eax
+SPAN_ω: mov     eax, 99
         xor     edx, edx
         pop     r13
         pop     r12
@@ -631,7 +631,7 @@ BRK_γ:  pop     r13
         pop     r12
         pop     rbx
         ret
-BRK_ω:  xor     eax, eax
+BRK_ω:  mov     eax, 99
         xor     edx, edx
         pop     r13
         pop     r12
@@ -693,7 +693,7 @@ BREAKX_γ:
         pop     rbx
         ret
 BREAKX_ω:
-        xor     eax, eax
+        mov     eax, 99
         xor     edx, edx
         pop     r13
         pop     r12
@@ -728,7 +728,7 @@ LEN_β:  mov     ecx, dword [rbx+0]      ; ζ->n
         jmp     LEN_ω
 LEN_γ:  pop     rbx
         ret
-LEN_ω:  xor     eax, eax
+LEN_ω:  mov     eax, 99
         xor     edx, edx
         pop     rbx
         ret
@@ -757,7 +757,7 @@ POS_α:  mov     eax, dword [rel Δ]      ; Δ
 POS_β:                                  jmp     POS_ω
 POS_γ:  pop     rbx
         ret
-POS_ω:  xor     eax, eax
+POS_ω:  mov     eax, 99
         xor     edx, edx
         pop     rbx
         ret
@@ -794,7 +794,7 @@ TAB_β:  mov     ecx, dword [rbx+4]      ; ζ->advance
         jmp     TAB_ω
 TAB_γ:  pop     rbx
         ret
-TAB_ω:  xor     eax, eax
+TAB_ω:  mov     eax, 99
         xor     edx, edx
         pop     rbx
         ret
@@ -822,7 +822,7 @@ REM_α:  ; REM = spec(Σ+Δ, Ω-Δ);  Δ = Ω
         jmp     REM_γ                   ; rax=σ, rdx=δ
 REM_β:                                  jmp     REM_ω
 REM_γ:                                  ret
-REM_ω:  xor     eax, eax
+REM_ω:  mov     eax, 99
         xor     edx, edx
         ret
 
@@ -854,7 +854,7 @@ EPS_β:  jmp     EPS_ω
 EPS_γ:                                                                  ; return EPS (rax=σ, rdx=δ)
         pop     rbx
         ret
-EPS_ω:  xor     eax, eax                ; return spec_empty
+EPS_ω:  mov     eax, 99                    ; return FAILDESCR (DT_FAIL=99) — U-6
         xor     edx, edx
         pop     rbx
         ret
@@ -875,7 +875,7 @@ bb_bal:
         lea     rsi, [rel .bal_msg]
         xor     eax, eax
         call    fprintf
-        xor     eax, eax                ; return spec_empty
+        mov     eax, 99                    ; return FAILDESCR (DT_FAIL=99) — U-6
         xor     edx, edx
         add     rsp, 8
         pop     rbx
@@ -892,7 +892,7 @@ bb_abort:
 ABORT_α:                                jmp     ABORT_ω
 ABORT_β:                                jmp     ABORT_ω
 ABORT_ω:
-        xor     eax, eax                ; return spec_empty
+        mov     eax, 99                    ; return FAILDESCR (DT_FAIL=99) — U-6
         xor     edx, edx
         ret
 
@@ -935,7 +935,7 @@ NOT_β:                                  jmp NOT_ω
 NOT_γ:  pop     r12
         pop     rbx
         ret
-NOT_ω:  xor     eax, eax                ; return spec_empty
+NOT_ω:  mov     eax, 99                    ; return FAILDESCR (DT_FAIL=99) — U-6
         xor     edx, edx
         pop     r12
         pop     rbx
@@ -981,7 +981,7 @@ INT_β:                                  jmp INT_ω
 INT_γ:  pop     r12
         pop     rbx
         ret
-INT_ω:  xor     eax, eax                ; return spec_empty
+INT_ω:  mov     eax, 99                    ; return FAILDESCR (DT_FAIL=99) — U-6
         xor     edx, edx
         pop     r12
         pop     rbx
@@ -1075,7 +1075,7 @@ CAP_γ_core:
 
 CAP_ω:  ; ζ->has_pending = 0
         mov     dword [rbx+48], 0
-        xor     eax, eax
+        mov     eax, 99
         xor     edx, edx
         add     rsp, 32
         pop     r13
@@ -1130,7 +1130,7 @@ ATP_γ:  add     rsp, 24
         pop     r12
         pop     rbx
         ret
-ATP_ω:  xor     eax, eax
+ATP_ω:  mov     eax, 99
         xor     edx, edx
         add     rsp, 24
         pop     r12
@@ -1285,7 +1285,7 @@ DVAR_γ: mov     rax, r12
         pop     r12
         pop     rbx
         ret
-DVAR_ω: xor     eax, eax
+DVAR_ω: mov     eax, 99
         xor     edx, edx
         add     rsp, 48
         pop     r15
@@ -1319,7 +1319,7 @@ FENCE_γ:
         pop     rbx
         ret
 FENCE_ω:
-        xor     eax, eax
+        mov     eax, 99
         xor     edx, edx
         pop     rbx
         ret
@@ -1329,7 +1329,7 @@ FENCE_ω:
 global bb_fail
 
 bb_fail:
-        xor     eax, eax                ; return spec_empty
+        mov     eax, 99                    ; return FAILDESCR (DT_FAIL=99) — U-6
         xor     edx, edx
         ret
 
@@ -1358,7 +1358,7 @@ RPOS_α: mov     eax, dword [rel Ω]      ; Ω
 RPOS_β:                                 jmp     RPOS_ω
 RPOS_γ: pop     rbx
         ret
-RPOS_ω: xor     eax, eax
+RPOS_ω: mov     eax, 99
         xor     edx, edx
         pop     rbx
         ret
@@ -1399,7 +1399,7 @@ RTAB_β: mov     ecx, dword [rbx+4]      ; ζ->advance
         jmp     RTAB_ω
 RTAB_γ: pop     rbx
         ret
-RTAB_ω: xor     eax, eax
+RTAB_ω: mov     eax, 99
         xor     edx, edx
         pop     rbx
         ret
