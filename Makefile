@@ -76,6 +76,7 @@ scrip:
 	$(CC) $(CRT)   -c $(RT)/x86/bb_build.c               -o $(OBJ)/bb_build.o
 	$(CC) $(CRT)   -c $(RT)/x86/bb_flat.c                    -o $(OBJ)/bb_flat.o
 	$(CC) $(CRT) -c $(RT)/x86/bb_boxes.c -o $(OBJ)/bb_boxes.o
+	$(CC) $(CRT) -c $(RT)/x86/bb_broker.c -o $(OBJ)/bb_broker.o
 	$(CC) $(CBASE) -I$(SRC)/frontend/snobol4 -DIR_DEFINE_NAMES \
 	    -c $(SRC)/ir/ir_print.c -o $(OBJ)/ir_print.o
 	$(CC) $(CBASE) -I$(SRC)/frontend/snobol4 -c $(SRC)/frontend/snocone/snocone_lex.c    -o $(OBJ)/snocone_lex.o
