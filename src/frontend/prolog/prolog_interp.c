@@ -91,14 +91,48 @@ static Term **env_new(int n) {
 }
 
 /*===========================================================================
+ * Cont_t — continuation type (defined early; used by findall support below)
+ *=========================================================================*/
+typedef struct Cont_t Cont_t;
+struct Cont_t { int (*fn)(Cont_t *self); };
+
+/*===========================================================================
  * Forward declarations
  *=========================================================================*/
+static Term *pl_term_from_expr(EXPR_t *e, Term **env);
+static Term *term_deep_copy(Term *t);
 static int pl_exec_goal(EXPR_t *goal, Term **env, PredTable *pt,
                         Trail *trail, int *cut_flag);
 static int pl_exec_body(EXPR_t **goals, int ngoals, Term **env,
                         PredTable *pt, Trail *trail, int *cut_flag);
 static int pl_call(PredTable *pt, const char *key, int arity,
                    Term **args, Trail *trail, int start);
+static int pl_exec_body_k(EXPR_t **goals, int ngoals, Term **env,
+                          PredTable *pt, Trail *trail, int *cut_flag,
+                          Cont_t *cont);
+
+/*===========================================================================
+ * findall/3 support — collecting continuation
+ *=========================================================================*/
+typedef struct {
+    Cont_t      base;
+    EXPR_t     *tmpl_expr;
+    Term      **env;
+    Term      **solutions;
+    int         nsol;
+    int         sol_cap;
+} Findall_cont;
+
+static int findall_cont_fn(Cont_t *self) {
+    Findall_cont *fc = (Findall_cont *)self;
+    Term *snap = term_deep_copy(pl_term_from_expr(fc->tmpl_expr, fc->env));
+    if (fc->nsol >= fc->sol_cap) {
+        fc->sol_cap = fc->sol_cap ? fc->sol_cap * 2 : 8;
+        fc->solutions = realloc(fc->solutions, fc->sol_cap * sizeof(Term *));
+    }
+    fc->solutions[fc->nsol++] = snap;
+    return 0;  /* fail → force backtracking to next solution */
+}
 
 /*===========================================================================
  * pl_term_from_expr — mirrors emit_term_val()
@@ -166,11 +200,31 @@ static int is_user_call(EXPR_t *goal) {
         "<",">","=<",">=","=:=","=\\=","=","\\=","==","\\==",
         "@<","@>","@=<","@>=",
         "var","nonvar","atom","integer","float","compound","atomic","callable","is_list",
-        "functor","arg","=..","\\+","not",",",";","->",
+        "functor","arg","=..","\\+","not",",",";","->","findall",
         NULL
     };
     for (int i = 0; builtins[i]; i++) if (strcmp(goal->sval, builtins[i]) == 0) return 0;
     return 1;
+}
+
+/*===========================================================================
+ * term_deep_copy — ground-copy a term, replacing unbound vars with fresh vars
+ * Used by findall/3 to snapshot Template without sharing variable cells.
+ *=========================================================================*/
+static Term *term_deep_copy(Term *t) {
+    t = term_deref(t);
+    if (!t || t->tag == TT_VAR) return term_new_atom(prolog_atom_intern("_"));
+    if (t->tag == TT_ATOM)  return term_new_atom(t->atom_id);
+    if (t->tag == TT_INT)   return term_new_int(t->ival);
+    if (t->tag == TT_FLOAT) return term_new_float(t->fval);
+    if (t->tag == TT_COMPOUND) {
+        Term **args = malloc(t->compound.arity * sizeof(Term *));
+        for (int i = 0; i < t->compound.arity; i++) args[i] = term_deep_copy(t->compound.args[i]);
+        Term *r = term_new_compound(t->compound.functor, t->compound.arity, args);
+        free(args);
+        return r;
+    }
+    return term_new_atom(prolog_atom_intern("_"));
 }
 
 /*===========================================================================
@@ -359,6 +413,47 @@ static int pl_exec_goal(EXPR_t *goal, Term **env, PredTable *pt,
                 { trail_unwind(trail,mark); return 0; }
                 return 1;
             }
+            /* findall/3: findall(Template, Goal, List) */
+            if (strcmp(fn,"findall")==0 && arity==3) {
+                EXPR_t *tmpl_expr = goal->children[0];
+                EXPR_t *goal_expr = goal->children[1];
+                EXPR_t *list_expr = goal->children[2];
+
+                /* Collect all solutions of Goal, snapshotting Template each time.
+                 * findall_cont_fn returns 0 (failure) after each snapshot, which
+                 * causes pl_exec_body_k to backtrack and try the next solution.  */
+                Findall_cont fc;
+                fc.base.fn   = findall_cont_fn;
+                fc.tmpl_expr = tmpl_expr;
+                fc.env       = env;
+                fc.solutions = NULL;
+                fc.nsol      = 0;
+                fc.sol_cap   = 0;
+
+                /* Run goal in isolated trail; findall is transparent to bindings */
+                Trail fa_trail; trail_init(&fa_trail);
+                int saved_cp = cp_top;
+                int cut2 = 0;
+                EXPR_t *goals1[1]; goals1[0] = goal_expr;
+                pl_exec_body_k(goals1, 1, env, pt, &fa_trail, &cut2, (Cont_t *)&fc);
+                cp_top = saved_cp;
+
+                /* Build result list [s1,...,sN] or [] */
+                int nil_id = prolog_atom_intern("[]");
+                int dot_id = prolog_atom_intern(".");
+                Term *lst  = term_new_atom(nil_id);
+                for (int i = fc.nsol - 1; i >= 0; i--) {
+                    Term *args2[2]; args2[0] = fc.solutions[i]; args2[1] = lst;
+                    lst = term_new_compound(dot_id, 2, args2);
+                }
+                free(fc.solutions);
+
+                /* Unify List with collected list */
+                Term *list_term = pl_term_from_expr(list_expr, env);
+                int u_mark = trail_mark(trail);
+                if (!unify(list_term, lst, trail)) { trail_unwind(trail, u_mark); return 0; }
+                return 1;
+            }
             /* user-defined call */
             if (is_user_call(goal)) {
                 char key[256]; snprintf(key,sizeof key,"%s/%d",fn,arity);
@@ -452,11 +547,8 @@ static void pl_fail_to_cp(void) {
 }
 
 /* ---- Continuation type ---- */
-typedef struct Cont_t Cont_t;
-struct Cont_t {
-    int (*fn)(Cont_t *self);  /* call this when goals succeed */
-    /* payload follows in subclasses (struct embedding) */
-};
+/* Cont_t typedef and struct already defined above */
+struct Cont_t_unused_; /* suppress warning */
 
 /* Terminal continuation: just return 1 (γ). */
 static int cont_done_fn(Cont_t *self) { (void)self; return 1; }
