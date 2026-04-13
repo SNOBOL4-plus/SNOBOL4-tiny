@@ -226,6 +226,7 @@ def build_driver_src(driver_path, beauty_dir):
     for line in src.splitlines():
         ls = line.strip()
         if re.match(r"^-INCLUDE\s+'global\.sno'", ls, re.I): continue
+        if any(ci in ls for ci in CRASH_INCLUDES): continue
         if re.match(r'^-INCLUDE', ls, re.I):
             mm = re.search(r"'([^']+)'", line)
             if mm:
@@ -270,43 +271,66 @@ def parse_dump(dump_text):
             scalars[name] = val
     return scalars
 
+# Names whose DUMP values contain raw non-printable bytes — use CHAR(N)
+NONPRINT_NAMES = {
+    'nl':'CHAR(10)', 'lf':'CHAR(10)', 'cr':'CHAR(13)', 'bs':'CHAR(8)',
+    'ht':'CHAR(9)',  'tab':'CHAR(9)', 'vt':'CHAR(11)', 'ff':'CHAR(12)',
+    'nul':'CHAR(0)',
+}
+# Names whose values are large charset strings from global.sno — skip them
+SKIP_NAMES = {'x0xxxxxxx','x1xxxxxxx','x10xxxxxx','x110xxxxx',
+              'x1110xxxx','x11110xxx','x11111xxx','utf_array'}
+
+# Includes that cause error 248 (OPSYN/FENCE redefinitions) in SPITBOL oracle
+CRASH_INCLUDES = {'FENCE.sno', 'io.sno'}
+
+
 def dump_val_to_snobol(name, raw_val):
     """
-    Convert a DUMP value line to a SNOBOL4 assignment statement.
-    raw_val is the text after '=' in the dump, e.g. '42' or "'hello'" or ''
-    Returns None if we can't reconstruct (DATA struct reference).
+    Convert a DUMP value entry to a SNOBOL4 assignment statement.
+    Returns None if we cannot reconstruct (DATA struct ref, charset string).
     """
-    # Skip DATA struct references like "link_counter #1"
-    if re.search(r'#\d+', raw_val): return None
+    if name.lower() in SKIP_NAMES: return None
+    if re.search(r'#\d+', raw_val): return None   # DATA struct ref
+    # Known non-printable names
+    if name.lower() in NONPRINT_NAMES:
+        return f"        {name} = {NONPRINT_NAMES[name.lower()]}"
     # Integer
     if re.match(r'^-?\d+$', raw_val.strip()):
         return f"        {name} = {raw_val.strip()}"
-    # String: already quoted in dump as 'val'
+    # String already quoted in dump
     if raw_val.startswith("'"):
+        # Check for embedded non-printable bytes — skip if found
+        inner = raw_val[1:raw_val.rfind("'")]
+        for ch in inner:
+            if ord(ch) < 32 and ch not in ("\t",): return None
         return f"        {name} = {raw_val}"
-    # Empty (unset variable)
+    # Empty
     if raw_val == '':
         return f"        {name} = ''"
     return None
 
 # ── Run 1: Oracle gauntlet ────────────────────────────────────────────────────
 
-MS = 'XGSSTART'; ME = 'XGSEND'  # gauntlet markers
+MS = 'XGSSTART'; ME = 'XGSEND'
+MT = 'XGSTYPE';  MV = 'XGSVAL'   # type and value markers
 
 def build_gauntlet_lines(subexprs, label_base):
     """
-    Build SNOBOL4 OUTPUT lines that print each sub-expression's value,
-    wrapped in markers so we can parse them out.
-    For pattern-type expressions use DATATYPE(); for others use the value directly.
+    For each sub-expression emit:
+      1. DATATYPE probe: always a string, captures type (pattern/string/integer/name)
+      2. Value probe via temp var: captures actual value for non-pattern types
+    Patterns cannot be concatenated into OUTPUT strings — they become the pattern.
+    Assign to temp var first, then output.
     """
     lines = []
     for i, sub in enumerate(subexprs):
-        # We don't know type ahead of time -- just output the value.
-        # If it's a pattern, OUTPUT will print something (SPITBOL shows pattern type).
-        # Wrap in markers.
-        lines.append(
-            f"        OUTPUT = '{MS}{i}|' ({sub}) '{ME}'"
-        )
+        tv = f'SNBtv{i}'  # temp var
+        lines.append(f"        {tv} = ({sub})")
+        lines.append(f"        OUTPUT = '{MT}{i}|' DATATYPE({tv}) '{ME}'")
+        lines.append(f"        OUTPUT = '{MV}{i}|' {tv} '{ME}'  :(SNBgn{i})")
+        lines.append(f"SNBgf{i} OUTPUT = '{MV}{i}|FAIL{ME}'")
+        lines.append(f"SNBgn{i}")
     return lines
 
 def run_oracle_gauntlet(driver_src, stlimit, subexprs, beauty_dir):
@@ -315,12 +339,15 @@ def run_oracle_gauntlet(driver_src, stlimit, subexprs, beauty_dir):
     Returns (dump_scalars, expr_values) where expr_values = {sub: value_str}.
     """
     gauntlet = '\n'.join(build_gauntlet_lines(subexprs, 'G'))
+    safe_driver = '\n'.join(
+        line for line in driver_src.splitlines()
+        if not any(ci in line for ci in CRASH_INCLUDES)
+    )
     prog = (
         f"        &STLIMIT = {stlimit}\n"
-        f"        &DUMP = 2\n"
-        f"        &ERRLIMIT = 20\n"
+        f"        &ERRLIMIT = 1\n"
         f"        &TRIM = 1\n"
-        f"{driver_src}\n"
+        f"{safe_driver}\n"
         f"        &STLIMIT = 10000000\n"
         f"{gauntlet}\n"
         f"END\n"
@@ -331,13 +358,24 @@ def run_oracle_gauntlet(driver_src, stlimit, subexprs, beauty_dir):
     # Parse DUMP
     scalars = parse_dump(out)
 
-    # Parse gauntlet output
-    expr_vals = {}
+    # Parse gauntlet: collect type and value for each sub-expression
+    expr_vals = {}   # sub -> value string to assert
     for i, sub in enumerate(subexprs):
-        pat = re.compile(
-            re.escape(f'{MS}{i}|') + r'(.*?)' + re.escape(ME), re.DOTALL)
-        mm = pat.search(out)
-        if mm: expr_vals[sub] = mm.group(1)
+        # Get type
+        tpat = re.compile(re.escape(f'{MT}{i}|') + r'(.*?)' + re.escape(ME), re.DOTALL)
+        tm = tpat.search(out)
+        typ = tm.group(1).strip() if tm else None
+
+        if typ == 'pattern':
+            # Assert DATATYPE = 'pattern' — not the value
+            expr_vals[sub] = ('__PATTERN__', 'pattern')
+        elif typ in ('string', 'integer', 'name'):
+            # Get actual value
+            vpat = re.compile(re.escape(f'{MV}{i}|') + r'(.*?)' + re.escape(ME), re.DOTALL)
+            vm = vpat.search(out)
+            if vm:
+                expr_vals[sub] = ('__VALUE__', vm.group(1))
+        # else: no oracle value captured — skip
 
     return scalars, expr_vals
 
@@ -348,104 +386,142 @@ def make_alias(name):
     return 'SNB' + re.sub(r'[^A-Za-z0-9]', 'x', name)
 
 def emit_snippet(out_dir, test_name, scalars, subexprs, expr_vals,
-                 source_file, line_no, raw_line):
+                 source_file, line_no, raw_line, driver_src, stlimit):
     """
-    Emit isolated snippet .sno + .ref.
-    State block: assign scalars from DUMP.
-    Assert block: IDENT per sub-expression innermost-first.
+    Emit in-context regression test: driver runs to stlimit=N,
+    then assert block evaluates each sub-expression.
+    No state block needed — driver context IS the state.
     """
-    # ── State block ──
-    state_lines = [
-        f"* Isolated snippet: {Path(source_file).name} line {line_no}",
+    safe_driver = '\n'.join(
+        line for line in driver_src.splitlines()
+        if not any(ci in line for ci in CRASH_INCLUDES)
+    )
+
+    assert_lines = [
+        f"* In-context snippet: {Path(source_file).name} line {line_no}",
         f"* Statement: {raw_line.strip()[:100]}",
+        f"        &STLIMIT = {stlimit}",
+        f"        &ERRLIMIT = 1",
         f"        &TRIM = 1",
-        f"        &ERRLIMIT = 20",
+        safe_driver,
+        f"        &STLIMIT = 10000000",
+        f"* ── asserts ──",
     ]
 
-    # Track which indirect names need aliases
-    aliases = {}  # indirect_name -> alias_var
-
-    for name, raw_val in sorted(scalars.items()):
-        stmt = dump_val_to_snobol(name, raw_val)
-        if stmt:
-            state_lines.append(stmt)
-        # Check if name is an indirect var ($B, #L etc.)
-        # These appear in DUMP as the bare name e.g. '$B' = 'hello'
-        # In state block we need:  bB = '$B'  \n  $bB = 'hello'
-        if re.match(r'^[$#@]', name):
-            alias = make_alias(name)
-            aliases[name] = alias
-            quoted = "'" + name.replace("'","''") + "'"
-            state_lines.append(f"        {alias} = {quoted}")
-            if stmt:
-                # Replace direct assignment with indirect
-                val_part = raw_val if raw_val else "''"
-                state_lines[-3] = f"        ${alias} = {val_part}"  # overwrite
-
-    # ── Assert block ──
-    assert_lines = ["* ── gauntlet asserts ──"]
     label_n = 1
     has_assert = False
 
     for i, sub in enumerate(subexprs):
-        val = expr_vals.get(sub)
-        if val is None: continue  # couldn't probe — skip
+        entry = expr_vals.get(sub)
+        if entry is None: continue
+        kind, val = entry
 
-        # Replace indirect name references in sub with aliases
-        sub_safe = sub
-        for iname, alias in aliases.items():
-            # Replace $'name' with $alias in sub_safe
-            quoted = "'" + iname.replace("'","''") + "'"
-            sub_safe = sub_safe.replace(f'${quoted}', f'${alias}')
-
-        safe_val = val.replace("'", "''")
         lpass = f'SNT{label_n}p'; lfail = f'SNT{label_n}f'
-        assert_lines.append(
-            f"        IDENT(({sub_safe}), '{safe_val}')   :S({lpass})F({lfail})"
-        )
-        assert_lines.append(
-            f"{lfail}   OUTPUT = 'FAIL [{sub[:50]}] got=[' ({sub_safe}) '] want=[{safe_val}]'"
-        )
-        assert_lines.append(f"        :(SNTend)")
+
+        if kind == '__PATTERN__':
+            assert_lines.append(
+                f"        IDENT(DATATYPE({sub}), 'pattern')   :S({lpass})F({lfail})"
+            )
+        else:
+            safe_val = val.replace("'","''")
+            assert_lines.append(
+                f"        IDENT(({sub}), '{safe_val}')   :S({lpass})F({lfail})"
+            )
+
+        assert_lines.append(f"{lfail}   OUTPUT = 'FAIL {label_n}'   :(SNTend)")
         assert_lines.append(f"{lpass}")
         label_n += 1
         has_assert = True
 
-    if not has_assert:
-        return False  # nothing to emit
+    if not has_assert: return False
 
-    assert_lines.append("        OUTPUT = 'PASS'")
-    assert_lines.append("SNTend")
-
-    sno = '\n'.join(state_lines + [''] + assert_lines + ['END\n'])
+    assert_lines += ["        OUTPUT = 'PASS'", "SNTend", "END"]
+    sno = '\n'.join(assert_lines) + '\n'
     Path(out_dir, f'{test_name}.sno').write_text(sno)
     Path(out_dir, f'{test_name}.ref').write_text('PASS\n')
     return True
 
-# ── Find stlimit for a statement ──────────────────────────────────────────────
+
+def enclosing_function(lines, target_line_no):
+    """
+    Find the function name and args for the function body containing target_line_no.
+    Strategy: scan backwards for a line with a label that matches a DEFINE name.
+    Returns (name, dummy_args_str) or (None, None).
+    """
+    define_re = re.compile(r"DEFINE\s*\(\s*'([A-Za-z][A-Za-z0-9]*)\(([^)]*)\)", re.I)
+    label_re  = re.compile(r'^([A-Za-z][A-Za-z0-9]*)\s+')
+
+    # Collect all DEFINE names and their arg lists in the file
+    defines = {}
+    for line in lines:
+        m = define_re.search(line)
+        if m:
+            name = m.group(1)
+            args = m.group(2)
+            arg_list = [a.strip().split()[0] for a in args.split(',') if a.strip()]
+            dummy_args = ', '.join("''" for _ in arg_list)
+            defines[name.upper()] = (name, dummy_args)
+
+    # Scan backwards from target line for a label matching a defined function
+    for i in range(target_line_no - 2, -1, -1):
+        m = label_re.match(lines[i])
+        if m:
+            label = m.group(1).upper()
+            if label in defines:
+                return defines[label]
+
+    return None, None
+
 
 def find_stlimit_for_line(driver_src, target_source_file, target_line_no, beauty_dir):
     """
-    Find the &STCOUNT value just before the target line executes.
-    Strategy: instrument with TRACE on that line's label, or binary search.
-    For now: run driver fully, collect total stmts, sample at 60% as heuristic.
-    TODO: proper instrumentation.
+    Find stlimit N just before the target line's first execution.
+    Injects sentinel before target line, builds minimal probe with a function
+    call to the enclosing function, runs under SPITBOL, captures &STCOUNT.
     """
+    beauty_dir = Path(beauty_dir)
+    lines = Path(target_source_file).read_text(errors='replace').splitlines()
+    if target_line_no < 1 or target_line_no > len(lines):
+        return 300
+
+    sentinel = "        OUTPUT = 'XSENTINEL' &STCOUNT 'XSENTINELEND'"
+    modified = lines[:]
+    modified.insert(target_line_no - 1, sentinel)
+
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.sno', delete=False,
+                                     dir='/tmp', prefix='bsg_inst_') as f:
+        f.write('\n'.join(modified))
+        inst_path = f.name
+
+    fn_name, dummy_args = enclosing_function(lines, target_line_no)
+    call_line = (f"        dummy = {fn_name}({dummy_args})"
+                 if fn_name else "")
+
     prog = (
+        f"-INCLUDE '{beauty_dir}/global.sno'\n"
+        f"-INCLUDE '{inst_path}'\n"
         f"        &STLIMIT = 10000000\n"
         f"        &TRIM = 1\n"
-        f"{driver_src}\n"
-        f"        OUTPUT = 'XSTC' &STCOUNT 'XSTCEND'\n"
+        f"        $'#L' = 0\n"
+        f"        $'$B' =\n"
+        f"        $'$X' =\n"
+        f"        $'$C' =\n"
+        f"        $'@S' =\n"
+        f"        $'#N' =\n"
+        f"{call_line}\n"
         f"END\n"
     )
-    out = run_sbl(prog)
-    if out is None: return 300
-    mm = re.search(r'XSTC(\d+)XSTCEND', out)
-    total = int(mm.group(1)) if mm else 500
-    # Skip first 15% (global.sno init), use 40-80% range for interesting samples
-    return int(total * 0.5)
+    out = run_sbl(prog, timeout=20)
+    try: os.unlink(inst_path)
+    except: pass
 
-# ── Main generator ────────────────────────────────────────────────────────────
+    if out:
+        mm = re.search(r'XSENTINEL(\d+)XSENTINELEND', out)
+        if mm:
+            return max(1, int(mm.group(1)) - 1)
+
+    return 300  # fallback
+
 
 def generate_one(source_file, driver_path, line_no, beauty_dir, out_dir,
                  verbose=False):
@@ -474,12 +550,12 @@ def generate_one(source_file, driver_path, line_no, beauty_dir, out_dir,
     scalars, expr_vals = run_oracle_gauntlet(driver_src, stlimit, subexprs, beauty_dir)
     if verbose:
         print(f"Scalars from DUMP: {len(scalars)}")
-        for sub, val in expr_vals.items():
-            print(f"  [{sub}] = {repr(val)}")
+        for sub, entry in expr_vals.items():
+            print(f"  [{sub}] = {repr(entry)}")
 
     tag = f"{Path(source_file).stem}_L{line_no:04d}"
     ok = emit_snippet(out_dir, tag, scalars, subexprs, expr_vals,
-                      source_file, line_no, raw_line)
+                      source_file, line_no, raw_line, driver_src, stlimit)
     if ok:
         print(f"Emitted: {tag}.sno")
     else:
