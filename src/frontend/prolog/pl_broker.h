@@ -1,102 +1,81 @@
 #ifndef PL_BROKER_H
 #define PL_BROKER_H
 /*======================================================================================================================
- * pl_broker.h — Prolog Byrd Box Broker (GOAL-PROLOG-BB-BYRD)
+ * pl_broker.h — Prolog Byrd Box Broker (GOAL-PROLOG-BB-BYRD, GOAL-UNIFIED-BROKER U-8)
  *
- * Pl_GoalBox is a live box instance: a bb_box_fn pointer + opaque state.
- * It reuses the bb_box_fn ABI from bb_box.h unchanged:
+ * U-8: Pl_GoalBox → bb_node_t (unified with SNOBOL4 / Icon boxes).
+ *      pl_exec_goal now calls bb_broker(root, BB_ONCE, NULL, NULL).
  *
- *   entry == α (0): first call — attempt goal
- *   entry == β (1): retry call — next solution or ω
- *   return spec_is_empty() == true  → ω (failure)
- *   return spec_is_empty() == false → γ (success)
+ * All Prolog goal boxes share the universal Byrd box signature:
+ *   DESCR_t (*bb_box_fn)(void *zeta, int entry)
  *
- * Prolog does not use the positional extent of spec_t (σ/δ fields).
- * Success is signalled by returning any non-empty spec; failure by spec_empty.
- * The broker calls root.fn(root.zeta, α) and returns 1 (γ) or 0 (ω).
+ * Same four-signal protocol:
+ *   entry == α (0): first call  — attempt goal
+ *   entry == β (1): retry call  — next solution or ω
+ *   IS_FAIL_fn(result) → ω (failure)
+ *   !IS_FAIL_fn(result) → γ (success)
  *
- * Box constructors are defined in pl_broker.c.
+ * Prolog boxes do not use the positional extent of DESCR_t.
+ * γ is signalled by returning NULVCL — a non-fail sentinel.
+ * Retry belongs to the OR-box (pl_box_choice), not the broker.
  *--------------------------------------------------------------------------------------------------------------------*/
 
-#include "runtime/x86/bb_box.h"   /* spec_t, bb_box_fn, α, β, spec_empty, spec_is_empty */
+#include "runtime/x86/bb_broker.h"         /* bb_box_fn, bb_node_t, BrokerMode, bb_broker, DESCR_t, FAILDESCR, IS_FAIL_fn, α, β */
 #include "frontend/prolog/prolog_runtime.h"
-#include "frontend/snobol4/scrip_cc.h" /* EXPR_t — needed for pl_box_builtin */
+#include "frontend/snobol4/scrip_cc.h"      /* EXPR_t — needed for pl_box_builtin */
 #include "frontend/prolog/prolog_builtin.h" /* interp_exec_pl_builtin */
-
-/*----------------------------------------------------------------------------------------------------------------------
- * Pl_GoalBox — a live, callable Prolog goal box
- *--------------------------------------------------------------------------------------------------------------------*/
-typedef struct {
-    bb_box_fn  fn;     /* box function — called with (zeta, entry)        */
-    void      *zeta;   /* opaque per-instance state (heap-allocated)      */
-} Pl_GoalBox;
-
-/* Null/empty sentinel — fn == NULL means "no box" */
-static inline int pl_goalbox_is_null(Pl_GoalBox b) { return b.fn == NULL; }
 
 /*----------------------------------------------------------------------------------------------------------------------
  * pl_exec_goal — top-level broker entry point
  *
- * Calls root.fn(root.zeta, α).
+ * Calls bb_broker(root, BB_ONCE, NULL, NULL).
  * Returns 1 if γ (success), 0 if ω (failure).
- * No scan loop — Prolog is not positional; retry is the caller box's job.
+ * No scan loop — Prolog is not positional; retry is the OR-box's job.
  *--------------------------------------------------------------------------------------------------------------------*/
-int pl_exec_goal(Pl_GoalBox root);
+int pl_exec_goal(bb_node_t root);
 
 /*----------------------------------------------------------------------------------------------------------------------
- * Leaf box constructors
- *--------------------------------------------------------------------------------------------------------------------*/
-
-/*----------------------------------------------------------------------------------------------------------------------
- * S-BB-2 Leaf box constructors
+ * Leaf box constructors (U-8: return bb_node_t, was Pl_GoalBox)
  *--------------------------------------------------------------------------------------------------------------------*/
 
 /* pl_box_true — γ on α, ω on β (succeed exactly once) */
-Pl_GoalBox pl_box_true(void);
+bb_node_t pl_box_true(void);
 
 /* pl_box_fail — ω on α and β (always fail) */
-Pl_GoalBox pl_box_fail(void);
+bb_node_t pl_box_fail(void);
 
 /* pl_box_builtin — α calls interp_exec_pl_builtin(goal, env); β returns ω */
-Pl_GoalBox pl_box_builtin(EXPR_t *goal, Term **env);
+bb_node_t pl_box_builtin(EXPR_t *goal, Term **env);
 
 /*----------------------------------------------------------------------------------------------------------------------
- * S-BB-3 CAT box constructors
+ * CAT box constructors
  *--------------------------------------------------------------------------------------------------------------------*/
 
 /* pl_box_cat — AND-box: left γ → right α; right ω → left β; mirrors bb_seq */
-Pl_GoalBox pl_box_cat(Pl_GoalBox left, Pl_GoalBox right);
+bb_node_t pl_box_cat(bb_node_t left, bb_node_t right);
 
-/* pl_box_cat_list — fold goals[0..n-1] into a left-associative CAT chain.
- * n==0 → pl_box_true(), n==1 → goals[0], n>=2 → nested pl_box_cat(). */
-Pl_GoalBox pl_box_cat_list(Pl_GoalBox *goals, int n);
+/* pl_box_cat_list — fold goals[0..n-1] into a left-associative CAT chain. */
+bb_node_t pl_box_cat_list(bb_node_t *goals, int n);
 
 /*----------------------------------------------------------------------------------------------------------------------
- * S-BB-4 — pl_box_clause: one Horn clause as a Byrd box
- *
- * Builds head-unify box CAT'd with body goal boxes.
- * ec           — E_CLAUSE IR node (children[0..arity-1]=head, [arity..]=body)
- * caller_args  — live Term* array for the arity caller arguments
- * arity        — number of head arguments
+ * pl_box_clause: one Horn clause as a Byrd box
  *--------------------------------------------------------------------------------------------------------------------*/
-Pl_GoalBox pl_box_clause(EXPR_t *ec, Term **caller_args, int arity);
+bb_node_t pl_box_clause(EXPR_t *ec, Term **caller_args, int arity);
 
 /*----------------------------------------------------------------------------------------------------------------------
- * S-BB-5 — OR-box constructors
+ * OR-box constructors
  *--------------------------------------------------------------------------------------------------------------------*/
 
-/* pl_box_choice — OR-box over all E_CLAUSE children of an E_CHOICE node.
- * caller_args[0..arity-1] are the live Term* arguments from the call site. */
-Pl_GoalBox pl_box_choice(EXPR_t *choice_node, Term **caller_args, int arity);
+/* pl_box_choice — OR-box over all E_CLAUSE children of an E_CHOICE node. */
+bb_node_t pl_box_choice(EXPR_t *choice_node, Term **caller_args, int arity);
 
-/* pl_box_choice_call — build an OR-box for an E_FNC user-predicate call goal.
- * Looks up the predicate in g_pl_pred_table; builds caller args from goal->children + env. */
-Pl_GoalBox pl_box_choice_call(EXPR_t *goal, Term **env);
+/* pl_box_choice_call — build an OR-box for an E_FNC user-predicate call goal. */
+bb_node_t pl_box_choice_call(EXPR_t *goal, Term **env);
 
 /*----------------------------------------------------------------------------------------------------------------------
- * S-BB-6 — pl_box_cut: FENCE analog for Prolog cut
+ * pl_box_cut: FENCE analog for Prolog cut
  * α: set g_pl_cut_flag=1, return γ.  β: return ω.
  *--------------------------------------------------------------------------------------------------------------------*/
-Pl_GoalBox pl_box_cut(void);
+bb_node_t pl_box_cut(void);
 
 #endif /* PL_BROKER_H */

@@ -2058,7 +2058,7 @@ static DESCR_t interp_eval(EXPR_t *e)
         if (!g_pl_active) return NULVCL;
         int arity = 0;
         if (e->sval) { const char *sl = strrchr(e->sval, '/'); if (sl) arity = atoi(sl+1); }
-        Pl_GoalBox root = pl_box_choice(e, g_pl_env, arity);
+        bb_node_t root = pl_box_choice(e, g_pl_env, arity);
         int ok = pl_exec_goal(root);
         return ok ? INTVAL(1) : FAILDESCR;
     }

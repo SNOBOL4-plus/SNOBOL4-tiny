@@ -1,7 +1,7 @@
 /*======================================================================================================================
  * pl_broker.c — Prolog Byrd Box Broker  (GOAL-PROLOG-BB-BYRD)
  *
- * S-BB-1: Pl_GoalBox (in pl_broker.h) + pl_exec_goal().
+ * S-BB-1: bb_node_t (in pl_broker.h) + pl_exec_goal().
  *         Leaf boxes (pl_box_true/fail/builtin) added S-BB-2.
  *         CAT / OR / CUT boxes added S-BB-3 through S-BB-6.
  *         Routing real interp_eval calls through broker: S-BB-7/S-BB-8.
@@ -19,7 +19,6 @@
 
 #include "frontend/prolog/pl_broker.h"
 #include "frontend/prolog/pl_interp.h"   /* g_pl_trail, pl_env_new, pl_unified_term_from_expr */
-#include "runtime/x86/bb_convert.h"      /* spec_from_descr — U-5: bb_box_fn now returns DESCR_t */
 
 /*----------------------------------------------------------------------------------------------------------------------
  * Internal γ sentinel — NULVCL (non-fail DESCR_t); U-5: bb_box_fn now returns DESCR_t.
@@ -30,15 +29,13 @@ static inline DESCR_t pl_gamma(void) { return NULVCL; }
 /*======================================================================================================================
  * pl_exec_goal — top-level broker entry point  (S-BB-1)
  *
- * Calls root.fn(root.zeta, α).
+ * Calls root.fn(root.ζ, α).
  * Returns 1 on γ (goal succeeded), 0 on ω (goal failed).
  *
  * No scan loop — Prolog is not positional.  Retry is the OR-box's job (S-BB-5).
  *====================================================================================================================*/
-int pl_exec_goal(Pl_GoalBox root) {
-    if (pl_goalbox_is_null(root)) return 0;
-    DESCR_t r = root.fn(root.zeta, α);
-    return !IS_FAIL_fn(r);
+int pl_exec_goal(bb_node_t root) {
+    return bb_broker(root, BB_ONCE, NULL, NULL);
 }
 
 /*======================================================================================================================
@@ -57,9 +54,9 @@ static DESCR_t pl_true_fn(void *zeta, int entry) {
     return FAILDESCR;   /* β → ω */
 }
 
-Pl_GoalBox pl_box_true(void) {
+bb_node_t pl_box_true(void) {
     pl_true_t *ζ = calloc(1, sizeof(pl_true_t));
-    return (Pl_GoalBox){ pl_true_fn, ζ };
+    return (bb_node_t){ pl_true_fn, ζ, 0 };
 }
 
 /*----------------------------------------------------------------------------------------------------------------------
@@ -70,8 +67,8 @@ static DESCR_t pl_fail_fn(void *zeta, int entry) {
     return FAILDESCR;
 }
 
-Pl_GoalBox pl_box_fail(void) {
-    return (Pl_GoalBox){ pl_fail_fn, NULL };
+bb_node_t pl_box_fail(void) {
+    return (bb_node_t){ pl_fail_fn, NULL, 0 };
 }
 
 /*----------------------------------------------------------------------------------------------------------------------
@@ -89,11 +86,11 @@ static DESCR_t pl_builtin_fn(void *zeta, int entry) {
     return FAILDESCR;   /* β → ω: builtins have no retry */
 }
 
-Pl_GoalBox pl_box_builtin(EXPR_t *goal, Term **env) {
+bb_node_t pl_box_builtin(EXPR_t *goal, Term **env) {
     pl_builtin_t *ζ = malloc(sizeof(pl_builtin_t));
     ζ->goal = goal;
     ζ->env  = env;
-    return (Pl_GoalBox){ pl_builtin_fn, ζ };
+    return (bb_node_t){ pl_builtin_fn, ζ, 0 };
 }
 
 /*======================================================================================================================
@@ -115,7 +112,7 @@ Pl_GoalBox pl_box_builtin(EXPR_t *goal, Term **env) {
  *           left γ  → call right(α), loop
  *           left ω  → return ω
  *====================================================================================================================*/
-typedef struct { Pl_GoalBox left; Pl_GoalBox right; } pl_cat_t;
+typedef struct { bb_node_t left; bb_node_t right; } pl_cat_t;
 
 static DESCR_t pl_cat_fn(void *zeta, int entry) {
     pl_cat_t *ζ = zeta;
@@ -124,37 +121,37 @@ static DESCR_t pl_cat_fn(void *zeta, int entry) {
     if (entry == α)                                 goto CAT_α;
     /* entry == β */                                goto CAT_β;
 
-CAT_α:  lr = ζ->left.fn(ζ->left.zeta, α);
+CAT_α:  lr = ζ->left.fn(ζ->left.ζ, α);
         if (IS_FAIL_fn(lr))                      goto left_ω;
                                                     goto left_γ;
-CAT_β:  rr = ζ->right.fn(ζ->right.zeta, β);
+CAT_β:  rr = ζ->right.fn(ζ->right.ζ, β);
         if (IS_FAIL_fn(rr))                      goto right_ω;
                                                     goto right_γ;
-left_γ: rr = ζ->right.fn(ζ->right.zeta, α);
+left_γ: rr = ζ->right.fn(ζ->right.ζ, α);
         if (IS_FAIL_fn(rr))                      goto right_ω;
                                                     goto right_γ;
 left_ω:                                             return FAILDESCR;
 right_γ:                                            return NULVCL;
-right_ω: lr = ζ->left.fn(ζ->left.zeta, β);
+right_ω: lr = ζ->left.fn(ζ->left.ζ, β);
         if (IS_FAIL_fn(lr))                      goto left_ω;
                                                     goto left_γ;
 }
 
 /* pl_box_cat — build a CAT box sequencing left then right */
-Pl_GoalBox pl_box_cat(Pl_GoalBox left, Pl_GoalBox right) {
+bb_node_t pl_box_cat(bb_node_t left, bb_node_t right) {
     pl_cat_t *ζ = malloc(sizeof(pl_cat_t));
     ζ->left  = left;
     ζ->right = right;
-    return (Pl_GoalBox){ pl_cat_fn, ζ };
+    return (bb_node_t){ pl_cat_fn, ζ, 0 };
 }
 
 /* pl_box_cat_list — fold a GoalBox array left-to-right into a CAT chain.
  * n==0 → true (empty conjunction), n==1 → goals[0], n>=2 → nested CATs. */
-Pl_GoalBox pl_box_cat_list(Pl_GoalBox *goals, int n) {
+bb_node_t pl_box_cat_list(bb_node_t *goals, int n) {
     if (n == 0) return pl_box_true();
     if (n == 1) return goals[0];
     /* fold left: cat(cat(cat(g0,g1),g2),...) */
-    Pl_GoalBox acc = pl_box_cat(goals[0], goals[1]);
+    bb_node_t acc = pl_box_cat(goals[0], goals[1]);
     for (int i = 2; i < n; i++) acc = pl_box_cat(acc, goals[i]);
     return acc;
 }
@@ -191,7 +188,7 @@ Pl_GoalBox pl_box_cat_list(Pl_GoalBox *goals, int n) {
  *====================================================================================================================*/
 
 /* Forward declaration for S-BB-5 user-call box (not yet implemented) */
-Pl_GoalBox pl_box_choice_call(EXPR_t *goal, Term **env);   /* defined in S-BB-5 */
+bb_node_t pl_box_choice_call(EXPR_t *goal, Term **env);   /* defined in S-BB-5 */
 
 /*----------------------------------------------------------------------------------------------------------------------
  * pl_box_unify — E_UNIFY leaf box: α unifies children[0] and children[1] via trail; β undoes.
@@ -215,10 +212,10 @@ static DESCR_t pl_unify_fn(void *zeta, int entry) {
     return FAILDESCR;
 }
 
-static Pl_GoalBox pl_box_unify(EXPR_t *node, Term **env) {
+static bb_node_t pl_box_unify(EXPR_t *node, Term **env) {
     pl_unify_t *ζ = calloc(1, sizeof(pl_unify_t));
     ζ->node = node; ζ->env = env;
-    return (Pl_GoalBox){ pl_unify_fn, ζ };
+    return (bb_node_t){ pl_unify_fn, ζ, 0 };
 }
 
 /*----------------------------------------------------------------------------------------------------------------------
@@ -262,14 +259,14 @@ static DESCR_t pl_head_unify_fn(void *zeta, int entry) {
 }
 
 /*----------------------------------------------------------------------------------------------------------------------
- * pl_box_goal_from_ir — build a Pl_GoalBox for one IR body goal node.
+ * pl_box_goal_from_ir — build a bb_node_t for one IR body goal node.
  * env is the clause's cenv (populated after head unification succeeds).
  * For user calls (S-BB-5), we forward to pl_box_choice_call.
  *--------------------------------------------------------------------------------------------------------------------*/
 static int pl_is_builtin_goal(EXPR_t *g);                              /* forward */
-static Pl_GoalBox pl_box_alt(Pl_GoalBox left, Pl_GoalBox right);       /* forward */
+static bb_node_t pl_box_alt(bb_node_t left, bb_node_t right);       /* forward */
 
-static Pl_GoalBox pl_box_goal_from_ir(EXPR_t *g, Term **env) {
+static bb_node_t pl_box_goal_from_ir(EXPR_t *g, Term **env) {
     if (!g) return pl_box_true();
     if (g->kind == E_CUT)   return pl_box_cut();
     if (g->kind == E_UNIFY) return pl_box_unify(g, env);
@@ -322,7 +319,7 @@ static int pl_is_builtin_goal(EXPR_t *g) {
 
 /*----------------------------------------------------------------------------------------------------------------------
 /* Forward declaration — defined after pl_is_builtin_goal */
-static Pl_GoalBox pl_box_goal_from_ir(EXPR_t *g, Term **env);
+static bb_node_t pl_box_goal_from_ir(EXPR_t *g, Term **env);
 
 /*----------------------------------------------------------------------------------------------------------------------
  * pl_box_deferred_env — wraps a body goal box whose env is not yet known at
@@ -335,7 +332,7 @@ static Pl_GoalBox pl_box_goal_from_ir(EXPR_t *g, Term **env);
 typedef struct {
     EXPR_t    *goal_node;   /* IR node for this body goal */
     Term    ***env_ptr;     /* &hζ->cenv — filled in by head-unify α */
-    Pl_GoalBox inner;       /* built lazily on first α */
+    bb_node_t inner;       /* built lazily on first α */
     int        built;
 } pl_deferred_env_t;
 
@@ -345,16 +342,16 @@ static DESCR_t pl_deferred_env_fn(void *zeta, int entry) {
         /* (re)build inner box using the now-valid *env_ptr */
         ζ->inner = pl_box_goal_from_ir(ζ->goal_node, *ζ->env_ptr);
         ζ->built  = 1;
-        return ζ->inner.fn(ζ->inner.zeta, α);
+        return ζ->inner.fn(ζ->inner.ζ, α);
     }
-    return ζ->inner.fn(ζ->inner.zeta, β);
+    return ζ->inner.fn(ζ->inner.ζ, β);
 }
 
-static Pl_GoalBox pl_box_deferred_env(EXPR_t *goal_node, Term ***env_ptr) {
+static bb_node_t pl_box_deferred_env(EXPR_t *goal_node, Term ***env_ptr) {
     pl_deferred_env_t *ζ = calloc(1, sizeof(pl_deferred_env_t));
     ζ->goal_node = goal_node;
     ζ->env_ptr   = env_ptr;
-    return (Pl_GoalBox){ pl_deferred_env_fn, ζ };
+    return (bb_node_t){ pl_deferred_env_fn, ζ, 0 };
 }
 
 /*----------------------------------------------------------------------------------------------------------------------
@@ -364,7 +361,7 @@ static Pl_GoalBox pl_box_deferred_env(EXPR_t *goal_node, Term ***env_ptr) {
  * Body goal boxes use pl_box_deferred_env so they resolve hζ->cenv at
  * call time (after head-unify α has allocated and populated cenv).
  *--------------------------------------------------------------------------------------------------------------------*/
-Pl_GoalBox pl_box_clause(EXPR_t *ec, Term **caller_args, int arity) {
+bb_node_t pl_box_clause(EXPR_t *ec, Term **caller_args, int arity) {
     if (!ec || ec->kind != E_CLAUSE) return pl_box_fail();
     int n_vars = (int)ec->ival;
     int nbody  = ec->nchildren - arity;
@@ -375,17 +372,17 @@ Pl_GoalBox pl_box_clause(EXPR_t *ec, Term **caller_args, int arity) {
     hζ->arity       = arity;
     hζ->ec          = ec;
     hζ->n_vars      = n_vars;
-    Pl_GoalBox head_box = (Pl_GoalBox){ pl_head_unify_fn, hζ };
+    bb_node_t head_box = (bb_node_t){ pl_head_unify_fn, hζ, 0 };
 
     if (nbody == 0) return head_box;   /* fact: head only */
 
     /* Body boxes use &hζ->cenv so they pick up cenv after head-unify α fires */
     int total = 1 + nbody;
-    Pl_GoalBox *boxes = malloc(total * sizeof(Pl_GoalBox));
+    bb_node_t *boxes = malloc(total * sizeof(bb_node_t));
     boxes[0] = head_box;
     for (int i = 0; i < nbody; i++)
         boxes[1 + i] = pl_box_deferred_env(ec->children[arity + i], &hζ->cenv);
-    Pl_GoalBox result = pl_box_cat_list(boxes, total);
+    bb_node_t result = pl_box_cat_list(boxes, total);
     free(boxes);
     return result;
 }
@@ -402,8 +399,8 @@ static DESCR_t pl_cut_fn(void *zeta, int entry) {
     return FAILDESCR;
 }
 
-Pl_GoalBox pl_box_cut(void) {
-    return (Pl_GoalBox){ pl_cut_fn, NULL };
+bb_node_t pl_box_cut(void) {
+    return (bb_node_t){ pl_cut_fn, NULL, 0 };
 }
 
 /*======================================================================================================================
@@ -413,36 +410,36 @@ Pl_GoalBox pl_box_cut(void) {
  * β: left already done — try right(β); if γ → return γ; else ω.
  * This gives ; the same semantics as bb_alt in stmt_exec.c.
  *====================================================================================================================*/
-typedef struct { Pl_GoalBox left; Pl_GoalBox right; int phase; } pl_alt_zeta_t;
+typedef struct { bb_node_t left; bb_node_t right; int phase; } pl_alt_zeta_t;
 /* phase: 0=left not tried, 1=left failed try right α, 2=right active */
 
 static DESCR_t pl_alt_fn(void *zeta, int entry) {
     pl_alt_zeta_t *ζ = (pl_alt_zeta_t *)zeta;
     DESCR_t r;
     if (entry == α) {
-        r = ζ->left.fn(ζ->left.zeta, α);
+        r = ζ->left.fn(ζ->left.ζ, α);
         if (!IS_FAIL_fn(r)) { ζ->phase = 0; return r; }   /* left γ */
         /* left ω — try right */
         ζ->phase = 2;
-        return ζ->right.fn(ζ->right.zeta, α);
+        return ζ->right.fn(ζ->right.ζ, α);
     }
     /* β: retry whichever branch is active */
     if (ζ->phase == 0) {
         /* left is still active — retry it */
-        r = ζ->left.fn(ζ->left.zeta, β);
+        r = ζ->left.fn(ζ->left.ζ, β);
         if (!IS_FAIL_fn(r)) return r;
         /* left exhausted — fall through to right */
         ζ->phase = 2;
-        return ζ->right.fn(ζ->right.zeta, α);
+        return ζ->right.fn(ζ->right.ζ, α);
     }
     /* right is active */
-    return ζ->right.fn(ζ->right.zeta, β);
+    return ζ->right.fn(ζ->right.ζ, β);
 }
 
-static Pl_GoalBox pl_box_alt(Pl_GoalBox left, Pl_GoalBox right) {
+static bb_node_t pl_box_alt(bb_node_t left, bb_node_t right) {
     pl_alt_zeta_t *ζ = malloc(sizeof(pl_alt_zeta_t));
     ζ->left = left; ζ->right = right; ζ->phase = 0;
-    return (Pl_GoalBox){ pl_alt_fn, ζ };
+    return (bb_node_t){ pl_alt_fn, ζ, 0 };
 }
 
 /*======================================================================================================================
@@ -466,7 +463,7 @@ typedef struct {
     int         trail_mark;
     Term      **caller_args;
     int         arity;
-    Pl_GoalBox  cur;
+    bb_node_t  cur;
     int         cur_active;
 } pl_choice_t;
 
@@ -475,7 +472,7 @@ static DESCR_t pl_choice_fn(void *zeta, int entry) {
     DESCR_t r;
 
     if (entry == β && ζ->cur_active) {
-        r = ζ->cur.fn(ζ->cur.zeta, β);
+        r = ζ->cur.fn(ζ->cur.ζ, β);
         if (!IS_FAIL_fn(r)) return NULVCL;
         trail_unwind(&g_pl_trail, ζ->trail_mark);
         ζ->ci++;
@@ -492,7 +489,7 @@ static DESCR_t pl_choice_fn(void *zeta, int entry) {
         trail_unwind(&g_pl_trail, ζ->trail_mark);
         ζ->cur        = pl_box_clause(ec, ζ->caller_args, ζ->arity);
         ζ->cur_active = 1;
-        r = ζ->cur.fn(ζ->cur.zeta, α);
+        r = ζ->cur.fn(ζ->cur.ζ, α);
         if (!IS_FAIL_fn(r)) return NULVCL;
         ζ->ci++;
         ζ->cur_active = 0;
@@ -502,17 +499,17 @@ static DESCR_t pl_choice_fn(void *zeta, int entry) {
     return FAILDESCR;
 }
 
-Pl_GoalBox pl_box_choice(EXPR_t *choice_node, Term **caller_args, int arity) {
+bb_node_t pl_box_choice(EXPR_t *choice_node, Term **caller_args, int arity) {
     if (!choice_node || choice_node->kind != E_CHOICE) return pl_box_fail();
     pl_choice_t *ζ = calloc(1, sizeof(pl_choice_t));
     ζ->clauses     = choice_node->children;
     ζ->nclause     = choice_node->nchildren;
     ζ->caller_args = caller_args;
     ζ->arity       = arity;
-    return (Pl_GoalBox){ pl_choice_fn, ζ };
+    return (bb_node_t){ pl_choice_fn, ζ, 0 };
 }
 
-Pl_GoalBox pl_box_choice_call(EXPR_t *goal, Term **env) {
+bb_node_t pl_box_choice_call(EXPR_t *goal, Term **env) {
     if (!goal || !goal->sval) return pl_box_fail();
     int arity = goal->nchildren;
     char key[256];
