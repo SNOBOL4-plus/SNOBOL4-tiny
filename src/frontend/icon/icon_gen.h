@@ -18,6 +18,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <ucontext.h>
 #include "../../runtime/x86/snobol4.h"   /* DESCR_t, FAILDESCR, IS_FAIL_fn, α/β */
 
 /*----------------------------------------------------------------------------------------------------------------------------
@@ -74,10 +75,41 @@ static inline void *icn_gen_enter(void **pp, size_t size) {
 int icn_broker(icn_gen_t gen, void (*body_fn)(DESCR_t val, void *arg), void *arg);
 
 /*----------------------------------------------------------------------------------------------------------------------------
- * icn_eval_gen — walk an EXPR_t tree and return an icn_gen_t.
- * Declared here; implemented in icon_gen.c (B-8).
+ * Box state types — allocated by icn_eval_gen (in scrip.c) and passed as zeta
  *--------------------------------------------------------------------------------------------------------------------------*/
-struct _EXPR_t;   /* forward — icon_lower.h defines EXPR_t */
-icn_gen_t icn_eval_gen(struct _EXPR_t *e);
+typedef struct { long lo; long hi; long cur; }                                        icn_to_state_t;
+typedef struct { long lo; long hi; long step; long cur; }                             icn_to_by_state_t;
+typedef struct { const char *str; long len; long pos; char ch[2]; }                  icn_iterate_state_t;
+typedef struct { const char *needle; const char *hay; int nlen; const char *next; }  icn_find_state_t;
+typedef struct {
+    ucontext_t  gen_ctx;
+    ucontext_t  caller_ctx;
+    char       *stack;
+    DESCR_t     yielded;
+    int         exhausted;
+    int         started;
+    void      (*trampoline)(void);
+    void       *trampoline_arg;
+} icn_suspend_state_t;
+
+/*----------------------------------------------------------------------------------------------------------------------------
+ * Box function declarations — implemented in icon_gen.c
+ *--------------------------------------------------------------------------------------------------------------------------*/
+DESCR_t icn_bb_to(void *zeta, int entry);
+DESCR_t icn_bb_to_by(void *zeta, int entry);
+DESCR_t icn_bb_iterate(void *zeta, int entry);
+DESCR_t icn_bb_suspend(void *zeta, int entry);
+DESCR_t icn_bb_find(void *zeta, int entry);
+
+/*----------------------------------------------------------------------------------------------------------------------------
+ * icn_eval_gen — walk an EXPR_t tree and return an icn_gen_t.
+ * Declared here; implemented in scrip.c (B-8) where interp_eval and proc tables are visible.
+ * Uses EXPR_t* — callers must have ir.h in scope.
+ *--------------------------------------------------------------------------------------------------------------------------*/
+#ifndef EXPR_T_DEFINED
+#define EXPR_T_DEFINED
+typedef struct EXPR_t EXPR_t;  /* minimal forward when ir.h not yet included */
+#endif
+icn_gen_t icn_eval_gen(EXPR_t *e);
 
 #endif /* ICON_GEN_H */

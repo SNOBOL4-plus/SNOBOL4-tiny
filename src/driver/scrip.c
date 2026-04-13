@@ -81,6 +81,7 @@ extern void ir_print_node_nl(const EXPR_t *e, FILE *f);
 #include "../runtime/x86/sm_interp.h"
 #include "../runtime/x86/sm_prog.h"
 #include "../runtime/x86/bb_build.h"    /* M-BB-LIVE-WIRE: bb_mode_t, g_bb_mode */
+#include "../frontend/icon/icon_gen.h"  /* icn_gen_t, icn_bb_*, icn_broker, icn_eval_gen — after bb_box.h */
 #include "../runtime/x86/sm_codegen.h"  /* M-JIT-RUN: sm_codegen, sm_jit_run */
 #include "../runtime/x86/sm_image.h"    /* M-JIT-RUN: sm_image_init */
 
@@ -400,6 +401,138 @@ static int icn_drive(EXPR_t *root, EXPR_t *e) {
 static DESCR_t icn_interp_eval(EXPR_t *root, EXPR_t *e) {
     g_icn_root = root;
     return interp_eval(e);
+}
+
+/*----------------------------------------------------------------------------------------------------------------------------
+ * B-8: icn_eval_gen — walk EXPR_t tree, return live icn_gen_t.
+ *--------------------------------------------------------------------------------------------------------------------------*/
+/* proc_coro_box: thin Byrd box that drives an existing Icn_coro_entry via swapcontext.
+ * Used for user generator procs (contains E_SUSPEND). α and β both resume the same coro. */
+typedef struct { Icn_coro_entry *ce; } proc_coro_state_t;
+static DESCR_t icn_proc_coro_box(void *zeta, int entry) {
+    (void)entry;
+    proc_coro_state_t *z = (proc_coro_state_t *)zeta;
+    Icn_coro_entry *ce = z->ce;
+    if (ce->exhausted) { icn_coro_clear(ce->call_node); return FAILDESCR; }
+    Icn_coro_entry *prev = icn_cur_coro; icn_cur_coro = ce;
+    swapcontext(&ce->caller_ctx, &ce->gen_ctx);
+    icn_cur_coro = prev;
+    if (ce->exhausted) { icn_coro_clear(ce->call_node); return FAILDESCR; }
+    return ce->yielded;
+}
+typedef struct { DESCR_t value; int fired; } icn_oneshot_state_t;
+static DESCR_t icn_oneshot_box(void *zeta, int entry) {
+    icn_oneshot_state_t *z = (icn_oneshot_state_t *)zeta;
+    if (entry == α && !z->fired) { z->fired = 1; return z->value; }
+    return FAILDESCR;
+}
+static icn_gen_t icn_make_oneshot(DESCR_t val) {
+    if (IS_FAIL_fn(val)) return ICN_FAIL_GEN;
+    icn_oneshot_state_t *s = GC_malloc(sizeof(*s));
+    s->value = val; s->fired = 0;
+    return (icn_gen_t){ icn_oneshot_box, s };
+}
+
+icn_gen_t icn_eval_gen(EXPR_t *e) {
+    if (!e) return ICN_FAIL_GEN;
+
+    switch (e->kind) {
+
+    /* ── E_TO: (lo to hi) ─────────────────────────────────────────────── */
+    case E_TO: {
+        if (e->nchildren < 2) return ICN_FAIL_GEN;
+        DESCR_t lo_d = interp_eval(e->children[0]);
+        DESCR_t hi_d = interp_eval(e->children[1]);
+        if (IS_FAIL_fn(lo_d) || IS_FAIL_fn(hi_d)) return ICN_FAIL_GEN;
+        icn_to_state_t *s = GC_malloc(sizeof(*s));
+        s->lo = lo_d.i; s->hi = hi_d.i;
+        return (icn_gen_t){ icn_bb_to, s };
+    }
+
+    /* ── E_TO_BY: (lo to hi by step) ──────────────────────────────────── */
+    case E_TO_BY: {
+        if (e->nchildren < 3) return ICN_FAIL_GEN;
+        DESCR_t lo_d = interp_eval(e->children[0]);
+        DESCR_t hi_d = interp_eval(e->children[1]);
+        DESCR_t st_d = interp_eval(e->children[2]);
+        if (IS_FAIL_fn(lo_d) || IS_FAIL_fn(hi_d) || IS_FAIL_fn(st_d)) return ICN_FAIL_GEN;
+        icn_to_by_state_t *s = GC_malloc(sizeof(*s));
+        s->lo = lo_d.i; s->hi = hi_d.i; s->step = st_d.i ? st_d.i : 1;
+        return (icn_gen_t){ icn_bb_to_by, s };
+    }
+
+    /* ── E_ITERATE: (!str) ─────────────────────────────────────────────── */
+    case E_ITERATE: {
+        if (e->nchildren < 1) return ICN_FAIL_GEN;
+        DESCR_t sv = interp_eval(e->children[0]);
+        if (IS_FAIL_fn(sv) || !IS_STR_fn(sv)) return ICN_FAIL_GEN;
+        const char *str = sv.s ? sv.s : "";
+        icn_iterate_state_t *s = GC_malloc(sizeof(*s));
+        s->str = str; s->len = (long)strlen(str); s->pos = 0;
+        return (icn_gen_t){ icn_bb_iterate, s };
+    }
+
+    /* ── E_FNC: find() or user generator proc ──────────────────────────── */
+    case E_FNC: {
+        if (e->nchildren < 1 || !e->children[0] || !e->children[0]->sval) break;
+        const char *fname = e->children[0]->sval;
+        int nargs = e->nchildren - 1;
+
+        /* find(needle, haystack) → icn_bb_find */
+        if (strcmp(fname, "find") == 0 && nargs >= 2) {
+            DESCR_t s1 = interp_eval(e->children[1]);
+            DESCR_t s2 = interp_eval(e->children[2]);
+            if (IS_FAIL_fn(s1) || IS_FAIL_fn(s2)) return ICN_FAIL_GEN;
+            const char *needle = VARVAL_fn(s1), *hay = VARVAL_fn(s2);
+            if (!needle || !hay) return ICN_FAIL_GEN;
+            icn_find_state_t *s = GC_malloc(sizeof(*s));
+            s->needle = needle; s->hay = hay;
+            s->nlen = (int)strlen(needle); s->next = hay;
+            return (icn_gen_t){ icn_bb_find, s };
+        }
+
+        /* User generator proc (has E_SUSPEND in body) → icn_bb_suspend */
+        for (int i = 0; i < icn_proc_count; i++) {
+            if (strcmp(icn_proc_table[i].name, fname) == 0
+                && icn_has_suspend(icn_proc_table[i].proc)) {
+                /* Reuse existing coro if already active for this call node */
+                Icn_coro_entry *ce = icn_coro_find(e);
+                if (!ce) {
+                    if (icn_coro_count >= ICN_CORO_MAX) return ICN_FAIL_GEN;
+                    ce = &icn_coro_table[icn_coro_count++];
+                    ce->call_node = e; ce->active = 1; ce->exhausted = 0;
+                    ce->proc = icn_proc_table[i].proc; ce->nargs = nargs;
+                    for (int j = 0; j < nargs && j < ICN_SLOT_MAX; j++)
+                        ce->args[j] = interp_eval(e->children[j+1]);
+                    ce->stack = GC_malloc(ICN_CORO_STACK);
+                    getcontext(&ce->gen_ctx);
+                    ce->gen_ctx.uc_stack.ss_sp   = ce->stack;
+                    ce->gen_ctx.uc_stack.ss_size = ICN_CORO_STACK;
+                    ce->gen_ctx.uc_link          = NULL;
+                    makecontext(&ce->gen_ctx, icn_coro_trampoline, 0);
+                }
+                /* Build a suspend box that uses this coro entry directly */
+                typedef struct { Icn_coro_entry *ce; } proc_coro_state_t;
+                proc_coro_state_t *ps = GC_malloc(sizeof(*ps));
+                ps->ce = ce;
+                return (icn_gen_t){ icn_proc_coro_box, ps };
+            }
+        }
+        break;
+    }
+
+    /* ── E_SUSPEND: bare suspend in body context — one-shot eval ────────── */
+    case E_SUSPEND:
+        /* suspend expr — eval the value, wrap as one-shot */
+        if (e->nchildren > 0) return icn_make_oneshot(interp_eval(e->children[0]));
+        return ICN_FAIL_GEN;
+
+    default:
+        break;
+    }
+
+    /* Non-generator: wrap interp_eval result as one-shot box */
+    return icn_make_oneshot(interp_eval(e));
 }
 
 /* icn_collect_names: walk proc body to collect all E_VAR names into names[].

@@ -55,7 +55,6 @@ int icn_broker(icn_gen_t gen, void (*body_fn)(DESCR_t val, void *arg), void *arg
  *   α: cur = lo; if cur > hi → ω; else return integer cur (γ).
  *   β: cur++; if cur > hi → ω; else return integer cur (γ).
  *============================================================================================================================*/
-typedef struct { long lo; long hi; long cur; } icn_to_state_t;
 
 DESCR_t icn_bb_to(void *zeta, int entry) {
     icn_to_state_t *z = (icn_to_state_t *)zeta;
@@ -73,7 +72,6 @@ DESCR_t icn_bb_to(void *zeta, int entry) {
  *   β: cur += step.
  *   if step > 0: cur > hi → ω.   if step < 0: cur < hi → ω.
  *============================================================================================================================*/
-typedef struct { long lo; long hi; long step; long cur; } icn_to_by_state_t;
 
 DESCR_t icn_bb_to_by(void *zeta, int entry) {
     icn_to_by_state_t *z = (icn_to_by_state_t *)zeta;
@@ -93,7 +91,6 @@ DESCR_t icn_bb_to_by(void *zeta, int entry) {
  *   β: pos++.
  *   if pos >= len → ω; else return single-char string at pos (γ).
  *============================================================================================================================*/
-typedef struct { const char *str; long len; long pos; char ch[2]; } icn_iterate_state_t;
 
 DESCR_t icn_bb_iterate(void *zeta, int entry) {
     icn_iterate_state_t *z = (icn_iterate_state_t *)zeta;
@@ -117,16 +114,6 @@ DESCR_t icn_bb_iterate(void *zeta, int entry) {
  * This box does NOT own the coroutine — icn_eval_gen (B-8) wires it up.
  * The zeta is cast to icn_suspend_state_t which the broker caller populates.
  *============================================================================================================================*/
-typedef struct {
-    ucontext_t  gen_ctx;
-    ucontext_t  caller_ctx;
-    char       *stack;
-    DESCR_t     yielded;
-    int         exhausted;
-    int         started;
-    void      (*trampoline)(void);   /* entry function for makecontext */
-    void       *trampoline_arg;      /* passed via global before makecontext */
-} icn_suspend_state_t;
 
 DESCR_t icn_bb_suspend(void *zeta, int entry) {
     icn_suspend_state_t *z = (icn_suspend_state_t *)zeta;
@@ -156,7 +143,6 @@ DESCR_t icn_bb_suspend(void *zeta, int entry) {
  *   β: advance past last match, find next.
  *   returns 1-based position of match, or ω.
  *============================================================================================================================*/
-typedef struct { const char *needle; const char *hay; int nlen; const char *next; } icn_find_state_t;
 
 DESCR_t icn_bb_find(void *zeta, int entry) {
     icn_find_state_t *z = (icn_find_state_t *)zeta;
@@ -168,13 +154,7 @@ DESCR_t icn_bb_find(void *zeta, int entry) {
     return (DESCR_t){ .v = DT_I, .i = pos1 };
 }
 
-/*============================================================================================================================
- * icn_eval_gen — forward declaration (B-8); stub until then
- *============================================================================================================================*/
-icn_gen_t icn_eval_gen(struct _EXPR_t *e) {
-    (void)e;
-    return ICN_FAIL_GEN;   /* replaced fully in B-8 */
-}
+/* icn_eval_gen — implemented in scrip.c where interp_eval and proc tables are visible. */
 
 /*============================================================================================================================
  * Unit tests: B-2 constant box, B-3 icn_bb_to, B-4 icn_bb_to_by, B-5 icn_bb_iterate, B-7 icn_bb_find
