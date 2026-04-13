@@ -170,12 +170,13 @@ static DESCR_t      icn_return_val;         /* value being returned */
 /* Generator substitution stack for E_EVERY/E_TO β re-entry (DESCR_t version).
  * Mirrors icn_exec_driven logic but uses DESCR_t instead of IcnVal. */
 #define ICN_GEN_MAX 16
-typedef struct { EXPR_t *node; long cur; } IcnGenEntry_d;
+typedef struct { EXPR_t *node; long cur; const char *sval; } IcnGenEntry_d;
 static IcnGenEntry_d icn_gen_stack[ICN_GEN_MAX];
 static int           icn_gen_depth = 0;
-static void icn_gen_push(EXPR_t *n, long v) { if(icn_gen_depth<ICN_GEN_MAX){icn_gen_stack[icn_gen_depth].node=n;icn_gen_stack[icn_gen_depth].cur=v;icn_gen_depth++;} }
+static void icn_gen_push(EXPR_t *n, long v, const char *sv) { if(icn_gen_depth<ICN_GEN_MAX){icn_gen_stack[icn_gen_depth].node=n;icn_gen_stack[icn_gen_depth].cur=v;icn_gen_stack[icn_gen_depth].sval=sv;icn_gen_depth++;} }
 static void icn_gen_pop(void)               { if(icn_gen_depth>0)icn_gen_depth--; }
 static int  icn_gen_lookup(EXPR_t *n, long *out) { for(int i=icn_gen_depth-1;i>=0;i--) if(icn_gen_stack[i].node==n){*out=icn_gen_stack[i].cur;return 1;} return 0; }
+static int  icn_gen_lookup_sv(EXPR_t *n, long *out, const char **sv) { for(int i=icn_gen_depth-1;i>=0;i--) if(icn_gen_stack[i].node==n){*out=icn_gen_stack[i].cur;*sv=icn_gen_stack[i].sval;return 1;} return 0; }
 static int  icn_gen_active(EXPR_t *n)            { for(int i=0;i<icn_gen_depth;i++) if(icn_gen_stack[i].node==n) return 1; return 0; }
 
 /* Icon scan state globals */
@@ -199,7 +200,7 @@ static int icn_drive(EXPR_t *root, EXPR_t *e) {
         if (IS_FAIL_fn(lo_d)||IS_FAIL_fn(hi_d)) return 0;
         long lo=lo_d.i, hi=hi_d.i; int ticks=0;
         for(long i=lo;i<=hi&&!icn_returning;i++){
-            icn_gen_push(e,i);
+            icn_gen_push(e,i,NULL);
             int inner=icn_drive(root,root);
             if(!inner) icn_interp_eval(root,root);
             icn_gen_pop(); ticks++;
@@ -213,8 +214,23 @@ static int icn_drive(EXPR_t *root, EXPR_t *e) {
         DESCR_t st_d=icn_interp_eval(root,e->children[2]);
         if(IS_FAIL_fn(lo_d)||IS_FAIL_fn(hi_d)||IS_FAIL_fn(st_d)) return 0;
         long lo=lo_d.i,hi=hi_d.i,st=st_d.i?st_d.i:1; int ticks=0;
-        if(st>0){for(long i=lo;i<=hi&&!icn_returning;i+=st){icn_gen_push(e,i);int inner=icn_drive(root,root);if(!inner)icn_interp_eval(root,root);icn_gen_pop();ticks++;if(icn_returning)break;}}
-        else    {for(long i=lo;i>=hi&&!icn_returning;i+=st){icn_gen_push(e,i);int inner=icn_drive(root,root);if(!inner)icn_interp_eval(root,root);icn_gen_pop();ticks++;if(icn_returning)break;}}
+        if(st>0){for(long i=lo;i<=hi&&!icn_returning;i+=st){icn_gen_push(e,i,NULL);int inner=icn_drive(root,root);if(!inner)icn_interp_eval(root,root);icn_gen_pop();ticks++;if(icn_returning)break;}}
+        else    {for(long i=lo;i>=hi&&!icn_returning;i+=st){icn_gen_push(e,i,NULL);int inner=icn_drive(root,root);if(!inner)icn_interp_eval(root,root);icn_gen_pop();ticks++;if(icn_returning)break;}}
+        return ticks;
+    }
+    /* S-6: E_ITERATE (!str) — generate each character of a string */
+    if (e->kind == E_ITERATE && e->nchildren >= 1) {
+        DESCR_t sv_d = icn_interp_eval(root, e->children[0]);
+        if (IS_FAIL_fn(sv_d) || !IS_STR_fn(sv_d)) return 0;
+        const char *str = sv_d.s ? sv_d.s : "";
+        long len = (long)strlen(str); int ticks = 0;
+        for (long i = 0; i < len && !icn_returning; i++) {
+            icn_gen_push(e, i, str);
+            int inner = icn_drive(root, root);
+            if (!inner) icn_interp_eval(root, root);
+            icn_gen_pop(); ticks++;
+            if (icn_returning) break;
+        }
         return ticks;
     }
     for(int i=0;i<e->nchildren;i++){int t=icn_drive(root,e->children[i]);if(t>0)return t;}
@@ -476,7 +492,15 @@ static DESCR_t icn_interp_eval(EXPR_t *root, EXPR_t *e) {
         if (strcmp(e->sval,"pos")==0) return INTVAL(icn_scan_pos);
         return NULVCL;
     }
-    case E_ITERATE: return FAILDESCR; /* !E — handled in S-6 */
+    case E_ITERATE: {
+        /* S-6: !str — when driven, return single-char string at current position */
+        long cur; const char *str;
+        if (icn_gen_lookup_sv(e, &cur, &str) && str) {
+            char *ch = GC_malloc(2); ch[0] = str[cur]; ch[1] = '\0';
+            return STRVAL(ch);
+        }
+        return FAILDESCR;
+    }
     case E_SUSPEND: /* simplified: return value (S-11 adds setjmp) */
         return (e->nchildren > 0) ? icn_interp_eval(root, e->children[0]) : NULVCL;
 
