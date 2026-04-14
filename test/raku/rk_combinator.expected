@@ -1,0 +1,7 @@
+parse: 3+4*2
+  digit 3
+  op    +
+  digit 4
+  op    *
+  digit 2
+ok
