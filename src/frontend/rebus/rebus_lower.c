@@ -658,3 +658,37 @@ Program *rebus_lower(RProgram *rp) {
     }
     return L.prog;
 }
+
+/* -------------------------------------------------------------------------
+ * rebus_compile — full pipeline: src string -> Program*
+ *
+ * FI-1A: mirrors icon_compile() exactly.
+ * Parses src via rebus_parse(), lowers via rebus_lower(), then tags every
+ * STMT_t with LANG_REB so the polyglot dispatch routes correctly.
+ * ---------------------------------------------------------------------- */
+Program *rebus_compile(const char *src, const char *filename) {
+    if (!filename) filename = "<stdin>";
+
+    /* Parse: rebus_parse() takes FILE* — use fmemopen for string input */
+    FILE *f = fmemopen((void *)src, strlen(src), "r");
+    if (!f) {
+        fprintf(stderr, "rebus_compile: fmemopen failed\n");
+        return NULL;
+    }
+    RProgram *rp = rebus_parse(f, filename);
+    fclose(f);
+    if (!rp) {
+        fprintf(stderr, "rebus_compile: parse error in %s\n", filename);
+        return NULL;
+    }
+
+    /* Lower RProgram* -> Program* */
+    Program *prog = rebus_lower(rp);
+    if (!prog) return NULL;
+
+    /* Tag every statement with LANG_REB */
+    for (STMT_t *st = prog->head; st; st = st->next)
+        st->lang = LANG_REB;
+
+    return prog;
+}

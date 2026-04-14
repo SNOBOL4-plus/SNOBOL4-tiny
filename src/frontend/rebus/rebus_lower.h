@@ -17,4 +17,12 @@
  */
 Program *rebus_lower(RProgram *rp);
 
+/*
+ * rebus_compile(src, filename) — FI-1A
+ *   Full pipeline: parse src string via rebus_parse(), lower via
+ *   rebus_lower(), tag all STMT_t with LANG_REB. Mirrors icon_compile().
+ *   Returns NULL on parse or lower error.
+ */
+Program *rebus_compile(const char *src, const char *filename);
+
 #endif /* REBUS_LOWER_H */
