@@ -62,6 +62,9 @@
  * Internal state
  * ---------------------------------------------------------------------- */
 
+/* Break-label stack — one entry per enclosing loop */
+#define BREAK_STACK_MAX 64
+
 typedef struct {
     const SnoconeToken *toks;
     int            count;
@@ -72,7 +75,20 @@ typedef struct {
     Program       *prog;
     /* Current function name (for return value assignment) */
     char          *fname;
+    /* Break-label stack: top is the end-label of the innermost loop */
+    char          *break_stack[BREAK_STACK_MAX];
+    int            break_depth;
 } CfState;
+
+static void push_break(CfState *st, const char *lab) {
+    if (st->break_depth < BREAK_STACK_MAX) st->break_stack[st->break_depth++] = (char *)lab;
+}
+static void pop_break(CfState *st) {
+    if (st->break_depth > 0) st->break_depth--;
+}
+static const char *top_break(CfState *st) {
+    return st->break_depth > 0 ? st->break_stack[st->break_depth - 1] : NULL;
+}
 
 /* -------------------------------------------------------------------------
  * Helpers
@@ -575,7 +591,9 @@ static void do_stmt(CfState *st) {
         /* Consume optional 'do' keyword */
         skip_nl(st);
         if (cur(st)->kind == SNOCONE_KW_DO) advance(st);
+        push_break(st, lab_end);
         do_body(st);
+        pop_break(st);
         emit_goto(st, lab_start);
         emit_label(st, lab_end);
 
@@ -590,7 +608,9 @@ static void do_stmt(CfState *st) {
         char *lab_end   = newlab(st);
 
         emit_label(st, lab_start);
+        push_break(st, lab_end);
         do_body(st);
+        pop_break(st);
 
         /* expect 'while' */
         skip_nl(st);
@@ -634,7 +654,9 @@ static void do_stmt(CfState *st) {
         /* Consume optional 'do' keyword */
         skip_nl(st);
         if (cur(st)->kind == SNOCONE_KW_DO) advance(st);
+        push_break(st, lab_end);
         do_body(st);
+        pop_break(st);
         if (step_s) prog_append(st, step_s);
         emit_goto(st, lab_test);
         emit_label(st, lab_end);
@@ -668,6 +690,14 @@ static void do_stmt(CfState *st) {
     if (k == SNOCONE_KW_STRUCT) {
         advance(st);
         do_struct(st);
+        return;
+    }
+
+    /* ---- break — jump to end of innermost loop ---- */
+    if (k == SNOCONE_KW_BREAK) {
+        advance(st);
+        const char *lab = top_break(st);
+        if (lab) { emit_goto(st, lab); } else { st->nerrors++; }
         return;
     }
 
