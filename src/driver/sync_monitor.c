@@ -44,6 +44,31 @@ void exec_snapshot_take(ExecSnapshot *s) {
 
     /* IM-8: last_ok unknown until caller sets it */
     s->last_ok = -1;
+
+    /* IM-10: ICN frame locals — walk all active frames, collect named slots */
+    s->icn_locals       = NULL;
+    s->icn_locals_count = 0;
+    if (icn_frame_depth > 0) {
+        /* Count total named slots across all frames */
+        int total = 0;
+        for (int fi = 0; fi < icn_frame_depth; fi++)
+            total += icn_frame_stack[fi].sc.n;
+        if (total > 0) {
+            s->icn_locals = malloc((size_t)total * sizeof(NvPair));
+            int out = 0;
+            for (int fi = 0; fi < icn_frame_depth; fi++) {
+                IcnFrame *f = &icn_frame_stack[fi];
+                for (int si = 0; si < f->sc.n; si++) {
+                    s->icn_locals[out].name = f->sc.e[si].name;
+                    int slot = f->sc.e[si].slot;
+                    s->icn_locals[out].val  = (slot >= 0 && slot < f->env_n)
+                                              ? f->env[slot] : NULVCL;
+                    out++;
+                }
+            }
+            s->icn_locals_count = out;
+        }
+    }
 }
 
 /*------------------------------------------------------------------------
@@ -85,6 +110,9 @@ void exec_snapshot_free(ExecSnapshot *s) {
     s->label_path     = NULL;
     s->label_path_n   = 0;
     s->label_path_cap = 0;
+    free(s->icn_locals);
+    s->icn_locals       = NULL;
+    s->icn_locals_count = 0;
 }
 
 /*------------------------------------------------------------------------
@@ -280,6 +308,16 @@ int sync_monitor_run(void *prog_arg, int verbose) {
             print_exec_line("IR",  &ir_snap);
             print_exec_line("SM",  &sm_snap);
             print_exec_line("JIT", &jit_snap);
+
+            /* IM-10: ICN locals — print if any frame is active */
+            if (ir_snap.icn_locals_count > 0) {
+                fprintf(stderr, "  ICN locals (IR):\n");
+                for (int li = 0; li < ir_snap.icn_locals_count; li++) {
+                    const char *v = VARVAL_fn(ir_snap.icn_locals[li].val);
+                    fprintf(stderr, "    %-16s = %s\n",
+                            ir_snap.icn_locals[li].name, v ? v : "");
+                }
+            }
 
             if (ir_sm) {
                 fprintf(stderr, "  IR vs SM (%d var(s) differ):\n", ir_sm);

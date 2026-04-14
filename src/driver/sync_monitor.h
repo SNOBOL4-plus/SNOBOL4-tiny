@@ -38,11 +38,18 @@ typedef struct {
 
     /* IM-9: sequence of source labels reached, one entry per statement executed.
      * label_path[i] = label of the (i+1)th statement executed, or NULL if unlabelled.
-     * label_path_n  = number of entries (= steps executed by this executor).
+     * label_path_n  = number of entries (= steps executed by this executor).\
      * Strings are not owned — they point into STMT_t / SM_Program storage. */
     const char **label_path;
     int          label_path_n;
     int          label_path_cap;
+
+    /* IM-10: ICN/Raku frame-local variables.
+     * Flat array of NvPair, one per named slot across all active frames.
+     * Names are not owned (point into IcnScope string storage).
+     * icn_locals_count = 0 when no ICN frames are active. */
+    NvPair  *icn_locals;
+    int      icn_locals_count;
 } ExecSnapshot;
 
 /*------------------------------------------------------------------------

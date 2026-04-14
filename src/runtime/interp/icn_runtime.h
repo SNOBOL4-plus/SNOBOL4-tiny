@@ -31,6 +31,10 @@ typedef struct { const char *name; EXPR_t *proc; } IcnProcEntry;
 
 typedef struct { EXPR_t *node; long cur; const char *sval; } IcnGenEntry_d;
 
+/* IM-10: moved above IcnFrame so IcnFrame.sc can embed IcnScope by value */
+typedef struct { const char *name; int slot; } IcnScopeEnt;
+typedef struct { IcnScopeEnt e[ICN_SLOT_MAX]; int n; } IcnScope;
+
 typedef struct {
     DESCR_t       env[ICN_SLOT_MAX];
     int           env_n;
@@ -40,10 +44,10 @@ typedef struct {
     int           gen_depth;
     int           loop_break;
     EXPR_t       *body_root;
+    /* IM-10: slot→name map, copied from the scope built in icn_call_proc.
+     * Allows sync_monitor to name local variables in snapshots. */
+    IcnScope      sc;
 } IcnFrame;
-
-typedef struct { const char *name; int slot; } IcnScopeEnt;
-typedef struct { IcnScopeEnt e[ICN_SLOT_MAX]; int n; } IcnScope;
 
 /*------------------------------------------------------------------------
  * Globals (defined in icn_runtime.c)

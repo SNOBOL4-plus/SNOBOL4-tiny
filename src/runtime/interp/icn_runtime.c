@@ -221,6 +221,7 @@ DESCR_t icn_call_proc(EXPR_t *proc, DESCR_t *args, int nargs) {
     IcnFrame *f = &icn_frame_stack[icn_frame_depth++];
     memset(f, 0, sizeof *f);
     f->env_n = nslots;
+    f->sc    = sc;   /* IM-10: save name→slot map so monitor can name locals */
     for (int i = 0; i < nparams && i < nargs && i < ICN_SLOT_MAX; i++)
         f->env[i] = args[i];
 
