@@ -41,6 +41,9 @@ void exec_snapshot_take(ExecSnapshot *s) {
 
     /* Prolog trail mark */
     s->pl_trail_mark   = trail_mark(&g_pl_trail);
+
+    /* IM-8: last_ok unknown until caller sets it */
+    s->last_ok = -1;
 }
 
 /*------------------------------------------------------------------------
@@ -183,30 +186,48 @@ int sync_monitor_run(void *prog_arg, int verbose) {
         exec_snapshot_restore(&baseline);
         execute_program_steps(prog, n);
         exec_snapshot_take(&ir_snap);
+        /* IR last_ok: not yet exposed as a global; leave as -1 */
 
         /* ── SM run to step n ── */
         exec_snapshot_restore(&baseline);
         SM_State sm_st; sm_state_init(&sm_st);
         sm_interp_run_steps(sm_prog, &sm_st, n);
         exec_snapshot_take(&sm_snap);
+        sm_snap.last_ok = sm_st.last_ok;
 
         /* ── JIT run to step n ── */
         exec_snapshot_restore(&baseline);
         SM_State jit_st; sm_state_init(&jit_st);
         sm_jit_run_steps(sm_prog, &jit_st, n);
         exec_snapshot_take(&jit_snap);
+        jit_snap.last_ok = jit_st.last_ok;
 
         /* ── Compare ── */
         int ir_sm  = snap_diff(&ir_snap,  "IR",  &sm_snap,  "SM",  0);
         int ir_jit = snap_diff(&ir_snap,  "IR",  &jit_snap, "JIT", 0);
+        int ok_diverge = (sm_snap.last_ok != jit_snap.last_ok);
 
-        if (ir_sm || ir_jit) {
-            /* Find label for this statement by walking the linked list */
+        if (ir_sm || ir_jit || ok_diverge) {
+            /* IM-8: rich diverge header — stmt, label, line */
             const char *lbl = "-";
+            int lineno = 0;
             { int wi = 1; STMT_t *ws = prog->head;
               for (; ws && wi < n; ws = ws->next, wi++) {}
-              if (ws && ws->label) lbl = ws->label; }
-            fprintf(stderr, "DIVERGE at stmt %d [label: %s]\n", n, lbl);
+              if (ws) { if (ws->label) lbl = ws->label; lineno = ws->lineno; } }
+            fprintf(stderr, "DIVERGE at stmt %d [label: %s, line %d]\n", n, lbl, lineno);
+
+            /* IM-8: per-executor last_ok + variable summary */
+            auto void print_exec_line(const char *tag, const ExecSnapshot *s);
+            void print_exec_line(const char *tag, const ExecSnapshot *s) {
+                if (s->last_ok < 0)
+                    fprintf(stderr, "  %-4s last_ok=?\n", tag);
+                else
+                    fprintf(stderr, "  %-4s last_ok=%d\n", tag, s->last_ok);
+            }
+            print_exec_line("IR",  &ir_snap);
+            print_exec_line("SM",  &sm_snap);
+            print_exec_line("JIT", &jit_snap);
+
             if (ir_sm) {
                 fprintf(stderr, "  IR vs SM (%d var(s) differ):\n", ir_sm);
                 snap_diff(&ir_snap, "IR", &sm_snap, "SM", 1);
@@ -215,6 +236,9 @@ int sync_monitor_run(void *prog_arg, int verbose) {
                 fprintf(stderr, "  IR vs JIT (%d var(s) differ):\n", ir_jit);
                 snap_diff(&ir_snap, "IR", &jit_snap, "JIT", 1);
             }
+            if (ok_diverge && !ir_sm && !ir_jit)
+                fprintf(stderr, "  SM last_ok=%d vs JIT last_ok=%d (NV agrees)\n",
+                        sm_snap.last_ok, jit_snap.last_ok);
             diverge_at = n;
             exec_snapshot_free(&ir_snap);
             exec_snapshot_free(&sm_snap);

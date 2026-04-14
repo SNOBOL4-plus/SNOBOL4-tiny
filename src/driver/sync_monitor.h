@@ -32,6 +32,9 @@ typedef struct {
 
     /* Prolog trail mark — restore by unwinding to this position */
     int      pl_trail_mark;
+
+    /* IM-8: last statement success/fail flag (-1 = unknown/IR) */
+    int      last_ok;
 } ExecSnapshot;
 
 /*------------------------------------------------------------------------
