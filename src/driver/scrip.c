@@ -3356,7 +3356,6 @@ static void execute_program(Program *prog)
      * For single-section .scrip (g_polyglot=0), fall through to legacy dispatch.
      */
     if (g_polyglot && g_registry.nmod > 0) {
-        fprintf(stderr, "DBG U-23: nmod=%d\n", g_registry.nmod);
         /* U-23: two-pass dispatch. SNO already ran; dispatch ICN/PL in registry order. */
         for (int _mi = 0; _mi < g_registry.nmod; _mi++) {
             ScripModule *_m = &g_registry.mods[_mi];
@@ -4091,7 +4090,9 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    if (mode_sm_run) {
+    if (lang_polyglot) {
+        polyglot_execute(prog);   /* OE-7: polyglot takes priority — SM layer not yet polyglot-aware (OE-9/10/11) */
+    } else if (mode_sm_run) {
         /* --sm-run: SM-LOWER path — IR → SM_Program → sm_interp_run.
          * Must mirror execute_program setup: build label table and register
          * DEFINE'd functions so call_user_function can find bodies via
@@ -4176,8 +4177,6 @@ int main(int argc, char **argv)
         pl_execute_program_unified(prog);
     } else if (lang_icon) {
         icn_execute_program_unified(prog);   /* unified IR interpreter — one interp_eval */
-    } else if (lang_polyglot) {
-        polyglot_execute(prog);   /* OE-7: unified entry point, all modules in registry order */
     } else {
         execute_program(prog);
     }
