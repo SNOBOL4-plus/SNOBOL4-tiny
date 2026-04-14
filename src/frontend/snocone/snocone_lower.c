@@ -318,18 +318,16 @@ static int lower_token(const ScPToken *tok, ExprStack *s,
 
     /* ---- Array ref: a[i] → E_IDX ---- */
     case SNOCONE_ARRAY_REF: {
-        int     nargs = tok->arg_count;
-        EXPR_t *base  = expr_new(E_IDX);
-        EXPR_t **tmp  = nargs > 0 ? malloc(nargs * sizeof(EXPR_t *)) : NULL;
+        int     nargs    = tok->arg_count;
+        EXPR_t *idx_node = expr_new(E_IDX);
+        EXPR_t **tmp     = nargs > 0 ? malloc(nargs * sizeof(EXPR_t *)) : NULL;
         for (int k = nargs - 1; k >= 0; k--)
             tmp[k] = es_pop(s);
-        EXPR_t *name_node = es_pop(s);
-        base->sval = name_node ? strdup(name_node->sval ? name_node->sval : "") : strdup("");
-        free(name_node);
-        /* children[0] = base (represented by sval only, no node), children[1..] = indices */
-        for (int k = 0; k < nargs; k++) expr_add_child(base, tmp[k]);
+        EXPR_t *name_node = es_pop(s);   /* full base expr (E_VAR, E_FNC, etc.) */
+        expr_add_child(idx_node, name_node);            /* children[0] = base */
+        for (int k = 0; k < nargs; k++) expr_add_child(idx_node, tmp[k]);  /* children[1..] = indices */
         if (tmp) free(tmp);
-        es_push(s, base);
+        es_push(s, idx_node);
         return 0;
     }
 

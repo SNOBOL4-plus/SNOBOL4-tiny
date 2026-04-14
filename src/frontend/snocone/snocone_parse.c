@@ -340,7 +340,10 @@ ScParseResult snocone_parse(const SnoconeToken *toks, int count) {
 
         /* ---- Left bracket ---- */
         if (tok->kind == SNOCONE_LBRACKET) {
-            Frame f = { FRAME_GROUP, 0, out.count, tok->line };
+            /* Always an array-subscript: either ident[i] (IDENT case above already
+             * pushed FRAME_ARRAY) or expr[i] (call result, parenthesised expr, etc.).
+             * Push FRAME_ARRAY so ']' emits SNOCONE_ARRAY_REF. */
+            Frame f = { FRAME_ARRAY, 0, out.count, tok->line };
             fvec_push(&calls, f);
             vec_push(&ops, make_pt(tok));
             i++;
