@@ -56,22 +56,8 @@
  *   expr_arg(e, i)  — children[i]
  *   expr_nargs(e)   — nchildren
  */
-#ifndef EXPR_T_DEFINED
-#define EXPR_T_DEFINED
-typedef struct EXPR_t EXPR_t;
-struct EXPR_t {
-    EKind    kind;
-    char    *sval;        /* E_QLIT text, E_VAR/E_KEYWORD/E_FNC/E_IDX name */
-    long     ival;        /* E_ILIT */
-    double   dval;        /* E_FLIT */
-    EXPR_t **children;    /* realloc-grown child array */
-    int      nchildren;
-};
-#else
-/* ir.h was included first; its EXPR_t uses fval (not dval).
- * Code that references e->dval on ir.h's EXPR_t must use e->fval directly.
- * The #define below is intentionally omitted to avoid polluting other structs. */
-#endif /* EXPR_T_DEFINED */
+/* EXPR_t is defined in ir/ir.h (included above) — ir.h is the sole owner.
+ * FI-0A: scrip_cc.h no longer carries a duplicate struct body. */
 
 /* NULL-safe named accessors */
 #define expr_left(e)     ((e) && (e)->nchildren >= 1 ? (e)->children[0] : NULL)
@@ -88,12 +74,6 @@ typedef struct {
     EXPR_t *computed_failure_expr;
     EXPR_t *computed_uncond_expr;
 } SnoGoto;
-
-/* Forward declaration so STMT_t can reference EXPR_t* before the full
- * struct definition (which appears below, guarded by EXPR_T_DEFINED). */
-#ifndef EXPR_T_DEFINED
-typedef struct EXPR_t EXPR_t;
-#endif
 
 /* ---- source language tags (U-12) ---- */
 #define LANG_SNO  0   /* SNOBOL4 */

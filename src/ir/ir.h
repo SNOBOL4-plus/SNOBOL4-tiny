@@ -236,13 +236,10 @@ typedef enum EKind {
 
 /* EXPR_t — the unified IR node struct.
  *
- * M-G1-IR-HEADER-WIRE: scrip-cc.h provides its own EXPR_t for now (legacy
- * field names: dval, no nalloc/id).  When scrip-cc.h includes ir.h first it
- * defines EXPR_T_DEFINED to suppress this copy and avoid a redefinition
- * error.  Struct field unification is a later reorg milestone.
+ * FI-0A: ir.h is the sole owner of this definition. scrip_cc.h no longer
+ * carries a duplicate body. The EXPR_T_DEFINED guard has been removed —
+ * this struct is defined exactly once, here.
  */
-#ifndef EXPR_T_DEFINED
-#define EXPR_T_DEFINED
 typedef struct EXPR_t EXPR_t;
 
 struct EXPR_t {
@@ -255,7 +252,6 @@ struct EXPR_t {
     int      nalloc;        /* allocated capacity of children[]             */
     int      id;            /* unique node id — assigned at emit time       */
 };
-#endif /* EXPR_T_DEFINED */
 
 /* =========================================================================
  * EKind name table — for ir_print.c and debugging
