@@ -76,11 +76,12 @@ typedef struct {
 } SnoGoto;
 
 /* ---- source language tags (U-12) ---- */
-#define LANG_SNO  0   /* SNOBOL4 */
-#define LANG_ICN  1   /* Icon    */
+#define LANG_SNO   0   /* SNOBOL4 */
+#define LANG_ICN   1   /* Icon    */
 #define LANG_PL    2   /* Prolog  */
 #define LANG_RAKU  3   /* Raku    */
 #define LANG_SCRIP 4   /* shared constants (U-23) */
+#define LANG_REB   5   /* Rebus   */
 
 /* ---- statement ---- */
 typedef struct STMT_t STMT_t;
@@ -93,7 +94,7 @@ struct STMT_t {
     int      lineno;
     int      is_end;
     int      has_eq;
-    int      lang;    /* LANG_SNO / LANG_ICN / LANG_PL  (U-12) */
+    int      lang;    /* LANG_SNO / LANG_ICN / LANG_PL / LANG_RAKU / LANG_SCRIP / LANG_REB (U-12) */
     STMT_t  *next;
 };
 
