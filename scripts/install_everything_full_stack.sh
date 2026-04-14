@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# build_setup.sh — full environment setup for a snobol4ever/one4all Claude session
+# install_everything_full_stack.sh — full environment setup for a snobol4ever/one4all session
 #
-# Run this at the start of every session after cloning the repos.
-# Installs all system packages, builds scrip, oracles, and verifies the gate.
+# One-shot full install: packages, scrip, oracles, smoke gate.
+# Do NOT run this for a specific goal session — run only the scripts listed
+# in the Goal file's ## Session Setup section instead.
 #
-# Usage: bash /home/claude/one4all/scripts/build_full_session_environment.sh
+# Usage: bash /home/claude/one4all/scripts/install_everything_full_stack.sh
 # Idempotent. Safe to run multiple times.
 set -euo pipefail
 
