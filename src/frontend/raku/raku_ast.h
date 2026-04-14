@@ -41,6 +41,8 @@ typedef enum {
     RK_GIVEN,                           /* given $x { when_list } */
     RK_WHEN,                            /* when val { block } */
     RK_DEFAULT,                         /* default { block } */
+    RK_ARR_GET,                         /* @arr[$i]  → arr_get builtin */
+    RK_ARR_SET,                         /* @arr[$i] = val → arr_set builtin */
     RK_CALL,                            /* name(args) */
     RK_GATHER,                          /* gather { block } */
 } RakuKind;
@@ -112,6 +114,8 @@ RakuNode *raku_node_call(char *name, RakuList *args, int line);
 RakuNode *raku_node_gather(RakuNode *body, int line);
 RakuNode *raku_node_given(RakuNode *topic, RakuList *whens, RakuNode *deflt, int line);
 RakuNode *raku_node_when(RakuNode *val, RakuNode *body, int line);
+RakuNode *raku_node_arr_get(char *arrname, RakuNode *idx, int line);
+RakuNode *raku_node_arr_set(char *arrname, RakuNode *idx, RakuNode *val, int line);
 
 /* ── Parse entry point ───────────────────────────────────────────────── */
 /* Call after setting up yyin or a string buffer.

@@ -191,6 +191,21 @@ RakuNode *raku_node_when(RakuNode *val, RakuNode *body, int line) {
     n->right = body;
     return n;
 }
+/* RK_ARR_GET: @arr[$i] — array name in sval, index in left */
+RakuNode *raku_node_arr_get(char *arrname, RakuNode *idx, int line) {
+    RakuNode *n = alloc_node(RK_ARR_GET, line);
+    n->sval = arrname;
+    n->left = idx;
+    return n;
+}
+/* RK_ARR_SET: @arr[$i] = val — array name in sval, index in left, value in right */
+RakuNode *raku_node_arr_set(char *arrname, RakuNode *idx, RakuNode *val, int line) {
+    RakuNode *n = alloc_node(RK_ARR_SET, line);
+    n->sval  = arrname;
+    n->left  = idx;
+    n->right = val;
+    return n;
+}
 
 /* ── Parse entry (sets up flex buffer and calls yyparse) ─────────────── */
 extern int  raku_yyparse(void);

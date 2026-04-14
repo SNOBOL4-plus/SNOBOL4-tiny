@@ -378,6 +378,23 @@ static EXPR_t *lower_node(const RakuNode *n) {
         /* Standalone RK_WHEN outside given — treat as if(true){body} */
         return lower_block(n->right);
 
+    /*-- @arr[$i]  → E_FNC("arr_get", [E_VAR(arr), idx]) -----------------*/
+    case RK_ARR_GET: {
+        EXPR_t *call = make_call("arr_get");
+        expr_add_child(call, var_node(n->sval));   /* @arr → E_VAR (sigil stripped) */
+        expr_add_child(call, lower_node(n->left)); /* index */
+        return call;
+    }
+
+    /*-- @arr[$i] = val  → E_FNC("arr_set", [E_VAR(arr), idx, val]) -----*/
+    case RK_ARR_SET: {
+        EXPR_t *call = make_call("arr_set");
+        expr_add_child(call, var_node(n->sval));    /* @arr */
+        expr_add_child(call, lower_node(n->left));  /* index */
+        expr_add_child(call, lower_node(n->right)); /* value */
+        return call;
+    }
+
     /*-- while cond body ---------------------------------------------------*/
     case RK_WHILE:
         return expr_binary(E_WHILE, lower_node(n->left), lower_block(n->right));

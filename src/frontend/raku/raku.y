@@ -108,6 +108,8 @@ stmt
         { $$ = raku_node_return(NULL, raku_get_lineno()); }
     | VAR_SCALAR '=' expr ';'
         { $$ = raku_node_assign($1, $3, raku_get_lineno()); }
+    | VAR_ARRAY '[' expr ']' '=' expr ';'
+        { $$ = raku_node_arr_set($1, $3, $6, raku_get_lineno()); }
     | expr ';'
         { $$ = raku_node_expr_stmt($1, raku_get_lineno()); }
     | if_stmt          { $$ = $1; }
@@ -247,6 +249,7 @@ atom
     | LIT_INTERP_STR              { $$ = raku_node_interp_str($1, raku_get_lineno()); }
     | VAR_SCALAR                  { $$ = raku_node_var_scalar($1, raku_get_lineno()); }
     | VAR_ARRAY                   { $$ = raku_node_var_array($1,  raku_get_lineno()); }
+    | VAR_ARRAY '[' expr ']'      { $$ = raku_node_arr_get($1, $3, raku_get_lineno()); }
     | IDENT                       { $$ = raku_node_ident($1, raku_get_lineno()); }
     | '(' expr ')'                { $$ = $2; }
     ;
