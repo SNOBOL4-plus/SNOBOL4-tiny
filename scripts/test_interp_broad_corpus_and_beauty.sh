@@ -1,15 +1,23 @@
 #!/usr/bin/env bash
-# run_interp_broad.sh — scrip regression: crosscheck + beauty drivers + demos
-# Usage: bash test/run_interp_broad.sh
-# From: /home/claude/one4all/
+# scripts/test_interp_broad_corpus_and_beauty.sh — scrip regression: crosscheck + beauty drivers + demos
+# Self-contained. Run from anywhere with no env vars.
+# Usage: bash scripts/test_interp_broad_corpus_and_beauty.sh
 
 set -uo pipefail
-INTERP="${INTERP:-./scrip}"
-CORPUS="${CORPUS:-/home/claude/corpus}"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+INTERP="${INTERP:-$HERE/scrip}"
+CORPUS="/home/claude/corpus"
 TIMEOUT="${TIMEOUT:-10}"
-INC="${INC:-$CORPUS/programs/snobol4/demo/inc}"
-BEAUTY="${BEAUTY:-$CORPUS/programs/snobol4/beauty}"
-DEMO="${DEMO:-$CORPUS/programs/snobol4/demo}"
+INC="$CORPUS/programs/snobol4/demo/inc"
+BEAUTY="$CORPUS/programs/snobol4/beauty"
+DEMO="$CORPUS/programs/snobol4/demo"
+
+# ── corpus guard ──────────────────────────────────────────────────────────────
+if [ ! -d "$CORPUS" ]; then
+    echo "SKIP corpus not found at $CORPUS"
+    echo "     clone snobol4ever/corpus to $CORPUS to run this suite"
+    exit 0
+fi
 
 PASS=0; FAIL=0
 FAILURES=""
@@ -21,7 +29,7 @@ run_test() {
     if [ -n "$input" ] && [ -f "$input" ]; then
         got=$(SNO_LIB="$INC" timeout "$TIMEOUT" $INTERP "$sno" < "$input" 2>/dev/null || true)
     else
-        got=$(SNO_LIB="$INC" timeout "$TIMEOUT" $INTERP "$sno" 2>/dev/null || true)
+        got=$(SNO_LIB="$INC" timeout "$TIMEOUT" $INTERP "$sno" < /dev/null 2>/dev/null || true)
     fi
     if [ -n "$filter" ]; then
         got=$(printf '%s\n' "$got" | grep -v "$filter" || true)

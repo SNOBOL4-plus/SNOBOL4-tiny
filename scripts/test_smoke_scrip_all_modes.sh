@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# test/smoke.sh — scrip smoke test: does it build and run in all modes?
-# Usage: bash test/smoke.sh
-# From:  /home/claude/one4all/
+# scripts/test_smoke_scrip_all_modes.sh — scrip smoke test: does it build and run in all modes?
+# Self-contained. Run from anywhere with no env vars.
+# Usage: bash scripts/test_smoke_scrip_all_modes.sh
 
 set -uo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIP="${SCRIP:-$ROOT/scrip}"
 JASMIN="${JASMIN:-$ROOT/src/backend/jasmin.jar}"
 PASS=0; FAIL=0
@@ -32,8 +32,8 @@ printf "        OUTPUT = 'hello'\nEND\n" > "$SNO"
 trap 'rm -f "$SNO"' EXIT
 
 # ── interpreter modes ─────────────────────────────────────────────────────────
-check "sm-run (default)" "hello" "$("$SCRIP" "$SNO" 2>/dev/null)"
-check "ir-run"           "hello" "$("$SCRIP" --ir-run "$SNO" 2>/dev/null)"
+check "sm-run (default)" "hello" "$(timeout 8 "$SCRIP" "$SNO" < /dev/null 2>/dev/null)"
+check "ir-run"           "hello" "$(timeout 8 "$SCRIP" --ir-run "$SNO" < /dev/null 2>/dev/null)"
 
 # ── x86 emit mode ─────────────────────────────────────────────────────────────
 # SM/BB-based x64 emit not yet implemented — new emitter comes box-by-box from SM/BB path.
@@ -42,7 +42,7 @@ echo "SKIP x86 emit (not yet implemented)"
 # ── JVM emit mode ─────────────────────────────────────────────────────────────
 if have java && [ -f "$JASMIN" ]; then
     TMP=$(mktemp -d)
-    "$SCRIP" --jit-emit --jvm "$SNO" > "$TMP/prog.j" 2>/dev/null
+    timeout 8 "$SCRIP" --jit-emit --jvm "$SNO" > "$TMP/prog.j" < /dev/null 2>/dev/null
     if grep -q "^\.class\|^\.source" "$TMP/prog.j" 2>/dev/null; then
         java -jar "$JASMIN" -d "$TMP" "$TMP/prog.j" 2>/dev/null &&
         got=$(java -cp "$TMP" Main 2>/dev/null) || got=""
@@ -58,7 +58,7 @@ fi
 # ── NET emit mode ─────────────────────────────────────────────────────────────
 if have ilasm && have mono; then
     TMP=$(mktemp -d)
-    "$SCRIP" --jit-emit --net "$SNO" > "$TMP/prog.il" 2>/dev/null &&
+    timeout 8 "$SCRIP" --jit-emit --net "$SNO" > "$TMP/prog.il" < /dev/null 2>/dev/null &&
     ilasm "$TMP/prog.il" /output:"$TMP/prog.exe" 2>/dev/null &&
     got=$(mono "$TMP/prog.exe" 2>/dev/null) ||
     got=""

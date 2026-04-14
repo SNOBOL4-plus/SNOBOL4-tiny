@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# run_csnobol4_suite.sh — CSNOBOL4 test suite regression for scrip
+# scripts/test_csnobol4_budne_suite.sh — CSNOBOL4 test suite regression for scrip
+# Self-contained. Run from anywhere with no env vars.
 #
 # Runs 116 Budne-suite tests + 10 FENCE crosscheck tests = 126 total.
-# Usage: CORPUS=/home/claude/corpus bash test/run_csnobol4_suite.sh
-# From:  /home/claude/one4all/
+# Usage: bash scripts/test_csnobol4_budne_suite.sh
 #
 # Stdin tests (data embedded below END in .sno):
 #   atn crlf longrec rewind1 sudoku trim0 trim1 uneval2
@@ -12,11 +12,19 @@
 # Excluded (8): bench breakline genc k ndbm sleep time line2
 
 set -uo pipefail
-INTERP="${INTERP:-./scrip}"
-CORPUS="${CORPUS:-/home/claude/corpus}"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+INTERP="${INTERP:-$HERE/scrip}"
+CORPUS="/home/claude/corpus"
 TIMEOUT="${TIMEOUT:-15}"
-SUITE="${SUITE:-$CORPUS/programs/csnobol4-suite}"
-FENCE="${FENCE:-$CORPUS/crosscheck/patterns}"
+SUITE="$CORPUS/programs/csnobol4-suite"
+FENCE="$CORPUS/crosscheck/patterns"
+
+# ── corpus guard ──────────────────────────────────────────────────────────────
+if [ ! -d "$CORPUS" ]; then
+    echo "SKIP corpus not found at $CORPUS"
+    echo "     clone snobol4ever/corpus to $CORPUS to run this suite"
+    exit 0
+fi
 
 PASS=0; FAIL=0; SKIP=0
 FAILURES=""
