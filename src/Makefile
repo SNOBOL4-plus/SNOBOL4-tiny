@@ -6,8 +6,7 @@ CFLAGS = -Wall -Wno-unused-function -g -O0 \
          -I frontend/prolog \
          -I frontend/icon \
          -I frontend/rebus \
-         -I backend \
-         -I backend
+         -I runtime/x86
 
 FRONTEND_SNO = \
     frontend/snobol4/snobol4.tab.c \
@@ -19,13 +18,16 @@ FRONTEND_PROLOG = \
     frontend/prolog/prolog_parse.c \
     frontend/prolog/prolog_unify.c \
     frontend/prolog/prolog_lower.c \
-    frontend/prolog/prolog_emit.c \
-    frontend/prolog/prolog_emit_net.c \
-    frontend/prolog/prolog_builtin.c
+    frontend/prolog/prolog_builtin.c \
+    frontend/prolog/prolog_driver.c \
+    frontend/prolog/pl_broker.c
 
 FRONTEND_SNOCONE = \
     frontend/snocone/snocone_lex.c \
-    frontend/snocone/snocone_parse.c
+    frontend/snocone/snocone_parse.c \
+    frontend/snocone/snocone_driver.c \
+    frontend/snocone/snocone_lower.c \
+    frontend/snocone/snocone_cf.c
 
 FRONTEND_REBUS = \
     frontend/rebus/rebus_lower.c \
@@ -33,57 +35,59 @@ FRONTEND_REBUS = \
     frontend/rebus/lex.rebus.c \
     frontend/rebus/rebus_print.c
 
-BACKEND_C = \
-    backend/emit_c.c
-
-BACKEND_X64 = \
-    backend/emit_x64.c
-
-
-DRIVER = \
-    driver/scrip.c
-
-BACKEND_JVM = \
-    backend/emit_jvm.c
-
-BACKEND_NET = \
-    backend/emit_net.c
-
-BACKEND_WASM = \
-    backend/emit_wasm.c
-
-BACKEND_JS = \
-    backend/emit_js.c
-
-IR = \
-    ir/ir_print.c \
-    ir/ir_verify.c \
-    ir/ir_emit_common.c
-
 FRONTEND_ICON = \
     frontend/icon/icn_main.c \
     frontend/icon/icon_lex.c \
     frontend/icon/icon_parse.c \
     frontend/icon/icon_ast.c \
     frontend/icon/icon_lower.c \
-    frontend/icon/icon_runtime.c
+    frontend/icon/icon_runtime.c \
+    frontend/icon/icon_driver.c \
+    frontend/icon/icon_gen.c
 
-SRCS = $(FRONTEND_SNO) $(FRONTEND_PROLOG) $(FRONTEND_SNOCONE) $(FRONTEND_REBUS) $(FRONTEND_ICON) $(BACKEND_C) $(BACKEND_X64) $(BACKEND_JVM) $(BACKEND_NET) $(BACKEND_WASM) $(BACKEND_JS) $(IR) $(DRIVER)
+IR = \
+    ir/ir_print.c \
+    ir/ir_verify.c
+
+RUNTIME_X86 = \
+    runtime/x86/snobol4.c \
+    runtime/x86/snobol4_argval.c \
+    runtime/x86/snobol4_invoke.c \
+    runtime/x86/snobol4_nmd.c \
+    runtime/x86/snobol4_pattern.c \
+    runtime/x86/snobol4_stmt_rt.c \
+    runtime/x86/stmt_exec.c \
+    runtime/x86/bb_boxes.c \
+    runtime/x86/bb_broker.c \
+    runtime/x86/bb_build.c \
+    runtime/x86/bb_emit.c \
+    runtime/x86/bb_flat.c \
+    runtime/x86/bb_pool.c \
+    runtime/x86/engine.c \
+    runtime/x86/eval_code.c \
+    runtime/x86/sm_lower.c \
+    runtime/x86/sm_interp.c \
+    runtime/x86/sm_prog.c \
+    runtime/x86/sm_codegen.c \
+    runtime/x86/sm_image.c
+
+DRIVER = \
+    driver/scrip.c
+
+SRCS = $(FRONTEND_SNO) $(FRONTEND_PROLOG) $(FRONTEND_SNOCONE) $(FRONTEND_REBUS) \
+       $(FRONTEND_ICON) $(IR) $(RUNTIME_X86) $(DRIVER)
 OBJS = $(SRCS:.c=.o)
 
 .PHONY: all clean
 
-BIN    = ../scrip
+BIN = ../scrip
 
 all: $(BIN)
 
 $(BIN): $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $^ -lm
+	$(CC) $(CFLAGS) -o $@ $^ -lm -lgc
 
 # Rebus parser — generated files are committed; only regenerate if absent.
-# Order-only prerequisites (after |) are checked for existence, not timestamp.
-# This prevents bison/flex from being invoked on a fresh clone where .y/.l
-# appear newer than the generated files due to git not preserving mtimes.
 frontend/rebus/rebus.tab.c frontend/rebus/rebus.tab.h: | frontend/rebus/rebus.y
 	@if [ ! -f frontend/rebus/rebus.tab.c ] || [ ! -f frontend/rebus/rebus.tab.h ]; then \
 	    bison -d -o frontend/rebus/rebus.tab.c frontend/rebus/rebus.y; \
@@ -99,16 +103,13 @@ frontend/snobol4/snobol4.lex.c: | frontend/snobol4/snobol4.l
 	    flex -o frontend/snobol4/snobol4.lex.c frontend/snobol4/snobol4.l; \
 	fi
 
-frontend/rebus/rebus.tab.o frontend/rebus/lex.rebus.o frontend/rebus/rebus_lower.o frontend/rebus/rebus_print.o: frontend/rebus/rebus.tab.h
+frontend/rebus/rebus.tab.o frontend/rebus/lex.rebus.o \
+frontend/rebus/rebus_lower.o frontend/rebus/rebus_print.o: frontend/rebus/rebus.tab.h
 
-
-
-# Pattern rule — each .c depends on the shared headers
+# Pattern rule — each .c compiled with shared headers as implicit deps
 %.o: %.c \
      frontend/snobol4/scrip_cc.h \
-     frontend/snobol4/snobol4.h \
-     emit_cnode.h \
-     emit_pretty.h
+     frontend/snobol4/snobol4.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
@@ -116,4 +117,3 @@ clean:
 
 debug: CFLAGS += -DDEBUG
 debug: $(BIN)
-

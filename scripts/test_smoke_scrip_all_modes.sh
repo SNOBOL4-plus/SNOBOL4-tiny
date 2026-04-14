@@ -5,7 +5,7 @@
 
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SCRIP="${SCRIP:-$ROOT/scrip}"
+SCRIP="${SCRIP:-$ROOT/../scrip}"
 JASMIN="${JASMIN:-$ROOT/src/backend/jasmin.jar}"
 PASS=0; FAIL=0
 

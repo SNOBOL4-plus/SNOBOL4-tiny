@@ -4,6 +4,10 @@
 section .note.GNU-stack noalloc noexec nowrite progbits
 
 extern Σ, Δ, Ω
+extern memcmp, memcpy, memset, strchr, calloc, fprintf, stderr
+extern GC_MALLOC
+extern NV_GET_fn, NV_SET_fn
+extern bb_build
 
 section .text
 ; ───── lit ─────
@@ -863,8 +867,6 @@ EPS_ω:  mov     eax, 99                    ; return FAILDESCR (DT_FAIL=99) — 
 ; bb_bal.s   _XBAL       balanced parens — STUB; M-DYN-BAL pending
 ; bal_t: { int δ @0; int start @4 }
 
-.bal_msg: db "bb_bal: unimplemented — ω", 10, 0
-
 global bb_bal
 
 bb_bal:
@@ -872,7 +874,7 @@ bb_bal:
         sub     rsp, 8
         ; fprintf(stderr, "bb_bal: unimplemented — ω\n")
         mov     rdi, qword [rel stderr]
-        lea     rsi, [rel .bal_msg]
+        lea     rsi, [rel bb_bal_msg]
         xor     eax, eax
         call    fprintf
         mov     eax, 99                    ; return FAILDESCR (DT_FAIL=99) — U-6
@@ -880,6 +882,8 @@ bb_bal:
         add     rsp, 8
         pop     rbx
         ret
+
+bb_bal_msg: db "bb_bal: unimplemented — ω", 10, 0
 
 ; ───── abort ─────
 ; bb_abort.s  _XABRT     always ω — force match failure

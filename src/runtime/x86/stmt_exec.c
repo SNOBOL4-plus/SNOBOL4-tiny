@@ -104,6 +104,12 @@ const char *Σ = NULL;
 int         Δ = 0;
 int         Ω = 0;
 
+/* Subject globals — defined here, extern'd in snobol4_stmt_rt.c.
+ * Were previously in the archived x86_stubs_interp.c asm harness. */
+uint64_t cursor          = 0;
+uint64_t subject_len_val = 0;
+char     subject_data[65536] = {0};
+
 /* ══════════════════════════════════════════════════════════════════════════
  * PRIMITIVE BOX IMPLEMENTATIONS
  * (used by bb_build below; the dyn/ box files are the canonical forms)

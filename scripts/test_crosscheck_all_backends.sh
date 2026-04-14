@@ -15,7 +15,7 @@
 
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SCRIP="${SCRIP:-$ROOT/scrip}"
+SCRIP="${SCRIP:-$ROOT/../scrip}"
 CORPUS="${CORPUS:-/home/claude/corpus}"
 JASMIN="${JASMIN:-$ROOT/src/backend/jasmin.jar}"
 SPITBOL="${SPITBOL:-/home/claude/x64/bin/sbl}"

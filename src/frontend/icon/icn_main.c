@@ -22,9 +22,7 @@
 #include <string.h>
 #include <ctype.h>
 
-/* Forward declaration for JVM emitter */
-void emit_jvm_icon_file(EXPR_t **nodes, int count, FILE *out, const char *filename,
-                  const char *outpath, ImportEntry *imports);
+/* Forward declaration removed — emit_jvm_icon_file archived with emitters */
 
 /* =========================================================================
  * icn_prescan_imports — scan raw Icon source for $import / -IMPORT lines.
@@ -136,15 +134,11 @@ int icn_main(int argc, char **argv) {
     if (output) { out_file = fopen(output, "w"); if (!out_file) { perror(output); return 1; } }
 
     if (do_jvm) {
-        int lcount = 0;
-        EXPR_t **lowered = icon_lower_file(procs, count, &lcount);
-        emit_jvm_icon_file(lowered, lcount, out_file, input, output, NULL);
-        free(lowered);
+        fprintf(stderr, "scrip: --jvm emit archived; use --sm-run or --jit-run\n");
+        return 1;
     } else {
-        int lcount = 0;
-        EXPR_t **lowered = icon_lower_file(procs, count, &lcount);
-        icn_emit_file(lowered, lcount, out_file);
-        free(lowered);
+        fprintf(stderr, "scrip: icn emit archived; use --sm-run or --jit-run\n");
+        return 1;
     }
 
     if (output) fclose(out_file);

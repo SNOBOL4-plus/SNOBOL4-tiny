@@ -10,15 +10,10 @@
  *   --ir-run         interpret via IR tree-walk (correctness reference)
  *   --sm-run         interpret SM_Program via dispatch loop  [DEFAULT]
  *   --jit-run        lower SM_Program to x86 bytes -> mmap slab -> jump in
- *   --jit-emit       lower SM_Program -> emit to file (target selects format)
  *
  * Byrd Box pattern mode (default: --bb-driver):
  *   --bb-driver      pattern matching via driver/broker
  *   --bb-live        pattern matching live-wired in exec memory
- *                    (only meaningful with --jit-run or --jit-emit)
- *
- * Target (for --jit-emit or --jit-run, default: --x64):
- *   --x64  --jvm  --net  --js  --wasm
  *
  * Diagnostic options:
  *   --dump-ir        print IR after frontend
@@ -3345,19 +3340,12 @@ int main(int argc, char **argv)
     int mode_ir_run        = 0;  /* --ir-run   : interpret via IR tree-walk (correctness ref) */
     int mode_sm_run        = 0;  /* --sm-run   : interpret SM_Program via dispatch loop [DEFAULT] */
     int mode_jit_run       = 0;  /* --jit-run  : SM_Program -> x86 bytes -> mmap slab -> jump in */
-    int mode_jit_emit      = 0;  /* --jit-emit : SM_Program -> emit to file (target selects format) */
 
     /* Byrd Box pattern mode — independent switch (default: --bb-driver) */
     int bb_driver          = 0;  /* --bb-driver : pattern matching via driver/broker */
     int bb_live            = 0;  /* --bb-live   : live-wired in exec memory */
 
-    /* Emit targets (meaningful with --jit-emit, default: --x64) */
-    int target_x64         = 0;  /* --x64  */
-    int target_jvm         = 0;  /* --jvm  */
-    int target_net         = 0;  /* --net  */
-    int target_js          = 0;  /* --js   */
-    int target_c           = 0;  /* --c    */
-    int target_wasm        = 0;  /* --wasm */
+
 
     /* Diagnostic options */
     int dump_parse         = 0;  /* --dump-parse      */
@@ -3375,17 +3363,9 @@ int main(int argc, char **argv)
         if      (strcmp(argv[argi], "--ir-run")        == 0) { mode_ir_run        = 1; argi++; }
         else if (strcmp(argv[argi], "--sm-run")        == 0) { mode_sm_run        = 1; argi++; }
         else if (strcmp(argv[argi], "--jit-run")       == 0) { mode_jit_run       = 1; argi++; }
-        else if (strcmp(argv[argi], "--jit-emit")      == 0) { mode_jit_emit      = 1; argi++; }
         /* BB pattern mode */
         else if (strcmp(argv[argi], "--bb-driver")     == 0) { bb_driver          = 1; argi++; }
         else if (strcmp(argv[argi], "--bb-live")       == 0) { bb_live            = 1; argi++; }
-        /* emit targets */
-        else if (strcmp(argv[argi], "--x64")           == 0) { target_x64         = 1; argi++; }
-        else if (strcmp(argv[argi], "--jvm")           == 0) { target_jvm         = 1; argi++; }
-        else if (strcmp(argv[argi], "--net")           == 0) { target_net         = 1; argi++; }
-        else if (strcmp(argv[argi], "--js")            == 0) { target_js          = 1; argi++; }
-        else if (strcmp(argv[argi], "--c")             == 0) { target_c           = 1; argi++; }
-        else if (strcmp(argv[argi], "--wasm")          == 0) { target_wasm        = 1; argi++; }
         /* diagnostic */
         else if (strcmp(argv[argi], "--dump-parse")      == 0) { dump_parse      = 1; argi++; }
         else if (strcmp(argv[argi], "--dump-parse-flat") == 0) { dump_parse_flat = 1; argi++; }
@@ -3399,41 +3379,30 @@ int main(int argc, char **argv)
     }
 
     /* Default execution mode: --sm-run */
-    if (!mode_ir_run && !mode_sm_run && !mode_jit_run && !mode_jit_emit)
+    if (!mode_ir_run && !mode_sm_run && !mode_jit_run)
         mode_sm_run = 1;
 
     /* Default BB mode: --bb-driver unless --bb-live explicitly set */
     if (!bb_driver && !bb_live) bb_driver = 1;
 
-    /* Default emit target: --x64 */
-    if (mode_jit_emit && !target_x64 && !target_jvm && !target_net &&
-        !target_js && !target_c && !target_wasm)
-        target_x64 = 1;
-
-    /* Suppress unused warnings for modes/targets not yet wired to codegen */
+    /* Suppress unused warning for bb_driver (not yet wired to stmt_exec.c guard) */
     (void)bb_driver;
-    (void)target_x64; (void)target_jvm; (void)target_net;
-    (void)target_js; (void)target_c;
 
     /* M-BB-LIVE-WIRE: propagate BB mode to stmt_exec.c */
     if (bb_live) g_bb_mode = BB_MODE_LIVE;
 
     if (argi >= argc) {
         fprintf(stderr,
-            "usage: scrip [mode] [bb] [target] [options] <file> [-- program-args...]\n"
+            "usage: scrip [mode] [bb] [options] <file> [-- program-args...]\n"
             "\n"
             "Execution modes (default: --sm-run):\n"
             "  --ir-run         interpret via IR tree-walk (correctness reference)\n"
             "  --sm-run         interpret SM_Program via dispatch loop  [DEFAULT]\n"
             "  --jit-run        SM_Program -> x86 bytes -> mmap slab -> jump in\n"
-            "  --jit-emit       SM_Program -> emit to file (target selects format)\n"
             "\n"
             "Byrd Box pattern mode (default: --bb-driver):\n"
             "  --bb-driver      pattern matching via driver/broker\n"
             "  --bb-live        live-wired BB blobs in exec memory (requires M-DYN-B* blobs)\n"
-            "\n"
-            "Target (default: --x64):\n"
-            "  --x64  --jvm  --net  --js  --c  --wasm\n"
             "\n"
             "Diagnostic options:\n"
             "  --dump-ir        print IR after frontend\n"
@@ -3621,12 +3590,6 @@ int main(int argc, char **argv)
         sm_prog_print(sm0, stdout);
         sm_prog_free(sm0);
         return 0;
-    }
-
-    /* ── --jit-emit --wasm: REMOVED (2026-04-08) ────────────────────── */
-    if (mode_jit_emit && target_wasm) {
-        fprintf(stderr, "scrip: --wasm emit removed from scrip build\n");
-        return 1;
     }
 
     if (mode_sm_run) {
