@@ -776,6 +776,10 @@ DESCR_t interp_eval(EXPR_t *e)
                 char *p=strstr(hay,needle);
                 return p?INTVAL((long long)(p-hay)+1):FAILDESCR;
             }
+            /* icn_drive_fnc passthrough: if this E_FNC node is currently being
+             * driven by icn_drive_fnc, return the suspended value directly
+             * instead of re-calling the procedure (which would recurse). */
+            if (e == icn_drive_node) return icn_drive_val;
             for (int i=0; i<icn_proc_count; i++) {
                 if (!strcmp(icn_proc_table[i].name,fn)) {
                     DESCR_t args[ICN_SLOT_MAX];
@@ -1628,8 +1632,10 @@ DESCR_t interp_eval(EXPR_t *e)
     }
 
     /* ── Numeric relational operators ─────────────────────────────────────
-     * Each compares two numeric operands; succeeds (returns lhs) or fails.
-     * SNOBOL4 relops return the left operand on success (not a boolean). */
+     * Each compares two numeric operands; succeeds (returns rhs) or fails.
+     * Icon relops return the RIGHT operand on success — this lets them act
+     * as filters in generator chains: every write(2 < (1 to 4)) → 3, 4.
+     * (SNOBOL4 uses a separate path; these cases are Icon-only.) */
 #define NUMREL(op) do { \
         if (e->nchildren < 2) return FAILDESCR; \
         DESCR_t l = interp_eval(e->children[0]); \
@@ -1638,7 +1644,7 @@ DESCR_t interp_eval(EXPR_t *e)
         double lv = (l.v==DT_R) ? l.r : (double)(l.v==DT_I ? l.i : 0); \
         double rv = (r.v==DT_R) ? r.r : (double)(r.v==DT_I ? r.i : 0); \
         if (!(lv op rv)) return FAILDESCR; \
-        return l; \
+        return r; \
     } while(0)
     case E_LT: NUMREL(<);
     case E_LE: NUMREL(<=);
@@ -1649,7 +1655,9 @@ DESCR_t interp_eval(EXPR_t *e)
 #undef NUMREL
 
     /* ── Lexicographic (string) relational operators ───────────────────────
-     * Each compares two string operands; succeeds (returns lhs) or fails. */
+     * Each compares two string operands; succeeds (returns rhs) or fails.
+     * Icon string relops return the RIGHT operand on success — oracle:
+     * ocomp.r StrComp macro: "Return y as the result of the comparison." */
 #define STRREL(cmpop) do { \
         if (e->nchildren < 2) return FAILDESCR; \
         DESCR_t l = interp_eval(e->children[0]); \
@@ -1659,7 +1667,7 @@ DESCR_t interp_eval(EXPR_t *e)
         const char *rs = VARVAL_fn(r); if (!rs) rs = ""; \
         int cmp = strcmp(ls, rs); \
         if (!(cmp cmpop 0)) return FAILDESCR; \
-        return l; \
+        return r; \
     } while(0)
     case E_LLT: STRREL(<);
     case E_LLE: STRREL(<=);
@@ -1809,16 +1817,22 @@ DESCR_t interp_eval(EXPR_t *e)
             ICN_CUR.body_root = saved_root;
             return NULVCL;
         }
+        /* General generator path: set body_root so icn_drive_fnc can find
+         * the every-body in the caller frame (needed for suspend-as-generator). */
+        EXPR_t *saved_root2 = ICN_CUR.body_root;
+        if (body) ICN_CUR.body_root = body;
         int ticks = icn_drive(gen);
         if (!ticks) interp_eval(gen);
+        ICN_CUR.body_root = saved_root2;
         return NULVCL;
     }
 
     case E_WHILE: {
         int saved_brk = ICN_CUR.loop_break; ICN_CUR.loop_break = 0;
-        while (!ICN_CUR.returning && !ICN_CUR.loop_break &&
+        while (!ICN_CUR.returning && !ICN_CUR.loop_break && !ICN_CUR.suspending &&
                !IS_FAIL_fn(interp_eval(e->children[0]))) {
             if (e->nchildren > 1) interp_eval(e->children[1]);
+            if (ICN_CUR.suspending) break;
         }
         ICN_CUR.loop_break = saved_brk;
         return NULVCL;
@@ -1925,8 +1939,20 @@ DESCR_t interp_eval(EXPR_t *e)
         return FAILDESCR;
     }
 
-    case E_SUSPEND:
-        return (e->nchildren > 0) ? interp_eval(e->children[0]) : NULVCL;
+    case E_SUSPEND: {
+        /* Icon suspend: yield a value to the driving icn_drive E_FNC loop.
+         * Signal by setting ICN_CUR.suspending=1; icn_drive sees the flag,
+         * runs the every-body, executes the do-clause, clears the flag, and
+         * re-enters the procedure body loop.  For non-generator (bare call)
+         * contexts there is no driver, so we just return the value. */
+        DESCR_t val = (e->nchildren > 0) ? interp_eval(e->children[0]) : NULVCL;
+        if (icn_frame_depth > 0) {
+            ICN_CUR.suspending  = 1;
+            ICN_CUR.suspend_val = val;
+            ICN_CUR.suspend_do  = (e->nchildren > 1) ? e->children[1] : NULL;
+        }
+        return val;
+    }
 
     default:
         return NULVCL;

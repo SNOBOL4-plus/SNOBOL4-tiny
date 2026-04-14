@@ -47,6 +47,10 @@ typedef struct {
     /* IM-10: slot→name map, copied from the scope built in icn_call_proc.
      * Allows sync_monitor to name local variables in snapshots. */
     IcnScope      sc;
+    /* suspend coroutine state: set by E_SUSPEND, cleared by icn_drive */
+    int           suspending;   /* 1 = procedure is suspending a value     */
+    DESCR_t       suspend_val;  /* the value being suspended               */
+    EXPR_t       *suspend_do;   /* do-clause to run on resumption, or NULL */
 } IcnFrame;
 
 /*------------------------------------------------------------------------
@@ -83,6 +87,13 @@ int     icn_is_global(const char *name);
 void    icn_global_register(const char *name);
 
 int     icn_drive(EXPR_t *e);
+int     icn_drive_fnc(EXPR_t *e);   /* suspend-aware driver for user proc generators */
+
+/* Set by icn_drive_fnc while running the every-body with a suspended value.
+ * interp_eval(E_FNC) checks this: if the E_FNC node matches icn_drive_node,
+ * return icn_drive_val directly instead of calling the procedure again. */
+extern EXPR_t  *icn_drive_node;   /* the E_FNC node currently being driven */
+extern DESCR_t  icn_drive_val;    /* the suspended value to return          */
 
 int     icn_scope_add(IcnScope *sc, const char *name);
 int     icn_scope_get(IcnScope *sc, const char *name);

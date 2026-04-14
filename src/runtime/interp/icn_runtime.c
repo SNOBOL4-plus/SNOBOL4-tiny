@@ -42,6 +42,12 @@ EXPR_t      *g_icn_root     = NULL;  /* current Icon drive root */
 IcnFrame icn_frame_stack[ICN_FRAME_MAX];
 int      icn_frame_depth = 0;
 
+/* icn_drive_fnc suspend-value passthrough: while running the every-body,
+ * set icn_drive_node = the E_FNC being driven and icn_drive_val = suspended value.
+ * interp_eval(E_FNC) returns icn_drive_val directly when e == icn_drive_node. */
+EXPR_t  *icn_drive_node = NULL;
+DESCR_t  icn_drive_val;
+
 /* Convenience helpers that mirror the old flat-global helpers */
 void icn_gen_push(EXPR_t *n, long v, const char *sv) {
     IcnFrame *f = &ICN_CUR;
@@ -150,6 +156,8 @@ int icn_drive(EXPR_t *e) {
         }
         return ticks;
     }
+    /* ── E_FNC user proc — suspend-aware coroutine driver ────────────────── */
+    if (e->kind == E_FNC) { int t = icn_drive_fnc(e); if (t > 0) return t; }
     for(int i=0;i<e->nchildren;i++){int t=icn_drive(e->children[i]);if(t>0)return t;}
     return 0;
 }
@@ -350,3 +358,98 @@ bb_node_t icn_eval_gen(EXPR_t *e) {
     return (bb_node_t){ icn_oneshot_box, z, 0 };
 }
 
+
+/* icn_drive_fnc: suspend-aware driver for user procedures called as generators.
+ * Called by icn_drive when e->kind == E_FNC and a matching proc exists.
+ * Runs the proc body in-frame, pausing at each E_SUSPEND, running the
+ * every-body (body_root of the *caller* frame), then the do-clause, then
+ * continuing from the same statement (so while-loops around suspend iterate). */
+int icn_drive_fnc(EXPR_t *e) {
+    if (!e || e->kind != E_FNC || e->nchildren < 1 || !e->children[0]) return 0;
+    const char *fn = e->children[0]->sval;
+    if (!fn) return 0;
+    int pi;
+    for (pi = 0; pi < icn_proc_count; pi++)
+        if (strcmp(icn_proc_table[pi].name, fn) == 0) break;
+    if (pi >= icn_proc_count) return 0;
+
+    EXPR_t *proc   = icn_proc_table[pi].proc;
+    int nparams    = (int)proc->ival;
+    int body_start = 1 + nparams;
+    int nbody      = proc->nchildren - body_start;
+
+    /* Build scope */
+    IcnScope sc; sc.n = 0;
+    for (int i = 0; i < nparams && i < ICN_SLOT_MAX; i++) {
+        EXPR_t *pn = proc->children[1+i];
+        if (pn && pn->sval) icn_scope_add(&sc, pn->sval);
+    }
+    for (int i = 0; i < nbody; i++) {
+        EXPR_t *st = proc->children[body_start+i];
+        if (st && st->kind == E_GLOBAL)
+            for (int j = 0; j < st->nchildren; j++)
+                if (st->children[j] && st->children[j]->sval)
+                    icn_scope_add(&sc, st->children[j]->sval);
+    }
+    for (int i = 0; i < nbody; i++)
+        icn_scope_patch(&sc, proc->children[body_start+i]);
+    int nslots = sc.n > 0 ? sc.n : (nparams > 0 ? nparams : 1);
+    if (nslots > ICN_SLOT_MAX) nslots = ICN_SLOT_MAX;
+
+    /* Push frame */
+    if (icn_frame_depth >= ICN_FRAME_MAX) return 0;
+    IcnFrame *f = &icn_frame_stack[icn_frame_depth++];
+    memset(f, 0, sizeof *f);
+    f->env_n = nslots;
+    f->sc    = sc;
+    int nargs = e->nchildren - 1;
+    for (int i = 0; i < nparams && i < nargs && i < ICN_SLOT_MAX; i++)
+        f->env[i] = interp_eval(e->children[1+i]);
+
+    /* The every-body lives in the *caller* frame (one below us now) */
+    EXPR_t *every_body = (icn_frame_depth >= 2)
+                         ? icn_frame_stack[icn_frame_depth-2].body_root : NULL;
+
+    /* Suspend-aware body loop */
+    int ticks = 0;
+    int stmt  = 0;
+    while (stmt < nbody && !f->returning && !f->loop_break) {
+        EXPR_t *st = proc->children[body_start + stmt];
+        if (!st || st->kind == E_GLOBAL) { stmt++; continue; }
+        f->body_root  = st;
+        f->suspending = 0;
+        interp_eval(st);
+        if (f->suspending) {
+            DESCR_t sv       = f->suspend_val;
+            EXPR_t *doclause = f->suspend_do;
+            f->suspending    = 0;
+            /* Run every-body with suspended value visible via ICN_CUR being
+             * the proc frame — write() etc. will call interp_eval on their
+             * argument, which is the result of the generator call.  We need
+             * the every-body to see sv as the result of the E_FNC expression.
+             * Accomplish this by temporarily storing sv in a gen slot keyed
+             * on e, so E_EVERY's interp_eval(gen) path retrieves it. */
+            /* Set drive passthrough so interp_eval(E_FNC e) returns sv directly
+             * instead of re-calling the procedure. */
+            icn_drive_node = e;
+            icn_drive_val  = sv;
+            if (every_body) interp_eval(every_body);
+            icn_drive_node = NULL;
+            if (doclause) interp_eval(doclause);
+            ticks++;
+            /* If the stmt that suspended was a loop (E_WHILE/E_REPEAT/E_UNTIL),
+             * re-enter it so it can re-check its condition next tick.
+             * For bare E_SUSPEND (or any other stmt), advance past it — it fired once. */
+            if (st->kind != E_WHILE && st->kind != E_REPEAT && st->kind != E_UNTIL)
+                stmt++;
+        } else {
+            stmt++;
+        }
+        /* Refresh pointer in case frame was reallocated (it isn't, but be safe) */
+        f = &icn_frame_stack[icn_frame_depth - 1];
+        if (f->returning || f->loop_break) break;
+    }
+
+    icn_frame_depth--;
+    return ticks;
+}
