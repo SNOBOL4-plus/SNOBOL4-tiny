@@ -50,6 +50,12 @@ RakuNode *raku_node_str(char *s, int line) {
     return n;
 }
 
+RakuNode *raku_node_interp_str(char *s, int line) {
+    RakuNode *n = alloc_node(RK_INTERP_STR, line);
+    n->sval = s;  /* raw string with $var sigils intact; lowerer splits */
+    return n;
+}
+
 /* ── Variables ───────────────────────────────────────────────────────── */
 RakuNode *raku_node_var_scalar(char *name, int line) {
     RakuNode *n = alloc_node(RK_VAR_SCALAR, line);

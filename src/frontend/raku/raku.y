@@ -44,7 +44,7 @@ RakuNode *raku_parse_result = NULL;
 /* ── Tokens ──────────────────────────────────────────────────────────── */
 %token <ival> LIT_INT
 %token <dval> LIT_FLOAT
-%token <sval> LIT_STR
+%token <sval> LIT_STR LIT_INTERP_STR
 %token <sval> VAR_SCALAR VAR_ARRAY IDENT
 
 %token KW_MY KW_SAY KW_PRINT KW_IF KW_ELSE KW_WHILE KW_FOR
@@ -227,6 +227,7 @@ atom
     : LIT_INT                     { $$ = raku_node_int($1,  raku_get_lineno()); }
     | LIT_FLOAT                   { $$ = raku_node_float($1, raku_get_lineno()); }
     | LIT_STR                     { $$ = raku_node_str($1,  raku_get_lineno()); }
+    | LIT_INTERP_STR              { $$ = raku_node_interp_str($1, raku_get_lineno()); }
     | VAR_SCALAR                  { $$ = raku_node_var_scalar($1, raku_get_lineno()); }
     | VAR_ARRAY                   { $$ = raku_node_var_array($1,  raku_get_lineno()); }
     | IDENT                       { $$ = raku_node_ident($1, raku_get_lineno()); }

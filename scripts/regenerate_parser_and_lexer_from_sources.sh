@@ -46,4 +46,16 @@ echo "GEN lex.rebus.c from rebus.l"
 flex --noline -o lex.rebus.c rebus.l
 echo "OK  lex.rebus.c"
 
+# ── raku parser: raku.y → raku.tab.c + raku.tab.h ───────────────────────────
+RAKU="$ONE4ALL/src/frontend/raku"
+echo "GEN raku.tab.c from raku.y"
+cd "$RAKU"
+bison -d --warnings=none -Wno-yacc -o raku.tab.c raku.y
+echo "OK  raku.tab.c raku.tab.h"
+
+# ── raku lexer: raku.l → raku.lex.c ─────────────────────────────────────────
+echo "GEN raku.lex.c from raku.l"
+flex --noline --prefix=raku_yy -o raku.lex.c raku.l
+echo "OK  raku.lex.c"
+
 echo "DONE — commit .y/.l sources and generated .tab.c/.tab.h/.lex.c together"

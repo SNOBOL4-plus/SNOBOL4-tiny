@@ -14,7 +14,7 @@
 /* ── Node kinds ──────────────────────────────────────────────────────── */
 typedef enum {
     /* Literals */
-    RK_INT, RK_FLOAT, RK_STR,
+    RK_INT, RK_FLOAT, RK_STR, RK_INTERP_STR,
     /* Variables */
     RK_VAR_SCALAR, RK_VAR_ARRAY, RK_IDENT,
     /* Binary operators */
@@ -83,6 +83,7 @@ RakuList *raku_list_append(RakuList *lst, RakuNode *node);
 RakuNode *raku_node_int(long v, int line);
 RakuNode *raku_node_float(double v, int line);
 RakuNode *raku_node_str(char *s, int line);
+RakuNode *raku_node_interp_str(char *s, int line); /* double-quoted with $var interpolation */
 RakuNode *raku_node_var_scalar(char *name, int line);
 RakuNode *raku_node_var_array(char *name, int line);
 RakuNode *raku_node_ident(char *name, int line);

@@ -1,0 +1,6 @@
+language: Raku
+version: 6
+hello world
+Dr Jones
+no interp here
+prefix Raku suffix

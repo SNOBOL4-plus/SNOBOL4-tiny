@@ -108,12 +108,16 @@ WS       [ \t\r]
     /* ── Identifiers (bare words — sub names, builtins) ─────────── */
 {ALPHA}{ALNUM}* { raku_yylval.sval = strdup(yytext); return IDENT; }
 
-    /* ── Double-quoted string (flat — no interpolation) ─────────── */
+    /* ── Double-quoted string: flat literal or interpolated ──────── */
+    /* If the buffer contains '$', emit LIT_INTERP_STR (RK-12).     */
+    /* The lowerer splits on $var boundaries into an E_CAT chain.    */
 "\""            { raku_strpos = 0; BEGIN(STR_DQ); }
-<STR_DQ>"\""   {
+<STR_DQ>"\"" {
     raku_strbuf[raku_strpos] = '\0';
     raku_yylval.sval = strdup(raku_strbuf);
     BEGIN(INITIAL);
+    if (strchr(raku_strbuf, '$') != NULL)
+        return LIT_INTERP_STR;
     return LIT_STR;
 }
 <STR_DQ>"\\n"  { raku_strbuf[raku_strpos++] = '\n'; }

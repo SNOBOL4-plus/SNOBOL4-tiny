@@ -9,6 +9,7 @@
  *   RK_INT        → E_ILIT
  *   RK_FLOAT      → E_FLIT
  *   RK_STR        → E_QLIT
+ *   RK_INTERP_STR → E_CAT chain (split on $var boundaries, RK-12)
  *   RK_VAR_SCALAR → E_VAR  (strip leading $)
  *   RK_VAR_ARRAY  → E_VAR  (strip leading @)
  *   RK_ADD        → E_ADD, RK_SUBTRACT→E_SUB, RK_MUL→E_MUL
@@ -132,6 +133,54 @@ static EXPR_t *lower_node(const RakuNode *n) {
 
     case RK_STR:
         return leaf_sval(E_QLIT, n->sval ? n->sval : "");
+
+    /*-- Interpolated double-quoted string: "hello $name" → E_CAT chain --*/
+    case RK_INTERP_STR: {
+        const char *s = n->sval ? n->sval : "";
+        int len = (int)strlen(s);
+        /* Walk string; split on $ident boundaries.
+         * Build left-associative E_CAT: ((seg0 ~ seg1) ~ seg2) ...      */
+        EXPR_t *result = NULL;
+        char litbuf[4096];
+        int  litpos = 0;
+        int  i = 0;
+        while (i < len) {
+            if (s[i] == '$' && i+1 < len &&
+                (s[i+1] == '_' || (s[i+1] >= 'A' && s[i+1] <= 'Z') ||
+                                   (s[i+1] >= 'a' && s[i+1] <= 'z'))) {
+                /* flush pending literal */
+                if (litpos > 0) {
+                    litbuf[litpos] = '\0';
+                    EXPR_t *lit = leaf_sval(E_QLIT, litbuf);
+                    result = result ? expr_binary(E_CAT, result, lit) : lit;
+                    litpos = 0;
+                }
+                /* consume $identifier */
+                i++; /* skip $ */
+                char vname[256]; int vlen = 0;
+                while (i < len && (s[i] == '_' ||
+                       (s[i] >= 'A' && s[i] <= 'Z') ||
+                       (s[i] >= 'a' && s[i] <= 'z') ||
+                       (s[i] >= '0' && s[i] <= '9'))) {
+                    if (vlen < 255) vname[vlen++] = s[i];
+                    i++;
+                }
+                vname[vlen] = '\0';
+                EXPR_t *var = leaf_sval(E_VAR, vname);
+                result = result ? expr_binary(E_CAT, result, var) : var;
+            } else {
+                if (litpos < 4095) litbuf[litpos++] = s[i];
+                i++;
+            }
+        }
+        /* flush trailing literal */
+        if (litpos > 0) {
+            litbuf[litpos] = '\0';
+            EXPR_t *lit = leaf_sval(E_QLIT, litbuf);
+            result = result ? expr_binary(E_CAT, result, lit) : lit;
+        }
+        return result ? result : leaf_sval(E_QLIT, "");
+    }
 
     /*-- Variables ---------------------------------------------------------*/
     case RK_VAR_SCALAR:

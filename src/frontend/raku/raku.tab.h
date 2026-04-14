@@ -84,34 +84,35 @@ extern int raku_yydebug;
     LIT_INT = 258,                 /* LIT_INT  */
     LIT_FLOAT = 259,               /* LIT_FLOAT  */
     LIT_STR = 260,                 /* LIT_STR  */
-    VAR_SCALAR = 261,              /* VAR_SCALAR  */
-    VAR_ARRAY = 262,               /* VAR_ARRAY  */
-    IDENT = 263,                   /* IDENT  */
-    KW_MY = 264,                   /* KW_MY  */
-    KW_SAY = 265,                  /* KW_SAY  */
-    KW_PRINT = 266,                /* KW_PRINT  */
-    KW_IF = 267,                   /* KW_IF  */
-    KW_ELSE = 268,                 /* KW_ELSE  */
-    KW_WHILE = 269,                /* KW_WHILE  */
-    KW_FOR = 270,                  /* KW_FOR  */
-    KW_SUB = 271,                  /* KW_SUB  */
-    KW_GATHER = 272,               /* KW_GATHER  */
-    KW_TAKE = 273,                 /* KW_TAKE  */
-    KW_RETURN = 274,               /* KW_RETURN  */
-    OP_RANGE = 275,                /* OP_RANGE  */
-    OP_RANGE_EX = 276,             /* OP_RANGE_EX  */
-    OP_ARROW = 277,                /* OP_ARROW  */
-    OP_EQ = 278,                   /* OP_EQ  */
-    OP_NE = 279,                   /* OP_NE  */
-    OP_LE = 280,                   /* OP_LE  */
-    OP_GE = 281,                   /* OP_GE  */
-    OP_SEQ = 282,                  /* OP_SEQ  */
-    OP_SNE = 283,                  /* OP_SNE  */
-    OP_AND = 284,                  /* OP_AND  */
-    OP_OR = 285,                   /* OP_OR  */
-    OP_BIND = 286,                 /* OP_BIND  */
-    OP_DIV = 287,                  /* OP_DIV  */
-    UMINUS = 288                   /* UMINUS  */
+    LIT_INTERP_STR = 261,          /* LIT_INTERP_STR  */
+    VAR_SCALAR = 262,              /* VAR_SCALAR  */
+    VAR_ARRAY = 263,               /* VAR_ARRAY  */
+    IDENT = 264,                   /* IDENT  */
+    KW_MY = 265,                   /* KW_MY  */
+    KW_SAY = 266,                  /* KW_SAY  */
+    KW_PRINT = 267,                /* KW_PRINT  */
+    KW_IF = 268,                   /* KW_IF  */
+    KW_ELSE = 269,                 /* KW_ELSE  */
+    KW_WHILE = 270,                /* KW_WHILE  */
+    KW_FOR = 271,                  /* KW_FOR  */
+    KW_SUB = 272,                  /* KW_SUB  */
+    KW_GATHER = 273,               /* KW_GATHER  */
+    KW_TAKE = 274,                 /* KW_TAKE  */
+    KW_RETURN = 275,               /* KW_RETURN  */
+    OP_RANGE = 276,                /* OP_RANGE  */
+    OP_RANGE_EX = 277,             /* OP_RANGE_EX  */
+    OP_ARROW = 278,                /* OP_ARROW  */
+    OP_EQ = 279,                   /* OP_EQ  */
+    OP_NE = 280,                   /* OP_NE  */
+    OP_LE = 281,                   /* OP_LE  */
+    OP_GE = 282,                   /* OP_GE  */
+    OP_SEQ = 283,                  /* OP_SEQ  */
+    OP_SNE = 284,                  /* OP_SNE  */
+    OP_AND = 285,                  /* OP_AND  */
+    OP_OR = 286,                   /* OP_OR  */
+    OP_BIND = 287,                 /* OP_BIND  */
+    OP_DIV = 288,                  /* OP_DIV  */
+    UMINUS = 289                   /* UMINUS  */
   };
   typedef enum raku_yytokentype raku_yytoken_kind_t;
 #endif
@@ -128,7 +129,7 @@ union RAKU_YYSTYPE
     RakuNode  *node;
     RakuList  *list;
 
-#line 132 "raku.tab.h"
+#line 133 "raku.tab.h"
 
 };
 typedef union RAKU_YYSTYPE RAKU_YYSTYPE;
