@@ -147,6 +147,7 @@ static int        call_depth = 0;
 
 /* The program being interpreted (set in main before execute_program) */
 static Program *g_prog = NULL;
+static int      g_polyglot = 0; /* U-23: 1 when running a fenced polyglot .scrip file */
 
 /* ── Icon unified interpreter state ────────────────────────────────────────
  * Icon procedures use slot-indexed locals (e->ival on E_VAR nodes).
@@ -190,6 +191,23 @@ static int         icn_scan_depth = 0;
 static int         icn_loop_break = 0; /* E_LOOP_BREAK signal for repeat/while/until */
 static DESCR_t icn_interp_eval(EXPR_t *root, EXPR_t *e); /* forward */
 static DESCR_t icn_call_proc(EXPR_t *proc, DESCR_t *args, int nargs); /* forward */
+
+/* U-23: Icon global variable names -- bridge to SNO NV store.
+ * Names declared `global X` in an Icon block are stored here.
+ * icn_scope_patch skips slot assignment for these; E_VAR read/write
+ * calls NV_GET_fn / NV_SET_fn instead of icn_env[slot]. */
+#define ICN_GLOBAL_MAX 64
+static const char *icn_global_names[ICN_GLOBAL_MAX];
+static int         icn_global_count = 0;
+static int icn_is_global(const char *name) {
+    for (int i = 0; i < icn_global_count; i++)
+        if (icn_global_names[i] && strcmp(icn_global_names[i], name) == 0) return 1;
+    return 0;
+}
+static void icn_global_register(const char *name) {
+    if (!name || icn_is_global(name) || icn_global_count >= ICN_GLOBAL_MAX) return;
+    icn_global_names[icn_global_count++] = name;
+}
 
 /* ── Prolog type forward declarations ────────────────────────────────────────
  * Full definitions appear in the pl_ block before execute_program below. */
@@ -354,6 +372,8 @@ static DESCR_t icn_interp_eval(EXPR_t *root, EXPR_t *e) {
         }
         int slot = (int)e->ival;
         if (slot >= 0 && slot < icn_env_n && icn_env) return icn_env[slot];
+        /* U-23: global var -> SNO NV store fallback */
+        if (slot < 0 && e->sval && e->sval[0] != '&') return NV_GET_fn(e->sval);
         return NULVCL;
     }
 
@@ -365,6 +385,8 @@ static DESCR_t icn_interp_eval(EXPR_t *root, EXPR_t *e) {
         if (lhs && lhs->kind == E_VAR) {
             int slot = (int)lhs->ival;
             if (slot >= 0 && slot < icn_env_n && icn_env) icn_env[slot] = val;
+            /* U-23: global var -> SNO NV store */
+            else if (slot < 0 && lhs->sval && lhs->sval[0] != '&') NV_SET_fn(lhs->sval, val);
         }
         return val;
     }
@@ -767,9 +789,9 @@ static void icn_scope_patch(IcnScope *sc, EXPR_t *e) {
         return;
     }
     if (e->kind == E_VAR && e->sval) {
-        /* Add var to scope if not already present (handles undeclared vars) */
-        int s = icn_scope_add(sc, e->sval);
-        if (s >= 0) e->ival = s;
+        /* U-23: globals bridge to SNO NV store — skip slot, preserve sval, set ival=-1 */
+        if (icn_is_global(e->sval)) { e->ival = -1; }
+        else { int s = icn_scope_add(sc, e->sval); if (s >= 0) e->ival = s; }
     }
     for (int i=0;i<e->nchildren;i++) icn_scope_patch(sc, e->children[i]);
 }
@@ -1043,7 +1065,7 @@ static void polyglot_init(Program *prog)
     prescan_defines(prog);
 
     /* ── ICN: proc table ────────────────────────────────────────────── */
-    icn_proc_count = 0;
+    icn_proc_count = 0; icn_global_count = 0;  /* U-23: reset global name bridge */
     icn_env = NULL; icn_env_n = 0; icn_returning = 0;
     icn_gen_depth = 0;
     icn_scan_subj = NULL; icn_scan_pos = 0; icn_scan_depth = 0;
@@ -1103,6 +1125,12 @@ static void polyglot_init(Program *prog)
              * icon_lower stores proc name in proc->sval (and also children[0]->sval).
              * Use proc->sval as the authoritative source. */
             EXPR_t *proc = s->subject;
+            /* U-23: collect global variable names from E_GLOBAL decl stmts */
+            if (proc->kind == E_GLOBAL) {
+                for (int _gi = 0; _gi < proc->nchildren; _gi++)
+                    if (proc->children[_gi] && proc->children[_gi]->sval)
+                        icn_global_register(proc->children[_gi]->sval);
+            }
             if (proc->kind == E_FNC && proc->sval && *proc->sval) {
                 const char *name = proc->sval;
 
@@ -2691,6 +2719,7 @@ static int is_pl_user_call(EXPR_t *goal) {
         "var","nonvar","atom","integer","float","compound","atomic","callable","is_list",
         "functor","arg","=..","\\+","not",",",";","->","findall",
         "assert","assertz","asserta","retract","retractall","abolish",
+        "nv_get","nv_set",
         NULL
     };
     for (int i = 0; builtins[i]; i++) if (strcmp(goal->sval, builtins[i]) == 0) return 0;
@@ -2862,6 +2891,31 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
             /* assert/assertz/asserta/retract/retractall/abolish — stubs */
             if ((strcmp(fn,"assert")==0||strcmp(fn,"assertz")==0||strcmp(fn,"asserta")==0)&&arity==1) return 1;
             if ((strcmp(fn,"retract")==0||strcmp(fn,"retractall")==0||strcmp(fn,"abolish")==0)&&arity==1) return 1;
+            /* U-23: nv_get(+Name, -Val) / nv_set(+Name, +Val) -- SNO NV store bridge */
+            if (strcmp(fn,"nv_get")==0&&arity==2) {
+                Term *nm=term_deref(pl_unified_term_from_expr(goal->children[0],env));
+                if (!nm || nm->tag != TT_ATOM) return 0;
+                const char *nm_str = prolog_atom_name(nm->atom_id);
+                DESCR_t dv = NV_GET_fn(nm_str);
+                Term *val_t = IS_FAIL_fn(dv) ? term_new_atom(ATOM_NIL) :
+                              (dv.v==DT_I) ? term_new_int(dv.i) :
+                              term_new_atom(prolog_atom_intern(dv.s ? dv.s : ""));
+                Term *lhs=pl_unified_term_from_expr(goal->children[1],env);
+                int mark=trail_mark(trail);
+                if(!unify(lhs,val_t,trail)){trail_unwind(trail,mark);return 0;}
+                return 1;
+            }
+            if (strcmp(fn,"nv_set")==0&&arity==2) {
+                Term *nm=term_deref(pl_unified_term_from_expr(goal->children[0],env));
+                Term *vl=term_deref(pl_unified_term_from_expr(goal->children[1],env));
+                if (!nm || nm->tag != TT_ATOM) return 0;
+                const char *nm_str = prolog_atom_name(nm->atom_id);
+                const char *vl_str = (vl && vl->tag==TT_ATOM) ? prolog_atom_name(vl->atom_id) : NULL;
+                DESCR_t dv = (vl && vl->tag==TT_INT) ? INTVAL(vl->ival) :
+                             vl_str                   ? STRVAL(vl_str) : NULVCL;
+                NV_SET_fn(nm_str, dv);
+                return 1;
+            }
             /* findall/3 — collect all solutions via interp_eval on each goal */
             if (strcmp(fn,"findall")==0&&arity==3){
                 EXPR_t *tmpl_expr=goal->children[0];
@@ -2962,7 +3016,7 @@ static void execute_program(Program *prog)
     const char *target    = NULL;
 
     while (s) {
-        if (s->is_end) break;
+        if (s->is_end) break;  /* U-23: polyglot multi-section dispatch handles remaining modules */
         comm_stno(++stno);
 
         /* ── --trace: print statement number to stderr ─────────────── */
@@ -3226,10 +3280,64 @@ static void execute_program(Program *prog)
         s = s->next;
     }
 
-    /* ── U-15: post-loop Icon dispatch ────────────────────────────────────
-     * Icon procedure definitions were skipped inline (they're registered in
-     * icn_proc_table by polyglot_init).  If the polyglot program has Icon
-     * sections, call main/0 now — mirroring icn_execute_program_unified. */
+    /* ── U-23: section-ordered polyglot dispatch ──────────────────────────
+     * When g_polyglot=1 (multi-section .scrip), execute modules in registry
+     * order so interleaved SNO/ICN/PL sections see each other's NV values.
+     * The SNO main loop above already ran all SNO stmts (they are NOT
+     * re-run here).  For Icon and Prolog sections we call their main/0
+     * in source order relative to SNO sections.
+     *
+     * U-23 multi-section model:
+     *   - SNO sections: already executed by main loop (in order, END skipped).
+     *   - ICN sections: find the "main" proc for each ICN module in order
+     *     and call it.  If multiple ICN modules share a proc table, only one
+     *     main will be present — that is correct.
+     *   - PL  sections: call main/0 once after all PL clauses are loaded.
+     *
+     * For single-section .scrip (g_polyglot=0), fall through to legacy dispatch.
+     */
+    if (g_polyglot && g_registry.nmod > 0) {
+        /* U-23: two-pass polyglot dispatch.
+         * Pass 1 (non-SNO): run ICN and PL modules in source order so they
+         *   write NV values before SNO reads them.
+         * Pass 2 (SNO): already done by the main loop above (the first SNO
+         *   section ran before this point — it reads NV values set in pass 1
+         *   only if it appears after ICN/PL in source order, which is the
+         *   idiomatic .scrip layout for cross-section reads).
+         *
+         * For the canonical layout (ICN/PL first, SNO last) the main loop
+         * runs the SNO section AFTER pass 1 completes because execute_program
+         * is called after polyglot_init which populates the registry but does
+         * not execute anything. The SNO main loop runs to is_end then falls
+         * through here for pass 1 (ICN/PL).
+         *
+         * Only ICN and PL need to be dispatched here; SNO already ran. */
+        for (int _mi = 0; _mi < g_registry.nmod; _mi++) {
+            ScripModule *_m = &g_registry.mods[_mi];
+            if (_m->lang == LANG_ICN) {
+                int _pend = _m->icn_proc_start + _m->icn_proc_count;
+                int _found = 0;
+                for (int _pi = _m->icn_proc_start; _pi < _pend && _pi < icn_proc_count; _pi++) {
+                    if (strcmp(icn_proc_table[_pi].name, "main") == 0)
+                        { icn_call_proc(icn_proc_table[_pi].proc, NULL, 0); _found=1; break; }
+                }
+                if (!_found)
+                    for (int _pi=0; _pi<icn_proc_count; _pi++)
+                        if (strcmp(icn_proc_table[_pi].name,"main")==0)
+                            { icn_call_proc(icn_proc_table[_pi].proc,NULL,0); break; }
+            } else if (_m->lang == LANG_PL) {
+                EXPR_t *pl_main = pl_pred_table_lookup(&g_pl_pred_table, "main/0");
+                if (pl_main) {
+                    int sv_pl = g_pl_active; g_pl_active = 1;
+                    interp_eval(pl_main);
+                    g_pl_active = sv_pl;
+                }
+            }
+        }
+        return;
+    }
+
+    /* ── Legacy single-section dispatch (U-15 / U-19) ──────────────────── */
     if (icn_proc_count > 0) {
         for (int _i = 0; _i < icn_proc_count; _i++) {
             if (strcmp(icn_proc_table[_i].name, "main") == 0) {
@@ -3238,11 +3346,6 @@ static void execute_program(Program *prog)
             }
         }
     }
-
-    /* ── U-19: post-loop Prolog dispatch ───────────────────────────────────
-     * Prolog clause STMT_t nodes were skipped inline (registered in
-     * g_pl_pred_table by polyglot_init).  If the polyglot program has Prolog
-     * sections, call main/0 now — mirroring pl_execute_program_unified. */
     {
         EXPR_t *pl_main = pl_pred_table_lookup(&g_pl_pred_table, "main/0");
         if (pl_main) {
@@ -3496,6 +3599,8 @@ static Program *parse_scrip_polyglot(const char *src, const char *filename)
         if      (tag_len == 7 && strncasecmp(tag_start, "SNOBOL4", 7) == 0) lang = LANG_SNO;
         else if (tag_len == 4 && strncasecmp(tag_start, "Icon",    4) == 0) lang = LANG_ICN;
         else if (tag_len == 6 && strncasecmp(tag_start, "Prolog",  6) == 0) lang = LANG_PL;
+        else if (tag_len == 5 && strncasecmp(tag_start, "Scrip",   5) == 0) lang = LANG_SCRIP; /* U-23: shared constants */
+        else if (tag_len == 6 && strncasecmp(tag_start, "SCRIP",   5) == 0) lang = LANG_SCRIP;
 
         /* Find the matching fence close ``` */
         const char *block_start = p;
@@ -3518,9 +3623,11 @@ static Program *parse_scrip_polyglot(const char *src, const char *filename)
 
         /* Compile block with the appropriate frontend */
         Program *sub = NULL;
-        if (lang == LANG_SNO) {
+        if (lang == LANG_SNO || lang == LANG_SCRIP) {
             sub = sno_parse_string(block);
-            /* sno_parse_string sets lang=LANG_SNO=0 via calloc — already correct */
+            /* LANG_SCRIP: compiled as SNO — shared constants are SNO assignments.
+             * U-23: these execute first (SNO section), writing to NV store
+             * which Icon/Prolog can then read via icn_global / nv_get. */
         } else if (lang == LANG_ICN) {
             sub = icon_compile(block, filename);
             /* icon_driver.c sets st->lang=LANG_ICN (U-12) */
@@ -3703,7 +3810,7 @@ int main(int argc, char **argv)
       if (dot && (strcmp(dot, ".scrip") == 0 || strcmp(dot, ".md") == 0)) lang_polyglot = 1; }
 
     Program *prog = NULL;
-    if (lang_polyglot) {
+    if (lang_polyglot) { g_polyglot = 1;
         /* U-13: read whole file, split fenced blocks, compile each, merge into one Program* */
         fseek(f, 0, SEEK_END); long flen = ftell(f); rewind(f);
         char *src = malloc(flen + 1);
