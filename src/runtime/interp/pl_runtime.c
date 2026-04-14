@@ -18,6 +18,10 @@
 #include "../../frontend/prolog/prolog_runtime.h"
 #include "../../frontend/prolog/prolog_atom.h"
 #include "../../frontend/prolog/prolog_builtin.h"
+
+/* pl_assert_term declared in prolog_lower.h but included here via forward decl
+ * to avoid scrip_cc.h path issues from runtime/interp context. */
+extern EXPR_t *pl_assert_term(Term *t, int *functor_out, int *arity_out);
 #include "../../frontend/prolog/pl_broker.h"
 #include "../../runtime/x86/bb_broker.h"
 #include <stdio.h>
@@ -56,6 +60,107 @@ EXPR_t *pl_pred_table_lookup(Pl_PredTable *pt, const char *key) {
 /* pl_pred_table_lookup_global — non-static wrapper for pl_broker.c (pl_interp.h) */
 EXPR_t *pl_pred_table_lookup_global(const char *key) {
     return pl_pred_table_lookup(&g_pl_pred_table, key);
+}
+
+/*----------------------------------------------------------------------------------------------------------------------------
+ * pl_pred_table_get_or_create_choice — find or create the E_CHOICE node for key in the global pred table.
+ * key is "functor/arity" string (caller owns; we strdup internally if creating).
+ *----------------------------------------------------------------------------------------------------------------------------*/
+static EXPR_t *pl_pred_table_get_or_create_choice(const char *key) {
+    EXPR_t *ch = pl_pred_table_lookup(&g_pl_pred_table, key);
+    if (ch) return ch;
+    ch = expr_new(E_CHOICE);
+    ch->sval = strdup(key);
+    pl_pred_table_insert(&g_pl_pred_table, ch->sval, ch);
+    return ch;
+}
+
+/*----------------------------------------------------------------------------------------------------------------------------
+ * pl_assert_clause — assertz (end=1) or asserta (end=0) a Term* into the global pred table.
+ * Returns 1 on success, 0 on failure.
+ *----------------------------------------------------------------------------------------------------------------------------*/
+static int pl_assert_clause(Term *t, int end) {
+    int functor_id = -1, arity = 0;
+    EXPR_t *ec = pl_assert_term(t, &functor_id, &arity);
+    if (!ec) return 0;
+    /* Build key string "functor/arity" */
+    const char *fname = prolog_atom_name(functor_id);
+    if (!fname) return 0;
+    char key[256];
+    snprintf(key, sizeof key, "%s/%d", fname, arity);
+    EXPR_t *ch = pl_pred_table_get_or_create_choice(key);
+    if (end) {
+        /* assertz — append at end */
+        expr_add_child(ch, ec);
+    } else {
+        /* asserta — prepend: shift existing children up, insert at [0] */
+        expr_add_child(ch, ec);  /* grow array first */
+        if (ch->nchildren > 1) {
+            memmove(&ch->children[1], &ch->children[0], (ch->nchildren - 1) * sizeof(EXPR_t *));
+            ch->children[0] = ec;
+        }
+    }
+    return 1;
+}
+
+/*----------------------------------------------------------------------------------------------------------------------------
+ * pl_retract_clause — retract first matching clause for head Term*.
+ * Matches on functor/arity only (structural unification of head args not yet implemented — simple name match).
+ * Returns 1 if a clause was removed, 0 if none found.
+ *----------------------------------------------------------------------------------------------------------------------------*/
+static int pl_retract_clause(Term *t) {
+    if (!t) return 0;
+    t = term_deref(t);
+    /* Extract head from :-(Head,Body) or plain head */
+    Term *head = t;
+    if (t->tag == TT_COMPOUND && t->compound.arity == 2) {
+        const char *fn = prolog_atom_name(t->compound.functor);
+        if (fn && strcmp(fn, ":-") == 0) head = term_deref(t->compound.args[0]);
+    }
+    /* Get functor/arity key */
+    const char *fname = NULL;
+    int arity = 0;
+    if (head->tag == TT_ATOM) {
+        fname = prolog_atom_name(head->atom_id); arity = 0;
+    } else if (head->tag == TT_COMPOUND) {
+        fname = prolog_atom_name(head->compound.functor); arity = head->compound.arity;
+    }
+    if (!fname) return 0;
+    char key[256]; snprintf(key, sizeof key, "%s/%d", fname, arity);
+    EXPR_t *ch = pl_pred_table_lookup(&g_pl_pred_table, key);
+    if (!ch || ch->nchildren == 0) return 0;
+    /* Remove first clause */
+    free(ch->children[0]);
+    memmove(&ch->children[0], &ch->children[1], (ch->nchildren - 1) * sizeof(EXPR_t *));
+    ch->nchildren--;
+    return 1;
+}
+
+/*----------------------------------------------------------------------------------------------------------------------------
+ * pl_abolish_pred — remove all clauses for functor/arity.
+ *----------------------------------------------------------------------------------------------------------------------------*/
+static int pl_abolish_pred(Term *t) {
+    if (!t) return 0;
+    t = term_deref(t);
+    const char *fname = NULL; int arity = 0;
+    /* Accept functor/arity compound or plain atom */
+    if (t->tag == TT_COMPOUND && t->compound.arity == 2) {
+        const char *fn = prolog_atom_name(t->compound.functor);
+        if (fn && strcmp(fn, "/") == 0) {
+            Term *na = term_deref(t->compound.args[0]);
+            Term *ar = term_deref(t->compound.args[1]);
+            if (na && na->tag == TT_ATOM) fname = prolog_atom_name(na->atom_id);
+            if (ar && ar->tag == TT_INT)  arity = (int)ar->ival;
+        }
+    } else if (t->tag == TT_ATOM) {
+        fname = prolog_atom_name(t->atom_id); arity = 0;
+    }
+    if (!fname) return 0;
+    char key[256]; snprintf(key, sizeof key, "%s/%d", fname, arity);
+    EXPR_t *ch = pl_pred_table_lookup(&g_pl_pred_table, key);
+    if (!ch) return 1;  /* already gone — succeed */
+    ch->nchildren = 0;  /* remove all clauses */
+    return 1;
 }
 
 /*---- Choice point stack ----*/
@@ -340,9 +445,23 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
                 if(!pl_univ(pl_unified_term_from_expr(goal->children[0],env),pl_unified_term_from_expr(goal->children[1],env),trail)){trail_unwind(trail,mark);return 0;}
                 return 1;
             }
-            /* assert/assertz/asserta/retract/retractall/abolish — stubs */
-            if ((strcmp(fn,"assert")==0||strcmp(fn,"assertz")==0||strcmp(fn,"asserta")==0)&&arity==1) return 1;
-            if ((strcmp(fn,"retract")==0||strcmp(fn,"retractall")==0||strcmp(fn,"abolish")==0)&&arity==1) return 1;
+            /* assert/assertz/asserta/retract/retractall/abolish */
+            if ((strcmp(fn,"assert")==0||strcmp(fn,"assertz")==0)&&arity==1) {
+                Term *arg=pl_unified_term_from_expr(goal->children[0],env);
+                return pl_assert_clause(arg,1);
+            }
+            if (strcmp(fn,"asserta")==0&&arity==1) {
+                Term *arg=pl_unified_term_from_expr(goal->children[0],env);
+                return pl_assert_clause(arg,0);
+            }
+            if ((strcmp(fn,"retract")==0||strcmp(fn,"retractall")==0)&&arity==1) {
+                Term *arg=pl_unified_term_from_expr(goal->children[0],env);
+                return pl_retract_clause(arg);
+            }
+            if (strcmp(fn,"abolish")==0&&arity==1) {
+                Term *arg=pl_unified_term_from_expr(goal->children[0],env);
+                return pl_abolish_pred(arg);
+            }
             /* U-23: nv_get(+Name, -Val) / nv_set(+Name, +Val) -- SNO NV store bridge */
             if (strcmp(fn,"nv_get")==0&&arity==2) {
                 Term *nm=term_deref(pl_unified_term_from_expr(goal->children[0],env));
@@ -396,6 +515,32 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
                 int u_mark=trail_mark(trail);
                 if(!unify(list_term,lst,trail)){trail_unwind(trail,u_mark);return 0;}
                 return 1;
+            }
+            /* Look up user-defined predicate in global pred table (assertz/asserta support) */
+            {
+                char ukey[256]; snprintf(ukey, sizeof ukey, "%s/%d", fn, arity);
+                EXPR_t *uch = pl_pred_table_lookup(&g_pl_pred_table, ukey);
+                if (uch) {
+                    Term **uargs = (arity > 0) ? pl_env_new(arity) : NULL;
+                    /* Unify call arguments into fresh env */
+                    Trail *utrail = &g_pl_trail;
+                    int umark = trail_mark(utrail);
+                    int uok = 1;
+                    for (int ui = 0; ui < arity && uok; ui++) {
+                        Term *actual = pl_unified_term_from_expr(goal->children[ui], env);
+                        if (!unify(uargs[ui], actual, utrail)) { uok = 0; }
+                    }
+                    if (uok) {
+                        Term **saved_env = g_pl_env;
+                        g_pl_env = uargs;
+                        bb_node_t uroot = pl_box_choice(uch, g_pl_env, arity);
+                        uok = bb_broker(uroot, BB_ONCE, NULL, NULL);
+                        g_pl_env = saved_env;
+                    }
+                    if (!uok) trail_unwind(utrail, umark);
+                    if (uargs) free(uargs);
+                    return uok;
+                }
             }
             fprintf(stderr,"prolog: undefined predicate %s/%d\n",fn,arity);
             return 0;

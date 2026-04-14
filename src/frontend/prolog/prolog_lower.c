@@ -65,6 +65,7 @@ static PredKey key_of_head(Term *head) {
  * ======================================================================= */
 
 static EXPR_t *lower_term(Term *t);
+static EXPR_t *lower_clause(PlClause *cl, PredKey key);
 
 /* Build functor/arity string like "foo/2" for E_CHOICE sval */
 static char *pred_str(int functor, int arity) {
@@ -432,4 +433,66 @@ void prolog_lower_pretty(Program *prog, FILE *out) {
         fprintf(out, "--- stmt (line %d) ---\n", s->lineno);
         expr_dump(s->subject, 2, out);
     }
+}
+
+/*============================================================================================================================
+ * pl_assert_term — build an E_CLAUSE from a runtime Term* (for assertz/asserta).
+ *
+ * Accepts:
+ *   atom or compound f(a1..an)          → fact clause, no body
+ *   ':-'(head, body)                    → rule clause
+ *
+ * Returns a heap-allocated E_CLAUSE ready to append to an E_CHOICE node.
+ * Also sets *key_out to the predicate key (functor atom_id, arity).
+ * Returns NULL on error.
+ *============================================================================================================================*/
+EXPR_t *pl_assert_term(Term *t, int *functor_out, int *arity_out) {
+    if (!t) return NULL;
+    t = term_deref(t);
+    if (!t) return NULL;
+
+    Term *head = NULL;
+    Term *body = NULL;  /* NULL means fact (body = true) */
+
+    /* Detect :-(Head, Body) rule form */
+    if (t->tag == TT_COMPOUND && t->compound.arity == 2) {
+        const char *fn = prolog_atom_name(t->compound.functor);
+        if (fn && strcmp(fn, ":-") == 0) {
+            head = term_deref(t->compound.args[0]);
+            body = term_deref(t->compound.args[1]);
+        }
+    }
+    if (!head) head = t;  /* fact */
+
+    /* Extract functor/arity from head */
+    PredKey k = key_of_head(head);
+    if (k.functor < 0) return NULL;
+
+    if (functor_out) *functor_out = k.functor;
+    if (arity_out)   *arity_out   = k.arity;
+
+    /* Build a synthetic PlClause so we can reuse lower_clause */
+    PlClause cl_buf;
+    memset(&cl_buf, 0, sizeof cl_buf);
+    cl_buf.head   = head;
+    cl_buf.lineno = 0;
+
+    /* Body: flatten conjunction into body array */
+    Term *body_goals[256];
+    int nbody = 0;
+    if (body) {
+        /* Flatten comma-conjunction */
+        Term *cur = body;
+        while (cur && cur->tag == TT_COMPOUND && cur->compound.arity == 2) {
+            const char *cfn = prolog_atom_name(cur->compound.functor);
+            if (!cfn || strcmp(cfn, ",") != 0) break;
+            if (nbody < 256) body_goals[nbody++] = term_deref(cur->compound.args[0]);
+            cur = term_deref(cur->compound.args[1]);
+        }
+        if (nbody < 256) body_goals[nbody++] = cur;
+    }
+    cl_buf.body  = (nbody > 0) ? body_goals : NULL;
+    cl_buf.nbody = nbody;
+
+    return lower_clause(&cl_buf, k);
 }
