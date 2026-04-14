@@ -224,10 +224,41 @@ static void lower_stmt(RebLow *L, RStmt *s) {
 
     case RS_EXPR:
     case RS_ASSIGN: {
-        STMT_t *st = blank_stmt();
-        st->lineno  = s->lineno;
-        st->subject = lower_expr(L, s->expr);
-        emit(L, st);
+        /* If the top-level expression is a simple assignment (lhs := rhs),
+         * emit as a STMT_t with subject=lhs, has_eq=1, replacement=rhs.
+         * This routes through the statement-level assignment path which
+         * correctly handles OUTPUT, INPUT, and other SNOBOL4 keywords.
+         * Nested assignments (e.g. x := y := z) still go through E_ASSIGN. */
+        RExpr *ex = s->expr;
+        if (ex && (ex->kind == RE_ASSIGN    ||
+                   ex->kind == RE_ADDASSIGN ||
+                   ex->kind == RE_SUBASSIGN ||
+                   ex->kind == RE_CATASSIGN) && ex->left) {
+            STMT_t *st = blank_stmt();
+            st->lineno = s->lineno;
+            if (ex->kind == RE_ASSIGN) {
+                st->subject     = lower_expr(L, ex->left);
+                st->replacement = lower_expr(L, ex->right);
+                st->has_eq      = 1;
+            } else {
+                /* x +:= e  →  subject=x, has_eq=1, replacement=x+e */
+                EXPR_t *lhs = lower_expr(L, ex->left);
+                EXPR_t *rhs = lower_expr(L, ex->right);
+                EKind   op  = (ex->kind == RE_ADDASSIGN) ? E_ADD :
+                              (ex->kind == RE_SUBASSIGN) ? E_SUB : E_CAT;
+                /* Need a fresh copy of lhs for the rhs operand */
+                EXPR_t *lhs2 = lower_expr(L, ex->left);
+                st->subject     = lhs;
+                st->replacement = expr_binary(op, lhs2, rhs);
+                st->has_eq      = 1;
+            }
+            emit(L, st);
+        } else {
+            STMT_t *st = blank_stmt();
+            st->lineno  = s->lineno;
+            st->subject = lower_expr(L, ex);
+            emit(L, st);
+        }
         break;
     }
 
@@ -483,20 +514,20 @@ static void lower_stmt(RebLow *L, RStmt *s) {
             /* fname = retval */
             EXPR_t *fn = expr_new(E_VAR); fn->sval = strdup(L->fname);
             STMT_t *assign = blank_stmt();
-            assign->subject = expr_binary(E_ASSIGN, fn, lower_expr(L, s->retval));
+            assign->subject     = fn;
+            assign->replacement = lower_expr(L, s->retval);
+            assign->has_eq      = 1;
             emit(L, assign);
         }
-        STMT_t *ret = blank_stmt();
-        ret->subject = make_fnc("RETURN", 0);
-        emit(L, ret);
+        /* :(RETURN) — goto pseudo-label, not a function call */
+        emit_goto(L, "RETURN");
         break;
     }
 
     /* --- fail */
     case RS_FAIL: {
-        STMT_t *st = blank_stmt();
-        st->subject = make_fnc("FRETURN", 0);
-        emit(L, st);
+        /* :(FRETURN) — goto pseudo-label */
+        emit_goto(L, "FRETURN");
         break;
     }
 
@@ -626,10 +657,8 @@ static void lower_decl(RebLow *L, RDecl *d) {
         free(L->fname);
         L->fname = saved_fname;
 
-        /* implicit RETURN at end of function */
-        STMT_t *ret = blank_stmt();
-        ret->subject = make_fnc("RETURN", 0);
-        emit(L, ret);
+        /* implicit :(RETURN) at end of function — goto pseudo-label, not E_FNC */
+        emit_goto(L, "RETURN");
 
         emit_label(L, l_end); free(l_end);
         break;
@@ -689,6 +718,17 @@ Program *rebus_compile(const char *src, const char *filename) {
     /* Tag every statement with LANG_REB */
     for (STMT_t *st = prog->head; st; st = st->next)
         st->lang = LANG_REB;
+
+    /* Append synthetic MAIN() call — TR 84-9 §2.3: "every program must have
+     * a function named main"; rebus_lower emits DEFINE+body but no call site.
+     * execute_program() runs the STMT_t chain top-to-bottom, so the call must
+     * be appended after all DEFINEs. */
+    STMT_t *call_st = calloc(1, sizeof(STMT_t));
+    call_st->subject = make_fnc("MAIN", 0);
+    call_st->lang    = LANG_REB;
+    if (!prog->head) prog->head = prog->tail = call_st;
+    else           { prog->tail->next = call_st; prog->tail = call_st; }
+    prog->nstmts++;
 
     return prog;
 }
