@@ -441,6 +441,10 @@ int icn_drive_fnc(EXPR_t *e) {
     int nslots = sc.n > 0 ? sc.n : (nparams > 0 ? nparams : 1);
     if (nslots > ICN_SLOT_MAX) nslots = ICN_SLOT_MAX;
 
+    /* Capture every-body from caller frame BEFORE pushing callee frame */
+    EXPR_t *every_body = (icn_frame_depth >= 1)
+                         ? icn_frame_stack[icn_frame_depth-1].body_root : NULL;
+
     /* Push frame */
     if (icn_frame_depth >= ICN_FRAME_MAX) return 0;
     IcnFrame *f = &icn_frame_stack[icn_frame_depth++];
@@ -450,10 +454,6 @@ int icn_drive_fnc(EXPR_t *e) {
     int nargs = e->nchildren - 1;
     for (int i = 0; i < nparams && i < nargs && i < ICN_SLOT_MAX; i++)
         f->env[i] = interp_eval(e->children[1+i]);
-
-    /* The every-body lives in the *caller* frame (one below us now) */
-    EXPR_t *every_body = (icn_frame_depth >= 2)
-                         ? icn_frame_stack[icn_frame_depth-2].body_root : NULL;
 
     /* Suspend-aware body loop */
     int ticks = 0;
@@ -478,7 +478,16 @@ int icn_drive_fnc(EXPR_t *e) {
              * instead of re-calling the procedure. */
             icn_drive_node = e;
             icn_drive_val  = sv;
-            if (every_body) interp_eval(every_body);
+            if (every_body) {
+                /* Execute every-body in caller frame: step back so ICN_CUR
+                 * is the caller (who owns the every/write expression), not
+                 * the generator proc frame. */
+                icn_frame_depth--;
+                interp_eval(every_body);
+                icn_frame_depth++;
+                /* Refresh f in case frame array was touched */
+                f = &icn_frame_stack[icn_frame_depth - 1];
+            }
             icn_drive_node = NULL;
             if (doclause) interp_eval(doclause);
             ticks++;

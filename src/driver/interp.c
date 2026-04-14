@@ -963,6 +963,92 @@ DESCR_t interp_eval(EXPR_t *e)
 
             return NULVCL;
         }
+        case E_ALT: {
+            /* Icon value alternation: expr1 | expr2 — return left if not fail, else right */
+            if (e->nchildren < 1) return FAILDESCR;
+            DESCR_t left = interp_eval(e->children[0]);
+            if (!IS_FAIL_fn(left)) return left;
+            if (e->nchildren < 2) return FAILDESCR;
+            return interp_eval(e->children[1]);
+        }
+        case E_EVERY: {
+            if (e->nchildren < 1) return NULVCL;
+            EXPR_t *gen  = e->children[0];
+            EXPR_t *body = (e->nchildren > 1) ? e->children[1] : NULL;
+            EXPR_t *saved_root = ICN_CUR.body_root;
+            /* When there is no explicit do-body, the generator expression itself
+             * is what gets re-evaluated each tick (e.g. every write(upto(4))). */
+            ICN_CUR.body_root = body ? body : gen;
+            int ticks = icn_drive(gen);
+            if (!ticks) interp_eval(gen);
+            ICN_CUR.body_root = saved_root;
+            return NULVCL;
+        }
+        case E_WHILE: {
+            int saved_brk = ICN_CUR.loop_break; ICN_CUR.loop_break = 0;
+            while (!ICN_CUR.returning && !ICN_CUR.loop_break && !ICN_CUR.suspending &&
+                   !IS_FAIL_fn(interp_eval(e->children[0]))) {
+                if (e->nchildren > 1) interp_eval(e->children[1]);
+                if (ICN_CUR.suspending) break;
+            }
+            ICN_CUR.loop_break = saved_brk;
+            return NULVCL;
+        }
+        case E_UNTIL: {
+            int saved_brk = ICN_CUR.loop_break; ICN_CUR.loop_break = 0;
+            while (!ICN_CUR.returning && !ICN_CUR.loop_break) {
+                DESCR_t cv = (e->nchildren > 0) ? interp_eval(e->children[0]) : FAILDESCR;
+                if (!IS_FAIL_fn(cv)) break;
+                if (e->nchildren > 1) interp_eval(e->children[1]);
+            }
+            ICN_CUR.loop_break = saved_brk;
+            return NULVCL;
+        }
+        case E_REPEAT: {
+            int saved_brk = ICN_CUR.loop_break; ICN_CUR.loop_break = 0;
+            while (!ICN_CUR.returning && !ICN_CUR.loop_break)
+                if (e->nchildren > 0) interp_eval(e->children[0]);
+            ICN_CUR.loop_break = saved_brk;
+            return NULVCL;
+        }
+        case E_SUSPEND: {
+            /* Icon suspend: yield a value to icn_drive_fnc loop. */
+            DESCR_t val = (e->nchildren > 0) ? interp_eval(e->children[0]) : NULVCL;
+            if (!IS_FAIL_fn(val)) {
+                ICN_CUR.suspending  = 1;
+                ICN_CUR.suspend_val = val;
+                ICN_CUR.suspend_do  = (e->nchildren > 1) ? e->children[1] : NULL;
+            }
+            return NULVCL;
+        }
+        case E_SEQ_EXPR: {
+            DESCR_t v = NULVCL;
+            for (int i = 0; i < e->nchildren && !ICN_CUR.returning; i++)
+                v = interp_eval(e->children[i]);
+            return v;
+        }
+        case E_IF: {
+            if (e->nchildren < 1) return NULVCL;
+            DESCR_t cv = interp_eval(e->children[0]);
+            if (!IS_FAIL_fn(cv)) { if (e->nchildren > 1) return interp_eval(e->children[1]); }
+            else                  { if (e->nchildren > 2) return interp_eval(e->children[2]); }
+            return NULVCL;
+        }
+        case E_BREAK: {
+            ICN_CUR.loop_break = 1;
+            return (e->nchildren > 0) ? interp_eval(e->children[0]) : NULVCL;
+        }
+        case E_RETURN: {
+            DESCR_t rv = (e->nchildren > 0) ? interp_eval(e->children[0]) : NULVCL;
+            ICN_CUR.returning  = 1;
+            ICN_CUR.return_val = rv;
+            return rv;
+        }
+        case E_FAIL: {
+            ICN_CUR.returning  = 1;
+            ICN_CUR.return_val = FAILDESCR;
+            return FAILDESCR;
+        }
         default: break;
         }
     }
@@ -1806,24 +1892,14 @@ DESCR_t interp_eval(EXPR_t *e)
         if (e->nchildren < 1) return NULVCL;
         EXPR_t *gen  = e->children[0];
         EXPR_t *body = (e->nchildren > 1) ? e->children[1] : NULL;
-        if (body && gen->kind == E_TO && gen->nchildren >= 2) {
-            DESCR_t lo_d = interp_eval(gen->children[0]);
-            DESCR_t hi_d = interp_eval(gen->children[1]);
-            if (IS_FAIL_fn(lo_d)||IS_FAIL_fn(hi_d)) return NULVCL;
-            long lo=lo_d.i, hi=hi_d.i;
-            EXPR_t *saved_root = ICN_CUR.body_root;
-            ICN_CUR.body_root = body;
-            for(long i=lo;i<=hi&&!ICN_CUR.returning;i++) interp_eval(body);
-            ICN_CUR.body_root = saved_root;
-            return NULVCL;
-        }
-        /* General generator path: set body_root so icn_drive_fnc can find
-         * the every-body in the caller frame (needed for suspend-as-generator). */
-        EXPR_t *saved_root2 = ICN_CUR.body_root;
+        /* General generator path: set body_root so icn_drive / icn_drive_fnc
+         * can find the every-body. No E_TO fast-path — nested generators like
+         * (1 to 2) to (2 to 3) require icn_drive for correct re-evaluation. */
+        EXPR_t *saved_root = ICN_CUR.body_root;
         if (body) ICN_CUR.body_root = body;
         int ticks = icn_drive(gen);
         if (!ticks) interp_eval(gen);
-        ICN_CUR.body_root = saved_root2;
+        ICN_CUR.body_root = saved_root;
         return NULVCL;
     }
 
