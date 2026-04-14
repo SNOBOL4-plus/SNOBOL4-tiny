@@ -217,13 +217,15 @@ static int lower_token(const ScPToken *tok, ExprStack *s,
     }
     case SNOCONE_QUESTION:
         if (tok->is_unary) {
-            /* unary ? = DIFFER(x) or just return x — treat as DIFFER(x,"") */
+            /* unary ? = DIFFER(x,"") — not-null test */
             EXPR_t *operand = es_pop(s);
             es_push(s, make_fnc1("DIFFER", operand));
         } else {
-            /* binary ? — alternation-like — map to DIFFER(a,b) per snocone.sc */
+            /* binary ?  →  E_SCAN(subject, pattern)
+             * assemble_stmt will detect E_SCAN and route to
+             * stmt->subject / stmt->pattern for BB_SCAN execution. */
             EXPR_t *r = es_pop(s), *l = es_pop(s);
-            es_push(s, make_fnc2("DIFFER", l, r));
+            es_push(s, expr_binary(E_SCAN, l, r));
         }
         return 0;
 
@@ -363,6 +365,9 @@ static int lower_token(const ScPToken *tok, ExprStack *s,
     }
 }
 
+/* forward declaration — defined after assemble_stmt */
+static void free_expr(EXPR_t *e);
+
 /* ---------------------------------------------------------------------------
  * Assemble a STMT_t from the top of the stack after SNOCONE_NEWLINE
  * ------------------------------------------------------------------------- */
@@ -380,6 +385,13 @@ static STMT_t *assemble_stmt(ExprStack *s, int lineno) {
         st->replacement = expr_right(top);
         st->has_eq      = 1;
         free(top);   /* free E_ASSIGN shell only */
+    } else if (top->kind == E_SCAN && top->nchildren == 2) {
+        /* Pattern match: subject ? pattern → BB_SCAN path */
+        es_pop(s);
+        st->subject = top->children[0];
+        st->pattern = top->children[1];
+        top->children[0] = top->children[1] = NULL;
+        free_expr(top);
     } else {
         /* Expression-only statement (output, pattern match, etc.) */
         es_pop(s);
