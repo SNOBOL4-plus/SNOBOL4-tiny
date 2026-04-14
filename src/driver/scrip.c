@@ -44,6 +44,7 @@
 /* CMPILE.h removed — bison/flex path only (GOAL-REMOVE-CMPILE S-5) */
 extern Program *sno_parse(FILE *f, const char *filename);
 #include "../frontend/snocone/snocone_driver.h"
+#include "../frontend/snocone/snocone_cf.h"
 #include "../frontend/prolog/prolog_driver.h"
 #include "../frontend/prolog/term.h"            /* Term — needed by Prolog globals block */
 #include "../frontend/prolog/prolog_runtime.h"  /* Trail — needed by Prolog globals block */
@@ -1244,6 +1245,14 @@ static DESCR_t *data_field_ptr(const char *fname, DESCR_t inst) {
     return NULL;
 }
 
+/* SC-1: forward declarations for DATA registry (defined near _builtin_DATA below) */
+typedef struct { char name[64]; int nfields; char fields[64][64]; } ScDatType;
+static ScDatType *sc_dat_find_type(const char *name);
+static ScDatType *sc_dat_find_field(const char *name, int *fidx);
+static DESCR_t    sc_dat_construct(ScDatType *t, DESCR_t *args, int nargs);
+static DESCR_t    sc_dat_field_get(const char *fname, DESCR_t obj);
+static DESCR_t    _builtin_print(DESCR_t *args, int nargs);
+
 static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
 {
     if (call_depth >= CALL_STACK_MAX) return FAILDESCR;
@@ -2100,6 +2109,14 @@ static DESCR_t interp_eval(EXPR_t *e)
             }
         }
 
+        /* SC-1: DATA constructor/field-accessor dispatch via our registry */
+        {
+            ScDatType *_dt = sc_dat_find_type(e->sval);
+            if (_dt) return sc_dat_construct(_dt, args, nargs);
+            int _fi = 0;
+            ScDatType *_ft = sc_dat_find_field(e->sval, &_fi);
+            if (_ft && nargs >= 1) return sc_dat_field_get(e->sval, args[0]);
+        }
         /* No body label → builtin or unknown. APPLY_fn handles both. */
         if (FNCEX_fn(e->sval)) {
             DESCR_t bres = APPLY_fn(e->sval, args, nargs);
@@ -3541,17 +3558,106 @@ static DESCR_t _builtin_CODE(DESCR_t *args, int nargs) {
     return code(s);
 }
 
-/* ── SC-1: DATA() builtin for Snocone struct lowering ────────────────────────
- * DATA('name(field1,field2,...)') — register a user-defined type.
- * Calls DEFDAT_fn to register the type + field accessor functions.
- * The constructor name() is registered via register_fn so interp_eval
- * can dispatch it through APPLY_fn → _builtin_DATA_constructor.
- * Returns null string on success (matches SNOBOL4 DATA() convention). */
+/* SC-1: print(v...) — Snocone print builtin: outputs each arg on its own line */
+static DESCR_t _builtin_print(DESCR_t *args, int nargs) {
+    if (nargs == 0) { output_str(""); return NULVCL; }
+    for (int i = 0; i < nargs; i++) output_val(args[i]);
+    return NULVCL;
+}
+
+/* ── SC-1: DATA registry — constructor/accessor dispatch for --ir-run ─────────
+ * DEFDAT_fn registers in the SPITBOL binary runtime table; APPLY_fn does not
+ * expose DATA-defined names via FNCEX_fn.  We maintain our own registry so
+ * interp_eval E_FNC can dispatch constructors and field accessors directly. */
+
+#define SC_DAT_MAX_FIELDS 64
+#define SC_DAT_MAX_TYPES  128
+
+static ScDatType sc_dat_types[SC_DAT_MAX_TYPES];
+static int       sc_dat_ntypes = 0;
+
+/* Parse "name(f1,f2,...)" spec and register in our table + DEFDAT_fn */
+static ScDatType *sc_dat_register(const char *spec) {
+    if (sc_dat_ntypes >= SC_DAT_MAX_TYPES) return NULL;
+    ScDatType *t = &sc_dat_types[sc_dat_ntypes];
+    memset(t, 0, sizeof *t);
+    /* parse name */
+    const char *p = spec;
+    int ni = 0;
+    while (*p && *p != '(' && ni < 63) t->name[ni++] = *p++;
+    t->name[ni] = '\0';
+    if (*p == '(') p++; /* skip '(' */
+    /* parse fields */
+    while (*p && *p != ')') {
+        while (*p == ' ' || *p == '\t') p++;
+        if (!*p || *p == ')') break;
+        int fi = 0;
+        while (*p && *p != ',' && *p != ')' && fi < 63) t->fields[t->nfields][fi++] = *p++;
+        t->fields[t->nfields][fi] = '\0';
+        if (t->nfields < SC_DAT_MAX_FIELDS - 1) t->nfields++;
+        if (*p == ',') p++;
+    }
+    sc_dat_ntypes++;
+    return t;
+}
+
+/* Look up a DATA type by constructor name (case-insensitive) */
+static ScDatType *sc_dat_find_type(const char *name) {
+    for (int i = 0; i < sc_dat_ntypes; i++)
+        if (strcasecmp(sc_dat_types[i].name, name) == 0) return &sc_dat_types[i];
+    return NULL;
+}
+
+/* Look up which type owns a field accessor name (case-insensitive) */
+static ScDatType *sc_dat_find_field(const char *name, int *fidx) {
+    for (int i = 0; i < sc_dat_ntypes; i++)
+        for (int j = 0; j < sc_dat_types[i].nfields; j++)
+            if (strcasecmp(sc_dat_types[i].fields[j], name) == 0) {
+                if (fidx) *fidx = j;
+                return &sc_dat_types[i];
+            }
+    return NULL;
+}
+
+/* Construct a new DT_DATA instance: name(f0,f1,...) */
+static DESCR_t sc_dat_construct(ScDatType *t, DESCR_t *args, int nargs) {
+    DATINST_t *inst = GC_malloc(sizeof(DATINST_t));
+    /* Find the DATBLK_t — allocated by DEFDAT_fn in the SPITBOL runtime.
+     * We locate it by calling DATCON_fn with zero args to get a prototype,
+     * then steal its type pointer — or we build our own DATBLK_t. */
+    /* Build a minimal DATBLK_t owned by us */
+    DATBLK_t *blk = GC_malloc(sizeof(DATBLK_t));
+    blk->name    = GC_strdup(t->name);
+    blk->nfields = t->nfields;
+    blk->fields  = GC_malloc(t->nfields * sizeof(char *));
+    for (int i = 0; i < t->nfields; i++) blk->fields[i] = GC_strdup(t->fields[i]);
+    blk->next    = NULL;
+    inst->type   = blk;
+    inst->fields = GC_malloc(t->nfields * sizeof(DESCR_t));
+    for (int i = 0; i < t->nfields; i++)
+        inst->fields[i] = (i < nargs) ? args[i] : NULVCL;
+    DESCR_t r;
+    r.v   = DT_DATA;
+    r.u   = inst;
+    r.s   = NULL;
+    r.slen = 0;
+    return r;
+}
+
+/* Field accessor: name(obj) → obj.name ; with one arg assumed to be the instance */
+static DESCR_t sc_dat_field_get(const char *fname, DESCR_t obj) {
+    DESCR_t *cell = data_field_ptr(fname, obj);
+    if (!cell) return FAILDESCR;
+    return *cell;
+}
+
+/* ── DATA() builtin ─────────────────────────────────────────────────────── */
 static DESCR_t _builtin_DATA(DESCR_t *args, int nargs) {
     if (nargs < 1) return FAILDESCR;
     const char *spec = VARVAL_fn(args[0]);
     if (!spec || !*spec) return FAILDESCR;
-    DEFDAT_fn(spec);
+    DEFDAT_fn(spec);              /* register in SPITBOL runtime (for DATATYPE() etc.) */
+    sc_dat_register(spec);        /* register in our dispatch table */
     return NULVCL;
 }
 
@@ -3828,7 +3934,7 @@ int main(int argc, char **argv)
         prog = lang_raku   ? raku_compile(src, input_path)
              : lang_prolog ? prolog_compile(src, input_path)
              : lang_icon   ? icon_compile(src, input_path)
-             :               snocone_compile(src, input_path);
+             :               snocone_cf_compile(src, input_path);
         free(src);
     } else if (dump_parse || dump_parse_flat || dump_ir) {
         /* --dump-parse / --dump-parse-flat / --dump-ir: bison path (CMPILE removed) */
@@ -3877,6 +3983,7 @@ int main(int argc, char **argv)
     register_fn("EVAL",   _builtin_EVAL,   1, 1);
     register_fn("CODE",   _builtin_CODE,   1, 1);
     register_fn("DATA",   _builtin_DATA,   1, 1);
+    register_fn("print",  _builtin_print,  0, 99);
 
     /* Wire user-function dispatch hook (wrapper defined above main) */
     extern DESCR_t (*g_user_call_hook)(const char *, DESCR_t *, int);
