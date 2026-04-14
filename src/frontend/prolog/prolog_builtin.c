@@ -86,6 +86,18 @@ void pl_write(Term *t) {
         case TT_COMPOUND: {
             const char *fn = prolog_atom_name(t->compound.functor);
             if (!fn) fn = "?";
+            /* '$VAR'(N) — print as variable name A,B,...,Z,A1,... */
+            if (strcmp(fn, "$VAR") == 0 && t->compound.arity == 1) {
+                Term *n = term_deref(t->compound.args[0]);
+                if (n && n->tag == TT_INT) {
+                    long num = n->ival;
+                    int letter = (int)(num % 26);
+                    long suffix = num / 26;
+                    if (suffix == 0) printf("%c", 'A' + letter);
+                    else            printf("%c%ld", 'A' + letter, suffix);
+                    break;
+                }
+            }
             /* List notation: '.'(H, T) -> [H|T] */
             if (t->compound.functor == ATOM_DOT && t->compound.arity == 2) {
                 printf("[");

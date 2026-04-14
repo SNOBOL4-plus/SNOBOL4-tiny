@@ -320,6 +320,7 @@ static int pl_is_builtin_goal(EXPR_t *g) {
         "atom_length","atom_concat","atom_chars","atom_codes",
         "sort","msort","compare","@<","@>","@=<","@>=",
         "succ","plus","format",
+        "numbervars","char_type",
         "nv_get","nv_set",
         NULL
     };

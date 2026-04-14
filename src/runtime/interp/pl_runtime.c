@@ -27,6 +27,7 @@ extern EXPR_t *pl_assert_term(Term *t, int *functor_out, int *arity_out);
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <setjmp.h>
 
 extern DESCR_t interp_eval(EXPR_t *e);
@@ -742,6 +743,97 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
                     }
                 }
                 return 1;
+            }
+            /*---- numbervars/3 and char_type/2 (PL-7) ----*/
+            /* numbervars(+Term, +Start, -End) — bind unbound vars to '$VAR'(N) */
+            if (strcmp(fn,"numbervars")==0&&arity==3) {
+                Term *t   = pl_unified_term_from_expr(goal->children[0],env);
+                Term *s   = term_deref(pl_unified_term_from_expr(goal->children[1],env));
+                Term *end = pl_unified_term_from_expr(goal->children[2],env);
+                if (!s||s->tag!=TT_INT) return 0;
+                long n = s->ival;
+                int var_id = prolog_atom_intern("$VAR");
+                /* Iterative DFS to number all unbound vars */
+                Term *stk[4096]; int top=0;
+                stk[top++]=term_deref(t);
+                while (top>0) {
+                    Term *cur=term_deref(stk[--top]);
+                    if (!cur) continue;
+                    if (cur->tag==TT_VAR) {
+                        Term *narg=term_new_int(n++);
+                        Term *binding=term_new_compound(var_id,1,&narg);
+                        cur->ref=binding; cur->tag=TT_REF;
+                    } else if (cur->tag==TT_COMPOUND) {
+                        for (int i=cur->compound.arity-1;i>=0;i--)
+                            if (top<4095) stk[top++]=term_deref(cur->compound.args[i]);
+                    }
+                }
+                Term *end_t=term_new_int(n);
+                int mark=trail_mark(trail);
+                if(!unify(end,end_t,trail)){trail_unwind(trail,mark);return 0;}
+                return 1;
+            }
+            /* char_type(+Char, ?Type) */
+            if (strcmp(fn,"char_type")==0&&arity==2) {
+                Term *ch=term_deref(pl_unified_term_from_expr(goal->children[0],env));
+                Term *ty=term_deref(pl_unified_term_from_expr(goal->children[1],env));
+                if (!ch||ch->tag!=TT_ATOM) return 0;
+                const char *cs=prolog_atom_name(ch->atom_id);
+                if (!cs||!cs[0]) return 0;
+                unsigned char c=(unsigned char)cs[0];
+                if (!ty||ty->tag==TT_VAR) return 0; /* need bound type for now */
+                const char *tname=NULL;
+                int tarity=0;
+                if (ty->tag==TT_ATOM) { tname=prolog_atom_name(ty->atom_id); tarity=0; }
+                else if (ty->tag==TT_COMPOUND) { tname=prolog_atom_name(ty->compound.functor); tarity=ty->compound.arity; }
+                if (!tname) return 0;
+                if (strcmp(tname,"alpha")==0)   return isalpha(c)?1:0;
+                if (strcmp(tname,"alnum")==0)   return isalnum(c)?1:0;
+                if (strcmp(tname,"space")==0||strcmp(tname,"white")==0) return isspace(c)?1:0;
+                if (strcmp(tname,"upper")==0&&tarity==0) return isupper(c)?1:0;
+                if (strcmp(tname,"lower")==0&&tarity==0) return islower(c)?1:0;
+                if (strcmp(tname,"punct")==0)   return ispunct(c)?1:0;
+                if (strcmp(tname,"ascii")==0&&tarity==0) return (c<128)?1:0;
+                if (strcmp(tname,"end_of_line")==0) return (c=='\n'||c=='\r')?1:0;
+                if (strcmp(tname,"digit")==0&&tarity==0) return isdigit(c)?1:0;
+                if (strcmp(tname,"digit")==0&&tarity==1) {
+                    if (!isdigit(c)) return 0;
+                    Term *d=term_new_int(c-'0');
+                    int mark=trail_mark(trail);
+                    if(!unify(ty->compound.args[0],d,trail)){trail_unwind(trail,mark);return 0;}
+                    return 1;
+                }
+                if (strcmp(tname,"upper")==0&&tarity==1) {
+                    if (!isupper(c)) return 0;
+                    char low[2]={(char)tolower(c),'\0'};
+                    Term *d=term_new_atom(prolog_atom_intern(low));
+                    int mark=trail_mark(trail);
+                    if(!unify(ty->compound.args[0],d,trail)){trail_unwind(trail,mark);return 0;}
+                    return 1;
+                }
+                if (strcmp(tname,"lower")==0&&tarity==1) {
+                    if (!islower(c)) return 0;
+                    char up[2]={(char)toupper(c),'\0'};
+                    Term *d=term_new_atom(prolog_atom_intern(up));
+                    int mark=trail_mark(trail);
+                    if(!unify(ty->compound.args[0],d,trail)){trail_unwind(trail,mark);return 0;}
+                    return 1;
+                }
+                if (strcmp(tname,"to_upper")==0&&tarity==1) {
+                    char up[2]={(char)toupper(c),'\0'};
+                    Term *d=term_new_atom(prolog_atom_intern(up));
+                    int mark=trail_mark(trail);
+                    if(!unify(ty->compound.args[0],d,trail)){trail_unwind(trail,mark);return 0;}
+                    return 1;
+                }
+                if (strcmp(tname,"to_lower")==0&&tarity==1) {
+                    char low[2]={(char)tolower(c),'\0'};
+                    Term *d=term_new_atom(prolog_atom_intern(low));
+                    int mark=trail_mark(trail);
+                    if(!unify(ty->compound.args[0],d,trail)){trail_unwind(trail,mark);return 0;}
+                    return 1;
+                }
+                return 0;
             }
             /* U-23: nv_get(+Name, -Val) / nv_set(+Name, +Val) -- SNO NV store bridge */
             if (strcmp(fn,"nv_get")==0&&arity==2) {
