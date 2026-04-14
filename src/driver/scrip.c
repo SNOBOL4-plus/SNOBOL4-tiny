@@ -53,6 +53,7 @@ extern Program *sno_parse(FILE *f, const char *filename);
 #include "../frontend/prolog/pl_broker.h"       /* pl_box_choice, pl_box_* — S-BB-7; pl_exec_goal removed U-11 */
 #include "../frontend/icon/icon_driver.h"
 #include "../frontend/raku/raku_driver.h"
+#include "../frontend/rebus/rebus_lower.h"
 #include "../frontend/icon/icon_gen.h"    /* icn_bb_to/by/iterate/suspend, state types — U-17 */
 #include "../frontend/icon/icon_lex.h"    /* IcnTkKind — TK_AUG* for E_AUGOP in unified interp */
 
@@ -3401,6 +3402,8 @@ static void polyglot_execute(Program *prog) {
         if (main_choice) interp_eval(main_choice);
         else fprintf(stderr, "prolog: no main/0 predicate\n");
         g_pl_active = 0;
+    } else if (slang == LANG_REB) {
+        execute_program(prog);   /* Rebus lowers to SNO-style label/goto chains — FI-1B */
     } else {
         execute_program(prog);   /* SNO single-lang fallback */
     }
@@ -3748,6 +3751,7 @@ static Program *parse_scrip_polyglot(const char *src, const char *filename)
         else if (tag_len == 4 && strncasecmp(tag_start, "Raku",    4) == 0) lang = LANG_RAKU; /* RK-5 */
         else if (tag_len == 5 && strncasecmp(tag_start, "Scrip",   5) == 0) lang = LANG_SCRIP; /* U-23: shared constants */
         else if (tag_len == 6 && strncasecmp(tag_start, "SCRIP",   5) == 0) lang = LANG_SCRIP;
+        else if (tag_len == 5 && strncasecmp(tag_start, "Rebus",   5) == 0) lang = LANG_REB;  /* FI-1B */
 
         /* Find the matching fence close ``` */
         const char *block_start = p;
@@ -3784,6 +3788,9 @@ static Program *parse_scrip_polyglot(const char *src, const char *filename)
         } else if (lang == LANG_RAKU) {
             sub = raku_compile(block, filename);
             /* raku_driver.c sets st->lang=LANG_RAKU (RK-5) */
+        } else if (lang == LANG_REB) {
+            sub = rebus_compile(block, filename);
+            /* rebus_compile sets st->lang=LANG_REB (FI-1B) */
         }
         free(block);
 
@@ -3955,6 +3962,8 @@ int main(int argc, char **argv)
     { const char *dot = strrchr(input_path, '.'); if (dot && strcmp(dot, ".icn") == 0) lang_icon = 1; }
     int lang_raku = 0;
     { const char *dot = strrchr(input_path, '.'); if (dot && strcmp(dot, ".raku") == 0) lang_raku = 1; }
+    int lang_rebus = 0;
+    { const char *dot = strrchr(input_path, '.'); if (dot && strcmp(dot, ".reb") == 0) lang_rebus = 1; }
     int lang_polyglot = 0;  /* U-13: .scrip or .md → fenced polyglot */
     { const char *dot = strrchr(input_path, '.');
       if (dot && (strcmp(dot, ".scrip") == 0 || strcmp(dot, ".md") == 0)) lang_polyglot = 1; }
@@ -3969,7 +3978,7 @@ int main(int argc, char **argv)
         if (opt_bench) clock_gettime(CLOCK_MONOTONIC, &_t1);
         prog = parse_scrip_polyglot(src, input_path);
         free(src);
-    } else if (lang_snocone || lang_prolog || lang_icon || lang_raku) {
+    } else if (lang_snocone || lang_prolog || lang_icon || lang_raku || lang_rebus) {
         /* Read whole file into buffer */
         fseek(f, 0, SEEK_END); long flen = ftell(f); rewind(f);
         char *src = malloc(flen + 1);
@@ -3979,6 +3988,7 @@ int main(int argc, char **argv)
         prog = lang_raku   ? raku_compile(src, input_path)
              : lang_prolog ? prolog_compile(src, input_path)
              : lang_icon   ? icon_compile(src, input_path)
+             : lang_rebus  ? rebus_compile(src, input_path)
              :               snocone_cf_compile(src, input_path);
         free(src);
     } else if (dump_parse || dump_parse_flat || dump_ir) {
@@ -4154,6 +4164,8 @@ int main(int argc, char **argv)
     } else if (lang_prolog) {
         polyglot_execute(prog);
     } else if (lang_icon) {
+        polyglot_execute(prog);
+    } else if (lang_rebus) {
         polyglot_execute(prog);
     } else {
         execute_program(prog);
