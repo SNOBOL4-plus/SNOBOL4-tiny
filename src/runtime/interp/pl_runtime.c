@@ -287,6 +287,7 @@ int is_pl_user_call(EXPR_t *goal) {
         "functor","arg","=..","\\+","not",",",";","->","findall",
         "assert","assertz","asserta","retract","retractall","abolish",
         "nv_get","nv_set",
+        "term_string","number_codes","number_chars","char_code","upcase_atom","downcase_atom",
         NULL
     };
     for (int i = 0; builtins[i]; i++) if (strcmp(goal->sval, builtins[i]) == 0) return 0;
@@ -869,6 +870,143 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
                 DESCR_t dv = (vl && vl->tag==TT_INT) ? INTVAL(vl->ival) :
                              vl_str                   ? STRVAL(vl_str) : NULVCL;
                 NV_SET_fn(nm_str, dv);
+                return 1;
+            }
+            /*---- PL-9: string/IO builtins ----*/
+            /* term_string(+Term, -String) or term_string(-Term, +String) */
+            if (strcmp(fn,"term_string")==0&&arity==2) {
+                Term *ta=term_deref(pl_unified_term_from_expr(goal->children[0],env));
+                Term *ts=term_deref(pl_unified_term_from_expr(goal->children[1],env));
+                if (ta && ta->tag!=TT_VAR) {
+                    /* mode: +Term, -String — render term as atom */
+                    char *buf = pl_term_to_string(ta);
+                    Term *str = term_new_atom(prolog_atom_intern(buf));
+                    free(buf);
+                    int mark=trail_mark(trail);
+                    if(!unify(ts,str,trail)){trail_unwind(trail,mark);return 0;}
+                    return 1;
+                } else if (ts && ts->tag==TT_ATOM) {
+                    /* mode: -Term, +String — parse atom as term (simple: just intern as atom) */
+                    const char *s = prolog_atom_name(ts->atom_id);
+                    if (!s) return 0;
+                    /* Try to parse as integer */
+                    char *end; long iv = strtol(s, &end, 10);
+                    Term *parsed;
+                    if (*end=='\0') parsed = term_new_int(iv);
+                    else            parsed = term_new_atom(prolog_atom_intern(s));
+                    int mark=trail_mark(trail);
+                    if(!unify(ta,parsed,trail)){trail_unwind(trail,mark);return 0;}
+                    return 1;
+                }
+                return 0;
+            }
+            /* number_codes(+Number, ?Codes) or number_codes(?Number, +Codes) */
+            if (strcmp(fn,"number_codes")==0&&arity==2) {
+                Term *tn=term_deref(pl_unified_term_from_expr(goal->children[0],env));
+                Term *tc=pl_unified_term_from_expr(goal->children[1],env);
+                int nil_id=prolog_atom_intern("[]"), dot_id=prolog_atom_intern(".");
+                if (tn && (tn->tag==TT_INT||tn->tag==TT_FLOAT)) {
+                    char buf[64];
+                    if (tn->tag==TT_INT) snprintf(buf,sizeof buf,"%ld",tn->ival);
+                    else snprintf(buf,sizeof buf,"%g",tn->fval);
+                    int n=(int)strlen(buf);
+                    Term *lst=term_new_atom(nil_id);
+                    for(int i=n-1;i>=0;i--){Term *a2[2];a2[0]=term_new_int((unsigned char)buf[i]);a2[1]=lst;lst=term_new_compound(dot_id,2,a2);}
+                    int mark=trail_mark(trail);
+                    if(!unify(tc,lst,trail)){trail_unwind(trail,mark);return 0;}
+                    return 1;
+                } else {
+                    /* +Codes → Number */
+                    Term *cur=term_deref(tc); char buf[64]; int pos=0;
+                    while(cur&&cur->tag==TT_COMPOUND&&cur->compound.arity==2){
+                        Term *hd=term_deref(cur->compound.args[0]);
+                        if(!hd||hd->tag!=TT_INT) return 0;
+                        if(pos<63) buf[pos++]=(char)hd->ival;
+                        cur=term_deref(cur->compound.args[1]);
+                    }
+                    buf[pos]='\0';
+                    char *end; long iv=strtol(buf,&end,10);
+                    Term *num = (*end=='\0') ? term_new_int(iv) : term_new_atom(prolog_atom_intern(buf));
+                    int mark=trail_mark(trail);
+                    if(!unify(tn,num,trail)){trail_unwind(trail,mark);return 0;}
+                    return 1;
+                }
+            }
+            /* number_chars(+Number, ?Chars) or number_chars(?Number, +Chars) */
+            if (strcmp(fn,"number_chars")==0&&arity==2) {
+                Term *tn=term_deref(pl_unified_term_from_expr(goal->children[0],env));
+                Term *tc=pl_unified_term_from_expr(goal->children[1],env);
+                int nil_id=prolog_atom_intern("[]"), dot_id=prolog_atom_intern(".");
+                if (tn && (tn->tag==TT_INT||tn->tag==TT_FLOAT)) {
+                    char buf[64];
+                    if (tn->tag==TT_INT) snprintf(buf,sizeof buf,"%ld",tn->ival);
+                    else snprintf(buf,sizeof buf,"%g",tn->fval);
+                    int n=(int)strlen(buf);
+                    Term *lst=term_new_atom(nil_id);
+                    for(int i=n-1;i>=0;i--){char ch[2]={buf[i],'\0'};Term *a2[2];a2[0]=term_new_atom(prolog_atom_intern(ch));a2[1]=lst;lst=term_new_compound(dot_id,2,a2);}
+                    int mark=trail_mark(trail);
+                    if(!unify(tc,lst,trail)){trail_unwind(trail,mark);return 0;}
+                    return 1;
+                } else {
+                    Term *cur=term_deref(tc); char buf[64]; int pos=0;
+                    while(cur&&cur->tag==TT_COMPOUND&&cur->compound.arity==2){
+                        Term *hd=term_deref(cur->compound.args[0]);
+                        if(!hd||hd->tag!=TT_ATOM) return 0;
+                        const char *cs=prolog_atom_name(hd->atom_id);
+                        if(pos<63) buf[pos++]=cs?cs[0]:0;
+                        cur=term_deref(cur->compound.args[1]);
+                    }
+                    buf[pos]='\0';
+                    char *end; long iv=strtol(buf,&end,10);
+                    Term *num = (*end=='\0') ? term_new_int(iv) : term_new_atom(prolog_atom_intern(buf));
+                    int mark=trail_mark(trail);
+                    if(!unify(tn,num,trail)){trail_unwind(trail,mark);return 0;}
+                    return 1;
+                }
+            }
+            /* char_code(+Char, ?Code) or char_code(?Char, +Code) */
+            if (strcmp(fn,"char_code")==0&&arity==2) {
+                Term *tch=term_deref(pl_unified_term_from_expr(goal->children[0],env));
+                Term *tco=term_deref(pl_unified_term_from_expr(goal->children[1],env));
+                if (tch && tch->tag==TT_ATOM) {
+                    const char *s=prolog_atom_name(tch->atom_id);
+                    Term *code=term_new_int(s?(unsigned char)s[0]:0);
+                    int mark=trail_mark(trail);
+                    if(!unify(tco,code,trail)){trail_unwind(trail,mark);return 0;}
+                    return 1;
+                } else if (tco && tco->tag==TT_INT) {
+                    char ch[2]={(char)tco->ival,'\0'};
+                    Term *cat=term_new_atom(prolog_atom_intern(ch));
+                    int mark=trail_mark(trail);
+                    if(!unify(tch,cat,trail)){trail_unwind(trail,mark);return 0;}
+                    return 1;
+                }
+                return 0;
+            }
+            /* upcase_atom(+Atom, -Upper) */
+            if (strcmp(fn,"upcase_atom")==0&&arity==2) {
+                Term *ta=term_deref(pl_unified_term_from_expr(goal->children[0],env));
+                Term *tr=pl_unified_term_from_expr(goal->children[1],env);
+                if (!ta||ta->tag!=TT_ATOM) return 0;
+                const char *s=prolog_atom_name(ta->atom_id); if(!s) return 0;
+                char *buf=malloc(strlen(s)+1);
+                for(int i=0;s[i];i++) buf[i]=(char)toupper((unsigned char)s[i]); buf[strlen(s)]='\0';
+                Term *res=term_new_atom(prolog_atom_intern(buf)); free(buf);
+                int mark=trail_mark(trail);
+                if(!unify(tr,res,trail)){trail_unwind(trail,mark);return 0;}
+                return 1;
+            }
+            /* downcase_atom(+Atom, -Lower) */
+            if (strcmp(fn,"downcase_atom")==0&&arity==2) {
+                Term *ta=term_deref(pl_unified_term_from_expr(goal->children[0],env));
+                Term *tr=pl_unified_term_from_expr(goal->children[1],env);
+                if (!ta||ta->tag!=TT_ATOM) return 0;
+                const char *s=prolog_atom_name(ta->atom_id); if(!s) return 0;
+                char *buf=malloc(strlen(s)+1);
+                for(int i=0;s[i];i++) buf[i]=(char)tolower((unsigned char)s[i]); buf[strlen(s)]='\0';
+                Term *res=term_new_atom(prolog_atom_intern(buf)); free(buf);
+                int mark=trail_mark(trail);
+                if(!unify(tr,res,trail)){trail_unwind(trail,mark);return 0;}
                 return 1;
             }
             /* findall/3 — collect ALL solutions via bb_broker retry loop */

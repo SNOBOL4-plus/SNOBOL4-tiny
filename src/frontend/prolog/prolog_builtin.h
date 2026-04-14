@@ -15,6 +15,7 @@ void pl_write(Term *t);
 void pl_writeln(Term *t);
 void pl_writeq(Term *t);
 void pl_write_canonical(Term *t);
+char *pl_term_to_string(Term *t);   /* malloc'd; caller frees */
 
 /* functor/3: functor(Term, Name, Arity) */
 int pl_functor(Term *t, Term *name, Term *arity, Trail *tr);

@@ -393,6 +393,64 @@ static void pl_write_canonical_term(Term *t) {
 void pl_write_canonical(Term *t) { pl_write_canonical_term(t); }
 
 /* =========================================================================
+ * pl_write_to_file / pl_term_to_string
+ * Write a term to an arbitrary FILE* (write/1 semantics, no operator sugar).
+ * pl_term_to_string returns a malloc'd string — caller must free().
+ * Used by term_string/2.
+ * ======================================================================= */
+static void pl_write_to_file(Term *t, FILE *out) {
+    t = term_deref(t);
+    if (!t) { fprintf(out, "[]"); return; }
+    switch (t->tag) {
+        case TT_ATOM: {
+            const char *name = prolog_atom_name(t->atom_id);
+            fprintf(out, "%s", name ? name : "?");
+            break;
+        }
+        case TT_VAR:   fprintf(out, "_G%d", t->var_slot); break;
+        case TT_INT:   fprintf(out, "%ld", t->ival); break;
+        case TT_FLOAT: {
+            double fv = t->fval;
+            if (fv == (long)fv && fv >= -1e15 && fv <= 1e15) fprintf(out, "%.1f", fv);
+            else fprintf(out, "%g", fv);
+            break;
+        }
+        case TT_COMPOUND: {
+            const char *fn = prolog_atom_name(t->compound.functor);
+            if (!fn) fn = "?";
+            if (t->compound.functor == ATOM_DOT && t->compound.arity == 2) {
+                fprintf(out, "["); pl_write_to_file(t->compound.args[0], out);
+                Term *tail = term_deref(t->compound.args[1]);
+                while (tail && tail->tag == TT_COMPOUND &&
+                       tail->compound.functor == ATOM_DOT && tail->compound.arity == 2) {
+                    fprintf(out, ","); pl_write_to_file(tail->compound.args[0], out);
+                    tail = term_deref(tail->compound.args[1]);
+                }
+                if (!(tail && tail->tag == TT_ATOM && tail->atom_id == ATOM_NIL))
+                    { fprintf(out, "|"); pl_write_to_file(tail, out); }
+                fprintf(out, "]"); break;
+            }
+            fprintf(out, "%s(", fn);
+            for (int i = 0; i < t->compound.arity; i++) {
+                if (i) fprintf(out, ",");
+                pl_write_to_file(t->compound.args[i], out);
+            }
+            fprintf(out, ")"); break;
+        }
+        default: break;
+    }
+}
+
+char *pl_term_to_string(Term *t) {
+    char *buf = NULL; size_t sz = 0;
+    FILE *f = open_memstream(&buf, &sz);
+    if (!f) return strdup("?");
+    pl_write_to_file(t, f);
+    fclose(f);
+    return buf;   /* caller must free() */
+}
+
+/* =========================================================================
  * pl_functor — functor(Term, Name, Arity)
  *
  * Rung-9 builtin.  If Term is bound:
