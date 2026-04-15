@@ -169,6 +169,7 @@ DESCR_t    table_get(TBBLK_t *tbl, const char *key);
 void      table_set(TBBLK_t *tbl, const char *key, DESCR_t val);
 void      table_set_descr(TBBLK_t *tbl, const char *key, DESCR_t key_d, DESCR_t val);
 int       table_has(TBBLK_t *tbl, const char *key);
+void      table_delete(TBBLK_t *tbl, const char *key);
 
 /* ============================================================
  * User-defined datatypes (DT_DATA() mechanism)

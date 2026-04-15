@@ -770,6 +770,13 @@ DESCR_t interp_eval(EXPR_t *e)
                 int slot = (int)lhs->ival;
                 if (slot >= 0 && slot < ICN_CUR.env_n) { ICN_CUR.env[slot] = val; return val; }
                 if (slot < 0 && lhs->sval && lhs->sval[0] != '&') NV_SET_fn(lhs->sval, val);
+            } else if (lhs && lhs->kind == E_IDX && lhs->nchildren >= 2) {
+                /* t["key"] := val  — subscript assignment in Icon frame */
+                DESCR_t base = interp_eval(lhs->children[0]);
+                if (!IS_FAIL_fn(base)) {
+                    DESCR_t idx = interp_eval(lhs->children[1]);
+                    if (!IS_FAIL_fn(idx)) subscript_set(base, idx, val);
+                }
             }
             return val;
         }
@@ -1092,7 +1099,7 @@ DESCR_t interp_eval(EXPR_t *e)
                     ? table_new_args((int)to_int(interp_eval(e->children[1])),
                                      (int)to_int(interp_eval(e->children[2])))
                     : table_new();
-                DESCR_t d; d.v = DT_T; d.tbl = tbl; d.s = NULL; d.slen = 0;
+                DESCR_t d; d.v = DT_T; d.slen = 0; d.tbl = tbl;
                 return d;
             }
             if (!strcmp(fn,"insert") && nargs >= 2) {
@@ -1115,8 +1122,10 @@ DESCR_t interp_eval(EXPR_t *e)
                 if (IS_INT_fn(kd))       { snprintf(kb,sizeof kb,"%lld",(long long)kd.i); ks=kb; }
                 else if (IS_REAL_fn(kd)) { snprintf(kb,sizeof kb,"%g",kd.r); ks=kb; }
                 else                     { ks = VARVAL_fn(kd); if (!ks) ks=""; }
-                /* walk bucket, unlink matching entry */
-                unsigned h = 0; { const char *p=ks; while(*p) h=(h*31u+(unsigned char)*p++)&0xFF; }
+                /* walk bucket using same djb2 hash as _tbl_hash in binary:
+                 * init=0x1505, hash = hash*33 ^ c, result & 0xFF */
+                unsigned h = 0x1505;
+                { const char *p=ks; while(*p) { h=(h<<5)+h^(unsigned char)*p++; } h&=0xFF; }
                 TBPAIR_t **pp = &td.tbl->buckets[h];
                 while (*pp) {
                     if (strcmp((*pp)->key, ks)==0) { TBPAIR_t *del=*pp; *pp=del->next; td.tbl->size--; break; }
