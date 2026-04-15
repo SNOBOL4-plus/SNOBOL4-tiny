@@ -133,6 +133,8 @@ typedef struct {
     char   **saved_names;
     DESCR_t *saved_vals;
     int      nsaved;
+    DESCR_t  retval_cell;  /* return-value capture: bypasses NV keyword collision */
+    int      retval_set;   /* 1 if retval_cell was written by body assignment */
 } CallFrame;
 
 static CallFrame  call_stack[CALL_STACK_MAX];
@@ -240,9 +242,18 @@ static inline int NAME_SET(DESCR_t nd, DESCR_t val) {
 /* T-0: set_and_trace — NV_SET_fn + VALUE trace hook for monitor.
  * Use at every plain-variable assignment site in the --ir-run path.
  * Keywords (&STLIMIT etc.) excluded: trace_is_active only fires on
- * names registered via TRACE(var,'VALUE'), never on &-keywords. */
+ * names registered via TRACE(var,'VALUE'), never on &-keywords.
+ * KW-RETFIX: capture return-value writes into frame->retval_cell to bypass
+ * NV keyword collision when user procedure name matches a keyword (e.g. "Trim"). */
 static inline void set_and_trace(const char *name, DESCR_t val) {
     NV_SET_fn(name, val);
+    if (call_depth > 0) {
+        CallFrame *fr = &call_stack[call_depth - 1];
+        if (name && fr->fname[0] && strcasecmp(name, fr->fname) == 0) {
+            fr->retval_cell = val;
+            fr->retval_set  = 1;
+        }
+    }
     if (name && name[0] != '&' && trace_is_active(name)) comm_var(name, val);
 }
 
@@ -382,6 +393,8 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
     fr->saved_names = snames;
     fr->saved_vals  = svals;
     fr->nsaved      = nsaved;
+    fr->retval_cell = STRVAL("");  /* cleared return slot, matches NV_SET clear above */
+    fr->retval_set  = 0;
 
     DESCR_t retval = NULVCL;
 
@@ -604,7 +617,7 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
                 if (target) {
                         if (strcasecmp(target, "END") == 0) break;
                     if (strcasecmp(target, "RETURN") == 0) {
-                        retval = NV_GET_fn(fr->fname);
+                        retval = fr->retval_set ? fr->retval_cell : NV_GET_fn(fr->fname);
                         strncpy(kw_rtntype, "RETURN",  sizeof(kw_rtntype)-1);
                         goto fn_done;
                     }
@@ -617,7 +630,7 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
                         /* NRETURN: return DT_N from fn return var as-is;
                          * caller (E_FNC) applies NAME_DEREF (slen discriminates
                          * NAMEPTR from NAMEVAL). */
-                        retval = NV_GET_fn(fr->fname);
+                        retval = fr->retval_set ? fr->retval_cell : NV_GET_fn(fr->fname);
                         strncpy(kw_rtntype, "NRETURN", sizeof(kw_rtntype)-1);
                         goto fn_done;
                     }
@@ -629,10 +642,10 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
             }
         }
         /* fell off body without RETURN — return function's name variable */
-        retval = NV_GET_fn(fr->fname);
+        retval = fr->retval_set ? fr->retval_cell : NV_GET_fn(fr->fname);
         strncpy(kw_rtntype, "RETURN",  sizeof(kw_rtntype)-1);
     } else if (ret_kind == 1) {
-        retval = NV_GET_fn(fr->fname);
+        retval = fr->retval_set ? fr->retval_cell : NV_GET_fn(fr->fname);
         strncpy(kw_rtntype, "RETURN",  sizeof(kw_rtntype)-1);
     } else {
         retval = FAILDESCR;

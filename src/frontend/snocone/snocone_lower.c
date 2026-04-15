@@ -150,15 +150,21 @@ static int lower_token(const ScPToken *tok, ExprStack *s,
 
     /* ---- String / pattern composition ---- */
     case SNOCONE_CONCAT: {
-        /* && blank concat → E_CAT (value-context string concat) */
+        /* && → E_SEQ (goal-directed sequence); runtime handles value-context concat.
+         * Mirrors SNOBOL4 juxtaposition which always emits E_SEQ (see snobol4.y). */
         EXPR_t *r = es_pop(s), *l = es_pop(s);
-        EXPR_t *e = expr_binary(E_CAT, l, r);
+        EXPR_t *e;
+        if (l->kind == E_SEQ) { expr_add_child(l, r); e = l; }
+        else { e = expr_new(E_SEQ); expr_add_child(e, l); expr_add_child(e, r); }
         es_push(s, e); return 0;
     }
     case SNOCONE_PIPE: {
-        /* single | also string concat in SNOBOL4 context */
+        /* | is pattern alternation in Snocone (|| and && are string concat) */
         EXPR_t *r = es_pop(s), *l = es_pop(s);
-        EXPR_t *e = expr_binary(E_CAT, l, r);
+        /* Build E_ALT, collapsing nested E_ALTs into n-ary form (mirrors SNOBOL4 grammar) */
+        EXPR_t *e;
+        if (l->kind == E_ALT) { expr_add_child(l, r); e = l; }
+        else { e = expr_new(E_ALT); expr_add_child(e, l); expr_add_child(e, r); }
         es_push(s, e); return 0;
     }
     case SNOCONE_OR: {
