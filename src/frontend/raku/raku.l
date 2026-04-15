@@ -66,6 +66,9 @@ WS       [ \t\r]
 "unless"        { return KW_UNLESS; }
 "until"         { return KW_UNTIL; }
 "repeat"        { return KW_REPEAT; }
+"map"           { return KW_MAP; }
+"grep"          { return KW_GREP; }
+"sort"          { return KW_SORT; }
 "True"          { raku_yylval.ival = 1; return LIT_INT; }
 "False"         { raku_yylval.ival = 0; return LIT_INT; }
 "eq"            { return OP_SEQ; }

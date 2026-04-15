@@ -111,21 +111,24 @@ typedef struct ExprList {
     KW_UNLESS = 284,               /* KW_UNLESS  */
     KW_UNTIL = 285,                /* KW_UNTIL  */
     KW_REPEAT = 286,               /* KW_REPEAT  */
-    OP_RANGE = 287,                /* OP_RANGE  */
-    OP_RANGE_EX = 288,             /* OP_RANGE_EX  */
-    OP_ARROW = 289,                /* OP_ARROW  */
-    OP_EQ = 290,                   /* OP_EQ  */
-    OP_NE = 291,                   /* OP_NE  */
-    OP_LE = 292,                   /* OP_LE  */
-    OP_GE = 293,                   /* OP_GE  */
-    OP_SEQ = 294,                  /* OP_SEQ  */
-    OP_SNE = 295,                  /* OP_SNE  */
-    OP_AND = 296,                  /* OP_AND  */
-    OP_OR = 297,                   /* OP_OR  */
-    OP_BIND = 298,                 /* OP_BIND  */
-    OP_SMATCH = 299,               /* OP_SMATCH  */
-    OP_DIV = 300,                  /* OP_DIV  */
-    UMINUS = 301                   /* UMINUS  */
+    KW_MAP = 287,                  /* KW_MAP  */
+    KW_GREP = 288,                 /* KW_GREP  */
+    KW_SORT = 289,                 /* KW_SORT  */
+    OP_RANGE = 290,                /* OP_RANGE  */
+    OP_RANGE_EX = 291,             /* OP_RANGE_EX  */
+    OP_ARROW = 292,                /* OP_ARROW  */
+    OP_EQ = 293,                   /* OP_EQ  */
+    OP_NE = 294,                   /* OP_NE  */
+    OP_LE = 295,                   /* OP_LE  */
+    OP_GE = 296,                   /* OP_GE  */
+    OP_SEQ = 297,                  /* OP_SEQ  */
+    OP_SNE = 298,                  /* OP_SNE  */
+    OP_AND = 299,                  /* OP_AND  */
+    OP_OR = 300,                   /* OP_OR  */
+    OP_BIND = 301,                 /* OP_BIND  */
+    OP_SMATCH = 302,               /* OP_SMATCH  */
+    OP_DIV = 303,                  /* OP_DIV  */
+    UMINUS = 304                   /* UMINUS  */
   };
   typedef enum raku_yytokentype raku_yytoken_kind_t;
 #endif
@@ -142,7 +145,7 @@ union RAKU_YYSTYPE
     EXPR_t   *node;
     ExprList *list;
 
-#line 146 "raku.tab.h"
+#line 149 "raku.tab.h"
 
 };
 typedef union RAKU_YYSTYPE RAKU_YYSTYPE;

@@ -1250,6 +1250,183 @@ DESCR_t interp_eval(EXPR_t *e)
                 }
             }
 
+            /* ── RK-24: Raku map/grep/sort higher-order list ops ────────────
+             * raku_map(block, @arr)  — apply block to each elem, collect results
+             * raku_grep(block, @arr) — collect elems where block is truthy
+             * raku_sort(@arr)        — lexicographic sort
+             * raku_sort(block, @arr) — sort with comparator (block uses $a/$b)
+             *
+             * Arrays are SOH (\x01) delimited strings.
+             * Block is an E_EXPR subtree (child[1]); array is child[2] (or child[1] for sort).
+             * $_ is bound into env slot via icn_scope_set for each iteration.  */
+
+            /* helper: split SOH string → char** of elems (GC-allocated) */
+#define SOH '\x01'
+
+            if (!strcmp(fn,"raku_map") && nargs == 2) {
+                EXPR_t *blk = e->children[1];          /* block EXPR_t* */
+                DESCR_t arrd = interp_eval(e->children[2]);
+                const char *as = VARVAL_fn(arrd); if (!as) as = "";
+                /* iterate elems, eval block with $_ bound, collect */
+                char *out = GC_strdup("");
+                const char *seg = as;
+                int first = 1;
+                do {
+                    const char *nx = strchr(seg, SOH);
+                    size_t elen = nx ? (size_t)(nx - seg) : strlen(seg);
+                    char *elem = GC_malloc(elen + 1);
+                    memcpy(elem, seg, elen); elem[elen] = '\0';
+                    /* bind $_ — walk closure tree; $_ has sval="$_" or "_", use ival as slot */
+                    { /* elem: INTVAL if numeric, else STRVAL */
+                      char *_ep_ev; long _iv_ev = strtol(elem, &_ep_ev, 10);
+                      DESCR_t _ev = (*_ep_ev == '\0' && _ep_ev > elem) ? INTVAL(_iv_ev) : STRVAL(elem);
+                      int _sl = -1;
+                      EXPR_t *_stk[64]; int _sn=0; _stk[_sn++]=blk;
+                      while (_sn>0 && _sl<0) {
+                          EXPR_t *_n=_stk[--_sn];
+                          if (!_n) continue;
+                          if (_n->kind==E_VAR && _n->sval) {
+                              const char *_sv = _n->sval;
+                              /* match "$_" or "_" (sigil may be stripped) */
+                              if (strcmp(_sv,"$_")==0 || strcmp(_sv,"_")==0)
+                                  _sl=(int)_n->ival;
+                          }
+                          for(int _ci=0;_ci<_n->nchildren&&_sn<62;_ci++) _stk[_sn++]=_n->children[_ci];
+                      }
+                      if (_sl >= 0 && _sl < ICN_CUR.env_n) ICN_CUR.env[_sl] = _ev;
+                      else NV_SET_fn("$_", _ev); }
+                    DESCR_t r = interp_eval(blk);
+                    if (!IS_FAIL_fn(r)) {
+                        const char *rv; char rb[64];
+                        if (IS_INT_fn(r))       { snprintf(rb,sizeof rb,"%lld",(long long)r.i); rv=rb; }
+                        else if (IS_REAL_fn(r)) { snprintf(rb,sizeof rb,"%g",r.r); rv=rb; }
+                        else                    { rv = VARVAL_fn(r); if (!rv) rv = ""; }
+                        size_t ol = strlen(out), rl = strlen(rv);
+                        char *nout = GC_malloc(ol + rl + 2);
+                        memcpy(nout, out, ol);
+                        if (!first) { nout[ol] = SOH; memcpy(nout+ol+1, rv, rl); nout[ol+1+rl]='\0'; }
+                        else        { memcpy(nout+ol, rv, rl); nout[ol+rl]='\0'; first=0; }
+                        out = nout;
+                    }
+                    seg = nx ? nx + 1 : NULL;
+                } while (seg);
+                return STRVAL(out);
+            }
+
+            if (!strcmp(fn,"raku_grep") && nargs == 2) {
+                EXPR_t *blk = e->children[1];
+                DESCR_t arrd = interp_eval(e->children[2]);
+                const char *as = VARVAL_fn(arrd); if (!as) as = "";
+                char *out = GC_strdup("");
+                const char *seg = as;
+                int first = 1;
+                do {
+                    const char *nx = strchr(seg, SOH);
+                    size_t elen = nx ? (size_t)(nx - seg) : strlen(seg);
+                    char *elem = GC_malloc(elen + 1);
+                    memcpy(elem, seg, elen); elem[elen] = '\0';
+                    /* bind $_ — walk closure tree; $_ has sval="$_" or "_", use ival as slot */
+                    { /* elem: INTVAL if numeric, else STRVAL */
+                      char *_ep_ev; long _iv_ev = strtol(elem, &_ep_ev, 10);
+                      DESCR_t _ev = (*_ep_ev == '\0' && _ep_ev > elem) ? INTVAL(_iv_ev) : STRVAL(elem);
+                      int _sl = -1;
+                      EXPR_t *_stk[64]; int _sn=0; _stk[_sn++]=blk;
+                      while (_sn>0 && _sl<0) {
+                          EXPR_t *_n=_stk[--_sn];
+                          if (!_n) continue;
+                          if (_n->kind==E_VAR && _n->sval) {
+                              const char *_sv = _n->sval;
+                              /* match "$_" or "_" (sigil may be stripped) */
+                              if (strcmp(_sv,"$_")==0 || strcmp(_sv,"_")==0)
+                                  _sl=(int)_n->ival;
+                          }
+                          for(int _ci=0;_ci<_n->nchildren&&_sn<62;_ci++) _stk[_sn++]=_n->children[_ci];
+                      }
+                      if (_sl >= 0 && _sl < ICN_CUR.env_n) ICN_CUR.env[_sl] = _ev;
+                      else NV_SET_fn("$_", _ev); }
+                    DESCR_t r = interp_eval(blk);
+                    /* RK-24: grep truthy = block did not fail (SNOBOL4 success/fail semantics).
+                     * E_EQ/E_LT etc return FAILDESCR on false, non-fail on true. */
+                    int truthy = !IS_FAIL_fn(r);
+                    if (truthy) {
+                        size_t ol = strlen(out), el = strlen(elem);
+                        char *nout = GC_malloc(ol + el + 2);
+                        memcpy(nout, out, ol);
+                        if (!first) { nout[ol] = SOH; memcpy(nout+ol+1,elem,el); nout[ol+1+el]='\0'; }
+                        else        { memcpy(nout+ol,elem,el); nout[ol+el]='\0'; first=0; }
+                        out = nout;
+                    }
+                    seg = nx ? nx + 1 : NULL;
+                } while (seg);
+                return STRVAL(out);
+            }
+
+            if (!strcmp(fn,"raku_sort") && (nargs == 1 || nargs == 2)) {
+                /* Simple lexicographic sort; numeric if all-integer elements.
+                 * With block (nargs==2): use $a/$b comparator block. */
+                DESCR_t arrd = interp_eval(e->children[nargs == 2 ? 2 : 1]);
+                const char *as = VARVAL_fn(arrd); if (!as || !*as) return STRVAL(GC_strdup(""));
+                EXPR_t *blk = (nargs == 2) ? e->children[1] : NULL;
+                /* split into array of strings */
+                int cnt = 1; for (const char *p=as;*p;p++) if(*p==SOH) cnt++;
+                char **elems = GC_malloc((size_t)cnt * sizeof(char*));
+                int idx = 0; const char *seg = as;
+                do {
+                    const char *nx = strchr(seg, SOH);
+                    size_t elen = nx ? (size_t)(nx-seg) : strlen(seg);
+                    char *elem = GC_malloc(elen+1); memcpy(elem,seg,elen); elem[elen]='\0';
+                    elems[idx++] = elem;
+                    seg = nx ? nx+1 : NULL;
+                } while (seg && idx < cnt);
+                /* sort: comparator block or default lexicographic */
+                if (blk) {
+                    /* insertion sort using block with $a/$b */
+                    for (int i=1;i<cnt;i++) {
+                        char *key = elems[i]; int j=i-1;
+                        while (j>=0) {
+                            NV_SET_fn("$a", STRVAL(elems[j]));
+                            NV_SET_fn("$b", STRVAL(key));
+                            DESCR_t r = interp_eval(blk);
+                            long cmp = IS_INT_fn(r) ? r.i : 0;
+                            if (cmp <= 0) break;
+                            elems[j+1]=elems[j]; j--;
+                        }
+                        elems[j+1]=key;
+                    }
+                } else {
+                    /* check if all-integer */
+                    int all_int = 1;
+                    for (int i=0;i<cnt&&all_int;i++) {
+                        char *ep; strtol(elems[i],&ep,10);
+                        if (*ep) all_int=0;
+                    }
+                    /* qsort */
+                    if (all_int) {
+                        /* numeric sort via simple insertion */
+                        for (int i=1;i<cnt;i++) {
+                            char *key=elems[i]; long kv=atol(key); int j=i-1;
+                            while (j>=0 && atol(elems[j])>kv) { elems[j+1]=elems[j]; j--; }
+                            elems[j+1]=key;
+                        }
+                    } else {
+                        for (int i=1;i<cnt;i++) {
+                            char *key=elems[i]; int j=i-1;
+                            while (j>=0 && strcmp(elems[j],key)>0) { elems[j+1]=elems[j]; j--; }
+                            elems[j+1]=key;
+                        }
+                    }
+                }
+                /* rejoin */
+                size_t total=0; for(int i=0;i<cnt;i++) total+=strlen(elems[i])+1;
+                char *out=GC_malloc(total+1); out[0]='\0';
+                for (int i=0;i<cnt;i++) {
+                    if (i) { size_t ol=strlen(out); out[ol]=SOH; out[ol+1]='\0'; }
+                    strcat(out,elems[i]);
+                }
+                return STRVAL(out);
+            }
+#undef SOH
+
             /* ── IC-3: Icon table builtins (DT_T native hash table) ────────
              * table()         → new empty table (default value = &null)
              * insert(T,k,v)   → set T[k]=v, return T

@@ -155,6 +155,7 @@ static void add_proc(EXPR_t *e) {
 %token KW_SUB KW_GATHER KW_TAKE KW_RETURN
 %token KW_GIVEN KW_WHEN KW_DEFAULT
 %token KW_EXISTS KW_DELETE KW_UNLESS KW_UNTIL KW_REPEAT
+%token KW_MAP KW_GREP KW_SORT
 
 %token OP_RANGE OP_RANGE_EX
 %token OP_ARROW
@@ -165,7 +166,7 @@ static void add_proc(EXPR_t *e) {
 %token OP_SMATCH
 %token OP_DIV
 
-%type <node> stmt expr atom range_expr cmp_expr add_expr
+%type <node> stmt expr atom range_expr cmp_expr add_expr closure
 %type <node> mul_expr unary_expr postfix_expr call_expr block
 %type <node> if_stmt while_stmt for_stmt sub_decl given_stmt
 %type <node> unless_stmt until_stmt repeat_stmt
@@ -400,6 +401,11 @@ block
     : '{' stmt_list '}'  { $$=make_seq($2); }
     ;
 
+/* closure: '{' expr '}' — for map/grep/sort bodies; $_ is bound by caller */
+closure
+    : '{' expr '}'  { $$=$2; }
+    ;
+
 expr
     : VAR_SCALAR '=' expr  { $$=expr_binary(E_ASSIGN,var_node($1),$3); }
     | KW_GATHER block      {
@@ -484,6 +490,19 @@ call_expr
           if(args){ for(int i=0;i<args->count;i++) expr_add_child(e,args->items[i]); exprlist_free(args); }
           $$=e; }
     | IDENT '(' ')'  { $$=make_call($1); }
+    /* RK-24: map/grep/sort higher-order list ops */
+    | KW_MAP closure expr
+        { EXPR_t *c=make_call("raku_map");
+          expr_add_child(c,$2); expr_add_child(c,$3); $$=c; }
+    | KW_GREP closure expr
+        { EXPR_t *c=make_call("raku_grep");
+          expr_add_child(c,$2); expr_add_child(c,$3); $$=c; }
+    | KW_SORT expr
+        { EXPR_t *c=make_call("raku_sort");
+          expr_add_child(c,$2); $$=c; }
+    | KW_SORT closure expr
+        { EXPR_t *c=make_call("raku_sort");
+          expr_add_child(c,$2); expr_add_child(c,$3); $$=c; }
     | atom           { $$=$1; }
     ;
 
