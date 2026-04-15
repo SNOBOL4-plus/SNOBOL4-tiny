@@ -31,6 +31,11 @@ void        *g_csn_step_arg  = NULL;
 int          g_csn_stno      = 0;
 void csn_step_reset(void) { g_csn_stno = 0; }
 
+/*--- endex_jmpbuf: SHARED build — endex() longjmps here instead of exit() --*/
+/* Defined in csnobol4/libcsnobol4.a (main_pic.o / snobol4_vars).           */
+/* endex.c uses: extern VAR jmp_buf endex_jmpbuf — we just reference it.   */
+extern jmp_buf endex_jmpbuf;
+
 /*--- Step-limit longjmp ----------------------------------------------------*/
 static jmp_buf _csn_step_jmp;
 static int     _csn_step_target = 0;
@@ -108,7 +113,8 @@ static int csn_nv_snapshot(CsnNvPair **out_pairs, int *out_count) {
 }
 
 /*--- Public interface -------------------------------------------------------*/
-int csnobol4_main(int argc, char *argv[]);
+/* main.c defines: #define main snobol4_main — so the archive exports snobol4_main */
+int snobol4_main(int argc, char *argv[]);
 
 int csnobol4_run_steps(const char *sno_path, int step_limit,
                        CsnNvPair **out_pairs, int *out_count) {
@@ -119,8 +125,16 @@ int csnobol4_run_steps(const char *sno_path, int step_limit,
     g_csn_step_hook = _csn_step_cb;
     g_csn_step_arg  = NULL;
     char *argv_csn[] = { (char *)"csnobol4", (char *)sno_path, NULL };
-    int hit = setjmp(_csn_step_jmp);
-    if (hit == 0) csnobol4_main(2, argv_csn);
+    /* Use a single exit point for both paths:
+     * - step hook  (_csn_step_cb) longjmps _csn_step_jmp with value 1
+     * - normal END (endex/SHARED) longjmps endex_jmpbuf with value 1
+     * Point endex_jmpbuf AT _csn_step_jmp so both land in the same place. */
+    if (setjmp(_csn_step_jmp) == 0) {
+        /* Redirect endex_jmpbuf → _csn_step_jmp so END lands here too.
+         * memcpy is safe: both are jmp_buf (same type, same size). */
+        memcpy(&endex_jmpbuf, &_csn_step_jmp, sizeof(jmp_buf));
+        snobol4_main(2, argv_csn);
+    }
     g_csn_step_hook = NULL;
     csn_nv_snapshot(out_pairs, out_count);
     return 0;
@@ -131,3 +145,9 @@ void csn_nv_snapshot_free(CsnNvPair *pairs, int n) {
     for (int i = 0; i < n; i++) { free(pairs[i].name); free(pairs[i].val_str); }
     free(pairs);
 }
+
+/*--- cleanup() override: no-op for embedded CSNOBOL4 (IM-16) ---------------*
+ * SHARED endex() calls cleanup() which walks dynamic-load lib lists.        *
+ * Embedded CSNOBOL4 has no dynamic loads; those lists are uninitialised     *
+ * and crash. This definition (linked before libcsnobol4.a) wins.           */
+void cleanup(void) { /* no-op: embedded CSNOBOL4 makes no dynamic LOAD calls */ }

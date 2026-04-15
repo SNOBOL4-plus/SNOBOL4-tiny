@@ -12,7 +12,7 @@ if [ -f "$OUT" ] && [ "$OUT" -nt "$CSN_REPO/isnobol4.c" ] && [ "$OUT" -nt "$CSN_
 fi
 echo "BUILD libcsnobol4.a ..."
 cd "$CSN_REPO"
-CFLAGS_BASE="-Wall -O3 -Iinclude -I. -DHAVE_CONFIG_H -DSNOBOL4 -fPIC -Dmain=csnobol4_main"
+CFLAGS_BASE="-Wall -O3 -Iinclude -I. -DHAVE_CONFIG_H -DSNOBOL4 -DSHARED -fPIC -Dmain=csnobol4_main"
 CFLAGS_SNO="$CFLAGS_BASE -Wno-return-type -Wno-switch"
 compile() { local src="$1" obj="$2" flags="${3:-$CFLAGS_BASE}"; cc $flags -c "$src" -o "$obj"; }
 compile isnobol4.c                   isnobol4_pic.o   "$CFLAGS_SNO"

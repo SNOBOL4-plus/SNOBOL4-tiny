@@ -350,8 +350,10 @@ int sync_monitor_run(void *prog_arg, int verbose, const char *sno_path) {
         label_path_append(&sm_path,  lbl_n);
         label_path_append(&jit_path, lbl_n);
 
-        /* ── CSNOBOL4 run to step n (IM-15b — stub, not yet wired) ── */
-        if (sno_path) {
+        /* ── CSNOBOL4 run to final step only (IM-16: avoid re-init crash) ──
+         * CSNOBOL4 globals cannot be safely re-initialized between calls.
+         * Run once at n==nstmts, compare final NV state vs IR. */
+        if (sno_path && n == nstmts) {
             exec_snapshot_restore(&baseline);
             csnobol4_run_steps(sno_path, n, &csn_pairs, &csn_count);
         }

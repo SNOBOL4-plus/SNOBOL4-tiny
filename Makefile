@@ -137,9 +137,9 @@ scrip-monitor:
 	      -c $(SRC)/driver/csnobol4_shim.c -o $(OBJ)/csnobol4_shim_csn.o
 	$(CC) $(CRT) -DWITH_CSNOBOL4=1 \
 	      -c $(SRC)/driver/sync_monitor.c -o $(OBJ)/sync_monitor_csn.o
-	$(CC) -m64 -no-pie \
+	$(CC) -m64 -no-pie -Wl,--allow-multiple-definition \
 	      $(OBJ)/csnobol4_shim_csn.o $(OBJ)/sync_monitor_csn.o \
-	      $(filter-out $(OBJ)/sync_monitor.o $(OBJ)/csnobol4_shim.o $(OBJ)/scrip_driver.o, $(wildcard $(OBJ)/*.o)) \
+	      $(filter-out $(OBJ)/sync_monitor.o $(OBJ)/sync_monitor_csn.o $(OBJ)/csnobol4_shim.o $(OBJ)/csnobol4_shim_csn.o $(OBJ)/scrip_driver.o, $(wildcard $(OBJ)/*.o)) \
 	      $(OBJ)/scrip_driver.o \
 	      $(CSN_A) $(LIBS) -lutil -ldl -lz -lbz2 -o scrip-monitor
 	@echo "Built: scrip-monitor (with CSNOBOL4 4th executor)"
