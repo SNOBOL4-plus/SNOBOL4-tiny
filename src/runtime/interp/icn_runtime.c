@@ -413,11 +413,12 @@ int icn_is_gen(EXPR_t *e) {
             /* User proc → generator (may return or suspend).
              * Builtin with generative arg → also generative. */
             return 1;
-        /* Arithmetic / relational binops are generative if any child is */
+        /* Arithmetic / relational binops and string concat are generative if any child is */
         case E_ADD: case E_SUB: case E_MUL: case E_DIV: case E_MOD:
         case E_LT:  case E_LE:  case E_GT:  case E_GE:
         case E_EQ:  case E_NE:
-        case E_LCONCAT:            for (int i = 0; i < e->nchildren; i++)
+        case E_LCONCAT: case E_CAT:
+                           for (int i = 0; i < e->nchildren; i++)
                 if (icn_is_gen(e->children[i])) return 1;
             return 0;
         default:
@@ -540,6 +541,45 @@ static DESCR_t icn_bb_raku_array(void *zeta, int entry) {
     return val;
 }
 
+/*----------------------------------------------------------------------------------------------------------------------------
+ * icn_find_leaf_gen — walk expr tree, return first generator-kind node.
+ * Defined here (and in interp.c as static) so icn_bb_cat_gen can use it.
+ *--------------------------------------------------------------------------------------------------------------------------*/
+static EXPR_t *icn_find_leaf_gen(EXPR_t *e) {
+    if (!e) return NULL;
+    switch (e->kind) {
+        case E_TO: case E_TO_BY: case E_ITERATE: case E_ALTERNATE:
+        case E_SUSPEND: case E_LIMIT: case E_EVERY: case E_BANG_BINARY: case E_SEQ_EXPR:
+            return e;
+        case E_FNC: return e;
+        default: break;
+    }
+    for (int i = 0; i < e->nchildren; i++) {
+        EXPR_t *found = icn_find_leaf_gen(e->children[i]);
+        if (found) return found;
+    }
+    return NULL;
+}
+
+/*----------------------------------------------------------------------------------------------------------------------------
+ * icn_bb_cat_gen — E_CAT with generative child  ("str" || gen_expr)
+ *
+ * Pumps the leaf generator child, injects each tick via icn_drive_node,
+ * re-evaluates the full E_CAT expression each tick to produce the concatenated
+ * result string.  Handles the polyglot case: every write("ICN: " || (1 to 3)).
+ *--------------------------------------------------------------------------------------------------------------------------*/
+typedef struct { bb_node_t gen; EXPR_t *cat_expr; EXPR_t *leaf; } icn_cat_gen_state_t;
+static DESCR_t icn_bb_cat_gen(void *zeta, int entry) {
+    icn_cat_gen_state_t *z = (icn_cat_gen_state_t *)zeta;
+    DESCR_t tick = z->gen.fn(z->gen.ζ, entry);
+    if (IS_FAIL_fn(tick)) return FAILDESCR;
+    icn_drive_node = z->leaf;
+    icn_drive_val  = tick;
+    DESCR_t result = interp_eval(z->cat_expr);
+    icn_drive_node = NULL;
+    return result;
+}
+
 bb_node_t icn_eval_gen(EXPR_t *e) {
     if (!e) {
         icn_oneshot_state_t *z = calloc(1, sizeof(*z));
@@ -657,6 +697,21 @@ bb_node_t icn_eval_gen(EXPR_t *e) {
             z->op       = binop_map[mi].bk;
             z->is_relop = binop_map[mi].is_rel;
             return (bb_node_t){ icn_bb_binop_gen, z, 0 };
+        }
+    }
+
+    /* ── E_CAT: ("str" || gen_expr) — pump generator child, re-eval concat each tick ── */
+    if (e->kind == E_CAT && e->nchildren >= 1) {
+        for (int _ci = 0; _ci < e->nchildren; _ci++) {
+            if (icn_is_gen(e->children[_ci])) {
+                EXPR_t *leaf = icn_find_leaf_gen(e->children[_ci]);
+                if (!leaf) leaf = e->children[_ci];
+                icn_cat_gen_state_t *z = calloc(1, sizeof(*z));
+                z->gen      = icn_eval_gen(leaf);
+                z->cat_expr = e;
+                z->leaf     = leaf;
+                return (bb_node_t){ icn_bb_cat_gen, z, 0 };
+            }
         }
     }
 
