@@ -1077,27 +1077,29 @@ DESCR_t interp_eval(EXPR_t *e)
         }
         case E_WHILE: {
             int saved_brk = ICN_CUR.loop_break; ICN_CUR.loop_break = 0;
-            while (!ICN_CUR.returning && !ICN_CUR.loop_break &&
+            while (!ICN_CUR.returning && !ICN_CUR.loop_break && !ICN_CUR.suspending &&
                    !IS_FAIL_fn(interp_eval(e->children[0]))) {
                 if (e->nchildren > 1) interp_eval(e->children[1]);
+                if (ICN_CUR.suspending) break;   /* suspend yield — exit loop, return to icn_call_proc */
             }
             ICN_CUR.loop_break = saved_brk;
             return NULVCL;
         }
         case E_UNTIL: {
             int saved_brk = ICN_CUR.loop_break; ICN_CUR.loop_break = 0;
-            while (!ICN_CUR.returning && !ICN_CUR.loop_break) {
+            while (!ICN_CUR.returning && !ICN_CUR.loop_break && !ICN_CUR.suspending) {
                 DESCR_t cv = (e->nchildren > 0) ? interp_eval(e->children[0]) : FAILDESCR;
                 if (!IS_FAIL_fn(cv)) break;
                 if (e->nchildren > 1) interp_eval(e->children[1]);
+                if (ICN_CUR.suspending) break;
             }
             ICN_CUR.loop_break = saved_brk;
             return NULVCL;
         }
         case E_REPEAT: {
             int saved_brk = ICN_CUR.loop_break; ICN_CUR.loop_break = 0;
-            while (!ICN_CUR.returning && !ICN_CUR.loop_break)
-                if (e->nchildren > 0) interp_eval(e->children[0]);
+            while (!ICN_CUR.returning && !ICN_CUR.loop_break && !ICN_CUR.suspending)
+                if (e->nchildren > 0) { interp_eval(e->children[0]); if (ICN_CUR.suspending) break; }
             ICN_CUR.loop_break = saved_brk;
             return NULVCL;
         }
@@ -2010,10 +2012,11 @@ DESCR_t interp_eval(EXPR_t *e)
 
     case E_UNTIL: {
         int saved_brk = ICN_CUR.loop_break; ICN_CUR.loop_break = 0;
-        while (!ICN_CUR.returning && !ICN_CUR.loop_break) {
+        while (!ICN_CUR.returning && !ICN_CUR.loop_break && !ICN_CUR.suspending) {
             DESCR_t cv = (e->nchildren > 0) ? interp_eval(e->children[0]) : FAILDESCR;
             if (!IS_FAIL_fn(cv)) break;
             if (e->nchildren > 1) interp_eval(e->children[1]);
+            if (ICN_CUR.suspending) break;
         }
         ICN_CUR.loop_break = saved_brk;
         return NULVCL;
@@ -2021,9 +2024,8 @@ DESCR_t interp_eval(EXPR_t *e)
 
     case E_REPEAT: {
         int saved_brk = ICN_CUR.loop_break; ICN_CUR.loop_break = 0;
-        while (!ICN_CUR.returning && !ICN_CUR.loop_break) {
-            if (e->nchildren > 0) interp_eval(e->children[0]);
-        }
+        while (!ICN_CUR.returning && !ICN_CUR.loop_break && !ICN_CUR.suspending)
+            if (e->nchildren > 0) { interp_eval(e->children[0]); if (ICN_CUR.suspending) break; }
         ICN_CUR.loop_break = saved_brk;
         return NULVCL;
     }

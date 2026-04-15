@@ -341,25 +341,39 @@ DESCR_t icn_call_proc(EXPR_t *proc, DESCR_t *args, int nargs) {
     for (int i = 0; i < nparams && i < nargs && i < ICN_SLOT_MAX; i++)
         f->env[i] = args[i];
 
-    /* Execute body statements */
+    /* Execute body statements — mirrors icn_drive_fnc's suspend-aware stmt loop.
+     * On E_SUSPEND: yield to coroutine caller via swapcontext, run do-clause on
+     * resume, then pin stmt index so loop stmts (E_WHILE/E_REPEAT/E_UNTIL) are
+     * re-entered naturally rather than restarted via a redundant interp_eval. */
     DESCR_t result = NULVCL;
-    for (int i = 0; i < nbody && !ICN_CUR.returning; i++) {
-        EXPR_t *st = proc->children[body_start+i];
-        if (!st || st->kind == E_GLOBAL) continue;
-        ICN_CUR.body_root = st;   /* OE-2: drive root for this statement */
+    int stmt = 0;
+    while (stmt < nbody && !ICN_CUR.returning && !ICN_CUR.loop_break) {
+        EXPR_t *st = proc->children[body_start + stmt];
+        if (!st || st->kind == E_GLOBAL) { stmt++; continue; }
+        ICN_CUR.body_root = st;
+        ICN_CUR.suspending = 0;
         result = interp_eval(st);
-        /* Suspend: yield value to coroutine caller, then resume here on β */
-        while (ICN_CUR.suspending && icn_active_ss) {
-            icn_suspend_state_t *ss = icn_active_ss;
-            ss->yielded       = ICN_CUR.suspend_val;
-            ICN_CUR.suspending = 0;
-            swapcontext(&ss->gen_ctx, &ss->caller_ctx);
-            /* Resumed by β — re-evaluate the same statement (for loops) or advance */
-            if (st->kind == E_WHILE || st->kind == E_REPEAT || st->kind == E_UNTIL) {
-                result = interp_eval(st);   /* re-enter the loop */
+        if (ICN_CUR.suspending && icn_active_ss) {
+            /* Yield to caller; coroutine resumes here after each β pump. */
+            while (ICN_CUR.suspending && icn_active_ss) {
+                icn_suspend_state_t *ss = icn_active_ss;
+                EXPR_t *doclause        = ICN_CUR.suspend_do;
+                ss->yielded             = ICN_CUR.suspend_val;
+                ICN_CUR.suspending      = 0;
+                swapcontext(&ss->gen_ctx, &ss->caller_ctx);
+                /* Resumed by β: run do-clause (e.g. i := i + 1) before re-entry */
+                if (doclause) interp_eval(doclause);
+                /* For loop stmts: re-enter without calling interp_eval again here;
+                 * just break out so the outer while re-issues interp_eval(st).
+                 * For non-loop stmts (bare E_SUSPEND): advance past stmt. */
+                if (st->kind != E_WHILE && st->kind != E_REPEAT && st->kind != E_UNTIL)
+                    stmt++;
+                break;   /* always break — outer while re-enters st or advances */
             }
-            /* If still suspending after re-entry, the while loop above catches it */
+        } else {
+            stmt++;
         }
+        if (ICN_CUR.returning || ICN_CUR.loop_break) break;
     }
     /* Icon semantics: explicit return → return the value; fall off end → fail. */
     if (ICN_CUR.returning) result = ICN_CUR.return_val;
