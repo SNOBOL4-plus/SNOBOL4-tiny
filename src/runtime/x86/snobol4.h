@@ -473,9 +473,9 @@ DESCR_t *table_ptr(TBBLK_t *tbl, DESCR_t key_d); /* find-or-create table cell pt
  * Set by scrip-interp.c main() before running any program.
  * Signature: fn(name, args, nargs) → DESCR_t result. */
 extern DESCR_t (*g_user_call_hook)(const char *name, DESCR_t *args, int nargs);
-void   subscript_set(DESCR_t arr, DESCR_t idx, DESCR_t val);
+int    subscript_set(DESCR_t arr, DESCR_t idx, DESCR_t val);       /* 1=ok, 0=fail */
 DESCR_t subscript_get2(DESCR_t arr, DESCR_t i, DESCR_t j);
-void   subscript_set2(DESCR_t arr, DESCR_t i, DESCR_t j, DESCR_t val);
+int    subscript_set2(DESCR_t arr, DESCR_t i, DESCR_t j, DESCR_t val); /* 1=ok, 0=fail */
 DESCR_t MAKE_TREE_fn(DESCR_t tag, DESCR_t val, DESCR_t n, DESCR_t children);
 
 /* Value stack aliases */

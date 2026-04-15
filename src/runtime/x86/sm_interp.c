@@ -552,10 +552,19 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
             if (name && strcmp(name, "ASGN_INDIR") == 0) {
                 DESCR_t name_d = sm_pop(st);
                 DESCR_t val    = sm_pop(st);
-                const char *vname = VARVAL_fn(name_d);
-                if (vname && *vname) NV_SET_fn(vname, val);
+                int ok = 0;
+                if (IS_NAMEPTR(name_d)) {
+                    /* $(.var) — write through name pointer directly */
+                    *(DESCR_t*)name_d.ptr = val; ok = 1;
+                } else if (IS_NAMEVAL(name_d)) {
+                    NV_SET_fn(name_d.s, val); ok = 1;
+                } else {
+                    const char *vname = VARVAL_fn(name_d);
+                    if (vname && *vname) { NV_SET_fn(vname, val); ok = 1; }
+                    /* else: empty/null name — fail the statement */
+                }
                 sm_push(st, val);
-                st->last_ok = 1;
+                st->last_ok = ok;
                 break;
             }
             if (name && strcmp(name, "NRETURN_ASGN") == 0) {
@@ -607,14 +616,14 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
                     DESCR_t i    = sm_pop(st);
                     DESCR_t base = sm_pop(st);
                     DESCR_t val  = sm_pop(st);
-                    subscript_set(base, i, val);
-                    sm_push(st, val); st->last_ok = 1;
+                    st->last_ok = subscript_set(base, i, val);
+                    sm_push(st, val);
                 } else if (nargs == 4) { /* 2D: children=3, nc+1=4 */
                     DESCR_t j    = sm_pop(st); DESCR_t i = sm_pop(st);
                     DESCR_t base = sm_pop(st);
                     DESCR_t val  = sm_pop(st);
-                    subscript_set2(base, i, j, val);
-                    sm_push(st, val); st->last_ok = 1;
+                    st->last_ok = subscript_set2(base, i, j, val);
+                    sm_push(st, val);
                 } else { st->last_ok = 0; }
                 break;
             }

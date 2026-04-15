@@ -93,8 +93,8 @@ extern void     comm_stno(int n);
 /* subscript helpers */
 extern DESCR_t subscript_get(DESCR_t base, DESCR_t idx);
 extern DESCR_t subscript_get2(DESCR_t base, DESCR_t i, DESCR_t j);
-extern void    subscript_set(DESCR_t base, DESCR_t idx, DESCR_t val);
-extern void    subscript_set2(DESCR_t base, DESCR_t i, DESCR_t j, DESCR_t val);
+extern int     subscript_set(DESCR_t base, DESCR_t idx, DESCR_t val);    /* 1=ok, 0=fail */
+extern int     subscript_set2(DESCR_t base, DESCR_t i, DESCR_t j, DESCR_t val); /* 1=ok, 0=fail */
 
 /* pattern constructors */
 extern DESCR_t pat_lit(const char *s);
@@ -402,10 +402,17 @@ static void h_call(void)
         PUSH(NAMEVAL(GC_strdup(vn ? vn : ""))); STATE->last_ok = 1; return;
     }
     if (name && strcmp(name, "ASGN_INDIR") == 0) {
-        DESCR_t nd  = POP(), val = POP();
-        const char *vn = VARVAL_fn(nd);
-        if (vn && *vn) NV_SET_fn(vn, val);
-        PUSH(val); STATE->last_ok = 1; return;
+        DESCR_t nd = POP(), val = POP();
+        int ok = 0;
+        if (IS_NAMEPTR(nd)) {
+            *(DESCR_t*)nd.ptr = val; ok = 1;
+        } else if (IS_NAMEVAL(nd)) {
+            NV_SET_fn(nd.s, val); ok = 1;
+        } else {
+            const char *vn = VARVAL_fn(nd);
+            if (vn && *vn) { NV_SET_fn(vn, val); ok = 1; }
+        }
+        PUSH(val); STATE->last_ok = ok; return;
     }
     if (name && strcmp(name, "IDX") == 0) {
         if (nargs == 2) {
@@ -422,10 +429,10 @@ static void h_call(void)
     if (name && strcmp(name, "IDX_SET") == 0) {
         if (nargs == 3) {
             DESCR_t i = POP(), base = POP(), val = POP();
-            subscript_set(base, i, val); PUSH(val); STATE->last_ok = 1;
+            STATE->last_ok = subscript_set(base, i, val); PUSH(val);
         } else if (nargs == 4) {
             DESCR_t j = POP(), i = POP(), base = POP(), val = POP();
-            subscript_set2(base, i, j, val); PUSH(val); STATE->last_ok = 1;
+            STATE->last_ok = subscript_set2(base, i, j, val); PUSH(val);
         } else { STATE->last_ok = 0; }
         return;
     }

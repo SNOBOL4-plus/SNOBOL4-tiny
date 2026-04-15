@@ -1328,18 +1328,21 @@ DESCR_t subscript_get(DESCR_t arr, DESCR_t idx) {
     return FAILDESCR;
 }
 
-/* subscript_set — arr[idx] = val */
-void subscript_set(DESCR_t arr, DESCR_t idx, DESCR_t val) {
+/* subscript_set — arr[idx] = val; returns 1 on success, 0 on OOB/type-error */
+int subscript_set(DESCR_t arr, DESCR_t idx, DESCR_t val) {
     if (arr.v == DT_A) {
-        array_set(arr.arr, (int)to_int(idx), val);
-        return;
+        int i = (int)to_int(idx);
+        if (i < arr.arr->lo || i > arr.arr->hi) return 0;  /* OOB → fail stmt */
+        array_set(arr.arr, i, val);
+        return 1;
     }
     if (arr.v == DT_T) {
         table_set(arr.tbl, VARVAL_fn(idx), val);
-        return;
+        return 1;
     }
     /* SIL NONARY → ERRTYP,3 → FTLTST */
     sno_runtime_error(3, NULL);
+    return 0;
 }
 
 /* subscript_get2 / subscript_set2 — 2D */
@@ -1349,9 +1352,16 @@ DESCR_t subscript_get2(DESCR_t arr, DESCR_t i, DESCR_t j) {
     return FAILDESCR;  /* P002: not an array — fail the statement */
 }
 
-void subscript_set2(DESCR_t arr, DESCR_t i, DESCR_t j, DESCR_t val) {
-    if (arr.v == DT_A)
-        array_set2(arr.arr, (int)to_int(i), (int)to_int(j), val);
+/* subscript_set2 — arr[i,j] = val; returns 1 on success, 0 on OOB */
+int subscript_set2(DESCR_t arr, DESCR_t i, DESCR_t j, DESCR_t val) {
+    if (arr.v == DT_A) {
+        int ii = (int)to_int(i), jj = (int)to_int(j);
+        if (ii < arr.arr->lo || ii > arr.arr->hi) return 0;
+        if (arr.arr->ndim >= 2 && (jj < arr.arr->lo2 || jj > arr.arr->hi2)) return 0;
+        array_set2(arr.arr, ii, jj, val);
+        return 1;
+    }
+    return 0;  /* not an array — fail */
 }
 
 /* tree_new — 4-arg version: creates a DT_DATA('tree(t,v,n,c)') instance */
