@@ -4,7 +4,7 @@
 # Gate: PASS >= 80% of suites across all test files.
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIP="${HERE}/../scrip"
-CORPUS=/home/claude/corpus-repo/programs/prolog
+CORPUS=/home/claude/corpus/programs/prolog
 SWIT=$CORPUS/swi_tests
 PLUNIT=$CORPUS/plunit.pl
 
@@ -29,13 +29,14 @@ normalize_scrip_output() {
     '
 }
 
-for f in "$SWIT"/test_*.pl; do
-    name=$(basename "$f" .pl)
-    ref="$SWIT/${name}.ref"
+for f in "$SWIT"/test_*_main.pl; do
+    base=$(basename "$f" _main.pl)
+    ref="$SWIT/${base}.ref"
     [ -f "$ref" ] || continue
 
-    # Run scrip with plunit shim + test file; entry via initialization directive or name/0
-    actual=$(timeout 30 "$SCRIP" --ir-run "$PLUNIT" "$f" < /dev/null 2>/dev/null | normalize_scrip_output)
+    # Run scrip with plunit shim + test file + _main.pl wrapper (defines main/0 -> test_X)
+    testfile="$SWIT/${base}.pl"
+    actual=$(timeout 30 "$SCRIP" --ir-run "$PLUNIT" "$testfile" "$f" < /dev/null 2>/dev/null | normalize_scrip_output)
     expected=$(cat "$ref")
 
     # Count suite lines in .ref
@@ -43,10 +44,10 @@ for f in "$SWIT"/test_*.pl; do
     TOTAL=$((TOTAL + suite_total))
 
     if [ "$actual" = "$expected" ]; then
-        echo "  PASS $name ($(echo "$expected" | grep -c "^PASS") suites)"
+        echo "  PASS $base ($(echo "$expected" | grep -c "^PASS") suites)"
         PASS=$((PASS + suite_total))
     else
-        echo "  FAIL $name"
+        echo "  FAIL $base"
         # Show diff of suite-level mismatches
         diff <(echo "$expected") <(echo "$actual") | head -10
         # Count matched lines

@@ -392,6 +392,16 @@ int is_pl_user_call(EXPR_t *goal) {
         "copy_term","atomic_list_concat","concat_atom","string_to_atom",
         "nb_setval","nb_getval","aggregate_all","throw","catch",
         "phrase",
+        "dynamic","discontiguous","module","use_module","ensure_loaded","style_check",
+        "set_prolog_flag","current_prolog_flag","module_info","if","else","endif",
+        "meta_predicate","module_transparent","multifile","include",
+        "format","succ","plus","number_vars","numbervars","char_type",
+        "atom_length","atom_chars","atom_codes","atom_concat","atom_string",
+        "number_string","string_length","string_concat","string_codes","string_chars",
+        "string_to_atom","sub_atom","atom_number","msort","sort","compare",
+        "between","succ_or_zero","forall","aggregate_all","length",
+        "read_term","write_term","with_output_to","initialization","call",
+        "@<","@>","@=<","@>=",
         NULL
     };
     for (int i = 0; builtins[i]; i++) if (strcmp(goal->sval, builtins[i]) == 0) return 0;
@@ -501,10 +511,37 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
         case E_FNC: {
             const char *fn = goal->sval ? goal->sval : "true";
             int arity = goal->nchildren;
+            /* ---- user-defined predicate dispatch (must come before builtin checks) ---- */
+            if (is_pl_user_call(goal)) {
+                char ukey[256]; snprintf(ukey,sizeof ukey,"%s/%d",fn,arity);
+                EXPR_t *uch = pl_pred_table_lookup(&g_pl_pred_table, ukey);
+                if (uch) {
+                    int ua = arity;
+                    Term **uenv = ua ? pl_env_new(ua) : NULL;
+                    for (int ui = 0; ui < ua; ui++)
+                        uenv[ui] = pl_unified_term_from_expr(goal->children[ui], env);
+                    Term **sv = g_pl_env; g_pl_env = uenv;
+                    DESCR_t rd = interp_eval(uch); g_pl_env = sv;
+                    if (uenv) free(uenv);
+                    return !IS_FAIL_fn(rd);
+                }
+                fprintf(stderr,"prolog: undefined predicate %s/%d\n",fn,arity);
+                return 0;
+            }
             if (strcmp(fn,"true")==0&&arity==0) return 1;
             if (strcmp(fn,"fail")==0&&arity==0) return 0;
             if (strcmp(fn,"halt")==0&&arity==0) exit(0);
             if (strcmp(fn,"halt")==0&&arity==1){Term *t=term_deref(pl_unified_term_from_expr(goal->children[0],env));exit(t&&t->tag==TT_INT?(int)t->ival:0);}
+            /* ---- directive no-ops: dynamic, discontiguous, module, use_module, include, etc. ---- */
+            if ((strcmp(fn,"dynamic")==0||strcmp(fn,"discontiguous")==0||
+                 strcmp(fn,"module")==0||strcmp(fn,"use_module")==0||
+                 strcmp(fn,"ensure_loaded")==0||strcmp(fn,"style_check")==0||
+                 strcmp(fn,"set_prolog_flag")==0||strcmp(fn,"module_info")==0||
+                 strcmp(fn,"if")==0||strcmp(fn,"else")==0||strcmp(fn,"endif")==0||
+                 strcmp(fn,"meta_predicate")==0||strcmp(fn,"module_transparent")==0||
+                 strcmp(fn,"multifile")==0)) return 1;
+            /* include/1: silently succeed (file already parsed by prolog_compile) */
+            if (strcmp(fn,"include")==0) return 1;
             if (strcmp(fn,"nl")==0&&arity==0){putchar('\n');return 1;}
             if (strcmp(fn,"write")==0&&arity==1){pl_write(pl_unified_term_from_expr(goal->children[0],env));return 1;}
             if (strcmp(fn,"writeln")==0&&arity==1){pl_write(pl_unified_term_from_expr(goal->children[0],env));putchar('\n');return 1;}
