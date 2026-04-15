@@ -103,6 +103,7 @@ static const int β = 1;
 const char *Σ = NULL;
 int         Δ = 0;
 int         Ω = 0;
+int         Σlen = 0;  /* true subject length — boxes use this for bounds; Ω clamped by kw_anchor */
 
 /* Subject globals — defined here, extern'd in snobol4_stmt_rt.c.
  * Were previously in the archived x86_stubs_interp.c asm harness. */
@@ -1392,6 +1393,7 @@ int exec_stmt(const char  *subj_name,
 
     Σ = subj_str;
     Ω = subj_len;
+    Σlen = subj_len;  /* true subject length — unchanged by kw_anchor clamping */
 
     /* ── Phase 2: build pattern ─────────────────────────────────────── */
     bb_node_t root;

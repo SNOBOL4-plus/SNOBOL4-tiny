@@ -4,7 +4,7 @@
  * Emits Byrd boxes as raw x86-64 bytes into bb_pool pages.
  * Each function mirrors the corresponding .s file byte-for-byte.
  *
- * Globals Σ/Δ/Ω are accessed via absolute imm64 addresses baked into
+ * Globals Σ/Δ/Σlen are accessed via absolute imm64 addresses baked into
  * the emitted code — the pool slab can sit anywhere in the address space.
  * memcmp is called the same way: mov rax, imm64(&memcmp) / call rax.
  *
@@ -27,7 +27,7 @@
 
 #include "bb_pool.h"
 #include "bb_emit.h"
-#include "bb_box.h"   /* spec_t, bb_box_fn, Σ/Δ/Ω externs */
+#include "bb_box.h"   /* spec_t, bb_box_fn, Σ/Δ/Σlen externs */
 
 /* M-DYN-B2: PATND_t needs DESCR_t first — pull in snobol4.h which
  * provides both.  bb_build.c is compiled as part of the full runtime
@@ -109,7 +109,7 @@ static void emit_sub_int_global(const int *addr, int32_t val)
  *     jmp  LIT_β
  *
  *   LIT_α:
- *     Δ + len > Ω  →  LIT_ω          ; bounds check
+ *     Δ + len > Σlen  →  LIT_ω          ; bounds check
  *     memcmp(Σ+Δ, lit, len) ≠ 0 → LIT_ω
  *     [rsp+0] = Σ+Δ                  ; σ
  *     [rsp+8] = len                  ; δ
@@ -130,7 +130,7 @@ static void emit_sub_int_global(const int *addr, int32_t val)
  *
  * Binary adaptation:
  *   - ζ->lit / ζ->len replaced by baked imm64/imm32
- *   - Σ/Δ/Ω accessed via absolute imm64 pointer loads
+ *   - Σ/Δ/Σlen accessed via absolute imm64 pointer loads
  *   - memcmp called via mov rax,imm64(&memcmp) / call rax
  *   - push rbx/r12 replaced by push rbx/push r12 (same bytes, kept for ABI)
  *
@@ -236,7 +236,7 @@ bb_box_fn bb_lit_emit_binary(const char *lit, int len)
     /* ── LIT_α: bounds check + memcmp ────────────────────────────────
      *   eax = Δ
      *   eax += len
-     *   cmp eax, Ω
+     *   cmp eax, Σlen
      *   jg  LIT_ω
      *   call memcmp(Σ+Δ, lit, len)
      *   test eax, eax
@@ -252,9 +252,9 @@ bb_box_fn bb_lit_emit_binary(const char *lit, int len)
     emit_load_int_global(&Δ);           /* mov rax,&Δ; mov eax,[rax] */
     /* eax += len */
     bb_emit_byte(0x05); bb_emit_u32((uint32_t)len);  /* add eax, imm32(len) */
-    /* cmp eax, Ω  →  mov rcx,&Ω; cmp eax,[rcx] */
+    /* cmp eax, Σlen  →  mov rcx,&Σlen; cmp eax,[rcx] */
     bb_emit_byte(0x48); bb_emit_byte(0xB9);
-    bb_emit_u64((uint64_t)(uintptr_t)&Ω);  /* mov rcx, imm64(&Ω) */
+    bb_emit_u64((uint64_t)(uintptr_t)&Σlen);  /* mov rcx, imm64(&Σlen) */
     bb_emit_byte(0x3B); bb_emit_byte(0x01); /* cmp eax, [rcx] */
     /* jg LIT_ω  (rel32 — α body is ~160 bytes, beyond rel8 range) */
     bb_emit_byte(0x0F); bb_emit_byte(0x8F); bb_emit_patch_rel32(&lbl_ω);
@@ -543,7 +543,7 @@ bb_box_fn bb_pos_emit_binary(int n)
 /*
  * Emits RPOS(n) as x86-64 binary.  n baked as imm32.
  * Mirrors bb_rpos.s:
- *   RPOS_α: eax=Ω-n; cmp Δ,eax; jne → ω; rax=Σ+Δ; rdx=0; → γ
+ *   RPOS_α: eax=Σlen-n; cmp Δ,eax; jne → ω; rax=Σ+Δ; rdx=0; → γ
  *   RPOS_β: → ω
  */
 bb_box_fn bb_rpos_emit_binary(int n)
@@ -566,14 +566,14 @@ bb_box_fn bb_rpos_emit_binary(int n)
     bb_insn_je_rel8(&lbl_α);
     bb_insn_jmp_rel32(&lbl_β);
 
-    /* RPOS_α: eax = Ω; eax -= n; cmp Δ, eax; jne → ω */
+    /* RPOS_α: eax = Σlen; eax -= n; cmp Δ, eax; jne → ω */
     bb_label_define(&lbl_α);
-    emit_load_int_global(&Ω);               /* eax = Ω */
-    bb_emit_byte(0x2D); bb_emit_u32((uint32_t)n);  /* sub eax, imm32(n)  → eax = Ω-n */
+    emit_load_int_global(&Σlen);               /* eax = Σlen */
+    bb_emit_byte(0x2D); bb_emit_u32((uint32_t)n);  /* sub eax, imm32(n)  → eax = Σlen-n */
     /* cmp [&Δ], eax  — load Δ into ecx, compare */
-    bb_emit_byte(0x89); bb_emit_byte(0xC1);  /* mov ecx, eax  (save Ω-n) */
+    bb_emit_byte(0x89); bb_emit_byte(0xC1);  /* mov ecx, eax  (save Σlen-n) */
     emit_load_int_global(&Δ);               /* eax = Δ */
-    bb_emit_byte(0x39); bb_emit_byte(0xC8);  /* cmp eax, ecx  (Δ == Ω-n?) */
+    bb_emit_byte(0x39); bb_emit_byte(0xC8);  /* cmp eax, ecx  (Δ == Σlen-n?) */
     bb_insn_jne_rel32(&lbl_ω);
 
     /* rax = Σ+Δ; rdx = 0 */
@@ -796,7 +796,7 @@ static bb_box_fn bb_alt_emit_binary(PATND_t *p)
 extern spec_t bb_arb(void *zeta, int entry);
 extern spec_t bb_breakx(void *zeta, int entry);
 
-/* bb_arb_emit_binary() — XFARB (ARB matches 0..Ω-Δ chars, grows on β)
+/* bb_arb_emit_binary() — XFARB (ARB matches 0..Σlen-Δ chars, grows on β)
  * arb_t = { int count; int start; } — both runtime-mutable, reset each α.
  * Simple trampoline: calloc(arb_t), mov rdi,imm64(z); mov rax,imm64(bb_arb); jmp rax. */
 static bb_box_fn bb_arb_emit_binary(void)

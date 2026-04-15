@@ -82,10 +82,10 @@ static void emit_load_sigma(void) {
     bb_emit_byte(0x48); bb_emit_byte(0x8B); bb_emit_byte(0x01);
 }
 
-/* Load Ω (int global) into eax. */
+/* Load Σlen (int global) into eax. */
 static void emit_load_omega(void) {
     bb_emit_byte(0x48); bb_emit_byte(0xB9);
-    bb_emit_u64((uint64_t)(uintptr_t)&Ω);
+    bb_emit_u64((uint64_t)(uintptr_t)&Σlen);
     bb_emit_byte(0x8B); bb_emit_byte(0x01);   /* mov eax, [rcx] */
 }
 
@@ -303,12 +303,12 @@ static void flat_emit_lit(const char *lit, int len,
 
     /* α: bounds check + memcmp (α entry falls through here) */
 
-    /* eax = Δ + len; cmp eax, Ω; jg fail */
+    /* eax = Δ + len; cmp eax, Σlen; jg fail */
     emit_load_delta();                                    /* eax = Δ */
     bb_emit_byte(0x05); bb_emit_u32((uint32_t)len);      /* add eax, len */
-    /* cmp eax, Ω */
+    /* cmp eax, Σlen */
     bb_emit_byte(0x48); bb_emit_byte(0xB9);
-    bb_emit_u64((uint64_t)(uintptr_t)&Ω);
+    bb_emit_u64((uint64_t)(uintptr_t)&Σlen);
     bb_emit_byte(0x3B); bb_emit_byte(0x01);               /* cmp eax, [rcx] */
     /* jg fail */
     bb_emit_byte(0x0F); bb_emit_byte(0x8F); bb_emit_patch_rel32(lbl_fail);
@@ -378,10 +378,10 @@ static void flat_emit_pos(int n, bb_label_t *lbl_succ, bb_label_t *lbl_fail,
 static void flat_emit_rpos(int n, bb_label_t *lbl_succ, bb_label_t *lbl_fail,
                            bb_label_t *lbl_beta)
 {
-    /* α: eax=Ω-n; cmp Δ,eax; jne fail; jmp succ */
-    emit_load_omega();                               /* eax = Ω */
+    /* α: eax=Σlen-n; cmp Δ,eax; jne fail; jmp succ */
+    emit_load_omega();                               /* eax = Σlen */
     bb_emit_byte(0x2D); bb_emit_u32((uint32_t)n);   /* sub eax, n */
-    bb_emit_byte(0x89); bb_emit_byte(0xC1);          /* mov ecx, eax (Ω-n) */
+    bb_emit_byte(0x89); bb_emit_byte(0xC1);          /* mov ecx, eax (Σlen-n) */
     emit_load_delta();                               /* eax = Δ */
     bb_emit_byte(0x39); bb_emit_byte(0xC8);          /* cmp eax, ecx */
     bb_insn_jne_rel32(lbl_fail);

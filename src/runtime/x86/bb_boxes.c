@@ -19,7 +19,7 @@ DESCR_t bb_lit(void *zeta, int entry)
     spec_t LIT;
     if (entry==α)                                                               goto LIT_α;
     if (entry==β)                                                               goto LIT_β;
-    LIT_α:          if (Δ + ζ->len > Ω)                                         goto LIT_ω;
+    LIT_α:          if (Δ + ζ->len > Σlen)                                         goto LIT_ω;
                     if (memcmp(Σ+Δ, ζ->lit, (size_t)ζ->len) != 0)               goto LIT_ω;
                     LIT = spec(Σ+Δ, ζ->len); Δ += ζ->len;                       goto LIT_γ;
     LIT_β:          Δ -= ζ->len;                                                goto LIT_ω;
@@ -121,7 +121,7 @@ DESCR_t bb_arb(void *zeta, int entry)
     if (entry==β)                                                               goto ARB_β;
     ARB_α:          ζ->count=0; ζ->start=Δ; ARB=spec(Σ+Δ,0);                    goto ARB_γ;
     ARB_β:          ζ->count++;                                                 
-                    if (ζ->start+ζ->count > Ω)                                  goto ARB_ω;
+                    if (ζ->start+ζ->count > Σlen)                                  goto ARB_ω;
                     Δ=ζ->start; ARB=spec(Σ+Δ,ζ->count); Δ+=ζ->count;            goto ARB_γ;
     ARB_γ:                                                                      return descr_from_spec(ARB);
     ARB_ω:                                                                      return FAILDESCR;
@@ -188,7 +188,7 @@ DESCR_t bb_any(void *zeta, int entry)
     spec_t ANY;
     if (entry==α)                                                               goto ANY_α;
     if (entry==β)                                                               goto ANY_β;
-    ANY_α:          if (Δ>=Ω || !strchr(ζ->chars,Σ[Δ]))                         goto ANY_ω;
+    ANY_α:          if (Δ>=Σlen || !strchr(ζ->chars,Σ[Δ]))                         goto ANY_ω;
                     ANY = spec(Σ+Δ,1); Δ++;                                     goto ANY_γ;
     ANY_β:          Δ--;                                                        goto ANY_ω;
     ANY_γ:                                                                      return descr_from_spec(ANY);
@@ -208,7 +208,7 @@ DESCR_t bb_notany(void *zeta, int entry)
     spec_t NOTANY;
     if (entry==α)                                                               goto NOTANY_α;
     if (entry==β)                                                               goto NOTANY_β;
-    NOTANY_α:       if (Δ>=Ω || strchr(ζ->chars,Σ[Δ]))                          goto NOTANY_ω;
+    NOTANY_α:       if (Δ>=Σlen || strchr(ζ->chars,Σ[Δ]))                          goto NOTANY_ω;
                     NOTANY = spec(Σ+Δ,1); Δ++;                                  goto NOTANY_γ;
     NOTANY_β:       Δ--;                                                        goto NOTANY_ω;
     NOTANY_γ:                                                                   return descr_from_spec(NOTANY);
@@ -229,7 +229,7 @@ DESCR_t bb_span(void *zeta, int entry)
     if (entry==α)                                                               goto SPAN_α;
     if (entry==β)                                                               goto SPAN_β;
     SPAN_α:         ζ->δ=0;                                                     
-                    while (Δ+ζ->δ<Ω && strchr(ζ->chars,Σ[Δ+ζ->δ])) ζ->δ++;      
+                    while (Δ+ζ->δ<Σlen && strchr(ζ->chars,Σ[Δ+ζ->δ])) ζ->δ++;      
                     if (ζ->δ <= 0)                                              goto SPAN_ω;
                     SPAN = spec(Σ+Δ, ζ->δ); Δ += ζ->δ;                          goto SPAN_γ;
     SPAN_β:         Δ -= ζ->δ;                                                  goto SPAN_ω;
@@ -251,8 +251,8 @@ DESCR_t bb_brk(void *zeta, int entry)
     if (entry==α)                                                               goto BRK_α;
     if (entry==β)                                                               goto BRK_β;
     BRK_α:          ζ->δ=0;                                                     
-                    while (Δ+ζ->δ<Ω && !strchr(ζ->chars,Σ[Δ+ζ->δ])) ζ->δ++;     
-                    if (Δ+ζ->δ >= Ω)                                            goto BRK_ω;
+                    while (Δ+ζ->δ<Σlen && !strchr(ζ->chars,Σ[Δ+ζ->δ])) ζ->δ++;     
+                    if (Δ+ζ->δ >= Σlen)                                            goto BRK_ω;
                     BRK = spec(Σ+Δ,ζ->δ); Δ += ζ->δ;                            goto BRK_γ;
     BRK_β:          Δ -= ζ->δ;                                                  goto BRK_ω;
     BRK_γ:                                                                      return descr_from_spec(BRK);
@@ -273,8 +273,8 @@ DESCR_t bb_breakx(void *zeta, int entry)
     if (entry==α)                                                               goto BREAKX_α;
     if (entry==β)                                                               goto BREAKX_β;
     BREAKX_α:       ζ->δ=0;                                                     
-                    while (Δ+ζ->δ<Ω && !strchr(ζ->chars,Σ[Δ+ζ->δ])) ζ->δ++;     
-                    if (ζ->δ==0 || Δ+ζ->δ>=Ω)                                   goto BREAKX_ω;
+                    while (Δ+ζ->δ<Σlen && !strchr(ζ->chars,Σ[Δ+ζ->δ])) ζ->δ++;     
+                    if (ζ->δ==0 || Δ+ζ->δ>=Σlen)                                   goto BREAKX_ω;
                     BREAKX = spec(Σ+Δ,ζ->δ); Δ += ζ->δ;                         goto BREAKX_γ;
     BREAKX_β:       Δ -= ζ->δ;                                                  goto BREAKX_ω;
     BREAKX_γ:                                                                   return descr_from_spec(BREAKX);
@@ -294,7 +294,7 @@ DESCR_t bb_len(void *zeta, int entry)
     spec_t LEN;
     if (entry==α)                                                               goto LEN_α;
     if (entry==β)                                                               goto LEN_β;
-    LEN_α:          if (Δ + ζ->n > Ω)                                           goto LEN_ω;
+    LEN_α:          if (Δ + ζ->n > Σlen)                                           goto LEN_ω;
                     LEN = spec(Σ+Δ, ζ->n); Δ += ζ->n;                           goto LEN_γ;
     LEN_β:          Δ -= ζ->n;                                                  goto LEN_ω;
     LEN_γ:                                                                      return descr_from_spec(LEN);
@@ -354,7 +354,7 @@ DESCR_t bb_rem(void *zeta, int entry)
     spec_t REM;
     if (entry==α)                                                               goto REM_α;
     if (entry==β)                                                               goto REM_β;
-    REM_α:          REM = spec(Σ+Δ, Ω-Δ); Δ = Ω;                                goto REM_γ;
+    REM_α:          REM = spec(Σ+Δ, Σlen-Δ); Δ = Σlen;                                goto REM_γ;
     REM_β:                                                                      goto REM_ω;
     REM_γ:                                                                      return descr_from_spec(REM);
     REM_ω:                                                                      return FAILDESCR;
@@ -594,7 +594,7 @@ fail_t *bb_fail_new(void)
 { return calloc(1,sizeof(fail_t)); }
 
 /* ───── rpos ───── */
-/* _XRPSI    RPOS        assert cursor == Ω-n (zero-width) */
+/* _XRPSI    RPOS        assert cursor == Σlen-n (zero-width) */
 
 
 DESCR_t bb_rpos(void *zeta, int entry)
@@ -603,7 +603,7 @@ DESCR_t bb_rpos(void *zeta, int entry)
     spec_t RPOS;
     if (entry==α)                                                               goto RPOS_α;
     if (entry==β)                                                               goto RPOS_β;
-    RPOS_α:         if (Δ != Ω-ζ->n)                                            goto RPOS_ω;
+    RPOS_α:         if (Δ != Σlen-ζ->n)                                            goto RPOS_ω;
                     RPOS = spec(Σ+Δ,0);                                         goto RPOS_γ;
     RPOS_β:                                                                     goto RPOS_ω;
     RPOS_γ:                                                                     return descr_from_spec(RPOS);
@@ -614,7 +614,7 @@ rpos_t *bb_rpos_new(int n)
 { rpos_t *ζ=calloc(1,sizeof(rpos_t)); ζ->n=n; return ζ; }
 
 /* ───── rtab ───── */
-/* _XRTB     RTAB        advance cursor TO position Ω-n */
+/* _XRTB     RTAB        advance cursor TO position Σlen-n */
 
 
 DESCR_t bb_rtab(void *zeta, int entry)
@@ -623,8 +623,8 @@ DESCR_t bb_rtab(void *zeta, int entry)
     spec_t RTAB;
     if (entry==α)                                                               goto RTAB_α;
     if (entry==β)                                                               goto RTAB_β;
-    RTAB_α:         if (Δ > Ω-ζ->n)                                             goto RTAB_ω;
-                    ζ->advance=(Ω-ζ->n)-Δ; RTAB=spec(Σ+Δ,ζ->advance); Δ=Ω-ζ->n; goto RTAB_γ;
+    RTAB_α:         if (Δ > Σlen-ζ->n)                                             goto RTAB_ω;
+                    ζ->advance=(Σlen-ζ->n)-Δ; RTAB=spec(Σ+Δ,ζ->advance); Δ=Σlen-ζ->n; goto RTAB_γ;
     RTAB_β:         Δ -= ζ->advance;                                            goto RTAB_ω;
     RTAB_γ:                                                                     return descr_from_spec(RTAB);
     RTAB_ω:                                                                     return FAILDESCR;

@@ -3,7 +3,7 @@
  *
  * One broker for all five languages. Three drive modes:
  *
- *   BB_SCAN (SNOBOL4): scan cursor positions Δ=0..Ω; call root.fn(ζ,α) at each position;
+ *   BB_SCAN (SNOBOL4): scan cursor positions Δ=0..Σlen; call root.fn(ζ,α) at each position;
  *                      on γ: call body_fn(val, arg) and stop (first match wins).
  *                      Mirrors Phase 3 of stmt_exec.c exactly.
  *
@@ -34,7 +34,7 @@ int bb_broker(bb_node_t root, BrokerMode mode,
     switch (mode) {
 
     /*--------------------------------------------------------------------------------------------------------------------------
-     * BB_SCAN — SNOBOL4 pattern match: try each cursor position 0..Ω
+     * BB_SCAN — SNOBOL4 pattern match: try each cursor position 0..Σlen
      * Mirrors exec_stmt Phase 3. kw_anchor and NAM save/restore are caller's responsibility
      * (stmt_exec.c handles those in its own Phase 3 wrapper until U-9 wires this in fully).
      *--------------------------------------------------------------------------------------------------------------------------*/
