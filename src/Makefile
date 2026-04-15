@@ -62,7 +62,6 @@ RUNTIME_X86 = \
     runtime/x86/bb_emit.c \
     runtime/x86/bb_flat.c \
     runtime/x86/bb_pool.c \
-    runtime/x86/engine.c \
     runtime/x86/eval_code.c \
     runtime/x86/sm_lower.c \
     runtime/x86/sm_interp.c \
