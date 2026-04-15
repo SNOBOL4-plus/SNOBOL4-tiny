@@ -35,6 +35,37 @@ DESCR_t icn_bb_to(void *zeta, int entry) {
 }
 
 /*============================================================================================================================
+ * icn_bb_to_nested — (lo_gen) to (hi_gen) cross-product Byrd box
+ *
+ * JCON irgen.icn ir_a_To nested case: when lo or hi is itself a generator,
+ * pre-collect all values from each, then iterate outer lo × hi pairs,
+ * yielding each inner lo_val..hi_val range in sequence.
+ *
+ * State pre-populated by icn_eval_gen before returning this box.
+ * α: li=0, hi2=0, cur=lo_vals[0]; step through inner range.
+ * β: cur++; if cur > hi_vals[hi2]: hi2++; if hi2 >= nhi: li++, hi2=0; reset cur.
+ * ω: li >= nlo.
+ *============================================================================================================================*/
+
+DESCR_t icn_bb_to_nested(void *zeta, int entry) {
+    icn_to_nested_state_t *z = (icn_to_nested_state_t *)zeta;
+    if (z->nlo == 0 || z->nhi == 0) return FAILDESCR;
+    if (entry == α) { z->li = 0; z->hi2 = 0; z->cur = z->lo_vals[0]; }
+    else            { z->cur++; }
+    /* Advance outer indices when inner range is exhausted */
+    for (;;) {
+        if (z->li >= z->nlo) return FAILDESCR;
+        long hi_bound = z->hi_vals[z->hi2];
+        if (z->cur <= hi_bound) return (DESCR_t){ .v = DT_I, .i = z->cur };
+        /* exhausted this (li, hi2) pair — advance hi2, then li */
+        z->hi2++;
+        if (z->hi2 >= z->nhi) { z->li++; z->hi2 = 0; }
+        if (z->li >= z->nlo) return FAILDESCR;
+        z->cur = z->lo_vals[z->li];
+    }
+}
+
+/*============================================================================================================================
  * B-4: icn_bb_to_by — E_TO_BY Byrd box  (i to j by k)
  *
  * State: lo, hi, step, cur.

@@ -672,6 +672,27 @@ fn_done:
  * exposing eval_node (which is static in eval_code.c).
  * ══════════════════════════════════════════════════════════════════════════ */
 
+/* icn_find_leaf_gen — walk an expr tree and return the first generator-kind node.
+ * Used by E_EVERY special-case to find the raw E_TO (or similar) inside
+ * compound exprs like E_ADD(E_VAR(total), E_TO(1,n)), so we can drive only
+ * the generator and inject via icn_drive_node, letting interp_eval re-read
+ * mutable variables (e.g. frame locals) fresh each tick. */
+static EXPR_t *icn_find_leaf_gen(EXPR_t *e) {
+    if (!e) return NULL;
+    switch (e->kind) {
+        case E_TO: case E_TO_BY: case E_ITERATE: case E_ALTERNATE:
+        case E_SUSPEND: case E_LIMIT: case E_EVERY: case E_BANG_BINARY: case E_SEQ_EXPR:
+            return e;
+        case E_FNC: return e;   /* user proc or builtin — treat as leaf generator */
+        default: break;
+    }
+    for (int i = 0; i < e->nchildren; i++) {
+        EXPR_t *found = icn_find_leaf_gen(e->children[i]);
+        if (found) return found;
+    }
+    return NULL;
+}
+
 /* icn_call_builtin — call a builtin E_FNC with pre-resolved args array.
  * Used by icn_bb_fnc_gen to avoid re-evaluating generator children.
  * Dispatches write/writes/upto/find/any/many/upto/tab/move/match by name.
@@ -711,6 +732,11 @@ DESCR_t icn_call_builtin(EXPR_t *call, DESCR_t *args, int nargs) {
 DESCR_t interp_eval(EXPR_t *e)
 {
     if (!e) return NULVCL;
+    /* icn_drive_node injection: if this exact node is being driven as a generator
+     * (set by E_EVERY leaf-gen injection or icn_drive_fnc), return the staged value
+     * directly without recursing into children.  Covers E_TO, E_FNC, and any other
+     * node kind that icn_find_leaf_gen or icn_drive_fnc selects as the leaf. */
+    if (icn_drive_node && e == icn_drive_node) return icn_drive_val;
 
     /* OE-5: Icon frame dispatch — E_VAR/E_ASSIGN/E_FNC differ between SNO and ICN.
      * All other EKinds fall through to the shared switch (already has Icon cases
@@ -1072,7 +1098,30 @@ DESCR_t interp_eval(EXPR_t *e)
             EXPR_t *gen  = e->children[0];
             EXPR_t *body = (e->nchildren > 1) ? e->children[1] : NULL;
             /* IC-2a: icn_eval_gen + BB_PUMP — all goal-directed ops through Byrd boxes.
-             * When body==NULL, the box's own side-effects ARE the work (e.g. every write(1 to 5)).
+             * Special case: E_ASSIGN with generative RHS — drive the leaf generator
+             * and re-evaluate the full assignment each tick so frame locals are read fresh.
+             * e.g.: every total := total + (1 to n) inside a proc body.
+             * NOTE: E_AUGOP is NOT special-cased here — it has its own icn_is_gen path
+             * in the E_AUGOP handler that correctly drives the generator per-tick. */
+            if (gen->kind == E_ASSIGN &&
+                gen->nchildren >= 2 && icn_is_gen(gen->children[1])) {
+                EXPR_t *leaf = icn_find_leaf_gen(gen->children[1]);
+                if (!leaf) leaf = gen->children[1];
+                bb_node_t rbox = icn_eval_gen(leaf);
+                DESCR_t tick = rbox.fn(rbox.ζ, α);
+                while (!IS_FAIL_fn(tick) && !ICN_CUR.returning && !ICN_CUR.loop_break) {
+                    icn_drive_node = leaf;
+                    icn_drive_val  = tick;
+                    interp_eval(gen);
+                    icn_drive_node = NULL;
+                    if (body) interp_eval(body);
+                    if (ICN_CUR.returning || ICN_CUR.loop_break) break;
+                    tick = rbox.fn(rbox.ζ, β);
+                }
+                ICN_CUR.loop_break = 0;
+                return NULVCL;
+            }
+            /* When body==NULL, the box's own side-effects ARE the work (e.g. every write(1 to 5)).
              * When body!=NULL, box produces a value; body runs separately each tick. */
             bb_node_t box = icn_eval_gen(gen);
             DESCR_t val = box.fn(box.ζ, α);
@@ -1999,18 +2048,24 @@ DESCR_t interp_eval(EXPR_t *e)
         EXPR_t *body = (e->nchildren > 1) ? e->children[1] : NULL;
         /* IC-2a: icn_eval_gen + BB_PUMP — all goal-directed ops through Byrd boxes.
          * Special case: if gen is E_ASSIGN or E_AUGOP with a generative RHS,
-         * drive the inner generator and re-evaluate gen each tick so that
-         * variable reads (lhs, lv) are fresh.  e.g.:
-         *   every total := total + (1 to n)   -- E_ASSIGN wrapping E_ADD(var, E_TO)
-         *   every total +:= (1 to n)           -- E_AUGOP with E_TO rhs              */
-        if ((gen->kind == E_ASSIGN || gen->kind == E_AUGOP) &&
+         * drive the LEAF generator inside the RHS and re-evaluate gen each tick so
+         * that mutable frame locals (e.g. `total`) are read fresh.  e.g.:
+         *   every total := total + (1 to n)   -- E_ASSIGN(E_VAR(total), E_ADD(E_VAR(total), E_TO(1,n)))
+         *   every total +:= (1 to n)           -- E_AUGOP with E_TO rhs
+         * We find the leaf generator node (e.g. E_TO), drive only that via icn_eval_gen,
+         * and inject each raw tick value via icn_drive_node passthrough.  interp_eval(gen)
+         * then re-reads the current value of `total` from the frame slot each iteration. */
+        if ((gen->kind == E_ASSIGN) &&
             gen->nchildren >= 2 && icn_is_gen(gen->children[1])) {
-            bb_node_t rbox = icn_eval_gen(gen->children[1]);
+            EXPR_t *leaf = icn_find_leaf_gen(gen->children[1]);
+            if (!leaf) leaf = gen->children[1];   /* fallback: treat whole RHS as gen */
+            bb_node_t rbox = icn_eval_gen(leaf);
             DESCR_t tick = rbox.fn(rbox.ζ, α);
             while (!IS_FAIL_fn(tick) && !ICN_CUR.returning && !ICN_CUR.loop_break) {
-                /* Inject the generator tick value via drive passthrough,
-                 * then re-evaluate gen (the assign/augop) so it reads fresh lhs. */
-                icn_drive_node = gen->children[1];
+                /* Inject the raw generator tick value via drive passthrough,
+                 * then re-evaluate gen (the assign/augop) — interp_eval re-reads
+                 * the current frame value of any E_VAR in the expression. */
+                icn_drive_node = leaf;
                 icn_drive_val  = tick;
                 interp_eval(gen);
                 icn_drive_node = NULL;

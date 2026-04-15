@@ -45,6 +45,19 @@ static inline void *icn_gen_enter(void **pp, size_t size) {
  * Box state types — allocated by icn_eval_gen (in scrip.c) and passed as zeta
  *--------------------------------------------------------------------------------------------------------------------------*/
 typedef struct { long lo; long hi; long cur; }                                        icn_to_state_t;
+/*----------------------------------------------------------------------------------------------------------------------------
+ * icn_to_nested_state_t — state for (lo_gen) to (hi_gen) cross-product box
+ * Pre-collects all lo/hi values, then iterates lo × hi × inner.
+ *--------------------------------------------------------------------------------------------------------------------------*/
+#define ICN_TO_NESTED_MAX 256
+typedef struct {
+    long lo_vals[ICN_TO_NESTED_MAX];
+    long hi_vals[ICN_TO_NESTED_MAX];
+    int  nlo, nhi;
+    int  li, hi2;   /* outer lo/hi pair indices */
+    long cur;       /* current value in inner lo..hi range */
+} icn_to_nested_state_t;
+DESCR_t icn_bb_to_nested(void *zeta, int entry);
 typedef struct { long lo; long hi; long step; long cur; }                             icn_to_by_state_t;
 typedef struct { const char *str; long len; long pos; char ch[2]; }                  icn_iterate_state_t;
 typedef struct { const char *needle; const char *hay; int nlen; const char *next; }  icn_find_state_t;

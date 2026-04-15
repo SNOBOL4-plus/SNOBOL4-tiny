@@ -549,8 +549,33 @@ bb_node_t icn_eval_gen(EXPR_t *e) {
 
     /* ── E_TO: (lo to hi) ────────────────────────────────────────────────── */
     if (e->kind == E_TO && e->nchildren >= 2) {
-        DESCR_t lo_d = interp_eval(e->children[0]);
-        DESCR_t hi_d = interp_eval(e->children[1]);
+        EXPR_t *lo_expr = e->children[0];
+        EXPR_t *hi_expr = e->children[1];
+        int lo_gen = icn_is_gen(lo_expr);
+        int hi_gen = icn_is_gen(hi_expr);
+        if (lo_gen || hi_gen) {
+            /* Nested-to: collect all lo/hi values then cross-product iterate. */
+            icn_to_nested_state_t *z = calloc(1, sizeof(*z));
+            if (!lo_gen) {
+                DESCR_t d = interp_eval(lo_expr);
+                if (!IS_FAIL_fn(d)) z->lo_vals[z->nlo++] = d.i;
+            } else {
+                bb_node_t lb = icn_eval_gen(lo_expr);
+                DESCR_t v = lb.fn(lb.ζ, α);
+                while (!IS_FAIL_fn(v) && z->nlo < ICN_TO_NESTED_MAX) { z->lo_vals[z->nlo++] = v.i; v = lb.fn(lb.ζ, β); }
+            }
+            if (!hi_gen) {
+                DESCR_t d = interp_eval(hi_expr);
+                if (!IS_FAIL_fn(d)) z->hi_vals[z->nhi++] = d.i;
+            } else {
+                bb_node_t hb = icn_eval_gen(hi_expr);
+                DESCR_t v = hb.fn(hb.ζ, α);
+                while (!IS_FAIL_fn(v) && z->nhi < ICN_TO_NESTED_MAX) { z->hi_vals[z->nhi++] = v.i; v = hb.fn(hb.ζ, β); }
+            }
+            return (bb_node_t){ icn_bb_to_nested, z, 0 };
+        }
+        DESCR_t lo_d = interp_eval(lo_expr);
+        DESCR_t hi_d = interp_eval(hi_expr);
         icn_to_state_t *z = calloc(1, sizeof(*z));
         z->lo = IS_FAIL_fn(lo_d) ? 0 : lo_d.i;
         z->hi = IS_FAIL_fn(hi_d) ? 0 : hi_d.i;
@@ -632,6 +657,21 @@ bb_node_t icn_eval_gen(EXPR_t *e) {
             z->op       = binop_map[mi].bk;
             z->is_relop = binop_map[mi].is_rel;
             return (bb_node_t){ icn_bb_binop_gen, z, 0 };
+        }
+    }
+
+    /* ── E_FNC find(needle,str) with scalar args — icn_bb_find generator ── */
+    if (e->kind == E_FNC && e->nchildren >= 3 && e->children[0] && e->children[0]->sval
+        && strcmp(e->children[0]->sval, "find") == 0) {
+        DESCR_t s1 = interp_eval(e->children[1]);
+        DESCR_t s2 = interp_eval(e->children[2]);
+        if (!IS_FAIL_fn(s1) && !IS_FAIL_fn(s2)) {
+            icn_find_state_t *z = calloc(1, sizeof(*z));
+            z->needle = s1.s ? s1.s : "";
+            z->hay    = s2.s ? s2.s : "";
+            z->nlen   = (int)strlen(z->needle);
+            z->next   = z->hay;
+            return (bb_node_t){ icn_bb_find, z, 0 };
         }
     }
 
