@@ -212,6 +212,13 @@ void polyglot_execute(Program *prog) {
         fprintf(stderr, "icon: no main procedure\n");
     } else if (slang == LANG_PL) {
         g_pl_active = 1;
+        /* Execute non-E_CHOICE/E_CLAUSE LANG_PL stmts as directives before main/0 */
+        for (STMT_t *_s = prog->head; _s; _s = _s->next) {
+            if (_s->lang != LANG_PL) continue;
+            if (!_s->subject) continue;
+            if (_s->subject->kind == E_CHOICE || _s->subject->kind == E_CLAUSE) continue;
+            interp_exec_pl_builtin(_s->subject, NULL);
+        }
         EXPR_t *main_choice = pl_pred_table_lookup(&g_pl_pred_table, "main/0");
         if (main_choice) interp_eval(main_choice);
         else fprintf(stderr, "prolog: no main/0 predicate\n");
