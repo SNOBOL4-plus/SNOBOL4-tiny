@@ -1035,10 +1035,25 @@ bb_node_t bb_build(PATND_t *p)
 
     /* ── FENCE — cut: γ on α, ω on all β (no backtrack across fence) ── */
     case XFNCE: {
-        fence_t *ζ = calloc(1, sizeof(fence_t));
-        n.fn = (bb_box_fn)bb_fence;
-        n.ζ  = ζ;
-        n.ζ_size = sizeof(*ζ);
+        if (p->nchildren == 0) {
+            /* FENCE0: bare FENCE — seal only */
+            fence_t *ζ = calloc(1, sizeof(fence_t));
+            n.fn = (bb_box_fn)bb_fence;
+            n.ζ  = ζ;
+            n.ζ_size = sizeof(*ζ);
+        } else {
+            /* FENCE1: FENCE(P) — sequence child then seal.
+             * Child fails → ω (fail). Child succeeds → seal (β cuts). */
+            bb_node_t child = bb_build(p->children[0]);
+            fence_t *fζ = calloc(1, sizeof(fence_t));
+            bb_node_t fence_n; fence_n.fn=(bb_box_fn)bb_fence; fence_n.ζ=fζ; fence_n.ζ_size=sizeof(*fζ);
+            seq_t *sζ = calloc(1, sizeof(seq_t));
+            sζ->left.fn    = child.fn;   sζ->left.state  = child.ζ;
+            sζ->right.fn   = fence_n.fn; sζ->right.state = fence_n.ζ;
+            n.fn = (bb_box_fn)bb_seq;
+            n.ζ  = sζ;
+            n.ζ_size = sizeof(*sζ);
+        }
         break;
     }
 

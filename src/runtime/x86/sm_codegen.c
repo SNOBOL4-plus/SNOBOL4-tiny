@@ -325,6 +325,7 @@ static void h_pat_fail(void)    { jit_pat_push(pat_fail()); }
 static void h_pat_succeed(void) { jit_pat_push(pat_succeed()); }
 static void h_pat_eps(void)     { jit_pat_push(pat_epsilon()); }
 static void h_pat_fence(void)   { jit_pat_push(pat_fence()); }
+static void h_pat_fence1(void)  { DESCR_t _ch = jit_pat_pop(); jit_pat_push(pat_fence_p(_ch)); }
 static void h_pat_abort(void)   { jit_pat_push(pat_abort()); }
 static void h_pat_bal(void)     { jit_pat_push(pat_bal()); }
 
@@ -511,6 +512,7 @@ static void init_handler_table(void)
     g_handlers[SM_PAT_REM]     = h_pat_rem;
     g_handlers[SM_PAT_BAL]     = h_pat_bal;
     g_handlers[SM_PAT_FENCE]   = h_pat_fence;
+    g_handlers[SM_PAT_FENCE1]  = h_pat_fence1;
     g_handlers[SM_PAT_ABORT]   = h_pat_abort;
     g_handlers[SM_PAT_FAIL]    = h_pat_fail;
     g_handlers[SM_PAT_SUCCEED] = h_pat_succeed;

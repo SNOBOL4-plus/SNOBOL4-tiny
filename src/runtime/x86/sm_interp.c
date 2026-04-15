@@ -410,6 +410,7 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
         case SM_PAT_SUCCEED: pat_push(pat_succeed()); break;
         case SM_PAT_EPS:     pat_push(pat_epsilon()); break;
         case SM_PAT_FENCE:   pat_push(pat_fence());   break;
+        case SM_PAT_FENCE1:  { DESCR_t _ch = pat_pop(); pat_push(pat_fence_p(_ch)); } break;
         case SM_PAT_ABORT:   pat_push(pat_abort());   break;
         case SM_PAT_BAL:     pat_push(pat_bal());     break;
 

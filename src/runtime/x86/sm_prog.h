@@ -62,6 +62,7 @@ typedef enum {
     SM_PAT_REM,
     SM_PAT_BAL,
     SM_PAT_FENCE,
+    SM_PAT_FENCE1,  /* pop child pat, push pat_fence_p(child) — FENCE(P) */
     SM_PAT_ABORT,
     SM_PAT_FAIL,
     SM_PAT_SUCCEED,

@@ -1408,8 +1408,37 @@ static bb_box_fn bb_build_binary_node(PATND_t *p)
         return bb_fail_emit_binary();
 
     /* ── M-DYN-B10: XFNCE — FENCE (succeed once; β cuts) ───────────────── */
-    case XFNCE:
-        return bb_fence_emit_binary();
+    case XFNCE: {
+        /* FENCE0 (no child): bare FENCE — seal only */
+        if (p->nchildren == 0) return bb_fence_emit_binary();
+        /* FENCE1 (one child): FENCE(P) — sequence child then seal.
+         * If P fails → whole match fails (ω). If P succeeds → seal (β cuts). */
+        bb_box_fn child_fn = bb_build_binary_node(p->children[0]);
+        if (!child_fn) return NULL;
+        bb_box_fn fence_fn = bb_fence_emit_binary();
+        if (!fence_fn) return NULL;
+        bin_seq_t *seq_zeta = calloc(1, sizeof(bin_seq_t));
+        if (!seq_zeta) return NULL;
+        seq_zeta->left.fn    = child_fn;
+        seq_zeta->left.state = NULL;
+        seq_zeta->right.fn   = fence_fn;
+        seq_zeta->right.state = NULL;
+#define FENCE1_TRAM_SIZE 64
+        bb_buf_t tbuf = bb_alloc(FENCE1_TRAM_SIZE);
+        if (!tbuf) { free(seq_zeta); return NULL; }
+        bb_emit_mode = EMIT_BINARY;
+        bb_emit_begin(tbuf, FENCE1_TRAM_SIZE);
+        bb_emit_byte(0x48); bb_emit_byte(0xBF);
+        bb_emit_u64((uint64_t)(uintptr_t)seq_zeta);
+        bb_emit_byte(0x48); bb_emit_byte(0xB8);
+        bb_emit_u64((uint64_t)(uintptr_t)bb_seq);
+        bb_emit_byte(0xFF); bb_emit_byte(0xE0);
+        int nb = bb_emit_end();
+        if (nb <= 0 || nb > FENCE1_TRAM_SIZE) { bb_free(tbuf, FENCE1_TRAM_SIZE); free(seq_zeta); return NULL; }
+        bb_seal(tbuf, (size_t)nb);
+#undef FENCE1_TRAM_SIZE
+        return (bb_box_fn)tbuf;
+    }
 
     /* ── M-DYN-B10: XATP — @var cursor-position capture ────────────────── */
     case XATP: {

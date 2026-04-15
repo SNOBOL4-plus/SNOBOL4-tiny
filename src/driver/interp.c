@@ -2440,7 +2440,13 @@ DESCR_t interp_eval(EXPR_t *e)
     case E_REM:     return pat_rem();
     case E_FAIL:    return pat_fail();
     case E_SUCCEED: return pat_succeed();
-    case E_FENCE:   return pat_fence();
+    case E_FENCE:
+        if (e->nchildren > 0) {
+            DESCR_t _inner = interp_eval_pat(e->children[0]);
+            if (IS_FAIL_fn(_inner)) return FAILDESCR;
+            return pat_fence_p(_inner);
+        }
+        return pat_fence();
     case E_ABORT:   return pat_abort();
     case E_BAL:     return pat_bal();
 
@@ -3079,6 +3085,16 @@ DESCR_t interp_eval_pat(EXPR_t *e)
             if (IS_NAMEPTR(r)) r = NAME_DEREF_PTR(r);
             return r;
         }
+
+    case E_FENCE:
+        /* FENCE(P) in pattern context — must be handled here so the child
+         * is evaluated in pat context, not value context (default path). */
+        if (e->nchildren > 0) {
+            DESCR_t _inner = interp_eval_pat(e->children[0]);
+            if (IS_FAIL_fn(_inner)) return FAILDESCR;
+            return pat_fence_p(_inner);
+        }
+        return pat_fence();
 
     default:
         return interp_eval(e);

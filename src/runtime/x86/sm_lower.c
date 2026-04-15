@@ -191,7 +191,14 @@ static void lower_pat_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
     case E_REM:      sm_emit(p, SM_PAT_REM);      return;
     case E_FAIL:     sm_emit(p, SM_PAT_FAIL);     return;
     case E_SUCCEED:  sm_emit(p, SM_PAT_SUCCEED);  return;
-    case E_FENCE:    sm_emit(p, SM_PAT_FENCE);    return;
+    case E_FENCE:
+        if (e->nchildren > 0) {
+            lower_pat_expr(p, lt, e->children[0]);
+            sm_emit(p, SM_PAT_FENCE1);
+        } else {
+            sm_emit(p, SM_PAT_FENCE);
+        }
+        return;
     case E_ABORT:    sm_emit(p, SM_PAT_ABORT);    return;
     case E_BAL:      sm_emit(p, SM_PAT_BAL);      return;
 

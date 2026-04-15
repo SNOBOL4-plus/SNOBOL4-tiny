@@ -174,6 +174,10 @@ DESCR_t pat_rem(void) {
 DESCR_t pat_fence_p(DESCR_t inner) {
     PATND_t *p = spat_new(XFNCE);
     PATND_t *ch = spat_of(inner);
+    if (!ch && inner.v == DT_S && inner.s) ch = spat_of(pat_lit(inner.s));
+    if (!ch && inner.v == DT_SNUL)         ch = spat_of(pat_lit(""));
+    if (!ch && inner.v == DT_I)            { char buf[32]; snprintf(buf,sizeof buf,"%lld",(long long)inner.i); ch = spat_of(pat_lit(buf)); }
+    if (!ch && inner.v == DT_R)            { char buf[64]; snprintf(buf,sizeof buf,"%.14g",inner.r); ch = spat_of(pat_lit(buf)); }
     PATND_t *arr[1] = { ch };
     patnd_set_children(p, arr, 1);
     return spat_val(p);
