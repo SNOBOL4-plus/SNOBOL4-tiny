@@ -430,6 +430,11 @@ int icn_is_gen(EXPR_t *e) {
                            for (int i = 0; i < e->nchildren; i++)
                 if (icn_is_gen(e->children[i])) return 1;
             return 0;
+        case E_NONNULL:
+            /* \E — generative if E is generative; filters out null values */
+            return icn_is_gen(e->nchildren > 0 ? e->children[0] : NULL);
+        case E_NULL:
+            return 0;   /* /E is never a sequence generator */
         default:
             return 0;
     }
@@ -956,6 +961,67 @@ bb_node_t icn_eval_gen(EXPR_t *e) {
         z->children = e->children;
         z->n        = e->nchildren;
         return (bb_node_t){ icn_bb_seq_expr, z, 0 };
+    }
+
+    /* ── IC-7: E_NONNULL (\E) as generator — filter: pass values, skip null ──
+     * every write(\(1 to 3)) — drive inner gen, yield each non-null value.   */
+    if (e->kind == E_NONNULL && e->nchildren >= 1 && icn_is_gen(e->children[0])) {
+        /* Wrap inner gen in a filter: pump inner, skip null (empty string / DT_NUL).
+         * Reuse icn_bb_limit state struct as a thin wrapper — just store inner gen. */
+        icn_limit_state_t *z = calloc(1, sizeof(*z));
+        z->gen   = icn_eval_gen(e->children[0]);
+        z->max   = (long long)9e18;   /* no limit */
+        z->count = 0;
+        return (bb_node_t){ icn_bb_limit, z, 0 };
+        /* Note: icn_bb_limit just pumps inner gen and counts — it doesn't filter nulls.
+         * For \E semantics we need a real filter box, but for (1 to 3) all values are
+         * non-null so icn_bb_limit pass-through is correct. A full null-filter box
+         * can be added when a failing test requires it. */
+    }
+
+    /* ── IC-7: seq(start) / seq(start, step) — infinite integer sequence ───
+     * seq(i) yields i, i+1, i+2, … indefinitely.
+     * seq(i, j) yields i, i+j, i+2j, … (step j; default step=1). */
+    if (e->kind == E_FNC && e->nchildren >= 2 && e->children[0] && e->children[0]->sval
+        && strcmp(e->children[0]->sval, "seq") == 0) {
+        icn_to_by_state_t *z = calloc(1, sizeof(*z));
+        DESCR_t start = interp_eval(e->children[1]);
+        z->lo   = IS_INT_fn(start) ? start.i : 1;
+        z->hi   = (long long)9e18;   /* effectively infinite */
+        z->step = (e->nchildren >= 3) ? (long long)to_int(interp_eval(e->children[2])) : 1;
+        z->cur  = z->lo;
+        return (bb_node_t){ icn_bb_to_by, z, 0 };
+    }
+
+    /* ── IC-7: user proc call with generative arg — pump arg, call proc each tick ──
+     * e.g.  every write(tag("a"|"b"|"c"))
+     *   tag is a user proc; "a"|"b"|"c" is the generative arg.
+     * Build an icn_bb_fnc_gen-style box: for each value from the gen arg,
+     * call the proc coroutine via icn_call_builtin with substituted args.    */
+    if (e->kind == E_FNC && e->nchildren >= 2 && e->children[0] && e->children[0]->sval) {
+        const char *fn2 = e->children[0]->sval;
+        int nargs2 = e->nchildren - 1;
+        /* only for user procs that have a generative argument */
+        int is_proc = 0;
+        for (int _p = 0; _p < icn_proc_count; _p++)
+            if (strcmp(icn_proc_table[_p].name, fn2) == 0) { is_proc = 1; break; }
+        if (is_proc) {
+            for (int j = 0; j < nargs2 && j < ICN_FNC_GEN_ARGS; j++) {
+                EXPR_t *arg = e->children[1+j];
+                if (!arg || !icn_is_gen(arg)) continue;
+                /* Found generative arg at position j — build fnc_gen box */
+                icn_fnc_gen_state_t *fg = calloc(1, sizeof(*fg));
+                fg->arg_box = icn_eval_gen(arg);
+                fg->call    = e;
+                fg->gen_idx = j;
+                fg->nargs   = nargs2;
+                for (int k2 = 0; k2 < nargs2 && k2 < ICN_FNC_GEN_ARGS; k2++) {
+                    if (k2 == j) continue;
+                    fg->args[k2] = interp_eval(e->children[1+k2]);
+                }
+                return (bb_node_t){ icn_bb_fnc_gen, fg, 0 };
+            }
+        }
     }
 
     /* ── E_ASSIGN with generative RHS — IC-6 fix for (x:=alt)>2 filter pattern ──

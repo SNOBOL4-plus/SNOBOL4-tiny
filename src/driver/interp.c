@@ -2159,6 +2159,85 @@ DESCR_t interp_eval(EXPR_t *e)
             /* ── IC-5: size *L for DT_DATA lists ──────────────────────────
              * E_SIZE is handled below; nothing to add in E_FNC.           */
 
+            /* ── IC-7: math builtins: abs, max, min, sqrt ──────────────── */
+            if (!strcmp(fn,"abs") && nargs == 1) {
+                DESCR_t av = interp_eval(e->children[1]);
+                if (IS_REAL_fn(av)) return REALVAL(fabs(av.r));
+                return INTVAL(av.i < 0 ? -av.i : av.i);
+            }
+            if (!strcmp(fn,"max") && nargs >= 2) {
+                DESCR_t best = interp_eval(e->children[1]);
+                for (int _j = 2; _j <= nargs; _j++) {
+                    DESCR_t cv = interp_eval(e->children[_j]);
+                    int gt = (IS_REAL_fn(best)||IS_REAL_fn(cv))
+                        ? ((IS_REAL_fn(best)?best.r:(double)best.i) < (IS_REAL_fn(cv)?cv.r:(double)cv.i))
+                        : (best.i < cv.i);
+                    if (gt) best = cv;
+                }
+                return best;
+            }
+            if (!strcmp(fn,"min") && nargs >= 2) {
+                DESCR_t best = interp_eval(e->children[1]);
+                for (int _j = 2; _j <= nargs; _j++) {
+                    DESCR_t cv = interp_eval(e->children[_j]);
+                    int lt = (IS_REAL_fn(best)||IS_REAL_fn(cv))
+                        ? ((IS_REAL_fn(best)?best.r:(double)best.i) > (IS_REAL_fn(cv)?cv.r:(double)cv.i))
+                        : (best.i > cv.i);
+                    if (lt) best = cv;
+                }
+                return best;
+            }
+            if (!strcmp(fn,"sqrt") && nargs == 1) {
+                DESCR_t av = interp_eval(e->children[1]);
+                double v = IS_REAL_fn(av) ? av.r : (double)av.i;
+                return REALVAL(sqrt(v));
+            }
+            /* seq(i) / seq(i,j) — generator: i, i+1, i+2, ... (up to j if given).
+             * Returns first value here; icn_eval_gen handles E_FNC "seq" as a box. */
+            if (!strcmp(fn,"seq") && nargs >= 1) {
+                DESCR_t start = interp_eval(e->children[1]);
+                return IS_INT_fn(start) ? start : INTVAL(1);
+            }
+
+            /* ── IC-7: sort(L) / sortf(L, n) ───────────────────────────── */
+            if ((!strcmp(fn,"sort") && nargs == 1) || (!strcmp(fn,"sortf") && nargs == 2)) {
+                DESCR_t ld = interp_eval(e->children[1]);
+                if (ld.v != DT_DATA) return FAILDESCR;
+                DESCR_t ea = FIELD_GET_fn(ld,"icn_elems");
+                int n = (int)FIELD_GET_fn(ld,"icn_size").i;
+                if (n <= 0) return ld;
+                DESCR_t *arr = (ea.v==DT_DATA) ? (DESCR_t*)ea.ptr : NULL;
+                if (!arr) return ld;
+                /* copy into new array for sort */
+                DESCR_t *sorted = GC_malloc(n * sizeof(DESCR_t));
+                memcpy(sorted, arr, n * sizeof(DESCR_t));
+                int field_idx = (!strcmp(fn,"sortf") && nargs == 2)
+                    ? (int)to_int(interp_eval(e->children[2])) - 1 : -1;
+                /* insertion sort — small lists only; correct semantics */
+                for (int _i = 1; _i < n; _i++) {
+                    DESCR_t key = sorted[_i]; int _j = _i - 1;
+                    while (_j >= 0) {
+                        DESCR_t a = sorted[_j], b = key;
+                        if (field_idx >= 0) {
+                            /* sortf: compare field field_idx of record via DATINST_t */
+                            if (a.v==DT_DATA && a.u) { DATINST_t *_ia=(DATINST_t*)a.u; if(_ia->type&&field_idx<_ia->type->nfields) a=_ia->fields[field_idx]; }
+                            if (b.v==DT_DATA && b.u) { DATINST_t *_ib=(DATINST_t*)b.u; if(_ib->type&&field_idx<_ib->type->nfields) b=_ib->fields[field_idx]; }
+                        }
+                        int cmp;
+                        if (IS_INT_fn(a) && IS_INT_fn(b)) cmp = (a.i > b.i) ? 1 : (a.i < b.i) ? -1 : 0;
+                        else { const char *sa=VARVAL_fn(a),*sb=VARVAL_fn(b); cmp=strcmp(sa?sa:"",sb?sb:""); }
+                        if (cmp <= 0) break;
+                        sorted[_j+1] = sorted[_j]; _j--;
+                    }
+                    sorted[_j+1] = key;
+                }
+                /* build new icnlist with sorted elements */
+                DESCR_t res = ld; /* same type tag */
+                FIELD_SET_fn(res,"icn_elems",(DESCR_t){.v=DT_DATA,.ptr=sorted});
+                FIELD_SET_fn(res,"icn_size",INTVAL(n));
+                return res;
+            }
+
             /* ── IC-5: record constructor — Icon puts name in children[0]->sval,
              * not in e->sval, so the shared E_FNC handler misses it.
              * Look up fn in sc_dat registry; if found, construct instance. */
@@ -3314,41 +3393,81 @@ DESCR_t interp_eval(EXPR_t *e)
     }
 
     case E_CASE: {
-        /* RK-18d: given/when smartmatch.
-         * Layout: child[0]=topic, then triples [cmpnode(E_ILIT), val, body].
-         * Default arm: cmpnode=E_NUL, val=E_NUL, body=default block. */
+        /* Two layouts:
+         *   Icon:  child[0]=topic, then pairs [val, body]..., optional trailing default_body
+         *   Raku:  child[0]=topic, then triples [cmpnode(E_ILIT|E_NUL), val, body]
+         * Detect by child[1]: if it's E_ILIT or E_NUL it's a Raku cmpnode (triples).
+         * Icon case values are always full expressions — never bare E_ILIT/E_NUL. */
         if (e->nchildren < 1) return NULVCL;
         DESCR_t topic = interp_eval(e->children[0]);
-        int i = 1;
-        while (i + 2 < e->nchildren) {
-            EXPR_t *cmpnode = e->children[i];
-            EXPR_t *val     = e->children[i+1];
-            EXPR_t *body    = e->children[i+2];
-            i += 3;
-            if (cmpnode->kind == E_NUL) { /* default arm */
-                return interp_eval(body);
-            }
-            EKind cmp = (EKind)(cmpnode->ival);
-            DESCR_t wval = interp_eval(val);
-            int match = 0;
-            if (cmp == E_LEQ) {
-                const char *ts = IS_STR_fn(topic) ? topic.s : VARVAL_fn(topic);
-                const char *ws = IS_STR_fn(wval)  ? wval.s  : VARVAL_fn(wval);
-                match = (ts && ws && strcmp(ts, ws) == 0);
-            } else {
-                if (IS_INT_fn(topic) && IS_INT_fn(wval)) match = (topic.i == wval.i);
-                else {
-                    const char *ts = VARVAL_fn(topic);
-                    const char *ws = VARVAL_fn(wval);
-                    match = (ts && ws && strcmp(ts, ws) == 0);
+        /* Detect layout by child count:
+         *   Raku triples: nchildren = 1 + 3*N  (topic + N×[cmpnode,val,body])  → (nchildren-1) % 3 == 0
+         *   Icon pairs:   nchildren = 1 + 2*N  or  1 + 2*N + 1 (with default)  → (nchildren-1) % 2 == 0 or 1
+         * Additionally verify child[1] is E_ILIT or E_NUL for Raku (cmpnode marker). */
+        int is_raku_layout = (e->nchildren >= 4 && (e->nchildren - 1) % 3 == 0 &&
+            e->children[1] && (e->children[1]->kind == E_ILIT || e->children[1]->kind == E_NUL));
+        if (is_raku_layout) {
+            /* Raku: triples [cmpnode(E_ILIT), val, body] */
+            int i = 1;
+            while (i + 2 < e->nchildren) {
+                EXPR_t *cmpnode = e->children[i];
+                EXPR_t *val     = e->children[i+1];
+                EXPR_t *body    = e->children[i+2];
+                i += 3;
+                if (cmpnode->kind == E_NUL) return interp_eval(body);
+                EKind cmp = (EKind)(cmpnode->ival);
+                DESCR_t wval = interp_eval(val);
+                int match = 0;
+                if (cmp == E_LEQ) {
+                    const char *ts = IS_STR_fn(topic)?topic.s:VARVAL_fn(topic);
+                    const char *ws = IS_STR_fn(wval)?wval.s:VARVAL_fn(wval);
+                    match = (ts && ws && strcmp(ts,ws)==0);
+                } else {
+                    if (IS_INT_fn(topic) && IS_INT_fn(wval)) match = (topic.i == wval.i);
+                    else { const char *ts=VARVAL_fn(topic),*ws=VARVAL_fn(wval); match=(ts&&ws&&strcmp(ts,ws)==0); }
                 }
+                if (match) return interp_eval(body);
+            }
+            if (i+1 < e->nchildren && e->children[i]->kind==E_NUL)
+                return interp_eval(e->children[i+1]);
+            return NULVCL;
+        }
+        /* Icon: pairs [val, body] then optional trailing default body */
+        int nc = e->nchildren;
+        int i = 1;
+        while (i + 1 < nc) {
+            DESCR_t wval = interp_eval(e->children[i]);
+            EXPR_t *body = e->children[i+1];
+            i += 2;
+            int match;
+            if (IS_INT_fn(topic) && IS_INT_fn(wval)) match = (topic.i == wval.i);
+            else {
+                const char *ts = VARVAL_fn(topic), *ws = VARVAL_fn(wval);
+                match = (ts && ws && strcmp(ts, ws) == 0);
             }
             if (match) return interp_eval(body);
         }
-        /* also handle 2-child default at end (E_NUL cmpnode missing — safety) */
-        if (i + 1 < e->nchildren && e->children[i]->kind == E_NUL)
-            return interp_eval(e->children[i+1]);
+        /* trailing default body (odd child count) */
+        if (i < nc) return interp_eval(e->children[i]);
         return NULVCL;
+    }
+
+    case E_NULL: {
+        /* /E — succeeds (yields &null) if E fails; fails if E succeeds */
+        if (e->nchildren < 1) return NULVCL;
+        DESCR_t v = interp_eval(e->children[0]);
+        return IS_FAIL_fn(v) ? NULVCL : FAILDESCR;
+    }
+
+    case E_NONNULL: {
+        /* \E — succeeds (yields E) if E succeeds and is non-null; fails otherwise */
+        if (e->nchildren < 1) return FAILDESCR;
+        DESCR_t v = interp_eval(e->children[0]);
+        if (IS_FAIL_fn(v)) return FAILDESCR;
+        /* null in Icon is the empty string / zero-length result of &null */
+        if (v.v == DT_S && (!v.s || v.s[0] == '\0')) return FAILDESCR;
+        if (v.v == DT_I && v.i == 0 && !(IS_INT_fn(v))) return FAILDESCR;
+        return v;
     }
 
     case E_AUGOP: {
