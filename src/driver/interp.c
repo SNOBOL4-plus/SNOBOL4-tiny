@@ -2097,8 +2097,13 @@ DESCR_t interp_eval(EXPR_t *e)
 
     case E_KEYWORD: {
         if (!e->sval || !*e->sval) return NULVCL;
-        /* Keywords stored without & prefix in NV store */
-        return NV_GET_fn(e->sval);
+        /* Keywords are case-insensitive; NV stores them uppercase (e.g. "LCASE","UCASE").
+         * Lexer strips '&' and preserves original case — uppercase before lookup. */
+        char uc[64]; int _ki;
+        for (_ki = 0; e->sval[_ki] && _ki < 63; _ki++)
+            uc[_ki] = toupper((unsigned char)e->sval[_ki]);
+        uc[_ki] = '\0';
+        return NV_GET_fn(uc);
     }
 
     case E_INTERROGATE: {
