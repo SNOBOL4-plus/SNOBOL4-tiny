@@ -1,24 +1,26 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # scripts/test_icon_ir_all_rungs.sh — Icon --ir-run rung ladder runner
 # Self-contained. Run from anywhere with no env vars.
-# Usage: bash scripts/test_icon_ir_all_rungs.sh [--rung RUNG]
+# Usage: bash scripts/test_icon_ir_all_rungs.sh [--rung RUNG] [--scrip PATH] [--corpus PATH]
 #
-# Runs rung01–rung29 (or a specific rung) of the Icon corpus against
-# scrip --ir-run and reports PASS/FAIL vs .expected files.
+# Runs rung01–rung36 (or a specific rung) of the Icon corpus against
+# scrip --ir-run and reports PASS/FAIL/XFAIL vs .expected files.
+# Files with a matching .xfail marker are skipped as known-unimplemented (XFAIL).
+# rung36 uses timeout 30s (large JCON programs); all others use 8s.
 #
 # Authors: LCherryholmes · Claude Sonnet 4.6
 
 set -euo pipefail
 
-HERE="$(cd "$(dirname "$0")" && pwd)"
-SCRIP="${SCRIP:-$HERE/scrip}"
-CORPUS="/home/claude/corpus/programs/icon"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIP="${SCRIP:-$HERE/../scrip}"
+CORPUS="${CORPUS:-/home/claude/corpus/programs/icon}"
 RUNG=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --rung)   RUNG="$2"; shift 2 ;;
-        --scrip)  SCRIP="$2"; shift 2 ;;
+        --rung)   RUNG="$2";   shift 2 ;;
+        --scrip)  SCRIP="$2";  shift 2 ;;
         --corpus) CORPUS="$2"; shift 2 ;;
         *) echo "Usage: $0 [--rung RUNG] [--scrip PATH] [--corpus PATH]"; exit 1 ;;
     esac
@@ -34,19 +36,28 @@ if [ ! -d "$CORPUS" ]; then
     exit 0
 fi
 
-PASS=0; FAIL=0
+PASS=0; FAIL=0; XFAIL=0
 
 run_one() {
     local icn="$1"
+    local tmo="${2:-8}"
     local exp="${icn%.icn}.expected"
     [ -f "$exp" ] || return 0
-    local got want name stdin_file
+    local base="${icn%.icn}"
+    local name
     name=$(basename "$icn" .icn)
-    stdin_file="${icn%.icn}.stdin"
+    # xfail: known-unimplemented — count but don't fail
+    if [ -f "${base}.xfail" ]; then
+        echo "XFAIL $name"
+        XFAIL=$((XFAIL+1))
+        return 0
+    fi
+    local stdin_file="${base}.stdin"
+    local got want
     if [ -f "$stdin_file" ]; then
-        got=$(timeout 8 "$SCRIP" --ir-run "$icn" < "$stdin_file" 2>/dev/null) || true
+        got=$(timeout "$tmo" "$SCRIP" --ir-run "$icn" < "$stdin_file" 2>/dev/null) || true
     else
-        got=$(timeout 8 "$SCRIP" --ir-run "$icn" < /dev/null 2>/dev/null) || true
+        got=$(timeout "$tmo" "$SCRIP" --ir-run "$icn" < /dev/null     2>/dev/null) || true
     fi
     want=$(cat "$exp")
     if [ "$got" = "$want" ]; then
@@ -67,14 +78,20 @@ if [ -n "$RUNG" ]; then
         run_one "$icn"
     done
 else
-    # Run rung01–rung29
+    # rung01–rung35: 8s timeout each
     for icn in "$CORPUS"/rung0[1-9]_*.icn \
                "$CORPUS"/rung1[0-9]_*.icn \
-               "$CORPUS"/rung2[0-9]_*.icn; do
+               "$CORPUS"/rung2[0-9]_*.icn \
+               "$CORPUS"/rung3[0-5]_*.icn; do
         [ -f "$icn" ] || continue
-        run_one "$icn"
+        run_one "$icn" 8
+    done
+    # rung36 JCON suite: 30s timeout (larger programs)
+    for icn in "$CORPUS"/rung36_*.icn; do
+        [ -f "$icn" ] || continue
+        run_one "$icn" 30
     done
 fi
 
-echo "--- Icon --ir-run: PASS=$PASS FAIL=$FAIL TOTAL=$((PASS+FAIL)) ---"
+echo "--- Icon --ir-run: PASS=$PASS FAIL=$FAIL XFAIL=$XFAIL TOTAL=$((PASS+FAIL+XFAIL)) ---"
 [ "$FAIL" -eq 0 ]

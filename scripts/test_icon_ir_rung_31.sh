@@ -1,22 +1,45 @@
-#!/bin/bash
-# run_rung31.sh — rung31_sort corpus runner (M-IJ-SORT)
-cd "$(dirname "$0")/../../.."
+#!/usr/bin/env bash
+# test_icon_ir_rung_31.sh — rung31: sort / sortf — IC-7
+# Gate: PASS=5 FAIL=0 XFAIL=0
+# Authors: LCherryholmes · Claude Sonnet 4.6   DATE: 2026-04-16
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIP="${SCRIP:-$HERE/../scrip}"
+CORPUS="${CORPUS:-/home/claude/corpus/programs/icon}"
 PASS=0; FAIL=0; XFAIL=0
-SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
-RUNG_DIR="${CORPUS_REPO:-$(cd "$SCRIPT_DIR/../../.." && pwd)/corpus}/programs/icon"
-for icn in "$RUNG_DIR"/rung31_sort_*.icn; do
-  base="${icn%.icn}"; exp="$base.expected"; [ -f "$exp" ] || continue
-  [ -f "$base.xfail" ] && { XFAIL=$((XFAIL+1)); echo "XFAIL: $(basename $icn)"; continue; }
-  ${1:-/tmp/scrip-cc} -jvm "$icn" -o /tmp/t31.j 2>/dev/null
-  # compile main class
-  timeout 30 java -jar src/backend/jasmin.jar /tmp/t31.j -d /tmp/ 2>/dev/null
-  # compile any record inner classes
-  for rj in /tmp/*\$*.j; do [ -f "$rj" ] && timeout 30 java -jar src/backend/jasmin.jar "$rj" -d /tmp/ 2>/dev/null; done
-  cls=$(grep -m1 '\.class' /tmp/t31.j | awk '{print $NF}')
-  got=$(timeout 5 java -cp /tmp/ "$cls" 2>/dev/null)
-  want=$(cat "$exp")
-  if [ "$got" = "$want" ]; then PASS=$((PASS+1)); echo "PASS: $(basename $icn)"
-  else FAIL=$((FAIL+1)); echo "FAIL: $(basename $icn)"; echo "  want: $(echo "$want"|tr '\n' '|')"; echo "  got:  $(echo "$got"|tr '\n' '|')"; fi
-done
-echo "--- rung31: $PASS pass, $FAIL fail, $XFAIL xfail ---"
-[ $FAIL -eq 0 ]
+
+if [ ! -x "$SCRIP" ];  then echo "SKIP scrip not found at $SCRIP";  exit 0; fi
+if [ ! -d "$CORPUS" ]; then echo "SKIP corpus not found at $CORPUS"; exit 0; fi
+
+run() {
+    local base="$CORPUS/$1"
+    [ -f "${base}.xfail" ] && { echo "  XFAIL $1"; XFAIL=$((XFAIL+1)); return; }
+    [ -f "${base}.expected" ] || { echo "  SKIP  $1 (no .expected)"; return; }
+    local stdin_f="${base}.stdin"
+    local got want
+    if [ -f "$stdin_f" ]; then
+        got=$(timeout 8 "$SCRIP" --ir-run "${base}.icn" < "$stdin_f"  2>/dev/null) || true
+    else
+        got=$(timeout 8 "$SCRIP" --ir-run "${base}.icn" < /dev/null   2>/dev/null) || true
+    fi
+    want=$(cat "${base}.expected")
+    if [ "$got" = "$want" ]; then
+        echo "  PASS $1"; PASS=$((PASS+1))
+    else
+        echo "  FAIL $1"
+        echo "    want: $(echo "$want" | tr '\n' '|')"
+        echo "    got:  $(echo "$got"  | tr '\n' '|')"
+        FAIL=$((FAIL+1))
+    fi
+}
+
+echo "=== rung31: sort / sortf ==="
+run rung31_sort_sort_already_sorted
+run rung31_sort_sort_basic
+run rung31_sort_sort_every
+run rung31_sort_sortf_field1
+run rung31_sort_sortf_field2
+
+echo ""
+echo "PASS=$PASS FAIL=$FAIL XFAIL=$XFAIL"
+[ "$FAIL" -eq 0 ]
