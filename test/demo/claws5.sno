@@ -1,0 +1,116 @@
+*------------------------------------------------------------------------------
+* claws5.sno — CLAWS5 POS-tagged corpus tokenizer
+* ENG 685, Lon Cherryholmes Sr.
+* Run: sbl -b claws5.sno   (CLAWS5inTASA.dat must be in working directory)
+*
+* Faithful SNOBOL4 port of assignment3.py (claws_info pattern).
+* Function names match Python lambda semantics:
+*   init()      λ("mem = dict()")
+*   new_sent()  λ("num=int(num)") + λ("mem[num]=dict()")
+*   add_tok()   λ("if wrd not in mem[num][wrd]: ...") + λ("mem[num][wrd][tag]+=1")
+*
+* Each is a single NRETURN function; called as  epsilon . *fn()  in the pattern.
+*------------------------------------------------------------------------------
+               &TRIM           =  1
+               &ANCHOR         =  0
+               &FULLSCAN       =  1
+               &ALPHABET       POS(10) LEN(1) . nl
+               DIGITS          =  '0123456789'
+               UCASE           =  'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+*------------------------------------------------------------------------------
+*  init() — λ("mem = dict()")
+*------------------------------------------------------------------------------
+               DEFINE('init()')                             :(init_end)
+init           mem             =  TABLE()
+               sentno          =  0
+               init            =  .dummy                    :(NRETURN)
+init_end
+*------------------------------------------------------------------------------
+*  new_sent() — λ("num=int(num)") + λ("mem[num]=dict()")
+*  Reads global: num (captured by SPAN(DIGITS) . num just before)
+*------------------------------------------------------------------------------
+               DEFINE('new_sent()')                         :(new_sent_end)
+new_sent       sentno          =  +num
+               mem[sentno]     =  TABLE()
+               new_sent        =  .dummy                    :(NRETURN)
+new_sent_end
+*------------------------------------------------------------------------------
+*  add_tok() — λ("if wrd not in mem[num]:      mem[num][wrd]=dict()")
+*            + λ("if tag not in mem[num][wrd]: mem[num][wrd][tag]=0")
+*            + λ("mem[num][wrd][tag] += 1")
+*  Reads globals: sentno, wrd, tag
+*------------------------------------------------------------------------------
+               DEFINE('add_tok()')                          :(add_tok_end)
+add_tok        DIFFER(mem[sentno][wrd])                     :F(new_wrd)
+               DIFFER(mem[sentno][wrd][tag])                :F(new_tag)
+               mem[sentno][wrd][tag]  =  mem[sentno][wrd][tag] + 1  :(done)
+new_wrd        mem[sentno][wrd]       =  TABLE()
+new_tag        mem[sentno][wrd][tag]  =  1
+done           add_tok         =  .dummy                    :(NRETURN)
+add_tok_end
+*------------------------------------------------------------------------------
+*  claws_pat — direct port of Python claws_info pattern:
+*    POS(0)
+*    + λ("mem=dict()")
+*    + ARBNO(
+*        ( SPAN(DIGITS)%"num" + σ('_CRD :_PUN') + λ("num=int(num)") + λ("mem[num]=dict()")
+*        | (NOTANY("_")+BREAK("_"))%"wrd" + σ('_')
+*          + (ANY(UCASE)+SPAN(DIGITS+UCASE))%"tag"
+*          + λ("mem[num][wrd][tag]+=1")
+*        ) + σ(' ')
+*      )
+*    + RPOS(0)
+*------------------------------------------------------------------------------
+               claws_pat       =
++              POS(0)
++              (epsilon . *init())
++              ARBNO(
++                ( (SPAN(DIGITS) . num) '_CRD :_PUN'
++                  (epsilon . *new_sent())
++                | (NOTANY('_') BREAK('_')) . wrd
++                  '_'
++                  (ANY(UCASE) SPAN(DIGITS UCASE)) . tag
++                  (epsilon . *add_tok())
++                )
++                ' '
++              )
++              RPOS(0)
+*------------------------------------------------------------------------------
+               DEFINE('pp_mem()sk,wk,tk,si,wi,ti')          :(pp_mem_end)
+pp_mem         OUTPUT          =  '{'
+               sk              =  SORT(mem)
+               si              =  0
+pp_s           si              =  si + 1
+               sk[si,1]                                     :F(pp_s_done)
+               si              GT(si, 1) OUTPUT = '   },'
+               OUTPUT          =  '   ' sk[si,1] ': {'
+               wk              =  SORT(mem[sk[si,1]])
+               wi              =  0
+pp_w           wi              =  wi + 1
+               wk[wi,1]                                     :F(pp_w_done)
+               wi              GT(wi, 1) OUTPUT = '      },'
+               OUTPUT          =  '      ' wk[wi,1] ': {'
+               tk              =  SORT(mem[sk[si,1]][wk[wi,1]])
+               ti              =  0
+pp_t           ti              =  ti + 1
+               tk[ti,1]                                     :F(pp_t_done)
+               OUTPUT          =  '         '
++                                 tk[ti,1] ': '
++                                 mem[sk[si,1]][wk[wi,1]][tk[ti,1]]
++                                 ','                        :(pp_t)
+pp_t_done      OUTPUT          =  '      }'                 :(pp_w)
+pp_w_done      OUTPUT          =  '   }'                    :(pp_s)
+pp_s_done      OUTPUT          =  '}'
+               pp_mem          =  .dummy                    :(RETURN)
+pp_mem_end
+*------------------------------------------------------------------------------
+               INPUT(.rdch, 8, 'CLAWS5inTASA.dat')          :F(main_err)
+slurp          line            =  rdch                      :F(slurp_done)
+               src             =  src line ' '              :(slurp)
+slurp_done     ENDFILE(8)
+               src             ?  claws_pat                 :F(main_fail)
+               pp_mem()                                     :(END)
+main_fail      OUTPUT          =  'Pattern match failed'    :(END)
+main_err       OUTPUT          =  'Could not read CLAWS5inTASA.dat'
+*------------------------------------------------------------------------------
+END

@@ -1,145 +1,190 @@
-// treebank.sc — Penn Treebank S-expression parser (Snocone port)
+// treebank.sc — Penn Treebank s-expression parser (Snocone port)
 // ENG 685, Lon Cherryholmes Sr.
+// Run: scrip --ir-run treebank.sc < VBGinTASA.dat
 //
-// Structured like beauty.sno: -INCLUDE libraries, statement-level main loop.
-
+// Faithful Snocone port of treebank.sno / assignment3.py (treebank pattern).
+// Function names match Python exactly:
+//   init_list(v)  push_list(v)  push_item(v)  pop_list()  pop_final(v)
+//
+// Each is a single nreturn procedure usable two ways:
+//   (word . tag) . *push_list(tag)    — capture then push at match time
+//   (epsilon . *push_list('BANK'))    — zero-width hook with literal
 
 &TRIM     = 1;
 &ANCHOR   = 0;
 &FULLSCAN = 1;
-nl        = CHAR(10);
-spc       = ' ';
-spcnl     = spc && nl;
+&ALPHABET POS(10) LEN(1) . nl;
 
-struct cell { hd, tl }
-stk = '';
+//--- Linked list DATA type --------------------------------------------------
 
-//--- Side-effect procedures -------------------------------------------------
+DATA('list(head,tail)');
 
-procedure do_push_list(v) {
-    stk = cell(cell(v, ''), stk);
-    do_push_list = .dummy;
-    nreturn;
-}
+//--- list_reverse(lst) -------------------------------------------------------
 
-procedure do_push_item(v) {
-    hd(stk) = cell(v, hd(stk));
-    do_push_item = .dummy;
-    nreturn;
-}
-
-procedure do_pop_list(  p, n, i, a) {
-    p = hd(stk);
-    n = 0;
-    while (DIFFER(p)) { n = n + 1; p = tl(p); }
-    a = ARRAY('1:' && n);
-    p = hd(stk);
-    i = n + 1;
-    while (GT(i, 1)) {
-        i = i - 1;
-        a[i] = hd(p);
-        p = tl(p);
-    }
-    stk = tl(stk);
-    hd(stk) = cell(a, hd(stk));
-    do_pop_list = .dummy;
-    nreturn;
-}
-
-procedure do_pop_final(v,   p, n, i, a) {
-    p = hd(stk);
-    n = 0;
-    while (DIFFER(p)) { n = n + 1; p = tl(p); }
-    a = ARRAY('1:' && n);
-    p = hd(stk);
-    i = n + 1;
-    while (GT(i, 1)) {
-        i = i - 1;
-        a[i] = hd(p);
-        p = tl(p);
-    }
-    stk = tl(stk);
-    $v = a;
-    do_pop_final = .dummy;
-    nreturn;
-}
-
-//--- group() — recursive descent parser ------------------------------------
-
-procedure group(  tag, wrd) {
-    if (~(buf ? (POS(0) && '(' && ''))) { freturn; }
-    if (~(buf ? (POS(0) && BREAK(spcnl && '()') . tag && ''))) { freturn; }
-    dummy = do_push_list(tag);
-    group_loop:
-    if (~(buf ? (POS(0) && SPAN(spcnl) && ''))) { goto group_close; }
-    if (buf ? (POS(0) && '(')) { goto group_rec; }
-    if (~(buf ? (POS(0) && BREAK(spcnl && '()') . wrd && ''))) { goto group_close; }
-    dummy = do_push_item(wrd);
-    goto group_loop;
-    group_rec:
-    if (group()) { goto group_loop; } else { freturn; }
-    group_close:
-    if (~(buf ? (POS(0) && ')' && ''))) { freturn; }
-    dummy = do_pop_list();
-    group = '';
+procedure list_reverse(lst,   acc, cur) {
+    acc = '';
+    cur = lst;
+    lr1:
+    if (~DIFFER(cur)) { goto lr_done; }
+    acc = list(head(cur), acc);
+    cur = tail(cur);
+    goto lr1;
+    lr_done:
+    list_reverse = acc;
     return;
 }
 
-//--- print_node — recursive tree printer -----------------------------------
+//--- Stack primitives --------------------------------------------------------
 
-procedure print_node(a, depth,   i, ch, dta) {
-    dta = DATATYPE(a);
-    if (IDENT(REPLACE(dta, &LCASE, &UCASE), 'STRING')) {
-        OUTPUT = DUPL('  ', depth) && a;
+procedure stk_push_frame(v) {
+    stk            = list(list(v, ''), stk);
+    stk_push_frame = .dummy;
+    return;
+}
+
+procedure stk_push_item(v) {
+    head(stk)      = list(v, head(stk));
+    stk_push_item  = .dummy;
+    return;
+}
+
+procedure stk_pop_into_parent(  child) {
+    child           = list_reverse(head(stk));
+    stk             = tail(stk);
+    head(stk)       = list(child, head(stk));
+    stk_pop_into_parent = .dummy;
+    return;
+}
+
+procedure stk_pop_final(var) {
+    $var           = list_reverse(head(stk));
+    stk            = tail(stk);
+    stk_pop_final  = .dummy;
+    return;
+}
+
+//--- init_list(v) — λ(f"{v}=None") + λ("stack=[]") -------------------------
+
+procedure init_list(v) {
+    $v         = '';
+    stk        = '';
+    init_list  = .dummy;
+    nreturn;
+}
+
+//--- push_list(v) — λ("stack.append(list())") + λ("stack[-1].append(v)") ---
+//    Called as: (word . tag) . *push_list(tag)  or  epsilon . *push_list('BANK')
+
+procedure push_list(v) {
+    dummy     = stk_push_frame(v);
+    push_list = .dummy;
+    nreturn;
+}
+
+//--- push_item(v) — λ("stack[-1].append(v)") --------------------------------
+//    Called as: (word . wrd) . *push_item(wrd)
+
+procedure push_item(v) {
+    dummy     = stk_push_item(v);
+    push_item = .dummy;
+    nreturn;
+}
+
+//--- pop_list() — λ("stack[-2].append(tuple(stack.pop()))") -----------------
+
+procedure pop_list() {
+    dummy    = stk_pop_into_parent();
+    pop_list = .dummy;
+    nreturn;
+}
+
+//--- pop_final(v) — λ(f"{v}=tuple(stack.pop())") ----------------------------
+
+procedure pop_final(v) {
+    dummy     = stk_pop_final(v);
+    pop_final = .dummy;
+    nreturn;
+}
+
+//--- Sub-patterns ------------------------------------------------------------
+
+delim  = SPAN(' ' && nl);
+word   = NOTANY('( )' && nl) && BREAK('( )' && nl);
+
+//--- group — direct port of Python:
+//    σ('(') + word%"tag" + push_list(tag)
+//    + ARBNO(delim + (ζ(λ:group) | word%"wrd" + push_item(wrd)))
+//    + pop_list() + σ(')')
+
+group =
+    '('
+    && (word . tag) . *push_list(tag)
+    && ARBNO(
+        *delim
+        && ( *group
+           | (word . wrd) . *push_item(wrd)
+           )
+    )
+    && (epsilon . *pop_list())
+    && ')';
+
+//--- treebank — direct port of Python:
+//    POS(0) + init_list("bank") + push_list("'BANK'")
+//    + ARBNO(push_list("'ROOT'") + ARBNO(group) + pop_list() + delim)
+//    + pop_final("bank") + RPOS(0)
+
+treebank =
+    POS(0)
+    && (epsilon . *init_list('bank'))
+    && (epsilon . *push_list('BANK'))
+    && ARBNO(
+        (epsilon . *push_list('ROOT'))
+        && ARBNO(*group)
+        && *delim
+        && (epsilon . *pop_list())
+    )
+    && (epsilon . *pop_final('bank'))
+    && RPOS(0);
+
+//--- pp_node: recursive pretty-printer --------------------------------------
+
+procedure pp_node(node, indent,   child, nxt, pad) {
+    pad = DUPL(' ', indent);
+    if (IDENT(REPLACE(DATATYPE(node), &LCASE, &UCASE), 'STRING')) {
+        OUTPUT = pad && node;
         return;
     }
-    OUTPUT = DUPL('  ', depth) && '(' && a[1];
-    i = 1;
-    while (1) {
-        i = i + 1;
-        ch = a[i];
-        if (~DIFFER(ch)) { break; }
-        dummy = print_node(ch, depth + 1);
-    }
-    OUTPUT = DUPL('  ', depth) && ')';
+    OUTPUT = pad && '(' && head(node);
+    child  = tail(node);
+    pp_ch:
+    if (~DIFFER(child)) { goto pp_close; }
+    nxt   = tail(child);
+    dummy = pp_node(head(child), indent + 3);
+    child = nxt;
+    goto pp_ch;
+    pp_close:
+    OUTPUT = pad && ')';
     return;
 }
 
-//--- word pattern -----------------------------------------------------------
-
-wbrks = '( )' && nl;
-word  = NOTANY(wbrks) && BREAK(wbrks);
-
-//--- Main -------------------------------------------------------------------
-
-buf = '';
-while (DIFFER(line = INPUT)) {
-    buf = buf && spc && line;
+procedure pp_bank() {
+    dummy   = pp_node(bank, 0);
+    pp_bank = .dummy;
+    return;
 }
 
-buf   = buf && spc;
-dummy = do_push_list('BANK');
+//--- Main: slurp stdin, match, print ----------------------------------------
 
-sentloop:
-buf ? (POS(0) && SPAN(spcnl) && '');
-if (~(buf ? (POS(0) && '('))) { goto parse_done; }
-dummy = do_push_list('ROOT');
-if (~group()) { goto parse_err; }
-dummy = do_pop_list();
-goto sentloop;
-
-parse_done:
-dummy = do_pop_final('bank');
-dta   = REPLACE(DATATYPE(bank), &LCASE, &UCASE);
-if (~IDENT(dta, 'ARRAY')) { goto END; }
-i = 1;
-print_lp:
-i = i + 1;
-r = bank[i];
-if (~DIFFER(r)) { goto END; }
-dummy = print_node(r, 0);
-goto print_lp;
-
-parse_err:
-OUTPUT = '*** parse error near: ' && SUBSTR(buf, 1, 40);
+src = '';
+slurp:
+line = INPUT;
+if (~DIFFER(line)) { goto slurp_done; }
+src = src && line && nl;
+goto slurp;
+slurp_done:
+if (src ? treebank) { goto matched; }
+OUTPUT = 'Pattern match failed';
+goto END;
+matched:
+dummy = pp_bank();
 END:
