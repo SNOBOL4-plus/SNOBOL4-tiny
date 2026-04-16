@@ -1325,6 +1325,21 @@ DESCR_t interp_eval(EXPR_t *e)
                 }
                 return INTVAL(0);
             }
+            if (!strcmp(fn,"raku_named_capture") && nargs == 1) {
+                /* RK-35: $<n> named capture from last ~~ match */
+                DESCR_t nd = interp_eval(e->children[1]);
+                const char *name = VARVAL_fn(nd); if (!name) name = "";
+                if (!g_raku_match.matched) return STRVAL(GC_strdup(""));
+                int g = -1;
+                for (int i=0;i<g_raku_match.ngroups;i++)
+                    if (strcmp(g_raku_match.group_name[i],name)==0){g=i;break;}
+                if (g<0||g_raku_match.group_start[g]<0) return STRVAL(GC_strdup(""));
+                int gs=g_raku_match.group_start[g], ge=g_raku_match.group_end[g];
+                if (ge<gs) return STRVAL(GC_strdup(""));
+                int len=ge-gs; char *out=GC_malloc(len+1);
+                memcpy(out,g_raku_subject+gs,(size_t)len); out[len]='\0';
+                return STRVAL(out);
+            }
             if (!strcmp(fn,"raku_capture") && nargs == 1) {
                 /* RK-34: $N positional capture from last ~~ match */
                 DESCR_t nd = interp_eval(e->children[1]);

@@ -44,6 +44,7 @@ struct Raku_nfa {
     int        start;
     int        accept;
     int        ngroups;  /* number of capture groups */
+    char       group_name[MAX_GROUPS][64]; /* "" = positional */
 };
 
 static int nfa_alloc(Raku_nfa *nfa) {
@@ -178,6 +179,41 @@ static int parse_atom(Re_parser *p, int *out_start, int *out_accept) {
         if (gidx + 1 > p->nfa->ngroups) p->nfa->ngroups = gidx + 1;
         return 1;
     }
+    /* <name>(...) named capture group */
+    if (c == '<') {
+        consume(p);
+        char capname[64]; int nlen=0;
+        while (!at_end(p) && (isalpha((unsigned char)peek(p)) ||
+               (nlen>0 && (isalnum((unsigned char)peek(p))||peek(p)=='_'))))
+            capname[nlen++]=consume(p);
+        capname[nlen]='\0';
+        if (nlen==0||peek(p)!='>') { re_err(p,"bad named capture <n>"); return 0; }
+        consume(p); /* eat > */
+        if (peek(p)!='(') { re_err(p,"<n> must be followed by (...)"); return 0; }
+        consume(p); /* eat ( */
+        int gidx=p->group_counter++;
+        if (gidx>=MAX_GROUPS) { re_err(p,"too many groups"); return 0; }
+        snprintf(p->nfa->group_name[gidx],64,"%s",capname);
+        int cap_open=nfa_alloc(p->nfa);
+        p->nfa->states[cap_open].kind=NK_CAP_OPEN;
+        p->nfa->states[cap_open].cap_idx=gidx;
+        p->nfa->states[cap_open].out1=NFA_NULL;
+        p->nfa->states[cap_open].out2=NFA_NULL;
+        int inner_start,inner_acc;
+        if (!parse_alt(p,&inner_start,&inner_acc)) return 0;
+        if (peek(p)!=')') { re_err(p,"missing ) in <n>(...)"); return 0; }
+        consume(p);
+        int cap_close=nfa_alloc(p->nfa);
+        p->nfa->states[cap_close].kind=NK_CAP_CLOSE;
+        p->nfa->states[cap_close].cap_idx=gidx;
+        p->nfa->states[cap_close].out1=NFA_NULL;
+        p->nfa->states[cap_close].out2=NFA_NULL;
+        p->nfa->states[cap_open].out1=inner_start;
+        p->nfa->states[inner_acc].out1=cap_close;
+        *out_start=cap_open; *out_accept=cap_close;
+        if (gidx+1>p->nfa->ngroups) p->nfa->ngroups=gidx+1;
+        return 1;
+    }
     if (c == '[') { consume(p); int id=parse_charclass(p); if(!p->ok)return 0;
                     *out_start=*out_accept=id; return 1; }
     if (c == '^') { consume(p); int id=nfa_state(p->nfa,NK_ANCHOR_BOL,NFA_NULL,NFA_NULL);
@@ -284,6 +320,7 @@ static int parse_alt(Re_parser *p, int *out_start, int *out_accept) {
 Raku_nfa *raku_nfa_build(const char *pattern) {
     Raku_nfa *nfa = malloc(sizeof *nfa);
     nfa->cap=NFA_INIT_CAP; nfa->n=0; nfa->ngroups=0;
+    memset(nfa->group_name,0,sizeof nfa->group_name);
     nfa->states=malloc((size_t)nfa->cap*sizeof(Nfa_state));
     nfa->start=NFA_NULL; nfa->accept=NFA_NULL;
 
@@ -305,6 +342,12 @@ Raku_nfa *raku_nfa_build(const char *pattern) {
 int        raku_nfa_state_count(const Raku_nfa *nfa) { return nfa?nfa->n:0; }
 int        raku_nfa_ngroups(const Raku_nfa *nfa)      { return nfa?nfa->ngroups:0; }
 Nfa_state *raku_nfa_states(Raku_nfa *nfa)             { return nfa?nfa->states:NULL; }
+int        raku_nfa_group_by_name(const Raku_nfa *nfa, const char *name) {
+    if (!nfa||!name||!*name) return -1;
+    for (int i=0;i<nfa->ngroups;i++)
+        if (strcmp(nfa->group_name[i],name)==0) return i;
+    return -1;
+}
 
 void raku_nfa_free(Raku_nfa *nfa) { if(!nfa)return; free(nfa->states); free(nfa); }
 
@@ -433,6 +476,7 @@ void raku_nfa_exec(const Raku_nfa *nfa, const char *subject, Raku_match *result)
             for (int g=0;g<nfa->ngroups;g++) {
                 result->group_start[g] = best_snap.gs[g];
                 result->group_end[g]   = best_snap.ge[g];
+                memcpy(result->group_name[g], nfa->group_name[g], 64);
             }
             return;
         }
