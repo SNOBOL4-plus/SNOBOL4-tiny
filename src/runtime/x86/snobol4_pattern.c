@@ -438,7 +438,7 @@ DESCR_t subscript_get(DESCR_t arr, DESCR_t idx) {
             /* IC-5: return table default value if not &null */
             if (arr.tbl->dflt.v != DT_FAIL && arr.tbl->dflt.v != 0)
                 return arr.tbl->dflt;
-            return FAILDESCR;
+            return NULVCL;   /* unset slot → null string (SNOBOL4 semantics) */
         }
         return table_get(arr.tbl, ks);
     }
