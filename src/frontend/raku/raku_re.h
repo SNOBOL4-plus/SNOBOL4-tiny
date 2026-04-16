@@ -26,6 +26,9 @@ typedef enum {
     NK_ANCHOR_EOL,  /* $ zero-width */
     NK_CAP_OPEN,    /* ( or <name> — record group start */
     NK_CAP_CLOSE,   /* ) or end of <name> — record group end */
+    NK_CODE_ASSERT,    /* { code } -- side-effect, always succeeds */
+    NK_CODE_PRED,      /* <{ }> / <?{ }> / <!{ }> -- predicate */
+    NK_SUB_CALL,       /* <&sub> -- call named sub as rule */
     NK_ACCEPT
 } Nfa_kind;
 
@@ -43,7 +46,9 @@ typedef struct {
     int       out1;
     int       out2;
     int       cap_idx;    /* NK_CAP_OPEN/CLOSE: group index */
-    int       bb_id;      /* reserved for Phase-3 BB lifter */
+    char     *code_str;  /* NK_CODE_*: assertion code or sub name */
+    int       pred_neg;  /* NK_CODE_PRED: 1=negative <!{ }> */
+    int       bb_id;     /* reserved for Phase-3 BB lifter */
 } Nfa_state;
 
 /*------------------------------------------------------------------------
@@ -76,3 +81,14 @@ Nfa_state *raku_nfa_states(Raku_nfa *nfa);
 int        raku_nfa_group_by_name(const Raku_nfa *nfa, const char *name);
 
 #endif /* RAKU_RE_H */
+
+/*------------------------------------------------------------------------
+ * Code assertion callback — installed by interp.c into Raku_nfa before exec
+ * Returns: 1 = assertion passes, 0 = assertion fails (kills NFA branch)
+ * For NK_CODE_ASSERT (side-effect only): return value ignored.
+ *----------------------------------------------------------------------*/
+typedef int (*Raku_code_fn)(const char *code, int pos, const char *subject,
+                            void *userdata);
+
+void raku_nfa_set_code_fn(Raku_nfa *nfa, Raku_code_fn fn, void *userdata);
+int  raku_nfa_has_code(const Raku_nfa *nfa);

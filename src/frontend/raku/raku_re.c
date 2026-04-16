@@ -45,6 +45,9 @@ struct Raku_nfa {
     int        accept;
     int        ngroups;  /* number of capture groups */
     char       group_name[MAX_GROUPS][64]; /* "" = positional */
+    Raku_code_fn code_fn;    /* callback for NK_CODE_* states */
+    void        *code_ud;    /* userdata for code_fn */
+    int          has_code;   /* 1 if any NK_CODE_* state exists */
 };
 
 static int nfa_alloc(Raku_nfa *nfa) {
@@ -214,6 +217,22 @@ static int parse_atom(Re_parser *p, int *out_start, int *out_accept) {
         if (gidx+1>p->nfa->ngroups) p->nfa->ngroups=gidx+1;
         return 1;
     }
+    /* { code } -- unconditional side-effect assertion */
+    if (c == '{') {
+        consume(p); /* eat { */
+        int depth=1; int cs=p->pos;
+        while (!at_end(p)&&depth>0){char x=consume(p);if(x=='{')depth++;else if(x=='}')depth--;}
+        int ce=p->pos-1; /* pos of closing } */
+        int clen=ce-cs;
+        char *code=malloc(clen+1); memcpy(code,p->pat+cs,clen); code[clen]='\0';
+        int id=nfa_alloc(p->nfa);
+        p->nfa->states[id].kind=NK_CODE_ASSERT;
+        p->nfa->states[id].code_str=code;
+        p->nfa->states[id].out1=NFA_NULL;
+        p->nfa->states[id].out2=NFA_NULL;
+        p->nfa->has_code=1;
+        *out_start=*out_accept=id; return 1;
+    }
     if (c == '[') { consume(p); int id=parse_charclass(p); if(!p->ok)return 0;
                     *out_start=*out_accept=id; return 1; }
     if (c == '^') { consume(p); int id=nfa_state(p->nfa,NK_ANCHOR_BOL,NFA_NULL,NFA_NULL);
@@ -348,6 +367,10 @@ int        raku_nfa_group_by_name(const Raku_nfa *nfa, const char *name) {
         if (strcmp(nfa->group_name[i],name)==0) return i;
     return -1;
 }
+void raku_nfa_set_code_fn(Raku_nfa *nfa, Raku_code_fn fn, void *ud) {
+    if (!nfa) return; nfa->code_fn=fn; nfa->code_ud=ud;
+}
+int  raku_nfa_has_code(const Raku_nfa *nfa) { return nfa?nfa->has_code:0; }
 
 void raku_nfa_free(Raku_nfa *nfa) { if(!nfa)return; free(nfa->states); free(nfa); }
 
