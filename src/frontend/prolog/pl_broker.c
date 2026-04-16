@@ -406,12 +406,19 @@ bb_node_t pl_box_clause(EXPR_t *ec, Term **caller_args, int arity) {
 /*======================================================================================================================
  * S-BB-6 — pl_box_cut (FENCE analog for Prolog cut)
  *
- * α: set g_pl_cut_flag = 1; return γ
- * β: return ω — no backtrack past cut, matching FENCE discipline in stmt_exec.c
+ * Cut scoping: g_pl_cur_cut_flag points to the innermost active OR-box cut field.
+ * pl_cut_fn signals through the pointer so cut terminates exactly the predicate
+ * whose clause body contains the cut — never leaking to a parent OR-box.
  *====================================================================================================================*/
+static int *g_pl_cur_cut_flag = NULL;   /* innermost active OR-box cut field ptr */
+
 static DESCR_t pl_cut_fn(void *zeta, int entry) {
     (void)zeta;
-    if (entry == α) { g_pl_cut_flag = 1; return NULVCL; }
+    if (entry == α) {
+        if (g_pl_cur_cut_flag) *g_pl_cur_cut_flag = 1;
+        else                    g_pl_cut_flag = 1;
+        return NULVCL;
+    }
     return FAILDESCR;
 }
 
@@ -481,6 +488,7 @@ typedef struct {
     int         arity;
     bb_node_t  cur;
     int         cur_active;
+    int         cut;            /* per-OR-box cut flag: set by pl_cut_fn via g_pl_cur_cut_flag */
 } pl_choice_t;
 
 static DESCR_t pl_choice_fn(void *zeta, int entry) {
@@ -497,20 +505,32 @@ static DESCR_t pl_choice_fn(void *zeta, int entry) {
         ζ->trail_mark = trail_mark(&g_pl_trail);
         ζ->ci         = 0;
         ζ->cur_active = 0;
+        ζ->cut        = 0;
     }
 
-    while (ζ->ci < ζ->nclause && !g_pl_cut_flag) {
+    /* Install this OR-box as the current cut target; save the previous target. */
+    int *saved_cut_ptr = g_pl_cur_cut_flag;
+    g_pl_cur_cut_flag  = &ζ->cut;
+
+    while (ζ->ci < ζ->nclause && !ζ->cut) {
         EXPR_t *ec = ζ->clauses[ζ->ci];
         if (!ec || ec->kind != E_CLAUSE) { ζ->ci++; continue; }
         trail_unwind(&g_pl_trail, ζ->trail_mark);
         ζ->cur        = pl_box_clause(ec, ζ->caller_args, ζ->arity);
         ζ->cur_active = 1;
         r = ζ->cur.fn(ζ->cur.ζ, α);
-        if (!IS_FAIL_fn(r)) return NULVCL;
+        if (!IS_FAIL_fn(r)) {
+            /* Clause succeeded — restore cut ptr but keep this OR-box installed
+             * (caller may β-retry, and we must remain the cut target). */
+            g_pl_cur_cut_flag = saved_cut_ptr;
+            return NULVCL;
+        }
         ζ->ci++;
         ζ->cur_active = 0;
     }
 
+    /* Restore previous cut target before returning failure. */
+    g_pl_cur_cut_flag = saved_cut_ptr;
     trail_unwind(&g_pl_trail, ζ->trail_mark);
     return FAILDESCR;
 }
