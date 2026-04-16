@@ -1,0 +1,4 @@
+stdout ok
+say stdout ok
+stderr ok
+rk_stdio39 ok

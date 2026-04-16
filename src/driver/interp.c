@@ -73,6 +73,29 @@ extern int         Δ;
 char g_raku_exception[512] = "";   /* set by raku_die, read by raku_try */
 static Raku_match g_raku_match;        /* last regex match result */
 static const char *g_raku_subject = ""; /* subject of last match */
+/* RK-38: file handle table */
+#define RAKU_FH_MAX 64
+static FILE *raku_fh_table[RAKU_FH_MAX];
+static int   raku_fh_init = 0;
+static void raku_fh_ensure_init(void) {
+    if (raku_fh_init) return;
+    memset(raku_fh_table,0,sizeof raku_fh_table);
+    raku_fh_table[0]=stdin; raku_fh_table[1]=stdout; raku_fh_table[2]=stderr;
+    raku_fh_init=1;
+}
+static int raku_fh_alloc(FILE *fp) {
+    raku_fh_ensure_init();
+    for(int i=3;i<RAKU_FH_MAX;i++) if(!raku_fh_table[i]){raku_fh_table[i]=fp;return i;}
+    return -1;
+}
+static FILE *raku_fh_get(int idx){
+    raku_fh_ensure_init();
+    if(idx<0||idx>=RAKU_FH_MAX) return NULL;
+    return raku_fh_table[idx];
+}
+static void raku_fh_free(int idx){
+    if(raku_fh_init&&idx>=3&&idx<RAKU_FH_MAX) raku_fh_table[idx]=NULL;
+}
 
 static void stmt_init(void) {}
 
@@ -1390,6 +1413,91 @@ DESCR_t interp_eval(EXPR_t *e)
                     e->children[1]->ival<ICN_CUR.env_n && icn_frame_depth>0)
                     ICN_CUR.env[e->children[1]->ival] = STRVAL(res);
                 return did_one ? STRVAL(res) : sd;
+            }
+            /* RK-38: file I/O builtins */
+            if (!strcmp(fn,"open") && (nargs==1||nargs==2)) {
+                DESCR_t pd=interp_eval(e->children[1]);
+                const char *path=VARVAL_fn(pd); if(!path||!*path) return FAILDESCR;
+                const char *mode="r";
+                if(nargs==2){
+                    DESCR_t md=interp_eval(e->children[2]);
+                    const char *ms=VARVAL_fn(md); if(!ms) ms="";
+                    if(strstr(ms,":w")||strstr(ms,"w")) mode="w";
+                    else if(strstr(ms,":a")||strstr(ms,"a")) mode="a";
+                }
+                FILE *fp=fopen(path,mode);
+                if(!fp) return FAILDESCR;
+                int idx=raku_fh_alloc(fp);
+                if(idx<0){fclose(fp);return FAILDESCR;}
+                return INTVAL(idx);
+            }
+            if (!strcmp(fn,"close") && nargs==1) {
+                DESCR_t fd=interp_eval(e->children[1]);
+                int idx=(int)(IS_INT_fn(fd)?fd.i:0);
+                FILE *fp=raku_fh_get(idx);
+                if(fp){fclose(fp);raku_fh_free(idx);}
+                return INTVAL(0);
+            }
+            if (!strcmp(fn,"slurp") && nargs==1) {
+                DESCR_t ad=interp_eval(e->children[1]);
+                FILE *fp=NULL; int need_close=0;
+                if(IS_INT_fn(ad)) {
+                    fp=raku_fh_get((int)ad.i);
+                } else {
+                    const char *path=VARVAL_fn(ad); if(!path||!*path) return STRVAL(GC_strdup(""));
+                    fp=fopen(path,"r"); need_close=1;
+                }
+                if(!fp) return STRVAL(GC_strdup(""));
+                fseek(fp,0,SEEK_END); long sz=ftell(fp); rewind(fp);
+                char *buf=GC_malloc(sz+1);
+                size_t nr=fread(buf,1,(size_t)sz,fp); buf[nr]='\0';
+                if(need_close) fclose(fp);
+                return STRVAL(buf);
+            }
+            if (!strcmp(fn,"lines") && nargs==1) {
+                /* lines(fh|path) -> SOH-delimited line list for for-loop */
+                DESCR_t ad=interp_eval(e->children[1]);
+                FILE *fp=NULL; int need_close=0;
+                if(IS_INT_fn(ad)) {
+                    fp=raku_fh_get((int)ad.i);
+                } else {
+                    const char *path=VARVAL_fn(ad); if(!path||!*path) return STRVAL(GC_strdup(""));
+                    fp=fopen(path,"r"); need_close=1;
+                }
+                if(!fp) return STRVAL(GC_strdup(""));
+                char *out=GC_malloc(65536); out[0]='\0'; size_t cap=65536, used=0;
+                char line[4096]; int first=1;
+                while(fgets(line,sizeof line,fp)){
+                    size_t ll=strlen(line);
+                    while(ll>0&&(line[ll-1]=='\n'||line[ll-1]=='\r')) line[--ll]='\0';
+                    size_t need=used+ll+2;
+                    if(need>cap){cap=need*2;char*nb=GC_malloc(cap);memcpy(nb,out,used);out=nb;}
+                    if(!first){out[used++]='\x01';}
+                    memcpy(out+used,line,ll); used+=ll; out[used]='\0'; first=0;
+                }
+                if(need_close) fclose(fp);
+                return STRVAL(out);
+            }
+            if ((!strcmp(fn,"raku_print_fh")||!strcmp(fn,"raku_say_fh")) && nargs==2) {
+                /* RK-39: print/say to file handle */
+                DESCR_t fd=interp_eval(e->children[1]);
+                DESCR_t vd=interp_eval(e->children[2]);
+                int idx=(int)(IS_INT_fn(fd)?fd.i:1);
+                FILE *fp=raku_fh_get(idx); if(!fp) fp=stdout;
+                const char *s=VARVAL_fn(vd); if(!s) s="";
+                fputs(s,fp);
+                if(!strcmp(fn,"raku_say_fh")) fputc('\n',fp);
+                return INTVAL(0);
+            }
+            if (!strcmp(fn,"spurt") && nargs==2) {
+                /* RK-56: spurt(path, content) -- write string to file */
+                DESCR_t pd=interp_eval(e->children[1]);
+                DESCR_t cd=interp_eval(e->children[2]);
+                const char *path=VARVAL_fn(pd); if(!path||!*path) return FAILDESCR;
+                const char *content=VARVAL_fn(cd); if(!content) content="";
+                FILE *fp=fopen(path,"w"); if(!fp) return FAILDESCR;
+                fputs(content,fp); fclose(fp);
+                return INTVAL(0);
             }
             if (!strcmp(fn,"raku_nfa_compile") && nargs == 1) {
                 /* RK-32: compile pattern string -> NFA, print state count, return 0 */

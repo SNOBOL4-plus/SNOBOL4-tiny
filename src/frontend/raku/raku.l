@@ -127,6 +127,10 @@ WS       [ \t\r]
 
     /* ── Sigil variables ─────────────────────────────────────────── */
 "$_"            { raku_yylval.sval = strdup("$_"); return VAR_SCALAR; }
+    /* RK-39: standard handles as integer constants */
+"$*STDIN"       { raku_yylval.ival = 0; return VAR_CAPTURE; }
+"$*STDOUT"      { raku_yylval.ival = 1; return VAR_CAPTURE; }
+"$*STDERR"      { raku_yylval.ival = 2; return VAR_CAPTURE; }
 "$"[0-9]+       { raku_yylval.ival = atoi(yytext+1); return VAR_CAPTURE; }
 "$<"[a-zA-Z][a-zA-Z0-9_]*">" { /* $<name> named capture: strip $< and > */
     int len = strlen(yytext)-3; /* skip $< and > */

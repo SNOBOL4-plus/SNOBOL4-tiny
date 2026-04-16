@@ -272,8 +272,14 @@ stmt
         { free($2); $$ = expr_binary(E_ASSIGN, var_node($3), leaf_sval(E_QLIT, "")); }
     | KW_SAY expr ';'
         { EXPR_t *c=make_call("write"); expr_add_child(c,$2); $$=c; }
+    | KW_SAY '(' expr ',' expr ')' ';'
+        { /* RK-39: say($fh, str) */
+          EXPR_t *c=make_call("raku_say_fh"); expr_add_child(c,$3); expr_add_child(c,$5); $$=c; }
     | KW_PRINT expr ';'
         { EXPR_t *c=make_call("writes"); expr_add_child(c,$2); $$=c; }
+    | KW_PRINT '(' expr ',' expr ')' ';'
+        { /* RK-39: print($fh, str) */
+          EXPR_t *c=make_call("raku_print_fh"); expr_add_child(c,$3); expr_add_child(c,$5); $$=c; }
     | KW_TAKE expr ';'
         { $$=expr_unary(E_SUSPEND,$2); }
     | KW_RETURN expr ';'

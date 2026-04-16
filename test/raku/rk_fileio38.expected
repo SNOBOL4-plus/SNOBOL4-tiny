@@ -1,0 +1,9 @@
+line one
+line two
+line three
+
+slurp fh ok
+line one
+line two
+line three
+rk_fileio38 ok
