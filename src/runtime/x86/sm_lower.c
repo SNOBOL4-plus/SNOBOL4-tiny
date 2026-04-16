@@ -246,7 +246,7 @@ static void lower_pat_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
         return;
     case E_ARBNO:
         lower_pat_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
-        sm_emit(p, SM_PAT_ARB);     /* ARBNO lowered as ARB for now; bb handles looping */
+        sm_emit(p, SM_PAT_ARBNO);   /* pop inner pat, push ARBNO(inner) */
         return;
 
     /* Concatenation (sequence in pattern) → left then right, then SM_PAT_CAT */

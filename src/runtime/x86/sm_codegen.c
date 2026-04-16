@@ -114,6 +114,7 @@ extern DESCR_t pat_tab(int64_t n);
 extern DESCR_t pat_rtab(int64_t n);
 extern DESCR_t pat_arb(void);
 extern DESCR_t pat_arbno(DESCR_t inner);
+extern DESCR_t pat_arbno(DESCR_t inner);
 extern DESCR_t pat_rem(void);
 extern DESCR_t pat_fence(void);
 extern DESCR_t pat_fail(void);
@@ -321,6 +322,7 @@ static void h_pat_rtab(void)
     jit_pat_push(pat_rtab(arg.v == DT_I ? arg.i : 0));
 }
 static void h_pat_arb(void)     { jit_pat_push(pat_arb()); }
+static void h_pat_arbno(void)   { DESCR_t _inner = jit_pat_pop(); jit_pat_push(pat_arbno(_inner)); }
 static void h_pat_rem(void)     { jit_pat_push(pat_rem()); }
 static void h_pat_fail(void)    { jit_pat_push(pat_fail()); }
 static void h_pat_succeed(void) { jit_pat_push(pat_succeed()); }
@@ -520,6 +522,7 @@ static void init_handler_table(void)
     g_handlers[SM_PAT_TAB]     = h_pat_tab;
     g_handlers[SM_PAT_RTAB]    = h_pat_rtab;
     g_handlers[SM_PAT_ARB]     = h_pat_arb;
+    g_handlers[SM_PAT_ARBNO]   = h_pat_arbno;
     g_handlers[SM_PAT_REM]     = h_pat_rem;
     g_handlers[SM_PAT_BAL]     = h_pat_bal;
     g_handlers[SM_PAT_FENCE]   = h_pat_fence;

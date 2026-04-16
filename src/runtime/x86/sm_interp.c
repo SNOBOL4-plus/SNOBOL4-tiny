@@ -405,6 +405,7 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
             break;
         }
         case SM_PAT_ARB:     pat_push(pat_arb());     break;
+        case SM_PAT_ARBNO:   { DESCR_t _inner = pat_pop(); pat_push(pat_arbno(_inner)); } break;
         case SM_PAT_REM:     pat_push(pat_rem());     break;
         case SM_PAT_FAIL:    pat_push(pat_fail());    break;
         case SM_PAT_SUCCEED: pat_push(pat_succeed()); break;

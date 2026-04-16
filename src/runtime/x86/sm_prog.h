@@ -59,6 +59,7 @@ typedef enum {
     SM_PAT_TAB,
     SM_PAT_RTAB,
     SM_PAT_ARB,
+    SM_PAT_ARBNO,    /* pop inner pat, push ARBNO(inner) */
     SM_PAT_REM,
     SM_PAT_BAL,
     SM_PAT_FENCE,
