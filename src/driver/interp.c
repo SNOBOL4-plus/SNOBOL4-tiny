@@ -1521,6 +1521,72 @@ DESCR_t interp_eval(EXPR_t *e)
             }
 #undef SOH
 
+            /* ── RK-26: Raku OO builtins ────────────────────────────────────
+             * raku_new(classname, key1, val1, key2, val2, ...)
+             *   → find registered ScDatType by name, construct instance,
+             *     assign named args to matching fields.
+             * raku_mcall(obj, methname, arg1, arg2, ...)
+             *   → look up obj's datatype name, find "TypeName__methname" proc
+             *     in icn_proc_table, call it with (obj, arg1, arg2, ...).
+             * ──────────────────────────────────────────────────────────────*/
+            if (!strcmp(fn,"raku_new")) {
+                /* children: [fn_name_var, classname_qlit, key1, val1, ...] */
+                /* e->children[0] = E_VAR("raku_new") (make_call layout)
+                 * e->children[1] = E_QLIT(classname)
+                 * e->children[2..] = alternating key, val */
+                if (e->nchildren < 2) return NULVCL;
+                DESCR_t cnameD = interp_eval(e->children[1]);
+                const char *cname = VARVAL_fn(cnameD);
+                if (!cname || !*cname) return FAILDESCR;
+                ScDatType *t = sc_dat_find_type(cname);
+                if (!t) return FAILDESCR;
+                /* Build field array in order matching type definition */
+                DESCR_t fvals[64];
+                for (int i=0;i<t->nfields && i<64;i++) fvals[i]=NULVCL;
+                /* Walk named pairs: children[2],children[3] = key,val ... */
+                for (int ci=2; ci+1 < e->nchildren; ci+=2) {
+                    DESCR_t kD = interp_eval(e->children[ci]);
+                    DESCR_t vD = interp_eval(e->children[ci+1]);
+                    const char *kname = VARVAL_fn(kD);
+                    if (!kname) continue;
+                    for (int fi=0;fi<t->nfields;fi++) {
+                        if (strcasecmp(t->fields[fi], kname)==0) { fvals[fi]=vD; break; }
+                    }
+                }
+                return sc_dat_construct(t, fvals, t->nfields);
+            }
+
+            if (!strcmp(fn,"raku_mcall")) {
+                /* children: [fn_var, obj, methname_qlit, arg1, arg2, ...] */
+                if (e->nchildren < 3) return FAILDESCR;
+                DESCR_t obj    = interp_eval(e->children[1]);
+                DESCR_t mnameD = interp_eval(e->children[2]);
+                const char *mname = VARVAL_fn(mnameD);
+                if (!mname || !*mname) return FAILDESCR;
+                /* Determine class name from obj's DT_DATA type */
+                const char *cname = NULL;
+                if (obj.v == DT_DATA && obj.u) {
+                    DATINST_t *inst = (DATINST_t *)obj.u;
+                    if (inst->type) cname = inst->type->name;
+                }
+                if (!cname) return FAILDESCR;
+                /* Build proc name: "ClassName__methname" */
+                char procname[256];
+                snprintf(procname, sizeof procname, "%s__%s", cname, mname);
+                /* Find in icn_proc_table */
+                int pi;
+                for (pi = 0; pi < icn_proc_count; pi++)
+                    if (strcmp(icn_proc_table[pi].name, procname) == 0) break;
+                if (pi >= icn_proc_count) return FAILDESCR;
+                /* Build arg array: self=obj, then extra args */
+                int nextra = e->nchildren - 3;
+                int total  = 1 + nextra;
+                DESCR_t *callargs = GC_malloc((size_t)total * sizeof(DESCR_t));
+                callargs[0] = obj;
+                for (int i=0;i<nextra;i++) callargs[i+1] = interp_eval(e->children[3+i]);
+                return icn_call_proc(icn_proc_table[pi].proc, callargs, total);
+            }
+
             /* ── IC-3: Icon table builtins (DT_T native hash table) ────────
              * table()         → new empty table (default value = &null)
              * insert(T,k,v)   → set T[k]=v, return T

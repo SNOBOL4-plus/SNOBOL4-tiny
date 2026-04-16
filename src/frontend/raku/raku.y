@@ -136,6 +136,30 @@ static void add_proc(EXPR_t *e) {
 /* SUB_TAG: sentinel bit to distinguish sub defs from body stmts in stmt_list */
 #define SUB_TAG 0x40000000
 
+/* RK-26: Raku method table — maps "ClassName::method" → E_FNC proc name */
+#define RAKU_METH_MAX 256
+typedef struct { char key[128]; char procname[128]; } RakuMethEntry;
+static RakuMethEntry raku_meth_table[RAKU_METH_MAX];
+static int           raku_meth_ntypes = 0;
+
+static void raku_meth_register(const char *classname, const char *methname, const char *procname) {
+    if (raku_meth_ntypes >= RAKU_METH_MAX) return;
+    RakuMethEntry *e = &raku_meth_table[raku_meth_ntypes++];
+    snprintf(e->key,      sizeof e->key,      "%s::%s", classname, methname);
+    snprintf(e->procname, sizeof e->procname,  "%s",     procname);
+}
+
+/* Emit the extern declaration so interp.c can call raku_meth_lookup */
+const char *raku_meth_lookup(const char *classname, const char *methname) {
+    char key[128];
+    snprintf(key, sizeof key, "%s::%s", classname, methname);
+    for (int i = 0; i < raku_meth_ntypes; i++)
+        if (strcmp(raku_meth_table[i].key, key) == 0)
+            return raku_meth_table[i].procname;
+    return NULL;
+}
+
+
 %}
 
 %union {
@@ -149,7 +173,7 @@ static void add_proc(EXPR_t *e) {
 %token <ival> LIT_INT
 %token <dval> LIT_FLOAT
 %token <sval> LIT_STR LIT_INTERP_STR LIT_REGEX
-%token <sval> VAR_SCALAR VAR_ARRAY VAR_HASH IDENT
+%token <sval> VAR_SCALAR VAR_ARRAY VAR_HASH VAR_TWIGIL IDENT
 
 %token KW_MY KW_SAY KW_PRINT KW_IF KW_ELSE KW_ELSIF KW_WHILE KW_FOR
 %token KW_SUB KW_GATHER KW_TAKE KW_RETURN
@@ -157,6 +181,8 @@ static void add_proc(EXPR_t *e) {
 %token KW_EXISTS KW_DELETE KW_UNLESS KW_UNTIL KW_REPEAT
 %token KW_MAP KW_GREP KW_SORT
 %token KW_TRY KW_CATCH KW_DIE
+%token KW_CLASS KW_METHOD KW_HAS KW_NEW
+%token OP_FATARROW
 
 %token OP_RANGE OP_RANGE_EX
 %token OP_ARROW
@@ -170,19 +196,20 @@ static void add_proc(EXPR_t *e) {
 %type <node> stmt expr atom range_expr cmp_expr add_expr closure
 %type <node> mul_expr unary_expr postfix_expr call_expr block
 %type <node> if_stmt while_stmt for_stmt sub_decl given_stmt
-%type <node> unless_stmt until_stmt repeat_stmt
-%type <list> stmt_list arg_list param_list when_list
+%type <node> unless_stmt until_stmt repeat_stmt class_decl
+%type <list> stmt_list arg_list param_list when_list named_arg_list class_body_list
 
 %right '=' OP_BIND
 %left  OP_OR
 %left  OP_AND
 %left  '!'
-%left  OP_EQ OP_NE '<' '>' OP_LE OP_GE OP_SEQ OP_SNE
+%left  OP_EQ OP_NE '<' '>' OP_LE OP_GE OP_SEQ OP_SNE OP_SMATCH
 %left  OP_RANGE OP_RANGE_EX
 %left  '~'
 %left  '+' '-'
 %left  '*' '/' '%' OP_DIV
 %right UMINUS
+%left  '.'
 
 %%
 
@@ -253,6 +280,12 @@ stmt
         { $$=expr_new(E_RETURN); }
     | VAR_SCALAR '=' expr ';'
         { $$=expr_binary(E_ASSIGN,var_node($1),$3); }
+    /* RK-26: $obj.field = expr — field write */
+    | VAR_SCALAR '.' IDENT '=' expr ';'
+        { EXPR_t *fe=expr_new(E_FIELD);
+          fe->sval=(char*)intern($3); free($3);
+          expr_add_child(fe,var_node($1));
+          $$=expr_binary(E_ASSIGN,fe,$5); }
     | VAR_ARRAY '[' expr ']' '=' expr ';'
         { EXPR_t *c=make_call("arr_set");
           expr_add_child(c,var_node($1)); expr_add_child(c,$3); expr_add_child(c,$6); $$=c; }
@@ -284,6 +317,7 @@ stmt
     | until_stmt        { $$=$1; }
     | repeat_stmt       { $$=$1; }
     | sub_decl          { $$=$1; }
+    | class_decl        { $$=$1; }
     ;
 
 if_stmt
@@ -400,6 +434,83 @@ sub_decl
           $$=e; }
     ;
 
+/* ── RK-26: class declaration ─────────────────────────────────────────────
+ * class Name { has $.f1; has $.f2; method m($p) { ... } }
+ * ──────────────────────────────────────────────────────────────────────── */
+class_decl
+    : KW_CLASS IDENT '{' class_body_list '}'
+        {
+            const char *cname = intern($2); free($2);
+            ExprList *body = $4;
+            EXPR_t *rec = expr_new(E_RECORD);
+            rec->sval = (char *)cname;
+            if (body) {
+                for (int i = 0; i < body->count; i++) {
+                    EXPR_t *item = body->items[i];
+                    if (!item) continue;
+                    if (item->kind == E_VAR) {
+                        expr_add_child(rec, item);
+                    } else if (item->kind == E_FNC && (item->ival & SUB_TAG)) {
+                        char fullname[256];
+                        snprintf(fullname, sizeof fullname, "%s__%s", cname, item->sval);
+                        const char *fname = intern(fullname);
+                        raku_meth_register(cname, item->sval, fname);
+                        item->sval = (char *)fname;
+                        if (item->nchildren > 0 && item->children[0]->kind == E_VAR)
+                            item->children[0]->sval = (char *)fname;
+                        item->ival &= ~SUB_TAG;
+                        add_proc(item);
+                        body->items[i] = NULL;
+                    }
+                }
+                exprlist_free(body);
+            }
+            add_proc(rec);
+            $$ = expr_new(E_NUL);
+        }
+    ;
+
+class_body_list
+    : /* empty */  { $$ = exprlist_new(); }
+    | class_body_list KW_HAS VAR_TWIGIL ';'
+        { EXPR_t *fv = leaf_sval(E_VAR, $3); free($3);
+          $$ = exprlist_append($1, fv); }
+    | class_body_list KW_HAS VAR_SCALAR ';'
+        { EXPR_t *fv = leaf_sval(E_VAR, strip_sigil($3)); free($3);
+          $$ = exprlist_append($1, fv); }
+    | class_body_list KW_METHOD IDENT '(' param_list ')' block
+        { ExprList *params = $5; int np = params ? params->count : 0;
+          EXPR_t *e = leaf_sval(E_FNC, $3);
+          e->ival = (long)(np + 1) | SUB_TAG;
+          EXPR_t *nn = expr_new(E_VAR); nn->sval = intern($3); expr_add_child(e, nn);
+          expr_add_child(e, leaf_sval(E_VAR, "self"));
+          if (params) { for (int i = 0; i < np; i++) expr_add_child(e, params->items[i]); exprlist_free(params); }
+          EXPR_t *body = $7;
+          for (int i = 0; i < body->nchildren; i++) expr_add_child(e, body->children[i]);
+          free($3);
+          $$ = exprlist_append($1, e); }
+    | class_body_list KW_METHOD IDENT '(' ')' block
+        { EXPR_t *e = leaf_sval(E_FNC, $3);
+          e->ival = (long)(1) | SUB_TAG;
+          EXPR_t *nn = expr_new(E_VAR); nn->sval = intern($3); expr_add_child(e, nn);
+          expr_add_child(e, leaf_sval(E_VAR, "self"));
+          EXPR_t *body = $6;
+          for (int i = 0; i < body->nchildren; i++) expr_add_child(e, body->children[i]);
+          free($3);
+          $$ = exprlist_append($1, e); }
+    ;
+
+named_arg_list
+    : IDENT OP_FATARROW expr
+        { $$ = exprlist_new();
+          exprlist_append($$, leaf_sval(E_QLIT, $1)); free($1);
+          exprlist_append($$, $3); }
+    | named_arg_list ',' IDENT OP_FATARROW expr
+        { exprlist_append($1, leaf_sval(E_QLIT, $3)); free($3);
+          exprlist_append($1, $5);
+          $$ = $1; }
+    ;
+
 param_list
     : VAR_SCALAR             { $$=exprlist_append(exprlist_new(),var_node($1)); }
     | param_list ',' VAR_SCALAR { $$=exprlist_append($1,var_node($3)); }
@@ -498,6 +609,36 @@ call_expr
           if(args){ for(int i=0;i<args->count;i++) expr_add_child(e,args->items[i]); exprlist_free(args); }
           $$=e; }
     | IDENT '(' ')'  { $$=make_call($1); }
+    /* RK-26: ClassName.new(named_args) */
+    | IDENT '.' KW_NEW '(' named_arg_list ')'
+        { EXPR_t *c=make_call("raku_new");
+          expr_add_child(c,leaf_sval(E_QLIT,$1)); free($1);
+          ExprList *nargs=$5;
+          if(nargs){ for(int i=0;i<nargs->count;i++) expr_add_child(c,nargs->items[i]); exprlist_free(nargs); }
+          $$=c; }
+    | IDENT '.' KW_NEW '(' ')'
+        { EXPR_t *c=make_call("raku_new");
+          expr_add_child(c,leaf_sval(E_QLIT,$1)); free($1);
+          $$=c; }
+    /* RK-26: $obj.method(args) */
+    | atom '.' IDENT '(' arg_list ')'
+        { EXPR_t *c=make_call("raku_mcall");
+          expr_add_child(c,$1);
+          expr_add_child(c,leaf_sval(E_QLIT,$3)); free($3);
+          ExprList *args=$5;
+          if(args){ for(int i=0;i<args->count;i++) expr_add_child(c,args->items[i]); exprlist_free(args); }
+          $$=c; }
+    | atom '.' IDENT '(' ')'
+        { EXPR_t *c=make_call("raku_mcall");
+          expr_add_child(c,$1);
+          expr_add_child(c,leaf_sval(E_QLIT,$3)); free($3);
+          $$=c; }
+    /* RK-26: $obj.field (field read) */
+    | atom '.' IDENT
+        { EXPR_t *fe=expr_new(E_FIELD);
+          fe->sval=(char*)intern($3); free($3);
+          expr_add_child(fe,$1);
+          $$=fe; }
     /* RK-24: map/grep/sort higher-order list ops */
     /* RK-25: die as expr (try/CATCH are stmt-level) */
     | KW_DIE expr
@@ -542,6 +683,12 @@ atom
     | KW_EXISTS VAR_HASH '{' expr '}'
         { EXPR_t *c=make_call("hash_exists"); expr_add_child(c,var_node($2)); expr_add_child(c,$4); $$=c; }
     | IDENT           { $$=var_node($1); }
+    /* RK-26: $.field / $!field inside a method → E_FIELD(self, fieldname) */
+    | VAR_TWIGIL
+        { EXPR_t *fe=expr_new(E_FIELD);
+          fe->sval=(char*)intern($1); free($1);
+          expr_add_child(fe, leaf_sval(E_VAR, "self"));
+          $$=fe; }
     | '(' expr ')'    { $$=$2; }
     ;
 

@@ -162,6 +162,11 @@ void polyglot_init(Program *prog, uint32_t lang_mask)
                         g_registry.main_mod = mod_idx;
                 }
             }
+            /* RK-26: evaluate E_RECORD immediately so class types are registered
+             * in sc_dat_types before main() calls raku_new. */
+            if (proc->kind == E_RECORD) {
+                interp_eval(proc);
+            }
         } else if (s->lang == LANG_PL) {
             /* Prolog: collect E_CHOICE / E_CLAUSE predicate definitions */
             EXPR_t *subj = s->subject;

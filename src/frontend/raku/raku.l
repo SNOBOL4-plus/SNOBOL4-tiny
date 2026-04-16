@@ -73,6 +73,11 @@ WS       [ \t\r]
 "catch"         { return KW_CATCH; }
 "CATCH"         { return KW_CATCH; }
 "die"           { return KW_DIE; }
+"class"         { return KW_CLASS; }
+"method"        { return KW_METHOD; }
+"has"           { return KW_HAS; }
+"new"           { return KW_NEW; }
+"self"          { raku_yylval.sval = strdup("self"); return VAR_SCALAR; }
 "True"          { raku_yylval.ival = 1; return LIT_INT; }
 "False"         { raku_yylval.ival = 0; return LIT_INT; }
 "eq"            { return OP_SEQ; }
@@ -110,6 +115,8 @@ WS       [ \t\r]
 "]"             { return ']'; }
 ";"             { return ';'; }
 ","             { return ','; }
+"."             { return '.'; }
+"=>"            { return OP_FATARROW; }
 
     /* ── Numeric literals ────────────────────────────────────────── */
 {DIGIT}+"."{DIGIT}+{EXP}?  { raku_yylval.dval = atof(yytext); return LIT_FLOAT; }
@@ -118,6 +125,9 @@ WS       [ \t\r]
 
     /* ── Sigil variables ─────────────────────────────────────────── */
 "$_"            { raku_yylval.sval = strdup("$_"); return VAR_SCALAR; }
+    /* RK-26: twigils $.field / $!field → VAR_TWIGIL (fieldname, no sigil) */
+"$."{ALPHA}{ALNUM}*  { raku_yylval.sval = strdup(yytext+2); return VAR_TWIGIL; }
+"$!"{ALPHA}{ALNUM}*  { raku_yylval.sval = strdup(yytext+2); return VAR_TWIGIL; }
 "$"{ALPHA}{ALNUM}*  { raku_yylval.sval = strdup(yytext); return VAR_SCALAR; }
 "@"{ALPHA}{ALNUM}*  { raku_yylval.sval = strdup(yytext); return VAR_ARRAY; }
 "%"{ALPHA}{ALNUM}*  { raku_yylval.sval = strdup(yytext); return VAR_HASH; }
