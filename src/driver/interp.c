@@ -4034,6 +4034,19 @@ DESCR_t _usercall_hook(const char *name, DESCR_t *args, int nargs) {
     if (strcasecmp(name, "IDENT") == 0)  return _builtin_IDENT(args, nargs);
     if (strcasecmp(name, "DIFFER") == 0) return _builtin_DIFFER(args, nargs);
     if (strcasecmp(name, "DATA") == 0)   return _builtin_DATA(args, nargs);
+    /* ITEM(arr,i) read and ITEM_SET(rhs,arr,i) write — SM emits these for ITEM() syntax.
+     * ITEM read: args[0]=arr, args[1]=i, [args[2]=j for 2D].
+     * ITEM_SET write: args[0]=rhs, args[1]=arr, args[2]=i, [args[3]=j for 2D]. */
+    if (strcasecmp(name, "ITEM") == 0 && nargs >= 2) {
+        if (nargs >= 3) return subscript_get2(args[0], args[1], args[2]);
+        return subscript_get(args[0], args[1]);
+    }
+    if (strcasecmp(name, "ITEM_SET") == 0 && nargs >= 3) {
+        DESCR_t rhs = args[0], arr = args[1], idx = args[2];
+        if (nargs >= 4) { subscript_set2(arr, idx, args[3], rhs); }
+        else            { subscript_set(arr, idx, rhs); }
+        return rhs;
+    }
     /* SC-1: DATA constructor/field-accessor/field-mutator dispatch via sc_dat registry.
      * Must precede label lookup so struct names shadow any same-named labels. */
     {

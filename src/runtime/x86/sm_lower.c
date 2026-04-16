@@ -916,11 +916,19 @@ static void lower_stmt(SM_Program *p, LabelTable *lt, const STMT_t *s)
                     sm_emit_si(p, SM_CALL, "NRETURN_ASGN", 1);
                     p->instrs[p->count - 1].a[1].s = GC_strdup(s->subject->sval);
                 } else {
-                    /* Multi-arg LHS: field mutator fname(obj,...) = rhs */
-                    lower_expr(p, lt, s->subject->nchildren > 0 ? s->subject->children[0] : NULL);
-                    char _setname[256];
-                    snprintf(_setname, sizeof(_setname), "%s_SET", s->subject->sval);
-                    sm_emit_si(p, SM_CALL, _setname, 2);
+                    /* Multi-arg LHS: field mutator fname(obj,...) = rhs.
+                     * Special case: ITEM(arr, i [,j]) = rhs — push all args, call ITEM_SET. */
+                    if (strcasecmp(s->subject->sval, "ITEM") == 0) {
+                        int nc = s->subject->nchildren;
+                        for (int ci = 0; ci < nc; ci++)
+                            lower_expr(p, lt, s->subject->children[ci]);
+                        sm_emit_si(p, SM_CALL, "ITEM_SET", (int64_t)(nc + 1)); /* +1 for rhs */
+                    } else {
+                        lower_expr(p, lt, s->subject->nchildren > 0 ? s->subject->children[0] : NULL);
+                        char _setname[256];
+                        snprintf(_setname, sizeof(_setname), "%s_SET", s->subject->sval);
+                        sm_emit_si(p, SM_CALL, _setname, 2);
+                    }
                 }
             } else {
                 lower_expr(p, lt, s->subject);
