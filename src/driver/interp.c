@@ -799,10 +799,14 @@ static EXPR_t *icn_find_leaf_gen(EXPR_t *e) {
     return NULL;
 }
 
-/* icn_real_str — format a real for Icon output: always has decimal point or exponent.
- * Icon uses %.15g precision but ensures at least one digit after the point. */
+/* icn_real_str — format a real for Icon output using shortest round-trip representation.
+ * Tries precisions 15..17 and picks the shortest that parses back to the same double. */
 static const char *icn_real_str(double r, char *buf, int bufsz) {
-    snprintf(buf, bufsz, "%.15g", r);
+    for (int p = 15; p <= 17; p++) {
+        snprintf(buf, bufsz, "%.*g", p, r);
+        char *end; double back = strtod(buf, &end);
+        if (back == r) break;   /* shortest precision that round-trips */
+    }
     if (!strchr(buf, '.') && !strchr(buf, 'e') && !strchr(buf, 'E') && !strchr(buf, 'n') && !strchr(buf, 'N'))
         strncat(buf, ".0", bufsz - strlen(buf) - 1);
     return buf;
@@ -1332,7 +1336,7 @@ DESCR_t interp_eval(EXPR_t *e)
                 for (char *p = out; *p; p++) *p = (char)tolower((unsigned char)*p);
                 return STRVAL(out);
             }
-            if (!strcmp(fn,"raku_trim") || (!strcmp(fn,"trim") && nargs == 1)) {
+            if (!strcmp(fn,"raku_trim")) {
                 DESCR_t sd = interp_eval(e->children[1]);
                 const char *s = VARVAL_fn(sd); if (!s) s = "";
                 while (*s == ' ' || *s == '\t' || *s == '\n' || *s == '\r') s++;
@@ -1758,12 +1762,12 @@ DESCR_t interp_eval(EXPR_t *e)
                 if (!strcmp(fn,"push") && nargs == 2) {
                     DESCR_t vd = interp_eval(e->children[2]);
                     if (ld.v != DT_DATA) return FAILDESCR;
+                    int n = (int)FIELD_GET_fn(ld,"icn_size").i;
                     DESCR_t ea = FIELD_GET_fn(ld,"icn_elems");
-                    int n = (ea.v==DT_I) ? (int)ea.i : 0;
                     DESCR_t *old = (ea.v==DT_DATA) ? (DESCR_t*)ea.ptr : NULL;
                     DESCR_t *nb = GC_malloc((n+1)*sizeof(DESCR_t));
                     nb[0] = vd;
-                    if (old) memcpy(nb+1,old,n*sizeof(DESCR_t));
+                    if (old && n > 0) memcpy(nb+1,old,n*sizeof(DESCR_t));
                     FIELD_SET_fn(ld,"icn_elems",(DESCR_t){.v=DT_DATA,.ptr=nb});
                     FIELD_SET_fn(ld,"icn_size",INTVAL(n+1));
                     return ld;
@@ -1772,11 +1776,11 @@ DESCR_t interp_eval(EXPR_t *e)
                 if (!strcmp(fn,"put") && nargs == 2) {
                     DESCR_t vd = interp_eval(e->children[2]);
                     if (ld.v != DT_DATA) return FAILDESCR;
+                    int n = (int)FIELD_GET_fn(ld,"icn_size").i;
                     DESCR_t ea = FIELD_GET_fn(ld,"icn_elems");
-                    int n = (ea.v==DT_I) ? (int)ea.i : 0;
                     DESCR_t *old = (ea.v==DT_DATA) ? (DESCR_t*)ea.ptr : NULL;
                     DESCR_t *nb = GC_malloc((n+1)*sizeof(DESCR_t));
-                    if (old) memcpy(nb,old,n*sizeof(DESCR_t));
+                    if (old && n > 0) memcpy(nb,old,n*sizeof(DESCR_t));
                     nb[n] = vd;
                     FIELD_SET_fn(ld,"icn_elems",(DESCR_t){.v=DT_DATA,.ptr=nb});
                     FIELD_SET_fn(ld,"icn_size",INTVAL(n+1));
@@ -1888,11 +1892,20 @@ DESCR_t interp_eval(EXPR_t *e)
             }
             if (!strcmp(fn,"trim") && nargs == 1) {
                 DESCR_t sv=interp_eval(e->children[1]); const char *s=VARVAL_fn(sv); if(!s)s="";
-                int sl=(int)strlen(s); while(sl>0&&isspace((unsigned char)s[sl-1]))sl--;
-                char *buf=GC_malloc(sl+1); memcpy(buf,s,sl); buf[sl]='\0';
-                return STRVAL(buf);
+                if (g_lang == 1) {
+                    /* Icon: trim trailing whitespace only */
+                    int sl=(int)strlen(s); while(sl>0&&isspace((unsigned char)s[sl-1]))sl--;
+                    char *buf=GC_malloc(sl+1); memcpy(buf,s,sl); buf[sl]='\0';
+                    return STRVAL(buf);
+                } else {
+                    /* Raku/other: trim both ends */
+                    while(*s==' '||*s=='\t'||*s=='\n'||*s=='\r') s++;
+                    size_t len=strlen(s);
+                    while(len>0&&(s[len-1]==' '||s[len-1]=='\t'||s[len-1]=='\n'||s[len-1]=='\r')) len--;
+                    char *buf=GC_malloc(len+1); memcpy(buf,s,len); buf[len]='\0';
+                    return STRVAL(buf);
+                }
             }
-
             /* ── IC-5: type(x), image(x), copy(x) ──────────────────────── */
             if (!strcmp(fn,"type") && nargs == 1) {
                 DESCR_t av = interp_eval(e->children[1]);
@@ -1916,7 +1929,7 @@ DESCR_t interp_eval(EXPR_t *e)
                 else if (IS_REAL_fn(av)) icn_real_str(av.r,buf,128);
                 else if (av.v==DT_T)     snprintf(buf,128,"table(%d)",av.tbl?av.tbl->size:0);
                 else if (av.v==DT_DATA)  snprintf(buf,128,"record");
-                else { const char *s=VARVAL_fn(av); snprintf(buf,128,"\"%s\"",s?s:""); }
+                else { const char *s=VARVAL_fn(av); return STRVAL(s?s:""); }
                 return STRVAL(buf);
             }
             if (!strcmp(fn,"copy") && nargs == 1) {
@@ -1977,6 +1990,27 @@ DESCR_t interp_eval(EXPR_t *e)
                     if (body) interp_eval(body);
                     if (ICN_CUR.returning || ICN_CUR.loop_break) break;
                     tick = rbox.fn(rbox.ζ, β);
+                }
+                ICN_CUR.loop_break = 0;
+                return NULVCL;
+            }
+            /* IC-6: E_SEQ conjunction — every (gen_expr & body_expr).
+             * E_SEQ is Icon's & operator. Drive gen (children[0]) as generator;
+             * evaluate remaining children as body per successful tick.
+             * e.g.: every (x := (1|2|3|4|5)) > 2 & write(x)
+             *   gen  = E_SEQ(E_GT(E_ASSIGN(x,alt), 2), E_FNC(write,x))
+             * We split: filter_gen = children[0], seq_body = children[1..n-1]. */
+            if (gen->kind == E_SEQ && gen->nchildren >= 2 && icn_is_gen(gen->children[0])) {
+                EXPR_t *filter = gen->children[0];
+                bb_node_t fbox = icn_eval_gen(filter);
+                DESCR_t tick = fbox.fn(fbox.ζ, α);
+                while (!IS_FAIL_fn(tick) && !ICN_CUR.returning && !ICN_CUR.loop_break) {
+                    /* Execute remaining seq children as body */
+                    for (int _si = 1; _si < gen->nchildren; _si++)
+                        interp_eval(gen->children[_si]);
+                    if (body) interp_eval(body);
+                    if (ICN_CUR.returning || ICN_CUR.loop_break) break;
+                    tick = fbox.fn(fbox.ζ, β);
                 }
                 ICN_CUR.loop_break = 0;
                 return NULVCL;
@@ -2246,12 +2280,7 @@ DESCR_t interp_eval(EXPR_t *e)
         DESCR_t l = interp_eval(e->children[0]);
         DESCR_t r = interp_eval(e->children[1]);
         if (IS_FAIL_fn(l) || IS_FAIL_fn(r)) return FAILDESCR;
-        /* SNOBOL4: ** returns integer when both operands are integer and exp >= 0 */
-        if (IS_INT_fn(l) && IS_INT_fn(r) && r.i >= 0) {
-            long base_i = l.i, result = 1;
-            for (long n = r.i; n > 0; n--) result *= base_i;
-            return INTVAL(result);
-        }
+        /* Icon: ^ always returns real regardless of operand types */
         double base = IS_REAL_fn(l) ? l.r : (double)l.i;
         double exp  = IS_REAL_fn(r) ? r.r : (double)r.i;
         return (DESCR_t){ .v = DT_R, .r = pow(base, exp) };

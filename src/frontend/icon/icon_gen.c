@@ -138,17 +138,39 @@ DESCR_t icn_bb_tbl_iterate(void *zeta, int entry) {
 
 /*============================================================================================================================
  * IC-5: icn_bb_list_iterate — E_ITERATE Byrd box for DT_DATA icnlist  (!L yields elements)
+ *   Holds the live list DT_DATA descriptor so it sees elements added by put() after box creation.
  *   α: reset pos=0, return elems[0].
  *   β: advance pos, return elems[pos].
  *   ω: pos >= n.
  *============================================================================================================================*/
 DESCR_t icn_bb_list_iterate(void *zeta, int entry) {
     icn_list_iterate_state_t *z = (icn_list_iterate_state_t *)zeta;
-    if (!z->elems || z->n <= 0) return FAILDESCR;
+    /* Re-read elems and size from live object each tick */
+    DESCR_t ea = FIELD_GET_fn(z->list_obj, "icn_elems");
+    int n = (int)FIELD_GET_fn(z->list_obj, "icn_size").i;
+    DESCR_t *elems = (ea.v == DT_DATA) ? (DESCR_t *)ea.ptr : NULL;
+    if (!elems || n <= 0) return FAILDESCR;
     if (entry == α) z->pos = 0;
     else            z->pos++;
-    if (z->pos >= z->n) return FAILDESCR;
-    return z->elems[z->pos];
+    if (z->pos >= n) return FAILDESCR;
+    return elems[z->pos];
+}
+
+/*============================================================================================================================
+ * IC-6: icn_bb_tbl_key_iterate — key(T) generator: yields each key in table T
+ *   Same bucket-walk as icn_bb_tbl_iterate but returns entry->key_descr instead of entry->val.
+ *============================================================================================================================*/
+DESCR_t icn_bb_tbl_key_iterate(void *zeta, int entry) {
+    icn_tbl_key_iterate_state_t *z = (icn_tbl_key_iterate_state_t *)zeta;
+    if (!z->tbl) return FAILDESCR;
+    if (entry == α) { z->bucket = 0; z->entry = z->tbl->buckets[0]; }
+    else if (z->entry) { z->entry = z->entry->next; }
+    while (!z->entry && z->bucket < TABLE_BUCKETS - 1) {
+        z->bucket++;
+        z->entry = z->tbl->buckets[z->bucket];
+    }
+    if (!z->entry) return FAILDESCR;
+    return z->entry->key_descr;
 }
 
 
@@ -231,26 +253,45 @@ DESCR_t icn_bb_find(void *zeta, int entry) {
 static DESCR_t icn_binop_apply(IcnBinopKind op, DESCR_t lv, DESCR_t rv, int *rel_fail) {
     *rel_fail = 0;
     if (IS_FAIL_fn(lv) || IS_FAIL_fn(rv)) return FAILDESCR;
-    long li = IS_INT_fn(lv) ? lv.i : (long)lv.r;
-    long ri = IS_INT_fn(rv) ? rv.i : (long)rv.r;
+    /* For relops and concat, use real-aware comparison when either operand is real */
+    int either_real = (IS_REAL_fn(lv) || IS_REAL_fn(rv));
+    double ld = IS_REAL_fn(lv) ? lv.r : (double)(IS_INT_fn(lv) ? lv.i : 0);
+    double rd = IS_REAL_fn(rv) ? rv.r : (double)(IS_INT_fn(rv) ? rv.i : 0);
+    long   li = IS_INT_fn(lv) ? lv.i : (long)lv.r;
+    long   ri = IS_INT_fn(rv) ? rv.i : (long)rv.r;
     switch (op) {
-        case ICN_BINOP_ADD:    return INTVAL(li + ri);
-        case ICN_BINOP_SUB:    return INTVAL(li - ri);
-        case ICN_BINOP_MUL:    return INTVAL(li * ri);
-        case ICN_BINOP_DIV:    return ri ? INTVAL(li / ri) : FAILDESCR;
+        case ICN_BINOP_ADD:
+            return either_real ? (DESCR_t){.v=DT_R,.r=ld+rd} : INTVAL(li + ri);
+        case ICN_BINOP_SUB:
+            return either_real ? (DESCR_t){.v=DT_R,.r=ld-rd} : INTVAL(li - ri);
+        case ICN_BINOP_MUL:
+            return either_real ? (DESCR_t){.v=DT_R,.r=ld*rd} : INTVAL(li * ri);
+        case ICN_BINOP_DIV:
+            if (either_real) return rd != 0.0 ? (DESCR_t){.v=DT_R,.r=ld/rd} : FAILDESCR;
+            return ri ? INTVAL(li / ri) : FAILDESCR;
         case ICN_BINOP_MOD:    return ri ? INTVAL(li % ri) : FAILDESCR;
-        case ICN_BINOP_LT:     *rel_fail = !(li <  ri); return *rel_fail ? FAILDESCR : INTVAL(ri);
-        case ICN_BINOP_LE:     *rel_fail = !(li <= ri); return *rel_fail ? FAILDESCR : INTVAL(ri);
-        case ICN_BINOP_GT:     *rel_fail = !(li >  ri); return *rel_fail ? FAILDESCR : INTVAL(ri);
-        case ICN_BINOP_GE:     *rel_fail = !(li >= ri); return *rel_fail ? FAILDESCR : INTVAL(ri);
-        case ICN_BINOP_EQ:     *rel_fail = !(li == ri); return *rel_fail ? FAILDESCR : INTVAL(ri);
-        case ICN_BINOP_NE:     *rel_fail = !(li != ri); return *rel_fail ? FAILDESCR : INTVAL(ri);
+        /* Relops: return the right operand as-is (Icon goal-directed semantics) */
+        case ICN_BINOP_LT:  *rel_fail = !(either_real ? ld <  rd : li <  ri); return *rel_fail ? FAILDESCR : rv;
+        case ICN_BINOP_LE:  *rel_fail = !(either_real ? ld <= rd : li <= ri); return *rel_fail ? FAILDESCR : rv;
+        case ICN_BINOP_GT:  *rel_fail = !(either_real ? ld >  rd : li >  ri); return *rel_fail ? FAILDESCR : rv;
+        case ICN_BINOP_GE:  *rel_fail = !(either_real ? ld >= rd : li >= ri); return *rel_fail ? FAILDESCR : rv;
+        case ICN_BINOP_EQ:  *rel_fail = !(either_real ? ld == rd : li == ri); return *rel_fail ? FAILDESCR : rv;
+        case ICN_BINOP_NE:  *rel_fail = !(either_real ? ld != rd : li != ri); return *rel_fail ? FAILDESCR : rv;
         case ICN_BINOP_CONCAT: {
-            /* String concatenation — use static buffer (adequate for test suite) */
-            const char *ls = lv.s ? lv.s : "", *rs = rv.s ? rv.s : "";
-            size_t ll = lv.slen > 0 ? (size_t)lv.slen : strlen(ls);
-            size_t rl = rv.slen > 0 ? (size_t)rv.slen : strlen(rs);
-            char *buf = malloc(ll + rl + 1);
+            /* String concatenation — coerce operands to string if needed */
+            char lbuf[64], rbuf[64];
+            const char *ls, *rs; size_t ll, rl;
+            if (IS_INT_fn(lv))       { snprintf(lbuf,64,"%lld",(long long)lv.i); ls=lbuf; ll=strlen(ls); }
+            else if (IS_REAL_fn(lv)) { snprintf(lbuf,64,"%.15g",lv.r);
+                                       if(!strchr(lbuf,'.')&&!strchr(lbuf,'e')) strcat(lbuf,".0");
+                                       ls=lbuf; ll=strlen(ls); }
+            else                     { ls = lv.s ? lv.s : ""; ll = lv.slen > 0 ? (size_t)lv.slen : strlen(ls); }
+            if (IS_INT_fn(rv))       { snprintf(rbuf,64,"%lld",(long long)rv.i); rs=rbuf; rl=strlen(rs); }
+            else if (IS_REAL_fn(rv)) { snprintf(rbuf,64,"%.15g",rv.r);
+                                       if(!strchr(rbuf,'.')&&!strchr(rbuf,'e')) strcat(rbuf,".0");
+                                       rs=rbuf; rl=strlen(rs); }
+            else                     { rs = rv.s ? rv.s : ""; rl = rv.slen > 0 ? (size_t)rv.slen : strlen(rs); }
+            char *buf = GC_malloc(ll + rl + 1);
             memcpy(buf, ls, ll); memcpy(buf + ll, rs, rl); buf[ll + rl] = '\0';
             return (DESCR_t){ .v = DT_S, .slen = (int)(ll + rl), .s = buf };
         }

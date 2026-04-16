@@ -414,6 +414,14 @@ int icn_is_gen(EXPR_t *e) {
             /* User proc → generator (may return or suspend).
              * Builtin with generative arg → also generative. */
             return 1;
+        /* E_IDX is generative if its index child is generative — e.g. s[1 to 3] */
+        case E_IDX:
+            for (int i = 1; i < e->nchildren; i++)
+                if (icn_is_gen(e->children[i])) return 1;
+            return 0;
+        /* E_ASSIGN is generative if its RHS is generative — e.g. x := (1|2|3) */
+        case E_ASSIGN:
+            return (e->nchildren >= 2 && icn_is_gen(e->children[1])) ? 1 : 0;
         /* Arithmetic / relational binops and string concat are generative if any child is */
         case E_ADD: case E_SUB: case E_MUL: case E_DIV: case E_MOD:
         case E_LT:  case E_LE:  case E_GT:  case E_GE:
@@ -431,7 +439,8 @@ int icn_is_gen(EXPR_t *e) {
 typedef struct { DESCR_t val; int fired; } icn_oneshot_state_t;
 static DESCR_t icn_oneshot_box(void *zeta, int entry) {
     icn_oneshot_state_t *z = (icn_oneshot_state_t *)zeta;
-    if (entry == α && !z->fired && !IS_FAIL_fn(z->val)) { z->fired = 1; return z->val; }
+    if (entry == α) { z->fired = 0; }   /* reset on α so cross-product can replay */
+    if (!z->fired && !IS_FAIL_fn(z->val)) { z->fired = 1; return z->val; }
     return FAILDESCR;
 }
 
@@ -711,18 +720,9 @@ bb_node_t icn_eval_gen(EXPR_t *e) {
         if (sv.v == DT_DATA) {
             DESCR_t tag = FIELD_GET_fn(sv, "icn_type");
             if (tag.v == DT_S && tag.s && strcmp(tag.s, "list") == 0) {
-                int n = (int)FIELD_GET_fn(sv, "icn_size").i;
-                DESCR_t ea = FIELD_GET_fn(sv, "icn_elems");
-                DESCR_t *elems = (ea.v == DT_DATA) ? (DESCR_t *)ea.ptr : NULL;
-                icn_tbl_iterate_state_t *z = calloc(1, sizeof(*z));
-                /* Reuse tbl_iterate state: bucket=pos index into elems array,
-                 * entry=NULL (not used), tbl=NULL.  We use a custom box below. */
-                /* Use a dedicated list-iterate box */
                 icn_list_iterate_state_t *lz = calloc(1, sizeof(*lz));
-                lz->elems = elems;
-                lz->n     = n;
-                lz->pos   = 0;
-                (void)z; free(z);
+                lz->list_obj = sv;  /* live DT_DATA — re-read each tick so put() mutations are visible */
+                lz->pos      = 0;
                 return (bb_node_t){ icn_bb_list_iterate, lz, 0 };
             }
         }
@@ -768,6 +768,7 @@ bb_node_t icn_eval_gen(EXPR_t *e) {
             { E_LT,  ICN_BINOP_LT,  1 }, { E_LE,  ICN_BINOP_LE,  1 },
             { E_GT,  ICN_BINOP_GT,  1 }, { E_GE,  ICN_BINOP_GE,  1 },
             { E_EQ,  ICN_BINOP_EQ,  1 }, { E_NE,  ICN_BINOP_NE,  1 },
+            { E_LCONCAT, ICN_BINOP_CONCAT, 0 },  /* ("a"|"b") || ("x"|"y") cross-product */
         };
         for (int mi = 0; mi < (int)(sizeof binop_map/sizeof binop_map[0]); mi++) {
             if (e->kind != binop_map[mi].ek) continue;
@@ -800,6 +801,21 @@ bb_node_t icn_eval_gen(EXPR_t *e) {
         }
     }
 
+    /* ── E_IDX: s[gen_idx] — drive index generator, re-eval subscript each tick ── */
+    if (e->kind == E_IDX && e->nchildren >= 2) {
+        for (int _ci = 1; _ci < e->nchildren; _ci++) {
+            if (icn_is_gen(e->children[_ci])) {
+                EXPR_t *leaf = icn_find_leaf_gen(e->children[_ci]);
+                if (!leaf) leaf = e->children[_ci];
+                icn_cat_gen_state_t *z = calloc(1, sizeof(*z));
+                z->gen      = icn_eval_gen(leaf);
+                z->cat_expr = e;     /* re-eval the full E_IDX expression per tick */
+                z->leaf     = leaf;
+                return (bb_node_t){ icn_bb_cat_gen, z, 0 };
+            }
+        }
+    }
+
     /* ── E_FNC find(needle,str) with scalar args — icn_bb_find generator ── */
     if (e->kind == E_FNC && e->nchildren >= 3 && e->children[0] && e->children[0]->sval
         && strcmp(e->children[0]->sval, "find") == 0) {
@@ -812,6 +828,19 @@ bb_node_t icn_eval_gen(EXPR_t *e) {
             z->nlen   = (int)strlen(z->needle);
             z->next   = z->hay;
             return (bb_node_t){ icn_bb_find, z, 0 };
+        }
+    }
+
+    /* ── E_FNC key(T) — generator yielding each key of table T ──────────── */
+    if (e->kind == E_FNC && e->nchildren >= 2 && e->children[0] && e->children[0]->sval
+        && strcmp(e->children[0]->sval, "key") == 0) {
+        DESCR_t td = interp_eval(e->children[1]);
+        if (td.v == DT_T && td.tbl) {
+            icn_tbl_key_iterate_state_t *z = calloc(1, sizeof(*z));
+            z->tbl    = td.tbl;
+            z->bucket = 0;
+            z->entry  = NULL;
+            return (bb_node_t){ icn_bb_tbl_key_iterate, z, 0 };
         }
     }
 

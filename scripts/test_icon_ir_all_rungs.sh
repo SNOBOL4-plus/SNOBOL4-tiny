@@ -3,7 +3,7 @@
 # Self-contained. Run from anywhere with no env vars.
 # Usage: bash scripts/test_icon_ir_all_rungs.sh [--rung RUNG]
 #
-# Runs rung01–rung11 (or a specific rung) of the Icon corpus against
+# Runs rung01–rung29 (or a specific rung) of the Icon corpus against
 # scrip --ir-run and reports PASS/FAIL vs .expected files.
 #
 # Authors: LCherryholmes · Claude Sonnet 4.6
@@ -40,9 +40,14 @@ run_one() {
     local icn="$1"
     local exp="${icn%.icn}.expected"
     [ -f "$exp" ] || return 0
-    local got want name
+    local got want name stdin_file
     name=$(basename "$icn" .icn)
-    got=$(timeout 8 "$SCRIP" --ir-run "$icn" < /dev/null 2>/dev/null) || true
+    stdin_file="${icn%.icn}.stdin"
+    if [ -f "$stdin_file" ]; then
+        got=$(timeout 8 "$SCRIP" --ir-run "$icn" < "$stdin_file" 2>/dev/null) || true
+    else
+        got=$(timeout 8 "$SCRIP" --ir-run "$icn" < /dev/null 2>/dev/null) || true
+    fi
     want=$(cat "$exp")
     if [ "$got" = "$want" ]; then
         echo "PASS $name"
@@ -62,10 +67,10 @@ if [ -n "$RUNG" ]; then
         run_one "$icn"
     done
 else
-    # Run rung01–rung11
+    # Run rung01–rung29
     for icn in "$CORPUS"/rung0[1-9]_*.icn \
-               "$CORPUS"/rung10_*.icn \
-               "$CORPUS"/rung11_*.icn; do
+               "$CORPUS"/rung1[0-9]_*.icn \
+               "$CORPUS"/rung2[0-9]_*.icn; do
         [ -f "$icn" ] || continue
         run_one "$icn"
     done
