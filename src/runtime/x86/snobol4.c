@@ -2513,7 +2513,7 @@ static int fn_has_builtin(const char *name) {
         h = h * 33 ^ (unsigned char)toupper((unsigned char)*p);
     h %= FUNC_BUCKETS;
     for (FNCBLK_t *e = _func_buckets[h]; e; e = e->next)
-        if (strcasecmp(e->name, name) == 0 && e->fn != NULL) return 1;
+        if (strcmp(e->name, name) == 0 && e->fn != NULL) return 1;
     return 0;
 }
 
@@ -2625,9 +2625,11 @@ void DEFINE_fn(const char *spec, FNCPTR_t fn) {
     FNCBLK_t *fe = _parse_define_spec(spec);
     fe->fn = fn;
     unsigned h = _func_hash(fe->name);
-    /* Replace existing if same name */
+    /* Replace existing if same name (case-sensitive: push_list and Push_list are distinct;
+     * same bucket because _func_hash uppercases, but distinct entries so the two-function
+     * trick works — SPITBOL and CSNOBOL4 -bf treat these as independent functions). */
     for (FNCBLK_t *e = _func_buckets[h]; e; e = e->next) {
-        if (strcasecmp(e->name, fe->name) == 0) {
+        if (strcmp(e->name, fe->name) == 0) {
             e->spec    = fe->spec;
             e->fn      = fe->fn;
             e->nparams = fe->nparams;
@@ -2650,7 +2652,7 @@ void DEFINE_fn_entry(const char *spec, FNCPTR_t fn, const char *entry_label) {
     FNCBLK_t *fe = _parse_define_spec(spec);
     unsigned h = _func_hash(fe->name);
     for (FNCBLK_t *e = _func_buckets[h]; e; e = e->next) {
-        if (strcasecmp(e->name, fe->name) == 0) {
+        if (strcmp(e->name, fe->name) == 0) {
             e->entry_label = GC_strdup(entry_label);
             return;
         }
@@ -2667,7 +2669,7 @@ void register_fn_alias(const char *newname, const char *oldname) {
     FNCBLK_t *old_entry = NULL;
     unsigned ho = _func_hash(oldname);
     for (FNCBLK_t *e = _func_buckets[ho]; e; e = e->next) {
-        if (strcasecmp(e->name, oldname) == 0) { old_entry = e; break; }
+        if (strcmp(e->name, oldname) == 0) { old_entry = e; break; }
     }
     /* Build new entry */
     FNCBLK_t *fe = GC_malloc(sizeof(FNCBLK_t));
@@ -2690,7 +2692,7 @@ void register_fn_alias(const char *newname, const char *oldname) {
     unsigned hn = _func_hash(newname);
     /* Replace if already present */
     for (FNCBLK_t *e = _func_buckets[hn]; e; e = e->next) {
-        if (strcasecmp(e->name, newname) == 0) {
+        if (strcmp(e->name, newname) == 0) {
             e->spec = fe->spec; e->fn = fe->fn;
             e->entry_label = fe->entry_label;
             e->nparams = fe->nparams; e->params = fe->params;
@@ -2711,7 +2713,7 @@ DESCR_t APPLY_fn(const char *name, DESCR_t *args, int nargs) {
     if (!name) return NULVCL;
     unsigned h = _func_hash(name);
     for (FNCBLK_t *e = _func_buckets[h]; e; e = e->next) {
-        if (strcasecmp(e->name, name) == 0) {
+        if (strcmp(e->name, name) == 0) {
             if (e->fn) {
                 return e->fn(args, nargs);
             }
@@ -2741,7 +2743,7 @@ static DESCR_t _ARG_(DESCR_t *a, int n) {
     _func_init();
     unsigned h = _func_hash(fname);
     for (FNCBLK_t *e = _func_buckets[h]; e; e = e->next) {
-        if (strcasecmp(e->name, fname) == 0) {
+        if (strcmp(e->name, fname) == 0) {
             if (idx < 1 || idx > (int64_t)e->nparams) return FAILDESCR;
             const char *pname = e->params[idx - 1];
             size_t len = strlen(pname);
@@ -2763,7 +2765,7 @@ static DESCR_t _LOCAL_(DESCR_t *a, int n) {
     _func_init();
     unsigned h = _func_hash(fname);
     for (FNCBLK_t *e = _func_buckets[h]; e; e = e->next) {
-        if (strcasecmp(e->name, fname) == 0) {
+        if (strcmp(e->name, fname) == 0) {
             if (idx < 1 || idx > (int64_t)e->nlocals) return FAILDESCR;
             const char *lname = e->locals[idx - 1];
             size_t len = strlen(lname);
@@ -2810,7 +2812,7 @@ static DESCR_t _FIELD_(DESCR_t *a, int n) {
     _func_init();
     unsigned h = _func_hash(fname);
     for (FNCBLK_t *e = _func_buckets[h]; e; e = e->next) {
-        if (strcasecmp(e->name, fname) == 0) {
+        if (strcmp(e->name, fname) == 0) {
             /* Fields = params of the DATA prototype */
             if (idx < 1 || idx > (int64_t)e->nparams) return FAILDESCR;
             const char *fname2 = e->params[idx - 1];
@@ -2828,7 +2830,7 @@ int FNCEX_fn(const char *name) {
     if (!name) return 0;
     unsigned h = _func_hash(name);
     for (FNCBLK_t *e = _func_buckets[h]; e; e = e->next)
-        if (strcasecmp(e->name, name) == 0) return 1;
+        if (strcmp(e->name, name) == 0) return 1;
     return 0;
 }
 
@@ -2838,7 +2840,7 @@ int FUNC_NPARAMS_fn(const char *fname) {
     if (!fname) return 0;
     unsigned h = _func_hash(fname);
     for (FNCBLK_t *e = _func_buckets[h]; e; e = e->next)
-        if (strcasecmp(e->name, fname) == 0) return e->nparams;
+        if (strcmp(e->name, fname) == 0) return e->nparams;
     return 0;
 }
 int FUNC_NLOCALS_fn(const char *fname) {
@@ -2846,7 +2848,7 @@ int FUNC_NLOCALS_fn(const char *fname) {
     if (!fname) return 0;
     unsigned h = _func_hash(fname);
     for (FNCBLK_t *e = _func_buckets[h]; e; e = e->next)
-        if (strcasecmp(e->name, fname) == 0) return e->nlocals;
+        if (strcmp(e->name, fname) == 0) return e->nlocals;
     return 0;
 }
 const char *FUNC_PARAM_fn(const char *fname, int i) {
@@ -2854,7 +2856,7 @@ const char *FUNC_PARAM_fn(const char *fname, int i) {
     if (!fname) return NULL;
     unsigned h = _func_hash(fname);
     for (FNCBLK_t *e = _func_buckets[h]; e; e = e->next)
-        if (strcasecmp(e->name, fname) == 0)
+        if (strcmp(e->name, fname) == 0)
             return (i >= 0 && i < e->nparams) ? e->params[i] : NULL;
     return NULL;
 }
@@ -2863,7 +2865,7 @@ const char *FUNC_LOCAL_fn(const char *fname, int i) {
     if (!fname) return NULL;
     unsigned h = _func_hash(fname);
     for (FNCBLK_t *e = _func_buckets[h]; e; e = e->next)
-        if (strcasecmp(e->name, fname) == 0)
+        if (strcmp(e->name, fname) == 0)
             return (i >= 0 && i < e->nlocals) ? e->locals[i] : NULL;
     return NULL;
 }
@@ -2872,7 +2874,7 @@ const char *FUNC_ENTRY_fn(const char *fname) {
     if (!fname) return NULL;
     unsigned h = _func_hash(fname);
     for (FNCBLK_t *e = _func_buckets[h]; e; e = e->next)
-        if (strcasecmp(e->name, fname) == 0)
+        if (strcmp(e->name, fname) == 0)
             return e->entry_label ? e->entry_label : e->name;
     return NULL;
 }
