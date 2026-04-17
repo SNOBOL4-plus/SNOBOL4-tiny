@@ -50,7 +50,7 @@ DESCR_t bb_seq(void *zeta, int entry)
     SEQ_β:          rr=spec_from_descr(ζ->right.fn(ζ->right.state,β));                           
                     if (spec_is_empty(rr))                                      goto right_ω;
                                                                                 goto right_γ;
-    left_γ:         ζ->matched=spec_cat(ζ->matched,lr);                         
+    left_γ:         ζ->matched=lr;                                              /* C5-3 fix: left result replaces, not accumulates */
                     rr=spec_from_descr(ζ->right.fn(ζ->right.state,α));                           
                     if (spec_is_empty(rr))                                      goto right_ω;
                                                                                 goto right_γ;

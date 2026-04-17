@@ -806,11 +806,41 @@ DESCR_t opsyn(DESCR_t newname, DESCR_t oldname, DESCR_t type) {
 }
 
 /* sort_fn — SORT(table_or_array) -> 2D array[1..n,1..2] */
-/* Compare function for qsort: sort by string key */
-static int _sort_cmp(const void *a, const void *b) {
-    const char **sa = (const char **)a;
-    const char **sb = (const char **)b;
-    return strcmp(sa[0], sb[0]);
+/* C5-4: typed compare — follows SPITBOL manual semantics:
+ *   int-int: algebraic;  str-str: lexical;  different types: by type-name order
+ *   (array, code, expression, integer, keyword, name, pattern, real, string, table)
+ * Preserves original key descriptor in col 1 of the result array. */
+static int _sort_type_rank(DESCR_t d) {
+    switch (d.v) {
+        case DT_A: return 0;   /* array */
+        case DT_C: return 1;   /* code */
+        case DT_E: return 2;   /* expression */
+        case DT_I: return 3;   /* integer */
+        /* keyword — no DT_K rank exposed here; treat as name */
+        case DT_P: return 6;   /* pattern */
+        case DT_R: return 7;   /* real */
+        case DT_S: return 8;   /* string */
+        case DT_SNUL: return 8;
+        case DT_T: return 9;   /* table */
+        default:   return 5;   /* name/other */
+    }
+}
+static int _sort_cmp_descr(DESCR_t a, DESCR_t b, const char *sa, const char *sb) {
+    /* int-int: algebraic */
+    if (a.v == DT_I && b.v == DT_I) {
+        if (a.i < b.i) return -1;
+        if (a.i > b.i) return  1;
+        return 0;
+    }
+    /* same string-ish (DT_S / DT_SNUL): lexical */
+    if ((a.v == DT_S || a.v == DT_SNUL) && (b.v == DT_S || b.v == DT_SNUL)) {
+        return strcmp(sa ? sa : "", sb ? sb : "");
+    }
+    /* different types (or other same-type): by type rank */
+    int ra = _sort_type_rank(a), rb = _sort_type_rank(b);
+    if (ra != rb) return ra - rb;
+    /* same rank but not handled above — fall back to stringified compare */
+    return strcmp(sa ? sa : "", sb ? sb : "");
 }
 DESCR_t sort_fn(DESCR_t arr) {
     if (arr.v != DT_T) return arr;  /* pass-through for non-table */
@@ -836,13 +866,15 @@ DESCR_t sort_fn(DESCR_t arr) {
             idx++;
         }
 
-    /* Sort by string key (indirect insertion sort) */
+    /* C5-4: typed insertion sort using key_descr for comparisons */
     int *order = GC_malloc(n * sizeof(int));
     for (int i = 0; i < n; i++) order[i] = i;
     for (int i = 1; i < n; i++) {
         int tmp = order[i];
         int j = i - 1;
-        while (j >= 0 && strcmp(keys[order[j]], keys[tmp]) > 0) {
+        while (j >= 0 &&
+               _sort_cmp_descr(key_descrs[order[j]], key_descrs[tmp],
+                               keys[order[j]],      keys[tmp]) > 0) {
             order[j+1] = order[j]; j--;
         }
         order[j+1] = tmp;
