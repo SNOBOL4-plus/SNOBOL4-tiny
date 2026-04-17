@@ -1,8 +1,11 @@
-// treebank.sc — Penn Treebank s-expression parser (Snocone port)
+// treebank-prepend.sc — Penn Treebank s-expression parser (LISP-style, Snocone)
 // ENG 685, Lon Cherryholmes Sr.
-// Run: scrip --ir-run treebank.sc < VBGinTASA.dat
+// Run: scrip --ir-run treebank-prepend.sc < VBGinTASA.dat
 //
-// Faithful Snocone port of treebank.sno / assignment3.py (treebank pattern).
+// LISP-style cons-list: children PREPENDED to head, list_reverse corrects
+// order at pop time.  Mirrors treebank-prepend.sno exactly.
+// Compare: treebank-append.sc (TABLE-based, append at end, no reversal).
+//
 // Function names match Python exactly:
 //   init_list(v)  push_list(v)  push_item(v)  pop_list()  pop_final(v)
 //
