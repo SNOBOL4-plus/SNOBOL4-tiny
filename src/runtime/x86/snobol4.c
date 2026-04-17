@@ -157,27 +157,73 @@ char alphabet[257];  /* all 256 ASCII chars */
 /* ============================================================
  * Numeric comparison builtins: GT LT GE LE EQ NE
  * SNOBOL4 semantics: succeed (return first arg) or fail (FAILDESCR).
+ * Per SPITBOL manual (p.221 EQ, p.11223+ LEQ): the numeric comparison
+ * family requires args that evaluate to integer or real. A string arg
+ * coerces via strtod only if the string parses cleanly (whitespace-only
+ * counts as 0). Non-numeric strings raise soft error 1 (Illegal data
+ * type) which longjmps to the statement-level :F branch, matching one4all
+ * error-recovery conventions. See also NE/LT/GT/LE/GE — same rule.
  * Also INTEGER, SIZE_fn, REAL type/conversion builtins.
  * ============================================================ */
 
+/* True if d can be used as a number without raising an error.
+ * Accepts: DT_I, DT_R, DT_SNUL, whitespace-only strings (→0),
+ * and strings that strtod consumes fully (up to trailing whitespace).
+ * DT_K is resolved through NV_GET and re-checked. */
+static int is_numeric_like(DESCR_t d) {
+    if (IS_INT(d) || IS_REAL(d) || IS_NULL(d)) return 1;
+    if (IS_STR(d)) {
+        const char *s = d.s ? d.s : "";
+        while (*s == ' ' || *s == '\t') s++;
+        if (!*s) return 1;              /* blank string coerces to 0 */
+        char *end;
+        strtod(s, &end);
+        if (end == s) return 0;         /* no digits consumed */
+        while (*end == ' ' || *end == '\t') end++;
+        return (*end == '\0');
+    }
+    if (IS_KW(d)) return is_numeric_like(NV_GET_fn(d.s));
+    return 0;
+}
+
+/* Guard every numeric-compare entry: raise soft error 1 on non-numeric
+ * args so Snocone `if (s == t)` takes the else branch and SNOBOL4 `:F()`
+ * catches it, rather than silently coercing 'foo'→0.0 and returning TRUE. */
+#define NUM_GUARD(fn)                                                      \
+    do {                                                                   \
+        if (!is_numeric_like(a[0])) {                                      \
+            sno_runtime_error(1, fn " first argument is not numeric");    \
+            return FAILDESCR;                                              \
+        }                                                                  \
+        if (!is_numeric_like(a[1])) {                                      \
+            sno_runtime_error(1, fn " second argument is not numeric");   \
+            return FAILDESCR;                                              \
+        }                                                                  \
+    } while (0)
+
 static DESCR_t _GT_(DESCR_t *a, int n) {
     if (n < 2) return FAILDESCR;
+    NUM_GUARD("GT");
     return gt(a[0], a[1]) ? NULVCL : FAILDESCR;
 }
 static DESCR_t _LT_(DESCR_t *a, int n) {
     if (n < 2) return FAILDESCR;
+    NUM_GUARD("LT");
     return lt(a[0], a[1]) ? NULVCL : FAILDESCR;
 }
 static DESCR_t _GE_(DESCR_t *a, int n) {
     if (n < 2) return FAILDESCR;
+    NUM_GUARD("GE");
     return ge(a[0], a[1]) ? NULVCL : FAILDESCR;
 }
 static DESCR_t _LE_(DESCR_t *a, int n) {
     if (n < 2) return FAILDESCR;
+    NUM_GUARD("LE");
     return le(a[0], a[1]) ? NULVCL : FAILDESCR;
 }
 static DESCR_t _EQ_(DESCR_t *a, int n) {
     if (n < 2) return FAILDESCR;
+    NUM_GUARD("EQ");
     /* Numeric equality: equal returns first arg, else fail */
     if (IS_INT(a[0]) && IS_INT(a[1]))
         return (a[0].i == a[1].i) ? NULVCL : FAILDESCR;
@@ -185,6 +231,7 @@ static DESCR_t _EQ_(DESCR_t *a, int n) {
 }
 static DESCR_t _NE_(DESCR_t *a, int n) {
     if (n < 2) return FAILDESCR;
+    NUM_GUARD("NE");
     if (IS_INT(a[0]) && IS_INT(a[1]))
         return (a[0].i != a[1].i) ? NULVCL : FAILDESCR;
     return (to_real(a[0]) != to_real(a[1])) ? NULVCL : FAILDESCR;
