@@ -258,6 +258,15 @@ void    NAM_discard(int cookie);
 /* NAM_pop: pop frame after final failure (call once after NAM_discard).     */
 void    NAM_pop(int cookie);
 
+/* NAM_mark / NAM_rollback_to — intra-frame high-water checkpoint.
+ *   Pattern combinators that backtrack internally (bb_alt, bb_arbno, etc.)
+ *   can NAM_mark() on entry to a trial branch and NAM_rollback_to(mark)
+ *   when that branch fails, discarding any entries appended during the
+ *   failed trial.  The returned mark is an opaque pointer to the frame's
+ *   tail at the moment of the call (NULL = frame was empty).            */
+void   *NAM_mark(void);
+void    NAM_rollback_to(void *mark);
+
 /* ============================================================
  * Counter stack (nPush/nInc/nDec/nTop/nPop)
  * ============================================================ */

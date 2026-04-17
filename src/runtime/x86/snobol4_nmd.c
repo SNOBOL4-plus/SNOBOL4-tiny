@@ -303,6 +303,37 @@ void NAM_discard(int cookie)
 }
 
 /*---------------------------------------------------------------------------*/
+/* NAM_mark / NAM_rollback_to — intra-frame high-water checkpoint             */
+/*                                                                            */
+/* Used by pattern combinators that backtrack internally (bb_alt, bb_arbno,   */
+/* etc.). NAM_mark() returns an opaque pointer (really the current tail) so   */
+/* that NAM_rollback_to(mark) can trim any entries appended since.            */
+/* A NULL mark means "frame was empty at the time of marking" — rollback in   */
+/* that case empties the frame entirely.                                      */
+/*---------------------------------------------------------------------------*/
+
+void *NAM_mark(void)
+{
+    if (!nam_stack) return NULL;
+    return (void *)nam_stack->tail;   /* may be NULL when frame is empty     */
+}
+
+void NAM_rollback_to(void *mark)
+{
+    if (!nam_stack) return;
+    NamEntry_t *new_tail = (NamEntry_t *)mark;
+    if (new_tail == NULL) {
+        /* frame was empty at mark time — clear everything appended since    */
+        nam_stack->head = NULL;
+        nam_stack->tail = NULL;
+        return;
+    }
+    /* Trim the list after new_tail. GC will reclaim the dangling nodes.     */
+    new_tail->next  = NULL;
+    nam_stack->tail = new_tail;
+}
+
+/*---------------------------------------------------------------------------*/
 /* NAM_pop — pop frame after final failure                                    */
 /*---------------------------------------------------------------------------*/
 

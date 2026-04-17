@@ -72,7 +72,8 @@ seq_t *bb_seq_new(bb_box_fn lf, void *ls, bb_box_fn rf, void *rs)
 #pragma GCC diagnostic ignored "-Wmisleading-indentation"
 #define BB_ALT_INIT 4
 typedef struct { bb_box_fn fn; void *state; } bb_altchild_t;
-typedef struct { int n; int cap; bb_altchild_t *children; int current; int position; spec_t result; } alt_t;
+typedef struct { int n; int cap; bb_altchild_t *children; int current; int position; spec_t result;
+                 void *nam_mark; } alt_t;
 
 DESCR_t bb_alt(void *zeta, int entry)
 {
@@ -81,6 +82,7 @@ DESCR_t bb_alt(void *zeta, int entry)
     if (entry==α)                                                               goto ALT_α;
     if (entry==β)                                                               goto ALT_β;
     ALT_α:          ζ->position=Δ; ζ->current=1;                                
+                    ζ->nam_mark = NAM_mark();   /* Bug #1d: checkpoint so failed arms don't leak (.) entries */
                     cr=spec_from_descr(ζ->children[0].fn(ζ->children[0].state,α));               
                     if (spec_is_empty(cr))                                      goto child_α_ω;
                                                                                 goto child_α_γ;
@@ -88,7 +90,8 @@ DESCR_t bb_alt(void *zeta, int entry)
                     if (spec_is_empty(cr))                                      goto ALT_ω;
                                                                                 goto child_β_γ;
     child_α_γ:      ζ->result=cr;                                               goto ALT_γ;
-    child_α_ω:      ζ->current++;                                               
+    child_α_ω:      NAM_rollback_to(ζ->nam_mark);  /* discard (.) entries from the failed arm */
+                    ζ->current++;                                               
                     if (ζ->current > ζ->n)                                      goto ALT_ω;
                     Δ=ζ->position;                                              
                     cr=spec_from_descr(ζ->children[ζ->current-1].fn(ζ->children[ζ->current-1].state,α));
