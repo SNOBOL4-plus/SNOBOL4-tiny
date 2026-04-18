@@ -118,29 +118,29 @@ char     subject_data[65536] = {0};
 
 /* ── Simple boxes — defined in runtime/x86/bb_boxes.c ────────── */
 /* Types shared with bb_*.c via bb_box.h — do NOT redefine here.           */
-extern spec_t bb_lit(void *zeta, int entry);
-extern spec_t bb_len(void *zeta, int entry);
-extern spec_t bb_span(void *zeta, int entry);
-extern spec_t bb_any(void *zeta, int entry);
-extern spec_t bb_notany(void *zeta, int entry);
-extern spec_t bb_brk(void *zeta, int entry);
-extern spec_t bb_breakx(void *zeta, int entry);
-extern spec_t bb_arb(void *zeta, int entry);
-extern spec_t bb_rem(void *zeta, int entry);
-extern spec_t bb_succeed(void *zeta, int entry);
-extern spec_t bb_fail(void *zeta, int entry);
-extern spec_t bb_eps(void *zeta, int entry);
-extern spec_t bb_pos(void *zeta, int entry);
-extern spec_t bb_rpos(void *zeta, int entry);
-extern spec_t bb_tab(void *zeta, int entry);
-extern spec_t bb_rtab(void *zeta, int entry);
-extern spec_t bb_fence(void *zeta, int entry);
-extern spec_t bb_abort(void *zeta, int entry);
+extern DESCR_t bb_lit(void *zeta, int entry);
+extern DESCR_t bb_len(void *zeta, int entry);
+extern DESCR_t bb_span(void *zeta, int entry);
+extern DESCR_t bb_any(void *zeta, int entry);
+extern DESCR_t bb_notany(void *zeta, int entry);
+extern DESCR_t bb_brk(void *zeta, int entry);
+extern DESCR_t bb_breakx(void *zeta, int entry);
+extern DESCR_t bb_arb(void *zeta, int entry);
+extern DESCR_t bb_rem(void *zeta, int entry);
+extern DESCR_t bb_succeed(void *zeta, int entry);
+extern DESCR_t bb_fail(void *zeta, int entry);
+extern DESCR_t bb_eps(void *zeta, int entry);
+extern DESCR_t bb_pos(void *zeta, int entry);
+extern DESCR_t bb_rpos(void *zeta, int entry);
+extern DESCR_t bb_tab(void *zeta, int entry);
+extern DESCR_t bb_rtab(void *zeta, int entry);
+extern DESCR_t bb_fence(void *zeta, int entry);
+extern DESCR_t bb_abort(void *zeta, int entry);
 extern DESCR_t bb_bal(void *zeta, int entry);
 extern bal_t  *bb_bal_new(void);
-extern spec_t bb_alt(void *zeta, int entry);
-extern spec_t bb_seq(void *zeta, int entry);
-extern spec_t bb_arbno(void *zeta, int entry);
+extern DESCR_t bb_alt(void *zeta, int entry);
+extern DESCR_t bb_seq(void *zeta, int entry);
+extern DESCR_t bb_arbno(void *zeta, int entry);
 
 /* ── Complex boxes — defined below (need bb_node_t / bb_build / DESCR_t) ─ */
 /* bb_capture, bb_atp, bb_deferred_var remain here until MILESTONE-BOX-UNIFY */
@@ -482,7 +482,18 @@ typedef struct {
     int         done;
 } usercall_t;
 
-static spec_t bb_usercall(void *zeta, int entry)
+/* SN-17 fix (Porter Bug #1d root cause):
+ * bb_usercall was declared to return spec_t but is invoked via the bb_box_fn
+ * pointer which expects DESCR_t.  spec_t { σ, δ } and DESCR_t { v, slen, union }
+ * have the same 16-byte size but DIFFERENT layout (σ at offset 0 vs v at offset 0).
+ * The caller (bb_seq via spec_from_descr) read the pointer bits of Σ+Δ as d.v,
+ * saw it was not DT_S, and treated the match as failure.  Consequence: any
+ * pattern of the form `*fn() other_box` in a sequence silently failed when
+ * `*fn()` should have matched epsilon.  Porter's guard idiom relies on exactly
+ * this shape (`*g_m_gt_0() (epsilon . *s_ee())`), which is why all Porter steps
+ * that use a *guard() before (epsilon . *action()) never fired.
+ * Fix: return DESCR_t via descr_from_spec, same as bb_atp, bb_not, bb_int etc. */
+static DESCR_t bb_usercall(void *zeta, int entry)
 {
     usercall_t *ζ = zeta;
     spec_t UC;
@@ -495,8 +506,8 @@ static spec_t bb_usercall(void *zeta, int entry)
            UC = spec(Σ + Δ, 0);           goto UC_γ;
     UC_β:                                  goto UC_ω;
 
-    UC_γ:                                  return UC;
-    UC_ω:                                  return spec_empty;
+    UC_γ:                                  return descr_from_spec(UC);
+    UC_ω:                                  return FAILDESCR;
 }
 
 /* ── CALLCAP box — call func at match time to get DT_N lvalue, capture into it ─
@@ -739,7 +750,7 @@ bb_node_t bb_build(PATND_t *p)
     if (!p) {
         /* null node → epsilon */
         eps_t *ζ = calloc(1, sizeof(eps_t));
-        n.fn = (bb_box_fn)bb_eps;
+        n.fn = bb_eps;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
                                                               return n;
@@ -771,7 +782,7 @@ bb_node_t bb_build(PATND_t *p)
         lit_t *ζ = calloc(1, sizeof(lit_t));
         ζ->lit = p->STRVAL_fn ? p->STRVAL_fn : "";
         ζ->len = (int)strlen(ζ->lit);
-        n.fn = (bb_box_fn)bb_lit;
+        n.fn = bb_lit;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
         break;
@@ -781,7 +792,7 @@ bb_node_t bb_build(PATND_t *p)
     case XPOSI: {
         pos_t *ζ = calloc(1, sizeof(pos_t));
         ζ->n = (int)p->num;
-        n.fn = (bb_box_fn)bb_pos;
+        n.fn = bb_pos;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
         break;
@@ -791,7 +802,7 @@ bb_node_t bb_build(PATND_t *p)
     case XRPSI: {
         rpos_t *ζ = calloc(1, sizeof(rpos_t));
         ζ->n = (int)p->num;
-        n.fn = (bb_box_fn)bb_rpos;
+        n.fn = bb_rpos;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
         break;
@@ -801,7 +812,7 @@ bb_node_t bb_build(PATND_t *p)
     case XLNTH: {
         len_t *ζ = calloc(1, sizeof(len_t));
         ζ->n = (int)p->num;
-        n.fn = (bb_box_fn)bb_len;
+        n.fn = bb_len;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
         break;
@@ -811,7 +822,7 @@ bb_node_t bb_build(PATND_t *p)
     case XSPNC: {
         span_t *ζ = calloc(1, sizeof(span_t));
         ζ->chars = p->STRVAL_fn ? p->STRVAL_fn : "";
-        n.fn = (bb_box_fn)bb_span;
+        n.fn = bb_span;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
         break;
@@ -821,7 +832,7 @@ bb_node_t bb_build(PATND_t *p)
     case XBRKC: {
         brk_t *ζ = calloc(1, sizeof(brk_t));
         ζ->chars = p->STRVAL_fn ? p->STRVAL_fn : "";
-        n.fn = (bb_box_fn)bb_brk;
+        n.fn = bb_brk;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
         break;
@@ -831,7 +842,7 @@ bb_node_t bb_build(PATND_t *p)
     case XBRKX: {
         brkx_t *ζ = calloc(1, sizeof(brkx_t));
         ζ->chars = p->STRVAL_fn ? p->STRVAL_fn : "";
-        n.fn = (bb_box_fn)bb_breakx;
+        n.fn = bb_breakx;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
         break;
@@ -841,7 +852,7 @@ bb_node_t bb_build(PATND_t *p)
     case XANYC: {
         any_t *ζ = calloc(1, sizeof(any_t));
         ζ->chars = p->STRVAL_fn ? p->STRVAL_fn : "";
-        n.fn = (bb_box_fn)bb_any;
+        n.fn = bb_any;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
         break;
@@ -851,7 +862,7 @@ bb_node_t bb_build(PATND_t *p)
     case XNNYC: {
         notany_t *ζ = calloc(1, sizeof(notany_t));
         ζ->chars = p->STRVAL_fn ? p->STRVAL_fn : "";
-        n.fn = (bb_box_fn)bb_notany;
+        n.fn = bb_notany;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
         break;
@@ -860,7 +871,7 @@ bb_node_t bb_build(PATND_t *p)
     /* ── ARB ────────────────────────────────────────────────────────── */
     case XFARB: {
         arb_t *ζ = calloc(1, sizeof(arb_t));
-        n.fn = (bb_box_fn)bb_arb;
+        n.fn = bb_arb;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
         break;
@@ -869,7 +880,7 @@ bb_node_t bb_build(PATND_t *p)
     /* ── REM ────────────────────────────────────────────────────────── */
     case XSTAR: {
         rem_t *ζ = calloc(1, sizeof(rem_t));
-        n.fn = (bb_box_fn)bb_rem;
+        n.fn = bb_rem;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
         break;
@@ -878,7 +889,7 @@ bb_node_t bb_build(PATND_t *p)
     /* ── SUCCEED ────────────────────────────────────────────────────── */
     case XSUCF: {
         succeed_t *ζ = calloc(1, sizeof(succeed_t));
-        n.fn = (bb_box_fn)bb_succeed;
+        n.fn = bb_succeed;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
         break;
@@ -887,7 +898,7 @@ bb_node_t bb_build(PATND_t *p)
     /* ── FAIL ───────────────────────────────────────────────────────── */
     case XFAIL: {
         fail_t *ζ = calloc(1, sizeof(fail_t));
-        n.fn = (bb_box_fn)bb_fail;
+        n.fn = bb_fail;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
         break;
@@ -896,7 +907,7 @@ bb_node_t bb_build(PATND_t *p)
     /* ── EPSILON ────────────────────────────────────────────────────── */
     case XEPS: {
         eps_t *ζ = calloc(1, sizeof(eps_t));
-        n.fn = (bb_box_fn)bb_eps;
+        n.fn = bb_eps;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
         break;
@@ -914,7 +925,7 @@ bb_node_t bb_build(PATND_t *p)
             ζ->left.fn    = l.fn;  ζ->left.state  = l.ζ;
             ζ->right.fn   = n.fn;  ζ->right.state = n.ζ;
             bb_node_t seq_n;
-            seq_n.fn = (bb_box_fn)bb_seq;
+            seq_n.fn = bb_seq;
             seq_n.ζ  = ζ;
             seq_n.ζ_size = sizeof(*ζ);
             n = seq_n;
@@ -934,7 +945,7 @@ bb_node_t bb_build(PATND_t *p)
             ζ->children[i].state = arm.ζ;
         }
         ζ->n = nc;
-        n.fn = (bb_box_fn)bb_alt;
+        n.fn = bb_alt;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
         break;
@@ -948,7 +959,7 @@ bb_node_t bb_build(PATND_t *p)
         ζ->state = body.ζ;
         ζ->cap   = ARBNO_INIT;
         ζ->stack = malloc(ζ->cap * sizeof(aframe_t));
-        n.fn = (bb_box_fn)bb_arbno;
+        n.fn = bb_arbno;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
         break;
@@ -964,7 +975,7 @@ bb_node_t bb_build(PATND_t *p)
         ζ->var_ptr   = (p->var.v == DT_N && p->var.ptr) ? (DESCR_t*)p->var.ptr : NULL;
         ζ->immediate = 1;
         register_capture(ζ);
-        n.fn = (bb_box_fn)bb_capture;
+        n.fn = bb_capture;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
         break;
@@ -979,7 +990,7 @@ bb_node_t bb_build(PATND_t *p)
         ζ->varname   = (p->var.v == DT_S && p->var.s) ? p->var.s : NULL;
         ζ->var_ptr   = (p->var.v == DT_N && p->var.ptr) ? (DESCR_t*)p->var.ptr : NULL;
         ζ->immediate = 0;
-        n.fn = (bb_box_fn)bb_capture;
+        n.fn = bb_capture;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
         break;
@@ -998,7 +1009,7 @@ bb_node_t bb_build(PATND_t *p)
         /* TL-2: propagate arg names for flush-time resolution (see CC_γ_core). */
         ζ->fnc_arg_names   = p->arg_names;
         ζ->fnc_n_arg_names = p->n_arg_names;
-        n.fn = (bb_box_fn)bb_callcap;
+        n.fn = bb_callcap;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
         break;
@@ -1024,14 +1035,14 @@ bb_node_t bb_build(PATND_t *p)
             ζ->child_fn = NULL;
             ζ->child_state  = NULL;
             ζ->child_size = 0;
-            n.fn     = (bb_box_fn)bb_deferred_var;
+            n.fn     = bb_deferred_var;
             n.ζ      = ζ;
             n.ζ_size = sizeof(deferred_var_t);
         n.ζ_size = sizeof(*ζ);
         } else {
             /* no name — epsilon (degenerate, shouldn't arise) */
             eps_t *ζ = calloc(1, sizeof(eps_t));
-            n.fn = (bb_box_fn)bb_eps;
+            n.fn = bb_eps;
             n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
         }
@@ -1044,7 +1055,7 @@ bb_node_t bb_build(PATND_t *p)
          * Distinct from POS(n): POS requires Δ==n; TAB allows Δ<=n. */
         tab_t *ζ = calloc(1, sizeof(tab_t));
         ζ->n = (int)p->num;
-        n.fn = (bb_box_fn)bb_tab;
+        n.fn = bb_tab;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
         break;
@@ -1054,7 +1065,7 @@ bb_node_t bb_build(PATND_t *p)
     case XRTB: {
         rtab_t *ζ = calloc(1, sizeof(rtab_t));
         ζ->n = (int)p->num;
-        n.fn = (bb_box_fn)bb_rtab;
+        n.fn = bb_rtab;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
         break;
@@ -1065,7 +1076,7 @@ bb_node_t bb_build(PATND_t *p)
         if (p->nchildren == 0) {
             /* FENCE0: bare FENCE — seal only */
             fence_t *ζ = calloc(1, sizeof(fence_t));
-            n.fn = (bb_box_fn)bb_fence;
+            n.fn = bb_fence;
             n.ζ  = ζ;
             n.ζ_size = sizeof(*ζ);
         } else {
@@ -1073,11 +1084,11 @@ bb_node_t bb_build(PATND_t *p)
              * Child fails → ω (fail). Child succeeds → seal (β cuts). */
             bb_node_t child = bb_build(p->children[0]);
             fence_t *fζ = calloc(1, sizeof(fence_t));
-            bb_node_t fence_n; fence_n.fn=(bb_box_fn)bb_fence; fence_n.ζ=fζ; fence_n.ζ_size=sizeof(*fζ);
+            bb_node_t fence_n; fence_n.fn= bb_fence; fence_n.ζ=fζ; fence_n.ζ_size=sizeof(*fζ);
             seq_t *sζ = calloc(1, sizeof(seq_t));
             sζ->left.fn    = child.fn;   sζ->left.state  = child.ζ;
             sζ->right.fn   = fence_n.fn; sζ->right.state = fence_n.ζ;
-            n.fn = (bb_box_fn)bb_seq;
+            n.fn = bb_seq;
             n.ζ  = sζ;
             n.ζ_size = sizeof(*sζ);
         }
@@ -1087,7 +1098,7 @@ bb_node_t bb_build(PATND_t *p)
     /* ── ABORT — immediate match failure, no backtracking ───────────── */
     case XABRT: {
         abort_t *ζ = calloc(1, sizeof(abort_t));
-        n.fn = (bb_box_fn)bb_abort;
+        n.fn = bb_abort;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
         break;
@@ -1104,7 +1115,7 @@ bb_node_t bb_build(PATND_t *p)
                                   ? p->args[0].s : "";
             atp_t *ζ = calloc(1, sizeof(atp_t));
             ζ->varname = varname;
-            n.fn     = (bb_box_fn)bb_atp;
+            n.fn     = bb_atp;
             n.ζ      = ζ;
             n.ζ_size = sizeof(atp_t);
             break;
@@ -1114,7 +1125,7 @@ bb_node_t bb_build(PATND_t *p)
         ζ2->name  = p->STRVAL_fn;
         ζ2->args  = p->args;
         ζ2->nargs = p->nargs;
-        n.fn     = (bb_box_fn)bb_usercall;
+        n.fn     = bb_usercall;
         n.ζ      = ζ2;
         n.ζ_size = sizeof(*ζ2);
         break;
@@ -1123,7 +1134,7 @@ bb_node_t bb_build(PATND_t *p)
     /* ── BAL ────────────────────────────────────────────────────────────── */
     case XBAL: {
         bal_t *ζ = bb_bal_new();
-        n.fn     = (bb_box_fn)bb_bal;
+        n.fn     = bb_bal;
         n.ζ      = ζ;
         n.ζ_size = sizeof(*ζ);
         break;
@@ -1134,7 +1145,7 @@ bb_node_t bb_build(PATND_t *p)
         fprintf(stderr, "stmt_exec: unimplemented XKIND %d — using epsilon\n",
                 (int)p->kind);
         eps_t *ζ = calloc(1, sizeof(eps_t));
-        n.fn = (bb_box_fn)bb_eps;
+        n.fn = bb_eps;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
         break;
@@ -1206,7 +1217,7 @@ static DESCR_t bb_deferred_var(void *zeta, int entry)
                                 lz = calloc(1, sizeof(lit_t));
                                 lz->lit = val.s;
                                 lz->len = (int)strlen(val.s);
-                                ζ->child_fn     = (bb_box_fn)bb_lit;
+                                ζ->child_fn     = bb_lit;
                                 ζ->child_state      = lz;
                                 ζ->child_size = sizeof(lit_t);
                                 rebuilt = 1;
@@ -1214,7 +1225,7 @@ static DESCR_t bb_deferred_var(void *zeta, int entry)
                         } else {
                             if (!ζ->child_fn) {
                                 eps_t *ez = calloc(1, sizeof(eps_t));
-                                ζ->child_fn     = (bb_box_fn)bb_eps;
+                                ζ->child_fn     = bb_eps;
                                 ζ->child_state      = ez;
                                 ζ->child_size = sizeof(eps_t);
                                 rebuilt = 1;
@@ -1227,11 +1238,11 @@ static DESCR_t bb_deferred_var(void *zeta, int entry)
                          * bb_brk). Zeroing nulls the ptr -> strchr(NULL,...) -> fail
                          * on every ARBNO retry iteration. bb_lit already excluded
                          * (DYN-12); extend guard to all config-only box types. */
-                        int _config_only = (ζ->child_fn == (bb_box_fn)bb_lit
-                                         || ζ->child_fn == (bb_box_fn)bb_any
-                                         || ζ->child_fn == (bb_box_fn)bb_notany
-                                         || ζ->child_fn == (bb_box_fn)bb_span
-                                         || ζ->child_fn == (bb_box_fn)bb_brk);
+                        int _config_only = (ζ->child_fn == bb_lit
+                                         || ζ->child_fn == bb_any
+                                         || ζ->child_fn == bb_notany
+                                         || ζ->child_fn == bb_span
+                                         || ζ->child_fn == bb_brk);
                         if (!rebuilt && ζ->child_state && ζ->child_size && !_config_only)
                             memset(ζ->child_state, 0, ζ->child_size);
                     }
@@ -1496,12 +1507,12 @@ int exec_stmt(const char  *subj_name,
             lit_t *lζ = calloc(1, sizeof(lit_t));
             lζ->lit = pat.s;
             lζ->len = (int)strlen(pat.s);
-            root.fn = (bb_box_fn)bb_lit;
+            root.fn = bb_lit;
             root.ζ  = lζ;
         }
     } else {
         eps_t *eζ = calloc(1, sizeof(eps_t));
-        root.fn = (bb_box_fn)bb_eps;
+        root.fn = bb_eps;
         root.ζ  = eζ;
     }
 

@@ -426,10 +426,10 @@ static void flat_emit_charset_call(bb_box_fn c_fn, const char *chars,
 
 /* ── flat_emit_node dispatch ─────────────────────────────────────────────── */
 
-extern spec_t bb_span(void *zeta, int entry);
-extern spec_t bb_any(void *zeta, int entry);
-extern spec_t bb_brk(void *zeta, int entry);
-extern spec_t bb_notany(void *zeta, int entry);
+extern DESCR_t bb_span(void *zeta, int entry);
+extern DESCR_t bb_any(void *zeta, int entry);
+extern DESCR_t bb_brk(void *zeta, int entry);
+extern DESCR_t bb_notany(void *zeta, int entry);
 extern int memcmp(const void *, const void *, size_t);
 
 static void flat_emit_node(PATND_t *p,

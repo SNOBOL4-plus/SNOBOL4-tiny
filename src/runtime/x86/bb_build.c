@@ -15,7 +15,7 @@
  *   bb_box_fn fn = bb_lit_emit_binary("hello", 5);
  *   if (fn) { root.fn = fn; root.ζ = NULL; }
  *
- * ABI: spec_t fn(void *zeta_ignored, int entry)
+ * ABI: DESCR_t fn(void *zeta_ignored, int entry)
  *   rdi = zeta (ignored — lit/len baked in)
  *   esi = entry (0=α, 1=β)
  *   returns: rax=σ (ptr), rdx=δ (len)  — success
@@ -141,9 +141,9 @@ static void emit_sub_int_global(const int *addr, int32_t val)
 extern int memcmp(const void *, const void *, size_t);
 
 /* forward declarations */
-extern spec_t bb_seq(void *zeta, int entry);
-extern spec_t bb_tab(void *zeta, int entry);
-extern spec_t bb_rtab(void *zeta, int entry);
+extern DESCR_t bb_seq(void *zeta, int entry);
+extern DESCR_t bb_tab(void *zeta, int entry);
+extern DESCR_t bb_rtab(void *zeta, int entry);
 
 /* M-DYN-B7: capture box — bb_capture is static in stmt_exec.c;
  * exposed via bb_capture_exported() thin wrapper + bb_capture_new() ctor. */
@@ -165,7 +165,7 @@ extern capture_t_bin *bb_capture_new(bb_box_fn child_fn, void *child_state,
 
 /* M-DYN-B10: exported shims for static box functions in stmt_exec.c */
 extern DESCR_t bb_callcap_exported(void *zeta, int entry);
-extern spec_t bb_deferred_var_exported(void *zeta, int entry);
+extern DESCR_t bb_deferred_var_exported(void *zeta, int entry);
 
 /* Mirror of callcap_t fields needed by bb_callcap_new — only the ctor fields.
  * The full struct in stmt_exec.c has extra fields (pending, resolved_ptr, etc.)
@@ -204,7 +204,7 @@ extern void *bb_dvar_bin_new(const char *name);
 /* bb_arbno, bb_fail, bb_atp are in separate .c files — directly linkable */
 extern DESCR_t bb_arbno(void *zeta, int entry);
 extern void   *bb_arbno_new(bb_box_fn fn, void *state);
-extern spec_t bb_fail(void *zeta, int entry);
+extern DESCR_t bb_fail(void *zeta, int entry);
 extern DESCR_t bb_atp(void *zeta, int entry);
 
 static bb_box_fn bb_build_binary_node(PATND_t *p);
@@ -378,7 +378,7 @@ bb_box_fn bb_lit_emit_binary(const char *lit, int len)
  * in the C path guards against double-γ on backtrack, but our binary boxes
  * are rebuilt each time, so this is safe.
  *
- * ABI: spec_t fn(void *zeta_ignored, int entry)
+ * ABI: DESCR_t fn(void *zeta_ignored, int entry)
  *   rdi = zeta (ignored)
  *   esi = entry (0=α → succeed, 1=β → fail)
  *
@@ -624,14 +624,14 @@ typedef struct {
 } bin_seq_t;
 
 /* Forward declaration for mutual recursion in XCAT */
-extern spec_t bb_seq(void *zeta, int entry);
-extern spec_t bb_len(void *zeta, int entry);
+extern DESCR_t bb_seq(void *zeta, int entry);
+extern DESCR_t bb_len(void *zeta, int entry);
 
 /* M-DYN-B8: char-set boxes */
-extern spec_t bb_span(void *zeta, int entry);
-extern spec_t bb_any(void *zeta, int entry);
-extern spec_t bb_brk(void *zeta, int entry);
-extern spec_t bb_notany(void *zeta, int entry);
+extern DESCR_t bb_span(void *zeta, int entry);
+extern DESCR_t bb_any(void *zeta, int entry);
+extern DESCR_t bb_brk(void *zeta, int entry);
+extern DESCR_t bb_notany(void *zeta, int entry);
 
 /*
  * Char-set trampoline helper — SPAN/ANY/BREAK/NOTANY — M-DYN-B8
@@ -712,8 +712,8 @@ static bb_box_fn bb_brk_emit_binary(const char *chars)
 #undef CHARSET_TRAM_SIZE
 
 /* M-DYN-B9: XOR (alternation) and XSTAR (REM) */
-extern spec_t bb_alt(void *zeta, int entry);
-extern spec_t bb_rem(void *zeta, int entry);
+extern DESCR_t bb_alt(void *zeta, int entry);
+extern DESCR_t bb_rem(void *zeta, int entry);
 
 /*
  * bb_rem_emit_binary() — M-DYN-B9
@@ -801,8 +801,8 @@ static bb_box_fn bb_alt_emit_binary(PATND_t *p)
 }
 
 /* M-DYN-B9b: XFARB (ARB) and XBRKX (BREAKX) */
-extern spec_t bb_arb(void *zeta, int entry);
-extern spec_t bb_breakx(void *zeta, int entry);
+extern DESCR_t bb_arb(void *zeta, int entry);
+extern DESCR_t bb_breakx(void *zeta, int entry);
 
 /* bb_arb_emit_binary() — XFARB (ARB matches 0..Σlen-Δ chars, grows on β)
  * arb_t = { int count; int start; } — both runtime-mutable, reset each α.
@@ -1062,7 +1062,7 @@ static bb_box_fn bb_fail_emit_binary(void)
  * fence_t = { int fired; }  (bb_box.h line 127)
  */
 typedef struct { int fired; } fence_t_bin;
-extern spec_t bb_fence(void *zeta, int entry);
+extern DESCR_t bb_fence(void *zeta, int entry);
 
 static bb_box_fn bb_fence_emit_binary(void)
 {
