@@ -138,7 +138,7 @@ arb_t *bb_arb_new(void)
 
 #pragma GCC diagnostic ignored "-Wmisleading-indentation"
 #define ARBNO_INIT 8
-typedef struct { spec_t matched; int start; } arbno_frame_t;
+typedef struct { spec_t matched; int start; void *nam_mark; } arbno_frame_t;
 typedef struct { bb_box_fn fn; void *state; int depth; int cap; arbno_frame_t *stack; } arbno_t;
 
 DESCR_t bb_arbno(void *zeta, int entry)
@@ -149,7 +149,8 @@ DESCR_t bb_arbno(void *zeta, int entry)
     if (entry==β)                                                               goto ARBNO_β;
     ARBNO_α:        ζ->depth=0; fr=&ζ->stack[0];
                     fr->matched=spec(Σ+Δ,0); fr->start=Δ;
-    ARBNO_try:      br=spec_from_descr(ζ->fn(ζ->state,α));
+    ARBNO_try:      ζ->stack[ζ->depth].nam_mark = NAM_mark();   /* TL-2: trim failed-trial NAM entries */
+                    br=spec_from_descr(ζ->fn(ζ->state,α));
                     if (spec_is_empty(br))                                      goto body_ω;
                                                                                 goto body_γ;
     ARBNO_β:        if (ζ->depth<=0)                                            goto ARBNO_ω;
@@ -165,8 +166,10 @@ DESCR_t bb_arbno(void *zeta, int entry)
                     }
                     fr=&ζ->stack[ζ->depth];
                     fr->matched=ARBNO; fr->start=Δ;                             goto ARBNO_try;
-    body_ω:         ARBNO=ζ->stack[ζ->depth].matched;                           goto ARBNO_γ;
-    ARBNO_γ_now:    ARBNO=ζ->stack[ζ->depth].matched;                           goto ARBNO_γ;
+    body_ω:         NAM_rollback_to(ζ->stack[ζ->depth].nam_mark);  /* TL-2: drop this trial's NAM entries */
+                    ARBNO=ζ->stack[ζ->depth].matched;                           goto ARBNO_γ;
+    ARBNO_γ_now:    NAM_rollback_to(ζ->stack[ζ->depth].nam_mark);  /* TL-2: zero-advance also drops */
+                    ARBNO=ζ->stack[ζ->depth].matched;                           goto ARBNO_γ;
     ARBNO_γ:                                                                    return descr_from_spec(ARBNO);
     ARBNO_ω:                                                                    return FAILDESCR;
 }

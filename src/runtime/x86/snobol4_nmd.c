@@ -342,31 +342,46 @@ void NAM_discard(int cookie)
 /* NAM_mark / NAM_rollback_to — intra-frame high-water checkpoint             */
 /*                                                                            */
 /* Used by pattern combinators that backtrack internally (bb_alt, bb_arbno,   */
-/* etc.). NAM_mark() returns an opaque pointer (really the current tail) so   */
-/* that NAM_rollback_to(mark) can trim any entries appended since.            */
-/* A NULL mark means "frame was empty at the time of marking" — rollback in   */
-/* that case empties the frame entirely.                                      */
+/* etc.). NAM_mark() returns an opaque pointer containing both the current    */
+/* frame identity AND the tail at the moment of the call. NAM_rollback_to    */
+/* trims entries appended since — but ONLY if the current top-of-stack frame */
+/* is still the frame that was marked. If that frame has been popped in the  */
+/* meantime (e.g., because a nested construct committed it), rollback is a   */
+/* safe no-op — the entries we cared about are already gone with the frame.  */
+/* Tail may be NULL: frame was empty at mark time → clear everything the    */
+/* frame now contains (but only if the frame identity still matches).       */
 /*---------------------------------------------------------------------------*/
+
+typedef struct { NamFrame_t *frame; NamEntry_t *tail; } NamMark_t;
 
 void *NAM_mark(void)
 {
     if (!nam_stack) return NULL;
-    return (void *)nam_stack->tail;   /* may be NULL when frame is empty     */
+    NamMark_t *m = GC_MALLOC(sizeof(NamMark_t));
+    m->frame = nam_stack;
+    m->tail  = nam_stack->tail;   /* may be NULL when frame is empty         */
+    return (void *)m;
 }
 
 void NAM_rollback_to(void *mark)
 {
-    if (!nam_stack) return;
-    NamEntry_t *new_tail = (NamEntry_t *)mark;
-    if (new_tail == NULL) {
-        /* frame was empty at mark time — clear everything appended since    */
+    if (!mark || !nam_stack) return;
+    NamMark_t  *m = (NamMark_t *)mark;
+    /* Frame-identity guard: if the marked frame is no longer the current   */
+    /* top-of-stack, the frame was popped (committed/discarded) since the   */
+    /* mark was taken. Any entries we would have rolled back are gone with  */
+    /* the frame — nothing to do. Writing into m->tail->next would corrupt  */
+    /* GC-reclaimed memory (observed claws5 'Aborted' crash).               */
+    if (m->frame != nam_stack) return;
+    if (m->tail == NULL) {
+        /* frame was empty at mark time — clear everything appended since  */
         nam_stack->head = NULL;
         nam_stack->tail = NULL;
         return;
     }
-    /* Trim the list after new_tail. GC will reclaim the dangling nodes.     */
-    new_tail->next  = NULL;
-    nam_stack->tail = new_tail;
+    /* Trim the list after m->tail. GC will reclaim the dangling nodes.     */
+    m->tail->next   = NULL;
+    nam_stack->tail = m->tail;
 }
 
 /*---------------------------------------------------------------------------*/

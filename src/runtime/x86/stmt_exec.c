@@ -280,7 +280,7 @@ typedef struct {
 } seq_t;
 
 #define ARBNO_INIT 8
-typedef struct { spec_t matched; int start; } aframe_t;
+typedef struct { spec_t matched; int start; void *nam_mark; } aframe_t;  /* TL-2: nam_mark must mirror bb_boxes.c arbno_frame_t */
 typedef struct {
     bb_box_fn  fn;
     void      *state;
