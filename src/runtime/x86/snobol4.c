@@ -8,6 +8,7 @@
 #include "snobol4.h"
 #include "sil_macros.h"   /* SIL macro translations — RT + SM axes */
 #include "snobol4_utf8.h"   /* P3C: UTF-8 character-aware helpers */
+#include "../../frontend/snobol4/scrip_cc.h"  /* SN-19: sno_fold_name() — lexer fold run on runtime name strings */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1192,9 +1193,9 @@ static DESCR_t _DATA_(DESCR_t *a, int n) {
 
     if (_data_ntypes >= DATA_MAX_TYPES) return NULVCL;
     int tidx = _data_ntypes++;
-    /* CSNOBOL4 returns DATATYPE as uppercase — uppercase the typename now */
-    char *uname = GC_strdup(tname);
-    for (char *p = uname; *p; p++) *p = (char)toupper((unsigned char)*p);
+    /* SN-19: lex-fold the typename (mode-aware); was a hard toupper which
+     * incorrectly folded in --case-sensitive mode. */
+    char *uname = GC_strdup(tname); sno_fold_name(uname);
     _data_types[tidx].typename = uname;
 
     /* Parse fields */
@@ -1205,15 +1206,16 @@ static DESCR_t _DATA_(DESCR_t *a, int n) {
         while (*tok == ' ') tok++;
         char *end = tok + strlen(tok) - 1;
         while (end > tok && *end == ' ') *end-- = '\0';
-        _data_types[tidx].fields[nf] = GC_strdup(tok);
+        char *fld = GC_strdup(tok); sno_fold_name(fld);  /* SN-19 */
+        _data_types[tidx].fields[nf] = fld;
         nf++;
         tok = strtok(NULL, ",");
     }
     _data_types[tidx].nfields = nf;
 
-    /* Register constructor: typename(f1,f2,...) */
+    /* Register constructor: typename(f1,f2,...) — use folded typename */
     extern void register_fn(const char *, DESCR_t (*)(DESCR_t*, int), int, int);
-    register_fn(tname, _ctor_fns[tidx], 0, nf);
+    register_fn(uname, _ctor_fns[tidx], 0, nf);
 
     /* Register field accessors: each field name as a 1-arg function */
     for (int fi = 0; fi < nf; fi++) {
@@ -1331,7 +1333,8 @@ static DESCR_t _VALUE_(DESCR_t *a, int n) {
     if (n < 1) return FAILDESCR;
     const char *name = VARVAL_fn(a[0]);
     if (!name) return FAILDESCR;
-    return NV_GET_fn(name);
+    char *fname = GC_strdup(name); sno_fold_name(fname);  /* SN-19 lex-fold on runtime name */
+    return NV_GET_fn(fname);
 }
 
 void SNO_INIT_fn(void) {
@@ -2590,7 +2593,7 @@ static FNCBLK_t *_parse_define_spec(const char *spec) {
         char *comma = strchr(s, ',');
         if (comma) {
             *comma = '\0';
-            fe->name = GC_strdup(s);
+            fe->name = GC_strdup(s); sno_fold_name(fe->name);  /* SN-19 lex-fold on runtime prototype */
             fe->entry_label = fe->name;
             char *lstr = GC_strdup(comma + 1);
             int nl = 0;
@@ -2602,11 +2605,11 @@ static FNCBLK_t *_parse_define_spec(const char *spec) {
             tok  = strtok(lstr, ",");
             for (int i = 0; i < nl && tok; i++) {
                 while (*tok == ' ') tok++;
-                fe->locals[i] = GC_strdup(tok);
+                fe->locals[i] = GC_strdup(tok); sno_fold_name(fe->locals[i]);  /* SN-19 */
                 tok = strtok(NULL, ",");
             }
         } else {
-            fe->name = GC_strdup(s);
+            fe->name = GC_strdup(s); sno_fold_name(fe->name);  /* SN-19 */
             fe->entry_label = fe->name;
         }
         fe->nparams = 0;
@@ -2615,7 +2618,7 @@ static FNCBLK_t *_parse_define_spec(const char *spec) {
     }
 
     *paren = '\0';
-    fe->name = GC_strdup(s);
+    fe->name = GC_strdup(s); sno_fold_name(fe->name);  /* SN-19 */
     fe->entry_label = fe->name; /* default: body label == function name */
 
     char *close = strchr(paren + 1, ')');
@@ -2640,7 +2643,7 @@ static FNCBLK_t *_parse_define_spec(const char *spec) {
         char *tok = strtok(pstr, ",");
         for (int i = 0; i < np && tok; i++) {
             while (*tok == ' ') tok++;
-            fe->params[i] = GC_strdup(tok);
+            fe->params[i] = GC_strdup(tok); sno_fold_name(fe->params[i]);  /* SN-19 */
             tok = strtok(NULL, ",");
         }
     }
@@ -2659,7 +2662,7 @@ static FNCBLK_t *_parse_define_spec(const char *spec) {
         tok  = strtok(lstr, ",");
         for (int i = 0; i < nl && tok; i++) {
             while (*tok == ' ') tok++;
-            fe->locals[i] = GC_strdup(tok);
+            fe->locals[i] = GC_strdup(tok); sno_fold_name(fe->locals[i]);  /* SN-19 */
             tok = strtok(NULL, ",");
         }
     }
@@ -2700,7 +2703,8 @@ void DEFINE_fn_entry(const char *spec, FNCPTR_t fn, const char *entry_label) {
     unsigned h = _func_hash(fe->name);
     for (FNCBLK_t *e = _func_buckets[h]; e; e = e->next) {
         if (strcmp(e->name, fe->name) == 0) {
-            e->entry_label = GC_strdup(entry_label);
+            char *el = GC_strdup(entry_label); sno_fold_name(el);  /* SN-19 */
+            e->entry_label = el;
             return;
         }
     }
@@ -2712,6 +2716,10 @@ void DEFINE_fn_entry(const char *spec, FNCPTR_t fn, const char *entry_label) {
  * If oldname is not found, newname is registered as a no-op (NULVCL). */
 void register_fn_alias(const char *newname, const char *oldname) {
     _func_init();
+    /* SN-19: OPSYN names are runtime strings — run the lexer fold on them */
+    char *nn = GC_strdup(newname); sno_fold_name(nn);
+    char *on = GC_strdup(oldname); sno_fold_name(on);
+    newname = nn; oldname = on;
     /* Find the old entry */
     FNCBLK_t *old_entry = NULL;
     unsigned ho = _func_hash(oldname);

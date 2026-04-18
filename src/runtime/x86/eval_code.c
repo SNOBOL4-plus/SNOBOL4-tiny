@@ -202,7 +202,10 @@ DESCR_t eval_node(EXPR_t *e)
         else if (lv && lv->kind == E_INDIRECT && lv->nchildren > 0) {
             DESCR_t name_d = eval_node(lv->children[0]);
             const char *nm = VARVAL_fn(name_d);
-            if (nm && *nm) NV_SET_fn(nm, val);
+            if (nm && *nm) {
+                char *fn = GC_strdup(nm); sno_fold_name(fn);  /* SN-19 lex-fold on runtime name */
+                NV_SET_fn(fn, val);
+            }
         }
         return val;
     }
@@ -213,7 +216,8 @@ DESCR_t eval_node(EXPR_t *e)
         DESCR_t name_d = eval_node(e->children[0]);
         const char *nm = VARVAL_fn(name_d);
         if (!nm || !*nm) return NULVCL;
-        return NV_GET_fn(nm);
+        char *fn = GC_strdup(nm); sno_fold_name(fn);  /* SN-19 lex-fold on runtime name */
+        return NV_GET_fn(fn);
     }
 
     /* ── function call ───────────────────────────────────────────────── */
@@ -327,7 +331,8 @@ DESCR_t eval_node(EXPR_t *e)
             else if (ic->kind == E_VAR  && ic->sval) { DESCR_t xv = NV_GET_fn(ic->sval); nm = VARVAL_fn(xv); }
             else                                      { DESCR_t nd = eval_node(ic);        nm = VARVAL_fn(nd); }
             if (!nm) return FAILDESCR;
-            name = NAME_fn(nm);
+            char *fn = GC_strdup(nm); sno_fold_name(fn);  /* SN-19 */
+            name = NAME_fn(fn);
         } else {
             name = eval_node(tgt);
         }
@@ -352,7 +357,8 @@ DESCR_t eval_node(EXPR_t *e)
             else if (ic->kind == E_VAR  && ic->sval) { DESCR_t xv = NV_GET_fn(ic->sval); nm = VARVAL_fn(xv); }
             else                                      { DESCR_t nd = eval_node(ic);        nm = VARVAL_fn(nd); }
             if (!nm) return FAILDESCR;
-            name = NAME_fn(nm);
+            char *fn = GC_strdup(nm); sno_fold_name(fn);  /* SN-19 */
+            name = NAME_fn(fn);
         } else {
             name = eval_node(tgt);
         }

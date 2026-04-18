@@ -727,6 +727,16 @@ static int sno_fold_on = 1;  /* 1 = fold to upper (default SNOBOL4 behavior) */
 void sno_set_case_sensitive(int on) { sno_fold_on = on ? 0 : 1; }
 int  sno_get_case_sensitive(void)   { return sno_fold_on ? 0 : 1; }
 
+/* SN-19: public fold helper — fold a runtime-sourced identifier string to
+ * canonical case, in-place, using the same rule the lexer uses. No-op in
+ * case-sensitive mode. Used by the runtime DEFINE path so that names born
+ * outside the lexer (from 'double(s)' spec strings, OPSYN args, etc.) land
+ * on the same key as lexer-sourced names. Safe to call with NULL. */
+void sno_fold_name(char *name) {
+    if (!sno_fold_on || !name) return;
+    for (char *p = name; *p; p++) *p = (char)toupper((unsigned char)*p);
+}
+
 static void fold_strbuf(void) {
     if (!sno_fold_on) return;
     for (char *p = strbuf; *p; p++) *p = (char)toupper((unsigned char)*p);

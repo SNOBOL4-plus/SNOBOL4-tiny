@@ -577,6 +577,11 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
                             DESCR_t nd = interp_eval(ic);
                             subj_name = VARVAL_fn(nd);
                         }
+                        if (subj_name) {
+                            /* SN-19: $name as subject — lex-fold the runtime-sourced name */
+                            char *fn = GC_strdup(subj_name); sno_fold_name(fn);
+                            subj_name = fn;
+                        }
                         if (subj_name && s->pattern) {
                             subj_val = NV_GET_fn(subj_name);
                         } else if (!subj_name)
@@ -706,9 +711,11 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
                             *(DESCR_t*)ind_val.ptr = repl_val; succeeded = 1;
                         } else {
                             /* Otherwise treat as string variable name */
-                            const char *nm = VARVAL_fn(ind_val);
-                            if (!nm || !*nm) { succeeded = 0; }
+                            const char *nm0 = VARVAL_fn(ind_val);
+                            if (!nm0 || !*nm0) { succeeded = 0; }
                             else {
+                                /* SN-19: $name = val — lex-fold the runtime-sourced name */
+                                char *nm = GC_strdup(nm0); sno_fold_name(nm);
                                 /* If the named variable itself holds a DT_N, write through */
                                 DESCR_t named = NV_GET_fn(nm);
                                 if (IS_NAMEPTR(named)) {
@@ -2702,7 +2709,10 @@ DESCR_t interp_eval(EXPR_t *e)
                     && ichild->children[0]->kind == E_VAR && ichild->children[0]->sval)
                 nm = ichild->children[0]->sval;
             else { DESCR_t nd = interp_eval(ichild); nm = VARVAL_fn(nd); }
-            if (nm && *nm) NV_SET_fn(nm, val);  /* inner expr: no trace */
+            if (nm && *nm) {
+                char *fn = GC_strdup(nm); sno_fold_name(fn);  /* SN-19 */
+                NV_SET_fn(fn, val);  /* inner expr: no trace */
+            }
         }
         return val;
     }
@@ -2738,8 +2748,9 @@ DESCR_t interp_eval(EXPR_t *e)
             DESCR_t _xv = NV_GET_fn(child->sval);
             if (IS_NAMEPTR(_xv)) return NAME_DEREF_PTR(_xv);
             if (IS_NAMEVAL(_xv)) return NV_GET_fn(_xv.s);
-            const char *_xnm = VARVAL_fn(_xv);
-            if (!_xnm || !*_xnm) return NULVCL;
+            const char *_xnm0 = VARVAL_fn(_xv);
+            if (!_xnm0 || !*_xnm0) return NULVCL;
+            char *_xnm = GC_strdup(_xnm0); sno_fold_name(_xnm);  /* SN-19 */
             DESCR_t _xnamed = NV_GET_fn(_xnm);
             if (IS_NAMEPTR(_xnamed)) return NAME_DEREF_PTR(_xnamed);
             if (IS_NAMEVAL(_xnamed)) return NV_GET_fn(_xnamed.s);
@@ -2793,8 +2804,9 @@ DESCR_t interp_eval(EXPR_t *e)
                 DESCR_t xval = NV_GET_fn(inner->sval);
                 if (IS_NAMEPTR(xval)) return NAME_DEREF_PTR(xval);
                 if (IS_NAMEVAL(xval)) return NV_GET_fn(xval.s);
-                const char *nm2 = VARVAL_fn(xval);
-                if (!nm2 || !*nm2) return NULVCL;
+                const char *nm2_0 = VARVAL_fn(xval);
+                if (!nm2_0 || !*nm2_0) return NULVCL;
+                char *nm2 = GC_strdup(nm2_0); sno_fold_name(nm2);  /* SN-19 */
                 DESCR_t named = NV_GET_fn(nm2);
                 if (IS_NAMEPTR(named)) return NAME_DEREF_PTR(named);
                 if (IS_NAMEVAL(named)) return NV_GET_fn(named.s);
@@ -2802,8 +2814,9 @@ DESCR_t interp_eval(EXPR_t *e)
             }
             /* fallback: evaluate inner directly */
             DESCR_t nd = interp_eval(inner);
-            const char *nm2 = VARVAL_fn(nd);
-            if (!nm2 || !*nm2) return NULVCL;
+            const char *nm2_0 = VARVAL_fn(nd);
+            if (!nm2_0 || !*nm2_0) return NULVCL;
+            char *nm2 = GC_strdup(nm2_0); sno_fold_name(nm2);  /* SN-19 */
             DESCR_t named2 = NV_GET_fn(nm2);
             if (IS_NAMEPTR(named2)) return NAME_DEREF_PTR(named2);
             if (IS_NAMEVAL(named2)) return NV_GET_fn(named2.s);
@@ -2813,8 +2826,9 @@ DESCR_t interp_eval(EXPR_t *e)
         DESCR_t nd = interp_eval(child);
         if (IS_NAMEPTR(nd)) return NAME_DEREF_PTR(nd);
         if (IS_NAMEVAL(nd)) return NV_GET_fn(nd.s);
-        const char *nm = VARVAL_fn(nd);
-        if (!nm || !*nm) return NULVCL;
+        const char *nm0 = VARVAL_fn(nd);
+        if (!nm0 || !*nm0) return NULVCL;
+        char *nm = GC_strdup(nm0); sno_fold_name(nm);  /* SN-19 */
         /* The named variable might also be a DT_N — dereference one more level */
         DESCR_t named = NV_GET_fn(nm);
         if (IS_NAMEPTR(named)) return NAME_DEREF_PTR(named);
@@ -3870,10 +3884,11 @@ static DESCR_t *interp_eval_ref(EXPR_t *e)
     case E_INDIRECT: {
         /* $expr — evaluate expr to get name string, then return that var's cell */
         DESCR_t name_d = interp_eval(e->nchildren >= 1 ? e->children[0] : NULL);
-        const char *nm = IS_NAMEPTR(name_d)
+        const char *nm0 = IS_NAMEPTR(name_d)
             ? VARVAL_fn(NAME_DEREF_PTR(name_d))
             : VARVAL_fn(name_d);
-        if (!nm || !*nm) return NULL;
+        if (!nm0 || !*nm0) return NULL;
+        char *nm = GC_strdup(nm0); sno_fold_name(nm);  /* SN-19 */
         return NV_PTR_fn(nm);
     }
 
