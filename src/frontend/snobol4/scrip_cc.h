@@ -165,6 +165,17 @@ EXPR_t  *parse_expr_pat_from_str(const char *src); /* bison: bare expr -> EXPR_t
 Program *sno_parse_string(const char *src);         /* bison: multi-stmt string -> Program* */
 void     c_emit(Program *prog, FILE *out);
 
+/* SN-19: case-sensitivity control. Default = case-INsensitive (fold to upper).
+ * Pass 1 to switch to case-SENsitive mode (CSNOBOL4 -f equivalent). */
+void     sno_set_case_sensitive(int on);
+int      sno_get_case_sensitive(void);
+
+/* SN-19: runtime fold helper — fold an identifier string in-place to the same
+ * canonical case the lexer uses. No-op in case-sensitive mode. Call on names
+ * that enter the runtime from user-data strings (DEFINE spec, OPSYN, APPLY
+ * string arg, etc.) so they match lexer-sourced names. */
+void     sno_fold_name(char *name);
+
 /* emit_byrd.c interface now internal to emit_byrd_c.c */
 
 /* ---- error ---- */

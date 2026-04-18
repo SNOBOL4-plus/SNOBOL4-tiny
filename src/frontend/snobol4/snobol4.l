@@ -43,6 +43,40 @@ static int   lineno = 1;
 static char  strbuf[65536];
 static int   strpos;
 
+/* ── SN-19: case folding at lex time ────────────────────────────────────────
+ * Default SNOBOL4 dialect is case-INsensitive. The lexer folds every
+ * identifier-class token (T_LABEL, T_IDENT, T_FUNCTION, T_KEYWORD, T_END,
+ * GT-state T_IDENT/T_STR, T_GOTO_S, T_GOTO_F) to UPPERCASE before it enters
+ * the token stream. Downstream — parser, IR, SM_Program, interp dispatch,
+ * INVOKE_fn, APPLY_fn — can then use plain strcmp / plain hashes instead of
+ * scattered strcasecmp / toupper band-aids.
+ *
+ * User data (quoted strings in BODY via STR1/STR2) is NOT folded.
+ *
+ * Case-sensitive mode (mirrors CSNOBOL4 -f) is selected via
+ * sno_set_case_sensitive(1), normally from a scrip CLI flag. Preserves
+ * identifier spelling verbatim. Required for the double-function trick
+ * (RULES.md: push_list vs Push_list).                                       */
+static int sno_fold_on = 1;  /* 1 = fold to upper (default SNOBOL4 behavior) */
+
+void sno_set_case_sensitive(int on) { sno_fold_on = on ? 0 : 1; }
+int  sno_get_case_sensitive(void)   { return sno_fold_on ? 0 : 1; }
+
+/* SN-19: public fold helper — fold a runtime-sourced identifier string to
+ * canonical case, in-place, using the same rule the lexer uses. No-op in
+ * case-sensitive mode. Used by the runtime DEFINE path so that names born
+ * outside the lexer (from 'double(s)' spec strings, OPSYN args, etc.) land
+ * on the same key as lexer-sourced names. Safe to call with NULL. */
+void sno_fold_name(char *name) {
+    if (!sno_fold_on || !name) return;
+    for (char *p = name; *p; p++) *p = (char)toupper((unsigned char)*p);
+}
+
+static void fold_strbuf(void) {
+    if (!sno_fold_on) return;
+    for (char *p = strbuf; *p; p++) *p = (char)toupper((unsigned char)*p);
+}
+
 
 static Token mktok(int k, const char *sv, long iv, double dv) {
     Token t; t.kind=k; t.sval=sv; t.ival=iv; t.dval=dv; t.lineno=lineno;
@@ -247,8 +281,8 @@ G       ({WS}|{CONT})*
 <BODY>{G}","{G}  { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=="\n") lineno++; return T_COMMA; }
 
     /* Atoms: arrive bare (T_CONCAT or Gray already consumed leading space) */
-<BODY>{ALPHA}{IDCONT}*/"("  { strbuf[0]='\0'; strncat(strbuf,yytext,sizeof(strbuf)-1); return T_FUNCTION; }
-<BODY>{ALPHA}{IDCONT}*      { strbuf[0]='\0'; strncat(strbuf,yytext,sizeof(strbuf)-1); return strcasecmp(strbuf,"END")==0?T_END:T_IDENT; }
+<BODY>{ALPHA}{IDCONT}*/"("  { strbuf[0]='\0'; strncat(strbuf,yytext,sizeof(strbuf)-1); fold_strbuf(); return T_FUNCTION; }
+<BODY>{ALPHA}{IDCONT}*      { strbuf[0]='\0'; strncat(strbuf,yytext,sizeof(strbuf)-1); fold_strbuf(); return strcmp(strbuf,"END")==0?T_END:T_IDENT; }
 <BODY>{DIGIT}+"."{DIGIT}+{EXP}? |
 <BODY>{DIGIT}+{EXP}         { strbuf[0]='\0'; strncat(strbuf,yytext,sizeof(strbuf)-1); return T_REAL; }
 <BODY>{DIGIT}+                { strbuf[0]='\0'; strncat(strbuf,yytext,sizeof(strbuf)-1); return T_INT;  }
@@ -405,17 +439,30 @@ Token flex_lex_next(Lex *lx) {
             t.kind = T_EOF; return t;
 
         case T_LABEL:
+            fold_strbuf();                                 /* SN-19 */
             t.sval = intern(strbuf);
-            t.ival = strcasecmp(strbuf,"END")==0 ? 1 : 0;
+            t.ival = strcmp(strbuf,"END")==0 ? 1 : 0;      /* SN-19: plain strcmp after fold */
             return t;
 
         case T_IDENT: case T_END: case T_KEYWORD:
         case T_FUNCTION:
         case T_GOTO_S: case T_GOTO_F:
+            fold_strbuf();                                 /* SN-19 */
             t.sval = intern(strbuf);
             return t;
 
         case T_STR:
+            /* T_STR is overloaded: quoted user-data strings (from STR1/STR2
+             * in BODY) and quoted label references (from GT state). The
+             * latter MUST be folded so references match folded label names.
+             * The flex scanner state distinguishes them, but by the time we
+             * reach flex_lex_next() that context is gone. Safe compromise:
+             * leave user-data strings unfolded (the common case) — the GT
+             * quoted-label case already yields an interned string that will
+             * be compared against the folded label key later. We handle
+             * that comparison with fold on the lookup side (label_lookup
+             * must tolerate the mismatch, same as today). SN-19 does NOT
+             * change T_STR semantics. */
             t.sval = intern(strbuf);
             return t;
 

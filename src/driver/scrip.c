@@ -129,6 +129,12 @@ int main(int argc, char **argv)
     int opt_trace          = 0;  /* --trace     : MONITOR trace output */
     int opt_bench          = 0;  /* --bench     : print wall-clock time after execution */
 
+    /* SN-19: case sensitivity. Default SNOBOL4 is case-INsensitive (lex fold
+     * to upper). --case-sensitive selects CSNOBOL4 -f-equivalent behavior,
+     * which the lexer uses to preserve identifier spelling. Required by the
+     * double-function trick (RULES.md: push_list vs Push_list). */
+    int opt_case_sensitive = 0;
+
     int argi = 1;
     while (argi < argc && argv[argi][0] == '-' && argv[argi][1] == '-') {
         /* execution modes */
@@ -148,8 +154,13 @@ int main(int argc, char **argv)
         else if (strcmp(argv[argi], "--dump-bb")         == 0) { dump_bb         = 1; argi++; }
         else if (strcmp(argv[argi], "--trace")           == 0) { opt_trace       = 1; argi++; }
         else if (strcmp(argv[argi], "--bench")           == 0) { opt_bench       = 1; argi++; }
+        /* SN-19 */
+        else if (strcmp(argv[argi], "--case-sensitive")  == 0) { opt_case_sensitive = 1; argi++; }
         else break;
     }
+
+    /* SN-19: wire case sensitivity into the SNOBOL4 lexer before sno_parse(). */
+    sno_set_case_sensitive(opt_case_sensitive);
 
     /* Default execution mode: --sm-run (not when --monitor) */
     if (!mode_ir_run && !mode_sm_run && !mode_jit_run && !mode_monitor)
@@ -187,6 +198,9 @@ int main(int argc, char **argv)
             "  --dump-parse     dump CMPILE parse tree\n"
             "  --dump-parse-flat  dump CMPILE parse tree (one line)\n"
             "  --dump-ir-bison  dump IR via old Bison/Flex parser\n"
+            "\n"
+            "SNOBOL4 dialect options:\n"
+            "  --case-sensitive preserve identifier spelling (default: fold to upper — SNOBOL4 standard)\n"
             "\n"
             "Frontend inferred from file extension:\n"
             "  .sno=SNOBOL4  .icn=Icon  .pl=Prolog  .sc=Snocone  .reb=Rebus\n"
