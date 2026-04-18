@@ -738,6 +738,12 @@ static void do_stmt(CfState *st) {
 Program *snocone_cf_compile(const char *source, const char *filename) {
     if (!filename) filename = "<stdin>";
 
+    /* Case policy is a frontend concern (cf. commit 8aa5803b for DATATYPE).
+     * Snocone's lexer preserves identifier spelling; tell the shared runtime
+     * to stop folding at name-ingest sites so DEFINE("Double(n)") + body ref
+     * "Double"/"n" match. No user --case-sensitive flag required for .sc. */
+    sno_set_case_sensitive(1);
+
     ScTokenArray ta = snocone_lex(source);
 
     CfState st;

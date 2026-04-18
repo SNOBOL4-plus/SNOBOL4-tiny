@@ -24,6 +24,10 @@ extern Program *raku_parse_string(const char *src);   /* defined below — wraps
  *============================================================*/
 Program *raku_compile(const char *src, const char *filename) {
     if (!filename) filename = "<stdin>";
+    /* Case policy is a frontend concern (cf. commit 8aa5803b for DATATYPE).
+     * Raku preserves identifier spelling; tell the shared runtime to stop
+     * folding at name-ingest sites. No user --case-sensitive flag required. */
+    sno_set_case_sensitive(1);
     raku_prog_result = NULL;   /* reset global before each parse */
     Program *prog = raku_parse_string(src);
     if (!prog) {

@@ -698,6 +698,11 @@ Program *rebus_lower(RProgram *rp) {
 Program *rebus_compile(const char *src, const char *filename) {
     if (!filename) filename = "<stdin>";
 
+    /* Case policy is a frontend concern (cf. commit 8aa5803b for DATATYPE).
+     * Rebus preserves identifier spelling; tell the shared runtime to stop
+     * folding at name-ingest sites. No user --case-sensitive flag required. */
+    sno_set_case_sensitive(1);
+
     /* Parse: rebus_parse() takes FILE* — use fmemopen for string input */
     FILE *f = fmemopen((void *)src, strlen(src), "r");
     if (!f) {

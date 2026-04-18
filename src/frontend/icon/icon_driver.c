@@ -20,6 +20,11 @@
 Program *icon_compile(const char *source, const char *filename) {
     if (!filename) filename = "<stdin>";
 
+    /* Case policy is a frontend concern (cf. commit 8aa5803b for DATATYPE).
+     * Icon preserves identifier spelling; tell the shared runtime to stop
+     * folding at name-ingest sites. No user --case-sensitive flag required. */
+    sno_set_case_sensitive(1);
+
     IcnLexer lx;
     icn_lex_init(&lx, source);
 
