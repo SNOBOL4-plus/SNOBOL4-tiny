@@ -82,7 +82,7 @@ DESCR_t bb_alt(void *zeta, int entry)
     if (entry==α)                                                               goto ALT_α;
     if (entry==β)                                                               goto ALT_β;
     ALT_α:          ζ->position=Δ; ζ->current=1;                                
-                    ζ->nam_mark = NAM_mark();   /* Bug #1d: checkpoint so failed arms don't leak (.) entries */
+                    ζ->nam_mark = NAME_mark();   /* Bug #1d: checkpoint so failed arms don't leak (.) entries */
                     cr=spec_from_descr(ζ->children[0].fn(ζ->children[0].state,α));               
                     if (spec_is_empty(cr))                                      goto child_α_ω;
                                                                                 goto child_α_γ;
@@ -90,7 +90,7 @@ DESCR_t bb_alt(void *zeta, int entry)
                     if (spec_is_empty(cr))                                      goto ALT_ω;
                                                                                 goto child_β_γ;
     child_α_γ:      ζ->result=cr;                                               goto ALT_γ;
-    child_α_ω:      NAM_rollback_to(ζ->nam_mark);  /* discard (.) entries from the failed arm */
+    child_α_ω:      NAME_rollback_to(ζ->nam_mark);  /* discard (.) entries from the failed arm */
                     ζ->current++;                                               
                     if (ζ->current > ζ->n)                                      goto ALT_ω;
                     Δ=ζ->position;                                              
@@ -149,7 +149,7 @@ DESCR_t bb_arbno(void *zeta, int entry)
     if (entry==β)                                                               goto ARBNO_β;
     ARBNO_α:        ζ->depth=0; fr=&ζ->stack[0];
                     fr->matched=spec(Σ+Δ,0); fr->start=Δ;
-    ARBNO_try:      ζ->stack[ζ->depth].nam_mark = NAM_mark();   /* TL-2: trim failed-trial NAM entries */
+    ARBNO_try:      ζ->stack[ζ->depth].nam_mark = NAME_mark();   /* TL-2: trim failed-trial NAM entries */
                     br=spec_from_descr(ζ->fn(ζ->state,α));
                     if (spec_is_empty(br))                                      goto body_ω;
                                                                                 goto body_γ;
@@ -166,9 +166,9 @@ DESCR_t bb_arbno(void *zeta, int entry)
                     }
                     fr=&ζ->stack[ζ->depth];
                     fr->matched=ARBNO; fr->start=Δ;                             goto ARBNO_try;
-    body_ω:         NAM_rollback_to(ζ->stack[ζ->depth].nam_mark);  /* TL-2: drop this trial's NAM entries */
+    body_ω:         NAME_rollback_to(ζ->stack[ζ->depth].nam_mark);  /* TL-2: drop this trial's NAM entries */
                     ARBNO=ζ->stack[ζ->depth].matched;                           goto ARBNO_γ;
-    ARBNO_γ_now:    NAM_rollback_to(ζ->stack[ζ->depth].nam_mark);  /* TL-2: zero-advance also drops */
+    ARBNO_γ_now:    NAME_rollback_to(ζ->stack[ζ->depth].nam_mark);  /* TL-2: zero-advance also drops */
                     ARBNO=ζ->stack[ζ->depth].matched;                           goto ARBNO_γ;
     ARBNO_γ:                                                                    return descr_from_spec(ARBNO);
     ARBNO_ω:                                                                    return FAILDESCR;
@@ -509,8 +509,8 @@ interr_t *bb_interr_new(bb_box_fn fn, void *state)
  *   immediate — 1 for XFNME ($): write now on every γ.  0 for XNME (.): defer via NAM_push.
  *
  * SN-20 (self-unwinding): every γ that pushes to the NAM list saves the
- * returned handle; β (retry) and ω (failure exit) call NAM_pop_one to undo.
- * No external combinator-level NAM_mark / NAM_rollback_to required — the
+ * returned handle; β (retry) and ω (failure exit) call NAME_pop to undo.
+ * No external combinator-level NAME_mark / NAME_rollback_to required — the
  * box is symmetric in its own right.
  *
  * cap_t definition now in bb_box.h so the stmt_exec.c dispatcher can
@@ -559,7 +559,7 @@ DESCR_t bb_cap(void *zeta, int entry)
                      name_commit_value(&ζ->name, val);
                  } else {
                      /* XNME (.): push the lvalue + matched substring onto the
-                      * flat NAM stack.  Statement-level NAM_commit walks the
+                      * flat NAM stack.  Statement-level NAME_commit walks the
                       * slots at full-match success and calls name_commit_value
                       * on each.  Save handle so CAP_β / CAP_ω self-unwind. */
                      ζ->nam_handle  = NAME_push(&ζ->name, cr.σ, (int)cr.δ);
@@ -590,7 +590,7 @@ static void register_capture(cap_t *c)
 }
 
 /* Reset pending flags after Phase 3 success.
- * RT-4: NAM_commit() now owns all conditional (.) capture writes.
+ * RT-4: NAME_commit() now owns all conditional (.) capture writes.
  * This function only clears has_pending bookkeeping so the scan-loop
  * reset logic stays correct on subsequent statements.
  * Exported for exec_stmt (see external decl in bb_box.h). */
@@ -645,7 +645,7 @@ cap_t *bb_cap_new(bb_box_fn child_fn, void *child_state,
  * that via NAME_push / NAME_pop γ / β / ω self-unwinding.
  *
  * Deferred (.) flow at commit time:
- *   NAM_commit walks live slots → name_commit_value(NM_CALL) →
+ *   NAME_commit walks live slots → name_commit_value(NM_CALL) →
  *   g_user_call_hook(fnc_name, args, nargs) → DT_N cell → store matched text.
  *
  * Immediate ($) flow at γ:

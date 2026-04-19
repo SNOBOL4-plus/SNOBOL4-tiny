@@ -149,7 +149,7 @@ typedef struct { int done; const char *varname; }     atp_t;
  *
  *   fn / state  — child box
  *   immediate   — 1 for XFNME ($): write at γ via name_commit_value
- *                 0 for XNME (.): push at γ via NAME_push; commit at NAM_commit
+ *                 0 for XNME (.): push at γ via NAME_push; commit at NAME_commit
  *   name        — unified lvalue descriptor (NM_VAR or NM_PTR in SN-21c)
  *   nam_handle  — NAME_push handle (NULL if none); popped on β/ω (self-unwind)
  *   pending / has_pending / registered — kept for pre-SN-21e bookkeeping so
@@ -175,7 +175,7 @@ extern cap_t *bb_cap_new(bb_box_fn child_fn, void *child_state,
                          const char *varname, DESCR_t *var_ptr, int immediate);
 /* SN-21d: NM_CALL constructor for `pat . *fn(args)` and `pat $ *fn(args)`.
  * Builds the embedded NAME_t via name_init_as_call.  Deferred (.) firings push
- * an NM_CALL entry onto the flat NAM stack; NAM_commit runs them through
+ * an NM_CALL entry onto the flat NAM stack; NAME_commit runs them through
  * name_commit_value, which invokes g_user_call_hook and writes matched text
  * into the returned DT_N cell. */
 extern cap_t *bb_cap_new_call(bb_box_fn child_fn, void *child_state,

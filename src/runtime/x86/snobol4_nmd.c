@@ -3,7 +3,7 @@
  *
  * ARCHITECTURE:
  *
- *   One flat array of NAM_entry_t (a NAME_t + the captured substring),
+ *   One flat array of NAME_entry_t (a NAME_t + the captured substring),
  *   grown on demand.  A single int `g_top` tracks the high-water slot.
  *
  *     stack: [ 0 | 1 | 2 | ... | top-1 ]    grows right
@@ -28,8 +28,8 @@
  *
  * LEGACY SHIMS:
  *
- *   NAM_save / NAM_push / NAM_push_callcap* / NAM_pop_one / NAM_commit /
- *   NAM_discard / NAM_pop / NAM_mark / NAM_rollback_to remain as thin
+ *   NAME_save / NAM_push / NAME_push_callcap* / NAME_pop / NAME_commit /
+ *   NAME_discard / NAM_pop / NAME_mark / NAME_rollback_to remain as thin
  *   wrappers mapping to the new API for the duration of SN-21b..SN-21d,
  *   so stmt_exec.c, bb_boxes.c, and eval_code.c still compile.  They
  *   are deleted in SN-21e.
@@ -50,7 +50,7 @@
 #include "name_t.h"
 
 /*===========================================================================*/
-/* NAM_entry_t — one slot in the flat stack                                  */
+/* NAME_entry_t — one slot in the flat stack                                  */
 /*===========================================================================*/
 
 typedef struct {
@@ -58,14 +58,13 @@ typedef struct {
     NAME_t      name;        /* full unified lvalue descriptor                  */
     const char *substr;      /* GC_malloc'd captured text (epsilon → "")        */
     int         slen;
-    int         legacy_dt;   /* DT_S normally; DT_K / DT_E via NAM_push shim    */
-} NAM_entry_t;
+} NAME_entry_t;
 
 /*===========================================================================*/
 /* The stack                                                                  */
 /*===========================================================================*/
 
-static NAM_entry_t *g_stack = NULL;
+static NAME_entry_t *g_stack = NULL;
 static int          g_cap   = 0;
 static int          g_top   = 0;
 
@@ -74,9 +73,9 @@ static void ensure_capacity(int need)
     if (need <= g_cap) return;
     int newcap = g_cap ? g_cap * 2 : 64;
     while (newcap < need) newcap *= 2;
-    NAM_entry_t *fresh = (NAM_entry_t *)GC_MALLOC((size_t)newcap * sizeof(NAM_entry_t));
+    NAME_entry_t *fresh = (NAME_entry_t *)GC_MALLOC((size_t)newcap * sizeof(NAME_entry_t));
     if (g_stack && g_top > 0)
-        memcpy(fresh, g_stack, (size_t)g_top * sizeof(NAM_entry_t));
+        memcpy(fresh, g_stack, (size_t)g_top * sizeof(NAME_entry_t));
     g_stack = fresh;
     g_cap   = newcap;
 }
@@ -105,12 +104,11 @@ void *NAME_push(const NAME_t *nm, const char *substr, int slen)
     ensure_capacity(g_top + 1);
 
     int idx = g_top;
-    NAM_entry_t *e = &g_stack[idx];
+    NAME_entry_t *e = &g_stack[idx];
     e->live      = 1;
     e->name      = *nm;
     e->substr    = dup_substr(substr, slen);
     e->slen      = (slen > 0) ? slen : 0;
-    e->legacy_dt = DT_S;
 
     g_top++;
     return idx_to_handle(idx);
@@ -129,7 +127,7 @@ void NAME_pop(void *handle)
     int idx = handle_to_idx(handle);
     if (idx < 0 || idx >= g_top) return;
 
-    NAM_entry_t *e = &g_stack[idx];
+    NAME_entry_t *e = &g_stack[idx];
     if (!e->live) return;
     e->live = 0;
 
@@ -172,41 +170,21 @@ void NAME_pop_above(int saved_top)
 /* ─── LEGACY SHIMS (deleted in SN-21e) ──────────────────────────────────── */
 /*===========================================================================*/
 
-/* NAM_save — "push frame" becomes "snapshot current top". */
-int NAM_save(void)
+/* NAME_save — "push frame" becomes "snapshot current top". */
+int NAME_save(void)
 {
     return NAME_top();
 }
 
-/* NAM_pop — old "pop frame" is a no-op in the flat model. */
-void NAM_pop(int cookie)
-{
-    (void)cookie;
-}
-
-/* NAM_push — old CAPTURE push carrying DT_S / DT_K / DT_E dispatch. */
-void *NAM_push(const char *var, DESCR_t *ptr, int dt,
-               const char *s, int len)
-{
-    NAME_t nm;
-    if (ptr) name_init_as_ptr(&nm, ptr);
-    else     name_init_as_var(&nm, var ? GC_strdup(var) : NULL);
-
-    void *h = NAME_push(&nm, s, len);
-    int idx = handle_to_idx(h);
-    if (idx >= 0) g_stack[idx].legacy_dt = dt;
-    return h;
-}
-
-/* NAM_push_callcap / NAM_push_callcap_named — NM_CALL entry. */
-void *NAM_push_callcap(const char *fnc_name, DESCR_t *fnc_args, int fnc_nargs,
+/* NAME_push_callcap / NAME_push_callcap_named — NM_CALL entry. */
+void *NAME_push_callcap(const char *fnc_name, DESCR_t *fnc_args, int fnc_nargs,
                        const char *matched_text, int matched_len)
 {
-    return NAM_push_callcap_named(fnc_name, fnc_args, fnc_nargs,
+    return NAME_push_callcap_named(fnc_name, fnc_args, fnc_nargs,
                                    NULL, 0, matched_text, matched_len);
 }
 
-void *NAM_push_callcap_named(const char *fnc_name,
+void *NAME_push_callcap_named(const char *fnc_name,
                               DESCR_t *fnc_args, int fnc_nargs,
                               char **fnc_arg_names, int fnc_n_arg_names,
                               const char *matched_text, int matched_len)
@@ -217,14 +195,8 @@ void *NAM_push_callcap_named(const char *fnc_name,
     return NAME_push(&nm, matched_text, matched_len);
 }
 
-/* NAM_pop_one — alias for NAME_pop. */
-void NAM_pop_one(void *handle)
-{
-    NAME_pop(handle);
-}
-
 /* same_var_target — last-write-wins dedup helper used inline below. */
-static int same_var_target(const NAM_entry_t *a, const NAM_entry_t *b)
+static int same_var_target(const NAME_entry_t *a, const NAME_entry_t *b)
 {
     if (a->name.kind != b->name.kind) return 0;
     if (a->name.kind == NM_PTR)
@@ -235,59 +207,26 @@ static int same_var_target(const NAM_entry_t *a, const NAM_entry_t *b)
     return 0;
 }
 
-/* NAM_commit — walk slots [cookie..top), honour legacy DT_K / DT_E, then
- * fire DT_S entries with last-write-wins dedup (stop at intervening NM_CALL),
- * then drop the range via NAME_pop_above. */
-void NAM_commit(int cookie)
+/* NAME_commit — walk slots [cookie..top), fire DT_S entries with
+ * last-write-wins dedup (stop at intervening NM_CALL), then drop the
+ * range via NAME_pop_above. */
+void NAME_commit(int cookie)
 {
-    extern DESCR_t EVAL_fn(DESCR_t);
-
     int mark = cookie;
     if (mark < 0) mark = 0;
     if (mark > g_top) mark = g_top;
 
-    /* Pass 1: legacy non-DT_S dispatch — tombstone the slot so pass 2 skips. */
+    /* Unified commit with last-write-wins dedup.  Walk in push order
+     * (oldest → newest) so (.) captures preceding (. *fn()) callcaps
+     * fire first, matching SC-26 semantics. */
     for (int i = mark; i < g_top; i++) {
-        NAM_entry_t *e = &g_stack[i];
-        if (!e->live) continue;
-        if (e->name.kind == NM_CALL) continue;     /* NM_CALL always DT_S   */
-        int dt = e->legacy_dt;
-        if (dt == DT_S) continue;
-
-        if (dt == DT_K) {
-            DESCR_t val = { .v = DT_S, .slen = (uint32_t)e->slen,
-                            .s = (char *)e->substr };
-            if (e->name.kind == NM_VAR && e->name.var_name)
-                ASGNIC_fn(e->name.var_name, val);
-            e->live = 0;
-            continue;
-        }
-
-        if (dt == DT_E) {
-            DESCR_t expr_d = { .v = DT_E, .ptr = e->name.var_ptr,
-                               .slen = 0, .s = NULL };
-            DESCR_t evval = EVAL_fn(expr_d);
-            if (!IS_FAIL_fn(evval)) {
-                if (e->name.kind == NM_VAR && e->name.var_name
-                    && e->name.var_name[0])
-                    NV_SET_fn(e->name.var_name, evval);
-            }
-            e->live = 0;
-            continue;
-        }
-    }
-
-    /* Pass 2: unified DT_S commit with last-write-wins dedup.  Walk in
-     * push order (oldest → newest) so (.) captures preceding (. *fn())
-     * callcaps fire first, matching SC-26 semantics. */
-    for (int i = mark; i < g_top; i++) {
-        NAM_entry_t *e = &g_stack[i];
+        NAME_entry_t *e = &g_stack[i];
         if (!e->live) continue;
 
         if (e->name.kind == NM_VAR || e->name.kind == NM_PTR) {
             int superseded = 0;
             for (int j = i + 1; j < g_top; j++) {
-                NAM_entry_t *f = &g_stack[j];
+                NAME_entry_t *f = &g_stack[j];
                 if (!f->live) continue;
                 if (f->name.kind == NM_CALL) break;
                 if (same_var_target(e, f)) { superseded = 1; break; }
@@ -303,20 +242,20 @@ void NAM_commit(int cookie)
     NAME_pop_above(mark);
 }
 
-/* NAM_discard — drop entries [cookie..top). */
-void NAM_discard(int cookie)
+/* NAME_discard — drop entries [cookie..top). */
+void NAME_discard(int cookie)
 {
     NAME_pop_above(cookie);
 }
 
-/* NAM_mark — opaque pointer-cookie wrapping NAME_top(). */
-void *NAM_mark(void)
+/* NAME_mark — opaque pointer-cookie wrapping NAME_top(). */
+void *NAME_mark(void)
 {
     return (void *)(intptr_t)(NAME_top() + 1);
 }
 
-/* NAM_rollback_to — SN-20: no-op by design (boxes self-unwind). */
-void NAM_rollback_to(void *mark)
+/* NAME_rollback_to — SN-20: no-op by design (boxes self-unwind). */
+void NAME_rollback_to(void *mark)
 {
     (void)mark;
 }

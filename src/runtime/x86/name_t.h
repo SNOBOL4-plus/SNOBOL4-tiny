@@ -91,7 +91,7 @@ typedef struct NAME_s {
 /* name_commit_value — commit a value into the location described by *nm.    */
 /*                                                                            */
 /* The single dispatch point used by bb_cap γ (immediate, $) and by           */
-/* NAM_commit (deferred, .).  Every kind has exactly one correct              */
+/* NAME_commit (deferred, .).  Every kind has exactly one correct              */
 /* implementation, and it lives here.                                         */
 /*                                                                            */
 /* value must already be the resolved DESCR_t to store — e.g. a DT_S slice    */

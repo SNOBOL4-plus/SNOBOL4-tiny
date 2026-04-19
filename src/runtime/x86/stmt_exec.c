@@ -376,7 +376,7 @@ void bin_audit_print(void)
  * atp_t defined in bb_box.h; bb_atp + bb_atp_new declared there too. */
 
 /* ── USERCALL box — *fn() bare pattern side-effect call ──────────────────────
- * Bug #1d fix: defer via NAM_push_callcap so the call fires at NAM_commit
+ * Bug #1d fix: defer via NAME_push_callcap so the call fires at NAME_commit
  * (overall pattern success) rather than at match-time alpha.  Failed ARBNO
  * trials / ALT arms that include *fn() no longer fire the function — the NAM
  * rollback on backtrack discards the pending callcap entry before commit.
@@ -413,13 +413,13 @@ static DESCR_t bb_usercall(void *zeta, int entry)
            /* SN-20: store handle so UC_ω (failure exit) can pop symmetrically.
             * bare *fn() has no β retry semantics — UC_β just fails outright — so
             * the only pop we need is on UC_ω. */
-           ζ->nam_handle = NAM_push_callcap(ζ->name, ζ->args, ζ->nargs, NULL, 0);
+           ζ->nam_handle = NAME_push_callcap(ζ->name, ζ->args, ζ->nargs, NULL, 0);
            UC = spec(Σ + Δ, 0);           goto UC_γ;
     UC_β:                                  goto UC_ω;
 
     UC_γ:                                  return descr_from_spec(UC);
     UC_ω:  /* SN-20: pop our deferred registration if this box never reached commit. */
-           if (ζ->nam_handle) { NAM_pop_one(ζ->nam_handle); ζ->nam_handle = NULL; }
+           if (ζ->nam_handle) { NAME_pop(ζ->nam_handle); ζ->nam_handle = NULL; }
                                            return FAILDESCR;
 }
 
@@ -441,12 +441,12 @@ typedef struct callcap_s {
     int          registered;
     int          last_gen;      /* DYN-76: generation at last CC_α registration */
     /* TL-2: arg *names* for flush-time variable resolution (see snobol4_patnd.h).
-     * If fnc_arg_names is non-NULL, the . path passes names to NAM_push_callcap
-     * (which forwards to NAM_commit for NV_GET_fn resolution); the $ path
+     * If fnc_arg_names is non-NULL, the . path passes names to NAME_push_callcap
+     * (which forwards to NAME_commit for NV_GET_fn resolution); the $ path
      * resolves in CC_γ_core's immediate branch directly. */
     char       **fnc_arg_names;
     int          fnc_n_arg_names;
-    void        *nam_handle;    /* SN-20: handle to our NAM_push_callcap entry */
+    void        *nam_handle;    /* SN-20: handle to our NAME_push_callcap entry */
 } callcap_t;
 
 /* DYN-79: per-firing event record.  A single callcap_t box (e.g. the *Push()
@@ -520,7 +520,7 @@ static DESCR_t bb_callcap(void *zeta, int entry)
 
     CC_β:  /* SN-20: undo our prior push before retry. If retry succeeds,
             * CC_γ_core will re-push with a fresh handle for the new spec. */
-           if (ζ->nam_handle) { NAM_pop_one(ζ->nam_handle); ζ->nam_handle = NULL; }
+           if (ζ->nam_handle) { NAME_pop(ζ->nam_handle); ζ->nam_handle = NULL; }
            child_r = spec_from_descr(ζ->child_fn(ζ->child_state, β));
            if (spec_is_empty(child_r)) goto CC_ω;
            goto CC_γ_core;
@@ -530,10 +530,10 @@ static DESCR_t bb_callcap(void *zeta, int entry)
                /* $ — call NOW, write immediately, passing matched text as arg[0] */
                if (g_user_call_hook && ζ->fnc_name) {
                    /* TL-2: if arg names are set, resolve each via NV_GET_fn now.
-                    * For $ immediate there is no NAM_commit step, so this is the
+                    * For $ immediate there is no NAME_commit step, so this is the
                     * flush point.  Any earlier $ capture in the same pattern has
                     * already written its variable; any earlier . capture has NOT
-                    * (that happens at NAM_commit) — matches oracle semantics which
+                    * (that happens at NAME_commit) — matches oracle semantics which
                     * lookup occurs when the pattern element is actually reached. */
                    DESCR_t *static_args = ζ->fnc_args;
                    int      nstatic     = ζ->fnc_nargs;
@@ -562,11 +562,11 @@ static DESCR_t bb_callcap(void *zeta, int entry)
                }
            } else {
                /* . — queue into unified NAM list so captures and callcaps
-                * flush in left-to-right pattern order at NAM_commit (SC-26).
-                * TL-2: pass arg_names through; NAM_commit will resolve via
+                * flush in left-to-right pattern order at NAME_commit (SC-26).
+                * TL-2: pass arg_names through; NAME_commit will resolve via
                 * NV_GET_fn after in-order earlier . captures have written.
                 * SN-20: store handle so CC_β/CC_ω can self-unwind. */
-               ζ->nam_handle = NAM_push_callcap_named(ζ->fnc_name,
+               ζ->nam_handle = NAME_push_callcap_named(ζ->fnc_name,
                                        ζ->fnc_args, ζ->fnc_nargs,
                                        ζ->fnc_arg_names, ζ->fnc_n_arg_names,
                                        child_r.σ, (int)child_r.δ);
@@ -580,7 +580,7 @@ static DESCR_t bb_callcap(void *zeta, int entry)
 
     CC_ω:  /* SN-20: pop our deferred registration if we pushed one and the
             * outer match is abandoning us. */
-           if (ζ->nam_handle) { NAM_pop_one(ζ->nam_handle); ζ->nam_handle = NULL; }
+           if (ζ->nam_handle) { NAME_pop(ζ->nam_handle); ζ->nam_handle = NULL; }
            ζ->has_pending = 0;
            return FAILDESCR;
 }
@@ -891,7 +891,7 @@ bb_node_t bb_build(PATND_t *p)
         bb_node_t child = bb_build(p->nchildren > 0 ? p->children[0] : NULL);
         /* SN-6 Bug #1d: DT_N with slen==0 carries name string in .s (NAMEVAL).
          * Mirror of bb_build.c bb_fnme_emit_binary — preserve name so
-         * NAM_commit reaches NV_SET_fn() and fires I/O hooks (OUTPUT, PUNCH). */
+         * NAME_commit reaches NV_SET_fn() and fires I/O hooks (OUTPUT, PUNCH). */
         const char *varname = (p->var.v == DT_S && p->var.s) ? p->var.s :
                               (p->var.v == DT_N && p->var.slen == 0 && p->var.s) ? p->var.s : NULL;
         DESCR_t    *var_ptr = (p->var.v == DT_N && p->var.slen == 1 && p->var.ptr)
@@ -910,7 +910,7 @@ bb_node_t bb_build(PATND_t *p)
         bb_node_t child = bb_build(p->nchildren > 0 ? p->children[0] : NULL);
         /* SN-6 Bug #1d: DT_N with slen==0 carries name string in .s (NAMEVAL).
          * Mirror of bb_build.c bb_nme_emit_binary — preserve name so
-         * NAM_commit reaches NV_SET_fn() and fires I/O hooks (OUTPUT, PUNCH).
+         * NAME_commit reaches NV_SET_fn() and fires I/O hooks (OUTPUT, PUNCH).
          * Without this, `S ? "x" ARB . OUTPUT` writes into a raw DESCR_t cell
          * and no output appears under --sm-run (word1.sno). */
         const char *varname = (p->var.v == DT_S && p->var.s) ? p->var.s :
@@ -928,7 +928,7 @@ bb_node_t bb_build(PATND_t *p)
     case XCALLCAP: {
         bb_node_t child = bb_build(p->nchildren > 0 ? p->children[0] : NULL);
         /* SN-21d: single bb_cap box with NM_CALL NAME_t.  Deferred (.) flow
-         * pushes an NM_CALL entry on γ; NAM_commit fires it via
+         * pushes an NM_CALL entry on γ; NAME_commit fires it via
          * name_commit_value → g_user_call_hook.  TL-2 arg-name deferred
          * resolution is handled inside name_commit_value. */
         cap_t *ζ = bb_cap_new_call(child.fn, child.ζ,
@@ -1177,10 +1177,10 @@ static DESCR_t bb_deferred_var(void *zeta, int entry)
                     /* SN-20 session 18: the legacy g_callcap_list / g_cc_events
                      * snapshot/restore dance is GONE. Rationale:
                      *
-                     *   Every bb_callcap push is a NAM_push_callcap_named() entry
+                     *   Every bb_callcap push is a NAME_push_callcap_named() entry
                      *   in the single NAM frame owned by exec_stmt. CC_β and CC_ω
-                     *   self-unwind via NAM_pop_one(handle). Nothing about the
-                     *   legacy g_callcap_list registry affects NAM_commit — that
+                     *   self-unwind via NAME_pop(handle). Nothing about the
+                     *   legacy g_callcap_list registry affects NAME_commit — that
                      *   walks the NAM frame directly. Snapshotting/restoring a
                      *   registry that has no dispatch role was both unnecessary
                      *   and actively harmful: it zeroed outer `registered` flags
@@ -1396,8 +1396,8 @@ int exec_stmt(const char  *subj_name,
 
     /* RT-4: reset stale pending captures before the scan sweep */
     clear_pending_flags();
-    int nam_cookie = NAM_save();
-    NAM_discard(nam_cookie);
+    int nam_cookie = NAME_save();
+    NAME_discard(nam_cookie);
 
     int saved_Ω = Ω;
     if (kw_anchor) Ω = 0;   /* clamp: bb_broker BB_SCAN tries 0..Ω */
@@ -1411,8 +1411,7 @@ int exec_stmt(const char  *subj_name,
     }
 
     /* match failed → :F */
-    NAM_discard(nam_cookie);
-    NAM_pop(nam_cookie);
+    NAME_discard(nam_cookie);
                                                               return 0;
 
 Phase4:
@@ -1427,10 +1426,10 @@ Phase4:
     if (has_repl && repl && !subj_name && !subj_var)          return 0;
 
     /* Flush all conditional captures and deferred callcaps in left-to-right
-     * pattern order — SC-26 fix: unified list in NAM_commit ensures captures
+     * pattern order — SC-26 fix: unified list in NAME_commit ensures captures
      * (tag, wrd) are assigned before the callcaps (push_list, push_item) that
      * read them. */
-    NAM_commit(nam_cookie);         /* RT-4 + SC-26: assign captures, fire callcaps */
+    NAME_commit(nam_cookie);         /* RT-4 + SC-26: assign captures, fire callcaps */
     flush_pending_captures();       /* legacy pending reset — keeps g_capture_list clean */
 
     if (!has_repl || !repl)                                   goto Success;

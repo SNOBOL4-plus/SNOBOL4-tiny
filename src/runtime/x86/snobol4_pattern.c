@@ -355,7 +355,7 @@ DESCR_t pat_assign_cond(DESCR_t child, DESCR_t var) {
  *
  * TL-2: also records arg *names* for flush-time resolution when every arg is a
  * plain variable.  If arg_names==NULL the legacy snapshot path (args/nargs)
- * applies; if arg_names is non-NULL the resolver at NAM_commit (or CC_γ_core
+ * applies; if arg_names is non-NULL the resolver at NAME_commit (or CC_γ_core
  * immediate branch) does NV_GET_fn(name) per arg to get the value that was
  * written by an earlier in-order . capture in the same pattern. */
 DESCR_t pat_assign_callcap(DESCR_t child, const char *fnc_name, DESCR_t *args, int nargs) {

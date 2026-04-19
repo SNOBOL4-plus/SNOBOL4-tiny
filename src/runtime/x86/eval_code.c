@@ -556,15 +556,14 @@ DESCR_t EXPVAL_fn(DESCR_t expr_d)
         int         save_delta = Δ;
 
         /* Save NAM frame (SIL: NAMICL/NHEDCL) — push fresh frame */
-        int nam_cookie = NAM_save();
+        int nam_cookie = NAME_save();
 
         DESCR_t result = eval_node((EXPR_t *)expr_d.ptr);
 
         /* Restore NAM frame — discard any captures from this expression's
-         * internal patterns, then pop the frame (do NOT commit — captures
-         * inside an EXPRESSION are local and must not propagate out). */
-        NAM_discard(nam_cookie);
-        NAM_pop(nam_cookie);   /* pop frame without assigning */
+         * internal patterns (do NOT commit — captures inside an EXPRESSION
+         * are local and must not propagate out). */
+        NAME_discard(nam_cookie);
 
         /* Restore subject globals */
         Σ = save_sigma;

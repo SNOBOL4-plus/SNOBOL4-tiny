@@ -230,57 +230,46 @@ DESCR_t  NAME_fn(const char *varname);
  * should fall back to NV_SET_fn for ordinary variables). */
 int      ASGNIC_fn(const char *kw_name, DESCR_t val);
 
-/* ── RT-4 / SN-20: SIL Naming List (§NMD) — nmd.c ────────────────────────── */
-/* NAM_push: record a conditional (.) capture during pattern match.
- *   var    — NV variable name (DT_S target); NULL if ptr is used
- *   ptr    — DT_N interior pointer target; NULL if var is used
- *   dt     — DT_S / DT_K / DT_E (dispatch selector for commit)
- *   s      — matched substring start (in subject buffer)
- *   len    — matched substring length
- *   returns opaque handle (NamEntry_t*); pass to NAM_pop_one on backtrack.  */
-void   *NAM_push(const char *var, DESCR_t *ptr, int dt,
-                  const char *s, int len);
-/* NAM_push_callcap: record a deferred XCALLCAP (pat . *fn()) call.
- *   Appended to the same ordered list as NAM_push so that captures and
- *   callcaps flush in left-to-right pattern order at NAM_commit time.
+/* ── RT-4 / SN-20 / SN-21: SIL Naming List (§NMD) — snobol4_nmd.c ─────────── */
+
+/* NAME_push_callcap: record a deferred XCALLCAP (pat . *fn()) call.
+ *   Appended to the flat NAM stack so captures and callcaps flush in
+ *   left-to-right pattern order at NAME_commit time.
  *   Returns opaque handle for self-unwinding pop (SN-20).                 */
-void   *NAM_push_callcap(const char *fnc_name, DESCR_t *fnc_args, int fnc_nargs,
+void   *NAME_push_callcap(const char *fnc_name, DESCR_t *fnc_args, int fnc_nargs,
                           const char *matched_text, int matched_len);
 /* TL-2: named variant — also records arg variable names for flush-time
- * resolution at NAM_commit time (after in-order earlier . captures have
+ * resolution at NAME_commit time (after in-order earlier . captures have
  * written their vars). Returns opaque handle for SN-20 pop. */
-void   *NAM_push_callcap_named(const char *fnc_name,
+void   *NAME_push_callcap_named(const char *fnc_name,
                                 DESCR_t *fnc_args, int fnc_nargs,
                                 char **fnc_arg_names, int fnc_n_arg_names,
                                 const char *matched_text, int matched_len);
 
 /* SN-20: box-owned self-unwind. Every box that pushed a NAM entry calls
- * NAM_pop_one(handle) on its β retry / ω failure path to undo its push.
+ * NAME_pop(handle) on its β retry / ω failure path to undo its push.
  * Safe if handle is NULL or the entry's frame has already been popped.   */
-void    NAM_pop_one(void *handle);
+void    NAME_pop(void *handle);
 
-/* NAM_save: snapshot current naming-list top; returns opaque cookie.        */
-int     NAM_save(void);
+/* NAME_save: snapshot current naming-list top; returns opaque cookie.        */
+int     NAME_save(void);
 
-/* NAM_commit: on pattern success — assign all entries since cookie.
- *   DT_K  → ASGNIC_fn (coerce to INTEGER per SIL NMDIC)
- *   DT_E  → stub (NAMEXN / EXPEVL — implemented in RT-6)
+/* NAME_commit: on pattern success — assign all entries since cookie.
+ *   DT_E  → thaw via EVAL_fn inside name_commit_value
  *   else  → NV_SET_fn or interior-pointer write                             */
-void    NAM_commit(int cookie);
+void    NAME_commit(int cookie);
 
-/* NAM_discard: mid-scan reset — clear current frame entries, keep frame.    */
-void    NAM_discard(int cookie);
-/* NAM_pop: pop frame after final failure (call once after NAM_discard).     */
-void    NAM_pop(int cookie);
+/* NAME_discard: mid-scan reset — clear entries since cookie.                 */
+void    NAME_discard(int cookie);
 
-/* NAM_mark / NAM_rollback_to — intra-frame high-water checkpoint.
+/* NAME_mark / NAME_rollback_to — intra-frame high-water checkpoint.
  *   Pattern combinators that backtrack internally (bb_alt, bb_arbno, etc.)
- *   can NAM_mark() on entry to a trial branch and NAM_rollback_to(mark)
+ *   can NAME_mark() on entry to a trial branch and NAME_rollback_to(mark)
  *   when that branch fails, discarding any entries appended during the
  *   failed trial.  The returned mark is an opaque pointer to the frame's
  *   tail at the moment of the call (NULL = frame was empty).            */
-void   *NAM_mark(void);
-void    NAM_rollback_to(void *mark);
+void   *NAME_mark(void);
+void    NAME_rollback_to(void *mark);
 
 /* ============================================================
  * Counter stack (nPush/nInc/nDec/nTop/nPop)

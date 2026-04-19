@@ -266,7 +266,7 @@ void state_pop(void);    /* restore from save stack */
  * SIL NAME     → NAME_fn()     in snobol4.c   (RT-3)
  * SIL ASGN     → ASGN_fn()     in snobol4.c   (RT-5)
  * SIL ASGNIC   → ASGNIC_fn()   in snobol4.c   (RT-3)
- * SIL NMD      → NAM_commit()  in nmd.c        (RT-4)
+ * SIL NMD      → NAME_commit()  in nmd.c        (RT-4)
  * SIL EXPVAL   → EXPVAL_fn()   in eval_code.c  (RT-6)
  * SIL EXPEVL   → EXPEVL_fn()   in eval_code.c  (RT-6)
  * SIL CONVE    → CONVE_fn()    in snobol4.c    (RT-7)

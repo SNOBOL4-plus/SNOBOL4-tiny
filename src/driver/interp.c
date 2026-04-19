@@ -3104,7 +3104,7 @@ DESCR_t interp_eval(EXPR_t *e)
             EXPR_t *fnc = tgt->children[0];
             int na = fnc->nchildren;
             /* TL-2: when every arg is a plain E_VAR, store *names* and defer
-             * lookup to flush time (NAM_commit).  This matches oracle semantics
+             * lookup to flush time (NAME_commit).  This matches oracle semantics
              * where args are resolved AFTER earlier . captures in the same
              * pattern have written their variables. */
             int all_vars = (na > 0);
