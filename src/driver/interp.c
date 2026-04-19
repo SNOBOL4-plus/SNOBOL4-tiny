@@ -594,6 +594,14 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
                             subj_val = NV_GET_fn(subj_name);
                         } else if (!subj_name)
                             subj_val = interp_eval(s->subject);
+                    } else if (s->subject->kind == E_FNC && s->has_eq && !s->pattern) {
+                        /* SN-6 session 14: same guard as top-level execute_program
+                         * loop (~L4142).  Dedicated branches below (ITEM/FIELD setter
+                         * at ~L673, NRETURN lvalue-assign at ~L699) call the function
+                         * exactly once to obtain the assignment target.  Evaluating
+                         * s->subject here would double-call the function inside a
+                         * user function body — expr_eval.sno Binary() does
+                         * Push() = EVAL(...) and needs this guard to match SPITBOL. */
                     } else {
                         subj_val = interp_eval(s->subject);
                     }
