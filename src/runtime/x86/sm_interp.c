@@ -486,10 +486,10 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
              * a[2].s (TL-2): optional '\t'-separated arg *names* for flush-time
              * resolution — set when every arg of *func() is a plain E_VAR.
              * When NULL, legacy path (no args, pat_assign_callcap).
-             * Use pat_assign_callcap → XCALLCAP node, handled by bb_build/bb_callcap
-             * in the byrd-box path.  bb_callcap calls g_user_call_hook(fname, args, 0)
-             * at match time (deferred for '.', immediate for '$'), which fires the
-             * SNOBOL4 function as a side effect.
+             * Use pat_assign_callcap → XCALLCAP node, lowered to bb_cap with
+             * NM_CALL NameKind_t (SN-21d).  At match time, name_commit_value's
+             * NM_CALL branch calls g_user_call_hook(fname, args, nargs);
+             * deferred for '.', immediate for '$'.
              * The old DT_E/pat_assign_cond approach only worked via the snobol4_pattern.c
              * materialise() path, which --sm-run does not use. */
             DESCR_t child = pat_pop();

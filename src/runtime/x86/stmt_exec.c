@@ -423,245 +423,23 @@ static DESCR_t bb_usercall(void *zeta, int entry)
                                            return FAILDESCR;
 }
 
-/* ── CALLCAP box — call func at match time to get DT_N lvalue, capture into it ─
- * Used for "pat . *func()" where func uses NRETURN to return a NAME.
- * On γ: call func to get DT_N ptr, store ptr + pending spec for conditional flush.
- * Conditional (.): flushes on overall match success via flush_pending_callcaps(). */
-
-typedef struct callcap_s {
-    bb_box_fn    child_fn;
-    void        *child_state;
-    const char  *fnc_name;
-    DESCR_t     *fnc_args;
-    int          fnc_nargs;
-    int          immediate;
-    spec_t       pending;
-    DESCR_t     *resolved_ptr;  /* set at match time; used at flush */
-    int          has_pending;
-    int          registered;
-    int          last_gen;      /* DYN-76: generation at last CC_α registration */
-    /* TL-2: arg *names* for flush-time variable resolution (see snobol4_patnd.h).
-     * If fnc_arg_names is non-NULL, the . path passes names to NAME_push_callcap
-     * (which forwards to NAME_commit for NV_GET_fn resolution); the $ path
-     * resolves in CC_γ_core's immediate branch directly. */
-    char       **fnc_arg_names;
-    int          fnc_n_arg_names;
-    void        *nam_handle;    /* SN-20: handle to our NAME_push_callcap entry */
-} callcap_t;
-
-/* DYN-79: per-firing event record.  A single callcap_t box (e.g. the *Push()
- * inside "constant . *Push()") can fire multiple times for different spans
- * (e.g. matching "1" and "2" in "*constant addop *constant").  Each firing
- * is a distinct event with its own spec snapshot.  We queue events here
- * rather than storing state on the shared callcap_t struct. */
-typedef struct {
-    const char *fnc_name;
-    DESCR_t    *fnc_args;
-    int         fnc_nargs;
-    spec_t      pending;
-    int         has_pending;    /* 1 = live event, 0 = stale (backtracked) */
-    callcap_t  *owner;          /* back-pointer for dedup keying */
-} cc_event_t;
-
-#define CALLCAPS_INIT 16
-
-static cc_event_t  *g_cc_events      = NULL;
-static int          g_cc_event_count = 0;
-static int          g_cc_event_cap   = 0;
-
-static callcap_t  **g_callcap_list   = NULL;
-static int          g_callcap_count  = 0;
-static int          g_callcap_cap    = 0;
-static int          g_callcap_gen    = 0;   /* DYN-76: per-statement generation */
-
-static void callcap_arrays_ensure(void)
-{
-    if (!g_cc_events) {
-        g_cc_event_cap = CALLCAPS_INIT;
-        g_cc_events    = malloc(g_cc_event_cap * sizeof(cc_event_t));
-    }
-    if (!g_callcap_list) {
-        g_callcap_cap  = CALLCAPS_INIT;
-        g_callcap_list = malloc(g_callcap_cap * sizeof(callcap_t *));
-    }
-}
-
-static void cc_events_grow(void)
-{
-    g_cc_event_cap *= 2;
-    g_cc_events = realloc(g_cc_events, g_cc_event_cap * sizeof(cc_event_t));
-    if (!g_cc_events) { fprintf(stderr, "stmt_exec: cc_events OOM\n"); abort(); }
-}
-
-static void callcap_list_grow(void)
-{
-    g_callcap_cap *= 2;
-    g_callcap_list = realloc(g_callcap_list, g_callcap_cap * sizeof(callcap_t *));
-    if (!g_callcap_list) { fprintf(stderr, "stmt_exec: callcap_list OOM\n"); abort(); }
-}
-
-static DESCR_t bb_callcap(void *zeta, int entry)
-{
-    callcap_t *ζ = zeta;
-    spec_t child_r;
-
-    if (entry == α) goto CC_α;
-                    goto CC_β;
-
-    CC_α:  if (!ζ->immediate && !ζ->registered) {
-               callcap_arrays_ensure();
-               if (g_callcap_count >= g_callcap_cap) callcap_list_grow();
-               ζ->registered = 1;
-               g_callcap_list[g_callcap_count++] = ζ;
-           }
-           child_r = spec_from_descr(ζ->child_fn(ζ->child_state, α));
-           if (spec_is_empty(child_r)) goto CC_ω;
-           goto CC_γ_core;
-
-    CC_β:  /* SN-20: undo our prior push before retry. If retry succeeds,
-            * CC_γ_core will re-push with a fresh handle for the new spec. */
-           if (ζ->nam_handle) { NAME_pop(ζ->nam_handle); ζ->nam_handle = NULL; }
-           child_r = spec_from_descr(ζ->child_fn(ζ->child_state, β));
-           if (spec_is_empty(child_r)) goto CC_ω;
-           goto CC_γ_core;
-
-    CC_γ_core: {
-           if (ζ->immediate) {
-               /* $ — call NOW, write immediately, passing matched text as arg[0] */
-               if (g_user_call_hook && ζ->fnc_name) {
-                   /* TL-2: if arg names are set, resolve each via NV_GET_fn now.
-                    * For $ immediate there is no NAME_commit step, so this is the
-                    * flush point.  Any earlier $ capture in the same pattern has
-                    * already written its variable; any earlier . capture has NOT
-                    * (that happens at NAME_commit) — matches oracle semantics which
-                    * lookup occurs when the pattern element is actually reached. */
-                   DESCR_t *static_args = ζ->fnc_args;
-                   int      nstatic     = ζ->fnc_nargs;
-                   DESCR_t  resolved_buf[8];
-                   DESCR_t *resolved    = NULL;
-                   if (ζ->fnc_arg_names && ζ->fnc_n_arg_names > 0) {
-                       nstatic = ζ->fnc_n_arg_names;
-                       resolved = (nstatic <= 8) ? resolved_buf
-                                                 : (DESCR_t *)GC_MALLOC((size_t)nstatic * sizeof(DESCR_t));
-                       for (int k = 0; k < nstatic; k++) {
-                           resolved[k] = NV_GET_fn(ζ->fnc_arg_names[k] ? ζ->fnc_arg_names[k] : "");
-                       }
-                       static_args = resolved;
-                   }
-                   int total = 1 + nstatic;
-                   DESCR_t *args = (DESCR_t *)GC_MALLOC((size_t)total * sizeof(DESCR_t));
-                   char *buf = (char *)GC_MALLOC((size_t)child_r.δ + 1);
-                   if (child_r.σ && child_r.δ > 0) memcpy(buf, child_r.σ, (size_t)child_r.δ);
-                   buf[child_r.δ] = '\0';
-                   args[0].v = DT_S; args[0].slen = (uint32_t)child_r.δ;
-                   args[0].s = buf;  /* do NOT set .ptr — shares union with .s */
-                   for (int _j = 0; _j < nstatic; _j++) args[_j+1] = static_args[_j];
-                   DESCR_t name_d = g_user_call_hook(ζ->fnc_name, args, total);
-                   DESCR_t *cell = (name_d.v == DT_N && name_d.ptr) ? (DESCR_t*)name_d.ptr : NULL;
-                   if (cell) *cell = args[0];
-               }
-           } else {
-               /* . — queue into unified NAM list so captures and callcaps
-                * flush in left-to-right pattern order at NAME_commit (SC-26).
-                * TL-2: pass arg_names through; NAME_commit will resolve via
-                * NV_GET_fn after in-order earlier . captures have written.
-                * SN-20: store handle so CC_β/CC_ω can self-unwind. */
-               ζ->nam_handle = NAME_push_callcap_named(ζ->fnc_name,
-                                       ζ->fnc_args, ζ->fnc_nargs,
-                                       ζ->fnc_arg_names, ζ->fnc_n_arg_names,
-                                       child_r.σ, (int)child_r.δ);
-               /* Keep ζ->pending/has_pending for DVAR save/restore compat */
-               ζ->pending     = child_r;
-               ζ->has_pending = 1;
-               ζ->resolved_ptr = NULL;
-           }
-           return descr_from_spec(child_r);
-    }
-
-    CC_ω:  /* SN-20: pop our deferred registration if we pushed one and the
-            * outer match is abandoning us. */
-           if (ζ->nam_handle) { NAME_pop(ζ->nam_handle); ζ->nam_handle = NULL; }
-           ζ->has_pending = 0;
-           return FAILDESCR;
-}
-
-/* M-DYN-B10: expose bb_callcap + ctor for bb_build_bin.c trampolines */
-DESCR_t bb_callcap_exported(void *zeta, int entry) { return bb_callcap(zeta, entry); }
-
-/* Forward decl: the named variant is defined just below. */
-callcap_t *bb_callcap_new_named(bb_box_fn child_fn, void *child_state,
-                                 const char *fnc_name, DESCR_t *fnc_args,
-                                 int fnc_nargs, int immediate,
-                                 char **fnc_arg_names, int fnc_n_arg_names);
-
-callcap_t *bb_callcap_new(bb_box_fn child_fn, void *child_state,
-                           const char *fnc_name, DESCR_t *fnc_args,
-                           int fnc_nargs, int immediate)
-{
-    return bb_callcap_new_named(child_fn, child_state, fnc_name,
-                                 fnc_args, fnc_nargs, immediate, NULL, 0);
-}
-
-callcap_t *bb_callcap_new_named(bb_box_fn child_fn, void *child_state,
-                                 const char *fnc_name, DESCR_t *fnc_args,
-                                 int fnc_nargs, int immediate,
-                                 char **fnc_arg_names, int fnc_n_arg_names)
-{
-    callcap_t *ζ = calloc(1, sizeof(callcap_t));
-    if (!ζ) return NULL;
-    ζ->child_fn    = child_fn;
-    ζ->child_state = child_state;
-    ζ->fnc_name    = fnc_name;
-    ζ->fnc_args    = fnc_args;
-    ζ->fnc_nargs   = fnc_nargs;
-    ζ->immediate   = immediate;
-    ζ->fnc_arg_names    = fnc_arg_names;
-    ζ->fnc_n_arg_names  = fnc_n_arg_names;
-    return ζ;
-}
-
-/* DYN-79: remove stale (has_pending=0) events from the event queue.
- * Live events (has_pending=1) are always kept, even if the same owner
- * fired multiple times (e.g. *Push() capturing "1" then "2"). */
-static void dedup_callcaps(void) {
-    int out = 0;
-    for (int i = 0; i < g_cc_event_count; i++) {
-        if (!g_cc_events[i].has_pending) {
-            /* Stale — drop only if a later event has the same owner */
-            int has_later = 0;
-            for (int j = i + 1; j < g_cc_event_count; j++)
-                if (g_cc_events[j].owner == g_cc_events[i].owner) { has_later = 1; break; }
-            if (has_later) continue;
-        }
-        g_cc_events[out++] = g_cc_events[i];
-    }
-    g_cc_event_count = out;
-}
-
-static void flush_pending_callcaps(void) {
-    for (int i = 0; i < g_cc_event_count; i++) {
-        cc_event_t *ev = &g_cc_events[i];
-        if (ev->has_pending) {
-            spec_t snap = ev->pending;
-            ev->has_pending = 0;
-            if (!g_user_call_hook || !ev->fnc_name) continue;
-            /* Pass only the explicit static args — do NOT prepend matched text.
-             * SNOBOL4 spec: *fn(a,b) receives exactly the listed args.
-             * Prepending captured text as args[0] was wrong (shifted all args by 1).
-             * CSNOBOL4 confirms: 'pat . *fn(X,Y)' -> fn receives (X, Y), not (matched,X,Y). */
-            DESCR_t name_d = g_user_call_hook(ev->fnc_name, ev->fnc_args, ev->fnc_nargs);
-            DESCR_t *cell = (name_d.v == DT_N && name_d.ptr) ? (DESCR_t*)name_d.ptr : NULL;
-            if (cell) *cell = name_d;
-        }
-    }
-    /* Also clear ζ->has_pending on all registered boxes */
-    for (int i = 0; i < g_callcap_count; i++) {
-        g_callcap_list[i]->has_pending = 0;
-        g_callcap_list[i]->registered  = 0;
-    }
-    g_callcap_count    = 0;
-    g_cc_event_count   = 0;
-}
+/* ── CALLCAP (pat . *fn() / pat $ *fn()) — DELETED in SN-21e.
+ *
+ * SN-21d collapsed the CALLCAP state machine into the unified bb_cap box with
+ * NAME_t { kind = NM_CALL }.  XCALLCAP now lowers through bb_cap_new_call in
+ * both bb_build.c trampolines and stmt_exec.c's pattern dispatcher; the
+ * deferred (.) commit fires from name_commit_value's NM_CALL branch.
+ *
+ * The legacy implementation — callcap_t, cc_event_t, bb_callcap / _exported /
+ * _new / _new_named, dedup_callcaps, flush_pending_callcaps, and the
+ * g_callcap_list / g_cc_events registries — lived here unreached between
+ * SN-21d and SN-21e.  SN-21e removes them entirely; the git history is the
+ * permanent record.
+ *
+ * The per-firing event queue (g_cc_events) was DYN-79 machinery that
+ * predated SN-20's self-unwinding NAM stack; with NAME_push / NAME_pop
+ * handling backtrack bookkeeping on every box, no event queue is needed.
+ */
 
 /* ══════════════════════════════════════════════════════════════════════════ */
 
@@ -1174,25 +952,19 @@ static DESCR_t bb_deferred_var(void *zeta, int entry)
                             memset(ζ->child_state, 0, ζ->child_size);
                     }
                     if (!ζ->child_fn) { g_dvar_depth--; goto DVAR_ω; }
-                    /* SN-20 session 18: the legacy g_callcap_list / g_cc_events
-                     * snapshot/restore dance is GONE. Rationale:
+                    /* SN-21e: no legacy callcap registry snapshot/restore
+                     * dance needed — the whole g_callcap_list / g_cc_events
+                     * scaffolding is deleted.  Every capture (. and $, var
+                     * and *fn() alike) flows through the single bb_cap box:
+                     * γ pushes into the flat NAME stack, β/ω self-unwind
+                     * via NAME_pop.  NAME_commit walks the stack on outer
+                     * match success; nothing else mediates the transaction.
                      *
-                     *   Every bb_callcap push is a NAME_push_callcap_named() entry
-                     *   in the single NAM frame owned by exec_stmt. CC_β and CC_ω
-                     *   self-unwind via NAME_pop(handle). Nothing about the
-                     *   legacy g_callcap_list registry affects NAME_commit — that
-                     *   walks the NAM frame directly. Snapshotting/restoring a
-                     *   registry that has no dispatch role was both unnecessary
-                     *   and actively harmful: it zeroed outer `registered` flags
-                     *   during child execution, which interfered with the inner
-                     *   CC_α registration path and corrupted the box graph when
-                     *   bb_deferred_var wrapped any pattern containing . *fn().
-                     *
-                     * Same-box β symmetry (lvalue-kind agnostic): PAT . var and
-                     * PAT . *fn() are the same γ/β/ω state machine with different
-                     * commit-time lvalue resolution. Both push into NAM; both
-                     * self-unwind on backtrack. bb_deferred_var is an ordinary
-                     * combinator that forwards α to its child — no special
+                     * Same-box β symmetry (lvalue-kind agnostic): PAT . var
+                     * and PAT . *fn() are now literally the same state
+                     * machine with different NameKind_t dispatch at commit
+                     * time.  bb_deferred_var is an ordinary combinator
+                     * that forwards α to its child — no special
                      * bookkeeping required. */
                     DVAR = spec_from_descr(ζ->child_fn(ζ->child_state, α));
                     g_dvar_depth--;
@@ -1287,9 +1059,9 @@ int exec_stmt(const char  *subj_name,
 {
     /* reset capture registry for this statement */
     reset_capture_registry();
-    g_callcap_count  = 0;   /* DYN-69: callcap (pat . *func()) registry */
-    g_cc_event_count = 0;   /* DYN-79: per-firing event queue */
-    g_callcap_gen++;        /* DYN-76: new generation — allows cached callcaps to re-register */
+    /* SN-21e: the DYN-69 / DYN-79 / DYN-76 callcap registries
+     * (g_callcap_count / g_cc_event_count / g_callcap_gen) are gone —
+     * the flat NAM stack plus bb_cap self-unwind is the full protocol. */
 
     /* ── Phase 1: build subject ─────────────────────────────────────── */
     /*

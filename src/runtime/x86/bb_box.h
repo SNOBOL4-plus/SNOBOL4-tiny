@@ -140,21 +140,24 @@ typedef struct { int δ; }                              bal_t;
 typedef struct { int done; const char *varname; }     atp_t;
 /* deferred_var_t needs bb_node_t — defined above */
 
-/* cap_t — SN-21c unified capture state.
+/* cap_t — SN-21c unified capture state; SN-21d extended to NM_CALL;
+ * SN-21e made canonical (all legacy siblings deleted).
  *
- * Replaces the pre-SN-21c capture_t.  One struct, one box (bb_cap) handles
- * both XNME (.) and XFNME ($) for plain-variable and DT_N pointer targets.
- * The {varname, var_ptr} pair is subsumed by NAME_t (kind ∈ {NM_VAR, NM_PTR});
- * bb_callcap still owns the NM_CALL case until SN-21d collapses it.
+ * One struct, one box (bb_cap) handles XNME (.), XFNME ($), and XCALLCAP
+ * for every lvalue kind.  The pre-SN-21 fracture — capture_t +
+ * callcap_t with separate state machines — is gone.  NameKind_t
+ * dispatch happens inside name_commit_value at commit time.
  *
  *   fn / state  — child box
  *   immediate   — 1 for XFNME ($): write at γ via name_commit_value
- *                 0 for XNME (.): push at γ via NAME_push; commit at NAME_commit
- *   name        — unified lvalue descriptor (NM_VAR or NM_PTR in SN-21c)
+ *                 0 for XNME / XCALLCAP (.): push at γ via NAME_push;
+ *                   commit at NAME_commit via name_commit_value
+ *   name        — unified lvalue descriptor (NM_VAR / NM_PTR / NM_CALL
+ *                   / NM_IDX reserved)
  *   nam_handle  — NAME_push handle (NULL if none); popped on β/ω (self-unwind)
- *   pending / has_pending / registered — kept for pre-SN-21e bookkeeping so
- *                 clear_pending_flags() and the capture-registry hooks stay
- *                 correct across statements. */
+ *   pending / has_pending / registered — kept for statement-level
+ *                 bookkeeping so clear_pending_flags() and the
+ *                 capture-registry hooks stay correct across statements. */
 typedef struct cap_s {
     bb_box_fn    fn;
     void        *state;

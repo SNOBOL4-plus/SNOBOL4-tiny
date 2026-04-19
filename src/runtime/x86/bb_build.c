@@ -152,33 +152,10 @@ extern DESCR_t bb_cap(void *zeta, int entry);
 /* cap_t + bb_cap_new canonical declarations come from bb_box.h
  * (SN-21c: bb_capture → bb_cap port). */
 
-/* M-DYN-B10: exported shims for static box functions in stmt_exec.c */
-extern DESCR_t bb_callcap_exported(void *zeta, int entry);
+/* M-DYN-B10: exported shim for static box function in stmt_exec.c.
+ * SN-21e: bb_callcap_exported is gone — the XCALLCAP emitter now trampolines
+ * directly to bb_cap with an NM_CALL NAME_t, just like XNME / XFNME. */
 extern DESCR_t bb_deferred_var_exported(void *zeta, int entry);
-
-/* Mirror of callcap_t fields needed by bb_callcap_new — only the ctor fields.
- * The full struct in stmt_exec.c has extra fields (pending, resolved_ptr, etc.)
- * all of which are zeroed by calloc — correct default. */
-typedef struct {
-    bb_box_fn    child_fn;
-    void        *child_state;
-    const char  *fnc_name;
-    void        *fnc_args;    /* DESCR_t* — opaque to bb_build.c */
-    int          fnc_nargs;
-    int          immediate;
-    /* TL-2: mirror of the new arg-name slots at the tail of the ctor-set fields.
-     * Zeroed by calloc in bb_callcap_new — a NULL fnc_arg_names disables the
-     * flush-time name-resolution path (identical to pre-TL-2 behavior). */
-    /* remaining fields (pending, has_pending, registered, last_gen,
-       resolved_ptr, fnc_arg_names, fnc_n_arg_names) are zeroed by calloc */
-} callcap_t_bin;
-extern void *bb_callcap_new(bb_box_fn child_fn, void *child_state,
-                             const char *fnc_name, void *fnc_args,
-                             int fnc_nargs, int immediate);
-extern void *bb_callcap_new_named(bb_box_fn child_fn, void *child_state,
-                                   const char *fnc_name, void *fnc_args,
-                                   int fnc_nargs, int immediate,
-                                   char **fnc_arg_names, int fnc_n_arg_names);
 
 /* Mirror of deferred_var_t from stmt_exec.c */
 typedef struct {
@@ -1206,9 +1183,10 @@ static bb_box_fn bb_arbn_emit_binary(PATND_t *p)
 
 /* ── M-DYN-B10: XCALLCAP — pat . *func() deferred-function capture ─────────
  * SN-21d: single bb_cap box with NM_CALL NAME_t.  Child is built recursively
- * in binary; if child fails → C fallback.  Trampoline points at bb_cap
- * (not the old bb_callcap_exported) — same state machine as XNME / XFNME,
- * kind dispatch happens inside name_commit_value at commit time. */
+ * in binary; if child fails → C fallback.  Trampoline points at bb_cap —
+ * same state machine as XNME / XFNME, kind dispatch happens inside
+ * name_commit_value at commit time.  SN-21e: legacy bb_callcap_exported and
+ * bb_callcap_new are gone; this is the only path. */
 static bb_box_fn bb_callcap_emit_binary(PATND_t *p)
 {
 #define CALLCAP_TRAM_SIZE 32

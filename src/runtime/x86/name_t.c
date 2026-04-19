@@ -13,6 +13,16 @@
 #include "name_t.h"
 #include "snobol4.h"    /* NV_SET_fn, NV_GET_fn, g_user_call_hook, DT_*       */
 
+/* SN-21e: DT_E thaw is the single-dispatch commit point for values produced
+ * by pattern-context `*var` references that bound a frozen expression
+ * (DT_E).  Before SN-21e the thaw was fragmented across interp_eval_pat and
+ * NAME_commit; folding it into name_commit_value means every lvalue kind
+ * (NM_VAR / NM_PTR / NM_CALL / NM_IDX) sees an already-thawed value with
+ * zero per-kind handling.  EVAL_fn is idempotent for DT_S / DT_I / DT_R and
+ * only pays cost for DT_E — see snobol4_pattern.c:EVAL_fn.  Closes the
+ * SN-20 `*var-holds-DT_E` remainder. */
+DESCR_t EVAL_fn(DESCR_t expr);
+
 /*---------------------------------------------------------------------------*/
 /* name_commit_value — commit `value` into the location described by *nm     */
 /*---------------------------------------------------------------------------*/
@@ -20,6 +30,12 @@
 void name_commit_value(const NAME_t *nm, DESCR_t value)
 {
     if (!nm) return;
+
+    /* SN-21e: DT_E thaw.  If a pattern-context *var held a frozen expression,
+     * the match-time value arrives here as DT_E; EVAL_fn drives it through
+     * EXPVAL_fn with proper NAM save/restore.  Non-DT_E values pass through
+     * unchanged (EVAL_fn idempotent for DT_S / DT_I / DT_R). */
+    if (value.v == DT_E) value = EVAL_fn(value);
 
     switch (nm->kind) {
 

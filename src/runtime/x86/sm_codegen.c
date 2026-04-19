@@ -377,9 +377,10 @@ static void h_pat_capture_fn(void)
     /* . *func() or $ *func() — a[0].s = function name.
      * a[2].s (TL-2): optional '\t'-separated arg *names* for flush-time
      * resolution — set when every arg of *func() is a plain E_VAR.
-     * Use pat_assign_callcap → XCALLCAP, handled by bb_build/bb_callcap.
-     * The old DT_E/pat_assign_cond approach only worked via materialise()
-     * which is not used in the byrd-box (--sm-run / --jit-emit) path. */
+     * Use pat_assign_callcap → XCALLCAP, lowered to bb_cap with NM_CALL
+     * NameKind_t (SN-21d).  The old DT_E/pat_assign_cond approach only
+     * worked via materialise() which is not used in the byrd-box
+     * (--sm-run / --jit-emit) path. */
     DESCR_t child  = jit_pat_pop();
     const char *fname = CUR_INS->a[0].s ? CUR_INS->a[0].s : "";
     const char *namelist = CUR_INS->a[2].s;

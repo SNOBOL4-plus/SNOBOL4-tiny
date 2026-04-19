@@ -23,8 +23,10 @@
  * match location is named.  `name_commit_value(&name, value)` dispatches on
  * `kind` and does the single correct thing for that kind.
  *
- * Currently SN-21a introduces the types + commit entry without wiring them
- * in; migration proceeds across SN-21b..SN-21e.  See GOAL-LANG-SNOBOL4.md.
+ * Migration complete at SN-21e (this commit): bb_capture / bb_callcap /
+ * capture_t / callcap_t / NAM_KIND_* are deleted; every caller goes through
+ * bb_cap + NAME_t.  The DT_E thaw is folded into name_commit_value as a
+ * one-line idempotent prelude, closing the SN-20 *var-holds-DT_E gap.
  */
 
 #ifndef NAME_T_H
