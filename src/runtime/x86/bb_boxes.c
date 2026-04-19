@@ -497,43 +497,130 @@ interr_t *bb_interr_new(bb_box_fn fn, void *state)
 { interr_t *ζ=calloc(1,sizeof(interr_t)); ζ->fn=fn; ζ->state=state; return ζ; }
 
 /* ───── capture ───── */
-/* _XNME/_XFNME  CAPTURE     $ writes on every γ; . buffers for Phase-5 commit */
+/* _XNME/_XFNME  CAPTURE     $ writes on every γ; . buffers for Phase-5 commit
+ *
+ * UNIFIED 2026-04-19 (SN-20 session 17): previously had two copies
+ * (bb_boxes.c and stmt_exec.c). Consolidated here as the single source
+ * of truth across --ir-run, --sm-run, and --jit-run.
+ *
+ * Fields:
+ *   varname   — DT_S target name (write via NV_SET_fn — fires I/O hooks for OUTPUT/PUNCH)
+ *   var_ptr   — DT_N target pointer (write directly through ptr — SIL NAME semantics)
+ *   immediate — 1 for XFNME ($): write now on every γ.  0 for XNME (.): defer via NAM_push.
+ *
+ * SN-20 (self-unwinding): every γ that pushes to the NAM list saves the
+ * returned handle; β (retry) and ω (failure exit) call NAM_pop_one to undo.
+ * No external combinator-level NAM_mark / NAM_rollback_to required — the
+ * box is symmetric in its own right.
+ *
+ * capture_t definition now in bb_box.h so the stmt_exec.c dispatcher can
+ * allocate state directly (mirrors other box struct exposure pattern).
+ */
 
-typedef struct {
-    bb_box_fn fn; void *state; const char *varname;
-    int immediate; spec_t pending; int has_pending;
-    void *nam_handle;   /* SN-20: entry pushed in prior γ; popped on β/ω */
-} capture_t;
+/* forward decl — used in bb_capture body below */
+static void register_capture(capture_t *c);
 
 DESCR_t bb_capture(void *zeta, int entry)
 {
     capture_t *ζ = zeta;
     spec_t cr;
-    if (entry==α)                                                               goto CAP_α;
-    if (entry==β)                                                               goto CAP_β;
-    CAP_α:          cr=spec_from_descr(ζ->fn(ζ->state,α));                                       
-                    if (spec_is_empty(cr))                                      goto CAP_ω;
+
+    if (entry == α)                                                             goto CAP_α;
+    if (entry == β)                                                             goto CAP_β;
+
+    CAP_α:       if (!ζ->immediate) register_capture(ζ);
+                 cr = spec_from_descr(ζ->fn(ζ->state, α));
+                 if (spec_is_empty(cr))                                         goto CAP_ω;
                                                                                 goto CAP_γ_core;
-    CAP_β:          /* SN-20: undo our prior push before retrying. If the
-                     * retry also succeeds, CAP_γ_core re-pushes fresh. */
-                    if (ζ->nam_handle) { NAM_pop_one(ζ->nam_handle); ζ->nam_handle = NULL; }
-                    cr=spec_from_descr(ζ->fn(ζ->state,β));
-                    if (spec_is_empty(cr))                                      goto CAP_ω;
+
+    CAP_β:       /* SN-20: undo our prior push before retrying. If retry
+                  * succeeds, CAP_γ_core re-pushes with a fresh handle. */
+                 if (ζ->nam_handle) { NAM_pop_one(ζ->nam_handle); ζ->nam_handle = NULL; }
+                 cr = spec_from_descr(ζ->fn(ζ->state, β));
+                 if (spec_is_empty(cr))                                         goto CAP_ω;
                                                                                 goto CAP_γ_core;
-    CAP_γ_core:     if (ζ->varname && *ζ->varname && ζ->immediate) {            
-                        char *s=GC_MALLOC(cr.δ+1);                              
-                        memcpy(s,cr.σ,(size_t)cr.δ); s[cr.δ]=0;                 
-                        DESCR_t v={.v=DT_S,.slen=(uint32_t)cr.δ,.s=s};          
-                        NV_SET_fn(ζ->varname,v);                                
-                    } else if (ζ->varname && *ζ->varname) {                     
-                        /* XNME (.): conditional — push onto NMD naming list.
-                         * SN-20: save handle so we can pop on β/ω symmetrically. */
-                        ζ->nam_handle = NAM_push(ζ->varname, NULL, DT_S, cr.σ, cr.δ);
-                        ζ->pending=cr; ζ->has_pending=1; }                      
+
+    CAP_γ_core:  if (ζ->var_ptr || (ζ->varname && *ζ->varname)) {
+                     if (ζ->immediate) {
+                         /* XFNME ($): immediate — write now on every γ */
+                         char *s = (char *)GC_MALLOC(cr.δ + 1);
+                         memcpy(s, cr.σ, (size_t)cr.δ);
+                         s[cr.δ] = '\0';
+                         DESCR_t val = { .v = DT_S, .slen = (uint32_t)cr.δ, .s = s };
+                         if (ζ->var_ptr) *ζ->var_ptr = val;
+                         else            NV_SET_fn(ζ->varname, val);
+                     } else {
+                         /* XNME (.): conditional — push onto NMD naming list.
+                          * SN-20: save handle so CAP_β/CAP_ω can self-unwind. */
+                         ζ->nam_handle  = NAM_push(ζ->varname, ζ->var_ptr, DT_S, cr.σ, cr.δ);
+                         ζ->pending     = cr;
+                         ζ->has_pending = 1;
+                     }
+                 }
                                                                                 return descr_from_spec(cr);
-    CAP_ω:          /* SN-20: pop our push on failure exit. */
-                    if (ζ->nam_handle) { NAM_pop_one(ζ->nam_handle); ζ->nam_handle = NULL; }
-                    ζ->has_pending=0;                                           return FAILDESCR;
+
+    CAP_ω:       /* SN-20: pop our push on failure exit. */
+                 if (ζ->nam_handle) { NAM_pop_one(ζ->nam_handle); ζ->nam_handle = NULL; }
+                 ζ->has_pending = 0;                                            return FAILDESCR;
+}
+
+/* Capture registry (moved from stmt_exec.c — used by exec_stmt for Phase-5 reset).
+ * MAX_CAPTURES raised from 64 to 256 to match stmt_exec.c's original value. */
+#define MAX_CAPTURES 256
+static capture_t *g_capture_list[MAX_CAPTURES];
+static int        g_capture_count = 0;
+
+/* Called from bb_capture CAP_α whenever a conditional (.) capture fires.
+ * Also callable from bb_build for eager registration if desired. */
+static void register_capture(capture_t *c)
+{
+    for (int i = 0; i < g_capture_count; i++)
+        if (g_capture_list[i] == c) return;
+    if (g_capture_count < MAX_CAPTURES)
+        g_capture_list[g_capture_count++] = c;
+}
+
+/* Reset pending flags after Phase 3 success.
+ * RT-4: NAM_commit() now owns all conditional (.) capture writes.
+ * This function only clears has_pending bookkeeping so the scan-loop
+ * reset logic stays correct on subsequent statements.
+ * Exported for exec_stmt (see external decl in bb_box.h). */
+void flush_pending_captures(void)
+{
+    for (int i = 0; i < g_capture_count; i++)
+        g_capture_list[i]->has_pending = 0;
+    g_capture_count = 0;
+}
+
+/* Called at start of exec_stmt to clear the registry for a fresh statement. */
+void reset_capture_registry(void)
+{
+    g_capture_count = 0;
+}
+
+/* Called before the scan sweep to clear stale has_pending flags without
+ * emptying the registry itself. RT-4 equivalent of the inline loop that
+ * previously lived in exec_stmt. */
+void clear_pending_flags(void)
+{
+    for (int i = 0; i < g_capture_count; i++)
+        g_capture_list[i]->has_pending = 0;
+}
+
+/* Unified constructor — external linkage; called from stmt_exec.c bb_build
+ * dispatcher and from bb_build.c JIT emitter. Signature matches the
+ * capture_t_bin mirror in bb_build.c (var_ptr is void* there, DESCR_t* here). */
+capture_t *bb_capture_new(bb_box_fn child_fn, void *child_state,
+                          const char *varname, DESCR_t *var_ptr, int immediate)
+{
+    capture_t *ζ = calloc(1, sizeof(capture_t));
+    if (!ζ) return NULL;
+    ζ->fn        = child_fn;
+    ζ->state     = child_state;
+    ζ->varname   = varname;
+    ζ->var_ptr   = var_ptr;
+    ζ->immediate = immediate;
+    return ζ;
 }
 
 /* ───── atp ───── */

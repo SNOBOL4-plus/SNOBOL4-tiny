@@ -162,82 +162,9 @@ static DESCR_t bb_deferred_var(void *zeta, int entry);
  * and commit only on overall success.  For DYN-4 we buffer XNME captures
  * in a small pending-capture list and flush it in Phase 5.
  */
-typedef struct {
-    bb_box_fn    fn;
-    void        *state;
-    const char  *varname;   /* DT_S target: write via NV_SET_fn */
-    DESCR_t     *var_ptr;   /* DT_N target: write directly through ptr (SIL NAME) */
-    int          immediate;
-    spec_t       pending;
-    int          has_pending;
-    int          registered;  /* set on first CAP_α; prevents double-register */
-} capture_t;
-
-/* forward decl — used in bb_capture body below */
-static void register_capture(capture_t *c);
-
-static DESCR_t bb_capture(void *zeta, int entry)
-{
-    capture_t *ζ = zeta;
-
-    if (entry == α)                                     goto CAP_α;
-    if (entry == β)                                     goto CAP_β;
-
-    spec_t         child_r;
-
-    CAP_α:        if (!ζ->immediate)
-                      register_capture(ζ);
-                  child_r = spec_from_descr(ζ->fn(ζ->state, α));
-                  if (spec_is_empty(child_r))                 goto CAP_ω;
-                                                              goto CAP_γ_core;
-    CAP_β:        child_r = spec_from_descr(ζ->fn(ζ->state, β));
-                  if (spec_is_empty(child_r))                 goto CAP_ω;
-                                                              goto CAP_γ_core;
-
-    CAP_γ_core:   if (ζ->var_ptr || (ζ->varname && *ζ->varname)) {
-                      if (ζ->immediate) {
-                          /* XFNME ($): immediate — write now on every γ */
-                          char *s = (char *)GC_MALLOC(child_r.δ + 1);
-                          memcpy(s, child_r.σ, (size_t)child_r.δ);
-                          s[child_r.δ] = '\0';
-                          DESCR_t val;
-                          val.v    = DT_S;
-                          val.slen = (uint32_t)child_r.δ;
-                          val.s    = s;
-                          if (ζ->var_ptr)        *ζ->var_ptr = val;
-                          else                   NV_SET_fn(ζ->varname, val);
-                      } else {
-                          /* XNME (.): conditional — push onto NMD naming list.
-                           * NAM_discard(cookie) rolls back on scan failure;
-                           * NAM_commit(cookie) assigns all on overall success. */
-                          NAM_push(ζ->varname, ζ->var_ptr, DT_S,
-                                   child_r.σ, child_r.δ);
-                          /* Keep pending for scan-loop reset bookkeeping */
-                          ζ->pending     = child_r;
-                          ζ->has_pending = 1;
-                      }
-                  }
-                                                              return descr_from_spec(child_r);
-
-    CAP_ω:        ζ->has_pending = 0;   /* backtracked past — pending stale */
-                                                              return FAILDESCR;
-}
-
-/* M-DYN-B7: expose bb_capture and capture_t constructor for bb_build_bin.c */
-DESCR_t bb_capture_exported(void *zeta, int entry) { return bb_capture(zeta, entry); }
-
-capture_t *bb_capture_new(bb_box_fn child_fn, void *child_state,
-                          const char *varname, DESCR_t *var_ptr, int immediate)
-{
-    capture_t *ζ = calloc(1, sizeof(capture_t));
-    if (!ζ) return NULL;
-    ζ->fn        = child_fn;
-    ζ->state     = child_state;
-    ζ->varname   = varname;
-    ζ->var_ptr   = var_ptr;
-    ζ->immediate = immediate;
-    return ζ;
-}
+/* capture_t / bb_capture / bb_capture_new / register_capture /
+ * flush_pending_captures all unified into bb_boxes.c (2026-04-19 session 17).
+ * Declarations visible here via bb_box.h. Single source across all three modes. */
 
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -256,8 +183,7 @@ capture_t *bb_capture_new(bb_box_fn child_fn, void *child_state,
 /* forward declaration for recursion */
 bb_node_t bb_build(PATND_t *p);
 
-/* forward decls for capture registry (defined after exec_stmt) */
-static void flush_pending_captures(void);
+/* flush_pending_captures now external, declared in bb_box.h */
 
 /* Box state types are now in bb_box.h (canonical).
  * lit_t / pos_t etc. were private aliases — replaced with canonical names.
@@ -446,27 +372,8 @@ void bin_audit_print(void)
 }
 
 /* ── ATP box (@var) — cursor-position capture ───────────────────────────────
- * On alpha: write Δ (current cursor) as DT_I into varname; succeed (epsilon).
- * On beta: fail — cursor-capture has no meaningful backtrack semantics. */
-/* atp_t defined in bb_box.h */
-
-static DESCR_t bb_atp(void *zeta, int entry)
-{
-    atp_t *ζ = zeta;
-
-    if (entry == α) goto ATP_α;
-                    goto ATP_β;
-
-    ATP_α:  ζ->done = 1;   /* mark for β — no backtrack */
-            if (ζ->varname && ζ->varname[0]) {
-                DESCR_t val;
-                val.v = DT_I;
-                val.i = (int64_t)Δ;
-                NV_SET_fn(ζ->varname, val);
-            }
-            return descr_from_spec(spec(Σ + Δ, 0));
-    ATP_β:  return FAILDESCR;
-}
+ * bb_atp unified into bb_boxes.c (2026-04-19 session 17). Single source.
+ * atp_t defined in bb_box.h; bb_atp + bb_atp_new declared there too. */
 
 /* ── USERCALL box — *fn() bare pattern side-effect call ──────────────────────
  * Bug #1d fix: defer via NAM_push_callcap so the call fires at NAM_commit
@@ -993,7 +900,8 @@ bb_node_t bb_build(PATND_t *p)
         ζ->var_ptr   = (p->var.v == DT_N && p->var.slen == 1 && p->var.ptr)
                        ? (DESCR_t*)p->var.ptr : NULL;
         ζ->immediate = 1;
-        register_capture(ζ);
+        /* XFNME is immediate=1 — no registration needed; unified bb_capture
+         * registers on CAP_α only when !immediate (XNME path). */
         n.fn = bb_capture;
         n.ζ  = ζ;
         n.ζ_size = sizeof(*ζ);
@@ -1373,41 +1281,11 @@ int kw_anchor = 0;
 #endif
 
 /*
- * DYN-4: pending-capture flush.
- * After Phase 3 confirms overall match success we walk the box graph
- * and commit any buffered XNME (.) captures.  We do this via a small
- * visitor that recurses through seq_t and alt_t frames and checks
- * every capture_t.has_pending flag.
- *
- * We need to reach capture_t nodes buried inside seq_t / alt_t.
- * Rather than a full graph walk (complex), we use a simple flat list:
- * bb_build registers every capture_t it allocates into a thread-local
- * array, and Phase 5 iterates the array.
+ * Capture registry — moved to bb_boxes.c (SN-20 session 17 unification).
+ * External API: reset_capture_registry(), clear_pending_flags(),
+ * flush_pending_captures(), bb_capture registers on CAP_α when !immediate.
+ * Declarations in bb_box.h.
  */
-#define MAX_CAPTURES 64
-static capture_t *g_capture_list[MAX_CAPTURES];
-static int        g_capture_count = 0;
-
-/* Called from bb_build whenever a capture_t is created */
-static void register_capture(capture_t *c)
-{
-    /* idempotent: skip if already registered this statement */
-    for (int i = 0; i < g_capture_count; i++)
-        if (g_capture_list[i] == c) return;
-    if (g_capture_count < MAX_CAPTURES)
-        g_capture_list[g_capture_count++] = c;
-}
-
-/* Reset pending flags after Phase 3 success.
- * RT-4: NAM_commit() now owns all conditional (.) capture writes.
- * This function only clears has_pending bookkeeping so the scan-loop
- * reset logic stays correct on subsequent statements. */
-static void flush_pending_captures(void)
-{
-    for (int i = 0; i < g_capture_count; i++)
-        g_capture_list[i]->has_pending = 0;
-    g_capture_count = 0;
-}
 
 /*----------------------------------------------------------------------------------------------------------------------------
  * U-9: scan_body_fn_u9 — body callback for bb_broker BB_SCAN in Phase 3.
@@ -1453,7 +1331,7 @@ int exec_stmt(const char  *subj_name,
                   int          has_repl)
 {
     /* reset capture registry for this statement */
-    g_capture_count  = 0;
+    reset_capture_registry();
     g_callcap_count  = 0;   /* DYN-69: callcap (pat . *func()) registry */
     g_cc_event_count = 0;   /* DYN-79: per-firing event queue */
     g_callcap_gen++;        /* DYN-76: new generation — allows cached callcaps to re-register */
@@ -1562,7 +1440,7 @@ int exec_stmt(const char  *subj_name,
     scan_result_t scan_res = { -1, -1 };
 
     /* RT-4: reset stale pending captures before the scan sweep */
-    for (int i = 0; i < g_capture_count; i++) g_capture_list[i]->has_pending = 0;
+    clear_pending_flags();
     int nam_cookie = NAM_save();
     NAM_discard(nam_cookie);
 

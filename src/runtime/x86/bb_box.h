@@ -139,6 +139,40 @@ typedef struct { int δ; }                              bal_t;
 typedef struct { int done; const char *varname; }     atp_t;
 /* deferred_var_t needs bb_node_t — defined above */
 
+/* capture_t — full definition exposed so stmt_exec.c dispatcher can allocate
+ * and fill the state struct in-place (mirrors pattern used for other box
+ * states above). SN-20 session 17: single source; same struct used in all
+ * three modes.
+ *   varname   — DT_S target (write via NV_SET_fn; fires OUTPUT/PUNCH hooks)
+ *   var_ptr   — DT_N target (write directly through ptr; SIL NAME semantics)
+ *   immediate — 1 for XFNME ($): write on every γ; 0 for XNME (.): defer via NAM_push
+ *   nam_handle — opaque NAM list node pushed in γ; popped on β/ω (self-unwind) */
+typedef struct capture_s {
+    bb_box_fn    fn;
+    void        *state;
+    const char  *varname;
+    DESCR_t     *var_ptr;
+    int          immediate;
+    spec_t       pending;
+    int          has_pending;
+    int          registered;
+    void        *nam_handle;
+} capture_t;
+
+/* External box-function + helper declarations — all live in bb_boxes.c
+ * (single source across --ir-run, --sm-run, --jit-run). Callers: stmt_exec.c
+ * bb_build dispatcher, bb_build.c JIT emitter. DESCR_t visible via descr.h above. */
+
+extern DESCR_t bb_capture(void *zeta, int entry);
+extern capture_t *bb_capture_new(bb_box_fn child_fn, void *child_state,
+                                 const char *varname, DESCR_t *var_ptr, int immediate);
+extern void      flush_pending_captures(void);
+extern void      reset_capture_registry(void);
+extern void      clear_pending_flags(void);
+
+extern DESCR_t bb_atp(void *zeta, int entry);
+extern atp_t   *bb_atp_new(const char *varname);
+
 /* bb_build: construct a live box node from a pattern tree node.
  * Defined in stmt_exec.c; declared here so bb_boxes.c can call it. */
 struct _PATND_t;  /* forward declaration */
