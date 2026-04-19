@@ -232,20 +232,6 @@ int      ASGNIC_fn(const char *kw_name, DESCR_t val);
 
 /* ── RT-4 / SN-20 / SN-21: SIL Naming List (§NMD) — snobol4_nmd.c ─────────── */
 
-/* NAME_push_callcap: record a deferred XCALLCAP (pat . *fn()) call.
- *   Appended to the flat NAM stack so captures and callcaps flush in
- *   left-to-right pattern order at NAME_commit time.
- *   Returns opaque handle for self-unwinding pop (SN-20).                 */
-void   *NAME_push_callcap(const char *fnc_name, DESCR_t *fnc_args, int fnc_nargs,
-                          const char *matched_text, int matched_len);
-/* TL-2: named variant — also records arg variable names for flush-time
- * resolution at NAME_commit time (after in-order earlier . captures have
- * written their vars). Returns opaque handle for SN-20 pop. */
-void   *NAME_push_callcap_named(const char *fnc_name,
-                                DESCR_t *fnc_args, int fnc_nargs,
-                                char **fnc_arg_names, int fnc_n_arg_names,
-                                const char *matched_text, int matched_len);
-
 /* SN-20: box-owned self-unwind. Every box that pushed a NAM entry calls
  * NAME_pop(handle) on its β retry / ω failure path to undo its push.
  * Safe if handle is NULL or the entry's frame has already been popped.   */

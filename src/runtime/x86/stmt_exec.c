@@ -414,7 +414,8 @@ typedef struct {
  * NAME_push_callcap existed to carry the call across backtracking so the
  * call would fire at commit.  Now the call has already fired; no further
  * deferral is needed.  The `.` / `$` capture forms still use NM_CALL via
- * bb_cap / NAME_push_callcap — that path is untouched.
+ * bb_cap (which calls NAME_push directly with a locally-built NAME_t) —
+ * that path is untouched.
  *
  * (The earlier SN-17 spec_t-vs-DESCR_t layout fix for the bb_box_fn return
  * type is preserved — we still return via descr_from_spec / FAILDESCR.)

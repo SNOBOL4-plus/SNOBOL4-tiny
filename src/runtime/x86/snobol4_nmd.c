@@ -46,10 +46,14 @@
  *   SN-23e   — deleted NAME_save, NAME_discard, NAME_top, NAME_pop_above.
  *              NAME_commit dropped its cookie argument (always 0 under
  *              ctx nesting).  API surface: 9 entries → 5.
+ *   SN-23f   — deleted NAME_push_callcap / NAME_push_callcap_named.
+ *              Zero live callers since SN-21d — bb_cap's CAP_α builds
+ *              its NM_CALL NAME_t via name_init_as_call directly.
+ *              API surface: 8 → 6 entries.
  *
  * AUTHORS: Lon Jones Cherryholmes · Claude Opus 4.7
  * DATE:    2026-04-19
- * SPRINT:  SN-23e
+ * SPRINT:  SN-23f
  */
 
 #include <stdio.h>
@@ -223,32 +227,6 @@ void NAME_pop_top(void)
     if (ctx->top <= 0) return;
     es[ctx->top - 1].live = 0;
     ctx->top--;
-}
-
-/*===========================================================================*/
-/* NAME_push_callcap / NAME_push_callcap_named — NM_CALL entry.               */
-/*                                                                            */
-/* Convenience wrappers around NAME_push for the pat . *fn() XCALLCAP case.  */
-/* Slated for deletion in SN-23f — zero live callers remain (bb_cap builds    */
-/* the NAME_t and calls NAME_push directly).                                  */
-/*===========================================================================*/
-
-void *NAME_push_callcap(const char *fnc_name, DESCR_t *fnc_args, int fnc_nargs,
-                       const char *matched_text, int matched_len)
-{
-    return NAME_push_callcap_named(fnc_name, fnc_args, fnc_nargs,
-                                   NULL, 0, matched_text, matched_len);
-}
-
-void *NAME_push_callcap_named(const char *fnc_name,
-                              DESCR_t *fnc_args, int fnc_nargs,
-                              char **fnc_arg_names, int fnc_n_arg_names,
-                              const char *matched_text, int matched_len)
-{
-    NAME_t nm;
-    name_init_as_call(&nm, fnc_name, fnc_args, fnc_nargs,
-                      fnc_arg_names, fnc_n_arg_names);
-    return NAME_push(&nm, matched_text, matched_len);
 }
 
 /*===========================================================================*/
