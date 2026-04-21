@@ -130,7 +130,7 @@ done < <(find "$CORPUS/crosscheck" -name "*.sno" | sort)
 
 # 2. beauty drivers
 echo "── beauty drivers ──"
-for sno in "$BEAUTY"/beauty_*_driver.sno; do
+for sno in "$BEAUTY"/*_driver.sno; do
     [ -f "$sno" ] || continue
     name=$(basename "$sno" .sno)
     run_test "$name" "$sno" "$BEAUTY/${name}.ref"

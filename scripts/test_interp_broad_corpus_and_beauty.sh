@@ -54,7 +54,7 @@ while IFS= read -r sno; do
 done < <(find "$CORPUS/crosscheck" -name "*.sno" | sort)
 
 # ── Beauty library drivers (19 subsystems) ────────────────────────────────────
-for sno in "$BEAUTY"/beauty_*_driver.sno; do
+for sno in "$BEAUTY"/*_driver.sno; do
     [ ! -f "$sno" ] && continue
     name=$(basename "$sno" .sno)
     ref="$BEAUTY/${name}.ref"

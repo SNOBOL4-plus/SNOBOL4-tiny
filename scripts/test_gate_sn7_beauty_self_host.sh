@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # scripts/test_gate_sn7_beauty_self_host.sh — SN-7 gate:
-# every beauty_*_driver.sno in corpus, under --ir-run, --sm-run, --jit-run,
+# every *_driver.sno in corpus/programs/snobol4/beauty/, under --ir-run,
+# --sm-run, --jit-run,
 # diff=0 vs its pre-baked .ref file (SPITBOL ground truth where valid; some
 # drivers have .ref files that reflect correct behavior SPITBOL itself fails
 # on — see RULES.md on .ref authority).
@@ -26,7 +27,7 @@ PASS=0
 FAIL=0
 FAILS=""
 
-for sno in "$BEAUTY"/beauty_*_driver.sno; do
+for sno in "$BEAUTY"/*_driver.sno; do
     [ ! -f "$sno" ] && continue
     name=$(basename "$sno" .sno)
     ref="$BEAUTY/${name}.ref"

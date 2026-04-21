@@ -49,8 +49,8 @@ rm -f "$T"
 # Beauty drivers — if corpus present
 BEAUTY=/home/claude/corpus/programs/snobol4/beauty
 for driver in omega gen tdump alpha; do
-    f="$BEAUTY/beauty_${driver}_driver.sno"
-    ref="/tmp/beauty_${driver}_spitbol.ref"
+    f="$BEAUTY/${driver}_driver.sno"
+    ref="/tmp/${driver}_driver_spitbol.ref"
     if [ -f "$f" ]; then
         # Generate oracle ref from SPITBOL if not cached
         if [ ! -f "$ref" ]; then
