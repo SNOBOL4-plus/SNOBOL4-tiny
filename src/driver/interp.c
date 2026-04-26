@@ -375,7 +375,12 @@ trace_hook:
             fr->retval_set  = 1;
         }
     }
-    if (name && name[0] != '&' && trace_is_active(name)) comm_var(name, val);
+    /* SN-26-binmon-3way: comm_var now fires post-commit inside NV_SET_fn,
+     * so an additional call here would double-emit on every assignment.
+     * The shadow path needs comm_var because shadow_set_cur doesn't pass
+     * through NV_SET_fn. */
+    if (shadow_has(name) && name && name[0] != '&' && trace_is_active(name))
+        comm_var(name, val);
 }
 
 /* DYN-57: E_FNC names that always yield a pattern value.
@@ -2476,10 +2481,16 @@ DESCR_t interp_eval(EXPR_t *e)
             /* Zero-arg builtin (ARB, REM, FAIL, SUCCEED, etc.) stored as
                function, not variable — only try if name is a registered fn.
                Guard prevents unset ordinary variables from spuriously calling
-               APPLY_fn and triggering Error 5. */
+               APPLY_fn and triggering Error 5.
+               SN-26-binmon-3way: if APPLY_fn returns FAIL (e.g. caller is
+               a >0-arity builtin like VALUE invoked with 0 args), don't
+               propagate the FAIL up — fall back to the unset-var value
+               (NULVCL).  This matches CSNOBOL4 / SPITBOL semantics where
+               an unbound identifier passed as an argument is the empty
+               string, not a failure that aborts the enclosing call. */
             if (FNCEX_fn(e->sval)) {
                 DESCR_t _fr = APPLY_fn(e->sval, NULL, 0);
-                if (!IS_NULL(_fr)) return _fr;
+                if (!IS_FAIL_fn(_fr) && !IS_NULL(_fr)) return _fr;
             }
             return _vr; /* unset variable */
         }

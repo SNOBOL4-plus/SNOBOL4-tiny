@@ -32,6 +32,7 @@
 #define MON_RS "\x1e"
 #define MON_US "\x1f"
 #include <sys/uio.h>
+#include "../../../scripts/monitor/monitor_wire.h"   /* SN-26-binmon-3way: binary wire format shared with oracles */
 
 int monitor_fd  = -1;
 int monitor_ack_fd = -1;
@@ -39,9 +40,30 @@ int monitor_ready = 0;  /* set to 1 after pre-init constants are installed */
 
 /* Trace-registration set: only variables registered via TRACE(name,'VALUE')
  * are sent to the monitor.  Simple open-addressed hash set of C strings.
- * Capacity must be a power of two; 64 slots is ample for typical programs. */
+ * Capacity must be a power of two; 64 slots is ample for typical programs.
+ *
+ * SN-26-binmon-3way: parallel callback table.  When TRACE() is called with
+ * 4 args (TRACE(var,VALUE,tag,fn)), the SNOBOL4 source wants its own
+ * function `fn` invoked on every assignment to `var` — comm_var must then
+ * APPLY_fn(fn, [var, value]) instead of (or in addition to) emitting on
+ * the wire.  This matches CSNOBOL4 / SPITBOL semantics. */
 #define TRACE_SET_CAP 256
-static const char *trace_set[TRACE_SET_CAP];  /* NULL = empty slot */
+static const char *trace_set[TRACE_SET_CAP];      /* NULL = empty slot */
+static const char *trace_callback[TRACE_SET_CAP]; /* NULL = no callback (3-arg form) */
+
+static int trace_recursion_depth = 0;  /* re-entry guard for callback invocation */
+
+static int trace_slot_lookup(const char *name) {
+    if (!name || !*name) return -1;
+    unsigned h = 5381;
+    for (const char *p = name; *p; p++) h = h * 33 ^ (unsigned char)*p;
+    for (int i = 0; i < TRACE_SET_CAP; i++) {
+        int slot = (h + i) & (TRACE_SET_CAP - 1);
+        if (!trace_set[slot]) return -1;
+        if (strcmp(trace_set[slot], name) == 0) return slot;
+    }
+    return -1;
+}
 
 static void trace_register(const char *name) {
     if (!name || !*name) return;
@@ -49,8 +71,33 @@ static void trace_register(const char *name) {
     for (const char *p = name; *p; p++) h = h * 33 ^ (unsigned char)*p;
     for (int i = 0; i < TRACE_SET_CAP; i++) {
         int slot = (h + i) & (TRACE_SET_CAP - 1);
-        if (!trace_set[slot]) { trace_set[slot] = GC_strdup(name); return; }
+        if (!trace_set[slot]) {
+            trace_set[slot] = GC_strdup(name);
+            trace_callback[slot] = NULL;
+            return;
+        }
         if (strcmp(trace_set[slot], name) == 0) return; /* already registered */
+    }
+}
+
+/* 4-arg TRACE — registers `name` AND records the SNOBOL4 callback `cbfn` to
+ * invoke on every assignment.  Subsequent comm_var calls look up the slot,
+ * see trace_callback[slot] non-NULL, and APPLY_fn the callback. */
+static void trace_register_callback(const char *name, const char *cbfn) {
+    if (!name || !*name) return;
+    unsigned h = 5381;
+    for (const char *p = name; *p; p++) h = h * 33 ^ (unsigned char)*p;
+    for (int i = 0; i < TRACE_SET_CAP; i++) {
+        int slot = (h + i) & (TRACE_SET_CAP - 1);
+        if (!trace_set[slot]) {
+            trace_set[slot] = GC_strdup(name);
+            trace_callback[slot] = (cbfn && *cbfn) ? GC_strdup(cbfn) : NULL;
+            return;
+        }
+        if (strcmp(trace_set[slot], name) == 0) {
+            trace_callback[slot] = (cbfn && *cbfn) ? GC_strdup(cbfn) : NULL;
+            return;
+        }
     }
 }
 
@@ -61,20 +108,24 @@ static void trace_unregister(const char *name) {
     for (int i = 0; i < TRACE_SET_CAP; i++) {
         int slot = (h + i) & (TRACE_SET_CAP - 1);
         if (!trace_set[slot]) return;
-        if (strcmp(trace_set[slot], name) == 0) { trace_set[slot] = NULL; return; }
+        if (strcmp(trace_set[slot], name) == 0) {
+            trace_set[slot] = NULL;
+            trace_callback[slot] = NULL;
+            return;
+        }
     }
 }
 
 static int trace_registered(const char *name) {
-    if (!name || !*name) return 0;
-    unsigned h = 5381;
-    for (const char *p = name; *p; p++) h = h * 33 ^ (unsigned char)*p;
-    for (int i = 0; i < TRACE_SET_CAP; i++) {
-        int slot = (h + i) & (TRACE_SET_CAP - 1);
-        if (!trace_set[slot]) return 0;
-        if (strcmp(trace_set[slot], name) == 0) return 1;
-    }
-    return 0;
+    return trace_slot_lookup(name) >= 0;
+}
+
+/* Returns the callback function name registered for `name`, or NULL if
+ * none (3-arg TRACE form, or not registered at all). */
+static const char *trace_get_callback(const char *name) {
+    int slot = trace_slot_lookup(name);
+    if (slot < 0) return NULL;
+    return trace_callback[slot];
 }
 
 /* Exported for scrip.c set_and_trace() — same semantics as trace_registered. */
@@ -100,6 +151,285 @@ static void mon_send(const char *kind, const char *name, const char *value) {
     }
 }
 
+/* ============================================================
+ * SN-26-binmon-3way: binary wire protocol — SNOBOL4-callable builtins
+ *
+ * scrip is the third participant in the binary sync-step harness.
+ * It runs the SAME instrumented .sno source the oracles run, so the
+ * preamble's MON_OPEN(...) gate fires at the same statement number
+ * across all three runtimes.  Wire emission flows through the
+ * SNOBOL4-source-level MV(name,$name) / MR(name,$name) / MC(name)
+ * callbacks — exactly the same shape the oracles use, but resolving
+ * to the C-builtin MON_* functions registered below instead of
+ * LOAD()'d entry points in a .so.
+ *
+ * Because emission goes through the same source-level gate
+ * (IDENT(MON_ON_,'1') after MON_OPEN sets MON_ON_), startup
+ * synchronization is automatic: scrip emits its first wire event
+ * at exactly the same source line as csn and spl.
+ *
+ * Helpers below are shared between MON_OPEN (loads names file +
+ * pipes) and the typed MON_PUT_* emitters (lookup name_id, marshal
+ * DESCR_t bytes, write 13-byte header + value, block on ack).
+ * ============================================================ */
+
+static char  **g_bin_names      = NULL;
+static int    *g_bin_name_lens  = NULL;
+static int     g_bin_n_names    = 0;
+
+static int load_names_file_bin(const char *path) {
+    FILE *f = fopen(path, "r");
+    if (!f) return -1;
+    int   cap = 64;
+    char **names = (char **)malloc(cap * sizeof(char *));
+    int   *lens  = (int  *)malloc(cap * sizeof(int));
+    if (!names || !lens) { fclose(f); free(names); free(lens); return -1; }
+    int n = 0;
+    char *line = NULL; size_t lcap = 0;
+    ssize_t got;
+    while ((got = getline(&line, &lcap, f)) >= 0) {
+        if (got > 0 && line[got-1] == '\n') { line[got-1] = '\0'; got--; }
+        if (got > 0 && line[got-1] == '\r') { line[got-1] = '\0'; got--; }
+        if (n == cap) {
+            cap *= 2;
+            names = (char **)realloc(names, cap * sizeof(char *));
+            lens  = (int  *)realloc(lens,  cap * sizeof(int));
+            if (!names || !lens) { fclose(f); free(line); return -1; }
+        }
+        char *copy = (char *)malloc((size_t)got + 1);
+        if (!copy) { fclose(f); free(line); return -1; }
+        memcpy(copy, line, (size_t)got + 1);
+        names[n] = copy;
+        lens[n]  = (int)got;
+        n++;
+    }
+    free(line);
+    fclose(f);
+    g_bin_names     = names;
+    g_bin_name_lens = lens;
+    g_bin_n_names   = n;
+    return 0;
+}
+
+/* Returns name_id (0..N-1) if present, MW_NAME_ID_NONE otherwise. */
+static uint32_t lookup_name_id_bin(const char *p, int len) {
+    if (!g_bin_names || !p) return MW_NAME_ID_NONE;
+    for (int i = 0; i < g_bin_n_names; i++) {
+        if (g_bin_name_lens[i] == len && memcmp(g_bin_names[i], p, (size_t)len) == 0)
+            return (uint32_t)i;
+    }
+    return MW_NAME_ID_NONE;
+}
+
+/* scrip DT_* → wire MWT_* mapping.  scrip's DTYPE_t is the source of
+ * truth here; the oracles do the same mapping from their respective
+ * tag enums in their LOAD modules. */
+static uint8_t scrip_tag_to_wire(int v) {
+    switch (v) {
+        case DT_SNUL:  return MWT_NULL;
+        case DT_S:     return MWT_STRING;
+        case DT_I:     return MWT_INTEGER;
+        case DT_R:     return MWT_REAL;
+        case DT_P:     return MWT_PATTERN;
+        case DT_A:     return MWT_ARRAY;
+        case DT_T:     return MWT_TABLE;
+        case DT_C:     return MWT_CODE;
+        case DT_E:     return MWT_EXPRESSION;
+        case DT_DATA:  return MWT_DATA;
+        default:       return MWT_UNKNOWN;
+    }
+}
+
+/* Emit a single binary record then block on ack.
+ * Mirrors emit_record() in monitor_ipc_bin_csn.c.  On 'S' (stop),
+ * exits cleanly to match text-path mon_send semantics. */
+static void mon_send_bin(uint32_t kind, uint32_t name_id, uint8_t type,
+                         const void *value, uint32_t value_len) {
+    if (monitor_fd < 0) return;
+    unsigned char hdr[MW_HDR_BYTES];
+    mw_pack_hdr(hdr, kind, name_id, type, value_len);
+    struct iovec iov[2];
+    int niov = 1;
+    iov[0].iov_base = hdr;
+    iov[0].iov_len  = MW_HDR_BYTES;
+    if (value_len > 0 && value) {
+        iov[1].iov_base = (void *)value;
+        iov[1].iov_len  = (size_t)value_len;
+        niov = 2;
+    }
+    ssize_t total = (ssize_t)MW_HDR_BYTES + (ssize_t)value_len;
+    ssize_t got   = writev(monitor_fd, iov, niov);
+    if (got != total) return;
+    if (monitor_ack_fd >= 0) {
+        char ack[1];
+        ssize_t r = read(monitor_ack_fd, ack, 1);
+        if (r != 1 || ack[0] == 'S') exit(0);
+    }
+}
+
+/* ── SNOBOL4-callable MON_* builtins ──────────────────────────────────────
+ * Signatures match the corresponding LOAD prototypes in the oracle
+ * .so files.  All return INTEGER 0 on success, FAIL on argument errors.
+ *
+ *   MON_OPEN(ready_path, go_path, names_path) → 0
+ *     The 3-way harness opens the FIFOs in SNO_INIT_fn already (via the
+ *     MONITOR_READY_PIPE/MONITOR_GO_PIPE/MONITOR_NAMES_FILE env vars), so
+ *     the SNOBOL4-side MON_OPEN call is effectively a no-op for scrip:
+ *     it just confirms-success so the preamble's :F(MON_NOOP_) branch
+ *     isn't taken and MON_ON_ gets set to '1'.  Names paths from the
+ *     args are accepted but already-loaded values are honored.
+ *
+ *   MON_PUT_S_VALUE(name, str)            → emit VALUE record, type=STRING
+ *   MON_PUT_I_VALUE(name, int)            → emit VALUE record, type=INTEGER
+ *   MON_PUT_R_VALUE(name, real)           → emit VALUE record, type=REAL
+ *   MON_PUT_O_VALUE(name, type-name-str)  → emit VALUE record, opaque
+ *   MON_PUT_S_RETURN / MON_PUT_I_RETURN / MON_PUT_R_RETURN / MON_PUT_O_RETURN
+ *                                         → same shapes for RETURN
+ *   MON_PUT_CALL(name)                    → emit CALL record, no value
+ *   MON_CLOSE()                           → emit END record, close fds
+ * ────────────────────────────────────────────────────────────────────────*/
+
+/* Helper: arg → (ptr,len) for STRING args.  scrip stores string args
+ * with .v=DT_S; .slen is authoritative for binary-safe length when nonzero. */
+static void _arg_str(DESCR_t a, const char **out_p, int *out_len) {
+    if (a.v == DT_S && a.s) {
+        *out_p   = a.s;
+        *out_len = a.slen ? (int)a.slen : (int)strlen(a.s);
+    } else {
+        *out_p = NULL; *out_len = 0;
+    }
+}
+
+/* Helper: emit a VALUE-or-RETURN record where arg[0]=name (STRING),
+ * arg[1]=value (any DT_*).  Used by MON_PUT_{S,I,R,O}_{VALUE,RETURN}.
+ * For OPAQUE: arg[1] is a STRING naming the actual datatype (e.g.
+ * "PATTERN", "ARRAY"); we map that string to a wire MWT_*, len=0. */
+static DESCR_t _mon_put_helper(DESCR_t *args, int nargs, uint32_t kind, int opaque) {
+    if (nargs < 2) return FAILDESCR;
+    const char *np; int nlen;
+    _arg_str(args[0], &np, &nlen);
+    if (!np) return FAILDESCR;
+    uint32_t name_id = lookup_name_id_bin(np, nlen);
+    if (name_id == MW_NAME_ID_NONE) return FAILDESCR;
+
+    uint8_t type;
+    const void *vp = NULL;
+    uint32_t    vlen = 0;
+    int64_t i_buf;
+    double  r_buf;
+
+    if (opaque) {
+        /* arg[1] is a type-name STRING; map it to MWT_* by exact match. */
+        const char *tp; int tlen;
+        _arg_str(args[1], &tp, &tlen);
+        type = MWT_DATA;  /* default for unknown opaque names */
+        if (tp) {
+            if      (tlen == 7  && memcmp(tp, "PATTERN", 7) == 0) type = MWT_PATTERN;
+            else if (tlen == 5  && memcmp(tp, "ARRAY",   5) == 0) type = MWT_ARRAY;
+            else if (tlen == 5  && memcmp(tp, "TABLE",   5) == 0) type = MWT_TABLE;
+            else if (tlen == 4  && memcmp(tp, "CODE",    4) == 0) type = MWT_CODE;
+            else if (tlen == 4  && memcmp(tp, "FILE",    4) == 0) type = MWT_FILE;
+            else if (tlen == 10 && memcmp(tp, "EXPRESSION", 10) == 0) type = MWT_EXPRESSION;
+            else if (tlen == 4  && memcmp(tp, "NAME",    4) == 0) type = MWT_NAME;
+            else if (tlen == 0)                                    type = MWT_NULL;
+        }
+    } else {
+        /* Typed channels: read the typed value directly. */
+        type = scrip_tag_to_wire(args[1].v);
+        switch (type) {
+            case MWT_STRING:
+            case MWT_NAME:
+                if (args[1].s) {
+                    vlen = args[1].slen ? (uint32_t)args[1].slen : (uint32_t)strlen(args[1].s);
+                    vp   = (vlen > 0) ? (const void *)args[1].s : NULL;
+                }
+                break;
+            case MWT_INTEGER: {
+                int64_t iv = args[1].i;
+                unsigned char *p = (unsigned char *)&i_buf;
+                for (int k = 0; k < 8; k++) p[k] = (unsigned char)((iv >> (k*8)) & 0xff);
+                vp = &i_buf; vlen = 8;
+                break;
+            }
+            case MWT_REAL: {
+                double rv = args[1].r;
+                memcpy(&r_buf, &rv, sizeof(r_buf));
+                vp = &r_buf; vlen = 8;
+                break;
+            }
+            default: break;
+        }
+    }
+    mon_send_bin(kind, name_id, type, vp, vlen);
+    return (DESCR_t){ .v = DT_I, .i = 0 };
+}
+
+/* MON_OPEN(ready, go, names) — confirms scrip is in binary-protocol
+ * mode (the FIFOs were opened in SNO_INIT_fn from env vars).  If the
+ * names table wasn't pre-loaded, accept the path argument as a fallback. */
+static DESCR_t _b_MON_OPEN(DESCR_t *args, int nargs) {
+    if (nargs < 3) return FAILDESCR;
+    if (monitor_fd < 0) return FAILDESCR;          /* FIFO never opened */
+    if (g_bin_names == NULL) {
+        const char *np; int nl;
+        _arg_str(args[2], &np, &nl);
+        if (np && nl > 0) {
+            char buf[4096];
+            int  cp = nl < (int)sizeof(buf)-1 ? nl : (int)sizeof(buf)-1;
+            memcpy(buf, np, cp); buf[cp] = '\0';
+            if (load_names_file_bin(buf) < 0) return FAILDESCR;
+        }
+    }
+    return (DESCR_t){ .v = DT_I, .i = 0 };
+}
+
+static DESCR_t _b_MON_PUT_S_VALUE (DESCR_t *a, int n) { return _mon_put_helper(a, n, MWK_VALUE,  0); }
+static DESCR_t _b_MON_PUT_I_VALUE (DESCR_t *a, int n) { return _mon_put_helper(a, n, MWK_VALUE,  0); }
+static DESCR_t _b_MON_PUT_R_VALUE (DESCR_t *a, int n) { return _mon_put_helper(a, n, MWK_VALUE,  0); }
+static DESCR_t _b_MON_PUT_O_VALUE (DESCR_t *a, int n) { return _mon_put_helper(a, n, MWK_VALUE,  1); }
+static DESCR_t _b_MON_PUT_S_RETURN(DESCR_t *a, int n) { return _mon_put_helper(a, n, MWK_RETURN, 0); }
+static DESCR_t _b_MON_PUT_I_RETURN(DESCR_t *a, int n) { return _mon_put_helper(a, n, MWK_RETURN, 0); }
+static DESCR_t _b_MON_PUT_R_RETURN(DESCR_t *a, int n) { return _mon_put_helper(a, n, MWK_RETURN, 0); }
+static DESCR_t _b_MON_PUT_O_RETURN(DESCR_t *a, int n) { return _mon_put_helper(a, n, MWK_RETURN, 1); }
+
+static DESCR_t _b_MON_PUT_CALL(DESCR_t *args, int nargs) {
+    if (nargs < 1) return FAILDESCR;
+    const char *np; int nlen;
+    _arg_str(args[0], &np, &nlen);
+    if (!np) return FAILDESCR;
+    uint32_t name_id = lookup_name_id_bin(np, nlen);
+    if (name_id == MW_NAME_ID_NONE) return FAILDESCR;
+    mon_send_bin(MWK_CALL, name_id, MWT_NULL, NULL, 0);
+    return (DESCR_t){ .v = DT_I, .i = 0 };
+}
+
+static DESCR_t _b_MON_CLOSE(DESCR_t *args, int nargs) {
+    (void)args; (void)nargs;
+    if (monitor_fd >= 0) {
+        mon_send_bin(MWK_END, MW_NAME_ID_NONE, MWT_NULL, NULL, 0);
+        /* Don't close monitor_fd — letting the process exit naturally
+         * lets the controller see EOF, which is the established
+         * end-of-events signal for the 2-way harness already. */
+    }
+    return (DESCR_t){ .v = DT_I, .i = 0 };
+}
+
+/* LOAD(prototype, so_path) stub — accepts and silently succeeds for
+ * any MON_* prototype because those names are pre-registered as C
+ * builtins above.  Other prototypes FAIL — scrip doesn't actually
+ * support dlopen()-style loading; this is purely the harness shim. */
+static DESCR_t _b_LOAD_stub(DESCR_t *args, int nargs) {
+    if (nargs < 1) return FAILDESCR;
+    const char *p; int len;
+    _arg_str(args[0], &p, &len);
+    if (!p || len < 4) return FAILDESCR;
+    /* Accept "MON_OPEN(...)..." / "MON_PUT_*..." / "MON_CLOSE..." patterns. */
+    if (memcmp(p, "MON_", 4) == 0) {
+        return (DESCR_t){ .v = DT_I, .i = 0 };
+    }
+    return FAILDESCR;
+}
+
 void comm_stno(int n) {
     ++kw_stcount;
     g_sno_err_stmt = n;          /* keep error reporter in sync with current stmt */
@@ -108,9 +438,25 @@ void comm_stno(int n) {
 }
 
 void comm_var(const char *name, DESCR_t val) {
+    if (!name || name[0] == '_') return;
+    const char *cbfn = trace_get_callback(name);
+    if (getenv("SCRIP_DEBUG_TRACE"))
+        fprintf(stderr, "[scrip-trace] comm_var name=%s cb=%s recur=%d\n",
+                name, cbfn ? cbfn : "(none)", trace_recursion_depth);
+    if (cbfn && trace_recursion_depth == 0) {
+        /* Invoke callback(name, ''): value is fetched on the SNOBOL4 side
+         * via $N indirection.  Re-entry guard prevents infinite recursion
+         * if the callback itself assigns to traced variables. */
+        trace_recursion_depth++;
+        DESCR_t cbargs[2];
+        cbargs[0] = STRVAL(GC_strdup(name));
+        cbargs[1] = STRVAL("");
+        (void)APPLY_fn(cbfn, cbargs, 2);
+        trace_recursion_depth--;
+        return;  /* callback handled it; don't ALSO emit on the C wire */
+    }
     if (monitor_fd < 0) return;
     if (!monitor_ready) return;
-    if (!name || name[0] == '_') return;
     if (!trace_registered(name)) return;
     const char *s = VARVAL_fn(val);
     mon_send("VALUE", name, s ? s : "(undef)");
@@ -907,15 +1253,27 @@ static DESCR_t _TRACE_(DESCR_t *a, int n) {
     if (n < 1) return FAILDESCR;
     const char *varname = VARVAL_fn(a[0]);
     if (!varname || !*varname) return FAILDESCR;
-    /* arg[1] = type string; default to 'VALUE' if omitted */
+    if (getenv("SCRIP_DEBUG_TRACE"))
+        fprintf(stderr, "[scrip-trace] _TRACE_ entry n=%d varname=%s\n", n, varname);
+    /* arg[1] = type string; default to 'VALUE' when omitted OR empty.
+     * Empty matches what bare unbound `VALUE` resolves to in the
+     * instrumented inject_traces preamble, which both oracles also
+     * treat as the default. */
     const char *type = (n >= 2) ? VARVAL_fn(a[1]) : "VALUE";
-    /* Only register into C trace_set when no SNOBOL4 callback is provided.
-     * 4-arg TRACE(var,type,tag,fn): arg[3] non-empty means MONVAL/MONCALL
-     * handles the event via the SNOBOL4 path; comm_var must stay silent. */
+    if (!type || !*type) type = "VALUE";
+    if (getenv("SCRIP_DEBUG_TRACE"))
+        fprintf(stderr, "[scrip-trace] _TRACE_ type=%s\n", type);
+    /* 4-arg TRACE(var,type,tag,fn): arg[3] non-empty registers a SNOBOL4-side
+     * callback that fires on every assignment.  comm_var APPLY_fn's it.
+     * Mirrors CSNOBOL4 / SPITBOL behaviour. */
     const char *cbfn = (n >= 4) ? VARVAL_fn(a[3]) : "";
-    if (type && (strcmp(type,"VALUE")==0 || strcmp(type,"value")==0)
-            && (!cbfn || !*cbfn))
-        trace_register(varname);
+    if (type && (strcmp(type,"VALUE")==0 || strcmp(type,"value")==0)) {
+        if (cbfn && *cbfn) {
+            trace_register_callback(varname, cbfn);
+        } else {
+            trace_register(varname);
+        }
+    }
     /* return the variable name (SNOBOL4 spec: TRACE returns first arg) */
     return STRVAL(GC_strdup(varname));
 }
@@ -1374,6 +1732,17 @@ void SNO_INIT_fn(void) {
         const char *go_pipe = getenv("MONITOR_GO_PIPE");
         if (go_pipe && go_pipe[0])
             monitor_ack_fd = open(go_pipe, O_RDONLY);
+        /* SN-26-binmon-3way: presence of MONITOR_NAMES_FILE pre-loads
+         * the names table so the MON_PUT_* C-builtin path can resolve
+         * names → name_id at emit time.  No protocol switch happens
+         * here — wire emission for scrip flows through the *same*
+         * SNOBOL4-source-level MV(...) callbacks the oracles use, which
+         * resolve to scrip's pre-registered MON_* builtins.  This
+         * enforces source-level startup synchronization: scrip and the
+         * oracles cross the MON_OPEN gate at the same statement number. */
+        const char *names_path = getenv("MONITOR_NAMES_FILE");
+        if (names_path && names_path[0])
+            (void)load_names_file_bin(names_path);
     } else {
         const char *mon = getenv("MONITOR");
         if (mon && mon[0] == '1') monitor_fd = 2;
@@ -1460,6 +1829,23 @@ void SNO_INIT_fn(void) {
     register_fn("DUMP",     _DUMP_,        0, 1);
     register_fn("TRACE",    _TRACE_,       1, 4);
     register_fn("STOPTR",   _STOPTR_,      1, 2);
+    /* SN-26-binmon-3way: MON_* binary-protocol harness builtins.
+     * Same shapes as the LOAD()d entry points in monitor_ipc_bin_csn.so /
+     * monitor_ipc_bin_spl.so so the instrumented preamble runs verbatim
+     * on scrip.  LOAD itself is a stub that succeeds for "MON_*" prototypes
+     * and fails for everything else — scrip has no real dlopen support. */
+    register_fn("LOAD",            _b_LOAD_stub,        1, 2);
+    register_fn("MON_OPEN",        _b_MON_OPEN,         3, 3);
+    register_fn("MON_PUT_S_VALUE", _b_MON_PUT_S_VALUE,  2, 2);
+    register_fn("MON_PUT_I_VALUE", _b_MON_PUT_I_VALUE,  2, 2);
+    register_fn("MON_PUT_R_VALUE", _b_MON_PUT_R_VALUE,  2, 2);
+    register_fn("MON_PUT_O_VALUE", _b_MON_PUT_O_VALUE,  2, 2);
+    register_fn("MON_PUT_S_RETURN",_b_MON_PUT_S_RETURN, 2, 2);
+    register_fn("MON_PUT_I_RETURN",_b_MON_PUT_I_RETURN, 2, 2);
+    register_fn("MON_PUT_R_RETURN",_b_MON_PUT_R_RETURN, 2, 2);
+    register_fn("MON_PUT_O_RETURN",_b_MON_PUT_O_RETURN, 2, 2);
+    register_fn("MON_PUT_CALL",    _b_MON_PUT_CALL,     1, 1);
+    register_fn("MON_CLOSE",       _b_MON_CLOSE,        0, 0);
     register_fn("DATE",     _DATE_,        0, 0);
     register_fn("TIME",     _TIME_,        0, 0);
     register_fn("RSORT",    _RSORT_,       1, 1);
@@ -2204,20 +2590,25 @@ DESCR_t NV_GET_fn(const char *name) {
 DESCR_t NV_SET_fn(const char *name, DESCR_t val) {  /* RT-5: returns val for embedded assignment */
     _var_init();
     if (!name) return val;  /* RT-5 */
-    comm_var(name, val);
+    /* SN-26-binmon-3way: comm_var moved AFTER the bucket commit (was here
+     * pre-commit).  Rationale: TRACE() callbacks invoked from comm_var read
+     * the new value via $N — they need the NV store to already reflect the
+     * write.  See _b_*_VALUE builtins in the binary 3-way harness. */
     /* Channel-bound output variable? */
     _io_chan_setup();
     int ch = _io_chan_find_by_var(name);
     if (ch >= 0 && _io_chan[ch].is_output && _io_chan[ch].fp) {
         char *s = VARVAL_fn(val);
         fprintf(_io_chan[ch].fp, "%s\n", s ? s : "");
+        comm_var(name, val);
         return val;  /* RT-5 */
     }
     /* Special I/O variables */
-    if (strcmp(name, "OUTPUT") == 0) { output_val(val); return val; }  /* RT-5 */
+    if (strcmp(name, "OUTPUT") == 0) { output_val(val); comm_var(name, val); return val; }  /* RT-5 */
     if (strcmp(name, "TERMINAL") == 0) {
         const char *s = IS_STR(val) ? val.s : "";
         fprintf(stderr, "%s\n", s);
+        comm_var(name, val);
         return val;  /* RT-5 */
     }
     /* Unprotected keywords backed by C globals */
@@ -2264,6 +2655,7 @@ DESCR_t NV_SET_fn(const char *name, DESCR_t val) {  /* RT-5: returns val for emb
             e->val = val;
             for (int _ri = 0; _ri < _var_reg_n; _ri++)
                 if (strcmp(_var_reg[_ri].name, name) == 0) { *_var_reg[_ri].ptr = val; break; }
+            comm_var(name, val);   /* SN-26-binmon-3way: post-commit */
             return;
         }
     }
@@ -2275,6 +2667,7 @@ DESCR_t NV_SET_fn(const char *name, DESCR_t val) {  /* RT-5: returns val for emb
     /* Also update registered C static if present */
     for (int _ri = 0; _ri < _var_reg_n; _ri++)
         if (strcmp(_var_reg[_ri].name, name) == 0) { *_var_reg[_ri].ptr = val; break; }
+    comm_var(name, val);   /* SN-26-binmon-3way: post-commit */
     return val;  /* RT-5: embedded assignment */
 }
 
