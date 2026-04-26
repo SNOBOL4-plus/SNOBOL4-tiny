@@ -330,9 +330,15 @@ static void lower_pat_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
                     p->instrs[idx].a[2].s = namelist;
                 } else {
                     /* SN-8a: args-on-stack path — eager-eval each arg, then
-                     * SM_PAT_CAPTURE_FN_ARGS pops them and calls pat_assign_callcap. */
-                    for (int i = 0; i < fnc->nchildren; i++)
-                        lower_expr(p, lt, fnc->children[i]);
+                     * SM_PAT_CAPTURE_FN_ARGS pops them and calls pat_assign_callcap.
+                     * SN-26c-parseerr-c: defer E_FNC sub-args via SM_PUSH_EXPR. */
+                    for (int i = 0; i < fnc->nchildren; i++) {
+                        EXPR_t *arg = fnc->children[i];
+                        if (arg && arg->kind == E_FNC)
+                            sm_emit_ptr(p, SM_PUSH_EXPR, (void *)arg);
+                        else
+                            lower_expr(p, lt, arg);
+                    }
                     int idx = sm_emit_s(p, SM_PAT_CAPTURE_FN_ARGS, fnc->sval);
                     p->instrs[idx].a[1].i = 0;              /* conditional */
                     p->instrs[idx].a[2].i = fnc->nchildren; /* nargs */
@@ -361,9 +367,15 @@ static void lower_pat_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
                     p->instrs[idx].a[1].i = 1;  /* immediate */
                     p->instrs[idx].a[2].s = namelist;
                 } else {
-                    /* SN-8a: args-on-stack path for $ *fn(args). */
-                    for (int i = 0; i < fnc->nchildren; i++)
-                        lower_expr(p, lt, fnc->children[i]);
+                    /* SN-8a: args-on-stack path for $ *fn(args).
+                     * SN-26c-parseerr-c: defer E_FNC sub-args via SM_PUSH_EXPR. */
+                    for (int i = 0; i < fnc->nchildren; i++) {
+                        EXPR_t *arg = fnc->children[i];
+                        if (arg && arg->kind == E_FNC)
+                            sm_emit_ptr(p, SM_PUSH_EXPR, (void *)arg);
+                        else
+                            lower_expr(p, lt, arg);
+                    }
                     int idx = sm_emit_s(p, SM_PAT_CAPTURE_FN_ARGS, fnc->sval);
                     p->instrs[idx].a[1].i = 1;              /* immediate */
                     p->instrs[idx].a[2].i = fnc->nchildren; /* nargs */
@@ -413,9 +425,26 @@ static void lower_pat_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
             } else {
                 /* SN-8a: args-on-stack path for bare *fn(args) when any arg is not
                  * a plain E_VAR (literal, nested expr, etc.).  Eager-eval args,
-                 * SM_PAT_USERCALL_ARGS pops them and calls pat_user_call. */
-                for (int i = 0; i < ch->nchildren; i++)
-                    lower_expr(p, lt, ch->children[i]);
+                 * SM_PAT_USERCALL_ARGS pops them and calls pat_user_call.
+                 *
+                 * SN-26c-parseerr-c (Bug B): when an arg is itself a function
+                 * call (E_FNC), DEFER it via SM_PUSH_EXPR so the inner call
+                 * evaluates at match time, not at pattern-build time.
+                 * Beauty's snoParse production has  ("'snoParse'" & 'nTop()')
+                 * which builds  EVAL("epsilon . *Reduce('snoParse', nTop())").
+                 * Per SPITBOL semantics, nTop() must fire at match time after
+                 * ARBNO has bumped the counter, not at pattern-build time
+                 * when the counter is just-pushed = 0.
+                 *
+                 * The match-time path (bb_usercall in stmt_exec.c) thaws each
+                 * DT_E via EVAL_fn before invoking the user function. */
+                for (int i = 0; i < ch->nchildren; i++) {
+                    EXPR_t *arg = ch->children[i];
+                    if (arg && arg->kind == E_FNC)
+                        sm_emit_ptr(p, SM_PUSH_EXPR, (void *)arg);
+                    else
+                        lower_expr(p, lt, arg);
+                }
                 int idx = sm_emit_s(p, SM_PAT_USERCALL_ARGS, ch->sval);
                 p->instrs[idx].a[1].i = ch->nchildren;  /* nargs */
             }

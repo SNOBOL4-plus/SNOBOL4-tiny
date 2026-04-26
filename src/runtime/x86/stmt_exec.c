@@ -430,7 +430,30 @@ static DESCR_t bb_usercall(void *zeta, int entry)
 
     UC_α:  ζ->done = 1;
            if (g_user_call_hook && ζ->name && ζ->name[0]) {
-               DESCR_t r = g_user_call_hook(ζ->name, ζ->args, ζ->nargs);
+               /* SN-26c-parseerr-c: thaw DT_E args at match time.
+                * Args that came in as DT_E were deferred by interp_eval_pat /
+                * sm_lower at pattern-build time so a match-time-sensitive
+                * value (e.g. nTop() after ARBNO has advanced the counter)
+                * resolves correctly.  EVAL_fn is idempotent for non-DT_E. */
+               DESCR_t *eff_args = ζ->args;
+               DESCR_t  thaw_buf[8];
+               DESCR_t *thawed   = NULL;
+               int      n        = ζ->nargs;
+               int      have_dte = 0;
+               for (int i = 0; i < n; i++) {
+                   if (ζ->args[i].v == DT_E) { have_dte = 1; break; }
+               }
+               if (have_dte && n > 0) {
+                   thawed = (n <= 8) ? thaw_buf
+                                     : (DESCR_t *)GC_MALLOC((size_t)n * sizeof(DESCR_t));
+                   for (int i = 0; i < n; i++) {
+                       thawed[i] = (ζ->args[i].v == DT_E)
+                                   ? EVAL_fn(ζ->args[i])
+                                   : ζ->args[i];
+                   }
+                   eff_args = thawed;
+               }
+               DESCR_t r = g_user_call_hook(ζ->name, eff_args, n);
                /* Two failure shapes to handle:
                 *   DT_FAIL (99)                        — FRETURN / explicit FAIL
                 *   DT_P wrapping XFAIL PATND node     — user wrote `fn = FAIL`

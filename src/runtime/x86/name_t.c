@@ -75,6 +75,25 @@ void name_commit_value(const NAME_t *nm, DESCR_t value)
                                         ? nm->fnc_arg_names[k] : "");
             }
             call_args = resolved;
+        } else {
+            /* SN-26c-parseerr-c: thaw DT_E args at match time.  Args wrapped
+             * as DT_E by lowerer (E_FNC sub-args of *fn(args) patterns)
+             * resolve here via EVAL_fn — counter values, etc., reflect
+             * post-ARBNO state, not pattern-build-time state. */
+            int have_dte = 0;
+            for (int k = 0; k < call_n; k++) {
+                if (nm->fnc_args[k].v == DT_E) { have_dte = 1; break; }
+            }
+            if (have_dte && call_n > 0) {
+                resolved = (call_n <= 8) ? resolved_buf
+                                         : (DESCR_t *)GC_MALLOC((size_t)call_n * sizeof(DESCR_t));
+                for (int k = 0; k < call_n; k++) {
+                    resolved[k] = (nm->fnc_args[k].v == DT_E)
+                                  ? EVAL_fn(nm->fnc_args[k])
+                                  : nm->fnc_args[k];
+                }
+                call_args = resolved;
+            }
         }
 
         DESCR_t name_d = g_user_call_hook(nm->fnc_name, call_args, call_n);

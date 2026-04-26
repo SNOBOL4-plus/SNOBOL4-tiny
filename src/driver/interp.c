@@ -3117,8 +3117,19 @@ DESCR_t interp_eval(EXPR_t *e)
                 for (int i = 0; i < na; i++) names[i] = (char *)fnc->children[i]->sval;
                 return pat_assign_callcap_named(pat, fnc->sval, NULL, 0, names, na);
             }
+            /* SN-26c-parseerr-c: defer E_FNC sub-args via DT_E wrapping;
+             * thaw at match time in name_commit_value(NM_CALL). */
             DESCR_t *av = na > 0 ? GC_malloc(na * sizeof(DESCR_t)) : NULL;
-            for (int i = 0; i < na; i++) av[i] = interp_eval(fnc->children[i]);
+            for (int i = 0; i < na; i++) {
+                EXPR_t *arg = fnc->children[i];
+                if (arg && arg->kind == E_FNC) {
+                    av[i].v = DT_E;
+                    av[i].ptr = arg;
+                    av[i].slen = 0;
+                } else {
+                    av[i] = interp_eval(arg);
+                }
+            }
             return pat_assign_callcap(pat, fnc->sval, av, na);
         }
         /* Snocone *fn() lowers as E_INDIRECT(E_FNC(...)) — same semantics as
@@ -3139,8 +3150,18 @@ DESCR_t interp_eval(EXPR_t *e)
                 for (int i = 0; i < na; i++) names[i] = (char *)fnc->children[i]->sval;
                 return pat_assign_callcap_named(pat, fnc->sval, NULL, 0, names, na);
             }
+            /* SN-26c-parseerr-c: defer E_FNC sub-args. */
             DESCR_t *av = na > 0 ? GC_malloc(na * sizeof(DESCR_t)) : NULL;
-            for (int i = 0; i < na; i++) av[i] = interp_eval(fnc->children[i]);
+            for (int i = 0; i < na; i++) {
+                EXPR_t *arg = fnc->children[i];
+                if (arg && arg->kind == E_FNC) {
+                    av[i].v = DT_E;
+                    av[i].ptr = arg;
+                    av[i].slen = 0;
+                } else {
+                    av[i] = interp_eval(arg);
+                }
+            }
             return pat_assign_callcap(pat, fnc->sval, av, na);
         }
         const char *nm = tgt->sval;
@@ -3979,13 +4000,39 @@ DESCR_t interp_eval_pat(EXPR_t *e)
         {
             EXPR_t *child = e->children[0];
             if (child->kind == E_FNC && child->sval) {
-                /* *func(args) — build deferred XATP pattern node */
+                /* *func(args) — build deferred XATP pattern node.
+                 *
+                 * SN-26c-parseerr-c (Bug B): args that are themselves function
+                 * calls (E_FNC) or other non-trivial expressions must be
+                 * DEFERRED to match time, not eagerly evaluated here.  Beauty's
+                 * snoParse production has  ("'snoParse'" & 'nTop()')  which
+                 * builds  EVAL("epsilon . *Reduce('snoParse', nTop())").
+                 * Per SPITBOL semantics, nTop() must fire at match time
+                 * (after ARBNO has bumped the counter), not at pattern-build
+                 * time (when counter is just-pushed = 0).
+                 *
+                 * Mechanism: wrap the arg child as DT_E (frozen EXPR_t*); the
+                 * match-time path (bb_usercall in stmt_exec.c) thaws each DT_E
+                 * via EVAL_fn before invoking the user function.
+                 *
+                 * Plain E_LIT and E_VAR args don't need this — E_LIT already
+                 * has its constant value, and the existing match-time hook
+                 * resolves variable values correctly via NV_GET_fn. */
                 int na = child->nchildren;
                 DESCR_t *av = NULL;
                 if (na > 0) {
                     av = GC_malloc(na * sizeof(DESCR_t));
-                    for (int i = 0; i < na; i++)
-                        av[i] = interp_eval(child->children[i]);
+                    for (int i = 0; i < na; i++) {
+                        EXPR_t *arg = child->children[i];
+                        if (arg && arg->kind == E_FNC) {
+                            /* Defer: wrap as DT_E for match-time EVAL_fn thaw. */
+                            av[i].v = DT_E;
+                            av[i].ptr = arg;
+                            av[i].slen = 0;
+                        } else {
+                            av[i] = interp_eval(arg);
+                        }
+                    }
                 }
                 return pat_user_call(child->sval, av, na);
             }
