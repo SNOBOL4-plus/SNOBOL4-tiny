@@ -81,8 +81,13 @@ RE_LABEL_LINE = re.compile(r'^[A-Za-z][A-Za-z0-9]*[\s]')
 RE_INCLUDE = re.compile(r"^-INCLUDE\s+'([^']+)'", re.IGNORECASE)
 
 # Names that must never be instrumented (internal monitor scaffolding).
-INTERNAL_FNS = {'MV', 'MC', 'MR', 'MON_OPEN', 'MON_PUT_VALUE',
-                'MON_PUT_CALL', 'MON_PUT_RETURN', 'MON_CLOSE'}
+INTERNAL_FNS = {'MV', 'MC', 'MR',
+                'MON_OPEN', 'MON_PUT_VALUE', 'MON_PUT_CALL',
+                'MON_PUT_RETURN', 'MON_CLOSE',
+                'MON_PUT_S_VALUE', 'MON_PUT_I_VALUE', 'MON_PUT_R_VALUE',
+                'MON_PUT_O_VALUE',
+                'MON_PUT_S_RETURN', 'MON_PUT_I_RETURN', 'MON_PUT_R_RETURN',
+                'MON_PUT_O_RETURN'}
 
 
 def _scan_lines(lines, include_rules, exclude_rules, seen_fn, seen_var,
@@ -174,7 +179,11 @@ def scan_sno(lines, include_rules, exclude_rules, sno_path=None):
 
 MONITOR_PREAMBLE = """\
 * --- MONITOR PREAMBLE (BINARY): injected by inject_traces_bin.py ---
-*     Sync-step IPC: MON_PUT_VALUE/CALL/RETURN block on go-pipe ack.
+*     Sync-step IPC: typed entry points block on go-pipe ack after each
+*     event.  The C side never stringifies; the SNOBOL4 wrapper picks
+*     the typed channel matching DATATYPE($N), so the runtime's LOAD-time
+*     argument conversion (gtstg/gtint/gtrea) accepts every call without
+*     ERROR 039 / 040 / 265 / Error 1.
 *     MONITOR_READY_PIPE   = ready FIFO (participant writes binary records)
 *     MONITOR_GO_PIPE      = ack   FIFO (participant reads 'G' or 'S')
 *     MONITOR_NAMES_FILE   = sidecar names table (one name per line)
@@ -187,37 +196,66 @@ MONITOR_PREAMBLE = """\
         MON_NAMES_     =  HOST(4,'MONITOR_NAMES_FILE')
         MON_SO_        =  HOST(4,'MONITOR_SO')
 *
+*     Runtime-derived datatype tokens for portable comparison
+*     (CSNOBOL4 returns UPPERCASE; SPITBOL x64 returns lowercase before SN-27).
+        MON_DT_S_      =  DATATYPE('')
+        MON_DT_I_      =  DATATYPE(0)
+        MON_DT_R_      =  DATATYPE(0.0)
+*
 *     Load IPC functions.  Fall through to no-op mode on any failure so a
 *     program instrumented for monitoring still runs without the harness.
-        IDENT(MON_SO_)                                     :S(MON_NOOP_)
-        LOAD('MON_OPEN(STRING,STRING,STRING)INTEGER',       MON_SO_)   :F(MON_NOOP_)
-        LOAD('MON_PUT_VALUE(STRING,STRING)INTEGER',         MON_SO_)   :F(MON_NOOP_)
-        LOAD('MON_PUT_CALL(STRING)INTEGER',                 MON_SO_)   :F(MON_NOOP_)
-        LOAD('MON_PUT_RETURN(STRING,STRING)INTEGER',        MON_SO_)   :F(MON_NOOP_)
-        LOAD('MON_CLOSE()INTEGER',                          MON_SO_)   :F(MON_NOOP_)
-        IDENT(MON_READY_)                                  :S(MON_NOOP_)
-        IDENT(MON_NAMES_)                                  :S(MON_NOOP_)
-        MON_OPEN(MON_READY_, MON_GO_, MON_NAMES_)          :F(MON_NOOP_)
-        MON_ON_        =  '1'                              :(MON_DEFS_)
+        IDENT(MON_SO_)                                            :S(MON_NOOP_)
+        LOAD('MON_OPEN(STRING,STRING,STRING)INTEGER',  MON_SO_)   :F(MON_NOOP_)
+        LOAD('MON_PUT_CALL(STRING)INTEGER',            MON_SO_)   :F(MON_NOOP_)
+        LOAD('MON_CLOSE()INTEGER',                     MON_SO_)   :F(MON_NOOP_)
+        LOAD('MON_PUT_S_VALUE(STRING,STRING)INTEGER',  MON_SO_)   :F(MON_NOOP_)
+        LOAD('MON_PUT_I_VALUE(STRING,INTEGER)INTEGER', MON_SO_)   :F(MON_NOOP_)
+        LOAD('MON_PUT_R_VALUE(STRING,REAL)INTEGER',    MON_SO_)   :F(MON_NOOP_)
+        LOAD('MON_PUT_O_VALUE(STRING,STRING)INTEGER',  MON_SO_)   :F(MON_NOOP_)
+        LOAD('MON_PUT_S_RETURN(STRING,STRING)INTEGER', MON_SO_)   :F(MON_NOOP_)
+        LOAD('MON_PUT_I_RETURN(STRING,INTEGER)INTEGER',MON_SO_)   :F(MON_NOOP_)
+        LOAD('MON_PUT_R_RETURN(STRING,REAL)INTEGER',   MON_SO_)   :F(MON_NOOP_)
+        LOAD('MON_PUT_O_RETURN(STRING,STRING)INTEGER', MON_SO_)   :F(MON_NOOP_)
+        IDENT(MON_READY_)                                         :S(MON_NOOP_)
+        IDENT(MON_NAMES_)                                         :S(MON_NOOP_)
+        MON_OPEN(MON_READY_, MON_GO_, MON_NAMES_)                 :F(MON_NOOP_)
+        MON_ON_        =  '1'                                     :(MON_DEFS_)
 MON_NOOP_
         MON_ON_        =  ''
 MON_DEFS_
 *
-*     Three thin callback functions.  They receive (name, value-of-$name)
-*     from the TRACE() machinery and pass them straight to the C-side.
-*     No CONVERT, no string concatenation, no IGNORE pre-filtering — the
-*     C side reads the descriptor's type tag and raw bytes directly.
-        DEFINE('MV(N,T)V')                                  :(MV_END_)
+*     Three thin callback functions.  TRACE() dispatches MV/MC/MR with
+*     (name, value-of-$name).  We branch on DATATYPE($N) and call the
+*     channel matching that type.  Strings/integers/reals send raw
+*     bytes; everything else (PATTERN/ARRAY/TABLE/CODE/DATA/EXPRESSION/
+*     FILE/NAME/etc.) sends just the type tag via the OPAQUE channel.
+        DEFINE('MV(N,T)V,DT_')                              :(MV_END_)
 MV      IDENT(MON_ON_,'1')                                  :F(RETURN)
-        MON_PUT_VALUE(N, $N)                                :S(RETURN)F(END)
+        DT_            =  DATATYPE($N)
+        IDENT(DT_,MON_DT_S_)                                :S(MV_S_)
+        IDENT(DT_,MON_DT_I_)                                :S(MV_I_)
+        IDENT(DT_,MON_DT_R_)                                :S(MV_R_)
+                                                            :(MV_O_)
+MV_S_   MON_PUT_S_VALUE(N,$N)                               :S(RETURN)F(END)
+MV_I_   MON_PUT_I_VALUE(N,$N)                               :S(RETURN)F(END)
+MV_R_   MON_PUT_R_VALUE(N,$N)                               :S(RETURN)F(END)
+MV_O_   MON_PUT_O_VALUE(N,DT_)                              :S(RETURN)F(END)
 MV_END_
         DEFINE('MC(N,T)')                                   :(MC_END_)
 MC      IDENT(MON_ON_,'1')                                  :F(RETURN)
         MON_PUT_CALL(N)                                     :S(RETURN)F(END)
 MC_END_
-        DEFINE('MR(N,T)V')                                  :(MR_END_)
+        DEFINE('MR(N,T)V,DT_')                              :(MR_END_)
 MR      IDENT(MON_ON_,'1')                                  :F(RETURN)
-        MON_PUT_RETURN(N, $N)                               :S(RETURN)F(END)
+        DT_            =  DATATYPE($N)
+        IDENT(DT_,MON_DT_S_)                                :S(MR_S_)
+        IDENT(DT_,MON_DT_I_)                                :S(MR_I_)
+        IDENT(DT_,MON_DT_R_)                                :S(MR_R_)
+                                                            :(MR_O_)
+MR_S_   MON_PUT_S_RETURN(N,$N)                              :S(RETURN)F(END)
+MR_I_   MON_PUT_I_RETURN(N,$N)                              :S(RETURN)F(END)
+MR_R_   MON_PUT_R_RETURN(N,$N)                              :S(RETURN)F(END)
+MR_O_   MON_PUT_O_RETURN(N,DT_)                             :S(RETURN)F(END)
 MR_END_
 * --- MONITOR PREAMBLE END ---
 """

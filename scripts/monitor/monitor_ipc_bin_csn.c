@@ -13,10 +13,30 @@
  *
  * SNOBOL4 entry points (all UPPERCASE — CSNOBOL4 LOAD looks up symbol verbatim):
  *   MON_OPEN(STRING,STRING,STRING)INTEGER         — ready,go,names paths
- *   MON_PUT_VALUE(STRING,STRING)INTEGER           — varname, $varname
  *   MON_PUT_CALL(STRING)INTEGER                   — fname
- *   MON_PUT_RETURN(STRING,STRING)INTEGER          — fname, $fname
  *   MON_CLOSE()INTEGER
+ *
+ * Typed value channels — one per SNOBOL4 datatype.  Each declares its second
+ * arg with the matching prototype token so the runtime accepts the call
+ * without an "argument is not a string" / "Illegal data type" rejection.
+ * The wrapper preamble in inject_traces_bin.py dispatches via DATATYPE($N).
+ *   MON_PUT_S_VALUE(STRING,STRING)INTEGER         — varname, $N where $N is STRING
+ *   MON_PUT_I_VALUE(STRING,INTEGER)INTEGER        — varname, $N where $N is INTEGER
+ *   MON_PUT_R_VALUE(STRING,REAL)INTEGER           — varname, $N where $N is REAL
+ *   MON_PUT_O_VALUE(STRING,STRING)INTEGER         — varname, type-string for opaque kinds
+ *   MON_PUT_S_RETURN(STRING,STRING)INTEGER        — fname,   $F where $F is STRING
+ *   MON_PUT_I_RETURN(STRING,INTEGER)INTEGER       — fname,   $F where $F is INTEGER
+ *   MON_PUT_R_RETURN(STRING,REAL)INTEGER          — fname,   $F where $F is REAL
+ *   MON_PUT_O_RETURN(STRING,STRING)INTEGER        — fname,   type-string for opaque kinds
+ *
+ * For the OPAQUE channels the second arg carries the runtime-derived
+ * datatype name (e.g. "PATTERN", "ARRAY") so the C side can stamp the
+ * wire `type` byte correctly without needing block-internal access.
+ * The wire `value_len` is always 0 for opaque kinds — type alone matters.
+ *
+ * MON_PUT_VALUE / MON_PUT_RETURN are kept as legacy polymorphic entry
+ * points but are no longer invoked by the injected preamble; they are
+ * left in place for direct C-side test programs.
  *
  * Build:
  *   gcc -shared -fPIC -O2 -Wall -o monitor_ipc_bin_csn.so monitor_ipc_bin_csn.c
@@ -353,6 +373,148 @@ lret_t MON_PUT_RETURN(LA_ALIST) {
     if (name_id == MW_NAME_ID_NONE) RETFAIL;
 
     if (!emit_value(MWK_RETURN, name_id, args, 1)) RETFAIL;
+    RETINT(0);
+}
+
+/*============================================================================
+ * Typed value/return entry points — one per dialect datatype.
+ *
+ * All four (S/I/R/O) follow the same shape:
+ *   1) lookup name_id from arg 0
+ *   2) emit a fixed-type record from arg 1
+ *
+ * For STRING/INTEGER/REAL: arg 1 IS the value descriptor; emit_record
+ * with raw value bytes copied off args[1].
+ * For OPAQUE: arg 1 is a STRING naming the opaque type; we map it to
+ * MWT_PATTERN / MWT_ARRAY / etc. and emit (type, len=0).
+ *==========================================================================*/
+
+/* Internal helpers — emit value of a known type from args[1]. */
+static int _put_str_at_idx1(uint32_t kind, uint32_t name_id, struct descr *args) {
+    int len = _slen(1, args);
+    const char *p = _sptr(1, args);
+    if (len < 0) RETFAIL;
+    return emit_record(kind, name_id, MWT_STRING, len > 0 ? p : NULL,
+                       (uint32_t)(len > 0 ? len : 0)) ? TRUE : FALSE;
+}
+static int _put_int_at_idx1(uint32_t kind, uint32_t name_id, struct descr *args) {
+    /* CSNOBOL4 marshalled INTEGER → args[1].a.i is the long value. */
+    int_t iv = args[1].a.i;
+    unsigned char buf[8];
+    for (int k = 0; k < 8; k++) buf[k] = (unsigned char)((iv >> (k*8)) & 0xff);
+    return emit_record(kind, name_id, MWT_INTEGER, buf, 8) ? TRUE : FALSE;
+}
+static int _put_real_at_idx1(uint32_t kind, uint32_t name_id, struct descr *args) {
+    /* CSNOBOL4 marshalled REAL → args[1].a.f is the double value. */
+    real_t rv = args[1].a.f;
+    unsigned char buf[8];
+    memcpy(buf, &rv, 8);
+    return emit_record(kind, name_id, MWT_REAL, buf, 8) ? TRUE : FALSE;
+}
+
+/* Map a runtime-derived datatype-name string to a wire type code.
+ * Comparison is case-insensitive — both dialects' DATATYPE() conventions
+ * are accepted.  Returns MWT_UNKNOWN on no match. */
+static uint8_t opaque_name_to_wire(const char *p, int len) {
+    if (!p || len <= 0) return MWT_UNKNOWN;
+    /* Stack copy + uppercase fold for comparison. */
+    char buf[16];
+    if (len >= (int)sizeof(buf)) return MWT_UNKNOWN;
+    for (int i = 0; i < len; i++) {
+        char c = p[i];
+        if (c >= 'a' && c <= 'z') c = (char)(c - 'a' + 'A');
+        buf[i] = c;
+    }
+    buf[len] = '\0';
+    if      (!strcmp(buf, "STRING"))     return MWT_STRING;
+    else if (!strcmp(buf, "INTEGER"))    return MWT_INTEGER;
+    else if (!strcmp(buf, "REAL"))       return MWT_REAL;
+    else if (!strcmp(buf, "NAME"))       return MWT_NAME;
+    else if (!strcmp(buf, "PATTERN"))    return MWT_PATTERN;
+    else if (!strcmp(buf, "EXPRESSION")) return MWT_EXPRESSION;
+    else if (!strcmp(buf, "ARRAY"))      return MWT_ARRAY;
+    else if (!strcmp(buf, "TABLE"))      return MWT_TABLE;
+    else if (!strcmp(buf, "CODE"))       return MWT_CODE;
+    else if (!strcmp(buf, "FILE"))       return MWT_FILE;
+    /* Unknown / user-DATA / EXTERNAL etc. → DATA (catch-all opaque). */
+    return MWT_DATA;
+}
+
+static int _put_opaque_at_idx1(uint32_t kind, uint32_t name_id, struct descr *args) {
+    int len = _slen(1, args);
+    const char *p = _sptr(1, args);
+    uint8_t type = opaque_name_to_wire(p, len);
+    return emit_record(kind, name_id, type, NULL, 0) ? TRUE : FALSE;
+}
+
+/* Resolve arg 0 → name_id, fail cleanly if missing. */
+static int _resolve_name_id(struct descr *args, uint32_t *out_id) {
+    int nlen = _slen(0, args);
+    const char *nptr = _sptr(0, args);
+    if (!nptr) return FALSE;
+    uint32_t id = lookup_name_id(nptr, nlen);
+    if (id == MW_NAME_ID_NONE) return FALSE;
+    *out_id = id;
+    return TRUE;
+}
+
+/* VALUE channel — typed. */
+lret_t MON_PUT_S_VALUE(LA_ALIST) {
+    (void)nargs;
+    uint32_t name_id;
+    if (!_resolve_name_id(args, &name_id)) RETFAIL;
+    if (!_put_str_at_idx1(MWK_VALUE, name_id, args)) RETFAIL;
+    RETINT(0);
+}
+lret_t MON_PUT_I_VALUE(LA_ALIST) {
+    (void)nargs;
+    uint32_t name_id;
+    if (!_resolve_name_id(args, &name_id)) RETFAIL;
+    if (!_put_int_at_idx1(MWK_VALUE, name_id, args)) RETFAIL;
+    RETINT(0);
+}
+lret_t MON_PUT_R_VALUE(LA_ALIST) {
+    (void)nargs;
+    uint32_t name_id;
+    if (!_resolve_name_id(args, &name_id)) RETFAIL;
+    if (!_put_real_at_idx1(MWK_VALUE, name_id, args)) RETFAIL;
+    RETINT(0);
+}
+lret_t MON_PUT_O_VALUE(LA_ALIST) {
+    (void)nargs;
+    uint32_t name_id;
+    if (!_resolve_name_id(args, &name_id)) RETFAIL;
+    if (!_put_opaque_at_idx1(MWK_VALUE, name_id, args)) RETFAIL;
+    RETINT(0);
+}
+
+/* RETURN channel — typed. */
+lret_t MON_PUT_S_RETURN(LA_ALIST) {
+    (void)nargs;
+    uint32_t name_id;
+    if (!_resolve_name_id(args, &name_id)) RETFAIL;
+    if (!_put_str_at_idx1(MWK_RETURN, name_id, args)) RETFAIL;
+    RETINT(0);
+}
+lret_t MON_PUT_I_RETURN(LA_ALIST) {
+    (void)nargs;
+    uint32_t name_id;
+    if (!_resolve_name_id(args, &name_id)) RETFAIL;
+    if (!_put_int_at_idx1(MWK_RETURN, name_id, args)) RETFAIL;
+    RETINT(0);
+}
+lret_t MON_PUT_R_RETURN(LA_ALIST) {
+    (void)nargs;
+    uint32_t name_id;
+    if (!_resolve_name_id(args, &name_id)) RETFAIL;
+    if (!_put_real_at_idx1(MWK_RETURN, name_id, args)) RETFAIL;
+    RETINT(0);
+}
+lret_t MON_PUT_O_RETURN(LA_ALIST) {
+    (void)nargs;
+    uint32_t name_id;
+    if (!_resolve_name_id(args, &name_id)) RETFAIL;
+    if (!_put_opaque_at_idx1(MWK_RETURN, name_id, args)) RETFAIL;
     RETINT(0);
 }
 
