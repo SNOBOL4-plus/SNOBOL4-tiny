@@ -3118,11 +3118,15 @@ DESCR_t interp_eval(EXPR_t *e)
                 return pat_assign_callcap_named(pat, fnc->sval, NULL, 0, names, na);
             }
             /* SN-26c-parseerr-c: defer E_FNC sub-args via DT_E wrapping;
-             * thaw at match time in name_commit_value(NM_CALL). */
+             * thaw at match time in name_commit_value(NM_CALL).
+             * SN-26c-parseerr-d: also defer E_VAR — when args are mixed
+             * (e.g. E_QLIT + E_VAR) the all_vars fast path above doesn't
+             * fire, and an E_VAR set by an earlier capture in the same
+             * pattern would otherwise be eagerly read here at build time. */
             DESCR_t *av = na > 0 ? GC_malloc(na * sizeof(DESCR_t)) : NULL;
             for (int i = 0; i < na; i++) {
                 EXPR_t *arg = fnc->children[i];
-                if (arg && arg->kind == E_FNC) {
+                if (arg && (arg->kind == E_FNC || arg->kind == E_VAR)) {
                     av[i].v = DT_E;
                     av[i].ptr = arg;
                     av[i].slen = 0;
@@ -3150,11 +3154,12 @@ DESCR_t interp_eval(EXPR_t *e)
                 for (int i = 0; i < na; i++) names[i] = (char *)fnc->children[i]->sval;
                 return pat_assign_callcap_named(pat, fnc->sval, NULL, 0, names, na);
             }
-            /* SN-26c-parseerr-c: defer E_FNC sub-args. */
+            /* SN-26c-parseerr-c: defer E_FNC sub-args.
+             * SN-26c-parseerr-d: also defer E_VAR (see twin site above). */
             DESCR_t *av = na > 0 ? GC_malloc(na * sizeof(DESCR_t)) : NULL;
             for (int i = 0; i < na; i++) {
                 EXPR_t *arg = fnc->children[i];
-                if (arg && arg->kind == E_FNC) {
+                if (arg && (arg->kind == E_FNC || arg->kind == E_VAR)) {
                     av[i].v = DT_E;
                     av[i].ptr = arg;
                     av[i].slen = 0;
@@ -4015,16 +4020,27 @@ DESCR_t interp_eval_pat(EXPR_t *e)
                  * match-time path (bb_usercall in stmt_exec.c) thaws each DT_E
                  * via EVAL_fn before invoking the user function.
                  *
-                 * Plain E_LIT and E_VAR args don't need this — E_LIT already
-                 * has its constant value, and the existing match-time hook
-                 * resolves variable values correctly via NV_GET_fn. */
+                 * Plain E_LIT args don't need this — E_LIT already has
+                 * its constant value baked in.
+                 *
+                 * SN-26c-parseerr-d: extend deferral to E_VAR.  The earlier
+                 * "Plain E_VAR args don't need this" reasoning was wrong:
+                 * in  p . thx . *Shift_t('idtag', thx)  the cursor capture
+                 * `. thx` writes the matched substring into thx ONLY at
+                 * match time.  If we eagerly interp_eval(thx) here at
+                 * pattern-build time, we capture the stale value (typically
+                 * empty), and the match-time call to Shift_t receives that
+                 * stale value instead of the captured cursor substring.
+                 * Wrapping E_VAR as DT_E with the EXPR_t* itself defers the
+                 * lookup to bb_usercall's thaw loop, which calls EVAL_fn ->
+                 * eval_node -> NV_GET_fn AT MATCH TIME. */
                 int na = child->nchildren;
                 DESCR_t *av = NULL;
                 if (na > 0) {
                     av = GC_malloc(na * sizeof(DESCR_t));
                     for (int i = 0; i < na; i++) {
                         EXPR_t *arg = child->children[i];
-                        if (arg && arg->kind == E_FNC) {
+                        if (arg && (arg->kind == E_FNC || arg->kind == E_VAR)) {
                             /* Defer: wrap as DT_E for match-time EVAL_fn thaw. */
                             av[i].v = DT_E;
                             av[i].ptr = arg;

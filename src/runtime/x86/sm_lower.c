@@ -331,10 +331,15 @@ static void lower_pat_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
                 } else {
                     /* SN-8a: args-on-stack path — eager-eval each arg, then
                      * SM_PAT_CAPTURE_FN_ARGS pops them and calls pat_assign_callcap.
-                     * SN-26c-parseerr-c: defer E_FNC sub-args via SM_PUSH_EXPR. */
+                     * SN-26c-parseerr-c: defer E_FNC sub-args via SM_PUSH_EXPR.
+                     * SN-26c-parseerr-d: also defer E_VAR — when args are mixed
+                     * (e.g. literal+var) the all_vars name-stash fast path
+                     * doesn't fire, and an E_VAR set by an earlier capture in
+                     * the same pattern would be eagerly read at build time
+                     * instead of at match time. */
                     for (int i = 0; i < fnc->nchildren; i++) {
                         EXPR_t *arg = fnc->children[i];
-                        if (arg && arg->kind == E_FNC)
+                        if (arg && (arg->kind == E_FNC || arg->kind == E_VAR))
                             sm_emit_ptr(p, SM_PUSH_EXPR, (void *)arg);
                         else
                             lower_expr(p, lt, arg);
@@ -368,10 +373,11 @@ static void lower_pat_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
                     p->instrs[idx].a[2].s = namelist;
                 } else {
                     /* SN-8a: args-on-stack path for $ *fn(args).
-                     * SN-26c-parseerr-c: defer E_FNC sub-args via SM_PUSH_EXPR. */
+                     * SN-26c-parseerr-c: defer E_FNC sub-args via SM_PUSH_EXPR.
+                     * SN-26c-parseerr-d: also defer E_VAR (see twin site). */
                     for (int i = 0; i < fnc->nchildren; i++) {
                         EXPR_t *arg = fnc->children[i];
-                        if (arg && arg->kind == E_FNC)
+                        if (arg && (arg->kind == E_FNC || arg->kind == E_VAR))
                             sm_emit_ptr(p, SM_PUSH_EXPR, (void *)arg);
                         else
                             lower_expr(p, lt, arg);
@@ -437,10 +443,14 @@ static void lower_pat_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
                  * when the counter is just-pushed = 0.
                  *
                  * The match-time path (bb_usercall in stmt_exec.c) thaws each
-                 * DT_E via EVAL_fn before invoking the user function. */
+                 * DT_E via EVAL_fn before invoking the user function.
+                 *
+                 * SN-26c-parseerr-d: also defer E_VAR — for the same reason
+                 * as the COND/IMMED twin sites above (cursor-capture set in
+                 * the same pattern). */
                 for (int i = 0; i < ch->nchildren; i++) {
                     EXPR_t *arg = ch->children[i];
-                    if (arg && arg->kind == E_FNC)
+                    if (arg && (arg->kind == E_FNC || arg->kind == E_VAR))
                         sm_emit_ptr(p, SM_PUSH_EXPR, (void *)arg);
                     else
                         lower_expr(p, lt, arg);
