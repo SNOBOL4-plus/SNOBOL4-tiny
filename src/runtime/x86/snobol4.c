@@ -38,6 +38,24 @@ int monitor_fd  = -1;
 int monitor_ack_fd = -1;
 int monitor_ready = 0;  /* set to 1 after pre-init constants are installed */
 
+/* SN-26-auto-binary-scrip: catch-all binary emission, no source modification.
+ *
+ * When MONITOR_BIN=1 is set in the env, comm_var / comm_call / comm_return
+ * emit MONITOR_WIRE-format records directly via mon_send_bin instead of the
+ * text-format MON_RS / MON_US records mon_send produces.  Names are
+ * auto-interned into g_bin_names on demand (no pre-loaded names file
+ * required); at process exit, the names table is dumped to MONITOR_NAMES_OUT
+ * as a UTF-8 sidecar (one name per line, indexed 0..N-1) so the controller
+ * can resolve name_id → string post-hoc.
+ *
+ * Forward decls live at file scope (NOT inside SNO_INIT_fn) so the compiler
+ * sees them before mon_at_exit is referenced by the atexit() registration.
+ * Definitions are below; this block is just declarations + state. */
+static int   monitor_bin_mode = 0;            /* set by SNO_INIT_fn from env */
+static const char *g_names_out_path_ref = NULL;  /* cached MONITOR_NAMES_OUT */
+static void  mon_at_exit(void);               /* defined below */
+static uint32_t intern_name_bin(const char *p, int len);  /* defined below */
+
 /* Trace-registration set: only variables registered via TRACE(name,'VALUE')
  * are sent to the monitor.  Simple open-addressed hash set of C strings.
  * Capacity must be a power of two; 64 slots is ample for typical programs.
@@ -176,6 +194,7 @@ static void mon_send(const char *kind, const char *name, const char *value) {
 static char  **g_bin_names      = NULL;
 static int    *g_bin_name_lens  = NULL;
 static int     g_bin_n_names    = 0;
+static int     g_bin_names_cap  = 0;   /* SN-26-auto: capacity for intern_name_bin grow path */
 
 static int load_names_file_bin(const char *path) {
     FILE *f = fopen(path, "r");
@@ -208,6 +227,7 @@ static int load_names_file_bin(const char *path) {
     g_bin_names     = names;
     g_bin_name_lens = lens;
     g_bin_n_names   = n;
+    g_bin_names_cap = cap;
     return 0;
 }
 
@@ -219,6 +239,84 @@ static uint32_t lookup_name_id_bin(const char *p, int len) {
             return (uint32_t)i;
     }
     return MW_NAME_ID_NONE;
+}
+
+/* SN-26-auto-binary-scrip: intern a name into g_bin_names on demand.
+ *
+ * If the name is already present, returns its existing id.  Otherwise
+ * appends a copy of (p,len) to the table, growing it geometrically, and
+ * returns the new id.  Used by the binary catch-all path in comm_var /
+ * comm_call / comm_return when MONITOR_BIN=1 — the user's .sno does not
+ * need to call MON_OPEN with a pre-baked names file; names accumulate as
+ * they're seen, and mon_at_exit dumps the final table to MONITOR_NAMES_OUT.
+ *
+ * Allocation strategy matches load_names_file_bin (raw malloc/realloc, not
+ * GC), keeping the names sidecar stable for the lifetime of the process. */
+static uint32_t intern_name_bin(const char *p, int len) {
+    if (!p || len < 0) return MW_NAME_ID_NONE;
+    /* Linear scan for existing entry. */
+    for (int i = 0; i < g_bin_n_names; i++) {
+        if (g_bin_name_lens[i] == len && memcmp(g_bin_names[i], p, (size_t)len) == 0)
+            return (uint32_t)i;
+    }
+    /* Grow if needed. */
+    if (g_bin_n_names == g_bin_names_cap) {
+        int new_cap = g_bin_names_cap ? g_bin_names_cap * 2 : 64;
+        char **nn = (char **)realloc(g_bin_names, (size_t)new_cap * sizeof(char *));
+        int   *nl = (int  *)realloc(g_bin_name_lens, (size_t)new_cap * sizeof(int));
+        if (!nn || !nl) {
+            /* Best effort — leave previous arrays in place; intern fails. */
+            if (nn) g_bin_names = nn;
+            if (nl) g_bin_name_lens = nl;
+            return MW_NAME_ID_NONE;
+        }
+        g_bin_names     = nn;
+        g_bin_name_lens = nl;
+        g_bin_names_cap = new_cap;
+    }
+    char *copy = (char *)malloc((size_t)len + 1);
+    if (!copy) return MW_NAME_ID_NONE;
+    if (len > 0) memcpy(copy, p, (size_t)len);
+    copy[len] = '\0';
+    int id = g_bin_n_names;
+    g_bin_names[id]     = copy;
+    g_bin_name_lens[id] = len;
+    g_bin_n_names       = id + 1;
+    return (uint32_t)id;
+}
+
+/* SN-26-auto-binary-scrip: atexit handler — emit final MWK_END record on
+ * the wire (so the controller sees a clean termination, not a raw EOF),
+ * then dump the auto-interned names table to MONITOR_NAMES_OUT.
+ *
+ * Registered via atexit() in SNO_INIT_fn when MONITOR_BIN=1.  Safe to call
+ * even if monitor_fd was never opened or no names were interned; it just
+ * does nothing in those cases.  Uses static guard so a second call (e.g.
+ * via duplicate atexit registrations) is a no-op. */
+static void mon_at_exit(void) {
+    static int already = 0;
+    if (already) return;
+    already = 1;
+    if (monitor_fd >= 0 && monitor_bin_mode) {
+        /* Final MWK_END.  We deliberately do NOT block on ack here — the
+         * controller may have already closed its side; an unread ack is
+         * normal at end of run. */
+        unsigned char hdr[MW_HDR_BYTES];
+        mw_pack_hdr(hdr, MWK_END, MW_NAME_ID_NONE, MWT_NULL, 0);
+        ssize_t w = write(monitor_fd, hdr, MW_HDR_BYTES);
+        (void)w;
+    }
+    if (g_names_out_path_ref && g_names_out_path_ref[0] && g_bin_n_names > 0) {
+        FILE *f = fopen(g_names_out_path_ref, "w");
+        if (f) {
+            for (int i = 0; i < g_bin_n_names; i++) {
+                if (g_bin_name_lens[i] > 0)
+                    fwrite(g_bin_names[i], 1, (size_t)g_bin_name_lens[i], f);
+                fputc('\n', f);
+            }
+            fclose(f);
+        }
+    }
 }
 
 /* scrip DT_* → wire MWT_* mapping.  scrip's DTYPE_t is the source of
@@ -459,6 +557,43 @@ void comm_var(const char *name, DESCR_t val) {
     if (!monitor_ready) return;
     /* &TRACE catch-all: emit if kw_trace > 0 OR if name explicitly registered. */
     if (kw_trace <= 0 && !trace_registered(name)) return;
+    if (monitor_bin_mode) {
+        /* SN-26-auto-binary-scrip: binary catch-all.  Auto-intern the name,
+         * marshal the descriptor's type+value via the existing scrip_tag_to_wire
+         * mapping, emit a single MWK_VALUE record on the wire. */
+        uint32_t name_id = intern_name_bin(name, (int)strlen(name));
+        if (name_id == MW_NAME_ID_NONE) return;
+        uint8_t type = scrip_tag_to_wire(val.v);
+        const void *vp = NULL;
+        uint32_t    vlen = 0;
+        int64_t i_buf;
+        double  r_buf;
+        switch (type) {
+            case MWT_STRING:
+            case MWT_NAME:
+                if (val.s) {
+                    vlen = val.slen ? (uint32_t)val.slen : (uint32_t)strlen(val.s);
+                    vp   = (vlen > 0) ? (const void *)val.s : NULL;
+                }
+                break;
+            case MWT_INTEGER: {
+                int64_t iv = val.i;
+                unsigned char *p = (unsigned char *)&i_buf;
+                for (int k = 0; k < 8; k++) p[k] = (unsigned char)((iv >> (k*8)) & 0xff);
+                vp = &i_buf; vlen = 8;
+                break;
+            }
+            case MWT_REAL: {
+                double rv = val.r;
+                memcpy(&r_buf, &rv, sizeof(r_buf));
+                vp = &r_buf; vlen = 8;
+                break;
+            }
+            default: break;
+        }
+        mon_send_bin(MWK_VALUE, name_id, type, vp, vlen);
+        return;
+    }
     const char *s = VARVAL_fn(val);
     mon_send("VALUE", name, s ? s : "(undef)");
 }
@@ -476,6 +611,12 @@ void comm_call(const char *fname) {
     if (monitor_fd < 0) return;
     if (!monitor_ready) return;
     if (kw_ftrace <= 0 && !trace_registered(fname)) return;
+    if (monitor_bin_mode) {
+        uint32_t name_id = intern_name_bin(fname, (int)strlen(fname));
+        if (name_id == MW_NAME_ID_NONE) return;
+        mon_send_bin(MWK_CALL, name_id, MWT_NULL, NULL, 0);
+        return;
+    }
     mon_send("CALL", fname, "");
 }
 
@@ -490,6 +631,41 @@ void comm_return(const char *fname, DESCR_t retval) {
     if (monitor_fd < 0) return;
     if (!monitor_ready) return;
     if (kw_ftrace <= 0 && !trace_registered(fname)) return;
+    if (monitor_bin_mode) {
+        uint32_t name_id = intern_name_bin(fname, (int)strlen(fname));
+        if (name_id == MW_NAME_ID_NONE) return;
+        /* Marshal retval per its type, same shape as comm_var binary path. */
+        uint8_t type = scrip_tag_to_wire(retval.v);
+        const void *vp = NULL;
+        uint32_t    vlen = 0;
+        int64_t i_buf;
+        double  r_buf;
+        switch (type) {
+            case MWT_STRING:
+            case MWT_NAME:
+                if (retval.s) {
+                    vlen = retval.slen ? (uint32_t)retval.slen : (uint32_t)strlen(retval.s);
+                    vp   = (vlen > 0) ? (const void *)retval.s : NULL;
+                }
+                break;
+            case MWT_INTEGER: {
+                int64_t iv = retval.i;
+                unsigned char *p = (unsigned char *)&i_buf;
+                for (int k = 0; k < 8; k++) p[k] = (unsigned char)((iv >> (k*8)) & 0xff);
+                vp = &i_buf; vlen = 8;
+                break;
+            }
+            case MWT_REAL: {
+                double rv = retval.r;
+                memcpy(&r_buf, &rv, sizeof(r_buf));
+                vp = &r_buf; vlen = 8;
+                break;
+            }
+            default: break;
+        }
+        mon_send_bin(MWK_RETURN, name_id, type, vp, vlen);
+        return;
+    }
     const char *s = VARVAL_fn(retval);
     mon_send("RETURN", fname, s ? s : "(fail)");
 }
@@ -1781,6 +1957,22 @@ void SNO_INIT_fn(void) {
         if (ev_tr && ev_tr[0]) {
             int64_t v = (int64_t)strtoll(ev_tr, NULL, 10);
             if (v > 0) kw_trace = v;
+        }
+    }
+
+    /* SN-26-auto-binary-scrip: switch comm_var/comm_call/comm_return to
+     * binary wire format (monitor_wire.h) when MONITOR_BIN=1 is set.
+     * Names are auto-interned; at process exit, the names table is dumped
+     * to MONITOR_NAMES_OUT (UTF-8, one name per line, indexed 0..N-1) so
+     * the controller can resolve name_id → string post-hoc.  No source
+     * modification of the user's .sno required. */
+    {
+        const char *ev_bin = getenv("MONITOR_BIN");
+        if (ev_bin && ev_bin[0] && ev_bin[0] != '0') {
+            monitor_bin_mode = 1;
+            const char *no_path = getenv("MONITOR_NAMES_OUT");
+            if (no_path && no_path[0]) g_names_out_path_ref = no_path;
+            atexit(mon_at_exit);
         }
     }
 
