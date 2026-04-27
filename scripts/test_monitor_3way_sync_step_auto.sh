@@ -33,9 +33,10 @@
 #   PARTICIPANTS="csn spl"     bash test_monitor_3way_sync_step_auto.sh <file.sno>
 #   PARTICIPANTS="spl scr"     bash test_monitor_3way_sync_step_auto.sh <file.sno>
 #   PARTICIPANTS="csn spl scr" bash test_monitor_3way_sync_step_auto.sh <file.sno>   # default
+#   PARTICIPANTS="csn spl dot" bash test_monitor_3way_sync_step_auto.sh <file.sno>   # GOAL-NET-BEAUTY-SELF
 #
 # Environment overrides:
-#   PARTICIPANTS="..."    — space-separated list from {csn, spl, scr} in
+#   PARTICIPANTS="..."    — space-separated list from {csn, spl, scr, dot} in
 #                           desired order.  First entry is the oracle
 #                           the controller compares against.
 #                           Default: "csn spl scr" (3-way).
@@ -43,6 +44,7 @@
 #   MONITOR_TIMEOUT=N     — per-participant timeout (default 15).
 #   STDIN_SRC=path        — file fed to each participant on stdin.
 #                           Default: /dev/null, or <file>.input if it exists.
+#   SNO4_DLL=path         — Snobol4.dll location (default $SNO4_REPO/Snobol4/bin/Release/net10.0/Snobol4.dll).
 #
 # Exit:
 #   0 — all participants agreed
@@ -69,6 +71,8 @@ X64_DIR="${X64_DIR:-/home/claude/x64}"
 SPITBOL="$X64_DIR/bin/sbl"
 CSNOBOL4="/home/claude/csnobol4/snobol4"
 SCRIP="${SCRIP:-$HERE/../scrip}"
+SNO4_REPO="${SNO4_REPO:-/home/claude/snobol4dotnet}"
+SNO4_DLL="${SNO4_DLL:-$SNO4_REPO/Snobol4/bin/Release/net10.0/Snobol4.dll}"
 INC="${INC:-/home/claude/corpus/programs/include}"
 
 TIMEOUT="${MONITOR_TIMEOUT:-15}"
@@ -87,17 +91,18 @@ fi
 # Validate participant names.
 for p in "${PARTICIPANTS[@]}"; do
     case "$p" in
-        csn|spl|scr) ;;
-        *) echo "FAIL unknown participant '$p' (allowed: csn, spl, scr)"; exit 2 ;;
+        csn|spl|scr|dot) ;;
+        *) echo "FAIL unknown participant '$p' (allowed: csn, spl, scr, dot)"; exit 2 ;;
     esac
 done
 
-want_csn=0; want_spl=0; want_scr=0
+want_csn=0; want_spl=0; want_scr=0; want_dot=0
 for p in "${PARTICIPANTS[@]}"; do
     case "$p" in
         csn) want_csn=1 ;;
         spl) want_spl=1 ;;
         scr) want_scr=1 ;;
+        dot) want_dot=1 ;;
     esac
 done
 
@@ -107,6 +112,8 @@ done
 [[ "$want_scr" = "1" ]] && [[ ! -x "$SCRIP" ]]    && { echo "FAIL scrip not built: $SCRIP — run build_scrip.sh"; exit 2; }
 [[ "$want_csn" = "1" ]] && [[ ! -x "$CSNOBOL4" ]] && { echo "FAIL csnobol4 not built: $CSNOBOL4"; exit 2; }
 [[ "$want_spl" = "1" ]] && [[ ! -x "$SPITBOL" ]]  && { echo "FAIL spitbol not built: $SPITBOL"; exit 2; }
+[[ "$want_dot" = "1" ]] && [[ ! -f "$SNO4_DLL" ]] && { echo "FAIL snobol4dotnet not built: $SNO4_DLL — dotnet build Snobol4/Snobol4.csproj -c Release -p:EnableWindowsTargeting=true"; exit 2; }
+[[ "$want_dot" = "1" ]] && ! command -v dotnet >/dev/null 2>&1 && { echo "FAIL dotnet command missing — apt-get install -y dotnet-sdk-10.0"; exit 2; }
 :
 
 TMP=$(mktemp -d /tmp/monitor_auto_XXXXXX)
@@ -171,6 +178,23 @@ if [[ "$want_scr" = "1" ]]; then
     SNO_LIB="$INC" \
         timeout "$((TIMEOUT*2))" "$SCRIP" --ir-run "$SNO" \
         < "$STDIN_SRC" > "$TMP/scr.out" 2> "$TMP/scr.err" &
+    PIDS+=($!)
+fi
+
+# snobol4dotnet — runtime under test for GOAL-NET-BEAUTY-SELF.
+# MonitorIpc.cs reads MONITOR_READY_PIPE / MONITOR_GO_PIPE / MONITOR_NAMES_OUT
+# at first emit; silently no-op if any of those env vars is unset (S-2-bridge-1
+# dormancy guarantee).  Fire-points landed in S-2-bridge-2/3/4:
+#   - Executive.Assign chokepoint  → VALUE on every lvalue store
+#   - ExecuteProgramDefinedFunction → CALL/EmitValue/RETURN at fn entry/exit
+# Run with -bf for case-sensitive identifiers (matches csn/spl invocation).
+if [[ "$want_dot" = "1" ]]; then
+    MONITOR_BIN=1 \
+    MONITOR_READY_PIPE="$TMP/dot.ready" \
+    MONITOR_GO_PIPE="$TMP/dot.go" \
+    MONITOR_NAMES_OUT="$TMP/dot.names" \
+        timeout "$((TIMEOUT*2))" dotnet "$SNO4_DLL" -bf "$SNO" \
+        < "$STDIN_SRC" > "$TMP/dot.out" 2> "$TMP/dot.err" &
     PIDS+=($!)
 fi
 
