@@ -44,17 +44,24 @@ int monitor_ready = 0;  /* set to 1 after pre-init constants are installed */
  * emit MONITOR_WIRE-format records directly via mon_send_bin instead of the
  * text-format MON_RS / MON_US records mon_send produces.  Names are
  * auto-interned into g_bin_names on demand (no pre-loaded names file
- * required); at process exit, the names table is dumped to MONITOR_NAMES_OUT
- * as a UTF-8 sidecar (one name per line, indexed 0..N-1) so the controller
- * can resolve name_id → string post-hoc.
+ * required).
+ *
+ * SN-26-bridge-coverage-e: streaming intern on the wire.  The first time a
+ * name is interned, intern_name_bin emits an MWK_NAME_DEF record carrying
+ * (id -> name bytes) BEFORE returning the new id.  Subsequent records
+ * referencing that id need no sidecar lookup — the controller has already
+ * received the binding on the wire.  No MONITOR_NAMES_OUT, no atexit dump
+ * of the names table.  mon_at_exit still runs to emit the final MWK_END
+ * record (load-bearing for clean termination).
  *
  * Forward decls live at file scope (NOT inside SNO_INIT_fn) so the compiler
  * sees them before mon_at_exit is referenced by the atexit() registration.
  * Definitions are below; this block is just declarations + state. */
 static int   monitor_bin_mode = 0;            /* set by SNO_INIT_fn from env */
-static const char *g_names_out_path_ref = NULL;  /* cached MONITOR_NAMES_OUT */
 static void  mon_at_exit(void);               /* defined below */
 static uint32_t intern_name_bin(const char *p, int len);  /* defined below */
+static void  mon_send_bin(uint32_t kind, uint32_t name_id, uint8_t type,
+                          const void *value, uint32_t value_len);  /* defined below */
 
 /* Trace-registration set: only variables registered via TRACE(name,'VALUE')
  * are sent to the monitor.  Simple open-addressed hash set of C strings.
@@ -248,10 +255,16 @@ static uint32_t lookup_name_id_bin(const char *p, int len) {
  * returns the new id.  Used by the binary catch-all path in comm_var /
  * comm_call / comm_return when MONITOR_BIN=1 — the user's .sno does not
  * need to call MON_OPEN with a pre-baked names file; names accumulate as
- * they're seen, and mon_at_exit dumps the final table to MONITOR_NAMES_OUT.
+ * they're seen.
  *
- * Allocation strategy matches load_names_file_bin (raw malloc/realloc, not
- * GC), keeping the names sidecar stable for the lifetime of the process. */
+ * SN-26-bridge-coverage-e: when a fresh id is assigned and the monitor
+ * wire is live (monitor_bin_mode + monitor_fd >= 0), an MWK_NAME_DEF
+ * record is emitted on the wire BEFORE returning the new id, binding
+ * (id -> name bytes) for the controller's per-participant intern table.
+ * No sidecar file is written.
+ *
+ * Allocation strategy: raw malloc/realloc (not GC), keeping the names
+ * table stable for the lifetime of the process. */
 static uint32_t intern_name_bin(const char *p, int len) {
     if (!p || len < 0) return MW_NAME_ID_NONE;
     /* Linear scan for existing entry. */
@@ -282,17 +295,28 @@ static uint32_t intern_name_bin(const char *p, int len) {
     g_bin_names[id]     = copy;
     g_bin_name_lens[id] = len;
     g_bin_n_names       = id + 1;
+    /* SN-26-bridge-coverage-e: announce the new binding on the wire BEFORE
+     * any record using this id flows.  Silent no-op when bin mode is off
+     * or the FIFO isn't open (e.g. legacy text-protocol path, or pre-init). */
+    if (monitor_bin_mode && monitor_fd >= 0) {
+        mon_send_bin(MWK_NAME_DEF, (uint32_t)id, MWT_STRING,
+                     (len > 0) ? (const void *)copy : NULL, (uint32_t)len);
+    }
     return (uint32_t)id;
 }
 
 /* SN-26-auto-binary-scrip: atexit handler — emit final MWK_END record on
- * the wire (so the controller sees a clean termination, not a raw EOF),
- * then dump the auto-interned names table to MONITOR_NAMES_OUT.
+ * the wire (so the controller sees a clean termination, not a raw EOF).
+ *
+ * SN-26-bridge-coverage-e: with streaming intern on the wire, names are
+ * announced via MWK_NAME_DEF records as they are first observed.  No
+ * sidecar dump happens here — MWK_END is the only thing this handler
+ * still emits.
  *
  * Registered via atexit() in SNO_INIT_fn when MONITOR_BIN=1.  Safe to call
- * even if monitor_fd was never opened or no names were interned; it just
- * does nothing in those cases.  Uses static guard so a second call (e.g.
- * via duplicate atexit registrations) is a no-op. */
+ * even if monitor_fd was never opened; it just does nothing in that case.
+ * Uses static guard so a second call (e.g. via duplicate atexit
+ * registrations) is a no-op. */
 static void mon_at_exit(void) {
     static int already = 0;
     if (already) return;
@@ -305,17 +329,6 @@ static void mon_at_exit(void) {
         mw_pack_hdr(hdr, MWK_END, MW_NAME_ID_NONE, MWT_NULL, 0);
         ssize_t w = write(monitor_fd, hdr, MW_HDR_BYTES);
         (void)w;
-    }
-    if (g_names_out_path_ref && g_names_out_path_ref[0] && g_bin_n_names > 0) {
-        FILE *f = fopen(g_names_out_path_ref, "w");
-        if (f) {
-            for (int i = 0; i < g_bin_n_names; i++) {
-                if (g_bin_name_lens[i] > 0)
-                    fwrite(g_bin_names[i], 1, (size_t)g_bin_name_lens[i], f);
-                fputc('\n', f);
-            }
-            fclose(f);
-        }
     }
 }
 
@@ -1978,16 +1991,13 @@ void SNO_INIT_fn(void) {
 
     /* SN-26-auto-binary-scrip: switch comm_var/comm_call/comm_return to
      * binary wire format (monitor_wire.h) when MONITOR_BIN=1 is set.
-     * Names are auto-interned; at process exit, the names table is dumped
-     * to MONITOR_NAMES_OUT (UTF-8, one name per line, indexed 0..N-1) so
-     * the controller can resolve name_id → string post-hoc.  No source
-     * modification of the user's .sno required. */
+     * Names are auto-interned and announced on the wire via MWK_NAME_DEF
+     * records (SN-26-bridge-coverage-e — streaming intern, no sidecar).
+     * No source modification of the user's .sno required. */
     {
         const char *ev_bin = getenv("MONITOR_BIN");
         if (ev_bin && ev_bin[0] && ev_bin[0] != '0') {
             monitor_bin_mode = 1;
-            const char *no_path = getenv("MONITOR_NAMES_OUT");
-            if (no_path && no_path[0]) g_names_out_path_ref = no_path;
             atexit(mon_at_exit);
         }
     }

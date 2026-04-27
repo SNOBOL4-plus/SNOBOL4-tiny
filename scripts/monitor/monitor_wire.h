@@ -11,8 +11,8 @@
  *
  *   offset  size  field        notes
  *   ------  ----  -----------  ----------------------------------------
- *      0     4    kind         u32 LE: 1=VALUE 2=CALL 3=RETURN 4=END 5=LABEL
- *      4     4    name_id      u32 LE: index into per-run names file
+ *      0     4    kind         u32 LE: 1=VALUE 2=CALL 3=RETURN 4=END 5=LABEL 6=NAME_DEF
+ *      4     4    name_id      u32 LE: streaming-intern id (see MWK_NAME_DEF)
  *      8     1    type         u8: SNOBOL4 datatype, see MWT_*
  *      9     4    value_len    u32 LE: length of value_bytes that follow
  *     13   ...    value_bytes  raw bytes per type:
@@ -34,10 +34,25 @@
  * a label-table reverse lookup; the source line / label name (if any)
  * can be derived externally from the program listing.
  *
- * The names file is a UTF-8 plain text sidecar: one name per line, indexed
- * 0..N-1.  inject_traces.py emits it; participants pass its path via
- * MONITOR_NAMES_FILE env var; controller reads it to print human-readable
- * traces.  name_id 0xffffffff is reserved for "(unnamed)" used by END events.
+ * MWK_NAME_DEF semantics (SN-26-bridge-coverage-e — streaming intern):
+ * emitted by the runtime IMMEDIATELY BEFORE the first record that
+ * references a given name_id.  The runtime maintains a private intern
+ * table; when a name is interned for the first time, a NAME_DEF record
+ * is sent giving the binding name_id -> name bytes:
+ *     kind      = MWK_NAME_DEF
+ *     name_id   = the id being defined
+ *     type      = MWT_STRING
+ *     value_len = length of the name in bytes
+ *     value     = the name bytes (UTF-8)
+ * Subsequent records may use this name_id without re-emitting the name.
+ * Receivers build a per-participant intern table from these wire records;
+ * NO sidecar file is read or written.  NAME_DEF records ARE acked by the
+ * controller (sync-step discipline) but are NOT considered semantic events
+ * for divergence comparison — different participants may intern the same
+ * name at different ids without diverging, since the controller resolves
+ * each record's name_id to a name string before the (kind,name,type,value)
+ * comparison.  An END record always carries name_id = MW_NAME_ID_NONE and
+ * is never preceded by a NAME_DEF for that id.
  */
 
 #ifndef MONITOR_WIRE_H
@@ -46,11 +61,12 @@
 #include <stdint.h>
 
 /* --- Event kinds (record.kind) -------------------------------------------- */
-#define MWK_VALUE   1u
-#define MWK_CALL    2u
-#define MWK_RETURN  3u
-#define MWK_END     4u
-#define MWK_LABEL   5u   /* statement entry — carries STNO label name (or empty) */
+#define MWK_VALUE     1u
+#define MWK_CALL      2u
+#define MWK_RETURN    3u
+#define MWK_END       4u
+#define MWK_LABEL     5u   /* statement entry — carries STNO label name (or empty) */
+#define MWK_NAME_DEF  6u   /* SN-26-bridge-coverage-e: streaming-intern name binding */
 
 /* --- SNOBOL4 datatype codes (record.type) --------------------------------- */
 /* Chosen as a stable, dialect-neutral enumeration.  Both ABIs map their

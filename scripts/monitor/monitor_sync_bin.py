@@ -10,41 +10,31 @@ Wire format (matches monitor_wire.h):
     13-byte header LE: u32 kind | u32 name_id | u8 type | u32 value_len
     value_len bytes of value (varies by type)
 
-Two CLI shapes are accepted:
+SN-26-bridge-coverage-e — streaming intern on the wire.
 
-    NEW (per-participant names sidecar — SN-26-auto path):
-        monitor_sync_bin.py NAME:READY_FIFO:GO_FIFO:NAMES_FILE ...
+Names are NOT loaded from a sidecar file.  Participants emit MWK_NAME_DEF
+records inline before any record using a fresh name_id.  The controller
+maintains a per-participant intern table populated from those NAME_DEF
+records.  NAME_DEFs are acked with 'G' like any other record but are
+not surfaced as semantic events for divergence comparison — different
+participants may assign the same name different ids without diverging,
+since comparison is on the resolved name string, not the id.
 
-        Each participant has its OWN names sidecar — a file written by
-        the participant at process exit listing every name it interned,
-        one per line, indexed 0..N-1.  The controller resolves each
-        record's name_id to a string per-participant before comparing.
-        Comparison tuple is (kind, name_string, type, value_bytes), so
-        participants that assign different ids to the same name agree.
+CLI shape (single, simple):
 
-    LEGACY (one shared names file — pre-#19 path):
-        monitor_sync_bin.py NAMES_FILE NAME:READY_FIFO:GO_FIFO ...
+    monitor_sync_bin.py NAME:READY_FIFO:GO_FIFO ...
 
-        Single shared names file, applied to all participants.  All
-        participants must have agreed on a common name->id mapping
-        ahead of time (this was the inject_traces_bin.py path).  Kept
-        working so existing harness scripts keep running until they
-        are rewritten.
-
-Detection: if argv[1] contains a colon, NEW shape; else LEGACY shape.
-
-The first PARTICIPANT is the consensus oracle.  Divergences are
-reported relative to it.
+The first PARTICIPANT is the consensus oracle.  Divergences are reported
+relative to it.
 
 Exit codes:
     0   all participants reached END agreeing on every event
     1   divergence — first disagreement reported, all participants stopped
-    2   timeout
+    2   timeout / bad CLI
     3   protocol error (bad header, short read, etc.)
 """
 
 import os
-import select
 import struct
 import sys
 import time
@@ -54,14 +44,18 @@ HDR_FMT  = '<IIBI'   # u32 kind, u32 name_id, u8 type, u32 value_len
 HDR_SIZE = struct.calcsize(HDR_FMT)
 assert HDR_SIZE == 13, "header must be 13 bytes"
 
-# Event kinds
-MWK_VALUE  = 1
-MWK_CALL   = 2
-MWK_RETURN = 3
-MWK_END    = 4
-MWK_LABEL  = 5
+# Event kinds — keep aligned with monitor_wire.h MWK_*
+MWK_VALUE     = 1
+MWK_CALL      = 2
+MWK_RETURN    = 3
+MWK_END       = 4
+MWK_LABEL     = 5
+MWK_NAME_DEF  = 6
 
-KIND_NAMES = {1: 'VALUE', 2: 'CALL', 3: 'RETURN', 4: 'END', 5: 'LABEL'}
+KIND_NAMES = {
+    1: 'VALUE', 2: 'CALL', 3: 'RETURN', 4: 'END',
+    5: 'LABEL', 6: 'NAME_DEF',
+}
 
 # Type tags (must match monitor_wire.h MWT_*)
 TYPE_NAMES = {
@@ -78,40 +72,41 @@ EVENT_TIMEOUT_S = 60.0    # generous; beauty self-host is slow
 Event = namedtuple('Event', 'kind name_id type value')
 
 
-def load_names(path):
-    """Load a names sidecar.  Empty/missing file is OK — yields []."""
-    if not path or not os.path.exists(path):
-        return []
-    with open(path) as f:
-        return [line.rstrip('\n').rstrip('\r') for line in f]
+def name_for_id(names_table, name_id):
+    """Resolve a name_id against a participant's intern table.
 
-
-def name_for_id(names, name_id):
+    names_table is a dict {id -> bytes}. NAME_ID_NONE -> '' (used for END/LABEL).
+    Unknown ids surface as '(id=N)' so downstream comparison still has a stable
+    string — should not happen with well-formed wire output.
+    """
     if name_id == NAME_ID_NONE:
         return ''
-    if 0 <= name_id < len(names):
-        return names[name_id]
-    return f'(id={name_id})'
+    nm = names_table.get(name_id)
+    if nm is None:
+        return f'(id={name_id})'
+    try:
+        return nm.decode('utf-8', errors='backslashreplace')
+    except Exception:
+        return repr(nm)
 
 
 # ---------------------------------------------------------------------------
 # read_record — read one full record (header + value bytes) from fd.
-# Returns Event namedtuple, or None on EOF, or raises on protocol error.
 # ---------------------------------------------------------------------------
 
 def read_exact(fd, n, timeout_s):
-    """Read exactly n bytes from fd or return None on EOF.
-    Uses select() with timeout to avoid hanging."""
+    """Read exactly n bytes from fd or return None on EOF."""
     deadline = time.monotonic() + timeout_s
     buf = b''
     while len(buf) < n:
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             return None
-        r, _, _ = select.select([fd], [], [], remaining)
-        if not r:
-            return None
-        chunk = os.read(fd, n - len(buf))
+        try:
+            chunk = os.read(fd, n - len(buf))
+        except BlockingIOError:
+            time.sleep(0.001)
+            continue
         if not chunk:
             return None  # EOF
         buf += chunk
@@ -132,16 +127,58 @@ def read_record(fd, timeout_s):
     return Event(kind, name_id, type_tag, val)
 
 
+def read_semantic_record(f, timeout_s):
+    """Read records from participant f until a non-NAME_DEF record is seen.
+
+    ONLY NAME_DEF records are absorbed here — they are wire-protocol
+    bookkeeping (binding name_id -> name bytes) and carry no semantics
+    of their own.  Every other record kind (VALUE, CALL, RETURN, END,
+    LABEL) is returned to the caller for sync-step comparison.
+
+    LABEL records are EXPLICITLY comparison-eligible: a LABEL divergence
+    means the runtimes entered different statements (different STNO),
+    which is a structural-flow bug that must surface immediately.  Do
+    not extend this absorption loop to LABEL or any future "informational"
+    kind without an explicit goal-level decision — silently filtering
+    LABEL would hide exactly the class of bug the monitor exists to
+    catch (control-flow disagreement before any value disagreement).
+
+    NAME_DEF records are acked with 'G' here so the participant can
+    continue; the participant still cannot run ahead of the controller
+    because each ack is one-record-at-a-time.
+
+    Returns Event or None on EOF.  Raises ValueError on protocol error.
+    """
+    while True:
+        ev = read_record(f['rd'], timeout_s)
+        if ev is None:
+            return None
+        if ev.kind != MWK_NAME_DEF:
+            return ev
+        # Streaming intern: register binding, ack, loop for next record.
+        f['names'][ev.name_id] = ev.value
+        try:
+            os.write(f['gw'], b'G')
+        except OSError:
+            return None  # participant closed early
+
+
 # ---------------------------------------------------------------------------
-# Resolve an Event to a comparable tuple using a per-participant names list.
-# This is the SN-26-auto switch: comparison is on name_string, not name_id.
+# Resolve an Event to a comparable tuple using a per-participant names dict.
+#
+# All non-NAME_DEF kinds participate in this comparison — including LABEL.
+# A LABEL divergence (same step, different STNO) means the runtimes are
+# executing different statements; that is a real structural-flow bug,
+# usually a control-flow disagreement upstream.  Do not be tempted to
+# filter LABELs out of the comparison to "reach" a value divergence —
+# the LABEL divergence IS the divergence.
 # ---------------------------------------------------------------------------
 
-def event_key(ev, names):
+def event_key(ev, names_table):
     """Return (kind, name_string, type, value_bytes) — the comparable tuple."""
     if ev is None:
         return None
-    return (ev.kind, name_for_id(names, ev.name_id), ev.type, ev.value)
+    return (ev.kind, name_for_id(names_table, ev.name_id), ev.type, ev.value)
 
 
 # ---------------------------------------------------------------------------
@@ -169,9 +206,9 @@ def fmt_value(type_tag, value):
     return f'{name}'
 
 
-def fmt_event(ev, names):
+def fmt_event(ev, names_table):
     kn = KIND_NAMES.get(ev.kind, f'K{ev.kind}')
-    nm = name_for_id(names, ev.name_id) or '(none)'
+    nm = name_for_id(names_table, ev.name_id) or '(none)'
     if ev.kind == MWK_END:
         return f'{kn}'
     if ev.kind == MWK_CALL:
@@ -186,16 +223,7 @@ def fmt_event(ev, names):
 # ---------------------------------------------------------------------------
 
 def open_pair(ready_path, go_path):
-    """Open ready FIFO for read, go FIFO for write.
-
-    Order matters: we must open the ready pipe first (blocking) so the
-    participant's write side can succeed; then open go for write
-    (blocking) so the participant's read side can proceed.
-
-    But participants open ready for write first, then go for read --
-    so both sides converge.  We just open with the same pattern as
-    the text-protocol version: O_RDONLY for ready, O_WRONLY for go.
-    """
+    """Open ready FIFO for read, go FIFO for write."""
     rd = os.open(ready_path, os.O_RDONLY)
     gw = os.open(go_path,    os.O_WRONLY)
     return rd, gw
@@ -205,55 +233,27 @@ def open_pair(ready_path, go_path):
 # Run the controller.
 # ---------------------------------------------------------------------------
 
-def run(participants, names_paths_per_participant):
-    """participants: list of (name, ready_path, go_path).
-    names_paths_per_participant: list of names-file paths, parallel to
-    participants (or the same path repeated for legacy mode).
-
-    Each participant's names list is loaded fresh AFTER we open the ready
-    FIFO — but since the participant only writes its sidecar at process
-    exit (atexit), we must in general re-load it on demand if the file
-    isn't present at startup.  For the auto path, the controller doesn't
-    need names until the FIRST disagreement or pretty-print, and by then
-    most events have flowed.  Practical compromise: load lazily and cache.
-    A miss yields '(id=N)' which is still a stable comparable string.
-    """
+def run(participants):
+    """participants: list of (name, ready_path, go_path)."""
     fds = []
-    for (nm, rp, gp), npath in zip(participants, names_paths_per_participant):
+    for nm, rp, gp in participants:
         rd, gw = open_pair(rp, gp)
-        fds.append({'name': nm, 'rd': rd, 'gw': gw, 'names_path': npath,
-                    'names': load_names(npath), 'names_loaded_size': -1})
-        n_loaded = len(fds[-1]['names'])
-        print(f'[ctrl] opened {nm}: ready={rp} go={gp} names={npath} ({n_loaded} loaded)',
-              file=sys.stderr)
-
-    def refresh_names(f):
-        """Re-read sidecar if it has grown since last load (participant's
-        atexit handler may have written it after we opened the pipe)."""
-        path = f['names_path']
-        if not path or not os.path.exists(path):
-            return
-        try:
-            sz = os.path.getsize(path)
-        except OSError:
-            return
-        if sz != f['names_loaded_size']:
-            f['names'] = load_names(path)
-            f['names_loaded_size'] = sz
+        fds.append({'name': nm, 'rd': rd, 'gw': gw, 'names': {}})
+        print(f'[ctrl] opened {nm}: ready={rp} go={gp}', file=sys.stderr)
 
     diverged = False
     step = 0
 
     while True:
         step += 1
-        # Read one record from each participant.
-        # Track which ones returned None (EOF or timeout).
+        # Read one semantic record from each participant.  read_semantic_record
+        # absorbs NAME_DEFs internally (acks them, registers bindings).
         events = []
         eof_set = []
         protocol_err = False
         for f in fds:
             try:
-                ev = read_record(f['rd'], EVENT_TIMEOUT_S)
+                ev = read_semantic_record(f, EVENT_TIMEOUT_S)
             except ValueError as e:
                 print(f'[ctrl] PROTOCOL ERR step {step} on {f["name"]}: {e}', file=sys.stderr)
                 protocol_err = True
@@ -272,21 +272,15 @@ def run(participants, names_paths_per_participant):
                 except OSError: pass
             return 3
 
-        # If ALL participants hit EOF simultaneously, that's a clean
-        # termination — they each ran their .sno to END.  The pipe close
-        # is the END signal in lieu of an explicit MON_CLOSE call.
+        # All EOF: clean termination (legacy path, when a runtime exits without
+        # emitting MWK_END).
         if len(eof_set) == len(fds):
             print(f'[ctrl] all reached EOF at step {step} (clean termination)',
                   file=sys.stderr)
             return 0
 
-        # Mixed: some EOF, some real event — that's a divergence in
-        # event count.  One side terminated early.
+        # Mixed EOF: divergence in event count.
         if eof_set:
-            # Refresh names — some participants may have just written
-            # their sidecar in their atexit handler.
-            for f in fds:
-                refresh_names(f)
             print(f'[ctrl] PARTIAL EOF step {step}: {eof_set} done, others still running',
                   file=sys.stderr)
             for f, ev in events:
@@ -300,8 +294,7 @@ def run(participants, names_paths_per_participant):
                 except OSError: pass
             return 1
 
-        # Compare against oracle (events[0]) using per-participant name
-        # resolution.  Tuple key: (kind, name_string, type, value).
+        # Compare against oracle (events[0]) using per-participant name resolution.
         oracle_f, oracle_ev = events[0]
         oracle_key = event_key(oracle_ev, oracle_f['names'])
         agree = True
@@ -311,29 +304,14 @@ def run(participants, names_paths_per_participant):
                 break
 
         if not agree:
-            # Refresh sidecars — the disagreement may be on an id whose
-            # name has just been written by the producer.
-            for f in fds:
-                refresh_names(f)
-            # Re-check after refresh; may still disagree, that's the bug.
-            oracle_key = event_key(oracle_ev, oracle_f['names'])
-            still_disagree = False
-            for f, ev in events[1:]:
-                if event_key(ev, f['names']) != oracle_key:
-                    still_disagree = True
-                    break
-            if still_disagree:
-                print(f'[ctrl] DIVERGE step {step}', file=sys.stderr)
-                for f, ev in events:
-                    print(f'  {f["name"]}: {fmt_event(ev, f["names"])}', file=sys.stderr)
-                # 'S' to all so they exit cleanly.
-                for f, ev in events:
-                    try: os.write(f['gw'], b'S')
-                    except OSError: pass
-                diverged = True
-                break
-            # Refresh resolved the apparent disagreement — fall through
-            # to the agree path.
+            print(f'[ctrl] DIVERGE step {step}', file=sys.stderr)
+            for f, ev in events:
+                print(f'  {f["name"]}: {fmt_event(ev, f["names"])}', file=sys.stderr)
+            for f, ev in events:
+                try: os.write(f['gw'], b'S')
+                except OSError: pass
+            diverged = True
+            break
 
         # If everyone sent END, we're done.
         if oracle_ev.kind == MWK_END:
@@ -348,7 +326,6 @@ def run(participants, names_paths_per_participant):
             try:
                 os.write(f['gw'], b'G')
             except OSError:
-                # Participant may have closed early — treat as divergence.
                 print(f'[ctrl] write failed to {f["name"]}', file=sys.stderr)
                 diverged = True
                 break
@@ -366,57 +343,29 @@ def run(participants, names_paths_per_participant):
 
 
 def parse_argv(argv):
-    """Return (participants, names_paths) or exit(2) on bad spec.
+    """Return participants or exit(2).
 
-    Detection:
-      - If argv[1] contains a colon, it's a participant spec → NEW mode.
-        Every spec is NAME:READY:GO:NAMES.
-      - Otherwise argv[1] is a shared names file → LEGACY mode.
-        Subsequent specs are NAME:READY:GO.
+    Spec: NAME:READY:GO  (one per participant).  No sidecar/names paths —
+    streaming intern means names live on the wire.
     """
     if len(argv) < 2:
-        print('Usage:', file=sys.stderr)
-        print('  monitor_sync_bin.py NAME:READY:GO:NAMES ...        (per-participant)',
-              file=sys.stderr)
-        print('  monitor_sync_bin.py NAMES_FILE NAME:READY:GO ...   (shared, legacy)',
-              file=sys.stderr)
+        print('Usage: monitor_sync_bin.py NAME:READY:GO ...', file=sys.stderr)
         sys.exit(2)
 
-    first = argv[1]
-    new_mode = ':' in first
     participants = []
-    names_paths  = []
-
-    if new_mode:
-        for spec in argv[1:]:
-            parts = spec.split(':')
-            if len(parts) != 4:
-                print(f'bad participant spec (expect NAME:READY:GO:NAMES): {spec}',
-                      file=sys.stderr)
-                sys.exit(2)
-            name, ready, go, namesf = parts
-            participants.append((name, ready, go))
-            names_paths.append(namesf)
-    else:
-        shared = argv[1]
-        if len(argv) < 3:
-            print('legacy mode needs at least one NAME:READY:GO spec', file=sys.stderr)
+    for spec in argv[1:]:
+        parts = spec.split(':')
+        if len(parts) != 3:
+            print(f'bad participant spec (expect NAME:READY:GO): {spec}',
+                  file=sys.stderr)
             sys.exit(2)
-        for spec in argv[2:]:
-            parts = spec.split(':')
-            if len(parts) != 3:
-                print(f'bad participant spec (expect NAME:READY:GO): {spec}',
-                      file=sys.stderr)
-                sys.exit(2)
-            participants.append(tuple(parts))
-            names_paths.append(shared)
-
-    return participants, names_paths
+        participants.append(tuple(parts))
+    return participants
 
 
 def main():
-    participants, names_paths = parse_argv(sys.argv)
-    rc = run(participants, names_paths)
+    participants = parse_argv(sys.argv)
+    rc = run(participants)
     sys.exit(rc)
 
 
