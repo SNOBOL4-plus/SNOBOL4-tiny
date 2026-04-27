@@ -183,17 +183,18 @@ if [[ "$want_scr" = "1" ]]; then
 fi
 
 # snobol4dotnet — runtime under test for GOAL-NET-BEAUTY-SELF.
-# MonitorIpc.cs reads MONITOR_READY_PIPE / MONITOR_GO_PIPE / MONITOR_NAMES_OUT
-# at first emit; silently no-op if any of those env vars is unset (S-2-bridge-1
-# dormancy guarantee).  Fire-points landed in S-2-bridge-2/3/4:
-#   - Executive.Assign chokepoint  → VALUE on every lvalue store
-#   - ExecuteProgramDefinedFunction → CALL/EmitValue/RETURN at fn entry/exit
+# MonitorIpc.cs reads MONITOR_READY_PIPE / MONITOR_GO_PIPE at first emit;
+# silently no-op if either is unset (S-2-bridge-1 dormancy guarantee).
+# Fire-points landed:
+#   - Executive.Assign chokepoint  → VALUE on every lvalue store (bridge-2/3)
+#   - ExecuteProgramDefinedFunction → CALL/EmitValue/RETURN at fn entry/exit (bridge-4)
+#   - InitStatementMsil + OpCode.Init → LABEL on every stmt entry (coverage-f)
+#   - InternName → MWK_NAME_DEF on first id use (coverage-e, streaming intern)
 # Run with -bf for case-sensitive identifiers (matches csn/spl invocation).
 if [[ "$want_dot" = "1" ]]; then
     MONITOR_BIN=1 \
     MONITOR_READY_PIPE="$TMP/dot.ready" \
     MONITOR_GO_PIPE="$TMP/dot.go" \
-    MONITOR_NAMES_OUT="$TMP/dot.names" \
         timeout "$((TIMEOUT*2))" dotnet "$SNO4_DLL" -bf "$SNO" \
         < "$STDIN_SRC" > "$TMP/dot.out" 2> "$TMP/dot.err" &
     PIDS+=($!)
@@ -201,11 +202,8 @@ fi
 
 # ── Launch controller using the SN-26-bridge-coverage-e 3-part spec ────
 # Names live on the wire (MWK_NAME_DEF records); no sidecar names path
-# in the spec.  The MONITOR_NAMES_OUT env vars set above are now ignored
-# by csn/spl/scr runtimes (per SN-26-e); they're left in the participant
-# launches as harmless legacy env so other runtimes (e.g. snobol4dotnet
-# 'dot' lane) that still honor them continue to work until their own -e
-# patches land.
+# in the spec.  All four runtimes (csn, spl, scr, dot) use streaming
+# intern as of snobol4dotnet @ 8e5ff9e.
 SPECS=()
 for p in "${PARTICIPANTS[@]}"; do
     SPECS+=("$p:$TMP/$p.ready:$TMP/$p.go")
