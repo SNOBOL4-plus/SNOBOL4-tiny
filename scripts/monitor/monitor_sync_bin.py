@@ -181,37 +181,60 @@ def event_key(ev, names_table):
     return (ev.kind, name_for_id(names_table, ev.name_id), ev.type, ev.value)
 
 
-# MWT_UNKNOWN sentinel — wildcard in compare.  See keys_match below.
+# MWT_UNKNOWN sentinel — wildcard on type field.  See keys_match below.
 MWT_UNKNOWN = 255
+
+# <lval> sentinel — wildcard on name field.  See keys_match below.
+LVAL_SENTINEL = '<lval>'
 
 
 def keys_match(a, b):
-    """Compare two event_key tuples, treating MWT_UNKNOWN as a wildcard on
-    the type field.
+    """Compare two event_key tuples, with two principled wildcards:
 
-    Rationale: a participant's bridge may not yet have full type-block
-    discrimination — e.g. SPITBOL's spl_block_to_wire returns MWT_UNKNOWN
-    for nmblk/ptblk/atblk/tbblk/cdblk/efblk because the type-word externs
-    are not exported in osint.h.  Until SN-26-bridge-coverage extends the
-    coverage, every aggregate creation in beauty (TABLE(), ARRAY(), pattern
-    construction) would trip a spurious DIVERGE on the type byte alone
-    while kind, name, and value bytes match.
+      1. MWT_UNKNOWN on the type field — strictly less informative.
+         A participant's bridge may not yet have full type-block
+         discrimination (e.g. SPITBOL's spl_block_to_wire returns
+         MWT_UNKNOWN for nmblk/ptblk/atblk/tbblk/cdblk/efblk because
+         the type-word externs are not exported in osint.h).  Until
+         SN-26-bridge-coverage extends the coverage, every aggregate
+         creation in beauty would trip a spurious DIVERGE on the type
+         byte alone while kind, name, and value bytes match.  Treating
+         UNKNOWN as a wildcard preserves divergence detection on real
+         disagreements; when two real typed tags disagree (STRING vs
+         INTEGER), this still flags DIVERGE.
 
-    UNKNOWN is strictly less informative than a typed tag — never
-    contradictory.  Treating it as a wildcard preserves divergence
-    detection on real disagreements (kind/name/value).  When two real
-    typed tags disagree (e.g. STRING vs INTEGER), this still flags
-    DIVERGE — only the UNKNOWN-vs-typed comparison is loosened.
+      2. '<lval>' on the name field — strictly less informative.
+         The pure-observer protocol contract says aggregate-element
+         stores (a<i>=v, d<'k'>=v) are anonymous lvalues with no
+         meaningful single name.  csn and the original dot emitted
+         '<lval>'.  S-2-bridge-7-lval (snobol4dotnet 2414a26) enriched
+         dot to emit the collection name (e.g. 'UTF') as a debugging
+         aid — strictly more informative.  Until SN-26-bridge-coverage
+         backports the same enrichment to csn (and addresses spl's
+         fake-vrblk bug), the wire shows '<lval>' on csn / '<lval>' or
+         junk on spl / collection-name on dot.  Treating '<lval>' as
+         a wildcard lets the run advance through aggregate stores when
+         one side has the enriched name and the other has the sentinel.
+         Real name disagreement (e.g. dot's 'S' vs spl's 'T' on a
+         scalar store) still flags DIVERGE.
+
+    Both wildcards apply ONLY when kind, value bytes, and the unmasked
+    fields all match — they soften the comparison without ever masking
+    a value-byte or kind divergence.  Those are the load-bearing fields
+    of the protocol; the type and name fields are decorative metadata
+    once a real value-byte agreement has been established.
     """
     if a is None or b is None:
         return a is b
     (ak, an, at, av) = a
     (bk, bn, bt, bv) = b
-    if ak != bk or an != bn or av != bv:
+    if ak != bk or av != bv:
         return False
-    if at == bt:
-        return True
-    return at == MWT_UNKNOWN or bt == MWT_UNKNOWN
+    type_ok = (at == bt) or (at == MWT_UNKNOWN) or (bt == MWT_UNKNOWN)
+    if not type_ok:
+        return False
+    name_ok = (an == bn) or (an == LVAL_SENTINEL) or (bn == LVAL_SENTINEL)
+    return name_ok
 
 
 # ---------------------------------------------------------------------------

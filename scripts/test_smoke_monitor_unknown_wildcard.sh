@@ -43,30 +43,84 @@ EOF
 
 PASS=0; FAIL=0
 
-# Check: 2-way spl+dot reaches END (exit 0)
+# Check 1: 2-way spl+dot reaches END (exit 0) with TABLE() probe.
+# Without UNKNOWN-wildcard, this would DIVERGE on type byte (UNKNOWN vs TABLE).
 out=$(PARTICIPANTS="spl dot" bash "$HARNESS" "$TD/probe.sno" 2>&1)
 rc=$?
 if [ $rc -eq 0 ]; then
     if echo "$out" | grep -q "all reached END"; then
         PASS=$((PASS+1))
     else
-        echo "FAIL: harness exit 0 but no END marker"
+        echo "FAIL Check 1: harness exit 0 but no END marker"
         echo "$out" | tail -10
         FAIL=$((FAIL+1))
     fi
 else
-    echo "FAIL: harness exit=$rc on TABLE() probe"
+    echo "FAIL Check 1: harness exit=$rc on TABLE() probe"
     echo "$out" | tail -15
     FAIL=$((FAIL+1))
 fi
 
-# Check: non-UNKNOWN value mismatch still DIVERGEs (regression guard)
-# Build a probe where dot and spl emit genuinely different values.
-# Hard to do without a runtime difference — but we can verify by
-# corrupting one side's wire artificially; skipping for now.  The
-# integration above already proves the wildcard is selective enough
-# that beauty.sno self-host moves PAST the step-47 TABLE noise to
-# step-49 (a different bug).
+# Check 2: <lval> sentinel as wildcard on name field.
+# Probe creates a table and stores into a slot.  dot now emits the
+# collection name 'd' (post S-2-bridge-7-lval) for the slot store;
+# spl emits its own (possibly junk) name.  But IF spl were emitting
+# <lval> per protocol contract, the wildcard should make the run
+# pass.  We verify by feeding a probe that elicits <lval> from
+# at least one bridge — currently csn's lvalue_name_id() guarantees
+# this, but csn has the label-only-skip bug at startup that breaks
+# 2-way csn+dot.  Use a synthetic test: confirm keys_match accepts
+# <lval> on either side.
+python3 - << 'PY' || FAIL=$((FAIL+1))
+import sys, os
+sys.path.insert(0, '/home/claude/one4all/scripts/monitor')
+import monitor_sync_bin as m
+
+# Construct two events: one with name 'UTF', one with '<lval>'
+# Same kind, same type, same value → wildcard should make them match.
+kinds = m.MWK_VALUE
+type_str = 1  # STRING
+value = b'NO_BREAK_SPACE'
+
+a = (kinds, 'UTF',     type_str, value)
+b = (kinds, '<lval>',  type_str, value)
+assert m.keys_match(a, b), "wildcard <lval> failed (a vs b)"
+assert m.keys_match(b, a), "wildcard <lval> failed (b vs a)"
+
+# Sanity: distinct real names must DIVERGE.
+c = (kinds, 'UTF',     type_str, value)
+d = (kinds, 'OTHER',   type_str, value)
+assert not m.keys_match(c, d), "name divergence not detected"
+
+# Sanity: value bytes mismatch must DIVERGE even if name is <lval>.
+e = (kinds, 'UTF',     type_str, b'X')
+f = (kinds, '<lval>',  type_str, b'Y')
+assert not m.keys_match(e, f), "value-byte divergence not detected (with <lval>)"
+
+# Sanity: kind mismatch must DIVERGE.
+g = (m.MWK_VALUE, 'UTF', type_str, value)
+h = (m.MWK_LABEL, 'UTF', type_str, value)
+assert not m.keys_match(g, h), "kind divergence not detected"
+
+print("OK")
+PY
+if [ $? -eq 0 ]; then PASS=$((PASS+1)); else echo "FAIL Check 2: keys_match wildcard semantics"; fi
+
+# Check 3: combined UNKNOWN + <lval> wildcards (regression of Check 1's
+# UNKNOWN logic still working in the new code).
+python3 - << 'PY' || FAIL=$((FAIL+1))
+import sys
+sys.path.insert(0, '/home/claude/one4all/scripts/monitor')
+import monitor_sync_bin as m
+
+# Aggregate-element store: spl emits UNKNOWN type + junk name; dot emits
+# correct type + collection name.  With both wildcards, this matches.
+a = (m.MWK_VALUE, '<lval>', m.MWT_UNKNOWN, b'NO_BREAK_SPACE')   # csn emits this
+b = (m.MWK_VALUE, 'UTF',    1,             b'NO_BREAK_SPACE')   # dot emits this
+assert m.keys_match(a, b), "combined UNKNOWN+<lval> wildcard failed"
+print("OK")
+PY
+if [ $? -eq 0 ]; then PASS=$((PASS+1)); else echo "FAIL Check 3: combined wildcards"; fi
 
 echo "PASS=$PASS FAIL=$FAIL"
 [ $FAIL -eq 0 ]
