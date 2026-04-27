@@ -181,6 +181,39 @@ def event_key(ev, names_table):
     return (ev.kind, name_for_id(names_table, ev.name_id), ev.type, ev.value)
 
 
+# MWT_UNKNOWN sentinel — wildcard in compare.  See keys_match below.
+MWT_UNKNOWN = 255
+
+
+def keys_match(a, b):
+    """Compare two event_key tuples, treating MWT_UNKNOWN as a wildcard on
+    the type field.
+
+    Rationale: a participant's bridge may not yet have full type-block
+    discrimination — e.g. SPITBOL's spl_block_to_wire returns MWT_UNKNOWN
+    for nmblk/ptblk/atblk/tbblk/cdblk/efblk because the type-word externs
+    are not exported in osint.h.  Until SN-26-bridge-coverage extends the
+    coverage, every aggregate creation in beauty (TABLE(), ARRAY(), pattern
+    construction) would trip a spurious DIVERGE on the type byte alone
+    while kind, name, and value bytes match.
+
+    UNKNOWN is strictly less informative than a typed tag — never
+    contradictory.  Treating it as a wildcard preserves divergence
+    detection on real disagreements (kind/name/value).  When two real
+    typed tags disagree (e.g. STRING vs INTEGER), this still flags
+    DIVERGE — only the UNKNOWN-vs-typed comparison is loosened.
+    """
+    if a is None or b is None:
+        return a is b
+    (ak, an, at, av) = a
+    (bk, bn, bt, bv) = b
+    if ak != bk or an != bn or av != bv:
+        return False
+    if at == bt:
+        return True
+    return at == MWT_UNKNOWN or bt == MWT_UNKNOWN
+
+
 # ---------------------------------------------------------------------------
 # Pretty-print one event.
 # ---------------------------------------------------------------------------
@@ -295,11 +328,13 @@ def run(participants):
             return 1
 
         # Compare against oracle (events[0]) using per-participant name resolution.
+        # keys_match treats MWT_UNKNOWN as a wildcard on the type field — see
+        # the keys_match docstring for the rationale.
         oracle_f, oracle_ev = events[0]
         oracle_key = event_key(oracle_ev, oracle_f['names'])
         agree = True
         for f, ev in events[1:]:
-            if event_key(ev, f['names']) != oracle_key:
+            if not keys_match(event_key(ev, f['names']), oracle_key):
                 agree = False
                 break
 
