@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 # test_monitor_3way_sync_step_auto.sh — auto-mode binary sync-step monitor.
 #
-# This is the SN-26-auto successor to test_monitor_3way_sync_step_bin.sh.
-# Key differences from its predecessor:
+# Canonical sync-step harness for the SNOBOL4 frontend ladder.  Drives
+# any subset of {csn, spl, scr} participants — see PARTICIPANTS env var.
+# Replaces the entire pre-SN-26-harness-rewrite family of harnesses
+# (test_monitor_3way_sync_step_bin.sh, test_monitor_5way_ipc.sh,
+# test_monitor_sync_step.sh, test_monitor_3way.sh) which all required
+# inject_traces*.py source preprocessing.  Per RULES.md "Sync-step
+# monitor — keyword catch-alls only, no source preprocessing":
 #
 #   1. NO source preprocessing.  The user's .sno runs unmodified.
-#      No inject_traces*.py step.  Per RULES.md "Sync-step monitor —
-#      keyword catch-alls only, no source preprocessing".
+#      No inject_traces*.py step.
 #
 #   2. NO shared names file.  Each participant writes its own names
 #      sidecar (per-participant MONITOR_NAMES_OUT) at process exit;
@@ -18,20 +22,24 @@
 #      activates its own catch-all trace.  scrip additionally honors
 #      SCRIP_TRACE=1 / SCRIP_FTRACE=1 for catch-all activation.
 #
-# Today (SN-26-auto-controller landed; oracle bridges still open),
-# the SCRIP_ONLY=1 mode is the only mode that actually runs end-to-end.
-# CSNOBOL4 and SPITBOL participants are gated on the oracle-side
-# bridges that emit binary records via runtime patches (SN-26-csn-bridge,
-# SN-26-spl-bridge); when those land, the default (3-way) mode will
-# work without further harness changes.
+# CSNOBOL4 and SPITBOL participants require the SN-26-csn-bridge and
+# SN-26-spl-bridge runtime patches to fire on the wire — those landed
+# in csnobol4 (session #26) and x64 (session #27).  Both are silently
+# no-op when MONITOR_READY_PIPE is unset.
 #
 # Usage:
 #   bash test_monitor_3way_sync_step_auto.sh <file.sno>
 #   SCRIP_ONLY=1 bash test_monitor_3way_sync_step_auto.sh <file.sno>
+#   PARTICIPANTS="csn spl"     bash test_monitor_3way_sync_step_auto.sh <file.sno>
+#   PARTICIPANTS="spl scr"     bash test_monitor_3way_sync_step_auto.sh <file.sno>
+#   PARTICIPANTS="csn spl scr" bash test_monitor_3way_sync_step_auto.sh <file.sno>   # default
 #
 # Environment overrides:
-#   SCRIP_ONLY=1          — only launch scrip; useful for validation
-#                           while CSN/SPL bridges are pending.
+#   PARTICIPANTS="..."    — space-separated list from {csn, spl, scr} in
+#                           desired order.  First entry is the oracle
+#                           the controller compares against.
+#                           Default: "csn spl scr" (3-way).
+#   SCRIP_ONLY=1          — alias for PARTICIPANTS="scr" (back-compat).
 #   MONITOR_TIMEOUT=N     — per-participant timeout (default 15).
 #   STDIN_SRC=path        — file fed to each participant on stdin.
 #                           Default: /dev/null, or <file>.input if it exists.
@@ -66,15 +74,40 @@ INC="${INC:-/home/claude/corpus/programs/include}"
 TIMEOUT="${MONITOR_TIMEOUT:-15}"
 SCRIP_ONLY="${SCRIP_ONLY:-0}"
 
+# PARTICIPANTS env var (preferred):  e.g. "csn spl scr", "csn spl", "spl scr".
+# SCRIP_ONLY=1 is back-compat alias for PARTICIPANTS="scr".
+if [[ -n "${PARTICIPANTS:-}" ]]; then
+    read -r -a PARTICIPANTS <<< "$PARTICIPANTS"
+elif [[ "$SCRIP_ONLY" = "1" ]]; then
+    PARTICIPANTS=(scr)
+else
+    PARTICIPANTS=(csn spl scr)   # default 3-way; first entry is oracle
+fi
+
+# Validate participant names.
+for p in "${PARTICIPANTS[@]}"; do
+    case "$p" in
+        csn|spl|scr) ;;
+        *) echo "FAIL unknown participant '$p' (allowed: csn, spl, scr)"; exit 2 ;;
+    esac
+done
+
+want_csn=0; want_spl=0; want_scr=0
+for p in "${PARTICIPANTS[@]}"; do
+    case "$p" in
+        csn) want_csn=1 ;;
+        spl) want_spl=1 ;;
+        scr) want_scr=1 ;;
+    esac
+done
+
 # ── Prerequisites ──────────────────────────────────────────────────────
 [[ -f "$SNO" ]]                          || { echo "FAIL .sno not found: $SNO"; exit 2; }
-[[ -x "$SCRIP" ]]                        || { echo "FAIL scrip not built: $SCRIP — run build_scrip.sh"; exit 2; }
 [[ -f "$MON_DIR/monitor_sync_bin.py" ]]  || { echo "FAIL monitor_sync_bin.py missing"; exit 2; }
-
-if [[ "$SCRIP_ONLY" != "1" ]]; then
-    [[ -x "$CSNOBOL4" ]]                 || { echo "FAIL csnobol4 not built: $CSNOBOL4 (or set SCRIP_ONLY=1)"; exit 2; }
-    [[ -x "$SPITBOL" ]]                  || { echo "FAIL spitbol not built: $SPITBOL (or set SCRIP_ONLY=1)"; exit 2; }
-fi
+[[ "$want_scr" = "1" ]] && [[ ! -x "$SCRIP" ]]    && { echo "FAIL scrip not built: $SCRIP — run build_scrip.sh"; exit 2; }
+[[ "$want_csn" = "1" ]] && [[ ! -x "$CSNOBOL4" ]] && { echo "FAIL csnobol4 not built: $CSNOBOL4"; exit 2; }
+[[ "$want_spl" = "1" ]] && [[ ! -x "$SPITBOL" ]]  && { echo "FAIL spitbol not built: $SPITBOL"; exit 2; }
+:
 
 TMP=$(mktemp -d /tmp/monitor_auto_XXXXXX)
 
@@ -84,16 +117,10 @@ STDIN_SRC="${STDIN_SRC:-/dev/null}"
 
 echo "[auto] program:    $base"
 echo "[auto] tmp:        $TMP"
-echo "[auto] mode:       $([[ "$SCRIP_ONLY" = "1" ]] && echo SCRIP_ONLY || echo 3-way)"
+echo "[auto] mode:       ${PARTICIPANTS[*]}"
 echo "[auto] stdin:      $STDIN_SRC"
 
 # ── Create per-participant FIFO pairs and names-out paths ──────────────
-if [[ "$SCRIP_ONLY" = "1" ]]; then
-    PARTICIPANTS=(scr)
-else
-    PARTICIPANTS=(csn spl scr)   # csn first → oracle
-fi
-
 for p in "${PARTICIPANTS[@]}"; do
     mkfifo "$TMP/$p.ready"
     mkfifo "$TMP/$p.go"
@@ -104,10 +131,11 @@ done
 
 PIDS=()
 
-# CSNOBOL4 — participant 0 (oracle), if 3-way mode.
-# NOTE: requires SN-26-csn-bridge to actually emit on the wire.  Without
-# it, csnobol4 won't open the FIFO and the harness will block waiting.
-if [[ "$SCRIP_ONLY" != "1" ]]; then
+# CSNOBOL4 — oracle when present.
+# Requires SN-26-csn-bridge applied to v311.sil (already in current
+# csnobol4 HEAD as of session #25/#26).  The bridge is silently no-op
+# when MONITOR_READY_PIPE is unset.
+if [[ "$want_csn" = "1" ]]; then
     MONITOR_BIN=1 \
     MONITOR_READY_PIPE="$TMP/csn.ready" \
     MONITOR_GO_PIPE="$TMP/csn.go" \
@@ -115,8 +143,12 @@ if [[ "$SCRIP_ONLY" != "1" ]]; then
         timeout "$((TIMEOUT*2))" "$CSNOBOL4" -bf -P256k -S 64k -I"$INC" "$SNO" \
         < "$STDIN_SRC" > "$TMP/csn.out" 2> "$TMP/csn.err" &
     PIDS+=($!)
+fi
 
-    # SPITBOL x64 — participant 1
+# SPITBOL x64 — secondary oracle.
+# Requires SN-26-spl-bridge applied to sbl.min (already in current x64
+# HEAD as of session #27).  Silently no-op when env vars unset.
+if [[ "$want_spl" = "1" ]]; then
     MONITOR_BIN=1 \
     MONITOR_READY_PIPE="$TMP/spl.ready" \
     MONITOR_GO_PIPE="$TMP/spl.go" \
@@ -127,18 +159,20 @@ if [[ "$SCRIP_ONLY" != "1" ]]; then
     PIDS+=($!)
 fi
 
-# scrip --ir-run — always launched.  Catch-all activation via env vars
-# only; no source modification, no LOAD-chain.
-MONITOR_BIN=1 \
-MONITOR_READY_PIPE="$TMP/scr.ready" \
-MONITOR_GO_PIPE="$TMP/scr.go" \
-MONITOR_NAMES_OUT="$TMP/scr.names" \
-SCRIP_TRACE=1 \
-SCRIP_FTRACE=1 \
-SNO_LIB="$INC" \
-    timeout "$((TIMEOUT*2))" "$SCRIP" --ir-run "$SNO" \
-    < "$STDIN_SRC" > "$TMP/scr.out" 2> "$TMP/scr.err" &
-PIDS+=($!)
+# scrip --ir-run — catch-all activated via SCRIP_TRACE/SCRIP_FTRACE only;
+# no source modification, no LOAD-chain.
+if [[ "$want_scr" = "1" ]]; then
+    MONITOR_BIN=1 \
+    MONITOR_READY_PIPE="$TMP/scr.ready" \
+    MONITOR_GO_PIPE="$TMP/scr.go" \
+    MONITOR_NAMES_OUT="$TMP/scr.names" \
+    SCRIP_TRACE=1 \
+    SCRIP_FTRACE=1 \
+    SNO_LIB="$INC" \
+        timeout "$((TIMEOUT*2))" "$SCRIP" --ir-run "$SNO" \
+        < "$STDIN_SRC" > "$TMP/scr.out" 2> "$TMP/scr.err" &
+    PIDS+=($!)
+fi
 
 # ── Launch controller using the new 4-part spec ────────────────────────
 SPECS=()
