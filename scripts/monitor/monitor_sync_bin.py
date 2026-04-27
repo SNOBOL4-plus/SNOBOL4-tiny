@@ -38,7 +38,13 @@ import os
 import struct
 import sys
 import time
-from collections import namedtuple
+from collections import namedtuple, deque
+
+# How many last-agreed records to print on a DIVERGE — gives the user
+# the "last-agree + first-disagree" pair that RULES.md "Sync-step monitor
+# — read the divergence point, not the trace" calls for, without
+# spamming the chat with hundreds of records.
+DIVERGE_HISTORY = 5
 
 HDR_FMT  = '<IIBI'   # u32 kind, u32 name_id, u8 type, u32 value_len
 HDR_SIZE = struct.calcsize(HDR_FMT)
@@ -187,9 +193,24 @@ MWT_UNKNOWN = 255
 # <lval> sentinel — wildcard on name field.  See keys_match below.
 LVAL_SENTINEL = '<lval>'
 
+# Per-participant blanket-name wildcard — set via env var.
+# MONITOR_NAME_WILDCARD="spl"  (comma-separated participant names) treats
+# the named participants' name field as a wildcard for ALL events, not
+# just <lval>.  Used to advance the wire past known bridge-side bugs
+# where one runtime emits stale-memory junk in the name slot for
+# aggregate-element stores (SPITBOL fake-vrblk in spl_vrblk_name —
+# see GOAL-NET-BEAUTY-SELF S-2-bridge-7 notes).  This lets bug-finding
+# proceed on the trustworthy side (e.g. dot) without first having to
+# patch the broken side's bridge.  Real value-byte / kind divergences
+# are still reported.  Default: empty (no wildcard).
+WILDCARD_NAMES_PARTICIPANTS = set(
+    p.strip() for p in os.environ.get('MONITOR_NAME_WILDCARD', '').split(',')
+    if p.strip()
+)
 
-def keys_match(a, b):
-    """Compare two event_key tuples, with two principled wildcards:
+
+def keys_match(a, b, a_name_wild=False, b_name_wild=False):
+    """Compare two event_key tuples, with three principled wildcards:
 
       1. MWT_UNKNOWN on the type field — strictly less informative.
          A participant's bridge may not yet have full type-block
@@ -218,7 +239,18 @@ def keys_match(a, b):
          Real name disagreement (e.g. dot's 'S' vs spl's 'T' on a
          scalar store) still flags DIVERGE.
 
-    Both wildcards apply ONLY when kind, value bytes, and the unmasked
+      3. Per-participant blanket name wildcard — opt-in via env var.
+         When MONITOR_NAME_WILDCARD lists a participant, that
+         participant's name field is wildcarded for ALL events.
+         Used to drive the wire forward past known bridge bugs in a
+         specific runtime (e.g. SPITBOL's fake-vrblk in
+         spl_vrblk_name producing stale-memory names like 'ss' on
+         table-element stores).  See SN-26-bridge-coverage in
+         GOAL-LANG-SNOBOL4 for the long-term fix.  This wildcard is
+         OFF by default; setting it is an explicit acknowledgment
+         that one side's name-emission is untrusted.
+
+    All wildcards apply ONLY when kind, value bytes, and the unmasked
     fields all match — they soften the comparison without ever masking
     a value-byte or kind divergence.  Those are the load-bearing fields
     of the protocol; the type and name fields are decorative metadata
@@ -233,7 +265,8 @@ def keys_match(a, b):
     type_ok = (at == bt) or (at == MWT_UNKNOWN) or (bt == MWT_UNKNOWN)
     if not type_ok:
         return False
-    name_ok = (an == bn) or (an == LVAL_SENTINEL) or (bn == LVAL_SENTINEL)
+    name_ok = (an == bn) or (an == LVAL_SENTINEL) or (bn == LVAL_SENTINEL) \
+              or a_name_wild or b_name_wild
     return name_ok
 
 
@@ -291,10 +324,22 @@ def open_pair(ready_path, go_path):
 
 def run(participants):
     """participants: list of (name, ready_path, go_path)."""
+    # Optional per-participant wire log — one line per record.  Set
+    # MONITOR_TRACE_LOG=/path/prefix and the controller will write
+    # /path/prefix.<participant>.log with every record received from each
+    # participant in order.  Useful for post-DIVERGE forensic grep without
+    # spamming chat.  Empty / unset → no log written.
+    trace_prefix = os.environ.get('MONITOR_TRACE_LOG', '').strip()
+
     fds = []
     for nm, rp, gp in participants:
         rd, gw = open_pair(rp, gp)
-        fds.append({'name': nm, 'rd': rd, 'gw': gw, 'names': {}})
+        log_fp = None
+        if trace_prefix:
+            log_fp = open(f'{trace_prefix}.{nm}.log', 'w')
+        fds.append({'name': nm, 'rd': rd, 'gw': gw, 'names': {},
+                    'history': deque(maxlen=DIVERGE_HISTORY),
+                    'log_fp': log_fp})
         print(f'[ctrl] opened {nm}: ready={rp} go={gp}', file=sys.stderr)
 
     diverged = False
@@ -321,6 +366,9 @@ def run(participants):
                 eof_set.append(f['name'])
             else:
                 events.append((f, ev))
+                if f['log_fp']:
+                    f['log_fp'].write(f'#{step} {fmt_event(ev, f["names"])}\n')
+                    f['log_fp'].flush()
 
         if protocol_err:
             for ff in fds:
@@ -355,21 +403,43 @@ def run(participants):
         # the keys_match docstring for the rationale.
         oracle_f, oracle_ev = events[0]
         oracle_key = event_key(oracle_ev, oracle_f['names'])
+        oracle_namewild = oracle_f['name'] in WILDCARD_NAMES_PARTICIPANTS
         agree = True
         for f, ev in events[1:]:
-            if not keys_match(event_key(ev, f['names']), oracle_key):
+            other_namewild = f['name'] in WILDCARD_NAMES_PARTICIPANTS
+            if not keys_match(event_key(ev, f['names']), oracle_key,
+                              a_name_wild=other_namewild,
+                              b_name_wild=oracle_namewild):
                 agree = False
                 break
 
         if not agree:
             print(f'[ctrl] DIVERGE step {step}', file=sys.stderr)
+            # Print last DIVERGE_HISTORY agreed records per participant for context.
+            print(f'[ctrl] last {DIVERGE_HISTORY} agreed records before divergence:',
+                  file=sys.stderr)
+            for f in fds:
+                hist = list(f['history'])
+                if not hist:
+                    print(f'  {f["name"]}: (no prior agreed records)', file=sys.stderr)
+                    continue
+                base = step - len(hist)
+                for i, prev in enumerate(hist):
+                    print(f'  {f["name"]} #{base+i}: {fmt_event(prev, f["names"])}',
+                          file=sys.stderr)
+            print(f'[ctrl] divergence record:', file=sys.stderr)
             for f, ev in events:
-                print(f'  {f["name"]}: {fmt_event(ev, f["names"])}', file=sys.stderr)
+                print(f'  {f["name"]} #{step}: {fmt_event(ev, f["names"])}', file=sys.stderr)
             for f, ev in events:
                 try: os.write(f['gw'], b'S')
                 except OSError: pass
             diverged = True
             break
+
+        # Record this agreed step in each participant's history for the next
+        # potential DIVERGE context.
+        for f, ev in events:
+            f['history'].append(ev)
 
         # If everyone sent END, we're done.
         if oracle_ev.kind == MWK_END:
