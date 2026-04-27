@@ -690,6 +690,12 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
                             DESCR_t idx2 = interp_eval(s->subject->children[2]);
                             subscript_set2(base, idx, idx2, rv);
                         } else { subscript_set(base, idx, rv); }
+                        /* SN-26-bridge-coverage-g: fire VALUE record for subscript store
+                         * inside user function body. */
+                        { const char *base_nm = (s->subject->children[0] &&
+                                                 s->subject->children[0]->kind == E_VAR)
+                                               ? s->subject->children[0]->sval : NULL;
+                          if (base_nm) comm_var(base_nm, rv); }
                         succeeded = 1;
                     }
                 } else if (s->has_eq && s->subject && s->subject->kind == E_FNC &&
@@ -4379,6 +4385,12 @@ void execute_program(Program *prog)
                     } else {
                         subscript_set(base, idx, repl_val);
                     }
+                    /* SN-26-bridge-coverage-g: fire VALUE record for subscript store.
+                     * Use the base variable name (children[0]->sval when E_VAR). */
+                    { const char *base_nm = (idx_e->children[0] &&
+                                             idx_e->children[0]->kind == E_VAR)
+                                           ? idx_e->children[0]->sval : NULL;
+                      if (base_nm) comm_var(base_nm, repl_val); }
                     succeeded = 1;
                 }
             } else { succeeded = 0; }
