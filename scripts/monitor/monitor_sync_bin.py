@@ -342,6 +342,16 @@ def run(participants):
                     'log_fp': log_fp})
         print(f'[ctrl] opened {nm}: ready={rp} go={gp}', file=sys.stderr)
 
+    # Diagnostic: keep last N agreed event tuples so a DIVERGE report can
+    # show the agreed-trail leading up to the disagreement.  Set via
+    # MONITOR_LAST_AGREE_TRAIL env var (integer; 0 disables).
+    try:
+        trail_n = int(os.environ.get('MONITOR_LAST_AGREE_TRAIL', '0') or '0')
+    except ValueError:
+        trail_n = 0
+    from collections import deque
+    trail = deque(maxlen=trail_n) if trail_n > 0 else None
+
     diverged = False
     step = 0
 
@@ -414,6 +424,10 @@ def run(participants):
                 break
 
         if not agree:
+            if trail is not None and len(trail) > 0:
+                print(f'[ctrl] last {len(trail)} agreed steps:', file=sys.stderr)
+                for tstep, tline in trail:
+                    print(f'  step {tstep}: {tline}', file=sys.stderr)
             print(f'[ctrl] DIVERGE step {step}', file=sys.stderr)
             # Print last DIVERGE_HISTORY agreed records per participant for context.
             print(f'[ctrl] last {DIVERGE_HISTORY} agreed records before divergence:',
@@ -440,6 +454,9 @@ def run(participants):
         # potential DIVERGE context.
         for f, ev in events:
             f['history'].append(ev)
+        # Also record on the single-track trail (for MONITOR_LAST_AGREE_TRAIL).
+        if trail is not None:
+            trail.append((step, fmt_event(oracle_ev, oracle_f['names'])))
 
         # If everyone sent END, we're done.
         if oracle_ev.kind == MWK_END:

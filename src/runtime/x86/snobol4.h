@@ -383,7 +383,8 @@ extern int64_t kw_maxlngth;
 extern int64_t kw_anchor;
 extern int64_t kw_trim;
 extern int64_t kw_stlimit;
-extern int64_t kw_stcount;   /* &STCOUNT — incremented every statement */
+extern int64_t kw_stcount;   /* &STCOUNT — incremented every statement executed */
+extern int64_t kw_stno;      /* &STNO    — current source statement number (advances through empty stmts too) */
 extern int64_t kw_ftrace;    /* &FTRACE   - function trace counter */
 extern int64_t kw_trace;     /* &TRACE    - variable trace counter (catch-all) */
 extern int64_t kw_errlimit;  /* &ERRLIMIT - max compile errors */

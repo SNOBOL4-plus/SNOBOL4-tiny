@@ -157,6 +157,7 @@ static const char *trace_get_callback(const char *name) {
 int trace_is_active(const char *name) { return trace_registered(name); }
 
 int64_t kw_stcount = 0;
+int64_t kw_stno    = 0;
 
 static void mon_send(const char *kind, const char *name, const char *value) {
     if (monitor_fd < 0) return;
@@ -2822,7 +2823,7 @@ DESCR_t NV_GET_fn(const char *name) {
     }
     /* Protected/unprotected keywords backed by C globals */
     if (strcmp(name, "STCOUNT")  == 0) return INTVAL(kw_stcount);
-    if (strcmp(name, "STNO")     == 0) return INTVAL(kw_stcount);
+    if (strcmp(name, "STNO")     == 0) return INTVAL(kw_stno);
     if (strcmp(name, "STLIMIT")  == 0) return INTVAL(kw_stlimit);
     if (strcmp(name, "ANCHOR")   == 0) return INTVAL(kw_anchor);
     if (strcmp(name, "TRIM")     == 0) return INTVAL(kw_trim);

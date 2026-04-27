@@ -110,7 +110,7 @@ G       ({WS}|{CONT})*
 
     /* ---- INITIAL: col-1 dispatch ---- */
 
-<INITIAL>\n             { lineno++; /* blank line */ }
+<INITIAL>\n             { lineno++; /* blank line — emit empty stmt to advance &STNO (matches SPITBOL/CSNOBOL4 / Green Book) */ return T_STMT_END; }
 <INITIAL>[*!|;]         { BEGIN(SKIP); }
 <INITIAL>[ \t]          { BEGIN(BODY_START); }
 

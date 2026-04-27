@@ -1081,7 +1081,7 @@ do_action:	/* This label is used only to access EOF actions. */
 case 1:
 /* rule 1 can match eol */
 YY_RULE_SETUP
-{ lineno++; /* blank line */ }
+{ lineno++; /* blank line — emit empty stmt to advance &STNO (matches SPITBOL/CSNOBOL4 / Green Book) */ return T_STMT_END; }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP

@@ -4204,7 +4204,26 @@ void execute_program(Program *prog)
 
     while (s) {
         if (s->is_end) break;  /* U-23: polyglot multi-section dispatch handles remaining modules */
+
+        /* Empty statement (blank source line — Green Book treats blank
+         * lines as empty statements, SPITBOL/CSNOBOL4 advance &STNO but
+         * not &STCOUNT through them).  Detect by total absence of
+         * label/subject/pattern/replacement/goto, fire the LABEL event
+         * for sync-step parity, advance stno locally, but do NOT call
+         * comm_stno (which would bump &STCOUNT). */
+        if (!s->label && !s->subject && !s->pattern && !s->replacement && !s->go) {
+            ++stno;
+            kw_stno = stno;
+            g_sno_err_stmt = stno;
+            /* Don't fire mon_emit_label_bin here — SPITBOL's bridge
+             * skips empty stmts (its sysml fire-points fire from stmgo
+             * which only runs for executed stmts). Symmetric coverage. */
+            s = s->next;
+            continue;
+        }
+
         comm_stno(++stno);
+        kw_stno = stno;
 
         /* SN-26-bridge-coverage-f: fire MWK_LABEL on every statement entry. */
         {
