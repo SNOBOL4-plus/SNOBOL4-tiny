@@ -59,8 +59,9 @@ MWK_VALUE  = 1
 MWK_CALL   = 2
 MWK_RETURN = 3
 MWK_END    = 4
+MWK_LABEL  = 5
 
-KIND_NAMES = {1: 'VALUE', 2: 'CALL', 3: 'RETURN', 4: 'END'}
+KIND_NAMES = {1: 'VALUE', 2: 'CALL', 3: 'RETURN', 4: 'END', 5: 'LABEL'}
 
 # Type tags (must match monitor_wire.h MWT_*)
 TYPE_NAMES = {
@@ -175,6 +176,8 @@ def fmt_event(ev, names):
         return f'{kn}'
     if ev.kind == MWK_CALL:
         return f'{kn} {nm}'
+    if ev.kind == MWK_LABEL:
+        return f'{kn} stno={fmt_value(ev.type, ev.value)}'
     return f'{kn} {nm} = {fmt_value(ev.type, ev.value)}'
 
 

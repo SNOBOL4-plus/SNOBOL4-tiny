@@ -17,7 +17,7 @@ CORPUS="${CORPUS:-/home/claude/corpus}"
 MONITOR_DIR="${MONITOR_DIR:-$HERE/monitor}"
 PROBE="$CORPUS/programs/snobol4/demo/csn_bridge_b/probe_b.sno"
 
-EXPECTED_RECORDS=7   # see probe_b.sno header
+EXPECTED_RECORDS=12  # SN-26-bridge-coverage-f: +5 LABEL records (DEFINE,SQR_END,3×top-level + SQR body)
 
 # --- preflight -----------------------------------------------------------
 if [ ! -x "$CSNOBOL4" ]; then
@@ -83,13 +83,18 @@ while IFS= read -r spec; do
         exit 1
     fi
 done <<'EOF_SPECS'
-#000 kind=VALUE name_id=0 STRING(11)=b'hello world'
-#001 kind=VALUE name_id=0 STRING(11)=b'hello there'
-#002 kind=CALL name_id=1
-#003 kind=VALUE name_id=1 INTEGER(49)
-#004 kind=RETURN name_id=1 STRING(6)=b'RETURN'
-#005 kind=VALUE name_id=2 INTEGER(49)
-#006 kind=END
+#000 kind=LABEL name_id=4294967295 INTEGER(2)
+#001 kind=LABEL name_id=4294967295 INTEGER(5)
+#002 kind=VALUE name_id=0 STRING(11)=b'hello world'
+#003 kind=LABEL name_id=4294967295 INTEGER(6)
+#004 kind=VALUE name_id=0 STRING(11)=b'hello there'
+#005 kind=LABEL name_id=4294967295 INTEGER(7)
+#006 kind=CALL name_id=1
+#007 kind=LABEL name_id=4294967295 INTEGER(3)
+#008 kind=VALUE name_id=1 INTEGER(49)
+#009 kind=RETURN name_id=1 STRING(6)=b'RETURN'
+#010 kind=VALUE name_id=2 INTEGER(49)
+#011 kind=END
 EOF_SPECS
 
 # Verify names sidecar contains S, SQR, N (in the order they were interned).

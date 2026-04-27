@@ -11,7 +11,7 @@
  *
  *   offset  size  field        notes
  *   ------  ----  -----------  ----------------------------------------
- *      0     4    kind         u32 LE: 1=VALUE 2=CALL 3=RETURN 4=END
+ *      0     4    kind         u32 LE: 1=VALUE 2=CALL 3=RETURN 4=END 5=LABEL
  *      4     4    name_id      u32 LE: index into per-run names file
  *      8     1    type         u8: SNOBOL4 datatype, see MWT_*
  *      9     4    value_len    u32 LE: length of value_bytes that follow
@@ -25,6 +25,14 @@
  *                                EXPRESSION / FILE: empty, length=0
  *
  * Cross-dialect comparison is byte-for-byte equality on the full record.
+ *
+ * MWK_LABEL semantics: emitted by the runtime on every statement entry
+ * (one per source statement, regardless of GOTO / fall-through).  The
+ * name_id is MW_NAME_ID_NONE; the type is MWT_INTEGER and the 8-byte LE
+ * payload carries the SNOBOL4 statement number (&STNO) of the statement
+ * being entered.  Controllers align on STNO alignment without needing
+ * a label-table reverse lookup; the source line / label name (if any)
+ * can be derived externally from the program listing.
  *
  * The names file is a UTF-8 plain text sidecar: one name per line, indexed
  * 0..N-1.  inject_traces.py emits it; participants pass its path via
@@ -42,6 +50,7 @@
 #define MWK_CALL    2u
 #define MWK_RETURN  3u
 #define MWK_END     4u
+#define MWK_LABEL   5u   /* statement entry — carries STNO label name (or empty) */
 
 /* --- SNOBOL4 datatype codes (record.type) --------------------------------- */
 /* Chosen as a stable, dialect-neutral enumeration.  Both ABIs map their

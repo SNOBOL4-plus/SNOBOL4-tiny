@@ -12,7 +12,7 @@ Spec:  NAME:READY:GO[:NAMES]
 """
 import os, sys, struct, time, errno
 
-KIND_NAMES = {1: "VALUE", 2: "CALL", 3: "RETURN", 4: "END"}
+KIND_NAMES = {1: "VALUE", 2: "CALL", 3: "RETURN", 4: "END", 5: "LABEL"}
 TYPE_NAMES = {0: "NULL", 1: "STRING", 2: "INTEGER", 3: "REAL", 4: "NAME",
               5: "PATTERN", 6: "EXPRESSION", 7: "ARRAY", 8: "TABLE",
               9: "CODE", 10: "DATA", 11: "FILE", 255: "UNKNOWN"}

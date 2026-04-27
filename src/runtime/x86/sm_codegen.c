@@ -203,6 +203,11 @@ static void h_nreturn(void)  { g_jit_halted = 1; }
 static int g_sm_stno_jit = 0;
 static void h_stno(void) {
     comm_stno(++g_sm_stno_jit);
+    /* SN-26-bridge-coverage-f: fire MWK_LABEL on every statement entry. */
+    {
+        extern void mon_emit_label_bin(int64_t stno);
+        mon_emit_label_bin((int64_t)g_sm_stno_jit);
+    }
     /* IM-5: step-limit — longjmp out when limit reached */
     if (g_jit_step_limit > 0 && g_jit_steps_done++ >= g_jit_step_limit)
         longjmp(g_jit_step_jmp, 1);

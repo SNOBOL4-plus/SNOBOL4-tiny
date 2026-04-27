@@ -213,6 +213,11 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
             extern void comm_stno(int n);
             static int g_sm_stno = 0;
             comm_stno(++g_sm_stno);
+            /* SN-26-bridge-coverage-f: fire MWK_LABEL on every statement entry. */
+            {
+                extern void mon_emit_label_bin(int64_t stno);
+                mon_emit_label_bin((int64_t)g_sm_stno);
+            }
             st->sp = 0;   /* reset value stack at each statement boundary */
             /* SN-26c-stmt637 probe: trace each SM step -> source stmt number */
             {

@@ -18,7 +18,7 @@ CORPUS="${CORPUS:-/home/claude/corpus}"
 MONITOR_DIR="${MONITOR_DIR:-$HERE/monitor}"
 PROBE="$CORPUS/programs/snobol4/demo/csn_bridge_c/probe_c.sno"
 
-EXPECTED_RECORDS=3   # ASGNVV S + NMD4 captured + END
+EXPECTED_RECORDS=5   # SN-26-bridge-coverage-f: +2 LABEL records (2 top-level stmts)
 
 # --- preflight -----------------------------------------------------------
 if [ ! -x "$CSNOBOL4" ]; then
@@ -82,9 +82,11 @@ while IFS= read -r spec; do
         exit 1
     fi
 done <<'EOF_SPECS'
-#000 kind=VALUE name_id=0 STRING(5)=b'AXBYC'
-#001 kind=VALUE name_id=1 STRING(1)=b'A'
-#002 kind=END
+#000 kind=LABEL name_id=4294967295 INTEGER(2)
+#001 kind=VALUE name_id=0 STRING(5)=b'AXBYC'
+#002 kind=LABEL name_id=4294967295 INTEGER(3)
+#003 kind=VALUE name_id=1 STRING(1)=b'A'
+#004 kind=END
 EOF_SPECS
 
 # Verify names sidecar contains S and captured (in interning order).

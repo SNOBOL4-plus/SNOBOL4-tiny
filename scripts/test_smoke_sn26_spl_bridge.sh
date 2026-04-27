@@ -15,7 +15,7 @@ CORPUS="${CORPUS:-/home/claude/corpus}"
 MONITOR_DIR="${MONITOR_DIR:-$HERE/monitor}"
 PROBE="$CORPUS/programs/snobol4/demo/spl_bridge/probe.sno"
 
-EXPECTED_RECORDS=6   # see probe.sno header
+EXPECTED_RECORDS=12  # SN-26-bridge-coverage-f: +6 LABEL records (DEFINE,SQR,SQR_END,2×top-level + SQR body + END)
 
 # --- preflight -----------------------------------------------------------
 if [ ! -x "$SBL" ]; then
@@ -88,12 +88,18 @@ while IFS= read -r spec; do
         exit 1
     fi
 done <<'EOF_SPECS'
-#000 kind=VALUE name_id=0 STRING(11)=b'hello world'
-#001 kind=CALL name_id=1
-#002 kind=VALUE name_id=1 INTEGER(49)
-#003 kind=RETURN name_id=1 STRING(6)=b'RETURN'
-#004 kind=VALUE name_id=2 INTEGER(49)
-#005 kind=END
+#000 kind=LABEL name_id=4294967295 INTEGER(2)
+#001 kind=LABEL name_id=4294967295 INTEGER(4)
+#002 kind=LABEL name_id=4294967295 INTEGER(5)
+#003 kind=VALUE name_id=0 STRING(11)=b'hello world'
+#004 kind=LABEL name_id=4294967295 INTEGER(6)
+#005 kind=CALL name_id=1
+#006 kind=LABEL name_id=4294967295 INTEGER(3)
+#007 kind=VALUE name_id=1 INTEGER(49)
+#008 kind=RETURN name_id=1 STRING(6)=b'RETURN'
+#009 kind=VALUE name_id=2 INTEGER(49)
+#010 kind=LABEL name_id=4294967295 INTEGER(7)
+#011 kind=END
 EOF_SPECS
 
 # Verify names sidecar contains S, SQR, N (in interning order).

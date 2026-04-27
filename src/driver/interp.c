@@ -4200,6 +4200,12 @@ void execute_program(Program *prog)
         if (s->is_end) break;  /* U-23: polyglot multi-section dispatch handles remaining modules */
         comm_stno(++stno);
 
+        /* SN-26-bridge-coverage-f: fire MWK_LABEL on every statement entry. */
+        {
+            extern void mon_emit_label_bin(int64_t stno);
+            mon_emit_label_bin((int64_t)stno);
+        }
+
         /* SN-26c-stmt637 probe: trace each IR step -> source stmt number */
         {
             static int s_trace_init = 0, s_trace_on = 0;

@@ -365,6 +365,22 @@ static void mon_send_bin(uint32_t kind, uint32_t name_id, uint8_t type,
     }
 }
 
+/* SN-26-bridge-coverage-f: public helper to emit MWK_LABEL records.
+ * Called from stmt_exec.c (--ir-run) and sm_interp.c (--sm-run / --jit-run)
+ * on every statement entry.  Wire payload mirrors the oracles:
+ *   name_id = MW_NAME_ID_NONE
+ *   type    = MWT_INTEGER
+ *   value   = 8-byte LE STNO of the statement being entered
+ *
+ * Silent no-op if monitor_bin_mode is off / monitor_fd is closed — matches
+ * the oracles' lazy-init semantics. */
+void mon_emit_label_bin(int64_t stno) {
+    if (monitor_fd < 0 || !monitor_bin_mode) return;
+    unsigned char buf[8];
+    for (int k = 0; k < 8; k++) buf[k] = (unsigned char)(((uint64_t)stno >> (k*8)) & 0xff);
+    mon_send_bin(MWK_LABEL, MW_NAME_ID_NONE, MWT_INTEGER, buf, 8);
+}
+
 /* ── SNOBOL4-callable MON_* builtins ──────────────────────────────────────
  * Signatures match the corresponding LOAD prototypes in the oracle
  * .so files.  All return INTEGER 0 on success, FAIL on argument errors.
