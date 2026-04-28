@@ -40,11 +40,16 @@ import sys
 import time
 from collections import namedtuple, deque
 
-# How many last-agreed records to print on a DIVERGE — gives the user
-# the "last-agree + first-disagree" pair that RULES.md "Sync-step monitor
-# — read the divergence point, not the trace" calls for, without
-# spamming the chat with hundreds of records.
-DIVERGE_HISTORY = 5
+# How many last-agreed records to keep in the circular buffer and print on
+# DIVERGE — gives the "last-agree + first-disagree" context RULES.md
+# "Sync-step monitor — read the divergence point, not the trace" calls for.
+# Overridable via MONITOR_LAST_AGREE_TRAIL env var (integer >= 1).
+# The circular buffer is a collections.deque(maxlen=N) — O(1) append/evict.
+_default_history = 5
+try:
+    DIVERGE_HISTORY = max(1, int(os.environ.get('MONITOR_LAST_AGREE_TRAIL', '') or _default_history))
+except ValueError:
+    DIVERGE_HISTORY = _default_history
 
 HDR_FMT  = '<IIBI'   # u32 kind, u32 name_id, u8 type, u32 value_len
 HDR_SIZE = struct.calcsize(HDR_FMT)
@@ -295,16 +300,17 @@ def fmt_value(type_tag, value):
     return f'{name}'
 
 
-def fmt_event(ev, names_table):
+def fmt_event(ev, names_table, stno=None):
     kn = KIND_NAMES.get(ev.kind, f'K{ev.kind}')
     nm = name_for_id(names_table, ev.name_id) or '(none)'
+    prefix = f'@{stno} ' if stno is not None else ''
     if ev.kind == MWK_END:
-        return f'{kn}'
+        return f'{prefix}{kn}'
     if ev.kind == MWK_CALL:
-        return f'{kn} {nm}'
+        return f'{prefix}{kn} {nm}'
     if ev.kind == MWK_LABEL:
         return f'{kn} stno={fmt_value(ev.type, ev.value)}'
-    return f'{kn} {nm} = {fmt_value(ev.type, ev.value)}'
+    return f'{prefix}{kn} {nm} = {fmt_value(ev.type, ev.value)}'
 
 
 # ---------------------------------------------------------------------------
@@ -338,18 +344,19 @@ def run(participants):
         if trace_prefix:
             log_fp = open(f'{trace_prefix}.{nm}.log', 'w')
         fds.append({'name': nm, 'rd': rd, 'gw': gw, 'names': {},
-                    'history': deque(maxlen=DIVERGE_HISTORY),
                     'log_fp': log_fp})
         print(f'[ctrl] opened {nm}: ready={rp} go={gp}', file=sys.stderr)
 
-    # Diagnostic: keep last N agreed event tuples so a DIVERGE report can
-    # show the agreed-trail leading up to the disagreement.  Set via
-    # MONITOR_LAST_AGREE_TRAIL env var (integer; 0 disables).
-    try:
-        trail_n = int(os.environ.get('MONITOR_LAST_AGREE_TRAIL', '0') or '0')
-    except ValueError:
-        trail_n = 0
-    trail = deque(maxlen=trail_n) if trail_n > 0 else None
+    # Interleaved agreed-event trail (circular buffer, always on).
+    # Entries are (step, stno, oracle_name, formatted_event_string).
+    # On DIVERGE this gives the reader a single chronological view of
+    # the last DIVERGE_HISTORY agreed steps — stno-annotated — before
+    # the split record.  The buffer is a deque(maxlen=N), O(1) append/evict.
+    trail = deque(maxlen=DIVERGE_HISTORY)
+
+    # Track last agreed stno so VALUE/CALL/RETURN lines can be annotated
+    # even though those record types carry no stno payload themselves.
+    last_agreed_stno = None
 
     diverged = False
     step = 0
@@ -376,7 +383,7 @@ def run(participants):
             else:
                 events.append((f, ev))
                 if f['log_fp']:
-                    f['log_fp'].write(f'#{step} {fmt_event(ev, f["names"])}\n')
+                    f['log_fp'].write(f'#{step} {fmt_event(ev, f["names"], stno=last_agreed_stno)}\n')
                     f['log_fp'].flush()
 
         if protocol_err:
@@ -398,7 +405,7 @@ def run(participants):
                   file=sys.stderr)
             for f, ev in events:
                 if ev is not None:
-                    print(f'  {f["name"]}: still emitting {fmt_event(ev, f["names"])}',
+                    print(f'  {f["name"]}: still emitting {fmt_event(ev, f["names"], stno=last_agreed_stno)}',
                           file=sys.stderr)
                 else:
                     print(f'  {f["name"]}: EOF', file=sys.stderr)
@@ -423,39 +430,32 @@ def run(participants):
                 break
 
         if not agree:
-            if trail is not None and len(trail) > 0:
-                print(f'[ctrl] last {len(trail)} agreed steps:', file=sys.stderr)
-                for tstep, tline in trail:
+            # Print interleaved circular-buffer trail then the divergence record.
+            if trail:
+                print(f'[ctrl] last {len(trail)} agreed steps (most recent last):',
+                      file=sys.stderr)
+                for tstep, tstno, tline in trail:
                     print(f'  step {tstep}: {tline}', file=sys.stderr)
             print(f'[ctrl] DIVERGE step {step}', file=sys.stderr)
-            # Print last DIVERGE_HISTORY agreed records per participant for context.
-            print(f'[ctrl] last {DIVERGE_HISTORY} agreed records before divergence:',
-                  file=sys.stderr)
-            for f in fds:
-                hist = list(f['history'])
-                if not hist:
-                    print(f'  {f["name"]}: (no prior agreed records)', file=sys.stderr)
-                    continue
-                base = step - len(hist)
-                for i, prev in enumerate(hist):
-                    print(f'  {f["name"]} #{base+i}: {fmt_event(prev, f["names"])}',
-                          file=sys.stderr)
             print(f'[ctrl] divergence record:', file=sys.stderr)
             for f, ev in events:
-                print(f'  {f["name"]} #{step}: {fmt_event(ev, f["names"])}', file=sys.stderr)
+                print(f'  {f["name"]} #{step}: {fmt_event(ev, f["names"], stno=last_agreed_stno)}',
+                      file=sys.stderr)
             for f, ev in events:
                 try: os.write(f['gw'], b'S')
                 except OSError: pass
             diverged = True
             break
 
-        # Record this agreed step in each participant's history for the next
-        # potential DIVERGE context.
-        for f, ev in events:
-            f['history'].append(ev)
-        # Also record on the single-track trail (for MONITOR_LAST_AGREE_TRAIL).
-        if trail is not None:
-            trail.append((step, fmt_event(oracle_ev, oracle_f['names'])))
+        # Update last-agreed stno when a LABEL record is agreed.
+        if oracle_ev.kind == MWK_LABEL:
+            # LABEL value is an 8-byte LE integer (the stno).
+            if len(oracle_ev.value) == 8:
+                last_agreed_stno = int.from_bytes(oracle_ev.value, 'little')
+
+        # Record this agreed step in the interleaved circular trail.
+        trail.append((step, last_agreed_stno,
+                      fmt_event(oracle_ev, oracle_f['names'], stno=last_agreed_stno)))
 
         # If everyone sent END, we're done.
         if oracle_ev.kind == MWK_END:
