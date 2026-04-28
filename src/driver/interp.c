@@ -616,13 +616,24 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
                             subj_val = NV_GET_fn(subj_name);
                     } else if (s->subject->kind == E_INDIRECT && s->subject->nchildren > 0) {
                         /* $'$B' or $X as subject — resolve to variable name for write-back.
-                         * child is E_QLIT "$B" (literal) or E_VAR X (runtime indirect). */
+                         * child is E_QLIT "$B" (literal) or E_VAR X (runtime indirect).
+                         * SN-26-bridge-coverage-y: if the resolved value is a DT_N NAMEPTR
+                         * (e.g. assign(name,...) where name was bound as `.snoBrackets`),
+                         * recover the variable name from the NV cell pointer instead of
+                         * letting VARVAL_fn read junk from the union's .s slot. */
                         EXPR_t *ic = s->subject->children[0];
                         if (ic->kind == E_QLIT && ic->sval) {
                             subj_name = ic->sval;  /* $'name' — literal name, use directly */
                         } else if (ic->kind == E_VAR && ic->sval) {
                             DESCR_t xv = NV_GET_fn(ic->sval); /* $X — indirect */
-                            subj_name = VARVAL_fn(xv);
+                            if (IS_NAMEPTR(xv)) {
+                                const char *_rn = NV_name_from_ptr((const DESCR_t*)xv.ptr);
+                                subj_name = _rn ? _rn : NULL;
+                            } else if (xv.v == DT_N && xv.slen == 0 && xv.s) {
+                                subj_name = xv.s;  /* NAMEVAL form */
+                            } else {
+                                subj_name = VARVAL_fn(xv);
+                            }
                         } else {
                             DESCR_t nd = interp_eval(ic);
                             subj_name = VARVAL_fn(nd);
@@ -775,9 +786,15 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
                         /* Evaluate the inner expr to get a NAME or string to indirect through */
                         DESCR_t ind_val = ichild ? interp_eval(ichild) : NULVCL;
                         /* If it's already a DT_N (e.g. $Push where Push = .stk[1]),
-                         * write directly through the pointer — SIL ASGNVV semantics */
+                         * write directly through the pointer — SIL ASGNVV semantics.
+                         * SN-26-bridge-coverage-y: recover variable name from the NV cell
+                         * pointer (same as name_t.c NM_PTR fix, session #55) and emit
+                         * comm_var so SPITBOL's asinp asnpa fire-point is mirrored. */
                         if (IS_NAMEPTR(ind_val)) {
-                            *(DESCR_t*)ind_val.ptr = repl_val; succeeded = 1;
+                            *(DESCR_t*)ind_val.ptr = repl_val;
+                            { const char *_rn = NV_name_from_ptr((const DESCR_t*)ind_val.ptr);
+                              comm_var(_rn ? _rn : "<lval>", repl_val); }
+                            succeeded = 1;
                         } else {
                             /* Otherwise treat as string variable name */
                             const char *nm0 = VARVAL_fn(ind_val);
@@ -785,10 +802,14 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
                             else {
                                 /* SN-19: $name = val — lex-fold the runtime-sourced name */
                                 char *nm = GC_strdup(nm0); sno_fold_name(nm);
-                                /* If the named variable itself holds a DT_N, write through */
+                                /* If the named variable itself holds a DT_N, write through.
+                                 * SN-26-bridge-coverage-y: emit comm_var here too. */
                                 DESCR_t named = NV_GET_fn(nm);
                                 if (IS_NAMEPTR(named)) {
-                                    NAME_DEREF_PTR(named) = repl_val; succeeded = 1;
+                                    NAME_DEREF_PTR(named) = repl_val;
+                                    { const char *_rn = NV_name_from_ptr((const DESCR_t*)named.ptr);
+                                      comm_var(_rn ? _rn : "<lval>", repl_val); }
+                                    succeeded = 1;
                                 } else {
                                     set_and_trace(nm, repl_val); succeeded = 1;
                                 }
