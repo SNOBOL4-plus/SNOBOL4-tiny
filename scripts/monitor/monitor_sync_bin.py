@@ -348,14 +348,15 @@ def run(participants):
         print(f'[ctrl] opened {nm}: ready={rp} go={gp}', file=sys.stderr)
 
     # Interleaved agreed-event trail (circular buffer, always on).
-    # Entries are (step, stno, oracle_name, formatted_event_string).
-    # On DIVERGE this gives the reader a single chronological view of
-    # the last DIVERGE_HISTORY agreed steps — stno-annotated — before
-    # the split record.  The buffer is a deque(maxlen=N), O(1) append/evict.
+    # Each entry: (step, stno, {pname: event_str}) — one dict per agreed step.
+    # On DIVERGE prints as a grid: step | stno | col-per-participant.
+    # Buffer is deque(maxlen=N), O(1) append/evict.
+    pnames = [nm for nm, rp, gp in participants]
     trail = deque(maxlen=DIVERGE_HISTORY)
 
-    # Track last agreed stno so VALUE/CALL/RETURN lines can be annotated
-    # even though those record types carry no stno payload themselves.
+    # Track last agreed stno from LABEL records so VALUE/CALL/RETURN rows
+    # can show which statement they belong to.  The stno is already on the
+    # wire — no source file scanning required.
     last_agreed_stno = None
 
     diverged = False
@@ -430,32 +431,56 @@ def run(participants):
                 break
 
         if not agree:
-            # Print interleaved circular-buffer trail then the divergence record.
-            if trail:
-                print(f'[ctrl] last {len(trail)} agreed steps (most recent last):',
-                      file=sys.stderr)
-                for tstep, tstno, tline in trail:
-                    print(f'  step {tstep}: {tline}', file=sys.stderr)
-            print(f'[ctrl] DIVERGE step {step}', file=sys.stderr)
-            print(f'[ctrl] divergence record:', file=sys.stderr)
-            for f, ev in events:
-                print(f'  {f["name"]} #{step}: {fmt_event(ev, f["names"], stno=last_agreed_stno)}',
-                      file=sys.stderr)
+            # Build per-participant col dict for the divergence row.
+            div_cols = {f['name']: fmt_event(ev, f['names'], stno=last_agreed_stno)
+                        for f, ev in events}
+            # Collect all rows: trail (agreed) + diverge row.
+            # trail entries are (step, stno, {pname: text}).
+            # Compute column widths across all rows.
+            pnames = [f['name'] for f in fds]
+            col_w = {p: len(p) for p in pnames}
+            for _s, _n, cols in trail:
+                for p in pnames:
+                    col_w[p] = max(col_w[p], len(cols.get(p, '')))
+            for p in pnames:
+                col_w[p] = max(col_w[p], len(div_cols.get(p, '')))
+            stno_strs = [str(n) for _, n, _ in trail if n is not None]
+            if last_agreed_stno is not None:
+                stno_strs.append(str(last_agreed_stno))
+            stno_w  = max(4, max((len(s) for s in stno_strs), default=4))
+            step_w  = max(4, len(str(step)))
+            sep = '  '
+            def grid_row(s, n, cols, marker='  '):
+                sn = str(n) if n is not None else ''
+                return marker + sep.join(
+                    [f'{s:>{step_w}}', f'{sn:>{stno_w}}'] +
+                    [f'{cols.get(p,""):<{col_w[p]}}' for p in pnames])
+            hdr = '  ' + sep.join(
+                [f'{"step":>{step_w}}', f'{"stno":>{stno_w}}'] +
+                [f'{p:<{col_w[p]}}' for p in pnames])
+            bar = '  ' + sep.join(['-'*step_w, '-'*stno_w] +
+                                   ['-'*col_w[p] for p in pnames])
+            print(f'[ctrl] DIVERGE step {step} — last {len(trail)} agreed + diverge:\n{hdr}\n{bar}',
+                  file=sys.stderr)
+            for tstep, tstno, cols in trail:
+                print(grid_row(tstep, tstno, cols), file=sys.stderr)
+            print(bar, file=sys.stderr)
+            print(grid_row(f'>{step}', last_agreed_stno, div_cols, marker=''), file=sys.stderr)
             for f, ev in events:
                 try: os.write(f['gw'], b'S')
                 except OSError: pass
             diverged = True
             break
 
-        # Update last-agreed stno when a LABEL record is agreed.
+        # Update last-agreed stno from LABEL records (stno is on the wire).
         if oracle_ev.kind == MWK_LABEL:
-            # LABEL value is an 8-byte LE integer (the stno).
             if len(oracle_ev.value) == 8:
                 last_agreed_stno = int.from_bytes(oracle_ev.value, 'little')
 
-        # Record this agreed step in the interleaved circular trail.
+        # Store per-participant event strings in the circular trail.
         trail.append((step, last_agreed_stno,
-                      fmt_event(oracle_ev, oracle_f['names'], stno=last_agreed_stno)))
+                      {f['name']: fmt_event(ev, f['names'], stno=last_agreed_stno)
+                       for f, ev in events}))
 
         # If everyone sent END, we're done.
         if oracle_ev.kind == MWK_END:

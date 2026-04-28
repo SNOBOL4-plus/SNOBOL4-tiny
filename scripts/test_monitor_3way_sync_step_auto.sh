@@ -64,9 +64,16 @@
 
 set -uo pipefail
 
-SNO=${1:?Usage: test_monitor_3way_sync_step_auto.sh <file.sno>}
+SNO=${1:?Usage: test_monitor_3way_sync_step_auto.sh <file.sno> [--trail N]}
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MON_DIR="$HERE/monitor"
+
+# --trail N  (optional second argument) — override how many last-agreed events
+# to print on DIVERGE.  Sets MONITOR_LAST_AGREE_TRAIL for the controller.
+# Default: 5 (controller default).  Env var also accepted directly.
+if [[ "${2:-}" == "--trail" && -n "${3:-}" ]]; then
+    export MONITOR_LAST_AGREE_TRAIL="${3}"
+fi
 
 X64_DIR="${X64_DIR:-/home/claude/x64}"
 SPITBOL="$X64_DIR/bin/sbl"
