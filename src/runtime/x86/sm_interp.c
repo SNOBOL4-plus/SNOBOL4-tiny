@@ -309,13 +309,24 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
              * and no assignment occurs. Without this guard, OUTPUT = DIFFER(X,Y)
              * would call output_val(FAILDESCR) and print a spurious blank line. */
             if (val.v == DT_FAIL) {
+                /* SN-32b-store-fail: push FAILDESCR so enclosing calls (e.g.
+                 * DIFFER(sno = Pop()) where Pop() FRETURNs) see a balanced
+                 * stack.  Without the push, the enclosing SM_CALL pops a
+                 * stale value, corrupting the arg and mis-setting last_ok.
+                 * SNOBOL4 semantics: the assignment does not occur, and FAIL
+                 * propagates up to the enclosing expression. */
+                sm_push(st, FAILDESCR);
                 st->last_ok = 0;
                 break;
             }
-            /* RT-5: NV_SET_fn returns the assigned value — push it so that
-             * embedded assignment X = (A = B) leaves B's value on stack for X. */
-            DESCR_t stored = NV_SET_fn(name, val);
-            sm_push(st, stored);
+            /* RT-5 / SN-32b-store-val: push `val` (the RHS value), NOT the return
+             * value of NV_SET_fn.  The IR path (interp.c E_ASSIGN, line 2844) always
+             * returns `val` regardless of what NV_SET_fn stores — NV_SET_fn's return
+             * value is unreliable for DT_DATA objects (returns SNUL on the second
+             * call for the same variable).  Pushing `val` ensures DIFFER(sno=Pop())
+             * sees the actual DATA value, not a stripped SNUL. */
+            NV_SET_fn(name, val);
+            sm_push(st, val);
             /* SN-6: successful assignment sets last_ok=1 so a prior failure
              * (e.g. EQ in previous statement) does not bleed into this statement's
              * :F branch. "Leave last_ok unchanged" was wrong — it caused
