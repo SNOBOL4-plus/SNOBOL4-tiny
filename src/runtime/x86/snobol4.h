@@ -368,6 +368,13 @@ void   output_str(const char *s);   /* OUTPUT = 'string' */
 
 /* COMM — monitor telemetry */
 extern int monitor_fd;
+/* SN-26-bridge-coverage-n: when > 0, comm_var() suppresses MWK_VALUE
+ * emission.  Bracketed by call_user_function around the entry-pass
+ * NV save/clear and exit-pass NV restore.  Those writes are
+ * interpreter mechanism — SPITBOL's SIL does not go through a
+ * comm_var-emitting path for them, so scrip silences them too to
+ * keep the wire shape symmetric. */
+extern int monitor_quiet_depth;
 void comm_stno(int n);
 void comm_var(const char *name, DESCR_t val);
 void comm_call(const char *fname);

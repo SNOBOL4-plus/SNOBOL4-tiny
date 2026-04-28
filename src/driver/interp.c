@@ -487,7 +487,26 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
     if (entry_pre && strcmp(entry_pre, fname) != 0 && FNCEX_fn(entry_pre))
         retname = entry_pre;
 
-    /* ── Save current values of retname-var, params, locals ── */
+    /* SN-26-bridge-coverage-n: emit CALL on the wire BEFORE the entry-pass
+     * NV writes.  SPITBOL's bridge fires CALL at bpf09 (before parameter
+     * binding); scrip's comm_call must fire in the same relative order so
+     * the wire records the function entry rather than the entry-pass clear
+     * of the return slot.  Without this, NV_SET_fn(retname, "") at the
+     * save/clear pass below fires comm_var first, which the controller
+     * sees as `VALUE retname=''` — categorically a different event from
+     * SPITBOL's `CALL fname`.  Beauty line 119 (`snoExprList = nPush()`,
+     * stno=709) is the canonical reproducer.
+     *
+     * Pass retname (canonical body name) not fname (caller-side alias).
+     * For OPSYN aliases like `OPSYN('&', 'reduce', 2)`, fname='&' but
+     * retname='reduce' — SPITBOL reports the body name, so scrip aligns. */
+    comm_call(retname);   /* T-2: FUNCTION trace CALL event */
+
+    /* ── Save current values of retname-var, params, locals ──
+     * SN-26-bridge-coverage-n: silence the wire — these NV writes are
+     * interpreter mechanism, not user-visible assignments.  SPITBOL's
+     * SIL doesn't emit comm_var for the equivalent internal stores. */
+    monitor_quiet_depth++;
     int nsaved = 1 + np + nl;
     char   **snames = GC_malloc((size_t)nsaved * sizeof(char *));
     DESCR_t *svals  = GC_malloc((size_t)nsaved * sizeof(DESCR_t));
@@ -517,6 +536,7 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
         svals[1+np+i]  = NV_GET_fn(lnames[i]);
         NV_SET_fn(lnames[i], NULVCL);
     }
+    monitor_quiet_depth--;
 
     /* ── Push call frame ── */
     CallFrame *fr = &call_stack[call_depth++];
@@ -549,8 +569,6 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
     int         saved_Ω    = Ω;
     int         saved_Σlen = Σlen;
 
-    comm_call(fname);   /* T-2: FUNCTION trace CALL event */
-
     int ret_kind = setjmp(fr->ret_env);
     if (ret_kind == 0) {
         /* ── Find body label: use entry_label (supports OPSYN aliases and
@@ -576,6 +594,16 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
                                    s->subject->kind == E_UNIFY  ||
                                    s->subject->kind == E_CLAUSE)) {
                     s = s->next; continue;
+                }
+                /* SN-26-bridge-coverage-n: fire MWK_LABEL on every executed
+                 * statement inside a function body — same coverage as the
+                 * top-level execute_program loop.  SPITBOL's bridge fires
+                 * LABEL via SIL's stmgo for every executed stmt regardless
+                 * of nesting; scrip matches by emitting here.  Skipped for
+                 * non-statement IR nodes (E_CHOICE/E_UNIFY/E_CLAUSE) above. */
+                {
+                    extern void mon_emit_label_bin(int64_t stno);
+                    mon_emit_label_bin((int64_t)s->stno);
                 }
 
                 DESCR_t     subj_val  = NULVCL;
@@ -830,12 +858,17 @@ fn_done:
     Δ    = saved_Δ;
     Ω    = saved_Ω;
     Σlen = saved_Σlen;
-    comm_return(fname, retval);  /* T-2: FUNCTION trace RETURN event */
+    comm_return(retname, retval);  /* T-2: FUNCTION trace RETURN event;
+                                      use retname (body name) not fname
+                                      (alias) for OPSYN parity with SPITBOL. */
     /* ── IC-5: snapshot initial-block locals before they're wiped ── */
     icn_init_update_snapshot(snames, svals, nsaved);
-    /* ── Restore saved variables and pop frame ── */
+    /* ── Restore saved variables and pop frame ──
+     * SN-26-bridge-coverage-n: silence the wire — these are mechanism. */
+    monitor_quiet_depth++;
     for (int i = 0; i < nsaved; i++)
         NV_SET_fn(snames[i], svals[i]);
+    monitor_quiet_depth--;
     call_depth--;
     kw_fnclevel = call_depth;
     return retval;

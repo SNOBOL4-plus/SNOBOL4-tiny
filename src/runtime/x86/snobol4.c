@@ -38,6 +38,10 @@ int monitor_fd  = -1;
 int monitor_ack_fd = -1;
 int monitor_ready = 0;  /* set to 1 after pre-init constants are installed */
 
+/* SN-26-bridge-coverage-n: see snobol4.h.  Bracketed by call_user_function
+ * around the entry-pass NV save/clear and exit-pass NV restore. */
+int monitor_quiet_depth = 0;
+
 /* SN-26-auto-binary-scrip: catch-all binary emission, no source modification.
  *
  * When MONITOR_BIN=1 is set in the env, comm_var / comm_call / comm_return
@@ -567,6 +571,11 @@ void comm_stno(int n) {
 
 void comm_var(const char *name, DESCR_t val) {
     if (!name || name[0] == '_') return;
+    /* SN-26-bridge-coverage-n: suppress mechanism-level NV writes
+     * (function-entry local-init save/clear, function-exit restore).
+     * SPITBOL's SIL does not emit comm_var for those internal stores,
+     * so scrip matches by gating here. */
+    if (monitor_quiet_depth > 0) return;
     const char *cbfn = trace_get_callback(name);
     if (getenv("SCRIP_DEBUG_TRACE"))
         fprintf(stderr, "[scrip-trace] comm_var name=%s cb=%s recur=%d\n",
@@ -664,36 +673,17 @@ void comm_return(const char *fname, DESCR_t retval) {
     if (monitor_bin_mode) {
         uint32_t name_id = intern_name_bin(fname, (int)strlen(fname));
         if (name_id == MW_NAME_ID_NONE) return;
-        /* Marshal retval per its type, same shape as comm_var binary path. */
-        uint8_t type = scrip_tag_to_wire(retval.v);
-        const void *vp = NULL;
-        uint32_t    vlen = 0;
-        int64_t i_buf;
-        double  r_buf;
-        switch (type) {
-            case MWT_STRING:
-            case MWT_NAME:
-                if (retval.s) {
-                    vlen = retval.slen ? (uint32_t)retval.slen : (uint32_t)strlen(retval.s);
-                    vp   = (vlen > 0) ? (const void *)retval.s : NULL;
-                }
-                break;
-            case MWT_INTEGER: {
-                int64_t iv = retval.i;
-                unsigned char *p = (unsigned char *)&i_buf;
-                for (int k = 0; k < 8; k++) p[k] = (unsigned char)((iv >> (k*8)) & 0xff);
-                vp = &i_buf; vlen = 8;
-                break;
-            }
-            case MWT_REAL: {
-                double rv = retval.r;
-                memcpy(&r_buf, &rv, sizeof(r_buf));
-                vp = &r_buf; vlen = 8;
-                break;
-            }
-            default: break;
-        }
-        mon_send_bin(MWK_RETURN, name_id, type, vp, vlen);
+        /* SN-26-bridge-coverage-n: RETURN payload is the return *type*
+         * string (RETURN / FRETURN / NRETURN), not the function's result.
+         * Per monitor_ipc_runtime.c on the SPITBOL side: "the RETURN
+         * payload is the return *type*, not the function's result value.
+         * Result is delivered via the preceding VALUE record on the
+         * function-name variable."  scrip aligns by emitting kw_rtntype. */
+        const char *rt = kw_rtntype[0] ? kw_rtntype : "RETURN";
+        uint32_t rtlen = (uint32_t)strlen(rt);
+        mon_send_bin(MWK_RETURN, name_id, MWT_STRING,
+                     rtlen ? (const void *)rt : NULL, rtlen);
+        (void)retval;   /* result delivered via preceding VALUE record */
         return;
     }
     const char *s = VARVAL_fn(retval);
