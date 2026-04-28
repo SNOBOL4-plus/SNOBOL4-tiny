@@ -2211,12 +2211,29 @@ char *STRCONCAT_fn(const char *a, const char *b) {
 
 /* P003: DESCR_t CONCAT_fn — propagates FAILDESCR if either operand is DT_FAIL.
  * If either operand is a PATTERN, build a pattern concatenation instead of
- * string concatenation (blank-juxtaposition of patterns = pattern cat). */
+ * string concatenation (blank-juxtaposition of patterns = pattern cat).
+ *
+ * SN-26-bridge-coverage-x: SPITBOL's SIL CONCAT proc short-circuits when
+ * either operand is null/empty — returns the OTHER operand as-is, preserving
+ * its type.  This is observable: `'' 2` yields INTEGER 2, `2 ''` yields
+ * INTEGER 2, `'' 2.5` yields REAL 2.5.  scrip previously coerced both sides
+ * to string, breaking type preservation through value-context concat with
+ * a null operand.  Fix: detect null operands and return the other side
+ * verbatim (NULVCL operand → other operand wins).  Two non-null operands
+ * still flow through STRCONCAT_fn (stringifies, joins). */
 DESCR_t CONCAT_fn(DESCR_t a, DESCR_t b) {
     if (IS_FAIL(a)) return FAILDESCR;
     if (IS_FAIL(b)) return FAILDESCR;
     if (IS_PAT(a) || IS_PAT(b))
         return pat_cat(a, b);
+    /* SPITBOL CONCAT short-circuit: null + X → X, X + null → X.  Preserves
+     * INTEGER/REAL/STRING type of the surviving operand.  IS_NULL_fn covers
+     * DT_SNUL and DT_S with empty/NULL .s pointer. */
+    int a_null = IS_NULL_fn(a);
+    int b_null = IS_NULL_fn(b);
+    if (a_null && b_null) return NULVCL;
+    if (a_null)            return b;
+    if (b_null)            return a;
     const char *sa = VARVAL_fn(a);
     const char *sb = VARVAL_fn(b);
     return STRVAL(STRCONCAT_fn(sa, sb));
