@@ -5,7 +5,7 @@
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIP="${SCRIP:-$HERE/../scrip}"
-BEAUTY_DIR="$HERE/../test/beauty-sc"
+BEAUTY_DIR="${CORPUS:-/home/claude/corpus}/programs/snocone/demo/beauty"
 TIMEOUT="${TIMEOUT:-10}"
 GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[0;33m'; RESET='\033[0m'
 
