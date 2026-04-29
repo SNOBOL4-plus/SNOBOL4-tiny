@@ -24,7 +24,7 @@ ROOT="$(cd "$HERE/.." && pwd)"
 SCRIP="${SCRIP:-$ROOT/scrip}"
 
 INPUT_FILE=""
-DRIVER="${CORPUS:-/home/claude/corpus}/programs/snocone/demo/beauty/test/driver.sc"
+DRIVER="${CORPUS:-/home/claude/corpus}/programs/snocone/demo/beauty/beauty.sc"
 MODE="--ir-run"
 TIMEOUT=15
 COMPARE=0
