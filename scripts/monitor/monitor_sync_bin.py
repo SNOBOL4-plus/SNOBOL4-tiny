@@ -283,9 +283,22 @@ def keys_match(a, b, a_name_wild=False, b_name_wild=False):
         return a is b
     (ak, an, at, av) = a
     (bk, bn, bt, bv) = b
-    if ak != bk or av != bv:
+    if ak != bk:
         return False
-    type_ok = (at == bt) or (at == MWT_UNKNOWN) or (bt == MWT_UNKNOWN)
+    # MWT_UNKNOWN wildcards type AND value bytes: when one side cannot
+    # discriminate the typed block (e.g. SPITBOL's spl_block_to_wire on
+    # nmblk/ptblk/atblk/tbblk/cdblk/efblk), it emits MWT_UNKNOWN with
+    # zero value bytes.  The other side may emit real type + real bytes
+    # (e.g. dot encodes NAME's symbol-name as value bytes).  Without
+    # the value-byte carve-out, a NAME-with-bytes from dot would diverge
+    # against UNKNOWN-with-no-bytes from spl on the value-byte field
+    # alone, even though the disagreement is purely the spl bridge's
+    # missing coverage.  Real value-byte divergence on real-typed
+    # events (STRING vs STRING, INTEGER vs INTEGER) is still flagged.
+    unknown_present = (at == MWT_UNKNOWN) or (bt == MWT_UNKNOWN)
+    if not unknown_present and av != bv:
+        return False
+    type_ok = (at == bt) or unknown_present
     if not type_ok:
         return False
     name_ok = (an == bn) or (an == LVAL_SENTINEL) or (bn == LVAL_SENTINEL) \
