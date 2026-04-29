@@ -12,7 +12,7 @@
  *   - L-component (control) → Icon EKind pool / label+goto STMT_t chains
  *
  * Control-flow lowering uses the same label/goto STMT_t pattern as
- * snocone_cf.c.  Each structured construct becomes labeled SNOBOL4-style
+ * snocone_control.c.  Each structured construct becomes labeled SNOBOL4-style
  * STMT_t nodes with SnoGoto fields.
  */
 

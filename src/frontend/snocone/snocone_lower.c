@@ -129,9 +129,13 @@ static int lower_token(const ScPToken *tok, ExprStack *s,
         }
     case SNOCONE_STAR:
         if (tok->is_unary) {
-            /* unary * = indirect reference */
+            /* unary * = deferred (unevaluated) expression — same semantics as
+             * SNOBOL4's *expr.  This is NOT $expr (indirect lookup); that would
+             * be E_INDIRECT.  Lower to E_DEFER so the pattern compiler builds
+             * an unevaluated-expression value (DATATYPE='EXPRESSION') rather
+             * than evaluating the operand at assignment time. */
             EXPR_t *operand = es_pop(s);
-            EXPR_t *e = expr_unary(E_INDIRECT, operand);
+            EXPR_t *e = expr_unary(E_DEFER, operand);
             es_push(s, e); return 0;
         } else {
             EXPR_t *r = es_pop(s), *l = es_pop(s);

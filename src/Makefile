@@ -28,7 +28,7 @@ FRONTEND_SNOCONE = \
     frontend/snocone/snocone_parse.c \
     frontend/snocone/snocone_driver.c \
     frontend/snocone/snocone_lower.c \
-    frontend/snocone/snocone_cf.c
+    frontend/snocone/snocone_control.c
 
 FRONTEND_REBUS = \
     frontend/rebus/rebus_lower.c \

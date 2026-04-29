@@ -12,7 +12,7 @@
 #include "../snobol4/scrip_cc.h"   /* Program, STMT_t, EXPR_t, expr_new, stmt_new, etc. */
 
 /*
- * snocone_cf_compile(source, filename) → Program*
+ * snocone_control_compile(source, filename) → Program*
  *
  * Compiles a complete Snocone source string to a Program* using the
  * full control-flow lowering pass (if/while/for/procedure/goto/return).
@@ -20,6 +20,6 @@
  * Replaces snocone_compile() from sc_driver.c for the ASM backend.
  * Returns the compiled Program* (never NULL; partial on error).
  */
-Program *snocone_cf_compile(const char *source, const char *filename);
+Program *snocone_control_compile(const char *source, const char *filename);
 
 #endif /* SNOCONE_CF_H */

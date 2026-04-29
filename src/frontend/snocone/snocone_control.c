@@ -8,7 +8,7 @@
  *
  * Architecture:
  *   snocone_lex()  → ScTokenArray (flat token stream)
- *   snocone_cf_compile() → Program* (STMT_t list with labels + go fields)
+ *   snocone_control_compile() → Program* (STMT_t list with labels + go fields)
  *
  * Each Snocone control construct is lowered to labeled SNOBOL4 STMT_t nodes:
  *
@@ -49,7 +49,7 @@
  * before.  Control-flow keywords are consumed by this pass, not snocone_parse.
  */
 
-#include "snocone_cf.h"
+#include "snocone_control.h"
 #include "snocone_lex.h"
 #include "snocone_parse.h"
 #include "snocone_lower.h"
@@ -733,9 +733,9 @@ static void do_stmt(CfState *st) {
 }
 
 /* -------------------------------------------------------------------------
- * snocone_cf_compile — public entry point
+ * snocone_control_compile — public entry point
  * ---------------------------------------------------------------------- */
-Program *snocone_cf_compile(const char *source, const char *filename) {
+Program *snocone_control_compile(const char *source, const char *filename) {
     if (!filename) filename = "<stdin>";
 
     /* Case policy is a frontend concern (cf. commit 8aa5803b for DATATYPE).
@@ -768,7 +768,7 @@ Program *snocone_cf_compile(const char *source, const char *filename) {
     sc_tokens_free(&ta);
 
     if (st.nerrors > 0) {
-        fprintf(stderr, "snocone_cf_compile: %d error(s) in %s\n",
+        fprintf(stderr, "snocone_control_compile: %d error(s) in %s\n",
                 st.nerrors, filename);
         /* Return prog anyway — partial output is useful for debugging */
     }

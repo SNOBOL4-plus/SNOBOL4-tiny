@@ -44,7 +44,7 @@
 /* CMPILE.h removed — bison/flex path only (GOAL-REMOVE-CMPILE S-5) */
 extern Program *sno_parse(FILE *f, const char *filename);
 #include "../frontend/snocone/snocone_driver.h"
-#include "../frontend/snocone/snocone_cf.h"
+#include "../frontend/snocone/snocone_control.h"
 #include "../frontend/prolog/prolog_driver.h"
 #include "../frontend/prolog/term.h"            /* Term — needed by Prolog globals block */
 #include "../frontend/prolog/prolog_runtime.h"  /* Trail — needed by Prolog globals block */
@@ -301,7 +301,7 @@ int main(int argc, char **argv)
                 : lang_prolog ? prolog_compile(src, input_path)
                 : lang_icon   ? icon_compile(src, input_path)
                 : lang_rebus  ? rebus_compile(src, input_path)
-                :               snocone_cf_compile(src, input_path);
+                :               snocone_control_compile(src, input_path);
             free(src);
             /* SC-26 investigation: allow --dump-ir on Snocone .sc files so
              * we can diff Snocone IR vs SNOBOL4 IR for the same program. */
@@ -335,8 +335,32 @@ int main(int argc, char **argv)
         if (!prog) {
             prog = sub;
         } else {
-            prog->tail->next = sub->head;
-            prog->tail       = sub->tail;
+            /* Strip trailing is_end sentinel from running prog before chaining
+             * the next sub-program.  Each frontend emits one is_end at end of
+             * its file; without this, multi-file invocations halt at the first
+             * file's END.  The very last sub's is_end stays — it terminates
+             * the merged program. */
+            if (prog->tail && prog->tail->is_end) {
+                STMT_t *t = prog->head;
+                STMT_t *prev = NULL;
+                while (t && t != prog->tail) { prev = t; t = t->next; }
+                if (prev) {
+                    prev->next = NULL;
+                    prog->tail = prev;
+                    prog->nstmts--;
+                } else {
+                    /* prog had only one stmt and it was END — drop it entirely */
+                    prog->head = prog->tail = NULL;
+                    prog->nstmts = 0;
+                }
+            }
+            if (prog->tail) {
+                prog->tail->next = sub->head;
+                prog->tail       = sub->tail;
+            } else {
+                prog->head = sub->head;
+                prog->tail = sub->tail;
+            }
             prog->nstmts    += sub->nstmts;
             free(sub);
         }

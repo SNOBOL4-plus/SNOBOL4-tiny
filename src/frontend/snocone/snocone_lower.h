@@ -43,7 +43,7 @@
  *   SNOCONE_STR_EQ    ->  E_FNC("LEQ",2)
  *   SNOCONE_STR_NE    ->  E_FNC("LNE",2)
  *   SNOCONE_PERCENT   ->  E_FNC("REMDR",2)
- *   SNOCONE_STAR (unary) -> E_INDR (indirect reference)
+ *   SNOCONE_STAR (unary) -> E_DEFER (unevaluated expression — *expr)
  *   SNOCONE_CALL      ->  E_FNC(name, nargs)
  *   SNOCONE_ARRAY_REF ->  E_IDX(name, nargs)
  *
