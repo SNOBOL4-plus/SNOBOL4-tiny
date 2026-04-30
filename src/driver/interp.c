@@ -4324,6 +4324,37 @@ DESCR_t interp_eval_pat(EXPR_t *e)
         }
         return pat_fence();
 
+    case E_FNC:
+        /* SB-5c.1: Snocone emits ARBNO(P) and FENCE(P) as E_FNC nodes (the
+         * frontend doesn't lower function-call surface syntax to E_ARBNO /
+         * E_FENCE).  Both builtins take a *pattern* argument.  Falling
+         * through to interp_eval (the default below) evaluates the arg in
+         * value context, which turns a child like E_DEFER(E_VAR("group"))
+         * into a frozen DT_E rather than an XDSAR deferred-reference
+         * pattern node.  pat_arbno/pat_fence_p then call spat_of(DT_E) →
+         * NULL and build a malformed pattern (NULL child), which fails
+         * to advance the cursor on match.  The SNOBOL4 frontend hits the
+         * E_ARBNO / E_FENCE cases above which already do the right thing.
+         *
+         * Fix: when E_FNC is ARBNO or FENCE, evaluate the child in pattern
+         * context here.  Other pattern-builtin function calls (POS, RPOS,
+         * SPAN, BREAK, LEN, ANY, NOTANY, TAB, RTAB, ARB, REM, ...) take
+         * non-pattern args (strings or integers), so for them the default
+         * value-context path is correct. */
+        if (e->sval && e->nchildren > 0) {
+            if (strcmp(e->sval, "ARBNO") == 0) {
+                DESCR_t _inner = interp_eval_pat(e->children[0]);
+                if (IS_FAIL_fn(_inner)) return FAILDESCR;
+                return pat_arbno(_inner);
+            }
+            if (strcmp(e->sval, "FENCE") == 0) {
+                DESCR_t _inner = interp_eval_pat(e->children[0]);
+                if (IS_FAIL_fn(_inner)) return FAILDESCR;
+                return pat_fence_p(_inner);
+            }
+        }
+        return interp_eval(e);
+
     default:
         return interp_eval(e);
     }
