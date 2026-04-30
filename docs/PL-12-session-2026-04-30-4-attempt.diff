@@ -1,0 +1,264 @@
+diff --git a/src/runtime/interp/pl_runtime.c b/src/runtime/interp/pl_runtime.c
+index 9cee0442..a340458a 100644
+--- a/src/runtime/interp/pl_runtime.c
++++ b/src/runtime/interp/pl_runtime.c
+@@ -254,6 +254,20 @@ Term *pl_unified_term_from_expr(EXPR_t *e, Term **env) {
+             Term *args2[2]; args2[0]=pl_unified_term_from_expr(e->children[0],env); args2[1]=pl_unified_term_from_expr(e->children[1],env);
+             return term_new_compound(atom, 2, args2);
+         }
++        case E_UNIFY: {
++            /* =/2 used as a term (e.g. G = (X = 5), assertz(p(X = 5))): wrap as
++             * compound. Without this, the default arm below silently produced
++             * atom("?") and any later `call(G)` / `catch(G,_,_)` saw a literal
++             * `?` instead of the unification goal. (PL-12 latent bug, surfaced
++             * by fix #2.) */
++            int atom = prolog_atom_intern("=");
++            Term *args2[2];
++            args2[0] = e->nchildren > 0 ? pl_unified_term_from_expr(e->children[0], env) : term_new_atom(atom);
++            args2[1] = e->nchildren > 1 ? pl_unified_term_from_expr(e->children[1], env) : term_new_atom(atom);
++            return term_new_compound(atom, 2, args2);
++        }
++        case E_CUT:  return term_new_atom(prolog_atom_intern("!"));
++        case E_NUL:  return term_new_atom(prolog_atom_intern("[]"));
+         case E_FNC: {
+             int arity = e->nchildren;
+             int atom  = prolog_atom_intern(e->sval ? e->sval : "f");
+@@ -492,6 +506,197 @@ static Term *pl_copy_term(Term *t) {
+     return copy_term_rec(t, map, &nmap);
+ }
+ 
++/*============================================================================================================================
++ * pl_term_to_goal_expr — synthesize an EXPR_t goal tree from a runtime Term
++ *
++ * PL-12 fix #2 (session 2026-04-30 #4). Used when a Prolog goal is a runtime
++ * variable bound to a callable Term (e.g. `catch(Goal, _, R)` where `Goal` is
++ * a clause-arg or asserted-body goal). Without this bridge, the catch handler
++ * fell into `interp_exec_pl_builtin`'s default `return 1` arm for E_VAR goals,
++ * silently succeeding for every "expected fail" test in the SWI plunit suites
++ * (bips, arg, is_most_general_term, term_singletons).
++ *
++ * Strategy: mirror prolog_lower.c::lower_term *exactly*, so the synthesized
++ * EXPR is byte-for-byte the same shape the lowerer would have produced from
++ * the equivalent source. That guarantees every downstream consumer
++ * (pl_box_goal_from_ir, pl_unified_term_from_expr, pl_unified_eval_arith_term,
++ * interp_exec_pl_builtin) handles the synth identically to lowered source.
++ *
++ * In particular: arith operators in the Term (e.g. `+(5,5)` inside `is(A,_)`)
++ * become E_ADD/E_SUB/E_MUL/E_DIV/E_MOD nodes whose leaves are E_ILIT/E_FLIT/
++ * E_VAR — NOT TT_COMPOUND-via-E_VAR. This is the architectural fix that the
++ * session #2 attempt missed (which produced a 33-suite regression by stuffing
++ * the compound into a tenv slot and letting eval_arith's E_VAR branch return
++ * it un-evaluated).
++ *
++ * Var dedup: TT_VAR Terms are matched by *pointer identity*. The same Term*
++ * appearing twice in the source (e.g. X+X) maps to the same E_VAR slot, so
++ * unification through the synth threads bindings consistently.
++ *
++ * Returns the synthesized EXPR_t* (heap-allocated; caller must free via
++ * pl_free_synth_expr). On the way it grows *penv to hold the var-binding env
++ * indexed by E_VAR ival; *pn_env is its used count, *pcap its capacity.
++ *============================================================================================================================*/
++static EXPR_t *pl_synth_expr_new(EKind k) {
++    EXPR_t *e = (EXPR_t *)calloc(1, sizeof(EXPR_t));
++    e->kind = k;
++    return e;
++}
++
++static void pl_synth_expr_add_child(EXPR_t *e, EXPR_t *c) {
++    if (e->nchildren >= e->nalloc) {
++        e->nalloc = e->nalloc ? e->nalloc * 2 : 4;
++        e->children = (EXPR_t **)realloc(e->children, e->nalloc * sizeof(EXPR_t *));
++    }
++    e->children[e->nchildren++] = c;
++}
++
++static int pl_env_lookup_or_add(Term *v, Term ***penv, int *pn_env, int *pcap) {
++    /* Dedup by pointer identity so X+X collapses to one slot */
++    for (int i = 0; i < *pn_env; i++) {
++        if ((*penv)[i] == v) return i;
++    }
++    if (*pn_env >= *pcap) {
++        int newcap = *pcap ? (*pcap) * 2 : 8;
++        *penv = (Term **)realloc(*penv, newcap * sizeof(Term *));
++        for (int i = *pcap; i < newcap; i++) (*penv)[i] = NULL;
++        *pcap = newcap;
++    }
++    (*penv)[*pn_env] = v;
++    return (*pn_env)++;
++}
++
++static EXPR_t *pl_term_to_goal_expr(Term *t, Term ***penv, int *pn_env, int *pcap) {
++    t = term_deref(t);
++    if (!t) {
++        EXPR_t *e = pl_synth_expr_new(E_FNC);
++        e->sval = strdup("[]");
++        return e;
++    }
++    switch (t->tag) {
++        case TT_VAR: {
++            int slot = pl_env_lookup_or_add(t, penv, pn_env, pcap);
++            EXPR_t *e = pl_synth_expr_new(E_VAR);
++            e->ival = slot;
++            e->sval = strdup("_synth");
++            return e;
++        }
++        case TT_INT: {
++            EXPR_t *e = pl_synth_expr_new(E_ILIT);
++            e->ival = t->ival;
++            return e;
++        }
++        case TT_FLOAT: {
++            EXPR_t *e = pl_synth_expr_new(E_FLIT);
++            e->dval = t->fval;
++            return e;
++        }
++        case TT_ATOM: {
++            /* Atom in goal position -> E_FNC/0 (true, fail, nl, halt, ...);
++             * pl_box_goal_from_ir recognises specific atoms (true, fail) and
++             * routes others through pl_box_choice_call/pl_box_builtin. */
++            const char *nm = prolog_atom_name(t->atom_id);
++            if (!nm) nm = "";
++            EXPR_t *e = pl_synth_expr_new(E_FNC);
++            e->sval = strdup(nm);
++            return e;
++        }
++        case TT_COMPOUND: {
++            const char *fn = prolog_atom_name(t->compound.functor);
++            if (!fn) fn = "?";
++            int arity = t->compound.arity;
++            /* =/2 -> E_UNIFY (mirror lower_term:165) */
++            if (arity == 2 && strcmp(fn, "=") == 0) {
++                EXPR_t *e = pl_synth_expr_new(E_UNIFY);
++                pl_synth_expr_add_child(e, pl_term_to_goal_expr(t->compound.args[0], penv, pn_env, pcap));
++                pl_synth_expr_add_child(e, pl_term_to_goal_expr(t->compound.args[1], penv, pn_env, pcap));
++                return e;
++            }
++            /* +/- /* /// /mod -> E_ADD/E_SUB/E_MUL/E_DIV/E_MOD (mirror lower_term:174-188) */
++            if (arity == 2) {
++                EKind ak = E_KIND_COUNT;
++                if      (strcmp(fn, "+") == 0)  ak = E_ADD;
++                else if (strcmp(fn, "-") == 0)  ak = E_SUB;
++                else if (strcmp(fn, "*") == 0)  ak = E_MUL;
++                else if (strcmp(fn, "/") == 0)  ak = E_DIV;
++                else if (strcmp(fn, "//") == 0) ak = E_DIV;
++                else if (strcmp(fn, "mod") == 0) ak = E_MOD;
++                if (ak != E_KIND_COUNT) {
++                    EXPR_t *e = pl_synth_expr_new(ak);
++                    pl_synth_expr_add_child(e, pl_term_to_goal_expr(t->compound.args[0], penv, pn_env, pcap));
++                    pl_synth_expr_add_child(e, pl_term_to_goal_expr(t->compound.args[1], penv, pn_env, pcap));
++                    return e;
++                }
++            }
++            /* General compound -> E_FNC sval=fn nchildren=arity (mirror lower_term:247-252).
++             * Note: ,/; /-> are also handled here as plain E_FNC; pl_box_goal_from_ir
++             * recognises sval==","/";"/"->" and dispatches via pl_box_cat_list/pl_box_alt.
++             * Lowerer flattens right-spine for these; we don't, because the runtime Term
++             * graph already has the natural right-spine shape and pl_box_goal_from_ir
++             * accepts both n-ary and 2-ary. */
++            EXPR_t *e = pl_synth_expr_new(E_FNC);
++            e->sval = strdup(fn);
++            for (int i = 0; i < arity; i++) {
++                pl_synth_expr_add_child(e, pl_term_to_goal_expr(t->compound.args[i], penv, pn_env, pcap));
++            }
++            return e;
++        }
++        default: {
++            EXPR_t *e = pl_synth_expr_new(E_FNC);
++            e->sval = strdup("?");
++            return e;
++        }
++    }
++}
++
++static void pl_free_synth_expr(EXPR_t *e) {
++    if (!e) return;
++    for (int i = 0; i < e->nchildren; i++) pl_free_synth_expr(e->children[i]);
++    if (e->children) free(e->children);
++    if (e->sval) free(e->sval);
++    free(e);
++}
++
++/*============================================================================================================================
++ * pl_invoke_term — invoke a runtime Term as a goal.
++ *
++ * Used by catch/3 (and any future site needing this) when goal_e->kind==E_VAR.
++ * Builds a synthesized EXPR_t goal tree from the deref'd Term, then dispatches
++ * via pl_box_goal_from_ir + bb_broker(BB_ONCE), the same path the lowerer's
++ * normal output takes. User predicates routed through pl_box_choice_call;
++ * builtins through pl_box_builtin -> interp_exec_pl_builtin recursively.
++ *
++ * Returns 1 on success, 0 on failure. Throws propagate via the existing
++ * setjmp/longjmp catch frame in the caller — do not catch them here.
++ *============================================================================================================================*/
++static int pl_invoke_term(Term *gt, Term **caller_env) {
++    (void)caller_env;  /* synth env is self-contained */
++    gt = term_deref(gt);
++    if (!gt) return 0;
++    if (gt->tag == TT_VAR) {
++        /* Unbound goal — ISO: instantiation_error. Match SWI test idiom: fail. */
++        return 0;
++    }
++    /* Number/etc. not callable */
++    if (gt->tag == TT_INT || gt->tag == TT_FLOAT) return 0;
++
++    Term **tenv = NULL;
++    int    tn   = 0;
++    int    tcap = 0;
++    EXPR_t *synth = pl_term_to_goal_expr(gt, &tenv, &tn, &tcap);
++
++    /* Dispatch via the canonical box builder */
++    Term **saved_env = g_pl_env;
++    if (tenv) g_pl_env = tenv;
++    bb_node_t box = pl_box_goal_from_ir(synth, tenv);
++    int ok = bb_broker(box, BB_ONCE, NULL, NULL);
++    g_pl_env = saved_env;
++
++    pl_free_synth_expr(synth);
++    if (tenv) free(tenv);
++    return ok;
++}
++
+ /*---- interp_exec_pl_builtin — execute one Prolog builtin goal ----*/
+ /* Uses file-scope globals g_pl_trail, g_pl_cut_flag, g_pl_pred_table, g_pl_env.
+  * Returns 1=success, 0=fail. Called by pl_box_builtin in pl_broker.c. */
+@@ -1302,7 +1507,17 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
+                 bb_node_t goal_box=pl_box_goal_from_ir(goal_expr,env);
+                 DESCR_t fa_r=goal_box.fn(goal_box.ζ,α);
+                 while(!IS_FAIL_fn(fa_r)){
+-                    Term *snap=pl_unified_deep_copy(pl_unified_term_from_expr(tmpl_expr,env));
++                    /* PL-12 fix #1 (sister to fix #2 / pl_invoke_term): preserve
++                     * variable sharing within each snapshot. The previous
++                     * pl_unified_deep_copy collapsed every TT_VAR to the literal
++                     * atom `_`, which destroyed the link between e.g. A in
++                     * `is(A,5+5)` and A in the matching `A == 10` Opts. Plunit
++                     * stores test bodies as findall-collected snapshots, so this
++                     * sharing is needed for any test where Opts references vars
++                     * bound by Goal. pl_copy_term uses the same shared
++                     * CopyVarMap as elsewhere — vars within ONE snapshot share
++                     * fresh-var identity; vars across snapshots are distinct. */
++                    Term *snap=pl_copy_term(pl_unified_term_from_expr(tmpl_expr,env));
+                     if(nsol>=sol_cap){sol_cap=sol_cap?sol_cap*2:8;solutions=realloc(solutions,sol_cap*sizeof(Term*));}
+                     solutions[nsol++]=snap;
+                     fa_r=goal_box.fn(goal_box.ζ,β);
+@@ -1527,7 +1742,20 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
+                 if (!threw) {
+                     /* run the goal */
+                     int ok;
+-                    if (is_pl_user_call(goal_e)) {
++                    /* PL-12 fix #2: E_VAR goal — Goal is a runtime variable
++                     * bound to a callable Term (e.g. plunit asserts test
++                     * bodies, then `catch(G,_,_)` calls them). Without this
++                     * branch, the next else-arm calls interp_exec_pl_builtin
++                     * with an E_VAR which falls through to default:return 1
++                     * (silent success), the bug behind the bips/arg/
++                     * is_most_general_term/term_singletons MISS suites.
++                     * pl_invoke_term builds a synth EXPR mirroring the
++                     * lowerer's output and dispatches through the canonical
++                     * box path — same route the literal-goal arm takes. */
++                    if (goal_e && goal_e->kind == E_VAR) {
++                        Term *gt = pl_unified_term_from_expr(goal_e, env);
++                        ok = pl_invoke_term(gt, env);
++                    } else if (is_pl_user_call(goal_e)) {
+                         char ukey[256];
+                         snprintf(ukey,sizeof ukey,"%s/%d",
+                                  goal_e->sval?goal_e->sval:"",goal_e->nchildren);
