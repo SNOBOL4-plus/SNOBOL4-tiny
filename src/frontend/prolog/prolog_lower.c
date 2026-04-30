@@ -67,6 +67,46 @@ static PredKey key_of_head(Term *head) {
 static EXPR_t *lower_term(Term *t);
 static EXPR_t *lower_clause(PlClause *cl, PredKey key);
 
+/* Walk the Term graph rooted at the head + each body goal of a clause.
+ * Pass 1: find max named-var slot.  Pass 2: assign fresh distinct slots to
+ * anonymous TT_VARs (saved_slot == -1).  Mutation is in place on the Term;
+ * idempotent — vars whose slot is already assigned are left alone.
+ * Used both by lower_clause and by the plunit prescan, which builds an
+ * assertz term whose Goal arg points back at the clause body Terms; the
+ * prescan must run this BEFORE lowering the assertz term so anon vars in
+ * the test body emit distinct E_VAR slots, not all aliased to slot 0. */
+static void assign_clause_anon_slots(PlClause *cl) {
+    if (!cl) return;
+    Term *stk[512]; int top = 0;
+    #define PA_PUSH(t_) do { Term *_p = term_deref(t_); \
+        if (_p && top < 512) stk[top++] = _p; } while(0)
+    int max_slot = -1;
+    /* Pass 1: max named slot */
+    #define PA_WALK_MAX(root_) do { top = 0; PA_PUSH(root_); \
+        while (top > 0) { Term *_c = stk[--top]; if (!_c) continue; \
+            if (_c->tag == TT_VAR && _c->saved_slot > max_slot) \
+                max_slot = _c->saved_slot; \
+            if (_c->tag == TT_COMPOUND) \
+                for (int _i = 0; _i < _c->compound.arity; _i++) \
+                    PA_PUSH(_c->compound.args[_i]); } } while(0)
+    if (cl->head) PA_WALK_MAX(cl->head);
+    for (int i = 0; i < cl->nbody; i++) if (cl->body[i]) PA_WALK_MAX(cl->body[i]);
+    /* Pass 2: assign fresh slots to anon vars */
+    int next_anon = max_slot + 1;
+    #define PA_WALK_ASSIGN(root_) do { top = 0; PA_PUSH(root_); \
+        while (top > 0) { Term *_c = stk[--top]; if (!_c) continue; \
+            if (_c->tag == TT_VAR && _c->saved_slot < 0) \
+                _c->saved_slot = next_anon++; \
+            if (_c->tag == TT_COMPOUND) \
+                for (int _i = 0; _i < _c->compound.arity; _i++) \
+                    PA_PUSH(_c->compound.args[_i]); } } while(0)
+    if (cl->head) PA_WALK_ASSIGN(cl->head);
+    for (int i = 0; i < cl->nbody; i++) if (cl->body[i]) PA_WALK_ASSIGN(cl->body[i]);
+    #undef PA_PUSH
+    #undef PA_WALK_MAX
+    #undef PA_WALK_ASSIGN
+}
+
 /* Build functor/arity string like "foo/2" for E_CHOICE sval */
 static char *pred_str(int functor, int arity) {
     const char *fn = prolog_atom_name(functor);
@@ -271,7 +311,41 @@ static EXPR_t *lower_clause(PlClause *cl, PredKey key) {
     /* Walk each body goal */
     for (int i = 0; i < cl->nbody; i++)
         if (cl->body[i]) WALK_ALL(cl->body[i]);
-    int n_vars = max_slot + 1;
+
+    /* Pass 2: assign fresh slots to anonymous TT_VARs (saved_slot == -1).
+     * Each distinct anon Term* gets its own slot starting at max_slot+1.
+     * Without this, lower_term sees saved_slot==-1 for every "_" and emits
+     * a single shared E_VAR slot — which incorrectly aliases distinct anon
+     * vars in the same clause (e.g. assertz-synthesized plunit test bodies
+     * containing multiple "_" placeholders). Idempotent: re-running on a
+     * Term graph whose anon vars already got slots leaves them unchanged.
+     * Walks via the same explicit stack pattern as Pass 1; mutation is on
+     * the Term directly so lower_term picks it up via the existing
+     * t->saved_slot read at line ~109. The plunit prescan calls this
+     * helper directly before building its synthesized assertz term, so
+     * the test body sees its anons get distinct slots BEFORE lower_term
+     * walks them. The named-var max_slot is recomputed here against the
+     * full clause regardless. */
+    int next_anon = max_slot + 1;
+    #define ASSIGN_ANON(root_) do { \
+        stk_top = 0; \
+        PUSH_TERM(root_); \
+        while (stk_top > 0) { \
+            Term *_cur = stk[--stk_top]; \
+            if (!_cur) continue; \
+            if (_cur->tag == TT_VAR && _cur->saved_slot < 0) \
+                _cur->saved_slot = next_anon++; \
+            if (_cur->tag == TT_COMPOUND) \
+                for (int _ai = 0; _ai < _cur->compound.arity; _ai++) \
+                    PUSH_TERM(_cur->compound.args[_ai]); \
+        } \
+    } while(0)
+
+    if (cl->head) ASSIGN_ANON(cl->head);
+    for (int i = 0; i < cl->nbody; i++)
+        if (cl->body[i]) ASSIGN_ANON(cl->body[i]);
+
+    int n_vars = next_anon;
     ec->ival = n_vars;              /* EnvLayout.n_vars */
     ec->dval = (double)key.arity;  /* EnvLayout.n_args */
 
@@ -348,6 +422,15 @@ Program *prolog_lower(PlProgram *pl_prog) {
         if (clause_idx < PL_MAX_CLAUSES && plunit_suite[clause_idx][0] != '\0') {
             const char *fn = prolog_atom_name(k.functor);
             if (fn && strcmp(fn, "test") == 0 && (k.arity == 1 || k.arity == 2)) {
+                /* Assign distinct slots to anon vars in the original clause's
+                 * head/body BEFORE we splice the body Terms into the synthetic
+                 * assertz term — without this, multiple "_" in the test body
+                 * (e.g. test_term `term_singletons(X+X+_Y,[_,_])`) would all
+                 * lower to the same slot and alias at runtime, causing the
+                 * `(expected fail, succeeded)` failure mode. Idempotent;
+                 * lower_clause(cl,k) below will see the slots already set
+                 * and leave them. */
+                assign_clause_anon_slots(cl);
                 /* Extract Name and Opts from head */
                 Term *hd = term_deref(cl->head);
                 Term *name_term = (hd->tag == TT_COMPOUND) ? term_deref(hd->compound.args[0]) : hd;
