@@ -1134,11 +1134,20 @@ static DESCR_t bb_deferred_var(void *zeta, int entry)
                          * bb_brk). Zeroing nulls the ptr -> strchr(NULL,...) -> fail
                          * on every ARBNO retry iteration. bb_lit already excluded
                          * (DYN-12); extend guard to all config-only box types. */
+                        /* DYN-12 extended: bb_arbno carries its own α/β-managed
+                         * iteration state (depth, cap, stack).  Zeroing it
+                         * between deferred-var re-uses corrupts the inner ARBNO
+                         * when *name resolves to the same PATND_t* on every
+                         * iteration (val.p == ζ->child_state → rebuilt=0 →
+                         * memset wipes cap→0, stack→NULL → crash/wrong-match).
+                         * The ARBNO box self-resets at every α entry; no external
+                         * reset is needed or safe.  SB-5c.1 fix. */
                         int _config_only = (ζ->child_fn == bb_lit
                                          || ζ->child_fn == bb_any
                                          || ζ->child_fn == bb_notany
                                          || ζ->child_fn == bb_span
-                                         || ζ->child_fn == bb_brk);
+                                         || ζ->child_fn == bb_brk
+                                         || ζ->child_fn == bb_arbno);
                         if (!rebuilt && ζ->child_state && ζ->child_size && !_config_only)
                             memset(ζ->child_state, 0, ζ->child_size);
                     }
