@@ -892,6 +892,27 @@ bb_node_t icn_eval_gen(EXPR_t *e) {
         int nargs = e->nchildren - 1;
         for (int i = 0; i < icn_proc_count; i++) {
             if (strcmp(icn_proc_table[i].name, fn) != 0) continue;
+            /* IC-7 rung32: if any arg is generative, route to icn_bb_fnc_gen.
+             * Otherwise the args would be pre-evaluated as scalars (only first
+             * value of any alternation/generator), and the proc would run once
+             * via icn_call_proc — yielding only one value over `every`.
+             * fnc_gen pumps the gen arg per tick and re-calls icn_call_proc
+             * with the substituted scalar arg each time. */
+            for (int j = 0; j < nargs && j < ICN_FNC_GEN_ARGS; j++) {
+                EXPR_t *arg = e->children[1+j];
+                if (!arg || !icn_is_gen(arg)) continue;
+                icn_fnc_gen_state_t *fg = calloc(1, sizeof(*fg));
+                fg->arg_box = icn_eval_gen(arg);
+                fg->call    = e;
+                fg->gen_idx = j;
+                fg->nargs   = nargs;
+                /* Pre-evaluate all other args (non-generative) */
+                for (int k2 = 0; k2 < nargs && k2 < ICN_FNC_GEN_ARGS; k2++) {
+                    if (k2 == j) continue;
+                    fg->args[k2] = interp_eval(e->children[1+k2]);
+                }
+                return (bb_node_t){ icn_bb_fnc_gen, fg, 0 };
+            }
             /* Build args array */
             DESCR_t *args = nargs > 0 ? calloc(nargs, sizeof(DESCR_t)) : NULL;
             for (int j = 0; j < nargs; j++)
