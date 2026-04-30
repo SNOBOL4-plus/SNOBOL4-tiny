@@ -94,9 +94,25 @@ static const char *top_break(CfState *st) {
  * Helpers
  * ---------------------------------------------------------------------- */
 
+/* SB-5b multi-file label-collision fix:
+ * scrip's --ir-run/--sm-run/--jit-run can invoke snocone_control_compile()
+ * multiple times in one run (one per .sc file on the command line) and merge
+ * the resulting Program* lists into a single program (driver/scrip.c).
+ * If newlab() restarts at L.1 on each call, both programs end up with their
+ * own L.1, L.2, ...  After merge, label_table_build (interp.c) registers the
+ * first occurrence of each name; subsequent :go/:goS/:goF references in the
+ * later file resolve to the wrong target.  Symptom on `global.sc m1.sc`:
+ * m1's `if (v ? POS(0)) { OUTPUT='OK' }` jumps :goS L.1 — but L.1 is global's
+ * UTF-table-loop label, so the if-arm evaluates inside global's loop body and
+ * never returns to print OK or FAIL.  Reverse order spins similarly.
+ * Fix: counter is process-global (static at file scope).  Every label across
+ * every snocone_control_compile call in this process is unique. */
+static int g_snocone_label_ctr = 0;
+
 static char *newlab(CfState *st) {
+    (void)st;  /* counter no longer per-state, but keep signature for callers */
     char buf[32];
-    snprintf(buf, sizeof buf, "L.%d", ++st->label_ctr);
+    snprintf(buf, sizeof buf, "L.%d", ++g_snocone_label_ctr);
     return strdup(buf);
 }
 
