@@ -203,6 +203,38 @@ void polyglot_init(Program *prog, uint32_t lang_mask)
 
 
 /*============================================================================================================================
+ * pl_directive_max_var_slot — walk a lowered Prolog directive subject EXPR
+ * and return the largest E_VAR ival found, or -1 if none.
+ *
+ * PL-12 (2026-04-30 #3): used by polyglot_execute's LANG_PL branch to size
+ * a per-directive cenv. Without this, directives like
+ *   :- assertz(test_g(hello)), test_g(G), write(G).
+ * passed env=NULL to interp_exec_pl_builtin, which made every E_VAR read
+ * mint a fresh disconnected Term*var via pl_unified_term_from_expr —
+ * unify could not thread bindings between conjuncts. The walk uses an
+ * iterative explicit stack (no recursion) to avoid blowing C stack on
+ * deeply nested goal trees built by the lowerer.
+ *============================================================================================================================*/
+static int pl_directive_max_var_slot(EXPR_t *root)
+{
+    if (!root) return -1;
+    int max_slot = -1;
+    enum { CAP = 512 };
+    EXPR_t *stk[CAP];
+    int top = 0;
+    stk[top++] = root;
+    while (top > 0) {
+        EXPR_t *e = stk[--top];
+        if (!e) continue;
+        if (e->kind == E_VAR && (int)e->ival > max_slot) max_slot = (int)e->ival;
+        for (int i = 0; i < e->nchildren && top < CAP; i++)
+            if (e->children[i]) stk[top++] = e->children[i];
+    }
+    return max_slot;
+}
+
+
+/*============================================================================================================================
  * polyglot_execute — OE-7: ONE top-level entry point for all languages.
  *
  * For polyglot programs: calls execute_program (which runs all SNO stmts and
@@ -233,12 +265,29 @@ void polyglot_execute(Program *prog) {
         fprintf(stderr, "icon: no main procedure\n");
     } else if (slang == LANG_PL) {
         g_pl_active = 1;
-        /* Execute non-E_CHOICE/E_CLAUSE LANG_PL stmts as directives before main/0 */
+        /* Execute non-E_CHOICE/E_CLAUSE LANG_PL stmts as directives before main/0.
+         * PL-12 (2026-04-30 #3): each directive gets a fresh cenv sized to its
+         * largest E_VAR slot. Without this, env=NULL caused
+         * pl_unified_term_from_expr to mint a fresh Term*var on every E_VAR
+         * read, so two references to the same logical variable G in
+         *   :- assertz(test_g(hello)), test_g(G), write(G).
+         * could not unify (the assertz callee bound a fresh var, the write
+         * read another fresh var, both disconnected). The directive printed
+         * `_G0` instead of `hello`. Walking the lowered EXPR for the max
+         * E_VAR ival and allocating cenv = pl_env_new(max+1) provides one
+         * shared env for the whole directive body, so unify can thread
+         * bindings the way it does for clause bodies. */
         for (STMT_t *_s = prog->head; _s; _s = _s->next) {
             if (_s->lang != LANG_PL) continue;
             if (!_s->subject) continue;
             if (_s->subject->kind == E_CHOICE || _s->subject->kind == E_CLAUSE) continue;
-            interp_exec_pl_builtin(_s->subject, NULL);
+            int _max_slot = pl_directive_max_var_slot(_s->subject);
+            Term **_dir_env = (_max_slot >= 0) ? pl_env_new(_max_slot + 1) : NULL;
+            Term **_saved   = g_pl_env;
+            if (_dir_env) g_pl_env = _dir_env;
+            interp_exec_pl_builtin(_s->subject, _dir_env);
+            g_pl_env = _saved;
+            if (_dir_env) free(_dir_env);
         }
         EXPR_t *main_choice = pl_pred_table_lookup(&g_pl_pred_table, "main/0");
         if (main_choice) interp_eval(main_choice);
