@@ -43,6 +43,7 @@ typedef struct {
     IcnGenEntry_d gen[ICN_GEN_MAX];
     int           gen_depth;
     int           loop_break;
+    int           loop_next;    /* 1 = `next` requested → skip body remainder, advance loop */
     EXPR_t       *body_root;
     /* IM-10: slot→name map, copied from the scope built in icn_call_proc.
      * Allows sync_monitor to name local variables in snapshots. */

@@ -2476,6 +2476,7 @@ DESCR_t interp_eval(EXPR_t *e)
                 bb_node_t rbox = icn_eval_gen(leaf);
                 DESCR_t tick = rbox.fn(rbox.ζ, α);
                 while (!IS_FAIL_fn(tick) && !ICN_CUR.returning && !ICN_CUR.loop_break) {
+                    ICN_CUR.loop_next = 0;
                     icn_drive_node = leaf;
                     icn_drive_val  = tick;
                     interp_eval(gen);
@@ -2485,6 +2486,7 @@ DESCR_t interp_eval(EXPR_t *e)
                     tick = rbox.fn(rbox.ζ, β);
                 }
                 ICN_CUR.loop_break = 0;
+                ICN_CUR.loop_next = 0;
                 return NULVCL;
             }
             /* IC-6: E_SEQ conjunction — every (gen_expr & body_expr).
@@ -2498,6 +2500,7 @@ DESCR_t interp_eval(EXPR_t *e)
                 bb_node_t fbox = icn_eval_gen(filter);
                 DESCR_t tick = fbox.fn(fbox.ζ, α);
                 while (!IS_FAIL_fn(tick) && !ICN_CUR.returning && !ICN_CUR.loop_break) {
+                    ICN_CUR.loop_next = 0;
                     /* Execute remaining seq children as body */
                     for (int _si = 1; _si < gen->nchildren; _si++)
                         interp_eval(gen->children[_si]);
@@ -2506,6 +2509,7 @@ DESCR_t interp_eval(EXPR_t *e)
                     tick = fbox.fn(fbox.ζ, β);
                 }
                 ICN_CUR.loop_break = 0;
+                ICN_CUR.loop_next = 0;
                 return NULVCL;
             }
             /* When body==NULL, the box's own side-effects ARE the work (e.g. every write(1 to 5)).
@@ -2517,6 +2521,7 @@ DESCR_t interp_eval(EXPR_t *e)
             int caller_depth = icn_frame_depth;
             DESCR_t val = box.fn(box.ζ, α);
             while (!IS_FAIL_fn(val) && !ICN_CUR.returning && !ICN_CUR.loop_break) {
+                ICN_CUR.loop_next = 0;
                 /* RK-21: bind loop variable into the CALLER's frame (depth saved before pump). */
                 if (gen->sval && *gen->sval && caller_depth >= 1) {
                     IcnFrame *cf = &icn_frame_stack[caller_depth - 1];
@@ -2542,34 +2547,45 @@ DESCR_t interp_eval(EXPR_t *e)
                 val = box.fn(box.ζ, β);
             }
             ICN_CUR.loop_break = 0;
+            ICN_CUR.loop_next = 0;
             return NULVCL;
         }
         case E_WHILE: {
             int saved_brk = ICN_CUR.loop_break; ICN_CUR.loop_break = 0;
+            int saved_nxt = ICN_CUR.loop_next;  ICN_CUR.loop_next  = 0;
             while (!ICN_CUR.returning && !ICN_CUR.loop_break && !ICN_CUR.suspending &&
                    !IS_FAIL_fn(interp_eval(e->children[0]))) {
+                ICN_CUR.loop_next = 0;
                 if (e->nchildren > 1) interp_eval(e->children[1]);
                 if (ICN_CUR.suspending) break;   /* suspend yield — exit loop, return to icn_call_proc */
             }
             ICN_CUR.loop_break = saved_brk;
+            ICN_CUR.loop_next  = saved_nxt;
             return NULVCL;
         }
         case E_UNTIL: {
             int saved_brk = ICN_CUR.loop_break; ICN_CUR.loop_break = 0;
+            int saved_nxt = ICN_CUR.loop_next;  ICN_CUR.loop_next  = 0;
             while (!ICN_CUR.returning && !ICN_CUR.loop_break && !ICN_CUR.suspending) {
                 DESCR_t cv = (e->nchildren > 0) ? interp_eval(e->children[0]) : FAILDESCR;
                 if (!IS_FAIL_fn(cv)) break;
+                ICN_CUR.loop_next = 0;
                 if (e->nchildren > 1) interp_eval(e->children[1]);
                 if (ICN_CUR.suspending) break;
             }
             ICN_CUR.loop_break = saved_brk;
+            ICN_CUR.loop_next  = saved_nxt;
             return NULVCL;
         }
         case E_REPEAT: {
             int saved_brk = ICN_CUR.loop_break; ICN_CUR.loop_break = 0;
-            while (!ICN_CUR.returning && !ICN_CUR.loop_break && !ICN_CUR.suspending)
+            int saved_nxt = ICN_CUR.loop_next;  ICN_CUR.loop_next  = 0;
+            while (!ICN_CUR.returning && !ICN_CUR.loop_break && !ICN_CUR.suspending) {
+                ICN_CUR.loop_next = 0;
                 if (e->nchildren > 0) { interp_eval(e->children[0]); if (ICN_CUR.suspending) break; }
+            }
             ICN_CUR.loop_break = saved_brk;
+            ICN_CUR.loop_next  = saved_nxt;
             return NULVCL;
         }
         case E_SUSPEND: {
@@ -2584,13 +2600,34 @@ DESCR_t interp_eval(EXPR_t *e)
         }
         case E_SEQ_EXPR: {
             DESCR_t v = NULVCL;
-            for (int i = 0; i < e->nchildren && !ICN_CUR.returning; i++)
+            for (int i = 0; i < e->nchildren && !ICN_CUR.returning && !ICN_CUR.loop_next; i++)
                 v = interp_eval(e->children[i]);
             return v;
         }
         case E_IF: {
             if (e->nchildren < 1) return NULVCL;
-            DESCR_t cv = interp_eval(e->children[0]);
+            EXPR_t *test = e->children[0];
+            /* IC-8: goal-directed test.  Icon if-conditions consult their
+             * test expression as a generator: if the generator yields ANY
+             * non-fail value, the then-branch fires; only if the generator
+             * is exhausted without producing a non-fail value does the
+             * else-branch fire.  Example (rung36_jcon_primes):
+             *     if i % (2 to i-1) = 0 then next
+             * succeeds for any divisor `d` in `2..i-1` for which
+             * `i % d = 0`.  Pre-IC-8 the test was called via interp_eval
+             * once and saw only the first generated value, so the then-
+             * branch never fired for composite i.  Now we pump test via
+             * icn_eval_gen α/β, stopping on the first success (then-branch)
+             * or on exhaustion (else-branch).  Mirrors the E_EVERY pump
+             * pattern below. */
+            if (icn_is_gen(test)) {
+                bb_node_t box = icn_eval_gen(test);
+                DESCR_t v = box.fn(box.ζ, α);
+                if (!IS_FAIL_fn(v) && !ICN_CUR.returning && !ICN_CUR.loop_break)
+                    return (e->nchildren > 1) ? interp_eval(e->children[1]) : v;
+                return (e->nchildren > 2) ? interp_eval(e->children[2]) : FAILDESCR;
+            }
+            DESCR_t cv = interp_eval(test);
             if (!IS_FAIL_fn(cv)) { if (e->nchildren > 1) return interp_eval(e->children[1]); }
             else                  { if (e->nchildren > 2) return interp_eval(e->children[2]); }
             return NULVCL;
@@ -2598,6 +2635,14 @@ DESCR_t interp_eval(EXPR_t *e)
         case E_BREAK: {
             ICN_CUR.loop_break = 1;
             return (e->nchildren > 0) ? interp_eval(e->children[0]) : NULVCL;
+        }
+        case E_LOOP_NEXT: {
+            /* `next` — abort the rest of the current loop body, ask the
+             * enclosing loop to advance to its next iteration.  Loop
+             * handlers (E_EVERY, E_WHILE, E_UNTIL, E_REPEAT) inspect and
+             * clear loop_next at iteration boundaries. */
+            ICN_CUR.loop_next = 1;
+            return NULVCL;
         }
         case E_RETURN: {
             DESCR_t rv = (e->nchildren > 0) ? interp_eval(e->children[0]) : NULVCL;
