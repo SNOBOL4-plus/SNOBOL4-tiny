@@ -1,0 +1,143 @@
+diff --git a/src/runtime/interp/pl_runtime.c b/src/runtime/interp/pl_runtime.c
+index 9cee0442..6bc50a80 100644
+--- a/src/runtime/interp/pl_runtime.c
++++ b/src/runtime/interp/pl_runtime.c
+@@ -492,6 +492,118 @@ static Term *pl_copy_term(Term *t) {
+     return copy_term_rec(t, map, &nmap);
+ }
+ 
++/*============================================================================================================================
++ * pl_invoke_term — invoke a runtime Term as a goal.
++ *
++ * Used when a Prolog goal is a runtime variable bound to a callable Term, e.g.
++ * `catch(Goal, _, Recovery)` where `Goal` is a clause arg or asserted-body goal
++ * that resolves at runtime to an atom (true/fail) or a compound (foo(a,b)).
++ * Without this, `interp_exec_pl_builtin` falls through `default: return 1` for
++ * E_VAR goals, silently succeeding when the bound goal should fail/run.
++ *
++ * Strategy: deref Term, extract functor/arity, then run the same dispatch that
++ * the user-call path uses for E_FNC goals — atom/compound builtins go through
++ * the synthesized E_FNC route, user predicates through pl_pred_table_lookup +
++ * pl_box_choice + bb_broker(BB_ONCE). Caller args are the Term's compound args
++ * directly, unified into a fresh env via the trail.
++ *
++ * Returns 1 on success, 0 on failure. Throws are propagated by the inner
++ * dispatch (longjmp into the enclosing catch frame).
++ *============================================================================================================================*/
++static int pl_invoke_term(Term *gt, Term **env) {
++    (void)env;  /* not needed — Term is already runtime-resolved */
++    gt = term_deref(gt);
++    if (!gt) return 0;
++    if (gt->tag == TT_VAR) {
++        /* still unbound — instantiation_error per ISO. Match SWI: return failure
++         * (test harnesses treat `catch(_,_,fail)` returning 0 as "test failed",
++         * which is the correct outcome for an unbound goal). */
++        return 0;
++    }
++    /* Extract functor name + arity from Term */
++    const char *fn = NULL;
++    int arity = 0;
++    Term **targs = NULL;
++    if (gt->tag == TT_ATOM) {
++        fn = prolog_atom_name(gt->atom_id);
++        arity = 0;
++    } else if (gt->tag == TT_COMPOUND) {
++        fn = prolog_atom_name(gt->compound.functor);
++        arity = gt->compound.arity;
++        targs = gt->compound.args;
++    } else {
++        return 0;  /* int/float/etc. not callable */
++    }
++    if (!fn) return 0;
++
++    /* Look up user-defined predicate first (assertz/asserta path) */
++    char ukey[256]; snprintf(ukey, sizeof ukey, "%s/%d", fn, arity);
++    EXPR_t *uch = pl_pred_table_lookup(&g_pl_pred_table, ukey);
++    if (uch) {
++        Term **uargs = (arity > 0) ? pl_env_new(arity) : NULL;
++        Trail *utrail = &g_pl_trail;
++        int umark = trail_mark(utrail);
++        int uok = 1;
++        for (int ui = 0; ui < arity && uok; ui++) {
++            if (!unify(uargs[ui], targs[ui], utrail)) uok = 0;
++        }
++        if (uok) {
++            Term **saved_env = g_pl_env;
++            g_pl_env = uargs;
++            bb_node_t uroot = pl_box_choice(uch, g_pl_env, arity);
++            uok = bb_broker(uroot, BB_ONCE, NULL, NULL);
++            g_pl_env = saved_env;
++        }
++        if (!uok) trail_unwind(utrail, umark);
++        if (uargs) free(uargs);
++        return uok;
++    }
++    /* Builtin atom-goal path: synthesize a small E_FNC node and dispatch */
++    if (arity == 0) {
++        EXPR_t syn; memset(&syn, 0, sizeof syn);
++        syn.kind = E_FNC;
++        syn.sval = (char*)fn;  /* read-only inside builtin dispatch */
++        syn.nchildren = 0;
++        return interp_exec_pl_builtin(&syn, env);
++    }
++    /* Compound builtin (e.g. write(X), is(Y,Z)): synthesize EXPR_t with literal
++     * children built from the Term args. Use the existing pl_unified_eval-style
++     * embedding: each arg becomes a transient EXPR placeholder whose evaluation
++     * yields the Term value via a local env trick.  Simpler: assertz a one-shot
++     * clause and call it.  Even simpler still: build E_FNC children that wrap
++     * the Term args as literals.  We use a helper that mirrors term-to-EXPR. */
++    EXPR_t syn; memset(&syn, 0, sizeof syn);
++    syn.kind = E_FNC;
++    syn.sval = (char*)fn;
++    syn.nchildren = arity;
++    syn.children = malloc(arity * sizeof(EXPR_t*));
++    /* Build children as E_FNC/0 atom-literal placeholders that pl_unified_term_from_expr
++     * will hand back the original Term via env override.  But env has no slot — we
++     * cheat: each child is an E_QLIT whose pointer-back is the Term.  This requires
++     * pl_unified_term_from_expr to know about a special tag.  Cleanest: pre-build a
++     * temp env, indexed by ival, where targs[i] lives. */
++    Term **tenv = pl_env_new(arity);
++    /* Bind each tenv[i] (initially fresh var) to targs[i] via trail */
++    Trail *trail = &g_pl_trail;
++    int mark = trail_mark(trail);
++    int bind_ok = 1;
++    for (int i = 0; i < arity; i++) {
++        EXPR_t *c = malloc(sizeof(EXPR_t)); memset(c, 0, sizeof *c);
++        c->kind = E_VAR;
++        c->ival = i;
++        c->sval = NULL;
++        syn.children[i] = c;
++        if (!unify(tenv[i], targs[i], trail)) { bind_ok = 0; break; }
++    }
++    int rc = bind_ok ? interp_exec_pl_builtin(&syn, tenv) : 0;
++    trail_unwind(trail, mark);
++    /* free children */
++    for (int i = 0; i < arity; i++) free(syn.children[i]);
++    free(syn.children);
++    free(tenv);
++    return rc;
++}
++
+ /*---- interp_exec_pl_builtin — execute one Prolog builtin goal ----*/
+ /* Uses file-scope globals g_pl_trail, g_pl_cut_flag, g_pl_pred_table, g_pl_env.
+  * Returns 1=success, 0=fail. Called by pl_box_builtin in pl_broker.c. */
+@@ -1527,7 +1639,18 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
+                 if (!threw) {
+                     /* run the goal */
+                     int ok;
+-                    if (is_pl_user_call(goal_e)) {
++                    /* PL-12 fix #2: catch(Var, _, Recovery) — Goal is a runtime
++                     * variable bound to a callable Term. Deref and dispatch via
++                     * pl_invoke_term so the bound goal actually runs (instead of
++                     * silently succeeding via interp_exec_pl_builtin's default
++                     * E_VAR fallthrough). Covers test_bips/arg/is_most_general_term
++                     * which call `catch(Goal, _, recovery)` from plunit's pj_do_*
++                     * predicates after assertz round-trip stored Goal as a clause
++                     * arg. */
++                    if (goal_e && goal_e->kind == E_VAR) {
++                        Term *gt = pl_unified_term_from_expr(goal_e, env);
++                        ok = pl_invoke_term(gt, env);
++                    } else if (is_pl_user_call(goal_e)) {
+                         char ukey[256];
+                         snprintf(ukey,sizeof ukey,"%s/%d",
+                                  goal_e->sval?goal_e->sval:"",goal_e->nchildren);
