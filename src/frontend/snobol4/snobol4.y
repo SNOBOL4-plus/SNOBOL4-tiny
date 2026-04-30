@@ -192,7 +192,7 @@ exprlist_ne: exprlist_ne T_COMMA expr0                                          
            | expr0                                                                                 { EXPR_t*l=expr_new(E_NUL);expr_add_child(l,$1);$$=l; }
            ;
 expr17     : T_LPAREN expr0 T_RPAREN                                                            { $$=$2; }
-           | T_LPAREN expr0 T_COMMA exprlist_ne T_RPAREN                                       { EXPR_t*a=expr_new(E_ALT);expr_add_child(a,$2);for(int i=0;i<$4->nchildren;i++)expr_add_child(a,$4->children[i]);free($4->children);free($4);$$=a; }
+           | T_LPAREN expr0 T_COMMA exprlist_ne T_RPAREN                                       { EXPR_t*a=expr_new(E_VLIST);expr_add_child(a,$2);for(int i=0;i<$4->nchildren;i++)expr_add_child(a,$4->children[i]);free($4->children);free($4);$$=a; }
            | T_LPAREN T_RPAREN                                                                  { $$=expr_new(E_NUL); }
            | T_FUNCTION T_LPAREN exprlist T_RPAREN                                             { EKind _k=pat_prim_kind($1.sval);EXPR_t*e=expr_new(_k==E_VAR?E_FNC:_k);if(_k==E_VAR)e->sval=(char*)$1.sval;for(int i=0;i<$3->nchildren;i++)expr_add_child(e,$3->children[i]);free($3->children);free($3);$$=e; }
            | T_IDENT                                                                              { EXPR_t*e=expr_new(E_VAR);e->sval=(char*)$1.sval;$$=e; }

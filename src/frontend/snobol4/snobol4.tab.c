@@ -1826,7 +1826,7 @@ yyreduce:
 
   case 90: /* expr17: T_LPAREN expr0 T_COMMA exprlist_ne T_RPAREN  */
 #line 195 "snobol4.y"
-                                                                                               { EXPR_t*a=expr_new(E_ALT);expr_add_child(a,(yyvsp[-3].expr));for(int i=0;i<(yyvsp[-1].expr)->nchildren;i++)expr_add_child(a,(yyvsp[-1].expr)->children[i]);free((yyvsp[-1].expr)->children);free((yyvsp[-1].expr));(yyval.expr)=a; }
+                                                                                               { EXPR_t*a=expr_new(E_VLIST);expr_add_child(a,(yyvsp[-3].expr));for(int i=0;i<(yyvsp[-1].expr)->nchildren;i++)expr_add_child(a,(yyvsp[-1].expr)->children[i]);free((yyvsp[-1].expr)->children);free((yyvsp[-1].expr));(yyval.expr)=a; }
 #line 1831 "snobol4.tab.c"
     break;
 

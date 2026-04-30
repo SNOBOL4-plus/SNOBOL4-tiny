@@ -173,9 +173,15 @@ static int lower_token(const ScPToken *tok, ExprStack *s,
         es_push(s, e); return 0;
     }
     case SNOCONE_OR: {
-        /* || string concatenation (same as | and && in value context) → E_CAT */
+        /* || logical disjunction (per snocone.sc bconv['||'] = or_binfo with
+         * fn=1, dprint emits paren-list (a, b)).  Spec: try left first; if it
+         * succeeds, value is left's value; else, value is right's value;
+         * fail iff both fail.  Lower to E_VLIST (n-ary value-disjunction)
+         * with left-associative collapse mirroring E_ALT and E_SEQ. */
         EXPR_t *r = es_pop(s), *l = es_pop(s);
-        EXPR_t *e = expr_binary(E_CAT, l, r);
+        EXPR_t *e;
+        if (l->kind == E_VLIST) { expr_add_child(l, r); e = l; }
+        else { e = expr_new(E_VLIST); expr_add_child(e, l); expr_add_child(e, r); }
         es_push(s, e); return 0;
     }
     case SNOCONE_PERIOD:
@@ -228,9 +234,12 @@ static int lower_token(const ScPToken *tok, ExprStack *s,
     }
     case SNOCONE_QUESTION:
         if (tok->is_unary) {
-            /* unary ? = DIFFER(x,"") — not-null test */
+            /* Unary ? "interrogation": yields null on operand-success;
+             * fails on operand-failure.  Spec (report.md L554-559): exact
+             * opposite of unary ~ (which succeeds-as-null on op-failure).
+             * Therefore ?x ≡ ~~x — uses existing E_NOT, no new IR. */
             EXPR_t *operand = es_pop(s);
-            es_push(s, make_fnc1("DIFFER", operand));
+            es_push(s, expr_unary(E_NOT, expr_unary(E_NOT, operand)));
         } else {
             /* binary ?  →  E_SCAN(subject, pattern)
              * assemble_stmt will detect E_SCAN and route to

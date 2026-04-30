@@ -80,6 +80,11 @@ typedef enum EKind {
                     /* SNOBOL4 value ctx; JVM StringBuilder; .NET Concat.     */
                     /* M-G4-SPLIT-SEQ-CONCAT (2026-03-28).                   */
     E_ALT,          /* Pattern alternation, n-ary (ORPP in SIL; was E_OR)   */
+    E_VLIST,        /* Goal-directed value-context disjunction.  N-ary.     */
+                    /* Try children left-to-right; return first non-failing  */
+                    /* value; fail if all fail.  SPITBOL `(a, b, c)`         */
+                    /* paren-list and Snocone `||`.  Distinct from E_ALT     */
+                    /* (pattern alternation, lazy at match time).            */
     E_OPSYN,        /* & operator: reduce(left, right)                      */
 
     /* --- Pattern Primitives ---------------------------------------------- */
@@ -281,6 +286,7 @@ static const char * const ekind_name[E_KIND_COUNT] = {
     [E_SEQ]          = "E_SEQ",
     [E_CAT]       = "E_CAT",
     [E_ALT]          = "E_ALT",
+    [E_VLIST]        = "E_VLIST",
     [E_OPSYN]        = "E_OPSYN",
     [E_ARB]          = "E_ARB",
     [E_ARBNO]        = "E_ARBNO",

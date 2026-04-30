@@ -622,6 +622,37 @@ static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
         sm_emit(p, SM_COERCE_NUM);   /* unary +: string→int or real */
         return;
 
+    /* ── Goal-directed value-context disjunction ─────────────────────── */
+    /* SPITBOL `(a, b, c)` paren-list and Snocone `||`.  Eager left-to-right
+     * evaluation; first non-failing arm's value is the result; FAIL if all
+     * arms fail.  Lower as: eval each arm, JUMP_S to done on success,
+     * POP failure value before next arm.  Last arm's value (success or
+     * fail) is left on stack if no earlier arm succeeded. */
+    case E_VLIST: {
+        if (e->nchildren == 0) {
+            sm_emit(p, SM_PUSH_NULL);
+            return;
+        }
+        if (e->nchildren == 1) {
+            lower_expr(p, lt, e->children[0]);
+            return;
+        }
+        int njs = e->nchildren - 1;
+        int *jumps = (int *)malloc((size_t)njs * sizeof(int));
+        for (int i = 0; i < e->nchildren; i++) {
+            lower_expr(p, lt, e->children[i]);
+            if (i < e->nchildren - 1) {
+                jumps[i] = sm_emit_i(p, SM_JUMP_S, 0);  /* if success, jump to done */
+                sm_emit(p, SM_POP);                       /* discard failure value */
+            }
+        }
+        int done = sm_label(p);
+        for (int i = 0; i < njs; i++)
+            sm_patch_jump(p, jumps[i], done);
+        free(jumps);
+        return;
+    }
+
     /* ── String concatenation (or pattern concatenation if any child is *X) ── */
     case E_CAT:
     case E_SEQ: {

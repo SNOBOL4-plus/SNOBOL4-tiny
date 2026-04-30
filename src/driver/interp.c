@@ -3328,6 +3328,19 @@ DESCR_t interp_eval(EXPR_t *e)
             acc = pat_alt(acc, interp_eval_pat(e->children[i]));
         return acc;
     }
+    case E_VLIST: {
+        /* Goal-directed value-context disjunction.  Try children
+         * left-to-right; return first non-failing value; fail if all fail.
+         * SPITBOL `(a, b, c)` paren-list and Snocone `||`.
+         * Distinct from E_ALT (pattern alt is lazy/backtracking).
+         * Side effects of arm k happen iff arms 0..k-1 all failed. */
+        if (e->nchildren == 0) return FAILDESCR;
+        for (int i = 0; i < e->nchildren; i++) {
+            DESCR_t v = interp_eval(e->children[i]);
+            if (!IS_FAIL_fn(v)) return v;
+        }
+        return FAILDESCR;
+    }
     case E_CAPT_COND_ASGN: {
         /* pat . target — conditional assignment on match success.
          * target may be:
@@ -4265,6 +4278,20 @@ DESCR_t interp_eval_pat(EXPR_t *e)
             acc = pat_alt(acc, nxt);
         }
         return acc;
+    }
+    case E_VLIST: {
+        /* Goal-directed value-context disjunction in pattern context.
+         * Paren-list `(a, b, c)` is a value-level construct even when it
+         * appears inside a pattern; the result is then coerced to pattern
+         * by the surrounding context (pat_cat, pat_alt, etc.) via
+         * pat_to_patnd.  Try children left-to-right; return first
+         * non-failing value; fail if all fail. */
+        if (e->nchildren == 0) return FAILDESCR;
+        for (int i = 0; i < e->nchildren; i++) {
+            DESCR_t v = interp_eval(e->children[i]);
+            if (!IS_FAIL_fn(v)) return v;
+        }
+        return FAILDESCR;
     }
     case E_VAR:
         if (e->sval && *e->sval) {
