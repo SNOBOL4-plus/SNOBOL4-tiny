@@ -933,7 +933,7 @@ static EXPR_t *icn_find_leaf_gen(EXPR_t *e) {
 
 /* icn_real_str — format a real for Icon output using shortest round-trip representation.
  * Tries precisions 15..17 and picks the shortest that parses back to the same double. */
-static const char *icn_real_str(double r, char *buf, int bufsz) {
+const char *icn_real_str(double r, char *buf, int bufsz) {
     for (int p = 15; p <= 17; p++) {
         snprintf(buf, bufsz, "%.*g", p, r);
         char *end; double back = strtod(buf, &end);
@@ -3555,6 +3555,19 @@ DESCR_t interp_eval(EXPR_t *e)
     case E_LEQ: STRREL(==);
     case E_LNE: STRREL(!=);
 #undef STRREL
+
+    /* ── IC-8: Icon `===` deep-identity (non-generator path) ─────────────────
+     * The icon-frame E_IF at L2607 routes to icn_eval_gen when icn_is_gen(test)
+     * is true (e.g. `if x === key(T)` where key(T) is a generator). The path
+     * here handles plain `a === b` and `&null === x` evaluation in any context.
+     * Returns rhs on identity (Icon goal-directed convention), FAILDESCR else. */
+    case E_IDENTICAL: {
+        if (e->nchildren < 2) return FAILDESCR;
+        DESCR_t l = interp_eval(e->children[0]);
+        DESCR_t r = interp_eval(e->children[1]);
+        if (IS_FAIL_fn(l) || IS_FAIL_fn(r)) return FAILDESCR;
+        return icn_descr_identical(l, r) ? r : FAILDESCR;
+    }
 
     /* ── Zero-argument pattern primitives ────────────────────────────────
      * These IR nodes are emitted directly by the SNOBOL4 parser for

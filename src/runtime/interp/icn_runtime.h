@@ -106,4 +106,10 @@ bb_node_t icn_eval_gen(EXPR_t *e);
 int       icn_is_gen(EXPR_t *e);
 void      icn_init_save_frame(void);  /* IC-5: save initial-block statics before frame pop */
 
+/* IC-8: real-to-string formatter (defined in driver/interp.c). Used by !N real iteration. */
+const char *icn_real_str(double r, char *buf, int bufsz);
+
+/* IC-8: deep-identity test for Icon `===` (defined in icn_runtime.c). */
+int icn_descr_identical(DESCR_t a, DESCR_t b);
+
 #endif /* DRIVER_ICN_RUNTIME_H */

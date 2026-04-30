@@ -187,10 +187,24 @@ int icn_drive(EXPR_t *e) {
     /* S-6 / RK-16: E_ITERATE — iterate string chars OR Raku @array elements.
      * If the string contains \x01 (SOH) it is a Raku array: split on SOH and
      * bind each element to the loop variable named in e->sval (if any).
-     * Otherwise fall through to character-by-character Icon iteration. */
+     * Otherwise fall through to character-by-character Icon iteration.
+     * IC-8: !N (integer) and !R (real) coerce to their image-string and iterate
+     * each character — `!-514` → `-`,`5`,`1`,`4`; `!12.5` → `1`,`2`,`.`,`5`. */
     if (e->kind == E_ITERATE && e->nchildren >= 1) {
         DESCR_t sv_d = interp_eval(e->children[0]);
-        if (IS_FAIL_fn(sv_d) || !IS_STR_fn(sv_d)) return 0;
+        if (IS_FAIL_fn(sv_d)) return 0;
+        /* IC-8: coerce numeric scalars to image-string before string-iterate path */
+        if (IS_INT_fn(sv_d)) {
+            char *nbuf = GC_malloc(32);
+            snprintf(nbuf, 32, "%lld", (long long)sv_d.i);
+            sv_d = STRVAL(nbuf);
+        } else if (IS_REAL_fn(sv_d)) {
+            char *nbuf = GC_malloc(64);
+            char tmp[64]; icn_real_str(sv_d.r, tmp, sizeof tmp);
+            strncpy(nbuf, tmp, 63); nbuf[63] = '\0';
+            sv_d = STRVAL(nbuf);
+        }
+        if (!IS_STR_fn(sv_d)) return 0;
         const char *str = sv_d.s ? sv_d.s : "";
         const char *loopvar = e->sval;   /* loop variable name, or NULL */
 
@@ -403,6 +417,39 @@ DESCR_t icn_call_proc(EXPR_t *proc, DESCR_t *args, int nargs) {
  * E_LIMIT, E_EVERY, E_BANG_BINARY, E_SEQ_EXPR, or any arithmetic/relational
  * binop whose children are generative).  Used by icn_eval_gen to decide
  * whether a builtin's argument needs the icn_bb_fnc_gen path. */
+/* IC-8: deep-identity test for Icon `===`.
+ * Returns 1 iff a and b are identical per Icon `===` semantics:
+ *   - same type required
+ *   - null === null
+ *   - strings:    byte-equal
+ *   - integers:   same numeric value
+ *   - reals:      same numeric value
+ *   - tables:     same .tbl pointer (identity, not deep-equal)
+ *   - lists/data: same .ptr pointer (identity)
+ *   - otherwise:  not identical                                            */
+int icn_descr_identical(DESCR_t a, DESCR_t b) {
+    if (IS_FAIL_fn(a) || IS_FAIL_fn(b)) return 0;
+    int an = (a.v == DT_SNUL) || (a.v == DT_S && (!a.s || !*a.s));
+    int bn = (b.v == DT_SNUL) || (b.v == DT_S && (!b.s || !*b.s));
+    if (an && bn) return 1;
+    if (an != bn) return 0;
+    /* Treat DT_S and DT_SNUL as the same family for non-null strings */
+    int as_str = (a.v == DT_S || a.v == DT_SNUL);
+    int bs_str = (b.v == DT_S || b.v == DT_SNUL);
+    if (as_str && bs_str) {
+        const char *s1 = a.s ? a.s : ""; size_t l1 = a.slen > 0 ? (size_t)a.slen : strlen(s1);
+        const char *s2 = b.s ? b.s : ""; size_t l2 = b.slen > 0 ? (size_t)b.slen : strlen(s2);
+        return (l1 == l2 && memcmp(s1, s2, l1) == 0);
+    }
+    if (a.v != b.v) return 0;       /* different non-string types */
+    if (a.v == DT_I) return a.i == b.i;
+    if (a.v == DT_R) return a.r == b.r;
+    if (a.v == DT_T) return a.tbl == b.tbl;
+    if (a.v == DT_DATA) return a.ptr == b.ptr;
+    /* Fallback: byte-compare DESCR_t (other v= cases — DT_N etc.) */
+    return memcmp(&a, &b, sizeof(DESCR_t)) == 0;
+}
+
 int icn_is_gen(EXPR_t *e) {
     if (!e) return 0;
     switch (e->kind) {
@@ -426,6 +473,7 @@ int icn_is_gen(EXPR_t *e) {
         case E_ADD: case E_SUB: case E_MUL: case E_DIV: case E_MOD:
         case E_LT:  case E_LE:  case E_GT:  case E_GE:
         case E_EQ:  case E_NE:
+        case E_IDENTICAL:                                /* IC-8: x === gen — drive gen */
         case E_LCONCAT: case E_CAT:
                            for (int i = 0; i < e->nchildren; i++)
                 if (icn_is_gen(e->children[i])) return 1;
@@ -634,6 +682,32 @@ static DESCR_t icn_bb_assign_gen(void *zeta, int entry) {
     return val;
 }
 
+/*----------------------------------------------------------------------------------------------------------------------------
+ * icn_bb_identical_gen — E_IDENTICAL  (a === b)  with one or both operands generative
+ *
+ * IC-8 fix for  if x === key(T) then ...  in tdump (rung36_jcon_table).
+ * Drives the right operand as a generator and re-evaluates the left scalar each
+ * tick (left is conventionally the test variable; right is conventionally the
+ * generator like `key(T)`).  Returns rhs on identity match, retries on miss,
+ * exhausts when the right-side generator is done.
+ *
+ * Symmetrical case (left generator, right scalar) handled by ICN_BINOP_*-style
+ * cross-product would be unusual for `===`; use the same drive-right pattern.
+ *--------------------------------------------------------------------------------------------------------------------------*/
+typedef struct { bb_node_t r_gen; EXPR_t *lhs_expr; } icn_identical_gen_state_t;
+static DESCR_t icn_bb_identical_gen(void *zeta, int entry) {
+    icn_identical_gen_state_t *z = (icn_identical_gen_state_t *)zeta;
+    DESCR_t lv = interp_eval(z->lhs_expr);     /* re-eval lhs each tick (cheap, no side effects) */
+    if (IS_FAIL_fn(lv)) return FAILDESCR;
+    int e2 = entry;
+    while (1) {
+        DESCR_t rv = z->r_gen.fn(z->r_gen.ζ, e2);
+        if (IS_FAIL_fn(rv)) return FAILDESCR;
+        if (icn_descr_identical(lv, rv)) return rv;
+        e2 = β;     /* miss — pump the right generator for next candidate */
+    }
+}
+
 bb_node_t icn_eval_gen(EXPR_t *e) {
     if (!e) {
         icn_oneshot_state_t *z = calloc(1, sizeof(*z));
@@ -721,6 +795,17 @@ bb_node_t icn_eval_gen(EXPR_t *e) {
         }
         DESCR_t sv = interp_eval(e->children[0]);
         const char *loopvar = e->sval;
+        /* IC-8: coerce numeric scalars to image-string before string-iterate path */
+        if (IS_INT_fn(sv)) {
+            char *nbuf = GC_malloc(32);
+            snprintf(nbuf, 32, "%lld", (long long)sv.i);
+            sv = STRVAL(nbuf);
+        } else if (IS_REAL_fn(sv)) {
+            char *nbuf = GC_malloc(64);
+            char tmp[64]; icn_real_str(sv.r, tmp, sizeof tmp);
+            strncpy(nbuf, tmp, 63); nbuf[63] = '\0';
+            sv = STRVAL(nbuf);
+        }
         /* IC-3: DT_T table iteration — !T yields each value */
         if (sv.v == DT_T) {
             icn_tbl_iterate_state_t *z = calloc(1, sizeof(*z));
@@ -762,6 +847,30 @@ bb_node_t icn_eval_gen(EXPR_t *e) {
             z->len = sv.slen > 0 ? sv.slen : (long)strlen(sv.s);
         }
         return (bb_node_t){ icn_bb_iterate, z, 0 };
+    }
+
+    /* ── IC-8: E_IDENTICAL  (a === b)  — goal-directed identity test ───────
+     * Wires `if x === key(T)` and similar patterns: drive RHS as generator,
+     * yield rhs on identity match, retry on miss, exhaust when RHS done.
+     * Non-generator case is handled by `case E_IDENTICAL` in interp_eval. */
+    if (e->kind == E_IDENTICAL && e->nchildren >= 2) {
+        EXPR_t *lc = e->children[0], *rc = e->children[1];
+        int l_gen = icn_is_gen(lc);
+        int r_gen = icn_is_gen(rc);
+        if (l_gen || r_gen) {
+            icn_identical_gen_state_t *z = calloc(1, sizeof(*z));
+            /* Common case (rung36_jcon_table tdump): LHS scalar, RHS generator key(T).
+             * If LHS is the generator, swap so RHS is what we drive; identity is
+             * symmetric so this preserves semantics.                            */
+            if (r_gen) {
+                z->lhs_expr = lc;
+                z->r_gen    = icn_eval_gen(rc);
+            } else {
+                z->lhs_expr = rc;
+                z->r_gen    = icn_eval_gen(lc);
+            }
+            return (bb_node_t){ icn_bb_identical_gen, z, 0 };
+        }
     }
 
     /* ── E_ALTERNATE: (a | b | c | …) n-ary ─────────────────────────────── */
