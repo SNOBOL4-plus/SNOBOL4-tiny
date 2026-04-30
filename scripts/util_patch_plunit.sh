@@ -22,66 +22,70 @@ PLUNIT=$CORPUS/programs/prolog/plunit.pl
 
 [ -f "$PLUNIT" ] || { echo "ERROR: $PLUNIT not found"; exit 1; }
 
-if grep -q 'PATCHED:v2' "$PLUNIT"; then
-    echo "SKIP: plunit.pl already patched (v2)"
+if grep -q 'PATCHED:v3' "$PLUNIT"; then
+    echo "SKIP: plunit.pl already patched (v3)"
     exit 0
 fi
 
 echo "Patching $PLUNIT ..."
 
 python3 - "$PLUNIT" << 'PYEOF'
-import sys
+import sys, re
 
 path = sys.argv[1]
 src = open(path).read()
 
-# Remove any previous patch sentinel
+# Remove old patch sentinels (replacing v2 with v3)
+src = re.sub(r'^/\* PATCHED:v\d+ \*/\n', '', src)
 src = src.replace('/* PATCHED:determinism-cuts */\n', '')
 
-# Fix 1a: pj_run_list — use (pj_run_suite(H) -> true ; true) so a failing
-#   suite never aborts the walk, then cut to prevent choice-point re-entry.
+# v2 baseline: pj_run_list safe walk (idempotent)
 src = src.replace(
     'pj_run_list([H|T]) :- pj_run_suite(H), !, pj_run_list(T).',
     'pj_run_list([H|T]) :- ( pj_run_suite(H) -> true ; true ), !, pj_run_list(T).'
 )
-# Also handle the original unpatched form:
 src = src.replace(
     'pj_run_list([H|T]) :- pj_run_suite(H), pj_run_list(T).',
     'pj_run_list([H|T]) :- ( pj_run_suite(H) -> true ; true ), !, pj_run_list(T).'
 )
 
-# Fix 1b: pj_run_suite — cut after verdict (body position)
-src = src.replace(
-    '    pj_suite_verdict(Suite, SF), !.',
-    '    pj_suite_verdict(Suite, SF), !.'
-)
-# Handle unpatched form:
+# v2 baseline: pj_run_suite — cut after verdict
 src = src.replace(
     '    pj_suite_verdict(Suite, SF).',
     '    pj_suite_verdict(Suite, SF), !.'
 )
 
-# Fix 1c: pj_run_tests — cut after pj_run_one (body position)
+# v3: wrap pj_run_one in once/1.
+# Hypothesis (now testable since once/1 is implemented):
+#   trailing ! in pj_run_tests recursion may cut the enclosing pj_run_suite
+#   continuation, so verdict line never prints. once/1 scopes determinism
+#   to pj_run_one only.
 src = src.replace(
     'pj_run_tests(Suite, [t(N,O,G)|Rest]) :-\n    pj_run_one(Suite,N,O,G), !, pj_run_tests(Suite,Rest).',
-    'pj_run_tests(Suite, [t(N,O,G)|Rest]) :-\n    pj_run_one(Suite,N,O,G), !, pj_run_tests(Suite,Rest).'
+    'pj_run_tests(Suite, [t(N,O,G)|Rest]) :-\n    once(pj_run_one(Suite,N,O,G)), pj_run_tests(Suite,Rest).'
 )
 src = src.replace(
     'pj_run_tests(Suite, [t(N,O,G)|Rest]) :-\n    pj_run_one(Suite,N,O,G), pj_run_tests(Suite,Rest).',
-    'pj_run_tests(Suite, [t(N,O,G)|Rest]) :-\n    pj_run_one(Suite,N,O,G), !, pj_run_tests(Suite,Rest).'
+    'pj_run_tests(Suite, [t(N,O,G)|Rest]) :-\n    once(pj_run_one(Suite,N,O,G)), pj_run_tests(Suite,Rest).'
 )
 
-# Fix 2: add =@= (structural equivalence up to variable renaming)
-# Insert after the stdlib section (after the last pj_insert line)
-stdlib_anchor = 'pj_insert(X,[H|T],[H|R]) :- pj_insert(X,T,R).'
-assert '=@=' not in src, "=@= already defined"
+# v3: defense in depth — wrap pj_run_tests call inside pj_run_suite with
+# (Body -> true ; true) so any internal failure cannot prevent verdict print.
 src = src.replace(
-    stdlib_anchor,
-    stdlib_anchor + '\nX =@= Y :- copy_term(X, X1), copy_term(Y, Y1), numbervars(X1,0,N), numbervars(Y1,0,N), X1 == Y1.'
+    '    pj_run_tests(Suite, Tests),\n    nb_getval(pj_sf,SF),',
+    '    ( pj_run_tests(Suite, Tests) -> true ; true ),\n    nb_getval(pj_sf,SF),'
 )
 
-# Sentinel v2
-src = '/* PATCHED:v2 */\n' + src
+# Ensure =@= is defined (idempotent)
+if '=@=' not in src:
+    stdlib_anchor = 'pj_insert(X,[H|T],[H|R]) :- pj_insert(X,T,R).'
+    src = src.replace(
+        stdlib_anchor,
+        stdlib_anchor + '\nX =@= Y :- copy_term(X, X1), copy_term(Y, Y1), numbervars(X1,0,N), numbervars(Y1,0,N), X1 == Y1.'
+    )
+
+# Sentinel v3
+src = '/* PATCHED:v3 */\n' + src
 
 open(path, 'w').write(src)
 print("OK")
@@ -92,5 +96,5 @@ cd "$CORPUS"
 git config user.name "LCherryholmes"
 git config user.email "lcherryh@yahoo.com"
 git add programs/prolog/plunit.pl
-git commit -m "PL-12: plunit.pl v2 — determinism cuts + =@= + safe suite walk"
+git commit -m "PL-12: plunit.pl v3 — once/1 around pj_run_one + verdict guard"
 echo "DONE"

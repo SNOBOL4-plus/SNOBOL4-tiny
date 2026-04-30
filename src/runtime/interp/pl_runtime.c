@@ -385,7 +385,7 @@ int is_pl_user_call(EXPR_t *goal) {
         "<",">","=<",">=","=:=","=\\=","=","\\=","==","\\==",
         "@<","@>","@=<","@>=",
         "var","nonvar","atom","integer","float","compound","atomic","callable","is_list",
-        "functor","arg","=..","\\+","not",",",";","->","findall",
+        "functor","arg","=..","\\+","not","once",",",";","->","findall",
         "assert","assertz","asserta","retract","retractall","abolish",
         "nv_get","nv_set",
         "term_string","number_codes","number_chars","char_code","upcase_atom","downcase_atom",
@@ -395,7 +395,8 @@ int is_pl_user_call(EXPR_t *goal) {
         "dynamic","discontiguous","module","use_module","ensure_loaded","style_check",
         "set_prolog_flag","current_prolog_flag","module_info","if","else","endif",
         "meta_predicate","module_transparent","multifile","include",
-        "format","succ","plus","number_vars","numbervars","char_type",
+        "$clausable","public","volatile","thread_local","table","set_test_options","encoding",
+        "format","succ","plus","number_vars","numbervars","char_type","term_singletons",
         "atom_length","atom_chars","atom_codes","atom_concat","atom_string",
         "number_string","string_length","string_concat","string_codes","string_chars",
         "string_to_atom","sub_atom","atom_number","msort","sort","compare",
@@ -539,7 +540,10 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
                  strcmp(fn,"set_prolog_flag")==0||strcmp(fn,"module_info")==0||
                  strcmp(fn,"if")==0||strcmp(fn,"else")==0||strcmp(fn,"endif")==0||
                  strcmp(fn,"meta_predicate")==0||strcmp(fn,"module_transparent")==0||
-                 strcmp(fn,"multifile")==0)) return 1;
+                 strcmp(fn,"multifile")==0||strcmp(fn,"$clausable")==0||
+                 strcmp(fn,"public")==0||strcmp(fn,"volatile")==0||
+                 strcmp(fn,"thread_local")==0||strcmp(fn,"table")==0||
+                 strcmp(fn,"set_test_options")==0||strcmp(fn,"encoding")==0)) return 1;
             /* include/1: silently succeed (file already parsed by prolog_compile) */
             if (strcmp(fn,"include")==0) return 1;
             if (strcmp(fn,"nl")==0&&arity==0){putchar('\n');return 1;}
@@ -663,6 +667,15 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
                 int mark=trail_mark(trail);
                 int ok=interp_exec_pl_builtin(goal->children[0],env);
                 trail_unwind(trail,mark);return !ok;
+            }
+            /* once/1 — succeed/fail like the goal; tree-walker has no
+             * choice points to discard, so semantically equivalent to
+             * a plain call here. Trail rolled back on failure. */
+            if (strcmp(fn,"once")==0&&arity==1){
+                int mark=trail_mark(trail);
+                int ok=interp_exec_pl_builtin(goal->children[0],env);
+                if(!ok) trail_unwind(trail,mark);
+                return ok;
             }
             /* functor/3 */
             if (strcmp(fn,"functor")==0&&arity==3){
@@ -971,6 +984,44 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
                 Term *end_t=term_new_int(n);
                 int mark=trail_mark(trail);
                 if(!unify(end,end_t,trail)){trail_unwind(trail,mark);return 0;}
+                return 1;
+            }
+            /* term_singletons(+Term, -Singletons) — list of variables that
+             * occur exactly once in Term. We walk the term, gather all
+             * unbound TT_VAR pointers, count occurrences, and unify Singletons
+             * with the list of those that appear once.  Order: leftmost-first
+             * (matches SWI). */
+            if (strcmp(fn,"term_singletons")==0&&arity==2) {
+                Term *t   = pl_unified_term_from_expr(goal->children[0],env);
+                Term *out = pl_unified_term_from_expr(goal->children[1],env);
+                /* Two passes: collect unique vars in order, then count */
+                Term *vars[1024]; int counts[1024]; int nv=0;
+                Term *stk[4096]; int top=0;
+                stk[top++]=term_deref(t);
+                while (top>0) {
+                    Term *cur=term_deref(stk[--top]);
+                    if (!cur) continue;
+                    if (cur->tag==TT_VAR) {
+                        int found=-1;
+                        for (int i=0;i<nv;i++) if (vars[i]==cur) { found=i; break; }
+                        if (found>=0) counts[found]++;
+                        else if (nv<1024) { vars[nv]=cur; counts[nv]=1; nv++; }
+                    } else if (cur->tag==TT_COMPOUND) {
+                        for (int i=cur->compound.arity-1;i>=0;i--)
+                            if (top<4095) stk[top++]=term_deref(cur->compound.args[i]);
+                    }
+                }
+                /* Build list of singletons (count==1) in collection order */
+                int dot=prolog_atom_intern("."), nil=prolog_atom_intern("[]");
+                Term *list = term_new_atom(nil);
+                for (int i=nv-1;i>=0;i--) {
+                    if (counts[i]==1) {
+                        Term *args[2] = { vars[i], list };
+                        list = term_new_compound(dot, 2, args);
+                    }
+                }
+                int mark=trail_mark(trail);
+                if(!unify(out,list,trail)){trail_unwind(trail,mark);return 0;}
                 return 1;
             }
             /* char_type(+Char, ?Type) */
