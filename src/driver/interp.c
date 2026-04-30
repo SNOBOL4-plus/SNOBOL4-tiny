@@ -3868,20 +3868,32 @@ DESCR_t interp_eval(EXPR_t *e)
     }
 
     case E_NULL: {
-        /* /E — succeeds (yields &null) if E fails; fails if E succeeds */
+        /* /E — succeeds (yields &null) iff E succeeds with the null value;
+         * fails if E fails OR if E yields any non-null value.
+         * Pre-IC-9 this was wrong: it returned NULVCL iff IS_FAIL_fn(v),
+         * conflating "E failed" with "E was null".  /x[k] for a missing
+         * table key (returns NULVCL, which is success-with-null) reported
+         * fail; /x[k] for a present non-null value also reported fail; the
+         * two contradictory bugs cancelled in some tests, but rung36_jcon_*
+         * exposed them via probes like `/x[1] | write("/1")`. */
         if (e->nchildren < 1) return NULVCL;
         DESCR_t v = interp_eval(e->children[0]);
-        return IS_FAIL_fn(v) ? NULVCL : FAILDESCR;
+        if (IS_FAIL_fn(v)) return FAILDESCR;
+        if (v.v == DT_SNUL) return NULVCL;
+        if (v.v == DT_S && (!v.s || v.s[0] == '\0')) return NULVCL;
+        return FAILDESCR;
     }
 
     case E_NONNULL: {
-        /* \E — succeeds (yields E) if E succeeds and is non-null; fails otherwise */
+        /* \E — succeeds (yields E) iff E succeeds with a non-null value;
+         * fails if E fails OR if E yields the null value.  Mirror of
+         * E_NULL above.  Pre-IC-9 this missed the DT_SNUL case entirely
+         * — \&null returned &null (success) instead of failing. */
         if (e->nchildren < 1) return FAILDESCR;
         DESCR_t v = interp_eval(e->children[0]);
         if (IS_FAIL_fn(v)) return FAILDESCR;
-        /* null in Icon is the empty string / zero-length result of &null */
+        if (v.v == DT_SNUL) return FAILDESCR;
         if (v.v == DT_S && (!v.s || v.s[0] == '\0')) return FAILDESCR;
-        if (v.v == DT_I && v.i == 0 && !(IS_INT_fn(v))) return FAILDESCR;
         return v;
     }
 
