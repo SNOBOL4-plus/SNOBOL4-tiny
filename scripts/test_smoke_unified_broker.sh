@@ -114,7 +114,7 @@ EOF
 
 echo "  SKIP ICN: user proc suspend (E_FNC coroutine — post-U-17, wired in U-18)"
 
-file_test "ICN: palindrome" "$ROOT/test/icon/palindrome.icn" "$(printf 'yes\nyes\nyes')"
+file_test "ICN: palindrome" "$ROOT/test/icon/palindrome.icn" "$(printf 'yes\nno\nyes')"
 
 if [ -f "$ICN_CORPUS/rung01_paper_compound.icn" ]; then
     expected=$(cat "$ICN_CORPUS/rung01_paper_compound.expected" 2>/dev/null)

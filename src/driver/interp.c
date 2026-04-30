@@ -954,20 +954,31 @@ DESCR_t icn_call_builtin(EXPR_t *call, DESCR_t *args, int nargs) {
     if (!fn) return NULVCL;
     DESCR_t a0 = nargs > 0 ? args[0] : NULVCL;
     DESCR_t a1 = nargs > 1 ? args[1] : NULVCL;
-    /* write(v) */
+    /* write(x1,...,xN) — concatenate all args, append newline.
+     * Icon semantics: any FAIL arg propagates; &null arg writes empty. */
     if (!strcmp(fn, "write")) {
-        if (IS_FAIL_fn(a0)) return FAILDESCR;
-        if (IS_INT_fn(a0))       printf("%lld\n", (long long)a0.i);
-        else if (IS_REAL_fn(a0)) { char _rb[64]; printf("%s\n", icn_real_str(a0.r,_rb,sizeof _rb)); }
-        else { const char *s = VARVAL_fn(a0); printf("%s\n", s ? s : ""); }
-        return a0;
+        for (int _wi = 0; _wi < nargs; _wi++) {
+            DESCR_t av = args[_wi];
+            if (IS_FAIL_fn(av)) return FAILDESCR;
+            if (av.v == DT_SNUL) continue;   /* &null → empty */
+            if (IS_INT_fn(av))       printf("%lld", (long long)av.i);
+            else if (IS_REAL_fn(av)) { char _rb[64]; printf("%s", icn_real_str(av.r,_rb,sizeof _rb)); }
+            else { const char *s = VARVAL_fn(av); if (s) fputs(s, stdout); }
+        }
+        putchar('\n');
+        return nargs > 0 ? args[nargs-1] : NULVCL;
     }
-    /* writes(v) */
+    /* writes(x1,...,xN) — same but no newline */
     if (!strcmp(fn, "writes")) {
-        if (IS_INT_fn(a0))       printf("%lld", (long long)a0.i);
-        else if (IS_REAL_fn(a0)) { char _rb[64]; printf("%s", icn_real_str(a0.r,_rb,sizeof _rb)); }
-        else { const char *s = VARVAL_fn(a0); printf("%s", s ? s : ""); }
-        return a0;
+        for (int _wi = 0; _wi < nargs; _wi++) {
+            DESCR_t av = args[_wi];
+            if (IS_FAIL_fn(av)) return FAILDESCR;
+            if (av.v == DT_SNUL) continue;
+            if (IS_INT_fn(av))       printf("%lld", (long long)av.i);
+            else if (IS_REAL_fn(av)) { char _rb[64]; printf("%s", icn_real_str(av.r,_rb,sizeof _rb)); }
+            else { const char *s = VARVAL_fn(av); if (s) fputs(s, stdout); }
+        }
+        return nargs > 0 ? args[nargs-1] : NULVCL;
     }
     /* User proc — call directly with resolved args */
     for (int i = 0; i < icn_proc_count; i++) {
@@ -1051,20 +1062,32 @@ DESCR_t interp_eval(EXPR_t *e)
             int nargs = e->nchildren - 1;
             if (!strcmp(fn,"write")) {
                 if (nargs == 0) { printf("\n"); return NULVCL; }
-                DESCR_t a = interp_eval(e->children[1]);
-                if (IS_FAIL_fn(a)) return FAILDESCR;
-                if (IS_INT_fn(a)) printf("%lld\n",(long long)a.i);
-                else if (IS_REAL_fn(a)) { char _rb[64]; printf("%s\n",icn_real_str(a.r,_rb,sizeof _rb)); }
-                else { const char *s=VARVAL_fn(a); printf("%s\n",s?s:""); }
-                return a;
+                DESCR_t last = NULVCL;
+                for (int _wi = 0; _wi < nargs; _wi++) {
+                    DESCR_t a = interp_eval(e->children[1+_wi]);
+                    if (IS_FAIL_fn(a)) return FAILDESCR;
+                    last = a;
+                    if (a.v == DT_SNUL) continue;
+                    if (IS_INT_fn(a)) printf("%lld",(long long)a.i);
+                    else if (IS_REAL_fn(a)) { char _rb[64]; printf("%s",icn_real_str(a.r,_rb,sizeof _rb)); }
+                    else { const char *s=VARVAL_fn(a); if (s) fputs(s, stdout); }
+                }
+                putchar('\n');
+                return last;
             }
             if (!strcmp(fn,"writes")) {
                 if (nargs == 0) return NULVCL;
-                DESCR_t a = interp_eval(e->children[1]);
-                if (IS_INT_fn(a)) printf("%lld",(long long)a.i);
-                else if (IS_REAL_fn(a)) { char _rb[64]; printf("%s",icn_real_str(a.r,_rb,sizeof _rb)); }
-                else { const char *s=VARVAL_fn(a); printf("%s",s?s:""); }
-                return a;
+                DESCR_t last = NULVCL;
+                for (int _wi = 0; _wi < nargs; _wi++) {
+                    DESCR_t a = interp_eval(e->children[1+_wi]);
+                    if (IS_FAIL_fn(a)) return FAILDESCR;
+                    last = a;
+                    if (a.v == DT_SNUL) continue;
+                    if (IS_INT_fn(a)) printf("%lld",(long long)a.i);
+                    else if (IS_REAL_fn(a)) { char _rb[64]; printf("%s",icn_real_str(a.r,_rb,sizeof _rb)); }
+                    else { const char *s=VARVAL_fn(a); if (s) fputs(s, stdout); }
+                }
+                return last;
             }
             if (!strcmp(fn,"read") && nargs == 0) {
                 /* Icon read() — read one line from stdin, strip trailing newline.
@@ -2207,28 +2230,64 @@ DESCR_t interp_eval(EXPR_t *e)
                 for(int i=0;i<sl;i++) buf[i]=s[sl-1-i]; buf[sl]='\0';
                 return STRVAL(buf);
             }
-            if (!strcmp(fn,"map") && nargs == 3) {
+            if (!strcmp(fn,"map") && nargs >= 1 && nargs <= 3) {
+                /* Icon map(s, c1, c2): c1 defaults &ucase, c2 defaults &lcase.
+                 * Each char of s — if it appears in c1 at index k, replaced by c2[k];
+                 * else passed through. c1 and c2 must be same length (truncated).
+                 * &null arg (omitted) → use the default. */
+                static const char *UCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                static const char *LCASE = "abcdefghijklmnopqrstuvwxyz";
                 DESCR_t sv=interp_eval(e->children[1]); const char *s=VARVAL_fn(sv); if(!s)s="";
-                DESCR_t fv=interp_eval(e->children[2]); const char *from=VARVAL_fn(fv); if(!from)from="";
-                DESCR_t tv=interp_eval(e->children[3]); const char *to=VARVAL_fn(tv); if(!to)to="";
+                const char *from = UCASE, *to = LCASE;
+                if (nargs >= 2) {
+                    DESCR_t fv=interp_eval(e->children[2]);
+                    if (fv.v != DT_SNUL) {
+                        const char *fs = VARVAL_fn(fv);
+                        if (fs) from = fs;
+                    }
+                }
+                if (nargs >= 3) {
+                    DESCR_t tv=interp_eval(e->children[3]);
+                    if (tv.v != DT_SNUL) {
+                        const char *ts = VARVAL_fn(tv);
+                        if (ts) to = ts;
+                    }
+                }
                 int sl=(int)strlen(s); char *buf=GC_malloc(sl+1);
-                int fl=(int)strlen(from),tl=(int)strlen(to);
-                for(int i=0;i<sl;i++){
-                    char c=s[i]; int found=0;
-                    for(int j=0;j<fl;j++) if(from[j]==c){buf[i]=(j<tl)?to[j]:'\0';found=1;break;}
-                    if(!found) buf[i]=c;
+                int fl=(int)strlen(from), tl=(int)strlen(to);
+                /* Icon spec: c1 and c2 same length — fail otherwise.
+                 * Walk c1 RIGHT-TO-LEFT so duplicate keys: last definition wins
+                 * (Icon: map("abcdef","aa","bc") → "cbcdef" — second 'a'→'c'). */
+                for (int i=0;i<sl;i++) {
+                    char c=s[i]; int hit=0;
+                    for (int j=fl-1;j>=0;j--) {
+                        if (from[j]==c) { buf[i] = (j<tl) ? to[j] : c; hit=1; break; }
+                    }
+                    if (!hit) buf[i]=c;
                 }
                 buf[sl]='\0'; return STRVAL(buf);
             }
-            if (!strcmp(fn,"trim") && nargs == 1) {
+            if (!strcmp(fn,"trim") && (nargs == 1 || nargs == 2)) {
                 DESCR_t sv=interp_eval(e->children[1]); const char *s=VARVAL_fn(sv); if(!s)s="";
-                if (g_lang == 1) {
-                    /* Icon: trim trailing whitespace only */
-                    int sl=(int)strlen(s); while(sl>0&&isspace((unsigned char)s[sl-1]))sl--;
+                /* Determine cset of trim chars. Default: space.
+                 * 2-arg: c arg may be string or cset (we treat both as char list).
+                 * &null arg → use default. */
+                const char *cset = " ";
+                if (nargs == 2) {
+                    DESCR_t cv = interp_eval(e->children[2]);
+                    if (cv.v != DT_SNUL) {
+                        const char *cs = VARVAL_fn(cv);
+                        if (cs) cset = cs;
+                    }
+                }
+                if (g_lang == 1 || nargs == 2) {
+                    /* Icon: trim trailing chars in cset */
+                    int sl=(int)strlen(s);
+                    while (sl > 0 && strchr(cset, s[sl-1])) sl--;
                     char *buf=GC_malloc(sl+1); memcpy(buf,s,sl); buf[sl]='\0';
                     return STRVAL(buf);
                 } else {
-                    /* Raku/other: trim both ends */
+                    /* Raku trim — both ends, whitespace only */
                     while(*s==' '||*s=='\t'||*s=='\n'||*s=='\r') s++;
                     size_t len=strlen(s);
                     while(len>0&&(s[len-1]==' '||s[len-1]=='\t'||s[len-1]=='\n'||s[len-1]=='\r')) len--;
@@ -2255,12 +2314,37 @@ DESCR_t interp_eval(EXPR_t *e)
             if (!strcmp(fn,"image") && nargs == 1) {
                 DESCR_t av = interp_eval(e->children[1]);
                 char *buf = GC_malloc(128);
-                if (IS_INT_fn(av))       snprintf(buf,128,"%lld",(long long)av.i);
-                else if (IS_REAL_fn(av)) icn_real_str(av.r,buf,128);
-                else if (av.v==DT_T)     snprintf(buf,128,"table(%d)",av.tbl?av.tbl->size:0);
-                else if (av.v==DT_DATA)  snprintf(buf,128,"record");
-                else { const char *s=VARVAL_fn(av); return STRVAL(s?s:""); }
-                return STRVAL(buf);
+                if (av.v == DT_SNUL)     return STRVAL("&null");
+                if (IS_INT_fn(av))       { snprintf(buf,128,"%lld",(long long)av.i); return STRVAL(buf); }
+                if (IS_REAL_fn(av))      { icn_real_str(av.r,buf,128); return STRVAL(buf); }
+                if (av.v==DT_T)          { snprintf(buf,128,"table(%d)",av.tbl?av.tbl->size:0); return STRVAL(buf); }
+                if (av.v==DT_DATA)       { snprintf(buf,128,"record"); return STRVAL(buf); }
+                /* String: produce "abc" with C-style escapes for control chars and " and \. */
+                const char *s=VARVAL_fn(av); if (!s) s = "";
+                int sl = (int)strlen(s);
+                /* Worst-case expansion: each byte → \xNN (4 chars) + 2 quotes + NUL */
+                char *out = GC_malloc(sl*4 + 3);
+                int o = 0;
+                out[o++] = '"';
+                for (int i = 0; i < sl; i++) {
+                    unsigned char c = (unsigned char)s[i];
+                    switch (c) {
+                        case '"':  out[o++]='\\'; out[o++]='"';  break;
+                        case '\\': out[o++]='\\'; out[o++]='\\'; break;
+                        case '\n': out[o++]='\\'; out[o++]='n';  break;
+                        case '\t': out[o++]='\\'; out[o++]='t';  break;
+                        case '\r': out[o++]='\\'; out[o++]='r';  break;
+                        default:
+                            if (c < 0x20 || c == 0x7f) {
+                                o += snprintf(out+o, 5, "\\x%02x", c);
+                            } else {
+                                out[o++] = (char)c;
+                            }
+                    }
+                }
+                out[o++] = '"';
+                out[o] = '\0';
+                return STRVAL(out);
             }
             if (!strcmp(fn,"copy") && nargs == 1) {
                 /* shallow copy — for our purposes return same value */
