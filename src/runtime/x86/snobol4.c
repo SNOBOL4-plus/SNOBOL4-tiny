@@ -2829,7 +2829,13 @@ DESCR_t NV_GET_fn(const char *name) {
     if (ch >= 0 && !_io_chan[ch].is_output && _io_chan[ch].fp) {
         ssize_t nread = getline(&_io_chan[ch].buf, &_io_chan[ch].cap, _io_chan[ch].fp);
         if (nread < 0) return FAILDESCR;
-        if (nread > 0 && _io_chan[ch].buf[nread-1] == '\n') _io_chan[ch].buf[nread-1] = '\0';
+        if (nread > 0 && _io_chan[ch].buf[nread-1] == '\n') { _io_chan[ch].buf[nread-1] = '\0'; nread--; }
+        /* &TRIM: strip trailing spaces and tabs (matches main INPUT path) */
+        if (kw_trim) {
+            while (nread > 0 && (_io_chan[ch].buf[nread-1] == ' ' || _io_chan[ch].buf[nread-1] == '\t')) {
+                _io_chan[ch].buf[--nread] = '\0';
+            }
+        }
         return STRVAL(GC_strdup(_io_chan[ch].buf));
     }
     /* Protected/unprotected keywords backed by C globals */
@@ -3956,7 +3962,17 @@ DESCR_t input_read(void) {
     if (!_input_fp) _input_fp = stdin;
     ssize_t nread = getline(&_input_buf, &_input_cap, _input_fp);
     if (nread < 0) return FAILDESCR;  /* EOF = INPUT fails */
-    if (nread > 0 && _input_buf[nread-1] == '\n') _input_buf[nread-1] = '\0';
+    if (nread > 0 && _input_buf[nread-1] == '\n') { _input_buf[nread-1] = '\0'; nread--; }
+    /* &TRIM: strip trailing spaces and tabs from each line read.  SPITBOL
+     * default is &TRIM=1; programs may set &TRIM=0 to preserve trailing
+     * whitespace.  Without this, scrip silently differs from SPITBOL on every
+     * INPUT, breaking pattern-match programs whose grammars depend on line
+     * boundaries (treebank-list, treebank-array, claws5, beauty et al). */
+    if (kw_trim) {
+        while (nread > 0 && (_input_buf[nread-1] == ' ' || _input_buf[nread-1] == '\t')) {
+            _input_buf[--nread] = '\0';
+        }
+    }
     return STRVAL(GC_strdup(_input_buf));
 }
 
