@@ -416,6 +416,9 @@ static void     sc_finalize_do_while  (ScParseState *st, struct DoHead *h, EXPR_
 static void     sc_finalize_for       (ScParseState *st, struct ForHead *h);
 static struct FuncHead *sc_func_head_new(ScParseState *st, char *name, char *argstr);
 static void     sc_finalize_function  (ScParseState *st, struct FuncHead *h);
+/* LS-4.i.1 — goto / label */
+static void     sc_emit_label_pad     (ScParseState *st, char *label);
+static void     sc_append_goto_label  (ScParseState *st, char *target);
 
 /* sc_kind_to_tok — translate FSM ScKind (1..N) to Bison's sc_tokentype.
  *
@@ -591,6 +594,8 @@ matched_stmt
                                         { sc_finalize_function(st, $1); }
             | func_head T_LBRACE T_RBRACE
                                         { sc_finalize_function(st, $1); }
+            /* LS-4.i.1 — labeled stmt: `name:` followed by a stmt */
+            | label_decl matched_stmt
             ;
 
 unmatched_stmt
@@ -603,6 +608,8 @@ unmatched_stmt
             /* LS-4.g — for with unmatched body */
             | for_head unmatched_stmt
                                         { sc_finalize_for(st, $1); }
+            /* LS-4.i.1 — labeled stmt: `name:` followed by an unmatched stmt */
+            | label_decl unmatched_stmt
             ;
 
 if_head     : T_IF T_LPAREN expr0 T_RPAREN opt_head_sep
@@ -706,6 +713,24 @@ else_keyword
             : T_ELSE                 { $$ = st->code->tail; }
             ;
 
+/* LS-4.i.1 — label_decl: `name:` prefix that emits a label-pad stmt
+ * eagerly and lets the following stmt's stmts append after it.  In
+ * SNOBOL4, a label on a label-only pad chains to the next non-empty
+ * stmt — that is exactly the semantics we want for `top: stmt`.
+ *
+ * The semantic action runs when Bison reduces `T_IDENT T_COLON`,
+ * before the trailing stmt is parsed.  Therefore the label-pad sits
+ * in st->code immediately before whatever stmts the body contributes.
+ *
+ * Disambiguation with expression-statement: at stmt-start, on seeing
+ * T_IDENT, Bison's lookahead is T_COLON.  COLON does not appear in
+ * any expression rule's FOLLOW set, so the LR(1) item set has only
+ * one viable parse — shift T_COLON into label_decl rather than reduce
+ * T_IDENT to expr17.  Bison resolves cleanly with no conflicts. */
+label_decl
+            : T_IDENT T_COLON        { sc_emit_label_pad(st, $1); free($1); }
+            ;
+
 simple_stmt : expr0 T_SEMICOLON                { sc_append_stmt(st, $1); }
             | T_SEMICOLON                      { /* empty stmt */         }
             /* LS-4.h — return/freturn/nreturn inside a function body */
@@ -713,6 +738,8 @@ simple_stmt : expr0 T_SEMICOLON                { sc_append_stmt(st, $1); }
             | T_RETURN T_SEMICOLON          { sc_append_return(st, NULL); }
             | T_FRETURN T_SEMICOLON         { sc_append_freturn(st); }
             | T_NRETURN T_SEMICOLON         { sc_append_nreturn(st); }
+            /* LS-4.i.1 — goto LABEL; */
+            | T_GOTO T_IDENT T_SEMICOLON    { sc_append_goto_label(st, $2); free($2); }
             ;
 
 block_stmt  : T_LBRACE stmt_list T_RBRACE      { /* statements already appended */ }
@@ -1506,6 +1533,28 @@ static STMT_t *sc_make_goto_uncond_stmt(ScParseState *st, char *target) {
     s->go     = sgoto_new();
     s->go->uncond = target;
     return s;
+}
+
+/* LS-4.i.1 — sc_emit_label_pad: append a label-only no-op stmt.
+ *
+ * Used by the `label_decl : T_IDENT T_COLON` rule.  Produces a STMT_t
+ * with `label = name`, no subject, no replacement, no goto.  In
+ * SNOBOL4, such a stmt is a valid branch target and chains the
+ * label to the next non-empty stmt — exactly matching what the user
+ * wrote: `top: x = 1;` should make `top` reach `x = 1` semantically. */
+static void sc_emit_label_pad(ScParseState *st, char *label) {
+    STMT_t *pad = sc_make_label_stmt(st, strdup(label));
+    sc_append_chain(st, pad, pad);
+}
+
+/* LS-4.i.1 — sc_append_goto_label: emit `:(target)` unconditional goto.
+ *
+ * Used by the `T_GOTO T_IDENT T_SEMICOLON` rule in simple_stmt.  The
+ * target is a user-written label name; we duplicate it (since the
+ * caller still owns the original IDENT string for free()). */
+static void sc_append_goto_label(ScParseState *st, char *target) {
+    STMT_t *g = sc_make_goto_uncond_stmt(st, strdup(target));
+    sc_append_chain(st, g, g);
 }
 
 /* Splice helpers — operate on st->code's linked list.
