@@ -242,6 +242,12 @@ S_DISPATCH:
      * also a value-starter (real number, e.g. .5 after `x`). */
     if (had_ws && last_value && is_value_starter(PEEK(0)))         {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
     if (had_ws && last_value && PEEK(0) == '.' && is_digit(PEEK(1))) { ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                }
+    /* CONCAT trigger for &IDENT keyword reference: `&` followed by an
+     * alpha forms a keyword token (e.g. `&UCASE`), which is a value.
+     * Without this, `KEYWORD KEYWORD` (e.g. inside ANY(&UCASE &LCASE))
+     * has no T_CONCAT injected and the parser sees two adjacent value
+     * tokens with no operator between, causing a syntax error. */
+    if (had_ws && last_value && PEEK(0) == '&' && is_alpha(PEEK(1))) { ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;               }
     if (PEEK(0) == '\0' )                                                                                                  goto E_EOF;
     if (PEEK(0) == '\'' )                                          {  ctx->strpos = 0; ADV(1);                             goto S_STR1;      }
     if (PEEK(0) == '"'  )                                          {  ctx->strpos = 0; ADV(1);                             goto S_STR2;      }

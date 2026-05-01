@@ -1038,6 +1038,18 @@ block_stmt  : T_LBRACE stmt_list T_RBRACE      { /* statements already appended 
  */
 expr0       : expr1 T_2EQUAL    expr0
                                 { $$ = expr_binary(E_ASSIGN, $1, $3); }
+            | expr1 T_2EQUAL
+                                /* LS-6.c — empty replacement: `subj ? pat = ;` and
+                                 * `x = ;` both lower to E_ASSIGN(lhs, '').  This
+                                 * matches SPITBOL's `opt_repl` rule in snobol4.y:77
+                                 * (T_2EQUAL with no expr → E_QLIT '').  Single
+                                 * token lookahead distinguishes from the binary
+                                 * assignment rule above: if next token can start
+                                 * expr0 → shift (use binary form); else (T_SEMICOLON,
+                                 * T_RPAREN, etc.) → reduce to empty-RHS form. */
+                                { EXPR_t *empty = expr_new(E_QLIT);
+                                  empty->sval = strdup("");
+                                  $$ = expr_binary(E_ASSIGN, $1, empty); }
             | expr1 T_PLUS_ASSIGN   expr0
                                 { EXPR_t *cl = sc_clone_expr_simple($1);
                                   EXPR_t *rhs = expr_binary(E_ADD, cl, $3);
