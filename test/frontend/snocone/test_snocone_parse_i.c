@@ -1,9 +1,11 @@
 /*
  * test_snocone_parse_i.c — GOAL-SNOCONE-LANG-SPACE LS-4.i acceptance test
  *
- * Sub-step LS-4.i.1: `goto LABEL;` and `LABEL:` prefix.
+ * Sub-step LS-4.i.1: `goto LABEL;` and `LABEL:` prefix.            (tests 1–15)
+ * Sub-step LS-4.i.2: `break;` `break LABEL;` `continue;` `continue LABEL;`.
+ *                                                                  (tests 16–31)
  *
- * Lowering shapes:
+ * LS-4.i.1 lowering shapes:
  *
  *   goto NAME ;        ->   :(NAME)        (bare goto-uncond stmt; no subject)
  *
@@ -13,6 +15,25 @@
  *                          Per SNOBOL4 semantics, a label on a label-only
  *                          pad chains to the next non-empty stmt — so
  *                          jumping to NAME lands on the inner stmt.
+ *
+ * LS-4.i.2 lowering shapes (loop frames are pushed at while/do/for head and
+ * popped at finalize; each frame carries a cont_label and end_label, plus
+ * any user labels that immediately preceded the head):
+ *
+ *   break ;            ->   :(end_label_of_innermost_frame)
+ *   break LABEL ;      ->   :(end_label_of_frame_tagged_by_user_LABEL)
+ *   continue ;         ->   :(cont_label_of_innermost_LOOP_frame)
+ *   continue LABEL ;   ->   :(cont_label_of_LOOP_frame_tagged_by_user_LABEL)
+ *
+ * `while`'s cont_label IS the synthetic `_Ltop_NNNN` (the back-edge target),
+ * always emitted.  `do/while` and `for` use a separate `_Lcont_NNNN` pad,
+ * lazy-emitted by sc_finalize_* only when at least one `continue` inside the
+ * body referenced it (frame's `cont_used` flag).  This keeps the IR shape of
+ * non-continue do/for byte-identical to the LS-4.f / LS-4.g lowering — every
+ * pre-existing parse-{f,g} test stays green without modification.
+ *
+ * Out-of-context `break;` / `continue;` and unresolved-label cases call
+ * sc_error(); snocone_parse_program returns NULL with state.nerrors > 0.
  *
  * Label declarations and goto targets are user names verbatim.  No
  * synthetic prefixing or mangling — `top` stays `top`.  Synthetic
@@ -495,7 +516,397 @@ static void test_label_inside_while(void) {
     free(stmts);
 }
 
+/* =========================================================================
+ * LS-4.i.2 helpers — count gotos targeting a given label name; check label
+ * presence; locate the goto-uncond stmt with a given target.
+ * ========================================================================= */
+static int count_gotos_to(STMT_t **stmts, int n, const char *target) {
+    int c = 0;
+    for (int i = 0; i < n; i++) {
+        if (stmts[i]->go && stmts[i]->go->uncond &&
+            strcmp(stmts[i]->go->uncond, target) == 0) c++;
+    }
+    return c;
+}
+static int count_labels_with_prefix(STMT_t **stmts, int n, const char *prefix) {
+    int c = 0;
+    size_t plen = strlen(prefix);
+    for (int i = 0; i < n; i++) {
+        if (stmts[i]->label && strncmp(stmts[i]->label, prefix, plen) == 0) c++;
+    }
+    return c;
+}
+static const char *find_label_with_prefix(STMT_t **stmts, int n, const char *prefix) {
+    size_t plen = strlen(prefix);
+    for (int i = 0; i < n; i++) {
+        if (stmts[i]->label && strncmp(stmts[i]->label, prefix, plen) == 0)
+            return stmts[i]->label;
+    }
+    return NULL;
+}
+
+/* =========================================================================
+ * Test 16 — bare break in while
+ *   while (DIFFER(x)) { break; }
+ *   While allocates _Ltop_0001 (cont) + _Lend_0002 (break target).
+ *   Body's break; lowers to :(_Lend_0002).
+ *   Expected stmt sequence:
+ *     [0] _Ltop_0001 pad
+ *     [1] DIFFER(x) :F(_Lend_0002)
+ *     [2] :(_Lend_0002)         (the break)
+ *     [3] :(_Ltop_0001)         (back-edge)
+ *     [4] _Lend_0002 pad
+ * ========================================================================= */
+static void test_break_bare_in_while(void) {
+    Program *prog = snocone_parse_program("while (DIFFER(x)) { break; }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(n == 5, "expected 5 stmts, got %d", n);
+    /* exactly one goto :(_Lend_0002), the break */
+    ASSERT(count_gotos_to(stmts, n, "_Lend_0002") == 1,
+           "expected exactly one break goto to _Lend_0002");
+    /* exactly one goto :(_Ltop_0001), the back-edge */
+    ASSERT(count_gotos_to(stmts, n, "_Ltop_0001") == 1,
+           "expected exactly one back-edge goto to _Ltop_0001");
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 17 — bare continue in while
+ *   while (DIFFER(x)) { continue; }
+ *   For while, the cont_label IS the back-edge label _Ltop_0001.  So
+ *   `continue;` lowers to :(_Ltop_0001) — same target as the natural
+ *   back-edge.  We expect TWO gotos to _Ltop_0001 (continue + back-edge).
+ * ========================================================================= */
+static void test_continue_bare_in_while(void) {
+    Program *prog = snocone_parse_program("while (DIFFER(x)) { continue; }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(count_gotos_to(stmts, n, "_Ltop_0001") == 2,
+           "expected 2 gotos to _Ltop_0001 (continue + back-edge), got %d",
+           count_gotos_to(stmts, n, "_Ltop_0001"));
+    /* No spurious _Lcont pad — while reuses _Ltop as cont target. */
+    ASSERT(count_labels_with_prefix(stmts, n, "_Lcont") == 0,
+           "while-loop continue must not emit a separate _Lcont pad");
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 18 — break + continue inside do/while
+ *   do { break; continue; } while (DIFFER(x));
+ *   do/while uses a separate _Lcont_NNNN pad spliced just before the cond.
+ *   `break;` -> :(_Lend_NNNN), `continue;` -> :(_Lcont_NNNN).
+ * ========================================================================= */
+static void test_break_continue_in_dowhile(void) {
+    Program *prog = snocone_parse_program(
+        "do { break; continue; } while (DIFFER(x));", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    /* exactly one Lcont pad lazy-emitted because cont_used=1 */
+    ASSERT(count_labels_with_prefix(stmts, n, "_Lcont") == 1,
+           "do/while+continue must emit exactly one _Lcont pad, got %d",
+           count_labels_with_prefix(stmts, n, "_Lcont"));
+    /* find the actual label name and assert a goto to it */
+    const char *lcont = find_label_with_prefix(stmts, n, "_Lcont");
+    const char *lend  = find_label_with_prefix(stmts, n, "_Lend");
+    ASSERT(lcont != NULL, "should have a _Lcont label");
+    ASSERT(lend != NULL,  "should have a _Lend label");
+    if (lcont) ASSERT(count_gotos_to(stmts, n, lcont) == 1,
+                      "expected one goto to %s (the continue)", lcont);
+    if (lend)  ASSERT(count_gotos_to(stmts, n, lend) == 1,
+                      "expected one goto to %s (the break)", lend);
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 19 — break + continue inside for-loop
+ *   for (i = 0; LT(i, 10); i = i + 1) { break; continue; }
+ *   for-loop uses a separate _Lcont_NNNN pad spliced just before the step.
+ *   `break;` -> :(_Lend_NNNN), `continue;` -> :(_Lcont_NNNN).
+ * ========================================================================= */
+static void test_break_continue_in_for(void) {
+    Program *prog = snocone_parse_program(
+        "for (i = 0; LT(i, 10); i = i + 1) { break; continue; }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    /* exactly one Lcont pad lazy-emitted */
+    ASSERT(count_labels_with_prefix(stmts, n, "_Lcont") == 1,
+           "for+continue must emit exactly one _Lcont pad, got %d",
+           count_labels_with_prefix(stmts, n, "_Lcont"));
+    const char *lcont = find_label_with_prefix(stmts, n, "_Lcont");
+    const char *lend  = find_label_with_prefix(stmts, n, "_Lend");
+    ASSERT(lcont != NULL, "should have a _Lcont label");
+    ASSERT(lend != NULL,  "should have a _Lend label");
+    if (lcont) ASSERT(count_gotos_to(stmts, n, lcont) == 1,
+                      "expected one goto to %s (the continue)", lcont);
+    if (lend)  ASSERT(count_gotos_to(stmts, n, lend) == 1,
+                      "expected one goto to %s (the break)", lend);
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 20 — for-loop WITHOUT continue: lazy-emit suppressed
+ *   for (i = 0; LT(i, 10); i = i + 1) { x = x + i; }
+ *   No continue in body -> frame's cont_used flag stays 0 -> finalize
+ *   does NOT splice a _Lcont pad.  The IR shape must be byte-identical
+ *   to the LS-4.g for-loop lowering (parse-g 95/95 stays green).
+ * ========================================================================= */
+static void test_for_no_continue_lazy_suppressed(void) {
+    Program *prog = snocone_parse_program(
+        "for (i = 0; LT(i, 10); i = i + 1) { x = x + i; }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(count_labels_with_prefix(stmts, n, "_Lcont") == 0,
+           "for without continue must NOT emit a _Lcont pad (lazy-emit), got %d",
+           count_labels_with_prefix(stmts, n, "_Lcont"));
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 21 — do/while WITHOUT continue: lazy-emit suppressed
+ *   do { x = x + 1; } while (DIFFER(x));
+ *   Same lazy-emit invariant as Test 20, for do/while.
+ * ========================================================================= */
+static void test_dowhile_no_continue_lazy_suppressed(void) {
+    Program *prog = snocone_parse_program(
+        "do { x = x + 1; } while (DIFFER(x));", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(count_labels_with_prefix(stmts, n, "_Lcont") == 0,
+           "do/while without continue must NOT emit a _Lcont pad (lazy-emit), got %d",
+           count_labels_with_prefix(stmts, n, "_Lcont"));
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 22 — for-loop WITH continue: lazy-emit triggered
+ *   for (i = 0; LT(i, 10); i = i + 1) { continue; }
+ *   continue in body sets frame's cont_used=1 -> finalize splices
+ *   _Lcont_NNNN pad just before the step stmt.
+ * ========================================================================= */
+static void test_for_with_continue_lazy_emitted(void) {
+    Program *prog = snocone_parse_program(
+        "for (i = 0; LT(i, 10); i = i + 1) { continue; }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(count_labels_with_prefix(stmts, n, "_Lcont") == 1,
+           "for+continue must emit exactly one _Lcont pad, got %d",
+           count_labels_with_prefix(stmts, n, "_Lcont"));
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 23 — do/while WITH continue: lazy-emit triggered
+ *   do { continue; } while (DIFFER(x));
+ *   Same as Test 22, for do/while.
+ * ========================================================================= */
+static void test_dowhile_with_continue_lazy_emitted(void) {
+    Program *prog = snocone_parse_program(
+        "do { continue; } while (DIFFER(x));", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(count_labels_with_prefix(stmts, n, "_Lcont") == 1,
+           "do/while+continue must emit exactly one _Lcont pad, got %d",
+           count_labels_with_prefix(stmts, n, "_Lcont"));
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 24 — labeled break across nested while loops
+ *   outer: while (DIFFER(x)) { while (DIFFER(y)) { break outer; } }
+ *   `break outer` must target the OUTER loop's _Lend (not inner's).
+ *   Outer is allocated first: _Ltop_0001 / _Lend_0002.
+ *   Inner second: _Ltop_0003 / _Lend_0004.
+ *   `break outer` -> :(_Lend_0002), not :(_Lend_0004).
+ * ========================================================================= */
+static void test_labeled_break_nested_loops(void) {
+    Program *prog = snocone_parse_program(
+        "outer: while (DIFFER(x)) { while (DIFFER(y)) { break outer; } }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    /* outer label sits at the very front (label-decl emits before head). */
+    ASSERT(n >= 1 && stmts[0]->label && strcmp(stmts[0]->label, "outer") == 0,
+           "stmt[0] should be user label 'outer', got %s",
+           (n >= 1 && stmts[0]->label) ? stmts[0]->label : "(null)");
+    /* The break-outer goto targets the OUTER's end label.  Outer is allocated
+     * first -> _Lend_0002.  Inner -> _Lend_0004.  We assert exactly one goto
+     * to _Lend_0002 (the break) and zero gotos to _Lend_0004 (no break in
+     * inner) — and the inner's natural fall-out goto is :(_Lend_0002) NO,
+     * actually inner's back-edge is :(_Ltop_0003).  Plain inner _Lend_0004 is
+     * a pad with one cond :F to it.  The ONLY goto to _Lend_0002 is the break. */
+    ASSERT(count_gotos_to(stmts, n, "_Lend_0002") == 1,
+           "expected exactly 1 goto to _Lend_0002 (break outer), got %d",
+           count_gotos_to(stmts, n, "_Lend_0002"));
+    /* Both end labels exist. */
+    int lend_count = count_labels_with_prefix(stmts, n, "_Lend");
+    ASSERT(lend_count == 2, "expected 2 _Lend pads (one per loop), got %d", lend_count);
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 25 — labeled continue across nested while loops
+ *   outer: while (DIFFER(x)) { while (DIFFER(y)) { continue outer; } }
+ *   `continue outer` -> :(_Ltop_0001) (outer's cont_label = its back-edge).
+ *   Inner has no continue, so no _Lcont pad emitted (while uses _Ltop as
+ *   cont target — separate _Lcont pads only for do/while/for).
+ *   _Ltop_0001 should be the target of TWO gotos: outer back-edge + the
+ *   continue.  Inner _Ltop_0003 is targeted by exactly one goto: inner
+ *   back-edge.
+ * ========================================================================= */
+static void test_labeled_continue_nested_loops(void) {
+    Program *prog = snocone_parse_program(
+        "outer: while (DIFFER(x)) { while (DIFFER(y)) { continue outer; } }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(count_gotos_to(stmts, n, "_Ltop_0001") == 2,
+           "expected 2 gotos to outer _Ltop_0001 (back-edge + continue), got %d",
+           count_gotos_to(stmts, n, "_Ltop_0001"));
+    ASSERT(count_gotos_to(stmts, n, "_Ltop_0003") == 1,
+           "expected 1 goto to inner _Ltop_0003 (back-edge only), got %d",
+           count_gotos_to(stmts, n, "_Ltop_0003"));
+    /* No separate _Lcont pad — both loops are while. */
+    ASSERT(count_labels_with_prefix(stmts, n, "_Lcont") == 0,
+           "while loops must not emit _Lcont pads");
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 26 — stacked user labels on a single loop, break by FIRST label
+ *   a: b: while (DIFFER(x)) { break a; }
+ *   Both `a` and `b` are pushed onto the same loop frame's user_labels[].
+ *   `break a` -> :(_Lend_0002).
+ * ========================================================================= */
+static void test_stacked_labels_break_first(void) {
+    Program *prog = snocone_parse_program(
+        "a: b: while (DIFFER(x)) { break a; }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    /* user labels stay attached as label-pads at the head — first 'a' then 'b' */
+    ASSERT(n >= 2 && stmts[0]->label && strcmp(stmts[0]->label, "a") == 0,
+           "stmt[0] should be label pad 'a'");
+    ASSERT(n >= 2 && stmts[1]->label && strcmp(stmts[1]->label, "b") == 0,
+           "stmt[1] should be label pad 'b'");
+    /* break a; -> goto :(_Lend_0002) */
+    ASSERT(count_gotos_to(stmts, n, "_Lend_0002") == 1,
+           "expected 1 goto to _Lend_0002 (break a), got %d",
+           count_gotos_to(stmts, n, "_Lend_0002"));
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 27 — stacked user labels, break by SECOND label (same loop)
+ *   a: b: while (DIFFER(x)) { break b; }
+ *   `break b` resolves to the SAME loop frame as `break a` (both labels
+ *   attach to the same frame's user_labels[]).  Same _Lend_0002 target.
+ * ========================================================================= */
+static void test_stacked_labels_break_second(void) {
+    Program *prog = snocone_parse_program(
+        "a: b: while (DIFFER(x)) { break b; }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(count_gotos_to(stmts, n, "_Lend_0002") == 1,
+           "expected 1 goto to _Lend_0002 (break b targets same loop as break a)");
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 28 — label-on-non-loop-stmt disambiguation
+ *   a: x = 1; while (DIFFER(y)) { z = 1; }
+ *   Label `a` attaches to the assignment (label-eager-emit puts an `a` pad
+ *   stmt before the assignment); the subsequent `while` head sees an EMPTY
+ *   pending-user-labels list because `sc_append_stmt` cleared it on the
+ *   assignment commit.  Therefore the loop frame has zero user_labels —
+ *   `break a;` from inside the loop body would be a parse error (Test 29
+ *   covers that).
+ *
+ *   Here we just verify the IR shape:
+ *     [0] a pad (label only)
+ *     [1] x = 1 (assignment — no label, has_eq)
+ *     [2..] _Ltop / cond / body / back-edge / _Lend
+ *   So the ONLY user-named label pad in the IR is `a`, and it sits BEFORE
+ *   the synthetic _Ltop pad.
+ * ========================================================================= */
+static void test_label_on_non_loop_stmt_disambiguation(void) {
+    Program *prog = snocone_parse_program(
+        "a: x = 1; while (DIFFER(y)) { z = 1; }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    /* stmt[0] is `a` label pad */
+    ASSERT(n >= 1, "should have at least 1 stmt");
+    ASSERT(n >= 1 && is_label_pad(stmts[0]), "stmt[0] should be label pad");
+    ASSERT(n >= 1 && stmts[0]->label && strcmp(stmts[0]->label, "a") == 0,
+           "stmt[0] label should be 'a'");
+    /* stmt[1] is the assignment x = 1 — no label */
+    ASSERT(n >= 2 && is_assignment(stmts[1]) && stmts[1]->label == NULL,
+           "stmt[1] should be unlabeled assignment");
+    /* The synthetic _Ltop pad must NOT carry the user label 'a' */
+    const char *ltop = find_label_with_prefix(stmts, n, "_Ltop_");
+    ASSERT(ltop != NULL, "should have a _Ltop pad");
+    /* No user label is on the _Ltop stmt itself — that is, the _Ltop pad
+     * is a SEPARATE stmt from the 'a' pad.  Verified by stmt[0]->label
+     * being 'a' (not _Ltop).  All good. */
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 29 — labeled break to non-loop-tagged label is a parse error
+ *   a: x = 1; while (DIFFER(y)) { break a; }
+ *   `a` is attached to the bare assignment, not to the loop.  `break a;`
+ *   inside the loop body therefore finds NO loop frame tagged `a` and
+ *   sc_error fires.  Parse must fail (NULL return).
+ * ========================================================================= */
+static void test_break_label_attached_to_non_loop_error(void) {
+    Program *prog = snocone_parse_program(
+        "a: x = 1; while (DIFFER(y)) { break a; }", "test");
+    ASSERT(prog == NULL, "parse must fail: 'a' is attached to bare stmt, not loop");
+}
+
+/* =========================================================================
+ * Test 30 — break outside any loop: parse error
+ *   break;
+ * ========================================================================= */
+static void test_break_outside_loop_error(void) {
+    Program *prog = snocone_parse_program("break;", "test");
+    ASSERT(prog == NULL, "bare break; at top level must fail");
+}
+
+/* =========================================================================
+ * Test 31 — continue outside any loop: parse error
+ *   continue;
+ * ========================================================================= */
+static void test_continue_outside_loop_error(void) {
+    Program *prog = snocone_parse_program("continue;", "test");
+    ASSERT(prog == NULL, "bare continue; at top level must fail");
+}
+
 int main(void) {
+    /* LS-4.i.1 — goto/label */
     test_goto_bare();
     test_goto_in_sequence();
     test_label_before_assign();
@@ -511,6 +922,23 @@ int main(void) {
     test_label_whitespace_variants();
     test_goto_whitespace_variants();
     test_label_inside_while();
+    /* LS-4.i.2 — break/continue */
+    test_break_bare_in_while();
+    test_continue_bare_in_while();
+    test_break_continue_in_dowhile();
+    test_break_continue_in_for();
+    test_for_no_continue_lazy_suppressed();
+    test_dowhile_no_continue_lazy_suppressed();
+    test_for_with_continue_lazy_emitted();
+    test_dowhile_with_continue_lazy_emitted();
+    test_labeled_break_nested_loops();
+    test_labeled_continue_nested_loops();
+    test_stacked_labels_break_first();
+    test_stacked_labels_break_second();
+    test_label_on_non_loop_stmt_disambiguation();
+    test_break_label_attached_to_non_loop_error();
+    test_break_outside_loop_error();
+    test_continue_outside_loop_error();
     printf("=== Results: %d passed, %d failed ===\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;
 }
