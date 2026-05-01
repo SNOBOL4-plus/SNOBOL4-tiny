@@ -468,8 +468,12 @@ typedef struct { Term *orig; Term *copy; } CopyVarMap;
 static Term *copy_term_rec(Term *t, CopyVarMap *map, int *nmap) {
     t = term_deref(t);
     if (!t) {
-        /* unbound variable — create or reuse fresh var */
-        Term *fresh = term_new_var(-1);
+        /* unbound variable — create or reuse fresh var.
+         * NOTE: var_slot must be non-negative so bind() trails this var.
+         * -1 means "anonymous wildcard, don't trail" — wrong for copy_term.
+         * PL-12 session #7: use synthetic slot 1<<20 + nmap to avoid env
+         * collisions (real env slots are 0..arity, typically <64). */
+        Term *fresh = term_new_var((1 << 20) + *nmap);
         return fresh;
     }
     switch (t->tag) {
@@ -477,7 +481,8 @@ static Term *copy_term_rec(Term *t, CopyVarMap *map, int *nmap) {
             /* unbound — look up or create a fresh copy */
             for (int i = 0; i < *nmap; i++)
                 if (map[i].orig == t) return map[i].copy;
-            Term *fresh = term_new_var(-1);
+            /* PL-12 session #7: see comment above — slot != -1 needed. */
+            Term *fresh = term_new_var((1 << 20) + *nmap);
             if (*nmap < COPY_TERM_MAX_VARS) {
                 map[*nmap].orig = t; map[*nmap].copy = fresh; (*nmap)++;
             }
