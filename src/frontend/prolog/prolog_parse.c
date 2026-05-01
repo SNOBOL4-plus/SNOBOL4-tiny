@@ -140,6 +140,7 @@ static const OpEntry BIN_OPS[] = {
     { ",",    1000, ASSOC_RIGHT },
     { ";",    1100, ASSOC_RIGHT },
     { "->",   1050, ASSOC_RIGHT },
+    { "*->",  1050, ASSOC_RIGHT },  /* soft-cut: SWI xfy 1050 — same prec as -> */
     { "@",     900, ASSOC_NONE  },  /* call-at-context: Goal@Module — xfx 900 (test_call.pl op decl) */
     { "=",     700, ASSOC_NONE  },
     { "\\=",   700, ASSOC_NONE  },
