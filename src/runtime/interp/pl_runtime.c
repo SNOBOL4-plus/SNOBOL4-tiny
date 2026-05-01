@@ -1320,7 +1320,14 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
                 bb_node_t goal_box=pl_box_goal_from_ir(goal_expr,env);
                 DESCR_t fa_r=goal_box.fn(goal_box.ζ,α);
                 while(!IS_FAIL_fn(fa_r)){
-                    Term *snap=pl_unified_deep_copy(pl_unified_term_from_expr(tmpl_expr,env));
+                    /* PL-12 session #7: use pl_copy_term (preserves var
+                     * sharing within snapshot via CopyVarMap) instead of
+                     * pl_unified_deep_copy (collapsed every TT_VAR to atom `_`,
+                     * which destroyed test goal vars carried through findall).
+                     * plunit's pj_run_suite stores test bodies as findall
+                     * snapshots; without this fix the goals would lose their
+                     * var bindings even before reaching catch's bridge. */
+                    Term *snap=pl_copy_term(pl_unified_term_from_expr(tmpl_expr,env));
                     if(nsol>=sol_cap){sol_cap=sol_cap?sol_cap*2:8;solutions=realloc(solutions,sol_cap*sizeof(Term*));}
                     solutions[nsol++]=snap;
                     fa_r=goal_box.fn(goal_box.ζ,β);
