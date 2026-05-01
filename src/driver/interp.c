@@ -23,7 +23,6 @@
 #include "frontend/snobol4/scrip_cc.h"
 extern Program *sno_parse(FILE *f, const char *filename);
 #include "frontend/snocone/snocone_driver.h"
-#include "frontend/snocone/snocone_control.h"
 #include "frontend/prolog/prolog_driver.h"
 #include "frontend/prolog/term.h"
 #include "frontend/prolog/prolog_runtime.h"
