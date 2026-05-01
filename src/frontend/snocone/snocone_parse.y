@@ -704,6 +704,33 @@ expr17      : T_FUNCTION T_LPAREN exprlist T_RPAREN
                                 { $$ = expr_unary(E_PLS, $2); }
             | T_1MINUS expr17
                                 { $$ = expr_unary(E_MNS, $2); }
+            /* ---- LS-4.e: remaining SPITBOL unary operators ---- */
+            /* *expr  — deferred evaluation / indirect pattern ref */
+            | T_1STAR   expr17  { $$ = expr_unary(E_DEFER,       $2); }
+            /* .expr  — name reference (returns name descriptor)   */
+            | T_1DOT    expr17  { $$ = expr_unary(E_NAME,        $2); }
+            /* $expr  — indirect (variable indirection)            */
+            | T_1DOLLAR expr17  { $$ = expr_unary(E_INDIRECT,    $2); }
+            /* @expr  — cursor position capture                    */
+            | T_1AT     expr17  { $$ = expr_unary(E_CAPT_CURSOR, $2); }
+            /* ~expr  — negate success/failure (NOT)               */
+            | T_1TILDE  expr17  { $$ = expr_unary(E_NOT,         $2); }
+            /* ?expr  — interrogation (null if succeeds, fail if fails) */
+            | T_1QUEST  expr17  { $$ = expr_unary(E_INTERROGATE, $2); }
+            /* &expr  — bare ampersand unary (OPSYN slot pri 2)    */
+            | T_1AMP    expr17  { EXPR_t *_e = expr_unary(E_OPSYN, $2);
+                                  _e->sval = strdup("&"); $$ = _e; }
+            /* OPSYN-slot unaries — user-definable via OPSYN       */
+            | T_1PERCENT expr17 { EXPR_t *_e = expr_unary(E_OPSYN, $2);
+                                  _e->sval = strdup("%"); $$ = _e; }
+            | T_1SLASH   expr17 { EXPR_t *_e = expr_unary(E_OPSYN, $2);
+                                  _e->sval = strdup("/"); $$ = _e; }
+            | T_1POUND   expr17 { EXPR_t *_e = expr_unary(E_OPSYN, $2);
+                                  _e->sval = strdup("#"); $$ = _e; }
+            | T_1PIPE    expr17 { EXPR_t *_e = expr_unary(E_OPSYN, $2);
+                                  _e->sval = strdup("|"); $$ = _e; }
+            | T_1EQUAL   expr17 { EXPR_t *_e = expr_unary(E_OPSYN, $2);
+                                  _e->sval = strdup("="); $$ = _e; }
             ;
 
 %%
