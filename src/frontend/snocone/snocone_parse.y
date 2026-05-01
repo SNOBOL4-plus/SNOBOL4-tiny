@@ -342,8 +342,8 @@ struct WhileHead {
     STMT_t *before_body;
     int     lineno;
 };
-/* LS-4.g — do/while and do/until: snapshot before body (at KW_DO), cond
- * provided when the trailing while/until clause is parsed. */
+/* LS-4.g — do/while: snapshot before body (at KW_DO), cond
+ * provided when the trailing while clause is parsed. */
 struct DoHead {
     STMT_t *before_body;   /* tail snapshot at KW_DO */
     int     lineno;
@@ -366,7 +366,6 @@ static void     sc_finalize_if_no_else(ScParseState *st, struct IfHead *h);
 static void     sc_finalize_if_else   (ScParseState *st, struct IfHead *h, STMT_t *before_else);
 static void     sc_finalize_while     (ScParseState *st, struct WhileHead *h);
 static void     sc_finalize_do_while  (ScParseState *st, struct DoHead *h, EXPR_t *cond);
-static void     sc_finalize_do_until  (ScParseState *st, struct DoHead *h, EXPR_t *cond);
 static void     sc_finalize_for       (ScParseState *st, struct ForHead *h);
 
 /* sc_kind_to_tok — translate FSM ScKind (1..N) to Bison's sc_tokentype.
@@ -458,7 +457,7 @@ static int sc_kind_to_tok(int sc_kind);
 %token T_1AT T_1TILDE T_1DOLLAR T_1DOT T_1POUND
 %token T_1PIPE T_1EQUAL T_1QUEST T_1AMP
 %token T_COLON
-%token T_KW_DO T_KW_UNTIL T_KW_FOR
+%token T_KW_DO T_KW_FOR
 %token T_KW_SWITCH T_KW_CASE T_KW_DEFAULT
 %token T_KW_BREAK T_KW_CONTINUE T_KW_GOTO
 %token T_KW_FUNCTION T_KW_RETURN T_KW_FRETURN T_KW_NRETURN T_KW_STRUCT
@@ -523,15 +522,13 @@ matched_stmt
                                         { sc_finalize_if_else(st, $1, $3); }
             | while_head matched_stmt
                                         { sc_finalize_while(st, $1); }
-            /* LS-4.g — do/while and do/until (always matched — no dangling-else risk).
+            /* LS-4.g — do/while (always matched — no dangling-else risk).
              * Uses do_body (always a brace block) to avoid the shift/reduce tension
              * that arises when T_KW_WHILE follows a matched_stmt on the stack:
              * the parser would want to start a new while_head rather than close
              * the do-loop.  Requiring { } makes the body unambiguous. */
             | do_head do_body T_KW_WHILE T_LPAREN expr0 T_RPAREN T_SEMICOLON
                                         { sc_finalize_do_while(st, $1, $5); }
-            | do_head do_body T_KW_UNTIL T_LPAREN expr0 T_RPAREN T_SEMICOLON
-                                        { sc_finalize_do_until(st, $1, $5); }
             /* LS-4.g — for (init; cond; step) body */
             | for_head matched_stmt
                                         { sc_finalize_for(st, $1); }
@@ -558,7 +555,7 @@ while_head  : T_KW_WHILE T_LPAREN expr0 T_RPAREN opt_head_sep
             ;
 
 /* LS-4.g — do_head fires at the `do` keyword before the body block.
- * The trailing while/until clause (with the condition) is parsed by the
+ * The trailing while clause (with the condition) is parsed by the
  * parent rule; do_head just snapshots the linked-list tail. */
 do_head     : T_KW_DO                  { $$ = sc_do_head_new(st); }
             ;
@@ -1042,7 +1039,6 @@ static int sc_kind_to_tok(int sc_kind) {
         case SC_T_KW_ELSE:          return T_KW_ELSE;
         case SC_T_KW_WHILE:         return T_KW_WHILE;
         case SC_T_KW_DO:            return T_KW_DO;
-        case SC_T_KW_UNTIL:         return T_KW_UNTIL;
         case SC_T_KW_FOR:           return T_KW_FOR;
         case SC_T_KW_SWITCH:        return T_KW_SWITCH;
         case SC_T_KW_CASE:          return T_KW_CASE;
@@ -1373,18 +1369,12 @@ static void sc_finalize_while(ScParseState *st, struct WhileHead *h) {
 }
 
 /* =========================================================================
- *  LS-4.g — do/while, do/until, for lowering helpers
+ *  LS-4.g — do/while and for lowering helpers
  *
  *  do { S } while (C);
  *      →   Ltop                      <- spliced after before_body
  *          <S stmts>
  *          C  :S(Ltop)               <- appended (success loops back)
- *          Lend                      <- appended
- *
- *  do { S } until (C);
- *      →   Ltop                      <- spliced after before_body
- *          <S stmts>
- *          C  :F(Ltop)               <- appended (failure loops back)
  *          Lend                      <- appended
  *
  *  for (init; C; step) S
@@ -1395,6 +1385,9 @@ static void sc_finalize_while(ScParseState *st, struct WhileHead *h) {
  *          <step stmt>               <- appended
  *          :(Ltop)                   <- appended
  *          Lend                      <- appended
+ *
+ *  Note: do/until removed — Snocone follows C's loop forms exactly
+ *  (while and do/while only).  Lon directive session 2026-04-30 #12.
  * ========================================================================= */
 
 /* Build a STMT whose subject is `cond` and whose go.onsuccess points at
@@ -1418,18 +1411,6 @@ static void sc_finalize_do_while(ScParseState *st, struct DoHead *h, EXPR_t *con
     /* Splice Ltop-pad right before the do-body. */
     sc_splice_after(st, h->before_body, top_pad, top_pad);
     /* Append cond :S(Ltop) and then Lend. */
-    cond_stmt->next = end_pad;
-    sc_append_chain(st, cond_stmt, end_pad);
-    free(h);
-}
-
-static void sc_finalize_do_until(ScParseState *st, struct DoHead *h, EXPR_t *cond) {
-    char   *Ltop      = sc_label_new(st, "_Ltop");
-    char   *Lend      = sc_label_new(st, "_Lend");
-    STMT_t *top_pad   = sc_make_label_stmt(st, Ltop);
-    STMT_t *cond_stmt = sc_make_cond_fail_stmt(st, cond, strdup(Ltop), h->lineno);
-    STMT_t *end_pad   = sc_make_label_stmt(st, Lend);
-    sc_splice_after(st, h->before_body, top_pad, top_pad);
     cond_stmt->next = end_pad;
     sc_append_chain(st, cond_stmt, end_pad);
     free(h);

@@ -156,25 +156,24 @@ typedef struct ScParseState {
     T_1AMP = 318,                  /* T_1AMP  */
     T_COLON = 319,                 /* T_COLON  */
     T_KW_DO = 320,                 /* T_KW_DO  */
-    T_KW_UNTIL = 321,              /* T_KW_UNTIL  */
-    T_KW_FOR = 322,                /* T_KW_FOR  */
-    T_KW_SWITCH = 323,             /* T_KW_SWITCH  */
-    T_KW_CASE = 324,               /* T_KW_CASE  */
-    T_KW_DEFAULT = 325,            /* T_KW_DEFAULT  */
-    T_KW_BREAK = 326,              /* T_KW_BREAK  */
-    T_KW_CONTINUE = 327,           /* T_KW_CONTINUE  */
-    T_KW_GOTO = 328,               /* T_KW_GOTO  */
-    T_KW_FUNCTION = 329,           /* T_KW_FUNCTION  */
-    T_KW_RETURN = 330,             /* T_KW_RETURN  */
-    T_KW_FRETURN = 331,            /* T_KW_FRETURN  */
-    T_KW_NRETURN = 332,            /* T_KW_NRETURN  */
-    T_KW_STRUCT = 333,             /* T_KW_STRUCT  */
-    T_UNKNOWN = 334,               /* T_UNKNOWN  */
-    T_LBRACE = 335,                /* T_LBRACE  */
-    T_RBRACE = 336,                /* T_RBRACE  */
-    T_KW_IF = 337,                 /* T_KW_IF  */
-    T_KW_ELSE = 338,               /* T_KW_ELSE  */
-    T_KW_WHILE = 339               /* T_KW_WHILE  */
+    T_KW_FOR = 321,                /* T_KW_FOR  */
+    T_KW_SWITCH = 322,             /* T_KW_SWITCH  */
+    T_KW_CASE = 323,               /* T_KW_CASE  */
+    T_KW_DEFAULT = 324,            /* T_KW_DEFAULT  */
+    T_KW_BREAK = 325,              /* T_KW_BREAK  */
+    T_KW_CONTINUE = 326,           /* T_KW_CONTINUE  */
+    T_KW_GOTO = 327,               /* T_KW_GOTO  */
+    T_KW_FUNCTION = 328,           /* T_KW_FUNCTION  */
+    T_KW_RETURN = 329,             /* T_KW_RETURN  */
+    T_KW_FRETURN = 330,            /* T_KW_FRETURN  */
+    T_KW_NRETURN = 331,            /* T_KW_NRETURN  */
+    T_KW_STRUCT = 332,             /* T_KW_STRUCT  */
+    T_UNKNOWN = 333,               /* T_UNKNOWN  */
+    T_LBRACE = 334,                /* T_LBRACE  */
+    T_RBRACE = 335,                /* T_RBRACE  */
+    T_KW_IF = 336,                 /* T_KW_IF  */
+    T_KW_ELSE = 337,               /* T_KW_ELSE  */
+    T_KW_WHILE = 338               /* T_KW_WHILE  */
   };
   typedef enum sc_tokentype sc_token_kind_t;
 #endif
@@ -183,7 +182,7 @@ typedef struct ScParseState {
 #if ! defined SC_STYPE && ! defined SC_STYPE_IS_DECLARED
 union SC_STYPE
 {
-#line 392 "snocone_parse.y"
+#line 391 "snocone_parse.y"
 
     EXPR_t *expr;
     char   *str;
@@ -200,7 +199,7 @@ union SC_STYPE
     struct ForHead   *forhead;
     STMT_t           *stmt_ptr;
 
-#line 204 "snocone_parse.tab.h"
+#line 203 "snocone_parse.tab.h"
 
 };
 typedef union SC_STYPE SC_STYPE;

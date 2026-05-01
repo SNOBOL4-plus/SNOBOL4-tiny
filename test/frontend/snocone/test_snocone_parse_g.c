@@ -3,14 +3,16 @@
  *
  * Verifies that the new Bison-based Snocone parser handles:
  *   do { S } while (C);
- *   do { S } until (C);
  *   for (init; cond; step) S
  *
  * Lowering shapes (all verified below):
  *
  *   do { S } while (C)   ->   Ltop ; <S> ; C:S(Ltop) ; Lend
- *   do { S } until (C)   ->   Ltop ; <S> ; C:F(Ltop) ; Lend
  *   for (I; C; T) S      ->   <I> ; Ltop ; C:F(Lend) ; <S> ; <T> ; :(Ltop) ; Lend
+ *
+ * Note: do/until removed per Lon directive session 2026-04-30 #12 —
+ * Snocone follows C's loop forms exactly (while and do/while only).
+ * Tests that previously used do/until syntax now verify parse failure.
  *
  * Build:
  *   cc -Wall -o test_snocone_parse_g test_snocone_parse_g.c \
@@ -87,26 +89,13 @@ static void test_do_while_basic(void) {
 }
 
 /* =========================================================================
- * Test 2 — do/until basic shape
- *   do { x = x + 1; } until (GT(x, 10));
- *   Expected: Ltop  ;  x=x+1(bare)  ;  GT(x,10):F(Ltop)  ;  Lend
+ * Test 2 — do/until is now a syntax error (removed per Lon directive #12)
+ *   Snocone follows C's loop forms: while and do/while only.
  * ========================================================================= */
 static void test_do_until_basic(void) {
     Program *prog = snocone_parse_program(
         "do { x = x + 1; } until (GT(x, 10));", "test");
-    ASSERT(prog != NULL, "parse failed");
-    if (!prog) return;
-
-    int n; STMT_t **stmts = collect_stmts(prog, &n);
-    ASSERT(n == 4, "expected 4 stmts, got %d", n);
-    if (n >= 1) ASSERT(is_label_pad(stmts[0]),              "stmt[0] should be Ltop pad");
-    if (n >= 2) ASSERT(is_bare_expr(stmts[1]),              "stmt[1] should be x=x+1 bare");
-    if (n >= 3) ASSERT(is_cond_fail(stmts[2]),              "stmt[2] should be cond:F(Ltop)");
-    if (n >= 3) ASSERT(stmts[2]->go->onfailure &&
-                       strcmp(stmts[2]->go->onfailure, stmts[0]->label) == 0,
-                       "cond:F target should equal Ltop");
-    if (n >= 4) ASSERT(is_label_pad(stmts[3]),              "stmt[3] should be Lend pad");
-    free(stmts);
+    ASSERT(prog == NULL, "do/until must be a syntax error after removal");
 }
 
 /* =========================================================================
@@ -283,26 +272,12 @@ static void test_for_containing_while_count(void) {
 }
 
 /* =========================================================================
- * Test 9 — do/until with backtracking condition (pattern match)
- *   do { line = line 'x'; } until (GT(SIZE(line), 5));
- *   Verifies that the condition expression can be a function call (E_FNC).
+ * Test 9 — do/until is a syntax error (removed per Lon directive #12)
  * ========================================================================= */
 static void test_do_until_fnc_cond(void) {
     Program *prog = snocone_parse_program(
         "do { line = line 'x'; } until (GT(SIZE(line), 5));", "test");
-    ASSERT(prog != NULL, "parse failed");
-    if (!prog) return;
-
-    int n; STMT_t **stmts = collect_stmts(prog, &n);
-    ASSERT(n == 4, "expected 4 stmts, got %d", n);
-    if (n >= 3) {
-        ASSERT(is_cond_fail(stmts[2]), "stmt[2] should be cond:F(Ltop)");
-        /* The condition should be an E_FNC (GT call). */
-        ASSERT(stmts[2]->subject && stmts[2]->subject->kind == E_FNC,
-               "condition should be E_FNC (GT), got kind=%d",
-               stmts[2]->subject ? (int)stmts[2]->subject->kind : -1);
-    }
-    free(stmts);
+    ASSERT(prog == NULL, "do/until must be a syntax error after removal");
 }
 
 /* =========================================================================
@@ -413,29 +388,12 @@ static void test_distinct_labels_do_while(void) {
 }
 
 /* =========================================================================
- * Test 14 — do/until: condition failure drives loop-back (verify onfailure)
- *   Semantic check: the cond-stmt's onfailure == Ltop label.
+ * Test 14 — do/until is a syntax error (removed per Lon directive #12)
  * ========================================================================= */
 static void test_do_until_failure_loops(void) {
     Program *prog = snocone_parse_program(
         "do { x = x + 1; } until (GT(x, 5));", "test");
-    ASSERT(prog != NULL, "parse failed");
-    if (!prog) return;
-
-    int n; STMT_t **stmts = collect_stmts(prog, &n);
-    ASSERT(n == 4, "expected 4 stmts, got %d", n);
-    if (n >= 4) {
-        const char *ltop = stmts[0]->label;
-        ASSERT(stmts[2]->go && stmts[2]->go->onfailure,
-               "cond stmt must have onfailure");
-        ASSERT(ltop && stmts[2]->go->onfailure &&
-               strcmp(stmts[2]->go->onfailure, ltop) == 0,
-               "do/until cond:F must target Ltop, got %s",
-               stmts[2]->go->onfailure ? stmts[2]->go->onfailure : "(null)");
-        /* onsuccess must NOT be set — only onfailure drives the loop */
-        ASSERT(!stmts[2]->go->onsuccess, "do/until cond must NOT have onsuccess");
-    }
-    free(stmts);
+    ASSERT(prog == NULL, "do/until must be a syntax error after removal");
 }
 
 /* =========================================================================
