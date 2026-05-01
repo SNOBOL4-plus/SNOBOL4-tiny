@@ -53,7 +53,7 @@
 extern int sc_debug;
 #endif
 /* "%code requires" blocks.  */
-#line 271 "snocone_parse.y"
+#line 273 "snocone_parse.y"
 
 #include "scrip_cc.h"
 
@@ -68,6 +68,7 @@ struct LexCtx;
  * full layout is defined in the epilogue alongside the helpers. */
 struct IfHead;
 struct WhileHead;
+struct FuncHead;
 
 /* Parser state — passed to sc_parse() via %parse-param.  Carries the
  * FSM lexer context (the single producer of tokens), the code under
@@ -80,9 +81,10 @@ typedef struct ScParseState {
     const char    *filename;
     int            nerrors;
     int            label_seq;     /* LS-4.f: synthetic label counter */
+    char          *cur_func_name; /* LS-4.h: enclosing function name (NULL at top level) */
 } ScParseState;
 
-#line 86 "snocone_parse.tab.h"
+#line 88 "snocone_parse.tab.h"
 
 /* Token kinds.  */
 #ifndef SC_TOKENTYPE
@@ -155,25 +157,25 @@ typedef struct ScParseState {
     T_1QUEST = 317,                /* T_1QUEST  */
     T_1AMP = 318,                  /* T_1AMP  */
     T_COLON = 319,                 /* T_COLON  */
-    T_KW_DO = 320,                 /* T_KW_DO  */
-    T_KW_FOR = 321,                /* T_KW_FOR  */
-    T_KW_SWITCH = 322,             /* T_KW_SWITCH  */
-    T_KW_CASE = 323,               /* T_KW_CASE  */
-    T_KW_DEFAULT = 324,            /* T_KW_DEFAULT  */
-    T_KW_BREAK = 325,              /* T_KW_BREAK  */
-    T_KW_CONTINUE = 326,           /* T_KW_CONTINUE  */
-    T_KW_GOTO = 327,               /* T_KW_GOTO  */
-    T_KW_FUNCTION = 328,           /* T_KW_FUNCTION  */
-    T_KW_RETURN = 329,             /* T_KW_RETURN  */
-    T_KW_FRETURN = 330,            /* T_KW_FRETURN  */
-    T_KW_NRETURN = 331,            /* T_KW_NRETURN  */
-    T_KW_STRUCT = 332,             /* T_KW_STRUCT  */
+    T_DO = 320,                    /* T_DO  */
+    T_FOR = 321,                   /* T_FOR  */
+    T_SWITCH = 322,                /* T_SWITCH  */
+    T_CASE = 323,                  /* T_CASE  */
+    T_DEFAULT = 324,               /* T_DEFAULT  */
+    T_BREAK = 325,                 /* T_BREAK  */
+    T_CONTINUE = 326,              /* T_CONTINUE  */
+    T_GOTO = 327,                  /* T_GOTO  */
+    T_FUNCTION_KW = 328,           /* T_FUNCTION_KW  */
+    T_RETURN = 329,                /* T_RETURN  */
+    T_FRETURN = 330,               /* T_FRETURN  */
+    T_NRETURN = 331,               /* T_NRETURN  */
+    T_STRUCT = 332,                /* T_STRUCT  */
     T_UNKNOWN = 333,               /* T_UNKNOWN  */
     T_LBRACE = 334,                /* T_LBRACE  */
     T_RBRACE = 335,                /* T_RBRACE  */
-    T_KW_IF = 336,                 /* T_KW_IF  */
-    T_KW_ELSE = 337,               /* T_KW_ELSE  */
-    T_KW_WHILE = 338               /* T_KW_WHILE  */
+    T_IF = 336,                    /* T_IF  */
+    T_ELSE = 337,                  /* T_ELSE  */
+    T_WHILE = 338                  /* T_WHILE  */
   };
   typedef enum sc_tokentype sc_token_kind_t;
 #endif
@@ -182,7 +184,7 @@ typedef struct ScParseState {
 #if ! defined SC_STYPE && ! defined SC_STYPE_IS_DECLARED
 union SC_STYPE
 {
-#line 391 "snocone_parse.y"
+#line 440 "snocone_parse.y"
 
     EXPR_t *expr;
     char   *str;
@@ -197,9 +199,11 @@ union SC_STYPE
     struct WhileHead *whilehead;
     struct DoHead    *dohead;
     struct ForHead   *forhead;
+    /* LS-4.h — function definition handoff type. */
+    struct FuncHead  *funchead;
     STMT_t           *stmt_ptr;
 
-#line 203 "snocone_parse.tab.h"
+#line 207 "snocone_parse.tab.h"
 
 };
 typedef union SC_STYPE SC_STYPE;

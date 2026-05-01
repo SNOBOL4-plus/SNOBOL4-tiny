@@ -129,23 +129,23 @@ int sc_kind_is_value(int kind) {
 /* ---------------------------------------------------------------- */
 typedef struct { const char *word; int kind; } KwEntry;
 static const KwEntry KW_TABLE[] = {
-    { "if",       T_KW_IF       },
-    { "else",     T_KW_ELSE     },
-    { "while",    T_KW_WHILE    },
-    { "do",       T_KW_DO       },
-    { "until",    T_KW_UNTIL    },
-    { "for",      T_KW_FOR      },
-    { "switch",   T_KW_SWITCH   },
-    { "case",     T_KW_CASE     },
-    { "default",  T_KW_DEFAULT  },
-    { "break",    T_KW_BREAK    },
-    { "continue", T_KW_CONTINUE },
-    { "goto",     T_KW_GOTO     },
-    { "function", T_KW_FUNCTION },
-    { "return",   T_KW_RETURN   },
-    { "freturn",  T_KW_FRETURN  },
-    { "nreturn",  T_KW_NRETURN  },
-    { "struct",   T_KW_STRUCT   },
+    { "if",       T_IF       },
+    { "else",     T_ELSE     },
+    { "while",    T_WHILE    },
+    { "do",       T_DO       },
+    { "until",    T_UNTIL    },
+    { "for",      T_FOR      },
+    { "switch",   T_SWITCH   },
+    { "case",     T_CASE     },
+    { "default",  T_DEFAULT  },
+    { "break",    T_BREAK    },
+    { "continue", T_CONTINUE },
+    { "goto",     T_GOTO     },
+    { "function", T_FUNCTION_KW },
+    { "return",   T_RETURN   },
+    { "freturn",  T_FRETURN  },
+    { "nreturn",  T_NRETURN  },
+    { "struct",   T_STRUCT   },
     { NULL,       T_IDENT       }
 };
 static int kw_lookup_at(const char *s, int idx) {
@@ -655,23 +655,23 @@ static void sc_name_table_build(void) {
     sc_name_table[T_COMMA]            = "T_COMMA";
     sc_name_table[T_SEMICOLON]        = "T_SEMICOLON";
     sc_name_table[T_COLON]            = "T_COLON";
-    sc_name_table[T_KW_IF]            = "T_KW_IF";
-    sc_name_table[T_KW_ELSE]          = "T_KW_ELSE";
-    sc_name_table[T_KW_WHILE]         = "T_KW_WHILE";
-    sc_name_table[T_KW_DO]            = "T_KW_DO";
-    sc_name_table[T_KW_UNTIL]         = "T_KW_UNTIL";
-    sc_name_table[T_KW_FOR]           = "T_KW_FOR";
-    sc_name_table[T_KW_SWITCH]        = "T_KW_SWITCH";
-    sc_name_table[T_KW_CASE]          = "T_KW_CASE";
-    sc_name_table[T_KW_DEFAULT]       = "T_KW_DEFAULT";
-    sc_name_table[T_KW_BREAK]         = "T_KW_BREAK";
-    sc_name_table[T_KW_CONTINUE]      = "T_KW_CONTINUE";
-    sc_name_table[T_KW_GOTO]          = "T_KW_GOTO";
-    sc_name_table[T_KW_FUNCTION]      = "T_KW_FUNCTION";
-    sc_name_table[T_KW_RETURN]        = "T_KW_RETURN";
-    sc_name_table[T_KW_FRETURN]       = "T_KW_FRETURN";
-    sc_name_table[T_KW_NRETURN]       = "T_KW_NRETURN";
-    sc_name_table[T_KW_STRUCT]        = "T_KW_STRUCT";
+    sc_name_table[T_IF]            = "T_IF";
+    sc_name_table[T_ELSE]          = "T_ELSE";
+    sc_name_table[T_WHILE]         = "T_WHILE";
+    sc_name_table[T_DO]            = "T_DO";
+    sc_name_table[T_UNTIL]         = "T_UNTIL";
+    sc_name_table[T_FOR]           = "T_FOR";
+    sc_name_table[T_SWITCH]        = "T_SWITCH";
+    sc_name_table[T_CASE]          = "T_CASE";
+    sc_name_table[T_DEFAULT]       = "T_DEFAULT";
+    sc_name_table[T_BREAK]         = "T_BREAK";
+    sc_name_table[T_CONTINUE]      = "T_CONTINUE";
+    sc_name_table[T_GOTO]          = "T_GOTO";
+    sc_name_table[T_FUNCTION_KW]      = "T_FUNCTION_KW";
+    sc_name_table[T_RETURN]        = "T_RETURN";
+    sc_name_table[T_FRETURN]       = "T_FRETURN";
+    sc_name_table[T_NRETURN]       = "T_NRETURN";
+    sc_name_table[T_STRUCT]        = "T_STRUCT";
     sc_name_table[T_EOF]              = "T_EOF";
     sc_name_table[T_UNKNOWN]          = "T_UNKNOWN";
     sc_name_table_built               = 1;

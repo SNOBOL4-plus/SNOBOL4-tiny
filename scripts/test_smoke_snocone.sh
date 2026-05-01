@@ -27,7 +27,7 @@ OUTPUT = 2 + 3
 EOF
 
 snocone "procedure" "42" << 'EOF'
-procedure Double(n) {
+function Double(n) {
     Double = n + n; return;
 }
 OUTPUT = Double(21)

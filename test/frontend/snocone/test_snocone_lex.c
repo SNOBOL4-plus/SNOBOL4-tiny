@@ -127,7 +127,7 @@ int main(void) {
     run_test(&(TestCase){
         "T06 if (x ? 'foo' = 'bar') doit();",
         "if (x ? 'foo' = 'bar') doit();",
-        { T_KW_IF, T_LPAREN, T_IDENT, T_2QUEST, T_STR, T_2EQUAL,
+        { T_IF, T_LPAREN, T_IDENT, T_2QUEST, T_STR, T_2EQUAL,
           T_STR, T_RPAREN,
           T_CONCAT,
           T_FUNCTION, T_LPAREN, T_RPAREN, T_SEMICOLON, T_EOF }
@@ -222,7 +222,7 @@ int main(void) {
     run_test(&(TestCase){
         "T18b if (a) b",
         "if (a) b",
-        { T_KW_IF, T_LPAREN, T_IDENT, T_RPAREN, T_CONCAT, T_IDENT, T_EOF }
+        { T_IF, T_LPAREN, T_IDENT, T_RPAREN, T_CONCAT, T_IDENT, T_EOF }
     });
 
     /* Test 19 — labels */
@@ -236,30 +236,30 @@ int main(void) {
     run_test(&(TestCase){
         "T20 goto top;",
         "goto top;",
-        { T_KW_GOTO, T_IDENT, T_SEMICOLON, T_EOF }
+        { T_GOTO, T_IDENT, T_SEMICOLON, T_EOF }
     });
 
     /* Test 21a — break with label */
     run_test(&(TestCase){
         "T21a break loop_done;",
         "break loop_done;",
-        { T_KW_BREAK, T_IDENT, T_SEMICOLON, T_EOF }
+        { T_BREAK, T_IDENT, T_SEMICOLON, T_EOF }
     });
 
     /* Test 21b — plain break */
     run_test(&(TestCase){
         "T21b break;",
         "break;",
-        { T_KW_BREAK, T_SEMICOLON, T_EOF }
+        { T_BREAK, T_SEMICOLON, T_EOF }
     });
 
     /* Test 22 — switch statement */
     run_test(&(TestCase){
         "T22 switch",
         "switch (x) { case 1: a = 1; default: a = 3; }",
-        { T_KW_SWITCH, T_LPAREN, T_IDENT, T_RPAREN, T_LBRACE,
-          T_KW_CASE, T_INT, T_COLON, T_IDENT, T_2EQUAL, T_INT, T_SEMICOLON,
-          T_KW_DEFAULT, T_COLON, T_IDENT, T_2EQUAL, T_INT, T_SEMICOLON,
+        { T_SWITCH, T_LPAREN, T_IDENT, T_RPAREN, T_LBRACE,
+          T_CASE, T_INT, T_COLON, T_IDENT, T_2EQUAL, T_INT, T_SEMICOLON,
+          T_DEFAULT, T_COLON, T_IDENT, T_2EQUAL, T_INT, T_SEMICOLON,
           T_RBRACE, T_EOF }
     });
 
@@ -267,10 +267,10 @@ int main(void) {
     run_test(&(TestCase){
         "T23 do/until",
         "do { x = x + 1; } until (GT(x, 10));",
-        { T_KW_DO, T_LBRACE,
+        { T_DO, T_LBRACE,
           T_IDENT, T_2EQUAL, T_IDENT, T_2PLUS, T_INT, T_SEMICOLON,
           T_RBRACE,
-          T_KW_UNTIL, T_LPAREN,
+          T_UNTIL, T_LPAREN,
           T_FUNCTION, T_LPAREN, T_IDENT, T_COMMA, T_INT, T_RPAREN,
           T_RPAREN, T_SEMICOLON, T_EOF }
     });
@@ -287,9 +287,9 @@ int main(void) {
     run_test(&(TestCase){
         "T_function keyword",
         "function foo(x) { return x; }",
-        { T_KW_FUNCTION, T_FUNCTION, T_LPAREN, T_IDENT, T_RPAREN,
+        { T_FUNCTION_KW, T_FUNCTION, T_LPAREN, T_IDENT, T_RPAREN,
           T_LBRACE,
-          T_KW_RETURN, T_IDENT, T_SEMICOLON,
+          T_RETURN, T_IDENT, T_SEMICOLON,
           T_RBRACE, T_EOF }
     });
 

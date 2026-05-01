@@ -154,24 +154,26 @@
 #define T_SEMICOLON        SC_T_SEMICOLON
 #define T_COLON            SC_T_COLON
 
-/* Keywords — keep existing names */
-#define T_KW_IF            SC_T_KW_IF
-#define T_KW_ELSE          SC_T_KW_ELSE
-#define T_KW_WHILE         SC_T_KW_WHILE
-#define T_KW_DO            SC_T_KW_DO
-#define T_KW_UNTIL         SC_T_KW_UNTIL
-#define T_KW_FOR           SC_T_KW_FOR
-#define T_KW_SWITCH        SC_T_KW_SWITCH
-#define T_KW_CASE          SC_T_KW_CASE
-#define T_KW_DEFAULT       SC_T_KW_DEFAULT
-#define T_KW_BREAK         SC_T_KW_BREAK
-#define T_KW_CONTINUE      SC_T_KW_CONTINUE
-#define T_KW_GOTO          SC_T_KW_GOTO
-#define T_KW_FUNCTION      SC_T_KW_FUNCTION
-#define T_KW_RETURN        SC_T_KW_RETURN
-#define T_KW_FRETURN       SC_T_KW_FRETURN
-#define T_KW_NRETURN       SC_T_KW_NRETURN
-#define T_KW_STRUCT        SC_T_KW_STRUCT
+/* Keywords — Snocone reserved words.  T_FUNCTION_KW (the `function`
+ * keyword) is named with a _KW suffix to avoid colliding with T_FUNCTION
+ * (the IDENT-followed-by-zero-space-`(` call-form token). */
+#define T_IF            SC_T_IF
+#define T_ELSE          SC_T_ELSE
+#define T_WHILE         SC_T_WHILE
+#define T_DO            SC_T_DO
+#define T_UNTIL         SC_T_UNTIL
+#define T_FOR           SC_T_FOR
+#define T_SWITCH        SC_T_SWITCH
+#define T_CASE          SC_T_CASE
+#define T_DEFAULT       SC_T_DEFAULT
+#define T_BREAK         SC_T_BREAK
+#define T_CONTINUE      SC_T_CONTINUE
+#define T_GOTO          SC_T_GOTO
+#define T_FUNCTION_KW      SC_T_FUNCTION_KW
+#define T_RETURN        SC_T_RETURN
+#define T_FRETURN       SC_T_FRETURN
+#define T_NRETURN       SC_T_NRETURN
+#define T_STRUCT        SC_T_STRUCT
 
 /* End-of-input + unknown */
 #define T_EOF              SC_T_EOF
@@ -247,23 +249,23 @@
 #undef T_COMMA
 #undef T_SEMICOLON
 #undef T_COLON
-#undef T_KW_IF
-#undef T_KW_ELSE
-#undef T_KW_WHILE
-#undef T_KW_DO
-#undef T_KW_UNTIL
-#undef T_KW_FOR
-#undef T_KW_SWITCH
-#undef T_KW_CASE
-#undef T_KW_DEFAULT
-#undef T_KW_BREAK
-#undef T_KW_CONTINUE
-#undef T_KW_GOTO
-#undef T_KW_FUNCTION
-#undef T_KW_RETURN
-#undef T_KW_FRETURN
-#undef T_KW_NRETURN
-#undef T_KW_STRUCT
+#undef T_IF
+#undef T_ELSE
+#undef T_WHILE
+#undef T_DO
+#undef T_UNTIL
+#undef T_FOR
+#undef T_SWITCH
+#undef T_CASE
+#undef T_DEFAULT
+#undef T_BREAK
+#undef T_CONTINUE
+#undef T_GOTO
+#undef T_FUNCTION_KW
+#undef T_RETURN
+#undef T_FRETURN
+#undef T_NRETURN
+#undef T_STRUCT
 #undef T_EOF
 #undef T_UNKNOWN
 }
@@ -282,6 +284,7 @@ struct LexCtx;
  * full layout is defined in the epilogue alongside the helpers. */
 struct IfHead;
 struct WhileHead;
+struct FuncHead;
 
 /* Parser state — passed to sc_parse() via %parse-param.  Carries the
  * FSM lexer context (the single producer of tokens), the code under
@@ -294,6 +297,7 @@ typedef struct ScParseState {
     const char    *filename;
     int            nerrors;
     int            label_seq;     /* LS-4.f: synthetic label counter */
+    char          *cur_func_name; /* LS-4.h: enclosing function name (NULL at top level) */
 } ScParseState;
 }
 
@@ -356,17 +360,62 @@ struct ForHead {
     EXPR_t *step;          /* step expression (emitted at loop bottom) */
     int     lineno;
 };
+/* LS-4.h — function definition handoff.
+ *
+ * `function NAME(args) { body }` lowers to:
+ *
+ *      <existing stmts up to before_func>
+ *      DEFINE('NAME(args)')              :(NAME_end)        <- emitted by sc_func_head_new
+ *      NAME    <body-stmts>                                  <- spliced by sc_finalize_function
+ *      NAME_end                                              <- appended by sc_finalize_function
+ *
+ * This matches the SPITBOL idiom: the DEFINE installs the function
+ * descriptor at load time, the unconditional goto jumps over the body
+ * so it does not execute as straight-line code, the entry-point label
+ * `NAME` is where calls land, and `NAME_end` is the skip-target.
+ *
+ * Inside the body, return/freturn/nreturn use the cur_func_name field
+ * (saved by sc_func_head_new and restored by sc_finalize_function) to
+ * emit the SPITBOL `:(RETURN)`, `:(FRETURN)`, `:(NRETURN)` branches.
+ *
+ * Nested function definitions are not supported (Andrew's `.sc`
+ * doesn't have them either) — the implementation assumes
+ * cur_func_name is NULL when sc_func_head_new fires.
+ */
+struct FuncHead {
+    char   *name;          /* function name — used as entry-point label,
+                              and for the prefix of the end-skip label */
+    char   *end_label;     /* "NAME_end" — the skip target */
+    char   *prev_func;     /* saved cur_func_name (for nested-function safety) */
+    STMT_t *after_goto;    /* tail snapshot AFTER the DEFINE+goto stmts,
+                              before any body stmt is appended.  The
+                              entry-point label `NAME` is spliced just
+                              after this anchor. */
+    int     lineno;
+};
 
 static char    *sc_label_new          (ScParseState *st, const char *prefix);
 static struct IfHead    *sc_if_head_new    (ScParseState *st, EXPR_t *cond);
 static struct WhileHead *sc_while_head_new (ScParseState *st, EXPR_t *cond);
 static struct DoHead    *sc_do_head_new    (ScParseState *st);
 static struct ForHead   *sc_for_head_new   (ScParseState *st, EXPR_t *cond, EXPR_t *step);
+/* LS-4.h */
+static void     sc_append_return      (ScParseState *st, EXPR_t *retval);
+static void     sc_append_freturn     (ScParseState *st);
+static void     sc_append_nreturn     (ScParseState *st);
+/* LS-4.h — forward decls for stmt-builder helpers used inside sc_func_head_new
+ * (the helpers themselves are defined later in the epilogue). */
+static STMT_t  *sc_make_label_stmt    (ScParseState *st, char *label);
+static STMT_t  *sc_make_goto_uncond_stmt(ScParseState *st, char *target);
+static void     sc_splice_after       (ScParseState *st, STMT_t *anchor, STMT_t *chain_head, STMT_t *chain_tail);
+static void     sc_append_chain       (ScParseState *st, STMT_t *chain_head, STMT_t *chain_tail);
 static void     sc_finalize_if_no_else(ScParseState *st, struct IfHead *h);
 static void     sc_finalize_if_else   (ScParseState *st, struct IfHead *h, STMT_t *before_else);
 static void     sc_finalize_while     (ScParseState *st, struct WhileHead *h);
 static void     sc_finalize_do_while  (ScParseState *st, struct DoHead *h, EXPR_t *cond);
 static void     sc_finalize_for       (ScParseState *st, struct ForHead *h);
+static struct FuncHead *sc_func_head_new(ScParseState *st, char *name, char *argstr);
+static void     sc_finalize_function  (ScParseState *st, struct FuncHead *h);
 
 /* sc_kind_to_tok — translate FSM ScKind (1..N) to Bison's sc_tokentype.
  *
@@ -402,6 +451,8 @@ static int sc_kind_to_tok(int sc_kind);
     struct WhileHead *whilehead;
     struct DoHead    *dohead;
     struct ForHead   *forhead;
+    /* LS-4.h — function definition handoff type. */
+    struct FuncHead  *funchead;
     STMT_t           *stmt_ptr;
 }
 
@@ -457,15 +508,15 @@ static int sc_kind_to_tok(int sc_kind);
 %token T_1AT T_1TILDE T_1DOLLAR T_1DOT T_1POUND
 %token T_1PIPE T_1EQUAL T_1QUEST T_1AMP
 %token T_COLON
-%token T_KW_DO T_KW_FOR
-%token T_KW_SWITCH T_KW_CASE T_KW_DEFAULT
-%token T_KW_BREAK T_KW_CONTINUE T_KW_GOTO
-%token T_KW_FUNCTION T_KW_RETURN T_KW_FRETURN T_KW_NRETURN T_KW_STRUCT
+%token T_DO T_FOR
+%token T_SWITCH T_CASE T_DEFAULT
+%token T_BREAK T_CONTINUE T_GOTO
+%token T_FUNCTION_KW T_RETURN T_FRETURN T_NRETURN T_STRUCT
 %token T_UNKNOWN
 
 /* ---- Block delimiters and control-flow keywords (LS-4.f) ---- */
 %token T_LBRACE T_RBRACE
-%token T_KW_IF T_KW_ELSE T_KW_WHILE
+%token T_IF T_ELSE T_WHILE
 
 %type <expr> expr0 expr1 expr3 expr4 expr5 expr6 expr9 expr11 expr15 expr17 exprlist exprlist_ne
 
@@ -476,6 +527,9 @@ static int sc_kind_to_tok(int sc_kind);
 %type <stmt_ptr>  else_keyword
 /* LS-4.g — for head carries cond+step captured after init parses */
 %type <forhead>   for_head
+/* LS-4.h — function definition head */
+%type <funchead>  func_head
+%type <str>       func_arglist func_arglist_ne
 
 %%
 
@@ -524,14 +578,19 @@ matched_stmt
                                         { sc_finalize_while(st, $1); }
             /* LS-4.g — do/while (always matched — no dangling-else risk).
              * Uses do_body (always a brace block) to avoid the shift/reduce tension
-             * that arises when T_KW_WHILE follows a matched_stmt on the stack:
+             * that arises when T_WHILE follows a matched_stmt on the stack:
              * the parser would want to start a new while_head rather than close
              * the do-loop.  Requiring { } makes the body unambiguous. */
-            | do_head do_body T_KW_WHILE T_LPAREN expr0 T_RPAREN T_SEMICOLON
+            | do_head do_body T_WHILE T_LPAREN expr0 T_RPAREN T_SEMICOLON
                                         { sc_finalize_do_while(st, $1, $5); }
             /* LS-4.g — for (init; cond; step) body */
             | for_head matched_stmt
                                         { sc_finalize_for(st, $1); }
+            /* LS-4.h — function name(args) { body } */
+            | func_head T_LBRACE stmt_list T_RBRACE
+                                        { sc_finalize_function(st, $1); }
+            | func_head T_LBRACE T_RBRACE
+                                        { sc_finalize_function(st, $1); }
             ;
 
 unmatched_stmt
@@ -546,24 +605,24 @@ unmatched_stmt
                                         { sc_finalize_for(st, $1); }
             ;
 
-if_head     : T_KW_IF T_LPAREN expr0 T_RPAREN opt_head_sep
+if_head     : T_IF T_LPAREN expr0 T_RPAREN opt_head_sep
                                         { $$ = sc_if_head_new(st, $3); }
             ;
 
-while_head  : T_KW_WHILE T_LPAREN expr0 T_RPAREN opt_head_sep
+while_head  : T_WHILE T_LPAREN expr0 T_RPAREN opt_head_sep
                                         { $$ = sc_while_head_new(st, $3); }
             ;
 
 /* LS-4.g — do_head fires at the `do` keyword before the body block.
  * The trailing while clause (with the condition) is parsed by the
  * parent rule; do_head just snapshots the linked-list tail. */
-do_head     : T_KW_DO                  { $$ = sc_do_head_new(st); }
+do_head     : T_DO                  { $$ = sc_do_head_new(st); }
             ;
 
 /* do_body — always a brace block.  Requiring { } here is not a semantic
  * restriction (C-style do {} while always uses braces in practice) and
  * is a necessary grammar disambiguation: if do_body were `stmt` the
- * parser would face a shift/reduce conflict at T_KW_WHILE — it could
+ * parser would face a shift/reduce conflict at T_WHILE — it could
  * not decide whether WHILE starts a new while_head (another matched_stmt)
  * or closes the do-loop.  Brace-delimited bodies have a clear endpoint. */
 do_body     : T_LBRACE stmt_list T_RBRACE
@@ -575,7 +634,7 @@ do_body     : T_LBRACE stmt_list T_RBRACE
  * cond and step are captured in the ForHead struct for use in finalize.
  * The snapshot of st->code->tail happens AFTER init is emitted —
  * that is the before_loop anchor used to splice Ltop + cond-stmt. */
-for_head    : T_KW_FOR T_LPAREN expr0 T_SEMICOLON expr0 T_SEMICOLON expr0 T_RPAREN opt_head_sep
+for_head    : T_FOR T_LPAREN expr0 T_SEMICOLON expr0 T_SEMICOLON expr0 T_RPAREN opt_head_sep
                                         { sc_append_stmt(st, $3);
                                           $$ = sc_for_head_new(st, $5, $7); }
             ;
@@ -592,17 +651,68 @@ opt_head_sep
             | T_CONCAT
             ;
 
-/* else_keyword reduces on T_KW_ELSE, snapshotting the linked-list tail
+/* LS-4.h — func_head: `function NAME ( arglist )` opt_head_sep.
+ *
+ * The function name is carried by T_FUNCTION (IDENT immediately followed
+ * by zero-whitespace `(` — the call-form token from the FSM).  The arg
+ * list is zero or more comma-separated IDENT names, returned as a single
+ * malloc'd string of the form "arg1,arg2,arg3".  An empty arg list
+ * returns "".
+ *
+ * func_head emits:
+ *   1. A DEFINE('name(args)') call statement — appended immediately.
+ *   2. An unconditional goto :(name_end) — skips the body at load time.
+ * It snapshots st->code->tail AFTER those two stmts, so the body stmts
+ * are appended after the snapshot; sc_finalize_function then appends
+ * the name label (entry point) BEFORE the body by splicing after the
+ * goto, and appends name_end AFTER the body.
+ *
+ * cur_func_name is set so return/freturn/nreturn inside the body can
+ * reference the function name.
+ */
+func_head   : T_FUNCTION_KW T_FUNCTION T_LPAREN func_arglist opt_head_sep
+                                        { $$ = sc_func_head_new(st, $2, $4); free($2); free($4); }
+            ;
+
+/* func_arglist — the argument portion of `function name(args)`.
+ * T_FUNCTION already consumed the name and the `(`; we now consume
+ * the comma-separated IDENT list and the closing `)`.
+ * The value is a malloc'd string "arg1,arg2" (empty string if no args).
+ */
+func_arglist
+            : T_RPAREN                 { $$ = strdup(""); }
+            | T_IDENT T_RPAREN         { $$ = strdup($1); free($1); }
+            | func_arglist_ne T_RPAREN { $$ = $1; }
+            ;
+
+/* Helper — builds the comma-separated arg string, left-to-right. */
+func_arglist_ne
+            : T_IDENT T_COMMA T_IDENT
+                { int len = strlen($1) + 1 + strlen($3) + 1;
+                  char *s = malloc(len); snprintf(s, len, "%s,%s", $1, $3);
+                  free($1); free($3); $$ = s; }
+            | func_arglist_ne T_COMMA T_IDENT
+                { int len = strlen($1) + 1 + strlen($3) + 1;
+                  char *s = malloc(len); snprintf(s, len, "%s,%s", $1, $3);
+                  free($1); free($3); $$ = s; }
+            ;
+
+/* else_keyword reduces on T_ELSE, snapshotting the linked-list tail
  * at the moment the else is recognised.  The if-else finalizer uses
  * this snapshot to delimit then-body's last stmt vs else-body's first.
  * One non-terminal shared between the matched and unmatched if-else
  * rules — the same anonymous reduction would have been a conflict. */
 else_keyword
-            : T_KW_ELSE                 { $$ = st->code->tail; }
+            : T_ELSE                 { $$ = st->code->tail; }
             ;
 
 simple_stmt : expr0 T_SEMICOLON                { sc_append_stmt(st, $1); }
             | T_SEMICOLON                      { /* empty stmt */         }
+            /* LS-4.h — return/freturn/nreturn inside a function body */
+            | T_RETURN expr0 T_SEMICOLON    { sc_append_return(st, $2); }
+            | T_RETURN T_SEMICOLON          { sc_append_return(st, NULL); }
+            | T_FRETURN T_SEMICOLON         { sc_append_freturn(st); }
+            | T_NRETURN T_SEMICOLON         { sc_append_nreturn(st); }
             ;
 
 block_stmt  : T_LBRACE stmt_list T_RBRACE      { /* statements already appended */ }
@@ -1035,22 +1145,22 @@ static int sc_kind_to_tok(int sc_kind) {
         case SC_T_COMMA:            return T_COMMA;
         case SC_T_SEMICOLON:        return T_SEMICOLON;
         case SC_T_COLON:            return T_COLON;
-        case SC_T_KW_IF:            return T_KW_IF;
-        case SC_T_KW_ELSE:          return T_KW_ELSE;
-        case SC_T_KW_WHILE:         return T_KW_WHILE;
-        case SC_T_KW_DO:            return T_KW_DO;
-        case SC_T_KW_FOR:           return T_KW_FOR;
-        case SC_T_KW_SWITCH:        return T_KW_SWITCH;
-        case SC_T_KW_CASE:          return T_KW_CASE;
-        case SC_T_KW_DEFAULT:       return T_KW_DEFAULT;
-        case SC_T_KW_BREAK:         return T_KW_BREAK;
-        case SC_T_KW_CONTINUE:      return T_KW_CONTINUE;
-        case SC_T_KW_GOTO:          return T_KW_GOTO;
-        case SC_T_KW_FUNCTION:      return T_KW_FUNCTION;
-        case SC_T_KW_RETURN:        return T_KW_RETURN;
-        case SC_T_KW_FRETURN:       return T_KW_FRETURN;
-        case SC_T_KW_NRETURN:       return T_KW_NRETURN;
-        case SC_T_KW_STRUCT:        return T_KW_STRUCT;
+        case SC_T_IF:            return T_IF;
+        case SC_T_ELSE:          return T_ELSE;
+        case SC_T_WHILE:         return T_WHILE;
+        case SC_T_DO:            return T_DO;
+        case SC_T_FOR:           return T_FOR;
+        case SC_T_SWITCH:        return T_SWITCH;
+        case SC_T_CASE:          return T_CASE;
+        case SC_T_DEFAULT:       return T_DEFAULT;
+        case SC_T_BREAK:         return T_BREAK;
+        case SC_T_CONTINUE:      return T_CONTINUE;
+        case SC_T_GOTO:          return T_GOTO;
+        case SC_T_FUNCTION_KW:      return T_FUNCTION_KW;
+        case SC_T_RETURN:        return T_RETURN;
+        case SC_T_FRETURN:       return T_FRETURN;
+        case SC_T_NRETURN:       return T_NRETURN;
+        case SC_T_STRUCT:        return T_STRUCT;
         case SC_T_UNKNOWN:          return T_UNKNOWN;
         default:                    return T_UNKNOWN;
     }
@@ -1226,6 +1336,146 @@ static struct ForHead *sc_for_head_new(ScParseState *st, EXPR_t *cond, EXPR_t *s
     return h;
 }
 
+/* LS-4.h — function-definition head.  Called when the parser reduces
+ * `function NAME ( arglist )`.  Emits the DEFINE call statement and
+ * the unconditional skip-the-body goto, snapshots the tail, and saves
+ * cur_func_name on the head struct so sc_finalize_function can restore.
+ *
+ * Emits two STMT_t's:
+ *   1. subject = E_FNC("DEFINE", E_QLIT("NAME(args)")), no goto
+ *   2. subject = NULL, go.uncond = "NAME_end"  (a bare goto stmt)
+ *
+ * The body's stmts will then be appended via sc_append_stmt() in the
+ * usual way.  sc_finalize_function patches in:
+ *   - The entry-point label "NAME" — spliced as a label-only pad
+ *     immediately AFTER the goto stmt (i.e. at the body's first
+ *     position).  Because labels in SNOBOL4 attach to the next
+ *     non-empty stmt, this is equivalent to labelling the body's
+ *     first stmt with "NAME".
+ *   - The end label "NAME_end" — appended at the end as a label pad.
+ */
+static struct FuncHead *sc_func_head_new(ScParseState *st, char *name, char *argstr) {
+    struct FuncHead *h = calloc(1, sizeof *h);
+    h->name      = strdup(name);
+    /* end_label: "NAME_end" */
+    int elen = strlen(name) + 5;
+    h->end_label = malloc(elen);
+    snprintf(h->end_label, elen, "%s_end", name);
+    h->prev_func = st->cur_func_name;     /* save (handles "no nested fn" defensively) */
+    h->lineno    = st->ctx ? st->ctx->line : 0;
+
+    /* ---- 1. emit DEFINE('NAME(args)') ---- */
+    int slen = strlen(name) + 1 + strlen(argstr) + 2;     /* NAME(args) + NUL */
+    char *defarg = malloc(slen);
+    snprintf(defarg, slen, "%s(%s)", name, argstr);
+    EXPR_t *qarg = expr_new(E_QLIT);
+    qarg->sval   = defarg;
+    EXPR_t *def_call = expr_new(E_FNC);
+    def_call->sval   = strdup("DEFINE");
+    expr_add_child(def_call, qarg);
+    sc_append_stmt(st, def_call);   /* appends as bare-expr stmt */
+
+    /* ---- 2. emit :(NAME_end) skip-the-body goto ---- */
+    STMT_t *skip = sc_make_goto_uncond_stmt(st, strdup(h->end_label));
+    sc_append_chain(st, skip, skip);
+
+    /* Snapshot tail AFTER the goto, so the body splices cleanly. */
+    h->after_goto = st->code->tail;
+
+    /* Mark the function context for return/freturn/nreturn */
+    st->cur_func_name = h->name;
+    return h;
+}
+
+/* LS-4.h — sc_finalize_function: splice entry-point label and append end label.
+ *
+ * Body has already been parsed and appended.  st->code looks like:
+ *
+ *   ... pre-func stmts ... | DEFINE(...) | goto :(NAME_end) | body0 | body1 | ... | tail
+ *                                          ^ h->after_goto                                  ^
+ *
+ * We need:
+ *   1. A label-pad "NAME" between h->after_goto and body0 (so body0 is
+ *      the entry point).  If the body is empty (h->after_goto == tail),
+ *      append the label pad at the end (it still serves as a label).
+ *   2. A label-pad "NAME_end" appended at the very end.
+ *
+ * Restore cur_func_name to the saved prev_func.
+ */
+static void sc_finalize_function(ScParseState *st, struct FuncHead *h) {
+    /* Entry-point label */
+    STMT_t *entry = sc_make_label_stmt(st, strdup(h->name));
+    sc_splice_after(st, h->after_goto, entry, entry);
+
+    /* End label (skip target) */
+    STMT_t *endpad = sc_make_label_stmt(st, strdup(h->end_label));
+    sc_append_chain(st, endpad, endpad);
+
+    /* Restore enclosing function context */
+    st->cur_func_name = h->prev_func;
+
+    free(h->name);
+    free(h->end_label);
+    free(h);
+}
+
+/* LS-4.h — sc_append_return: emit `cur_func_name = retval :(RETURN)`
+ * (or, with no retval, just `:(RETURN)` as a bare goto-only stmt).
+ *
+ * SPITBOL/SNOBOL4 functions return their value by assigning to a
+ * variable named after the function and then branching to the
+ * pseudo-label RETURN.  Snocone's `return E;` lowers to that idiom;
+ * `return;` lowers to a bare `:(RETURN)` (the function's slot retains
+ * whatever previous value it was set to in the body, or null if
+ * never assigned).
+ *
+ * Outside a function (cur_func_name == NULL), `return` is still
+ * legal — it just lowers to `:(RETURN)` and behaves as in SPITBOL
+ * (a top-level `:(RETURN)` is a runtime error or fallthrough,
+ * depending on dialect).  We do not enforce structural validity here.
+ */
+static void sc_append_return(ScParseState *st, EXPR_t *retval) {
+    STMT_t *s = stmt_new();
+    s->lineno = st->ctx ? st->ctx->line : 0;
+    s->stno   = ++st->code->nstmts;
+    if (retval && st->cur_func_name) {
+        /* fname = retval :(RETURN) */
+        EXPR_t *lhs = expr_new(E_VAR);
+        lhs->sval   = strdup(st->cur_func_name);
+        s->subject     = lhs;
+        s->replacement = retval;
+        s->has_eq      = 1;
+    } else if (retval) {
+        /* `return E;` outside a function — keep E as bare-expr subject;
+         * still emit the RETURN goto so it's syntactically a return.   */
+        s->subject = retval;
+    }
+    s->go = sgoto_new();
+    s->go->uncond = strdup("RETURN");
+    if (!st->code->head) st->code->head = st->code->tail = s;
+    else { st->code->tail->next = s; st->code->tail = s; }
+}
+
+static void sc_append_freturn(ScParseState *st) {
+    STMT_t *s = stmt_new();
+    s->lineno = st->ctx ? st->ctx->line : 0;
+    s->stno   = ++st->code->nstmts;
+    s->go     = sgoto_new();
+    s->go->uncond = strdup("FRETURN");
+    if (!st->code->head) st->code->head = st->code->tail = s;
+    else { st->code->tail->next = s; st->code->tail = s; }
+}
+
+static void sc_append_nreturn(ScParseState *st) {
+    STMT_t *s = stmt_new();
+    s->lineno = st->ctx ? st->ctx->line : 0;
+    s->stno   = ++st->code->nstmts;
+    s->go     = sgoto_new();
+    s->go->uncond = strdup("NRETURN");
+    if (!st->code->head) st->code->head = st->code->tail = s;
+    else { st->code->tail->next = s; st->code->tail = s; }
+}
+
 /* Build a label-only landing-pad STMT (subject=NULL).  Takes ownership
  * of `label`.  Does NOT link it into st->code — caller does that. */
 static STMT_t *sc_make_label_stmt(ScParseState *st, char *label) {
@@ -1315,7 +1565,7 @@ static void sc_finalize_if_no_else(ScParseState *st, struct IfHead *h) {
  *   <S2 stmts>
  *   Lend                      <- appended at end
  *
- * before_else snapshots st->code->tail at the moment T_KW_ELSE is
+ * before_else snapshots st->code->tail at the moment T_ELSE is
  * recognised (after S1 was fully parsed).  The else-body is whatever
  * was appended after that point.  If S1 was empty (e.g. `if (c) ; else ...`)
  * before_else == h->before_body (or NULL); the splice math still works.
