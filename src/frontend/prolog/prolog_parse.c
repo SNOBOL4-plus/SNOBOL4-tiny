@@ -175,6 +175,7 @@ static const OpEntry BIN_OPS[] = {
     { "\\/",   500, ASSOC_LEFT  },
     { "**",    200, ASSOC_RIGHT },
     { "^",     200, ASSOC_RIGHT },
+    { ":",     200, ASSOC_RIGHT },  /* module qualifier: Module:Goal — xfy 200 in SWI */
     { NULL,    0,   ASSOC_NONE  }
 };
 
