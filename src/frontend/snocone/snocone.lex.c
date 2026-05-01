@@ -386,27 +386,8 @@ typedef size_t yy_size_t;
 #define EOB_ACT_END_OF_FILE 1
 #define EOB_ACT_LAST_MATCH 2
     
-    /* Note: We specifically omit the test for yy_rule_can_match_eol because it requires
-     *       access to the local variable yy_act. Since yyless() is a macro, it would break
-     *       existing scanners that call yyless() from OUTSIDE yylex.
-     *       One obvious solution it to make yy_act a global. I tried that, and saw
-     *       a 5% performance hit in a non-yylineno scanner, because yy_act is
-     *       normally declared as a register variable-- so it is not worth it.
-     */
-    #define  YY_LESS_LINENO(n) \
-            do { \
-                int yyl;\
-                for ( yyl = n; yyl < yyleng; ++yyl )\
-                    if ( yytext[yyl] == '\n' )\
-                        --yylineno;\
-            }while(0)
-    #define YY_LINENO_REWIND_TO(dst) \
-            do {\
-                const char *p;\
-                for ( p = yy_cp-1; p >= (dst); --p)\
-                    if ( *p == '\n' )\
-                        --yylineno;\
-            }while(0)
+    #define YY_LESS_LINENO(n)
+    #define YY_LINENO_REWIND_TO(ptr)
     
 /* Return all but the first "n" matched characters back to the input stream. */
 #define yyless(n) \
@@ -568,8 +549,8 @@ static void yynoreturn yy_fatal_error ( const char* msg , yyscan_t yyscanner );
 	yyg->yy_hold_char = *yy_cp; \
 	*yy_cp = '\0'; \
 	yyg->yy_c_buf_p = yy_cp;
-#define YY_NUM_RULES 71
-#define YY_END_OF_BUFFER 72
+#define YY_NUM_RULES 89
+#define YY_END_OF_BUFFER 90
 /* This struct is not used in this scanner,
    but its presence is necessary. */
 struct yy_trans_info
@@ -577,21 +558,43 @@ struct yy_trans_info
 	flex_int32_t yy_verify;
 	flex_int32_t yy_nxt;
 	};
-static const flex_int16_t yy_accept[112] =
+static const flex_int16_t yy_accept[321] =
     {   0,
-        0,    0,    0,    0,    0,    0,    0,    0,   72,   70,
-        1,    2,   60,   14,   53,   59,   54,    9,   61,   62,
-       50,   47,   67,   48,   52,   49,   22,   69,   68,   57,
-       44,   58,   45,   55,   25,   65,   66,   51,   63,   46,
-       64,   56,   47,   52,   13,   12,   11,   18,   17,   16,
-        8,    7,    8,    1,   40,   23,   43,   35,   33,   34,
-       21,    5,    4,   36,   19,   22,    0,    0,   38,    0,
-        0,    0,   41,   39,   42,   24,   25,   37,    0,    3,
-       33,   21,   10,   15,    6,   23,    0,    4,   19,    0,
-        0,   20,   30,    0,   31,    0,    0,   32,    0,    0,
+        0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
+        0,    0,   90,    1,   89,   88,   18,   18,   73,    8,
+       83,   81,   78,   87,    7,   56,   57,   76,   74,   60,
+       75,   82,   77,   70,   64,   61,   85,   86,   79,   66,
+       58,   59,   72,   62,   84,   63,   80,   12,   11,   10,
+       16,   15,   14,    6,    5,    6,   18,   18,    0,    0,
+        0,    0,    0,   57,    0,    0,   60,    0,    0,    0,
+       64,   61,    0,   20,    0,    0,    0,   59,    0,   62,
+        0,   63,    0,   18,   18,   17,   56,   56,   71,   39,
+       37,   60,   60,   38,   69,    3,    2,   40,   67,   70,
 
-        0,   21,    0,   19,   26,   27,   29,   28,    0,   21,
-        0
+        0,   65,   66,   58,   58,   41,   62,   62,    9,   13,
+        4,   44,   44,    0,   55,   55,   49,   49,   53,   53,
+       51,   51,   47,   47,    0,   45,   45,   46,   46,   50,
+       50,   48,   48,    0,    0,    0,    0,    0,   35,   35,
+        0,   19,   19,    0,   36,   36,    0,   21,   21,   52,
+       52,   43,   43,   22,   22,   54,   54,   18,   18,   20,
+       18,   18,   17,   56,   39,   39,   37,   37,   60,   38,
+       38,    0,    2,   40,   40,   67,    0,    0,   68,   58,
+       41,   41,   62,   44,   32,   32,   55,   49,   53,   51,
+       47,   42,   42,   45,   46,   50,   48,    0,    0,   30,
+
+       30,    0,    0,    0,    0,    0,   35,   33,   33,   19,
+       31,   31,   36,   34,   34,   21,   52,   43,   22,   54,
+       18,   18,   18,   19,   19,   18,   18,   18,   56,   39,
+       37,   60,   38,    0,   69,   40,    0,   67,   58,   41,
+       62,   44,   32,   55,   49,   53,   51,   47,   42,   45,
+       46,   50,   48,   29,   29,    0,   30,   27,   27,    0,
+        0,   28,   28,    0,   35,   33,   19,   31,   36,   34,
+       21,   52,   43,   22,   54,   18,   18,   18,   19,   18,
+       18,   39,   37,   38,   40,   41,   32,   42,   29,   24,
+       24,   30,   27,   25,   25,   23,   23,   28,   26,   26,
+
+       33,   31,   34,   18,   18,   18,   19,   29,   24,   27,
+       25,   23,   28,   26,   18,   24,   25,   23,   26,    0
     } ;
 
 static const YY_CHAR yy_ec[256] =
@@ -599,17 +602,17 @@ static const YY_CHAR yy_ec[256] =
         1,    1,    1,    1,    1,    1,    1,    1,    2,    3,
         1,    2,    2,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
-        1,    2,    4,    5,    1,    6,    7,    8,    9,   10,
-       11,   12,   13,   14,   15,   16,   17,   18,   18,   18,
-       18,   18,   18,   18,   18,   18,   18,   19,   20,   21,
-       22,   23,   24,   25,   26,   26,   26,   27,   27,   26,
-       26,   26,   26,   26,   26,   26,   26,   26,   26,   26,
-       26,   26,   26,   26,   26,   26,   26,   26,   26,   26,
-       28,    1,   29,   30,   26,    1,   26,   26,   26,   27,
+        1,    2,    4,    5,    6,    7,    8,    9,   10,   11,
+       12,   13,   14,   15,   16,   17,   18,   19,   19,   19,
+       19,   19,   19,   19,   19,   19,   19,   20,   21,   22,
+       23,   24,   25,   26,   27,   27,   27,   28,   28,   27,
+       27,   27,   27,   27,   27,   27,   27,   27,   27,   27,
+       27,   27,   27,   27,   27,   27,   27,   27,   27,   27,
+       29,    1,   30,   31,   27,    1,   27,   27,   27,   28,
 
-       27,   26,   26,   26,   26,   26,   26,   26,   26,   26,
-       26,   26,   26,   26,   26,   26,   26,   26,   26,   26,
-       26,   26,   31,   32,   33,   34,    1,    1,    1,    1,
+       28,   27,   27,   27,   27,   27,   27,   27,   27,   27,
+       27,   27,   27,   27,   27,   27,   27,   27,   27,   27,
+       27,   27,   32,   33,   34,   35,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
@@ -626,103 +629,271 @@ static const YY_CHAR yy_ec[256] =
         1,    1,    1,    1,    1
     } ;
 
-static const YY_CHAR yy_meta[35] =
+static const YY_CHAR yy_meta[36] =
     {   0,
         1,    1,    2,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
-        1,    1,    1,    1
+        1,    1,    1,    1,    1
     } ;
 
-static const flex_int16_t yy_base[117] =
+static const flex_int16_t yy_base[327] =
     {   0,
-        0,   22,   33,   34,   36,   41,   37,   42,  152,  153,
-      149,  153,  128,  153,  153,  153,   21,  153,  153,  153,
-       38,  127,  153,  126,  129,   39,   37,   48,  153,  124,
-      123,  122,  153,  153,   47,  153,  153,  121,  153,  153,
-      153,  153,   55,   60,  153,  153,  133,  153,  153,  136,
-      153,  153,  123,  137,  153,   54,  153,  153,  153,  153,
-       41,  153,    0,  153,   48,   66,   70,   57,  153,   67,
-      116,   68,  153,  153,  153,  153,   81,  153,  125,  153,
-      124,   91,  153,  153,  153,   74,   97,    0,   77,   98,
-      107,  105,  153,  103,  153,  102,  100,  153,   87,  111,
+        0,    0,    0,    0,    0,    0,   33,   34,   35,   36,
+       39,   42,  301,  738,  738,  738,   54,   32,  738,  738,
+      738,  738,  738,   20,  738,   48,  738,   41,  249,   79,
+      236,  233,   77,   74,  738,  738,  738,  738,  738,   85,
+       95,  738,  220,  103,  738,  738,  738,  738,  738,  210,
+      738,  738,  197,  738,  738,  157,    0,   93,  106,  112,
+      114,  116,  118,  738,  120,  122,  124,  128,  132,  134,
+      124,  738,  136,  138,  147,  150,  152,  738,  160,  162,
+      164,  738,  166,  169,  171,  157,  175,  177,  738,  179,
+      184,  186,  193,  195,   64,  738,    0,  197,   75,  184,
 
-       85,   80,   79,   78,  153,  153,  153,  153,   99,  102,
-      153,  129,  131,  133,  135,   61
+      190,  738,  194,  212,  214,  216,  221,  223,  738,  738,
+      738,  227,  230,  232,  236,  239,  243,  246,  248,  252,
+      255,  259,  262,  265,  268,  272,  275,  278,  281,  283,
+      285,  288,  291,  170,  294,  188,  137,  280,  304,  307,
+      309,  311,  313,  315,  317,  320,  323,  326,  329,  333,
+      336,  338,  342,  345,  349,  352,  355,  358,  362,  365,
+      368,  372,  354,  375,  381,  388,  390,  392,  394,  396,
+      398,  394,    0,  401,  414,  208,  404,  139,  137,  419,
+      422,  424,  427,  430,  432,  434,  437,  440,  442,  444,
+      447,  450,  452,  454,  456,  458,  460,  462,  122,  465,
+
+      468,  470,  112,   91,  472,   81,  474,  476,  478,  481,
+      484,  486,  488,  491,  494,  496,  499,  502,  504,  507,
+      510,  512,  514,  516,  519,  521,  523,  525,  527,  529,
+      535,  537,  539,   80,   54,  541,   46,   40,  545,  547,
+      549,  551,  553,  555,  557,  559,  561,  563,  565,  567,
+      569,  571,  573,  575,  577,  579,  581,  583,  585,  587,
+      590,  593,  595,  598,  601,  603,  605,  608,  611,  613,
+      615,  617,  619,  621,  623,  625,  627,  629,  631,  633,
+      635,  637,  639,  642,  645,  647,  649,  651,  653,  655,
+      657,  659,  661,  663,  665,  667,  670,  673,  675,  678,
+
+      683,  686,  688,  691,  694,  696,  698,  700,  702,  704,
+      706,  708,  710,  712,  716,  718,  720,  722,  724,  738,
+      727,  729,  731,  733,  735,   52
     } ;
 
-static const flex_int16_t yy_def[117] =
+static const flex_int16_t yy_def[327] =
     {   0,
-      111,    1,  112,  112,  113,  113,  114,  114,  111,  111,
-      111,  111,  111,  111,  111,  111,  111,  111,  111,  111,
-      111,  111,  111,  111,  111,  111,  111,  111,  111,  111,
-      111,  111,  111,  111,  111,  111,  111,  111,  111,  111,
-      111,  111,  115,  115,  111,  111,  111,  111,  111,  111,
-      111,  111,  111,  111,  111,  111,  111,  111,  111,  111,
-      111,  111,  116,  111,  111,  111,  111,  111,  111,  111,
-      111,  111,  111,  111,  111,  111,  111,  111,  115,  111,
-      115,  115,  111,  111,  111,  111,  111,  116,  111,  111,
-      111,  111,  111,  111,  111,  111,  111,  111,  111,  115,
+      321,  321,  322,  322,  320,    5,  323,  323,  324,  324,
+      325,  325,  320,  320,  320,  320,  320,   17,  320,  320,
+      320,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+      320,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+      320,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+      320,  320,  320,  320,  320,  320,   17,   17,  320,  320,
+      320,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+      320,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+      320,  320,  320,   17,   17,  320,  320,  320,  320,  320,
+      320,  320,  320,  320,  320,  320,  326,  320,  320,  320,
 
-      111,  111,  111,  111,  111,  111,  111,  111,  115,  115,
-        0,  111,  111,  111,  111,  111
+      320,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+      320,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+      320,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+      320,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+      320,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+      320,  320,  320,  320,  320,  320,  320,   17,   17,  320,
+       17,   17,  320,  320,  320,  320,  320,  320,  320,  320,
+      320,  320,  326,  320,  320,  320,  320,  320,  320,  320,
+      320,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+      320,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+
+      320,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+      320,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+       17,   17,   17,  320,  320,   17,   17,   17,  320,  320,
+      320,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+      320,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+      320,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+      320,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+      320,  320,  320,  320,  320,   17,   17,   17,  320,   17,
+       17,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+      320,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+
+      320,  320,  320,   17,   17,   17,  320,  320,  320,  320,
+      320,  320,  320,  320,   17,  320,  320,  320,  320,    0,
+      320,  320,  320,  320,  320,  320
     } ;
 
-static const flex_int16_t yy_nxt[188] =
+static const flex_int16_t yy_nxt[774] =
     {   0,
-       10,   11,   12,   13,   14,   15,   16,   17,   18,   19,
-       20,   21,   22,   23,   24,   25,   26,   27,   28,   29,
-       30,   31,   32,   33,   34,   35,   35,   36,   37,   38,
-       39,   40,   41,   42,   43,   46,   46,   44,   49,   52,
-       50,   47,   47,   49,   52,   50,   56,   56,   53,   57,
-       62,   68,   65,   53,   66,   63,   76,   80,   61,   58,
-       64,   88,   80,   67,   77,   89,   69,   87,   70,   71,
-       72,   86,   77,   77,   90,   93,   81,   82,   94,   86,
-       86,   65,   91,   66,   91,   95,   98,   92,   96,   99,
-       76,   86,   67,   80,   89,  104,  104,  102,   77,   86,
+       16,   17,   18,   19,   20,   21,   22,   23,   24,   25,
+       26,   27,   28,   29,   30,   31,   32,   33,   34,   35,
+       36,   16,   37,   16,   38,   39,   40,   40,   41,   42,
+       43,   44,   45,   46,   47,   49,   49,   52,   52,   53,
+       53,   55,   50,   50,   55,   84,   86,   86,   85,   87,
+       88,   56,  173,   89,   56,   57,   58,   59,  238,   60,
+       61,   62,   63,   90,  238,   64,   65,   66,   67,   68,
+       69,   70,  235,   71,   72,   73,   74,   75,   76,   77,
+       92,   93,   95,   78,   79,   80,   81,   82,   83,   96,
+       99,  172,  100,  176,   97,  102,  104,  105,  235,   98,
 
-       86,   80,  102,   90,   80,  108,   77,   77,   82,  101,
-      103,  101,  103,   80,  102,  104,  110,  100,  107,  110,
-      106,  105,   92,  109,   92,  109,   80,   80,  110,   45,
-       45,   48,   48,   51,   51,   79,   79,   97,   54,   85,
-       84,   83,   78,   75,   74,   73,   61,   60,   59,   55,
-       54,  111,    9,  111,  111,  111,  111,  111,  111,  111,
-      111,  111,  111,  111,  111,  111,  111,  111,  111,  111,
-      111,  111,  111,  111,  111,  111,  111,  111,  111,  111,
-      111,  111,  111,  111,  111,  111,  111
+      264,  101,  177,  103,  107,  108,   84,  112,  113,   85,
+      261,  103,  103,  115,  116,  117,  118,  119,  120,  121,
+      122,  123,  124,  126,  127,   92,   93,  134,  114,  128,
+      129,  260,  125,  130,  131,  132,  133,  139,  140,  142,
+      143,  256,   90,  135,   91,  136,  137,  138,  145,  146,
+       94,  148,  149,  150,  151,  179,   98,  179,  141,  204,
+      144,  152,  153,  107,  108,  154,  155,  156,  157,  147,
+      158,  159,  161,  162,  111,  163,   87,   88,   87,   88,
+      165,  166,  106,  163,  163,  167,  168,   92,   93,  198,
+      164,  160,  199,  164,   92,   93,  170,  171,  174,  175,
+
+       99,  110,  100,  178,  102,  178,  169,  202,  179,  169,
+      203,  101,  103,  104,  105,  104,  105,  181,  182,  109,
+      103,  103,  107,  108,  107,  108,  176,  180,  112,  113,
+      180,  112,  113,  185,  186,  177,  183,  115,  116,  183,
+      115,  116,  106,  184,  117,  118,  184,  117,  118,  119,
+      120,   95,  187,  119,  120,  187,  121,  122,   94,  188,
+      121,  122,  188,  123,  124,  189,  123,  124,  189,  192,
+      193,   91,  190,  126,  127,  190,  126,  127,  191,  128,
+      129,  191,  128,  129,  130,  131,  130,  131,  194,  132,
+      133,  194,  132,  133,  195,  200,  201,  195,  196,  205,
+
+      320,  196,  206,  320,  197,  139,  140,  197,  139,  140,
+      208,  209,  142,  143,  142,  143,  211,  212,  145,  146,
+      207,  145,  146,  207,  214,  215,  210,  148,  149,  210,
+      148,  149,  320,  213,  150,  151,  213,  150,  151,  152,
+      153,  320,  216,  152,  153,  216,  154,  155,  320,  217,
+      154,  155,  217,  156,  157,  218,  156,  157,  218,  158,
+      159,  320,  219,  221,  159,  219,  224,  225,  220,  161,
+      162,  220,  163,  226,  162,  222,  229,   88,  223,  320,
+      163,  163,  165,  166,  320,  227,  320,  144,  228,  165,
+      166,  167,  168,  167,  168,  232,   93,  170,  171,  170,
+
+      171,  230,  174,  175,  230,  231,  320,  234,  231,  234,
+      320,  233,  235,  320,  233,  174,  175,  237,  320,  237,
+      239,  105,  238,  181,  182,  181,  182,  236,  241,  108,
+      236,  242,  113,  185,  186,  185,  186,  240,  244,  116,
+      240,  245,  118,  246,  120,  247,  122,  243,  248,  124,
+      243,  192,  193,  192,  193,  250,  127,  251,  129,  252,
+      131,  253,  133,  254,  255,  249,  200,  201,  249,  200,
+      201,  258,  259,  262,  263,  265,  140,  208,  209,  208,
+      209,  257,  267,  143,  257,  211,  212,  211,  212,  269,
+      146,  266,  214,  215,  266,  214,  215,  271,  149,  268,
+
+      272,  151,  268,  273,  153,  274,  155,  270,  275,  157,
+      270,  221,  159,  276,  159,  277,  278,  224,  225,  320,
+      224,  225,  226,  162,  280,  278,  281,  162,  229,   88,
+      282,  166,  279,  320,  160,  279,  283,  168,  232,   93,
+      284,  171,  285,  175,  320,  160,  239,  105,  286,  182,
+      241,  108,  242,  113,  287,  186,  244,  116,  245,  118,
+      246,  120,  247,  122,  248,  124,  288,  193,  250,  127,
+      251,  129,  252,  131,  253,  133,  254,  255,  254,  255,
+      290,  291,  292,  201,  258,  259,  258,  259,  294,  295,
+      289,  296,  297,  289,  262,  263,  262,  263,  293,  299,
+
+      300,  293,  265,  140,  301,  209,  267,  143,  298,  302,
+      212,  298,  269,  146,  303,  215,  271,  149,  272,  151,
+      273,  153,  274,  155,  275,  157,  276,  159,  277,  278,
+      304,  278,  307,  225,  280,  278,  281,  162,  282,  166,
+      283,  168,  305,  284,  171,  306,  285,  175,  286,  182,
+      287,  186,  288,  193,  308,  255,  290,  291,  290,  291,
+      292,  201,  310,  259,  294,  295,  294,  295,  296,  297,
+      309,  296,  297,  309,  313,  263,  299,  300,  311,  299,
+      300,  311,  320,  312,  301,  209,  312,  302,  212,  303,
+      215,  314,  304,  278,  314,  315,  278,  315,  278,  307,
+
+      225,  308,  255,  316,  291,  310,  259,  317,  295,  318,
+      297,  313,  263,  319,  300,  320,  160,  315,  278,  316,
+      291,  317,  295,  318,  297,  319,  300,   14,   14,   15,
+       15,   48,   48,   51,   51,   54,   54,   13,  320,  320,
+      320,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+      320,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+      320,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+      320,  320,  320
     } ;
 
-static const flex_int16_t yy_chk[188] =
+static const flex_int16_t yy_chk[774] =
     {   0,
-        1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
-        1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
-        1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
-        1,    1,    1,    1,    2,    3,    4,    2,    5,    7,
-        5,    3,    4,    6,    8,    6,   17,   17,    7,   21,
-       26,   28,   27,    8,   27,   26,   35,   43,   61,   21,
-       26,  116,   44,   27,   35,   65,   28,   61,   28,   28,
-       28,   56,   35,   35,   65,   68,   43,   44,   68,   56,
-       56,   66,   67,   66,   67,   70,   72,   67,   70,   72,
-       77,   86,   66,   82,   89,  104,  103,  102,   77,   86,
+        5,    5,    5,    5,    5,    5,    5,    5,    5,    5,
+        5,    5,    5,    5,    5,    5,    5,    5,    5,    5,
+        5,    5,    5,    5,    5,    5,    5,    5,    5,    5,
+        5,    5,    5,    5,    5,    7,    8,    9,   10,    9,
+       10,   11,    7,    8,   12,   18,   24,   24,   18,   26,
+       26,   11,  326,   28,   12,   17,   17,   17,  238,   17,
+       17,   17,   17,   28,  237,   17,   17,   17,   17,   17,
+       17,   17,  235,   17,   17,   17,   17,   17,   17,   17,
+       30,   30,   95,   17,   17,   17,   17,   17,   17,   33,
+       34,   95,   34,   99,   33,   40,   41,   41,  234,   33,
 
-       86,  109,  101,   89,  110,   99,   77,   77,   82,   87,
-       90,   87,   90,  100,   87,   90,  109,   82,   97,  110,
-       96,   94,   92,  100,   91,  100,   81,   79,  100,  112,
-      112,  113,  113,  114,  114,  115,  115,   71,   54,   53,
-       50,   47,   38,   32,   31,   30,   25,   24,   22,   13,
-       11,    9,  111,  111,  111,  111,  111,  111,  111,  111,
-      111,  111,  111,  111,  111,  111,  111,  111,  111,  111,
-      111,  111,  111,  111,  111,  111,  111,  111,  111,  111,
-      111,  111,  111,  111,  111,  111,  111
+      206,   34,   99,   40,   44,   44,   58,   59,   59,   58,
+      204,   40,   40,   60,   60,   61,   61,   62,   62,   63,
+       63,   65,   65,   66,   66,   67,   67,   71,   59,   68,
+       68,  203,   65,   69,   69,   70,   70,   73,   73,   74,
+       74,  199,   65,   71,   66,   71,   71,   71,   75,   75,
+       68,   76,   76,   77,   77,  179,   70,  178,   73,  137,
+       74,   79,   79,   80,   80,   81,   81,   83,   83,   75,
+       84,   84,   85,   85,   56,   86,   87,   87,   88,   88,
+       90,   90,   79,   86,   86,   91,   91,   92,   92,  134,
+       88,   84,  134,   88,   93,   93,   94,   94,   98,   98,
+
+      100,   53,  100,  101,  103,  101,   93,  136,  101,   93,
+      136,  100,  103,  104,  104,  105,  105,  106,  106,   50,
+      103,  103,  107,  107,  108,  108,  176,  105,  112,  112,
+      105,  113,  113,  114,  114,  176,  108,  115,  115,  108,
+      116,  116,   43,  113,  117,  117,  113,  118,  118,  119,
+      119,   32,  116,  120,  120,  116,  121,  121,   31,  118,
+      122,  122,  118,  123,  123,  120,  124,  124,  120,  125,
+      125,   29,  122,  126,  126,  122,  127,  127,  124,  128,
+      128,  124,  129,  129,  130,  130,  131,  131,  127,  132,
+      132,  127,  133,  133,  129,  135,  135,  129,  131,  138,
+
+       13,  131,  138,    0,  133,  139,  139,  133,  140,  140,
+      141,  141,  142,  142,  143,  143,  144,  144,  145,  145,
+      140,  146,  146,  140,  147,  147,  143,  148,  148,  143,
+      149,  149,    0,  146,  150,  150,  146,  151,  151,  152,
+      152,    0,  149,  153,  153,  149,  154,  154,    0,  151,
+      155,  155,  151,  156,  156,  153,  157,  157,  153,  158,
+      158,    0,  155,  159,  159,  155,  160,  160,  157,  161,
+      161,  157,  163,  162,  162,  159,  164,  164,  159,    0,
+      163,  163,  165,  165,    0,  162,    0,  160,  162,  166,
+      166,  167,  167,  168,  168,  169,  169,  170,  170,  171,
+
+      171,  166,  174,  174,  166,  168,    0,  172,  168,  172,
+        0,  171,  172,    0,  171,  175,  175,  177,    0,  177,
+      180,  180,  177,  181,  181,  182,  182,  175,  183,  183,
+      175,  184,  184,  185,  185,  186,  186,  182,  187,  187,
+      182,  188,  188,  189,  189,  190,  190,  186,  191,  191,
+      186,  192,  192,  193,  193,  194,  194,  195,  195,  196,
+      196,  197,  197,  198,  198,  193,  200,  200,  193,  201,
+      201,  202,  202,  205,  205,  207,  207,  208,  208,  209,
+      209,  201,  210,  210,  201,  211,  211,  212,  212,  213,
+      213,  209,  214,  214,  209,  215,  215,  216,  216,  212,
+
+      217,  217,  212,  218,  218,  219,  219,  215,  220,  220,
+      215,  221,  221,  222,  222,  223,  223,  224,  224,    0,
+      225,  225,  226,  226,  227,  227,  228,  228,  229,  229,
+      230,  230,  225,    0,  222,  225,  231,  231,  232,  232,
+      233,  233,  236,  236,    0,  227,  239,  239,  240,  240,
+      241,  241,  242,  242,  243,  243,  244,  244,  245,  245,
+      246,  246,  247,  247,  248,  248,  249,  249,  250,  250,
+      251,  251,  252,  252,  253,  253,  254,  254,  255,  255,
+      256,  256,  257,  257,  258,  258,  259,  259,  260,  260,
+      255,  261,  261,  255,  262,  262,  263,  263,  259,  264,
+
+      264,  259,  265,  265,  266,  266,  267,  267,  263,  268,
+      268,  263,  269,  269,  270,  270,  271,  271,  272,  272,
+      273,  273,  274,  274,  275,  275,  276,  276,  277,  277,
+      278,  278,  279,  279,  280,  280,  281,  281,  282,  282,
+      283,  283,  278,  284,  284,  278,  285,  285,  286,  286,
+      287,  287,  288,  288,  289,  289,  290,  290,  291,  291,
+      292,  292,  293,  293,  294,  294,  295,  295,  296,  296,
+      291,  297,  297,  291,  298,  298,  299,  299,  295,  300,
+      300,  295,    0,  297,  301,  301,  297,  302,  302,  303,
+      303,  300,  304,  304,  300,  305,  305,  306,  306,  307,
+
+      307,  308,  308,  309,  309,  310,  310,  311,  311,  312,
+      312,  313,  313,  314,  314,    0,  305,  315,  315,  316,
+      316,  317,  317,  318,  318,  319,  319,  321,  321,  322,
+      322,  323,  323,  324,  324,  325,  325,  320,  320,  320,
+      320,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+      320,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+      320,  320,  320,  320,  320,  320,  320,  320,  320,  320,
+      320,  320,  320
     } ;
-
-/* Table of booleans, true if rule could match eol. */
-static const flex_int32_t yy_rule_can_match_eol[72] =
-    {   0,
-0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,     };
 
 /* The intent behind this definition is that it'll catch
  * any uses of REJECT which flex missed.
@@ -732,43 +903,63 @@ static const flex_int32_t yy_rule_can_match_eol[72] =
 #define YY_MORE_ADJ 0
 #define YY_RESTORE_YY_MORE_OFFSET
 #line 1 "snocone.l"
+#line 2 "snocone.l"
 /*
- * snocone.l — Snocone language Flex lexer  (GOAL-SNOCONE-LANG-SPACE LS-3.a)
+ * snocone.l — Snocone Flex lexer (GOAL-SNOCONE-LANG-SPACE LS-3)
  *
- * Andrew Koenig .sc operator set minus &&, ||, % plus CONCAT synthetic.
- * Commit identity: LCherryholmes / lcherryh@yahoo.com
+ * DESIGN:
+ *   Space envelops the operator.  Pattern {W}OP{W} matches the operator
+ *   together with its surrounding whitespace.  Whitespace alone (between
+ *   two atoms with no operator between them) lexes as T_CONCAT.  Unary
+ *   versions of dual-role operators arrive bare (no leading space) and
+ *   are returned as T_UN_*.  This matches the snobol4.l lexer pattern
+ *   exactly (lines 235-315 of snobol4.l).
+ *
+ *   The CONCAT decision is therefore not a previous-token state machine
+ *   — it falls out of the rule patterns themselves.  This is the
+ *   elegant SNOBOL4-Flex approach: longest-match selects the right rule,
+ *   and the token stream is unambiguous by construction.
+ *
+ * NAMING: token names match snobol4.tab.h conventions (T_IDENT, T_INT,
+ *   T_REAL, T_STR, T_FUNCTION, T_KEYWORD, T_CONCAT, T_ADDITION, etc.)
+ *   to keep one4all "same names everywhere for any concept equivalence"
+ *   (RULES.md / Lon's session-#9 directive).
+ *
+ * Andrew's .sc operator set, minus &&, ||, %.  Plus C-style control
+ * flow keywords (if/else/while/do/until/for/switch/case/default/break/
+ * continue/goto/function/return/freturn/nreturn/struct).
+ *
+ * Commit identity: LCherryholmes / lcherryh@yahoo.com  (RULES.md)
  */
-#define YY_NO_INPUT 1
-#line 15 "snocone.l"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "snocone_lex2.h"
 
+static int   sc_lineno = 1;
+static char  sc_strbuf[65536];
+static int   sc_strpos;
+
+static void emit_simple(LexerState *st, int kind, const char *text);
+static void emit_str(LexerState *st, const char *s);
 static int  classify_keyword(const char *s);
-static void push_token_impl(ScTokenBuf *buf, int kind, const char *text, int line);
-static int  can_start_expr_kind(int kind);
-static void update_prev(LexerState *st, int kind);
-static void maybe_emit_concat(LexerState *st, int next_can_start, int lineno);
-static void push_call_depth(LexerState *st);
-static int  pop_call_depth(LexerState *st);
+static void count_newlines(const char *s);
 
-#define TOK(kind) \
-    do { \
-        maybe_emit_concat(yyextra, can_start_expr_kind(kind), yylineno); \
-        push_token_impl(yyextra->buf, (kind), yytext, yylineno); \
-        update_prev(yyextra, (kind)); \
-        yyextra->whitespace_seen = 0; \
-    } while(0)
+/* push token with default text=yytext */
+#define EMIT(kind) emit_simple(yyextra, (kind), yytext)
+#define EMIT_NL(kind) do { count_newlines(yytext); emit_simple(yyextra, (kind), yytext); } while(0)
 
-#line 765 "snocone.lex.c"
+#line 953 "snocone.lex.c"
+#define YY_NO_INPUT 1
 
-#line 767 "snocone.lex.c"
+#line 956 "snocone.lex.c"
 
 #define INITIAL 0
-#define IN_SQ 1
-#define IN_DQ 2
-#define IN_BLOCK_COMMENT 3
+#define BODY_START 1
+#define BODY 2
+#define STR1 3
+#define STR2 4
+#define BLOCK_COMMENT 5
 
 #ifndef YY_NO_UNISTD_H
 /* Special case for "unistd.h", since it is non-ANSI. We include it way
@@ -984,9 +1175,6 @@ extern int yylex (yyscan_t yyscanner);
 #endif
 
 #define YY_RULE_SETUP \
-	if ( yyleng > 0 ) \
-		YY_CURRENT_BUFFER_LVALUE->yy_at_bol = \
-				(yytext[yyleng - 1] == '\n'); \
 	YY_USER_ACTION
 
 /** The main scanner function which does all the work.
@@ -1025,10 +1213,13 @@ YY_DECL
 		}
 
 	{
-#line 47 "snocone.l"
+#line 65 "snocone.l"
 
 
-#line 1032 "snocone.lex.c"
+#line 68 "snocone.l"
+  /* INITIAL: jump straight into BODY (no card-format dispatch in Snocone —
+   * Snocone uses C-style blocks, semicolons, and free-form layout). */
+#line 1223 "snocone.lex.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -1043,7 +1234,6 @@ YY_DECL
 		yy_bp = yy_cp;
 
 		yy_current_state = yyg->yy_start;
-		yy_current_state += YY_AT_BOL();
 yy_match:
 		do
 			{
@@ -1056,13 +1246,13 @@ yy_match:
 			while ( yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state )
 				{
 				yy_current_state = (int) yy_def[yy_current_state];
-				if ( yy_current_state >= 112 )
+				if ( yy_current_state >= 321 )
 					yy_c = yy_meta[yy_c];
 				}
 			yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c];
 			++yy_cp;
 			}
-		while ( yy_base[yy_current_state] != 153 );
+		while ( yy_base[yy_current_state] != 738 );
 
 yy_find_action:
 		yy_act = yy_accept[yy_current_state];
@@ -1074,18 +1264,6 @@ yy_find_action:
 			}
 
 		YY_DO_BEFORE_ACTION;
-
-		if ( yy_act != YY_END_OF_BUFFER && yy_rule_can_match_eol[yy_act] )
-			{
-			int yyl;
-			for ( yyl = 0; yyl < yyleng; ++yyl )
-				if ( yytext[yyl] == '\n' )
-					
-    do{ yylineno++;
-        yycolumn=0;
-    }while(0)
-;
-			}
 
 do_action:	/* This label is used only to access EOF actions. */
 
@@ -1099,434 +1277,586 @@ do_action:	/* This label is used only to access EOF actions. */
 			goto yy_find_action;
 
 case 1:
+/* rule 1 can match eol */
 YY_RULE_SETUP
-#line 49 "snocone.l"
-{ yyextra->whitespace_seen = 1; }
+#line 70 "snocone.l"
+{ yyless(0); BEGIN(BODY); }
 	YY_BREAK
+/* ========================================================== */
+/* BODY: statement body                                       */
+/* ========================================================== */
+/* Comments are pure whitespace (transparent for CONCAT). */
 case 2:
-/* rule 2 can match eol */
 YY_RULE_SETUP
-#line 50 "snocone.l"
-{ yyextra->whitespace_seen = 1; }
+#line 77 "snocone.l"
+{ /* line comment — fall through to next ws */ }
 	YY_BREAK
 case 3:
-/* rule 3 can match eol */
 YY_RULE_SETUP
-#line 51 "snocone.l"
-{ yyextra->whitespace_seen = 1; }
+#line 78 "snocone.l"
+{ BEGIN(BLOCK_COMMENT); }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 52 "snocone.l"
-{ yyextra->whitespace_seen = 1; }
+#line 80 "snocone.l"
+{ BEGIN(BODY); }
 	YY_BREAK
 case 5:
+/* rule 5 can match eol */
 YY_RULE_SETUP
-#line 53 "snocone.l"
-{ BEGIN(IN_BLOCK_COMMENT); yyextra->whitespace_seen = 1; }
+#line 81 "snocone.l"
+{ sc_lineno++; }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 54 "snocone.l"
-{ BEGIN(INITIAL); }
-	YY_BREAK
-case 7:
-/* rule 7 can match eol */
-YY_RULE_SETUP
-#line 55 "snocone.l"
+#line 82 "snocone.l"
 { /* absorbed */ }
+	YY_BREAK
+/* String literals — STR1 single-quote, STR2 double-quote.
+   * SNOBOL4 strings: no backslash escapes; '' inside '...' is one '.   */
+case 7:
+YY_RULE_SETUP
+#line 86 "snocone.l"
+{ sc_strpos = 0; BEGIN(STR1); }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 56 "snocone.l"
-{ /* absorbed */ }
+#line 87 "snocone.l"
+{ sc_strpos = 0; BEGIN(STR2); }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 58 "snocone.l"
-{ BEGIN(IN_SQ); sc_strlit_begin(yyextra, '\'', yylineno); }
+#line 89 "snocone.l"
+{ sc_strbuf[sc_strpos++] = '\''; }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 59 "snocone.l"
-{ sc_strlit_append_char(yyextra, '\''); }
+#line 90 "snocone.l"
+{ sc_strbuf[sc_strpos] = '\0';
+                              BEGIN(BODY);
+                              emit_str(yyextra, sc_strbuf); }
 	YY_BREAK
 case 11:
+/* rule 11 can match eol */
 YY_RULE_SETUP
-#line 60 "snocone.l"
-{
-    BEGIN(INITIAL);
-    int ln = yyextra->strlit_start_line;
-    char *s = sc_strlit_end(yyextra);
-    maybe_emit_concat(yyextra, 1, ln);
-    push_token_impl(yyextra->buf, SC2_STRING, s, ln);
-    free(s);
-    update_prev(yyextra, SC2_STRING);
-    yyextra->whitespace_seen = 0;
-}
+#line 93 "snocone.l"
+{ sc_strbuf[sc_strpos++] = '\n'; sc_lineno++; }
 	YY_BREAK
 case 12:
-/* rule 12 can match eol */
 YY_RULE_SETUP
-#line 70 "snocone.l"
-{ sc_strlit_append_char(yyextra, '\n'); }
+#line 94 "snocone.l"
+{ sc_strbuf[sc_strpos++] = yytext[0]; }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 71 "snocone.l"
-{ sc_strlit_append_char(yyextra, yytext[0]); }
+#line 96 "snocone.l"
+{ sc_strbuf[sc_strpos++] = '"'; }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 73 "snocone.l"
-{ BEGIN(IN_DQ); sc_strlit_begin(yyextra, '"', yylineno); }
+#line 97 "snocone.l"
+{ sc_strbuf[sc_strpos] = '\0';
+                              BEGIN(BODY);
+                              emit_str(yyextra, sc_strbuf); }
 	YY_BREAK
 case 15:
+/* rule 15 can match eol */
 YY_RULE_SETUP
-#line 74 "snocone.l"
-{ sc_strlit_append_char(yyextra, '"'); }
+#line 100 "snocone.l"
+{ sc_strbuf[sc_strpos++] = '\n'; sc_lineno++; }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 75 "snocone.l"
-{
-    BEGIN(INITIAL);
-    int ln = yyextra->strlit_start_line;
-    char *s = sc_strlit_end(yyextra);
-    maybe_emit_concat(yyextra, 1, ln);
-    push_token_impl(yyextra->buf, SC2_STRING, s, ln);
-    free(s);
-    update_prev(yyextra, SC2_STRING);
-    yyextra->whitespace_seen = 0;
-}
+#line 101 "snocone.l"
+{ sc_strbuf[sc_strpos++] = yytext[0]; }
 	YY_BREAK
+/* &IDENT as one token (no space between & and ident) — like SNOBOL4 */
 case 17:
-/* rule 17 can match eol */
 YY_RULE_SETUP
-#line 85 "snocone.l"
-{ sc_strlit_append_char(yyextra, '\n'); }
+#line 104 "snocone.l"
+{ emit_simple(yyextra, T_KEYWORD, yytext + 1); }
 	YY_BREAK
+/* T_CONCAT: pure whitespace between two atoms — emit if previous token
+   * was atom-class.  We inhibit emission immediately after openers / before
+   * closers / at end-of-statement using the prev-token-class check inside
+   * emit_simple.  In the {W}OP{W} pattern below, the operator's surrounding
+   * space is consumed *with* the operator, so plain {W} only matches when
+   * no operator follows — that's where CONCAT belongs. */
 case 18:
+/* rule 18 can match eol */
 YY_RULE_SETUP
-#line 86 "snocone.l"
-{ sc_strlit_append_char(yyextra, yytext[0]); }
+#line 112 "snocone.l"
+{ count_newlines(yytext);
+                              emit_simple(yyextra, T_CONCAT, ""); }
 	YY_BREAK
+/* ========================================================== */
+/* Binary operators: {W} OP {W}                              */
+/* The mandatory whitespace on at least one side distinguishes */
+/* binary use from unary.  Where unary form is the ONLY        */
+/* meaningful interpretation we drop the W-envelope.           */
+/* ========================================================== */
+/* SPITBOL/Snocone priority-0 assign — = with required surrounding space */
 case 19:
+/* rule 19 can match eol */
 YY_RULE_SETUP
-#line 88 "snocone.l"
-{ TOK(SC2_REAL); }
+#line 123 "snocone.l"
+{ EMIT_NL(T_ASSIGNMENT); }
 	YY_BREAK
+/* = at end-of-line / no trailing space — still T_ASSIGNMENT (DYN-63 mirror) */
 case 20:
+/* rule 20 can match eol */
 YY_RULE_SETUP
-#line 89 "snocone.l"
-{ TOK(SC2_REAL); }
+#line 125 "snocone.l"
+{ EMIT_NL(T_ASSIGNMENT); }
 	YY_BREAK
+/* Pattern match — same shape */
 case 21:
+/* rule 21 can match eol */
 YY_RULE_SETUP
-#line 90 "snocone.l"
-{ TOK(SC2_REAL); }
+#line 128 "snocone.l"
+{ EMIT_NL(T_MATCH); }
 	YY_BREAK
+/* Alternation */
 case 22:
+/* rule 22 can match eol */
 YY_RULE_SETUP
-#line 91 "snocone.l"
-{ TOK(SC2_INTEGER); }
+#line 131 "snocone.l"
+{ EMIT_NL(T_ALTERNATION); }
 	YY_BREAK
+/* String comparison — multi-character, must come BEFORE the */
+/* single-char rules to win the longest-match contest.       */
 case 23:
+/* rule 23 can match eol */
 YY_RULE_SETUP
-#line 93 "snocone.l"
-{ TOK(SC2_KEYWORD_NAME); }
+#line 135 "snocone.l"
+{ EMIT_NL(T_LEQ); }
 	YY_BREAK
 case 24:
+/* rule 24 can match eol */
+YY_RULE_SETUP
+#line 136 "snocone.l"
+{ EMIT_NL(T_LNE); }
+	YY_BREAK
+case 25:
+/* rule 25 can match eol */
+YY_RULE_SETUP
+#line 137 "snocone.l"
+{ EMIT_NL(T_LLE); }
+	YY_BREAK
+case 26:
+/* rule 26 can match eol */
+YY_RULE_SETUP
+#line 138 "snocone.l"
+{ EMIT_NL(T_LGE); }
+	YY_BREAK
+case 27:
+/* rule 27 can match eol */
+YY_RULE_SETUP
+#line 139 "snocone.l"
+{ EMIT_NL(T_LLT); }
+	YY_BREAK
+case 28:
+/* rule 28 can match eol */
+YY_RULE_SETUP
+#line 140 "snocone.l"
+{ EMIT_NL(T_LGT); }
+	YY_BREAK
+case 29:
+/* rule 29 can match eol */
+YY_RULE_SETUP
+#line 141 "snocone.l"
+{ EMIT_NL(T_DIFFER); }
+	YY_BREAK
+case 30:
+/* rule 30 can match eol */
+YY_RULE_SETUP
+#line 142 "snocone.l"
+{ EMIT_NL(T_IDENT_OP); }
+	YY_BREAK
+/* Numeric comparison (Andrew's .sc 6-op set) */
+case 31:
+/* rule 31 can match eol */
+YY_RULE_SETUP
+#line 145 "snocone.l"
+{ EMIT_NL(T_EQ); }
+	YY_BREAK
+case 32:
+/* rule 32 can match eol */
+YY_RULE_SETUP
+#line 146 "snocone.l"
+{ EMIT_NL(T_NE); }
+	YY_BREAK
+case 33:
+/* rule 33 can match eol */
+YY_RULE_SETUP
+#line 147 "snocone.l"
+{ EMIT_NL(T_LE); }
+	YY_BREAK
+case 34:
+/* rule 34 can match eol */
+YY_RULE_SETUP
+#line 148 "snocone.l"
+{ EMIT_NL(T_GE); }
+	YY_BREAK
+case 35:
+/* rule 35 can match eol */
+YY_RULE_SETUP
+#line 149 "snocone.l"
+{ EMIT_NL(T_LT); }
+	YY_BREAK
+case 36:
+/* rule 36 can match eol */
+YY_RULE_SETUP
+#line 150 "snocone.l"
+{ EMIT_NL(T_GT); }
+	YY_BREAK
+/* Compound-assignments — adopted in today's lexer; LS-2 will decide
+   * whether the grammar accepts these.  The lexer keeps them. */
+case 37:
+/* rule 37 can match eol */
+YY_RULE_SETUP
+#line 154 "snocone.l"
+{ EMIT_NL(T_PLUS_ASSIGN); }
+	YY_BREAK
+case 38:
+/* rule 38 can match eol */
+YY_RULE_SETUP
+#line 155 "snocone.l"
+{ EMIT_NL(T_MINUS_ASSIGN); }
+	YY_BREAK
+case 39:
+/* rule 39 can match eol */
+YY_RULE_SETUP
+#line 156 "snocone.l"
+{ EMIT_NL(T_STAR_ASSIGN); }
+	YY_BREAK
+case 40:
+/* rule 40 can match eol */
+YY_RULE_SETUP
+#line 157 "snocone.l"
+{ EMIT_NL(T_SLASH_ASSIGN); }
+	YY_BREAK
+case 41:
+/* rule 41 can match eol */
+YY_RULE_SETUP
+#line 158 "snocone.l"
+{ EMIT_NL(T_CARET_ASSIGN); }
+	YY_BREAK
+/* Exponentiation synonyms: ^, **, !  (pri 11 right-assoc) */
+case 42:
+/* rule 42 can match eol */
+YY_RULE_SETUP
+#line 161 "snocone.l"
+{ EMIT_NL(T_EXPONENTIATION); }
+	YY_BREAK
+case 43:
+/* rule 43 can match eol */
+YY_RULE_SETUP
+#line 162 "snocone.l"
+{ EMIT_NL(T_EXPONENTIATION); }
+	YY_BREAK
+case 44:
+/* rule 44 can match eol */
+YY_RULE_SETUP
+#line 163 "snocone.l"
+{ EMIT_NL(T_EXPONENTIATION); }
+	YY_BREAK
+/* Arithmetic */
+case 45:
+/* rule 45 can match eol */
+YY_RULE_SETUP
+#line 166 "snocone.l"
+{ EMIT_NL(T_ADDITION); }
+	YY_BREAK
+case 46:
+/* rule 46 can match eol */
+YY_RULE_SETUP
+#line 167 "snocone.l"
+{ EMIT_NL(T_SUBTRACTION); }
+	YY_BREAK
+case 47:
+/* rule 47 can match eol */
+YY_RULE_SETUP
+#line 168 "snocone.l"
+{ EMIT_NL(T_MULTIPLICATION); }
+	YY_BREAK
+case 48:
+/* rule 48 can match eol */
+YY_RULE_SETUP
+#line 169 "snocone.l"
+{ EMIT_NL(T_DIVISION); }
+	YY_BREAK
+/* Indirection (binary $ — immediate assign in pattern context) */
+case 49:
+/* rule 49 can match eol */
+YY_RULE_SETUP
+#line 172 "snocone.l"
+{ EMIT_NL(T_IMMEDIATE_ASSIGN); }
+	YY_BREAK
+/* Name-of (binary . — conditional assign in pattern context) */
+case 50:
+/* rule 50 can match eol */
+YY_RULE_SETUP
+#line 174 "snocone.l"
+{ EMIT_NL(T_COND_ASSIGN); }
+	YY_BREAK
+/* OPSYN slot operators (binary forms — Andrew's & % @ # ~) */
+case 51:
+/* rule 51 can match eol */
+YY_RULE_SETUP
+#line 177 "snocone.l"
+{ EMIT_NL(T_AMPERSAND); }
+	YY_BREAK
+case 52:
+/* rule 52 can match eol */
+YY_RULE_SETUP
+#line 178 "snocone.l"
+{ EMIT_NL(T_AT_SIGN); }
+	YY_BREAK
+case 53:
+/* rule 53 can match eol */
+YY_RULE_SETUP
+#line 179 "snocone.l"
+{ EMIT_NL(T_PERCENT); }
+	YY_BREAK
+case 54:
+/* rule 54 can match eol */
+YY_RULE_SETUP
+#line 180 "snocone.l"
+{ EMIT_NL(T_TILDE); }
+	YY_BREAK
+case 55:
+/* rule 55 can match eol */
+YY_RULE_SETUP
+#line 181 "snocone.l"
+{ EMIT_NL(T_POUND); }
+	YY_BREAK
+/* ========================================================== */
+/* Structural punctuation                                    */
+/* ========================================================== */
+/* ( absorbs trailing gray (matches snobol4.l line 281).
+   * IMPORTANT: ( with NO leading whitespace and a preceding identifier
+   * is the call-form — handled by the T_FUNCTION rule below via trailing
+   * context.  This rule fires for sub-expression parens.            */
+case 56:
+/* rule 56 can match eol */
+YY_RULE_SETUP
+#line 191 "snocone.l"
+{ EMIT_NL(T_LPAREN); }
+	YY_BREAK
+case 57:
+/* rule 57 can match eol */
+YY_RULE_SETUP
+#line 192 "snocone.l"
+{ EMIT_NL(T_RPAREN); }
+	YY_BREAK
+case 58:
+/* rule 58 can match eol */
+YY_RULE_SETUP
+#line 193 "snocone.l"
+{ EMIT_NL(T_LBRACK); }
+	YY_BREAK
+case 59:
+/* rule 59 can match eol */
+YY_RULE_SETUP
+#line 194 "snocone.l"
+{ EMIT_NL(T_RBRACK); }
+	YY_BREAK
+case 60:
+/* rule 60 can match eol */
+YY_RULE_SETUP
+#line 195 "snocone.l"
+{ EMIT_NL(T_COMMA); }
+	YY_BREAK
+case 61:
+/* rule 61 can match eol */
+YY_RULE_SETUP
+#line 196 "snocone.l"
+{ EMIT_NL(T_SEMICOLON); }
+	YY_BREAK
+/* Block braces (Snocone-only) — gray on outside */
+case 62:
+/* rule 62 can match eol */
+YY_RULE_SETUP
+#line 199 "snocone.l"
+{ EMIT_NL(T_LBRACE); }
+	YY_BREAK
+case 63:
+/* rule 63 can match eol */
+YY_RULE_SETUP
+#line 200 "snocone.l"
+{ EMIT_NL(T_RBRACE); }
+	YY_BREAK
+/* Colon: label suffix.  Andrew's .sc uses `name : clause` (label) and
+   * `case value :` (switch case).  This is a bare colon — the multi-char
+   * comparison rules above (`:==:` etc.) win longest-match. */
+case 64:
+/* rule 64 can match eol */
+YY_RULE_SETUP
+#line 205 "snocone.l"
+{ EMIT_NL(T_COLON); }
+	YY_BREAK
+/* ========================================================== */
+/* Atoms — arrive bare (preceding T_CONCAT or W{OP} consumed   */
+/* the leading whitespace already)                            */
+/* ========================================================== */
+/* T_FUNCTION: identifier immediately followed by '(' (no space).
+   * Same trick as snobol4.l line 290.  The '(' stays in the input
+   * stream — the BODY '(' rule consumes it next as T_LPAREN.  Grammar
+   * sees: T_FUNCTION T_LPAREN args T_RPAREN. */
+case 65:
 *yy_cp = yyg->yy_hold_char; /* undo effects of setting up yytext */
 yyg->yy_c_buf_p = yy_cp -= 1;
 YY_DO_BEFORE_ACTION; /* set up yytext again */
 YY_RULE_SETUP
-#line 95 "snocone.l"
-{
-    char *name = strdup(yytext);
-
-    maybe_emit_concat(yyextra, 1, yylineno);
-    push_token_impl(yyextra->buf, SC2_IDENT_LPAREN_NOSP, name, yylineno);
-    free(name);
-    push_call_depth(yyextra);
-    update_prev(yyextra, SC2_IDENT_LPAREN_NOSP);
-    yyextra->whitespace_seen = 0;
-    yyextra->absorb_next_lparen = 1;  /* next '(' is the call-open, absorb silently */
-}
+#line 216 "snocone.l"
+{ emit_simple(yyextra, T_FUNCTION, yytext); }
 	YY_BREAK
-case 25:
-YY_RULE_SETUP
-#line 106 "snocone.l"
-{ TOK(classify_keyword(yytext)); }
-	YY_BREAK
-case 26:
-YY_RULE_SETUP
-#line 108 "snocone.l"
-{ TOK(SC2_STR_NE); }
-	YY_BREAK
-case 27:
-YY_RULE_SETUP
-#line 109 "snocone.l"
-{ TOK(SC2_STR_LE); }
-	YY_BREAK
-case 28:
-YY_RULE_SETUP
-#line 110 "snocone.l"
-{ TOK(SC2_STR_GE); }
-	YY_BREAK
-case 29:
-YY_RULE_SETUP
-#line 111 "snocone.l"
-{ TOK(SC2_STR_EQ); }
-	YY_BREAK
-case 30:
-YY_RULE_SETUP
-#line 112 "snocone.l"
-{ TOK(SC2_STR_DIFFER); }
-	YY_BREAK
-case 31:
-YY_RULE_SETUP
-#line 113 "snocone.l"
-{ TOK(SC2_STR_LT); }
-	YY_BREAK
-case 32:
-YY_RULE_SETUP
-#line 114 "snocone.l"
-{ TOK(SC2_STR_GT); }
-	YY_BREAK
-case 33:
-YY_RULE_SETUP
-#line 115 "snocone.l"
-{ TOK(SC2_PLUS_ASSIGN); }
-	YY_BREAK
-case 34:
-YY_RULE_SETUP
-#line 116 "snocone.l"
-{ TOK(SC2_MINUS_ASSIGN); }
-	YY_BREAK
-case 35:
-YY_RULE_SETUP
-#line 117 "snocone.l"
-{ TOK(SC2_STAR_ASSIGN); }
-	YY_BREAK
-case 36:
-YY_RULE_SETUP
-#line 118 "snocone.l"
-{ TOK(SC2_SLASH_ASSIGN); }
-	YY_BREAK
-case 37:
-YY_RULE_SETUP
-#line 119 "snocone.l"
-{ TOK(SC2_CARET_ASSIGN); }
-	YY_BREAK
-case 38:
-YY_RULE_SETUP
-#line 120 "snocone.l"
-{ TOK(SC2_STR_IDENT); }
-	YY_BREAK
-case 39:
-YY_RULE_SETUP
-#line 121 "snocone.l"
-{ TOK(SC2_EQ); }
-	YY_BREAK
-case 40:
-YY_RULE_SETUP
-#line 122 "snocone.l"
-{ TOK(SC2_NE); }
-	YY_BREAK
-case 41:
-YY_RULE_SETUP
-#line 123 "snocone.l"
-{ TOK(SC2_LE); }
-	YY_BREAK
-case 42:
-YY_RULE_SETUP
-#line 124 "snocone.l"
-{ TOK(SC2_GE); }
-	YY_BREAK
-case 43:
-YY_RULE_SETUP
-#line 125 "snocone.l"
-{ TOK(SC2_CARET); }
-	YY_BREAK
-case 44:
-YY_RULE_SETUP
-#line 126 "snocone.l"
-{ TOK(SC2_ASSIGN); }
-	YY_BREAK
-case 45:
-YY_RULE_SETUP
-#line 127 "snocone.l"
-{ TOK(SC2_QUESTION); }
-	YY_BREAK
-case 46:
-YY_RULE_SETUP
-#line 128 "snocone.l"
-{ TOK(SC2_PIPE); }
-	YY_BREAK
-case 47:
-YY_RULE_SETUP
-#line 129 "snocone.l"
-{ TOK(SC2_PLUS); }
-	YY_BREAK
-case 48:
-YY_RULE_SETUP
-#line 130 "snocone.l"
-{ TOK(SC2_MINUS); }
-	YY_BREAK
-case 49:
-YY_RULE_SETUP
-#line 131 "snocone.l"
-{ TOK(SC2_SLASH); }
-	YY_BREAK
-case 50:
-YY_RULE_SETUP
-#line 132 "snocone.l"
-{ TOK(SC2_STAR); }
-	YY_BREAK
-case 51:
-YY_RULE_SETUP
-#line 133 "snocone.l"
-{ TOK(SC2_CARET); }
-	YY_BREAK
-case 52:
-YY_RULE_SETUP
-#line 134 "snocone.l"
-{ TOK(SC2_PERIOD); }
-	YY_BREAK
-case 53:
-YY_RULE_SETUP
-#line 135 "snocone.l"
-{ TOK(SC2_DOLLAR); }
-	YY_BREAK
-case 54:
-YY_RULE_SETUP
-#line 136 "snocone.l"
-{ TOK(SC2_AMPERSAND); }
-	YY_BREAK
-case 55:
-YY_RULE_SETUP
-#line 137 "snocone.l"
-{ TOK(SC2_AT); }
-	YY_BREAK
-case 56:
-YY_RULE_SETUP
-#line 138 "snocone.l"
-{ TOK(SC2_TILDE); }
-	YY_BREAK
-case 57:
-YY_RULE_SETUP
-#line 139 "snocone.l"
-{ TOK(SC2_LT); }
-	YY_BREAK
-case 58:
-YY_RULE_SETUP
-#line 140 "snocone.l"
-{ TOK(SC2_GT); }
-	YY_BREAK
-case 59:
-YY_RULE_SETUP
-#line 141 "snocone.l"
-{ TOK(SC2_PERCENT); }
-	YY_BREAK
-case 60:
-YY_RULE_SETUP
-#line 142 "snocone.l"
-{ TOK(SC2_BANG_EXPONENT); }
-	YY_BREAK
-case 61:
-YY_RULE_SETUP
-#line 144 "snocone.l"
-{
-    if (yyextra->absorb_next_lparen) {
-        /* This '(' is the call-open paren implied by IDENT_LPAREN_NOSP.
-         * Do NOT emit a LPAREN token — the grammar knows from the
-         * IDENT_LPAREN_NOSP token that a '(' was consumed.
-         * DO increment paren_depth so RPAREN tracking works. */
-        yyextra->absorb_next_lparen = 0;
-        yyextra->paren_depth++;
-        /* prev stays PT_OPEN (set by update_prev for IDENT_LPAREN_NOSP) */
-    } else {
-        maybe_emit_concat(yyextra, 1, yylineno);
-        push_token_impl(yyextra->buf, SC2_LPAREN, yytext, yylineno);
-        yyextra->paren_depth++;
-        update_prev(yyextra, SC2_LPAREN);
-        yyextra->whitespace_seen = 0;
-    }
-}
-	YY_BREAK
-case 62:
-YY_RULE_SETUP
-#line 161 "snocone.l"
-{
-    int is_call = pop_call_depth(yyextra);
-    (void)is_call;
-    maybe_emit_concat(yyextra, 0, yylineno);
-    push_token_impl(yyextra->buf, SC2_RPAREN, yytext, yylineno);
-    if (yyextra->paren_depth > 0) yyextra->paren_depth--;
-    update_prev(yyextra, SC2_RPAREN);
-    yyextra->whitespace_seen = 0;
-}
-	YY_BREAK
-case 63:
-YY_RULE_SETUP
-#line 170 "snocone.l"
-{ TOK(SC2_LBRACE); }
-	YY_BREAK
-case 64:
-YY_RULE_SETUP
-#line 171 "snocone.l"
-{ TOK(SC2_RBRACE); }
-	YY_BREAK
-case 65:
-YY_RULE_SETUP
-#line 172 "snocone.l"
-{ TOK(SC2_LBRACKET); }
-	YY_BREAK
+/* T_IDENT or keyword */
 case 66:
 YY_RULE_SETUP
-#line 173 "snocone.l"
-{ TOK(SC2_RBRACKET); }
+#line 219 "snocone.l"
+{
+                              int kind = classify_keyword(yytext);
+                              emit_simple(yyextra, kind, yytext);
+                            }
 	YY_BREAK
+/* Numbers — REAL forms before INT (longest-match) */
 case 67:
 YY_RULE_SETUP
-#line 174 "snocone.l"
-{ TOK(SC2_COMMA); }
+#line 225 "snocone.l"
+{ EMIT(T_REAL); }
 	YY_BREAK
 case 68:
 YY_RULE_SETUP
-#line 175 "snocone.l"
-{ TOK(SC2_SEMICOLON); }
+#line 226 "snocone.l"
+{ EMIT(T_REAL); }
 	YY_BREAK
 case 69:
 YY_RULE_SETUP
-#line 176 "snocone.l"
-{ TOK(SC2_COLON); }
-	YY_BREAK
-case YY_STATE_EOF(INITIAL):
-case YY_STATE_EOF(IN_SQ):
-case YY_STATE_EOF(IN_DQ):
-case YY_STATE_EOF(IN_BLOCK_COMMENT):
-#line 178 "snocone.l"
-{
-    push_token_impl(yyextra->buf, SC2_EOF, "", yylineno);
-    yyterminate();
-}
+#line 227 "snocone.l"
+{ EMIT(T_REAL); }
 	YY_BREAK
 case 70:
 YY_RULE_SETUP
-#line 183 "snocone.l"
-{
-    push_token_impl(yyextra->buf, SC2_UNKNOWN, yytext, yylineno);
-    yyextra->whitespace_seen = 0;
-}
+#line 228 "snocone.l"
+{ EMIT(T_INT); }
 	YY_BREAK
+/* ========================================================== */
+/* Unary operators — bare (no leading W).  The grammar has    */
+/* T_UN_* productions for each.                               */
+/* ========================================================== */
 case 71:
 YY_RULE_SETUP
-#line 188 "snocone.l"
+#line 235 "snocone.l"
+{ EMIT(T_EXPONENTIATION); }
+	YY_BREAK
+case 72:
+YY_RULE_SETUP
+#line 236 "snocone.l"
+{ EMIT(T_EXPONENTIATION); }
+	YY_BREAK
+case 73:
+YY_RULE_SETUP
+#line 237 "snocone.l"
+{ EMIT(T_EXPONENTIATION); }
+	YY_BREAK
+case 74:
+YY_RULE_SETUP
+#line 238 "snocone.l"
+{ EMIT(T_UN_PLUS); }
+	YY_BREAK
+case 75:
+YY_RULE_SETUP
+#line 239 "snocone.l"
+{ EMIT(T_UN_MINUS); }
+	YY_BREAK
+case 76:
+YY_RULE_SETUP
+#line 240 "snocone.l"
+{ EMIT(T_UN_ASTERISK); }
+	YY_BREAK
+case 77:
+YY_RULE_SETUP
+#line 241 "snocone.l"
+{ EMIT(T_UN_SLASH); }
+	YY_BREAK
+case 78:
+YY_RULE_SETUP
+#line 242 "snocone.l"
+{ EMIT(T_UN_PERCENT); }
+	YY_BREAK
+case 79:
+YY_RULE_SETUP
+#line 243 "snocone.l"
+{ EMIT(T_UN_AT_SIGN); }
+	YY_BREAK
+case 80:
+YY_RULE_SETUP
+#line 244 "snocone.l"
+{ EMIT(T_UN_TILDE); }
+	YY_BREAK
+case 81:
+YY_RULE_SETUP
+#line 245 "snocone.l"
+{ EMIT(T_UN_DOLLAR_SIGN); }
+	YY_BREAK
+case 82:
+YY_RULE_SETUP
+#line 246 "snocone.l"
+{ EMIT(T_UN_PERIOD); }
+	YY_BREAK
+case 83:
+YY_RULE_SETUP
+#line 247 "snocone.l"
+{ EMIT(T_UN_POUND); }
+	YY_BREAK
+case 84:
+YY_RULE_SETUP
+#line 248 "snocone.l"
+{ EMIT(T_UN_VERTICAL_BAR); }
+	YY_BREAK
+case 85:
+YY_RULE_SETUP
+#line 249 "snocone.l"
+{ EMIT(T_UN_EQUAL); }
+	YY_BREAK
+case 86:
+YY_RULE_SETUP
+#line 250 "snocone.l"
+{ EMIT(T_UN_QUESTION_MARK); }
+	YY_BREAK
+case 87:
+YY_RULE_SETUP
+#line 251 "snocone.l"
+{ EMIT(T_UN_AMPERSAND); }
+	YY_BREAK
+case 88:
+YY_RULE_SETUP
+#line 253 "snocone.l"
+{
+    /* Unrecognised character */
+    emit_simple(yyextra, T_UNKNOWN, yytext);
+}
+	YY_BREAK
+case YY_STATE_EOF(INITIAL):
+case YY_STATE_EOF(BODY_START):
+case YY_STATE_EOF(BODY):
+case YY_STATE_EOF(STR1):
+case YY_STATE_EOF(STR2):
+case YY_STATE_EOF(BLOCK_COMMENT):
+#line 258 "snocone.l"
+{
+    emit_simple(yyextra, T_EOF, "");
+    yyterminate();
+}
+	YY_BREAK
+case 89:
+YY_RULE_SETUP
+#line 263 "snocone.l"
 ECHO;
 	YY_BREAK
-#line 1530 "snocone.lex.c"
+#line 1860 "snocone.lex.c"
 
 	case YY_END_OF_BUFFER:
 		{
@@ -1811,7 +2141,6 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 
 	yy_current_state = yyg->yy_start;
-	yy_current_state += YY_AT_BOL();
 
 	for ( yy_cp = yyg->yytext_ptr + YY_MORE_ADJ; yy_cp < yyg->yy_c_buf_p; ++yy_cp )
 		{
@@ -1824,7 +2153,7 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 		while ( yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state )
 			{
 			yy_current_state = (int) yy_def[yy_current_state];
-			if ( yy_current_state >= 112 )
+			if ( yy_current_state >= 321 )
 				yy_c = yy_meta[yy_c];
 			}
 		yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c];
@@ -1853,11 +2182,11 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 	while ( yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state )
 		{
 		yy_current_state = (int) yy_def[yy_current_state];
-		if ( yy_current_state >= 112 )
+		if ( yy_current_state >= 321 )
 			yy_c = yy_meta[yy_c];
 		}
 	yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c];
-	yy_is_jam = (yy_current_state == 111);
+	yy_is_jam = (yy_current_state == 320);
 
 	(void)yyg;
 	return yy_is_jam ? 0 : yy_current_state;
@@ -1937,14 +2266,6 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 	c = *(unsigned char *) yyg->yy_c_buf_p;	/* cast for 8-bit char's */
 	*yyg->yy_c_buf_p = '\0';	/* preserve yytext */
 	yyg->yy_hold_char = *++yyg->yy_c_buf_p;
-
-	YY_CURRENT_BUFFER_LVALUE->yy_at_bol = (c == '\n');
-	if ( YY_CURRENT_BUFFER_LVALUE->yy_at_bol )
-		
-    do{ yylineno++;
-        yycolumn=0;
-    }while(0)
-;
 
 	return c;
 }
@@ -2664,151 +2985,122 @@ void yyfree (void * ptr , yyscan_t yyscanner)
 
 #define YYTABLES_NAME "yytables"
 
-#line 188 "snocone.l"
+#line 263 "snocone.l"
 
+
+/* ========================================================== */
+/* Keyword table — case-sensitive (RULES.md)                  */
+/* ========================================================== */
 
 typedef struct { const char *word; int kind; } KwEntry;
 static const KwEntry KW_TABLE[] = {
-    { "if",       SC2_KW_IF       },
-    { "else",     SC2_KW_ELSE     },
-    { "while",    SC2_KW_WHILE    },
-    { "do",       SC2_KW_DO       },
-    { "until",    SC2_KW_UNTIL    },
-    { "for",      SC2_KW_FOR      },
-    { "switch",   SC2_KW_SWITCH   },
-    { "case",     SC2_KW_CASE     },
-    { "default",  SC2_KW_DEFAULT  },
-    { "break",    SC2_KW_BREAK    },
-    { "continue", SC2_KW_CONTINUE },
-    { "goto",     SC2_KW_GOTO     },
-    { "function", SC2_KW_FUNCTION },
-    { "return",   SC2_KW_RETURN   },
-    { "freturn",  SC2_KW_FRETURN  },
-    { "nreturn",  SC2_KW_NRETURN  },
-    { "struct",   SC2_KW_STRUCT   },
-    { NULL,       SC2_IDENT       }
+    /* Control flow */
+    { "if",       T_KW_IF       },
+    { "else",     T_KW_ELSE     },
+    { "while",    T_KW_WHILE    },
+    { "do",       T_KW_DO       },
+    { "until",    T_KW_UNTIL    },
+    { "for",      T_KW_FOR      },
+    { "switch",   T_KW_SWITCH   },
+    { "case",     T_KW_CASE     },
+    { "default",  T_KW_DEFAULT  },
+    { "break",    T_KW_BREAK    },
+    { "continue", T_KW_CONTINUE },
+    { "goto",     T_KW_GOTO     },
+    /* Function / return */
+    { "function", T_KW_FUNCTION },   /* RENAMED from procedure (session #7) */
+    { "return",   T_KW_RETURN   },
+    { "freturn",  T_KW_FRETURN  },
+    { "nreturn",  T_KW_NRETURN  },
+    /* Data */
+    { "struct",   T_KW_STRUCT   },
+    { NULL,       T_IDENT       }
 };
 
 static int classify_keyword(const char *s) {
     for (const KwEntry *e = KW_TABLE; e->word; e++)
         if (strcmp(s, e->word) == 0) return e->kind;
-    return SC2_IDENT;
+    return T_IDENT;
 }
 
-static int can_start_expr_kind(int kind) {
-    /* Only tokens that are UNAMBIGUOUSLY the start of a new operand trigger
-     * CONCAT emission.  Tokens that double as binary operators (?, &, +, -, *,
-     * ., $) do NOT trigger CONCAT — in a post-value position they are binary.
-     * The grammar handles precedence from there. */
+/* ========================================================== */
+/* Token-buffer accumulation                                  */
+/* ========================================================== */
+
+static void emit_simple(LexerState *st, int kind, const char *text) {
+    /* CONCAT suppression: never emit two CONCATs in a row, never emit
+     * CONCAT at the start of the token stream, never emit CONCAT
+     * immediately after an opener or operator (its purpose is to
+     * separate two value-yielding atoms only). */
+    if (kind == T_CONCAT) {
+        if (st->buf->count == 0) return;
+        int last = st->buf->tokens[st->buf->count - 1].kind;
+        if (last == T_CONCAT) return;
+        /* If the previous token is non-value (operator, opener, separator),
+         * the whitespace is just trivia.  Only emit CONCAT after value-
+         * yielding tokens. */
+        if (!sc_kind_is_value(last)) return;
+    }
+
+    /* If we were about to emit a value-yielding token but the previous
+     * token was also a value-yielding token AND no CONCAT has been
+     * emitted between them, the source had no whitespace between the
+     * two atoms.  In SNOBOL4 lexing the {W} envelope already inserts
+     * the CONCAT (because at least one space is required between two
+     * atoms with no operator between them).  In Snocone we inherit
+     * the same property: this branch is dead in correct programs. */
+
+    if (st->buf->count >= st->buf->capacity) {
+        st->buf->capacity = st->buf->capacity ? st->buf->capacity * 2 : 64;
+        st->buf->tokens   = realloc(st->buf->tokens,
+                                    st->buf->capacity * sizeof(ScToken2));
+    }
+    ScToken2 *t = &st->buf->tokens[st->buf->count++];
+    t->kind = kind;
+    t->text = strdup(text);
+    t->line = sc_lineno;
+}
+
+static void emit_str(LexerState *st, const char *s) {
+    emit_simple(st, T_STR, s);
+}
+
+static void count_newlines(const char *s) {
+    for (const char *p = s; *p; p++)
+        if (*p == '\n') sc_lineno++;
+}
+
+/* sc_kind_is_value: does this token kind end an expression / could a
+ * CONCAT validly follow it? */
+int sc_kind_is_value(int kind) {
     switch (kind) {
-    case SC2_IDENT:
-    case SC2_IDENT_LPAREN_NOSP:
-    case SC2_INTEGER:
-    case SC2_REAL:
-    case SC2_STRING:
-    case SC2_KEYWORD_NAME:
-    case SC2_LPAREN:
-    case SC2_LBRACKET:
-    /* Unambiguously unary — have no binary role in the operator table */
-    case SC2_TILDE:
-    case SC2_AT:
+    case T_IDENT:
+    case T_FUNCTION:
+    case T_INT:
+    case T_REAL:
+    case T_STR:
+    case T_KEYWORD:
+    case T_RPAREN:
+    case T_RBRACK:
         return 1;
     default:
         return 0;
     }
 }
 
-static void update_prev(LexerState *st, int kind) {
-    switch (kind) {
-    case SC2_IDENT: case SC2_INTEGER: case SC2_REAL: case SC2_STRING:
-    case SC2_KEYWORD_NAME: case SC2_RPAREN: case SC2_RBRACKET:
-        st->prev = PT_VALUE; break;
-    case SC2_IDENT_LPAREN_NOSP:
-        st->prev = PT_OPEN; break;
-    case SC2_LPAREN: case SC2_LBRACE: case SC2_LBRACKET:
-        st->prev = PT_OPEN; break;
-    case SC2_COMMA: case SC2_SEMICOLON: case SC2_COLON: case SC2_RBRACE:
-        st->prev = PT_NONE; break;
-    case SC2_AMPERSAND: case SC2_AT: case SC2_TILDE:
-        st->prev = PT_UNARY_PREFIX; break;
-    case SC2_KW_IF: case SC2_KW_WHILE: case SC2_KW_FOR: case SC2_KW_DO:
-    case SC2_KW_UNTIL: case SC2_KW_SWITCH: case SC2_KW_CASE:
-    case SC2_KW_DEFAULT: case SC2_KW_FUNCTION: case SC2_KW_ELSE:
-    case SC2_KW_STRUCT:
-        st->prev = PT_KW_BLOCK_OPENER; break;
-    case SC2_KW_BREAK: case SC2_KW_CONTINUE: case SC2_KW_GOTO:
-    case SC2_KW_RETURN: case SC2_KW_FRETURN: case SC2_KW_NRETURN:
-        st->prev = PT_KW_LOOPCTRL; break;
-    default:
-        st->prev = PT_BINOP; break;
-    }
-}
-
-static void maybe_emit_concat(LexerState *st, int next_can_start, int lineno) {
-    if (st->prev == PT_VALUE && next_can_start && st->whitespace_seen)
-        push_token_impl(st->buf, SC2_CONCAT, "", lineno);
-}
-
-static void push_call_depth(LexerState *st) {
-    /* The '(' is NOT yet consumed (trailing context) so paren_depth has not
-     * been incremented yet.  Record paren_depth+1 as the target depth — that
-     * is the depth the call's RPAREN will see when it arrives. */
-    int target = st->paren_depth + 1;
-    if (st->call_stack_top < SC2_MAX_CALL_DEPTH - 1)
-        st->call_stack[++st->call_stack_top] = target;
-}
-
-static int pop_call_depth(LexerState *st) {
-    if (st->call_stack_top >= 0
-            && st->call_stack[st->call_stack_top] == st->paren_depth) {
-        st->call_stack_top--;
-        return 1;
-    }
-    return 0;
-}
-
-static void push_token_impl(ScTokenBuf *buf, int kind, const char *text, int line) {
-    if (buf->count >= buf->capacity) {
-        buf->capacity = buf->capacity ? buf->capacity * 2 : 64;
-        buf->tokens = realloc(buf->tokens, buf->capacity * sizeof(ScToken2));
-    }
-    ScToken2 *t = &buf->tokens[buf->count++];
-    t->kind = kind;
-    t->text = strdup(text);
-    t->line = line;
-}
-
-void sc_strlit_begin(LexerState *st, char quote, int line) {
-    st->strlit_quote = quote;
-    st->strlit_start_line = line;
-    st->strlit_len = 0;
-    st->strlit_cap = 64;
-    st->strlit_buf = malloc(st->strlit_cap);
-    st->strlit_buf[0] = '\0';
-}
-
-void sc_strlit_append_char(LexerState *st, char c) {
-    if (st->strlit_len + 2 >= st->strlit_cap) {
-        st->strlit_cap *= 2;
-        st->strlit_buf = realloc(st->strlit_buf, st->strlit_cap);
-    }
-    st->strlit_buf[st->strlit_len++] = c;
-    st->strlit_buf[st->strlit_len] = '\0';
-}
-
-void sc_strlit_append(LexerState *st, char c) { sc_strlit_append_char(st, c); }
-
-char *sc_strlit_end(LexerState *st) { return strdup(st->strlit_buf); }
+/* ========================================================== */
+/* Public API                                                 */
+/* ========================================================== */
 
 ScTokenBuf snocone_lex2(const char *source) {
     LexerState st;
     memset(&st, 0, sizeof(st));
-    st.prev = PT_NONE;
-    st.call_stack_top = -1;
 
     ScTokenBuf buf;
     memset(&buf, 0, sizeof(buf));
     st.buf = &buf;
+
+    sc_lineno = 1;
 
     yyscan_t scanner;
     sc_lex_init_extra(&st, &scanner);
@@ -2817,88 +3109,103 @@ ScTokenBuf snocone_lex2(const char *source) {
     sc__delete_buffer(ybuf, scanner);
     sc_lex_destroy(scanner);
 
-    if (st.strlit_buf) free(st.strlit_buf);
     return buf;
 }
 
 void sc_token_buf_free(ScTokenBuf *buf) {
     for (int i = 0; i < buf->count; i++) free(buf->tokens[i].text);
     free(buf->tokens);
-    buf->tokens = NULL; buf->count = 0; buf->capacity = 0;
+    buf->tokens = NULL;
+    buf->count = 0;
+    buf->capacity = 0;
 }
 
 const char *sc2_kind_name(int kind) {
     switch (kind) {
-    case SC2_INTEGER:           return "INTEGER";
-    case SC2_REAL:              return "REAL";
-    case SC2_STRING:            return "STRING";
-    case SC2_IDENT:             return "IDENT";
-    case SC2_IDENT_LPAREN_NOSP: return "IDENT_LPAREN_NOSP";
-    case SC2_KEYWORD_NAME:      return "KEYWORD_NAME";
-    case SC2_CONCAT:            return "CONCAT";
-    case SC2_ASSIGN:            return "ASSIGN";
-    case SC2_QUESTION:          return "QUESTION";
-    case SC2_PIPE:              return "PIPE";
-    case SC2_EQ:                return "EQ";
-    case SC2_NE:                return "NE";
-    case SC2_LT:                return "LT";
-    case SC2_GT:                return "GT";
-    case SC2_LE:                return "LE";
-    case SC2_GE:                return "GE";
-    case SC2_STR_IDENT:         return "STR_IDENT";
-    case SC2_STR_DIFFER:        return "STR_DIFFER";
-    case SC2_STR_LT:            return "STR_LT";
-    case SC2_STR_GT:            return "STR_GT";
-    case SC2_STR_LE:            return "STR_LE";
-    case SC2_STR_GE:            return "STR_GE";
-    case SC2_STR_EQ:            return "STR_EQ";
-    case SC2_STR_NE:            return "STR_NE";
-    case SC2_PLUS:              return "PLUS";
-    case SC2_MINUS:             return "MINUS";
-    case SC2_SLASH:             return "SLASH";
-    case SC2_STAR:              return "STAR";
-    case SC2_PERCENT:           return "PERCENT";
-    case SC2_CARET:             return "CARET";
-    case SC2_BANG_EXPONENT:     return "BANG_EXPONENT";
-    case SC2_PERIOD:            return "PERIOD";
-    case SC2_DOLLAR:            return "DOLLAR";
-    case SC2_AT:                return "AT";
-    case SC2_TILDE:             return "TILDE";
-    case SC2_AMPERSAND:         return "AMPERSAND";
-    case SC2_PLUS_ASSIGN:       return "PLUS_ASSIGN";
-    case SC2_MINUS_ASSIGN:      return "MINUS_ASSIGN";
-    case SC2_STAR_ASSIGN:       return "STAR_ASSIGN";
-    case SC2_SLASH_ASSIGN:      return "SLASH_ASSIGN";
-    case SC2_CARET_ASSIGN:      return "CARET_ASSIGN";
-    case SC2_LPAREN:            return "LPAREN";
-    case SC2_RPAREN:            return "RPAREN";
-    case SC2_LBRACE:            return "LBRACE";
-    case SC2_RBRACE:            return "RBRACE";
-    case SC2_LBRACKET:          return "LBRACKET";
-    case SC2_RBRACKET:          return "RBRACKET";
-    case SC2_COMMA:             return "COMMA";
-    case SC2_SEMICOLON:         return "SEMICOLON";
-    case SC2_COLON:             return "COLON";
-    case SC2_KW_IF:             return "KW_IF";
-    case SC2_KW_ELSE:           return "KW_ELSE";
-    case SC2_KW_WHILE:          return "KW_WHILE";
-    case SC2_KW_DO:             return "KW_DO";
-    case SC2_KW_UNTIL:          return "KW_UNTIL";
-    case SC2_KW_FOR:            return "KW_FOR";
-    case SC2_KW_SWITCH:         return "KW_SWITCH";
-    case SC2_KW_CASE:           return "KW_CASE";
-    case SC2_KW_DEFAULT:        return "KW_DEFAULT";
-    case SC2_KW_BREAK:          return "KW_BREAK";
-    case SC2_KW_CONTINUE:       return "KW_CONTINUE";
-    case SC2_KW_GOTO:           return "KW_GOTO";
-    case SC2_KW_FUNCTION:       return "KW_FUNCTION";
-    case SC2_KW_RETURN:         return "KW_RETURN";
-    case SC2_KW_FRETURN:        return "KW_FRETURN";
-    case SC2_KW_NRETURN:        return "KW_NRETURN";
-    case SC2_KW_STRUCT:         return "KW_STRUCT";
-    case SC2_EOF:               return "EOF";
-    case SC2_UNKNOWN:           return "UNKNOWN";
-    default:                    return "???";
+    case T_INT:                  return "T_INT";
+    case T_REAL:                 return "T_REAL";
+    case T_STR:                  return "T_STR";
+    case T_IDENT:                return "T_IDENT";
+    case T_FUNCTION:             return "T_FUNCTION";
+    case T_KEYWORD:              return "T_KEYWORD";
+    case T_CONCAT:               return "T_CONCAT";
+    case T_ASSIGNMENT:           return "T_ASSIGNMENT";
+    case T_MATCH:                return "T_MATCH";
+    case T_ALTERNATION:          return "T_ALTERNATION";
+    case T_ADDITION:             return "T_ADDITION";
+    case T_SUBTRACTION:          return "T_SUBTRACTION";
+    case T_MULTIPLICATION:       return "T_MULTIPLICATION";
+    case T_DIVISION:             return "T_DIVISION";
+    case T_EXPONENTIATION:       return "T_EXPONENTIATION";
+    case T_IMMEDIATE_ASSIGN:     return "T_IMMEDIATE_ASSIGN";
+    case T_COND_ASSIGN:          return "T_COND_ASSIGN";
+    case T_AMPERSAND:            return "T_AMPERSAND";
+    case T_AT_SIGN:              return "T_AT_SIGN";
+    case T_POUND:                return "T_POUND";
+    case T_PERCENT:              return "T_PERCENT";
+    case T_TILDE:                return "T_TILDE";
+    case T_EQ:                   return "T_EQ";
+    case T_NE:                   return "T_NE";
+    case T_LT:                   return "T_LT";
+    case T_GT:                   return "T_GT";
+    case T_LE:                   return "T_LE";
+    case T_GE:                   return "T_GE";
+    case T_LEQ:                  return "T_LEQ";
+    case T_LNE:                  return "T_LNE";
+    case T_LLT:                  return "T_LLT";
+    case T_LGT:                  return "T_LGT";
+    case T_LLE:                  return "T_LLE";
+    case T_LGE:                  return "T_LGE";
+    case T_IDENT_OP:             return "T_IDENT_OP";
+    case T_DIFFER:               return "T_DIFFER";
+    case T_PLUS_ASSIGN:          return "T_PLUS_ASSIGN";
+    case T_MINUS_ASSIGN:         return "T_MINUS_ASSIGN";
+    case T_STAR_ASSIGN:          return "T_STAR_ASSIGN";
+    case T_SLASH_ASSIGN:         return "T_SLASH_ASSIGN";
+    case T_CARET_ASSIGN:         return "T_CARET_ASSIGN";
+    case T_UN_PLUS:              return "T_UN_PLUS";
+    case T_UN_MINUS:             return "T_UN_MINUS";
+    case T_UN_ASTERISK:          return "T_UN_ASTERISK";
+    case T_UN_SLASH:             return "T_UN_SLASH";
+    case T_UN_PERCENT:           return "T_UN_PERCENT";
+    case T_UN_AT_SIGN:           return "T_UN_AT_SIGN";
+    case T_UN_TILDE:             return "T_UN_TILDE";
+    case T_UN_DOLLAR_SIGN:       return "T_UN_DOLLAR_SIGN";
+    case T_UN_PERIOD:            return "T_UN_PERIOD";
+    case T_UN_POUND:             return "T_UN_POUND";
+    case T_UN_VERTICAL_BAR:      return "T_UN_VERTICAL_BAR";
+    case T_UN_EQUAL:             return "T_UN_EQUAL";
+    case T_UN_QUESTION_MARK:     return "T_UN_QUESTION_MARK";
+    case T_UN_AMPERSAND:         return "T_UN_AMPERSAND";
+    case T_LPAREN:               return "T_LPAREN";
+    case T_RPAREN:               return "T_RPAREN";
+    case T_LBRACE:               return "T_LBRACE";
+    case T_RBRACE:               return "T_RBRACE";
+    case T_LBRACK:               return "T_LBRACK";
+    case T_RBRACK:               return "T_RBRACK";
+    case T_COMMA:                return "T_COMMA";
+    case T_SEMICOLON:            return "T_SEMICOLON";
+    case T_COLON:                return "T_COLON";
+    case T_KW_IF:                return "T_KW_IF";
+    case T_KW_ELSE:              return "T_KW_ELSE";
+    case T_KW_WHILE:             return "T_KW_WHILE";
+    case T_KW_DO:                return "T_KW_DO";
+    case T_KW_UNTIL:             return "T_KW_UNTIL";
+    case T_KW_FOR:               return "T_KW_FOR";
+    case T_KW_SWITCH:            return "T_KW_SWITCH";
+    case T_KW_CASE:              return "T_KW_CASE";
+    case T_KW_DEFAULT:           return "T_KW_DEFAULT";
+    case T_KW_BREAK:             return "T_KW_BREAK";
+    case T_KW_CONTINUE:          return "T_KW_CONTINUE";
+    case T_KW_GOTO:              return "T_KW_GOTO";
+    case T_KW_FUNCTION:          return "T_KW_FUNCTION";
+    case T_KW_RETURN:            return "T_KW_RETURN";
+    case T_KW_FRETURN:           return "T_KW_FRETURN";
+    case T_KW_NRETURN:           return "T_KW_NRETURN";
+    case T_KW_STRUCT:            return "T_KW_STRUCT";
+    case T_EOF:                  return "T_EOF";
+    case T_UNKNOWN:              return "T_UNKNOWN";
+    default:                     return "T_???";
     }
 }
 

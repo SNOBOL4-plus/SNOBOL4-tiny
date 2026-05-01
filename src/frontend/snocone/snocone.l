@@ -1,334 +1,379 @@
-/*
- * snocone.l — Snocone language Flex lexer  (GOAL-SNOCONE-LANG-SPACE LS-3.a)
- *
- * Andrew Koenig .sc operator set minus &&, ||, % plus CONCAT synthetic.
- * Commit identity: LCherryholmes / lcherryh@yahoo.com
- */
-
-%option noyywrap nounput noinput
-%option reentrant
-%option extra-type="LexerState *"
-%option prefix="sc_"
-%option yylineno
-
 %{
+/*
+ * snocone.l — Snocone Flex lexer (GOAL-SNOCONE-LANG-SPACE LS-3)
+ *
+ * DESIGN:
+ *   Space envelops the operator.  Pattern {W}OP{W} matches the operator
+ *   together with its surrounding whitespace.  Whitespace alone (between
+ *   two atoms with no operator between them) lexes as T_CONCAT.  Unary
+ *   versions of dual-role operators arrive bare (no leading space) and
+ *   are returned as T_UN_*.  This matches the snobol4.l lexer pattern
+ *   exactly (lines 235-315 of snobol4.l).
+ *
+ *   The CONCAT decision is therefore not a previous-token state machine
+ *   — it falls out of the rule patterns themselves.  This is the
+ *   elegant SNOBOL4-Flex approach: longest-match selects the right rule,
+ *   and the token stream is unambiguous by construction.
+ *
+ * NAMING: token names match snobol4.tab.h conventions (T_IDENT, T_INT,
+ *   T_REAL, T_STR, T_FUNCTION, T_KEYWORD, T_CONCAT, T_ADDITION, etc.)
+ *   to keep one4all "same names everywhere for any concept equivalence"
+ *   (RULES.md / Lon's session-#9 directive).
+ *
+ * Andrew's .sc operator set, minus &&, ||, %.  Plus C-style control
+ * flow keywords (if/else/while/do/until/for/switch/case/default/break/
+ * continue/goto/function/return/freturn/nreturn/struct).
+ *
+ * Commit identity: LCherryholmes / lcherryh@yahoo.com  (RULES.md)
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "snocone_lex2.h"
 
-static int  classify_keyword(const char *s);
-static void push_token_impl(ScTokenBuf *buf, int kind, const char *text, int line);
-static int  can_start_expr_kind(int kind);
-static void update_prev(LexerState *st, int kind);
-static void maybe_emit_concat(LexerState *st, int next_can_start, int lineno);
-static void push_call_depth(LexerState *st);
-static int  pop_call_depth(LexerState *st);
+static int   sc_lineno = 1;
+static char  sc_strbuf[65536];
+static int   sc_strpos;
 
-#define TOK(kind) \
-    do { \
-        maybe_emit_concat(yyextra, can_start_expr_kind(kind), yylineno); \
-        push_token_impl(yyextra->buf, (kind), yytext, yylineno); \
-        update_prev(yyextra, (kind)); \
-        yyextra->whitespace_seen = 0; \
-    } while(0)
+static void emit_simple(LexerState *st, int kind, const char *text);
+static void emit_str(LexerState *st, const char *s);
+static int  classify_keyword(const char *s);
+static void count_newlines(const char *s);
+
+/* push token with default text=yytext */
+#define EMIT(kind) emit_simple(yyextra, (kind), yytext)
+#define EMIT_NL(kind) do { count_newlines(yytext); emit_simple(yyextra, (kind), yytext); } while(0)
 
 %}
 
-DIGIT    [0-9]
-LETTER   [A-Za-z_]
-ALNUM    [A-Za-z0-9_]
-WS       [ \t\r\f]
-NL       \n
-EXP      [eEdD][+-]?{DIGIT}+
+%option noyywrap nounput noinput
+%option reentrant
+%option extra-type="LexerState *"
+%option prefix="sc_"
 
-%x IN_SQ IN_DQ IN_BLOCK_COMMENT
+%x BODY_START BODY STR1 STR2 BLOCK_COMMENT
+
+DIGIT   [0-9]
+ALPHA   [A-Za-z_]
+IDCONT  [A-Za-z0-9_]
+EXP     [eEdD][+-]?{DIGIT}+
+WS      [ \t\r\f]
+CONT    \n[+.][ \t\r\f]*
+W       ({WS}|{CONT}|\n)+
+G       ({WS}|{CONT}|\n)*
 
 %%
 
-{WS}+                   { yyextra->whitespace_seen = 1; }
-{NL}                    { yyextra->whitespace_seen = 1; }
-^[+.][^\n]*{NL}         { yyextra->whitespace_seen = 1; }
-"//"[^\n]*              { yyextra->whitespace_seen = 1; }
-"/*"                    { BEGIN(IN_BLOCK_COMMENT); yyextra->whitespace_seen = 1; }
-<IN_BLOCK_COMMENT>"*/"  { BEGIN(INITIAL); }
-<IN_BLOCK_COMMENT>{NL}  { /* absorbed */ }
-<IN_BLOCK_COMMENT>.     { /* absorbed */ }
+  /* INITIAL: jump straight into BODY (no card-format dispatch in Snocone —
+   * Snocone uses C-style blocks, semicolons, and free-form layout). */
+.|\n            { yyless(0); BEGIN(BODY); }
 
-\'          { BEGIN(IN_SQ); sc_strlit_begin(yyextra, '\'', yylineno); }
-<IN_SQ>\'\'  { sc_strlit_append_char(yyextra, '\''); }
-<IN_SQ>\'   {
-    BEGIN(INITIAL);
-    int ln = yyextra->strlit_start_line;
-    char *s = sc_strlit_end(yyextra);
-    maybe_emit_concat(yyextra, 1, ln);
-    push_token_impl(yyextra->buf, SC2_STRING, s, ln);
-    free(s);
-    update_prev(yyextra, SC2_STRING);
-    yyextra->whitespace_seen = 0;
+  /* ========================================================== */
+  /* BODY: statement body                                       */
+  /* ========================================================== */
+
+  /* Comments are pure whitespace (transparent for CONCAT). */
+<BODY>"//"[^\n]*           { /* line comment — fall through to next ws */ }
+<BODY>"/*"                  { BEGIN(BLOCK_COMMENT); }
+
+<BLOCK_COMMENT>"*/"         { BEGIN(BODY); }
+<BLOCK_COMMENT>\n           { sc_lineno++; }
+<BLOCK_COMMENT>.            { /* absorbed */ }
+
+  /* String literals — STR1 single-quote, STR2 double-quote.
+   * SNOBOL4 strings: no backslash escapes; '' inside '...' is one '.   */
+<BODY>\'                    { sc_strpos = 0; BEGIN(STR1); }
+<BODY>\"                    { sc_strpos = 0; BEGIN(STR2); }
+
+<STR1>\'\'                  { sc_strbuf[sc_strpos++] = '\''; }
+<STR1>\'                    { sc_strbuf[sc_strpos] = '\0';
+                              BEGIN(BODY);
+                              emit_str(yyextra, sc_strbuf); }
+<STR1>\n                    { sc_strbuf[sc_strpos++] = '\n'; sc_lineno++; }
+<STR1>.                     { sc_strbuf[sc_strpos++] = yytext[0]; }
+
+<STR2>\"\"                  { sc_strbuf[sc_strpos++] = '"'; }
+<STR2>\"                    { sc_strbuf[sc_strpos] = '\0';
+                              BEGIN(BODY);
+                              emit_str(yyextra, sc_strbuf); }
+<STR2>\n                    { sc_strbuf[sc_strpos++] = '\n'; sc_lineno++; }
+<STR2>.                     { sc_strbuf[sc_strpos++] = yytext[0]; }
+
+  /* &IDENT as one token (no space between & and ident) — like SNOBOL4 */
+<BODY>"&"{ALPHA}{IDCONT}*   { emit_simple(yyextra, T_KEYWORD, yytext + 1); }
+
+  /* T_CONCAT: pure whitespace between two atoms — emit if previous token
+   * was atom-class.  We inhibit emission immediately after openers / before
+   * closers / at end-of-statement using the prev-token-class check inside
+   * emit_simple.  In the {W}OP{W} pattern below, the operator's surrounding
+   * space is consumed *with* the operator, so plain {W} only matches when
+   * no operator follows — that's where CONCAT belongs. */
+<BODY>{W}                   { count_newlines(yytext);
+                              emit_simple(yyextra, T_CONCAT, ""); }
+
+  /* ========================================================== */
+  /* Binary operators: {W} OP {W}                              */
+  /* The mandatory whitespace on at least one side distinguishes */
+  /* binary use from unary.  Where unary form is the ONLY        */
+  /* meaningful interpretation we drop the W-envelope.           */
+  /* ========================================================== */
+
+  /* SPITBOL/Snocone priority-0 assign — = with required surrounding space */
+<BODY>{W}"="{W}             { EMIT_NL(T_ASSIGNMENT); }
+  /* = at end-of-line / no trailing space — still T_ASSIGNMENT (DYN-63 mirror) */
+<BODY>{W}"="                 { EMIT_NL(T_ASSIGNMENT); }
+
+  /* Pattern match — same shape */
+<BODY>{W}"?"{W}             { EMIT_NL(T_MATCH); }
+
+  /* Alternation */
+<BODY>{W}"|"{W}             { EMIT_NL(T_ALTERNATION); }
+
+  /* String comparison — multi-character, must come BEFORE the */
+  /* single-char rules to win the longest-match contest.       */
+<BODY>{W}":==:"{W}          { EMIT_NL(T_LEQ); }
+<BODY>{W}":!=:"{W}          { EMIT_NL(T_LNE); }
+<BODY>{W}":<=:"{W}          { EMIT_NL(T_LLE); }
+<BODY>{W}":>=:"{W}          { EMIT_NL(T_LGE); }
+<BODY>{W}":<:"{W}           { EMIT_NL(T_LLT); }
+<BODY>{W}":>:"{W}           { EMIT_NL(T_LGT); }
+<BODY>{W}":!:"{W}           { EMIT_NL(T_DIFFER); }
+<BODY>{W}"::"{W}            { EMIT_NL(T_IDENT_OP); }
+
+  /* Numeric comparison (Andrew's .sc 6-op set) */
+<BODY>{W}"=="{W}            { EMIT_NL(T_EQ); }
+<BODY>{W}"!="{W}            { EMIT_NL(T_NE); }
+<BODY>{W}"<="{W}            { EMIT_NL(T_LE); }
+<BODY>{W}">="{W}            { EMIT_NL(T_GE); }
+<BODY>{W}"<"{W}             { EMIT_NL(T_LT); }
+<BODY>{W}">"{W}             { EMIT_NL(T_GT); }
+
+  /* Compound-assignments — adopted in today's lexer; LS-2 will decide
+   * whether the grammar accepts these.  The lexer keeps them. */
+<BODY>{G}"+="{G}            { EMIT_NL(T_PLUS_ASSIGN); }
+<BODY>{G}"-="{G}            { EMIT_NL(T_MINUS_ASSIGN); }
+<BODY>{G}"*="{G}            { EMIT_NL(T_STAR_ASSIGN); }
+<BODY>{G}"/="{G}            { EMIT_NL(T_SLASH_ASSIGN); }
+<BODY>{G}"^="{G}            { EMIT_NL(T_CARET_ASSIGN); }
+
+  /* Exponentiation synonyms: ^, **, !  (pri 11 right-assoc) */
+<BODY>{W}"**"{W}            { EMIT_NL(T_EXPONENTIATION); }
+<BODY>{W}"^"{W}             { EMIT_NL(T_EXPONENTIATION); }
+<BODY>{W}"!"{W}             { EMIT_NL(T_EXPONENTIATION); }
+
+  /* Arithmetic */
+<BODY>{W}"+"{W}             { EMIT_NL(T_ADDITION); }
+<BODY>{W}"-"{W}             { EMIT_NL(T_SUBTRACTION); }
+<BODY>{W}"*"{W}             { EMIT_NL(T_MULTIPLICATION); }
+<BODY>{W}"/"{W}             { EMIT_NL(T_DIVISION); }
+
+  /* Indirection (binary $ — immediate assign in pattern context) */
+<BODY>{W}"$"{W}             { EMIT_NL(T_IMMEDIATE_ASSIGN); }
+  /* Name-of (binary . — conditional assign in pattern context) */
+<BODY>{W}"."{W}             { EMIT_NL(T_COND_ASSIGN); }
+
+  /* OPSYN slot operators (binary forms — Andrew's & % @ # ~) */
+<BODY>{W}"&"{W}             { EMIT_NL(T_AMPERSAND); }
+<BODY>{W}"@"{W}             { EMIT_NL(T_AT_SIGN); }
+<BODY>{W}"%"{W}             { EMIT_NL(T_PERCENT); }
+<BODY>{W}"~"{W}             { EMIT_NL(T_TILDE); }
+<BODY>{W}"#"{W}             { EMIT_NL(T_POUND); }
+
+  /* ========================================================== */
+  /* Structural punctuation                                    */
+  /* ========================================================== */
+
+  /* ( absorbs trailing gray (matches snobol4.l line 281).
+   * IMPORTANT: ( with NO leading whitespace and a preceding identifier
+   * is the call-form — handled by the T_FUNCTION rule below via trailing
+   * context.  This rule fires for sub-expression parens.            */
+<BODY>"("{G}                { EMIT_NL(T_LPAREN); }
+<BODY>{G}")"                { EMIT_NL(T_RPAREN); }
+<BODY>"["{G}                { EMIT_NL(T_LBRACK); }
+<BODY>{G}"]"                { EMIT_NL(T_RBRACK); }
+<BODY>{G}","{G}             { EMIT_NL(T_COMMA); }
+<BODY>{G}";"                { EMIT_NL(T_SEMICOLON); }
+
+  /* Block braces (Snocone-only) — gray on outside */
+<BODY>{G}"{"{G}             { EMIT_NL(T_LBRACE); }
+<BODY>{G}"}"                { EMIT_NL(T_RBRACE); }
+
+  /* Colon: label suffix.  Andrew's .sc uses `name : clause` (label) and
+   * `case value :` (switch case).  This is a bare colon — the multi-char
+   * comparison rules above (`:==:` etc.) win longest-match. */
+<BODY>{G}":"                { EMIT_NL(T_COLON); }
+
+  /* ========================================================== */
+  /* Atoms — arrive bare (preceding T_CONCAT or W{OP} consumed   */
+  /* the leading whitespace already)                            */
+  /* ========================================================== */
+
+  /* T_FUNCTION: identifier immediately followed by '(' (no space).
+   * Same trick as snobol4.l line 290.  The '(' stays in the input
+   * stream — the BODY '(' rule consumes it next as T_LPAREN.  Grammar
+   * sees: T_FUNCTION T_LPAREN args T_RPAREN. */
+<BODY>{ALPHA}{IDCONT}*/"("  { emit_simple(yyextra, T_FUNCTION, yytext); }
+
+  /* T_IDENT or keyword */
+<BODY>{ALPHA}{IDCONT}*      {
+                              int kind = classify_keyword(yytext);
+                              emit_simple(yyextra, kind, yytext);
+                            }
+
+  /* Numbers — REAL forms before INT (longest-match) */
+<BODY>{DIGIT}+\.{DIGIT}*({EXP})?  { EMIT(T_REAL); }
+<BODY>{DIGIT}+{EXP}                { EMIT(T_REAL); }
+<BODY>\.{DIGIT}+({EXP})?           { EMIT(T_REAL); }
+<BODY>{DIGIT}+                     { EMIT(T_INT); }
+
+  /* ========================================================== */
+  /* Unary operators — bare (no leading W).  The grammar has    */
+  /* T_UN_* productions for each.                               */
+  /* ========================================================== */
+
+<BODY>"**"   { EMIT(T_EXPONENTIATION); }
+<BODY>"^"    { EMIT(T_EXPONENTIATION); }
+<BODY>"!"    { EMIT(T_EXPONENTIATION); }
+<BODY>"+"    { EMIT(T_UN_PLUS); }
+<BODY>"-"    { EMIT(T_UN_MINUS); }
+<BODY>"*"    { EMIT(T_UN_ASTERISK); }
+<BODY>"/"    { EMIT(T_UN_SLASH); }
+<BODY>"%"    { EMIT(T_UN_PERCENT); }
+<BODY>"@"    { EMIT(T_UN_AT_SIGN); }
+<BODY>"~"    { EMIT(T_UN_TILDE); }
+<BODY>"$"    { EMIT(T_UN_DOLLAR_SIGN); }
+<BODY>"."    { EMIT(T_UN_PERIOD); }
+<BODY>"#"    { EMIT(T_UN_POUND); }
+<BODY>"|"    { EMIT(T_UN_VERTICAL_BAR); }
+<BODY>"="    { EMIT(T_UN_EQUAL); }
+<BODY>"?"    { EMIT(T_UN_QUESTION_MARK); }
+<BODY>"&"    { EMIT(T_UN_AMPERSAND); }
+
+<BODY>.      {
+    /* Unrecognised character */
+    emit_simple(yyextra, T_UNKNOWN, yytext);
 }
-<IN_SQ>{NL}  { sc_strlit_append_char(yyextra, '\n'); }
-<IN_SQ>.     { sc_strlit_append_char(yyextra, yytext[0]); }
 
-\"          { BEGIN(IN_DQ); sc_strlit_begin(yyextra, '"', yylineno); }
-<IN_DQ>\"\"  { sc_strlit_append_char(yyextra, '"'); }
-<IN_DQ>\"   {
-    BEGIN(INITIAL);
-    int ln = yyextra->strlit_start_line;
-    char *s = sc_strlit_end(yyextra);
-    maybe_emit_concat(yyextra, 1, ln);
-    push_token_impl(yyextra->buf, SC2_STRING, s, ln);
-    free(s);
-    update_prev(yyextra, SC2_STRING);
-    yyextra->whitespace_seen = 0;
-}
-<IN_DQ>{NL}  { sc_strlit_append_char(yyextra, '\n'); }
-<IN_DQ>.     { sc_strlit_append_char(yyextra, yytext[0]); }
-
-{DIGIT}+\.{DIGIT}*({EXP})?    { TOK(SC2_REAL); }
-{DIGIT}+{EXP}                  { TOK(SC2_REAL); }
-\.{DIGIT}+({EXP})?             { TOK(SC2_REAL); }
-{DIGIT}+                       { TOK(SC2_INTEGER); }
-
-"&"{LETTER}{ALNUM}*            { TOK(SC2_KEYWORD_NAME); }
-
-{LETTER}{ALNUM}*/"("    {
-    char *name = strdup(yytext);
-
-    maybe_emit_concat(yyextra, 1, yylineno);
-    push_token_impl(yyextra->buf, SC2_IDENT_LPAREN_NOSP, name, yylineno);
-    free(name);
-    push_call_depth(yyextra);
-    update_prev(yyextra, SC2_IDENT_LPAREN_NOSP);
-    yyextra->whitespace_seen = 0;
-    yyextra->absorb_next_lparen = 1;  /* next '(' is the call-open, absorb silently */
-}
-{LETTER}{ALNUM}*       { TOK(classify_keyword(yytext)); }
-
-":!=:"  { TOK(SC2_STR_NE); }
-":<=:"  { TOK(SC2_STR_LE); }
-":>=:"  { TOK(SC2_STR_GE); }
-":==:"  { TOK(SC2_STR_EQ); }
-":!:"   { TOK(SC2_STR_DIFFER); }
-":<:"   { TOK(SC2_STR_LT); }
-":>:"   { TOK(SC2_STR_GT); }
-"+="    { TOK(SC2_PLUS_ASSIGN); }
-"-="    { TOK(SC2_MINUS_ASSIGN); }
-"*="    { TOK(SC2_STAR_ASSIGN); }
-"/="    { TOK(SC2_SLASH_ASSIGN); }
-"^="    { TOK(SC2_CARET_ASSIGN); }
-"::"    { TOK(SC2_STR_IDENT); }
-"=="    { TOK(SC2_EQ); }
-"!="    { TOK(SC2_NE); }
-"<="    { TOK(SC2_LE); }
-">="    { TOK(SC2_GE); }
-"**"    { TOK(SC2_CARET); }
-"="     { TOK(SC2_ASSIGN); }
-"?"     { TOK(SC2_QUESTION); }
-"|"     { TOK(SC2_PIPE); }
-"+"     { TOK(SC2_PLUS); }
-"-"     { TOK(SC2_MINUS); }
-"/"     { TOK(SC2_SLASH); }
-"*"     { TOK(SC2_STAR); }
-"^"     { TOK(SC2_CARET); }
-"."     { TOK(SC2_PERIOD); }
-"$"     { TOK(SC2_DOLLAR); }
-"&"     { TOK(SC2_AMPERSAND); }
-"@"     { TOK(SC2_AT); }
-"~"     { TOK(SC2_TILDE); }
-"<"     { TOK(SC2_LT); }
-">"     { TOK(SC2_GT); }
-"%"     { TOK(SC2_PERCENT); }
-"!"     { TOK(SC2_BANG_EXPONENT); }
-
-"("     {
-    if (yyextra->absorb_next_lparen) {
-        /* This '(' is the call-open paren implied by IDENT_LPAREN_NOSP.
-         * Do NOT emit a LPAREN token — the grammar knows from the
-         * IDENT_LPAREN_NOSP token that a '(' was consumed.
-         * DO increment paren_depth so RPAREN tracking works. */
-        yyextra->absorb_next_lparen = 0;
-        yyextra->paren_depth++;
-        /* prev stays PT_OPEN (set by update_prev for IDENT_LPAREN_NOSP) */
-    } else {
-        maybe_emit_concat(yyextra, 1, yylineno);
-        push_token_impl(yyextra->buf, SC2_LPAREN, yytext, yylineno);
-        yyextra->paren_depth++;
-        update_prev(yyextra, SC2_LPAREN);
-        yyextra->whitespace_seen = 0;
-    }
-}
-")"     {
-    int is_call = pop_call_depth(yyextra);
-    (void)is_call;
-    maybe_emit_concat(yyextra, 0, yylineno);
-    push_token_impl(yyextra->buf, SC2_RPAREN, yytext, yylineno);
-    if (yyextra->paren_depth > 0) yyextra->paren_depth--;
-    update_prev(yyextra, SC2_RPAREN);
-    yyextra->whitespace_seen = 0;
-}
-"{"     { TOK(SC2_LBRACE); }
-"}"     { TOK(SC2_RBRACE); }
-"["     { TOK(SC2_LBRACKET); }
-"]"     { TOK(SC2_RBRACKET); }
-","     { TOK(SC2_COMMA); }
-";"     { TOK(SC2_SEMICOLON); }
-":"     { TOK(SC2_COLON); }
-
-<<EOF>> {
-    push_token_impl(yyextra->buf, SC2_EOF, "", yylineno);
+<<EOF>>      {
+    emit_simple(yyextra, T_EOF, "");
     yyterminate();
 }
 
-.       {
-    push_token_impl(yyextra->buf, SC2_UNKNOWN, yytext, yylineno);
-    yyextra->whitespace_seen = 0;
-}
-
 %%
+
+/* ========================================================== */
+/* Keyword table — case-sensitive (RULES.md)                  */
+/* ========================================================== */
 
 typedef struct { const char *word; int kind; } KwEntry;
 static const KwEntry KW_TABLE[] = {
-    { "if",       SC2_KW_IF       },
-    { "else",     SC2_KW_ELSE     },
-    { "while",    SC2_KW_WHILE    },
-    { "do",       SC2_KW_DO       },
-    { "until",    SC2_KW_UNTIL    },
-    { "for",      SC2_KW_FOR      },
-    { "switch",   SC2_KW_SWITCH   },
-    { "case",     SC2_KW_CASE     },
-    { "default",  SC2_KW_DEFAULT  },
-    { "break",    SC2_KW_BREAK    },
-    { "continue", SC2_KW_CONTINUE },
-    { "goto",     SC2_KW_GOTO     },
-    { "function", SC2_KW_FUNCTION },
-    { "return",   SC2_KW_RETURN   },
-    { "freturn",  SC2_KW_FRETURN  },
-    { "nreturn",  SC2_KW_NRETURN  },
-    { "struct",   SC2_KW_STRUCT   },
-    { NULL,       SC2_IDENT       }
+    /* Control flow */
+    { "if",       T_KW_IF       },
+    { "else",     T_KW_ELSE     },
+    { "while",    T_KW_WHILE    },
+    { "do",       T_KW_DO       },
+    { "until",    T_KW_UNTIL    },
+    { "for",      T_KW_FOR      },
+    { "switch",   T_KW_SWITCH   },
+    { "case",     T_KW_CASE     },
+    { "default",  T_KW_DEFAULT  },
+    { "break",    T_KW_BREAK    },
+    { "continue", T_KW_CONTINUE },
+    { "goto",     T_KW_GOTO     },
+    /* Function / return */
+    { "function", T_KW_FUNCTION },   /* RENAMED from procedure (session #7) */
+    { "return",   T_KW_RETURN   },
+    { "freturn",  T_KW_FRETURN  },
+    { "nreturn",  T_KW_NRETURN  },
+    /* Data */
+    { "struct",   T_KW_STRUCT   },
+    { NULL,       T_IDENT       }
 };
 
 static int classify_keyword(const char *s) {
     for (const KwEntry *e = KW_TABLE; e->word; e++)
         if (strcmp(s, e->word) == 0) return e->kind;
-    return SC2_IDENT;
+    return T_IDENT;
 }
 
-static int can_start_expr_kind(int kind) {
-    /* Only tokens that are UNAMBIGUOUSLY the start of a new operand trigger
-     * CONCAT emission.  Tokens that double as binary operators (?, &, +, -, *,
-     * ., $) do NOT trigger CONCAT — in a post-value position they are binary.
-     * The grammar handles precedence from there. */
+/* ========================================================== */
+/* Token-buffer accumulation                                  */
+/* ========================================================== */
+
+static void emit_simple(LexerState *st, int kind, const char *text) {
+    /* CONCAT suppression: never emit two CONCATs in a row, never emit
+     * CONCAT at the start of the token stream, never emit CONCAT
+     * immediately after an opener or operator (its purpose is to
+     * separate two value-yielding atoms only). */
+    if (kind == T_CONCAT) {
+        if (st->buf->count == 0) return;
+        int last = st->buf->tokens[st->buf->count - 1].kind;
+        if (last == T_CONCAT) return;
+        /* If the previous token is non-value (operator, opener, separator),
+         * the whitespace is just trivia.  Only emit CONCAT after value-
+         * yielding tokens. */
+        if (!sc_kind_is_value(last)) return;
+    }
+
+    /* If we were about to emit a value-yielding token but the previous
+     * token was also a value-yielding token AND no CONCAT has been
+     * emitted between them, the source had no whitespace between the
+     * two atoms.  In SNOBOL4 lexing the {W} envelope already inserts
+     * the CONCAT (because at least one space is required between two
+     * atoms with no operator between them).  In Snocone we inherit
+     * the same property: this branch is dead in correct programs. */
+
+    if (st->buf->count >= st->buf->capacity) {
+        st->buf->capacity = st->buf->capacity ? st->buf->capacity * 2 : 64;
+        st->buf->tokens   = realloc(st->buf->tokens,
+                                    st->buf->capacity * sizeof(ScToken2));
+    }
+    ScToken2 *t = &st->buf->tokens[st->buf->count++];
+    t->kind = kind;
+    t->text = strdup(text);
+    t->line = sc_lineno;
+}
+
+static void emit_str(LexerState *st, const char *s) {
+    emit_simple(st, T_STR, s);
+}
+
+static void count_newlines(const char *s) {
+    for (const char *p = s; *p; p++)
+        if (*p == '\n') sc_lineno++;
+}
+
+/* sc_kind_is_value: does this token kind end an expression / could a
+ * CONCAT validly follow it? */
+int sc_kind_is_value(int kind) {
     switch (kind) {
-    case SC2_IDENT:
-    case SC2_IDENT_LPAREN_NOSP:
-    case SC2_INTEGER:
-    case SC2_REAL:
-    case SC2_STRING:
-    case SC2_KEYWORD_NAME:
-    case SC2_LPAREN:
-    case SC2_LBRACKET:
-    /* Unambiguously unary — have no binary role in the operator table */
-    case SC2_TILDE:
-    case SC2_AT:
+    case T_IDENT:
+    case T_FUNCTION:
+    case T_INT:
+    case T_REAL:
+    case T_STR:
+    case T_KEYWORD:
+    case T_RPAREN:
+    case T_RBRACK:
         return 1;
     default:
         return 0;
     }
 }
 
-static void update_prev(LexerState *st, int kind) {
-    switch (kind) {
-    case SC2_IDENT: case SC2_INTEGER: case SC2_REAL: case SC2_STRING:
-    case SC2_KEYWORD_NAME: case SC2_RPAREN: case SC2_RBRACKET:
-        st->prev = PT_VALUE; break;
-    case SC2_IDENT_LPAREN_NOSP:
-        st->prev = PT_OPEN; break;
-    case SC2_LPAREN: case SC2_LBRACE: case SC2_LBRACKET:
-        st->prev = PT_OPEN; break;
-    case SC2_COMMA: case SC2_SEMICOLON: case SC2_COLON: case SC2_RBRACE:
-        st->prev = PT_NONE; break;
-    case SC2_AMPERSAND: case SC2_AT: case SC2_TILDE:
-        st->prev = PT_UNARY_PREFIX; break;
-    case SC2_KW_IF: case SC2_KW_WHILE: case SC2_KW_FOR: case SC2_KW_DO:
-    case SC2_KW_UNTIL: case SC2_KW_SWITCH: case SC2_KW_CASE:
-    case SC2_KW_DEFAULT: case SC2_KW_FUNCTION: case SC2_KW_ELSE:
-    case SC2_KW_STRUCT:
-        st->prev = PT_KW_BLOCK_OPENER; break;
-    case SC2_KW_BREAK: case SC2_KW_CONTINUE: case SC2_KW_GOTO:
-    case SC2_KW_RETURN: case SC2_KW_FRETURN: case SC2_KW_NRETURN:
-        st->prev = PT_KW_LOOPCTRL; break;
-    default:
-        st->prev = PT_BINOP; break;
-    }
-}
-
-static void maybe_emit_concat(LexerState *st, int next_can_start, int lineno) {
-    if (st->prev == PT_VALUE && next_can_start && st->whitespace_seen)
-        push_token_impl(st->buf, SC2_CONCAT, "", lineno);
-}
-
-static void push_call_depth(LexerState *st) {
-    /* The '(' is NOT yet consumed (trailing context) so paren_depth has not
-     * been incremented yet.  Record paren_depth+1 as the target depth — that
-     * is the depth the call's RPAREN will see when it arrives. */
-    int target = st->paren_depth + 1;
-    if (st->call_stack_top < SC2_MAX_CALL_DEPTH - 1)
-        st->call_stack[++st->call_stack_top] = target;
-}
-
-static int pop_call_depth(LexerState *st) {
-    if (st->call_stack_top >= 0
-            && st->call_stack[st->call_stack_top] == st->paren_depth) {
-        st->call_stack_top--;
-        return 1;
-    }
-    return 0;
-}
-
-static void push_token_impl(ScTokenBuf *buf, int kind, const char *text, int line) {
-    if (buf->count >= buf->capacity) {
-        buf->capacity = buf->capacity ? buf->capacity * 2 : 64;
-        buf->tokens = realloc(buf->tokens, buf->capacity * sizeof(ScToken2));
-    }
-    ScToken2 *t = &buf->tokens[buf->count++];
-    t->kind = kind;
-    t->text = strdup(text);
-    t->line = line;
-}
-
-void sc_strlit_begin(LexerState *st, char quote, int line) {
-    st->strlit_quote = quote;
-    st->strlit_start_line = line;
-    st->strlit_len = 0;
-    st->strlit_cap = 64;
-    st->strlit_buf = malloc(st->strlit_cap);
-    st->strlit_buf[0] = '\0';
-}
-
-void sc_strlit_append_char(LexerState *st, char c) {
-    if (st->strlit_len + 2 >= st->strlit_cap) {
-        st->strlit_cap *= 2;
-        st->strlit_buf = realloc(st->strlit_buf, st->strlit_cap);
-    }
-    st->strlit_buf[st->strlit_len++] = c;
-    st->strlit_buf[st->strlit_len] = '\0';
-}
-
-void sc_strlit_append(LexerState *st, char c) { sc_strlit_append_char(st, c); }
-
-char *sc_strlit_end(LexerState *st) { return strdup(st->strlit_buf); }
+/* ========================================================== */
+/* Public API                                                 */
+/* ========================================================== */
 
 ScTokenBuf snocone_lex2(const char *source) {
     LexerState st;
     memset(&st, 0, sizeof(st));
-    st.prev = PT_NONE;
-    st.call_stack_top = -1;
 
     ScTokenBuf buf;
     memset(&buf, 0, sizeof(buf));
     st.buf = &buf;
+
+    sc_lineno = 1;
 
     yyscan_t scanner;
     sc_lex_init_extra(&st, &scanner);
@@ -337,87 +382,102 @@ ScTokenBuf snocone_lex2(const char *source) {
     sc__delete_buffer(ybuf, scanner);
     sc_lex_destroy(scanner);
 
-    if (st.strlit_buf) free(st.strlit_buf);
     return buf;
 }
 
 void sc_token_buf_free(ScTokenBuf *buf) {
     for (int i = 0; i < buf->count; i++) free(buf->tokens[i].text);
     free(buf->tokens);
-    buf->tokens = NULL; buf->count = 0; buf->capacity = 0;
+    buf->tokens = NULL;
+    buf->count = 0;
+    buf->capacity = 0;
 }
 
 const char *sc2_kind_name(int kind) {
     switch (kind) {
-    case SC2_INTEGER:           return "INTEGER";
-    case SC2_REAL:              return "REAL";
-    case SC2_STRING:            return "STRING";
-    case SC2_IDENT:             return "IDENT";
-    case SC2_IDENT_LPAREN_NOSP: return "IDENT_LPAREN_NOSP";
-    case SC2_KEYWORD_NAME:      return "KEYWORD_NAME";
-    case SC2_CONCAT:            return "CONCAT";
-    case SC2_ASSIGN:            return "ASSIGN";
-    case SC2_QUESTION:          return "QUESTION";
-    case SC2_PIPE:              return "PIPE";
-    case SC2_EQ:                return "EQ";
-    case SC2_NE:                return "NE";
-    case SC2_LT:                return "LT";
-    case SC2_GT:                return "GT";
-    case SC2_LE:                return "LE";
-    case SC2_GE:                return "GE";
-    case SC2_STR_IDENT:         return "STR_IDENT";
-    case SC2_STR_DIFFER:        return "STR_DIFFER";
-    case SC2_STR_LT:            return "STR_LT";
-    case SC2_STR_GT:            return "STR_GT";
-    case SC2_STR_LE:            return "STR_LE";
-    case SC2_STR_GE:            return "STR_GE";
-    case SC2_STR_EQ:            return "STR_EQ";
-    case SC2_STR_NE:            return "STR_NE";
-    case SC2_PLUS:              return "PLUS";
-    case SC2_MINUS:             return "MINUS";
-    case SC2_SLASH:             return "SLASH";
-    case SC2_STAR:              return "STAR";
-    case SC2_PERCENT:           return "PERCENT";
-    case SC2_CARET:             return "CARET";
-    case SC2_BANG_EXPONENT:     return "BANG_EXPONENT";
-    case SC2_PERIOD:            return "PERIOD";
-    case SC2_DOLLAR:            return "DOLLAR";
-    case SC2_AT:                return "AT";
-    case SC2_TILDE:             return "TILDE";
-    case SC2_AMPERSAND:         return "AMPERSAND";
-    case SC2_PLUS_ASSIGN:       return "PLUS_ASSIGN";
-    case SC2_MINUS_ASSIGN:      return "MINUS_ASSIGN";
-    case SC2_STAR_ASSIGN:       return "STAR_ASSIGN";
-    case SC2_SLASH_ASSIGN:      return "SLASH_ASSIGN";
-    case SC2_CARET_ASSIGN:      return "CARET_ASSIGN";
-    case SC2_LPAREN:            return "LPAREN";
-    case SC2_RPAREN:            return "RPAREN";
-    case SC2_LBRACE:            return "LBRACE";
-    case SC2_RBRACE:            return "RBRACE";
-    case SC2_LBRACKET:          return "LBRACKET";
-    case SC2_RBRACKET:          return "RBRACKET";
-    case SC2_COMMA:             return "COMMA";
-    case SC2_SEMICOLON:         return "SEMICOLON";
-    case SC2_COLON:             return "COLON";
-    case SC2_KW_IF:             return "KW_IF";
-    case SC2_KW_ELSE:           return "KW_ELSE";
-    case SC2_KW_WHILE:          return "KW_WHILE";
-    case SC2_KW_DO:             return "KW_DO";
-    case SC2_KW_UNTIL:          return "KW_UNTIL";
-    case SC2_KW_FOR:            return "KW_FOR";
-    case SC2_KW_SWITCH:         return "KW_SWITCH";
-    case SC2_KW_CASE:           return "KW_CASE";
-    case SC2_KW_DEFAULT:        return "KW_DEFAULT";
-    case SC2_KW_BREAK:          return "KW_BREAK";
-    case SC2_KW_CONTINUE:       return "KW_CONTINUE";
-    case SC2_KW_GOTO:           return "KW_GOTO";
-    case SC2_KW_FUNCTION:       return "KW_FUNCTION";
-    case SC2_KW_RETURN:         return "KW_RETURN";
-    case SC2_KW_FRETURN:        return "KW_FRETURN";
-    case SC2_KW_NRETURN:        return "KW_NRETURN";
-    case SC2_KW_STRUCT:         return "KW_STRUCT";
-    case SC2_EOF:               return "EOF";
-    case SC2_UNKNOWN:           return "UNKNOWN";
-    default:                    return "???";
+    case T_INT:                  return "T_INT";
+    case T_REAL:                 return "T_REAL";
+    case T_STR:                  return "T_STR";
+    case T_IDENT:                return "T_IDENT";
+    case T_FUNCTION:             return "T_FUNCTION";
+    case T_KEYWORD:              return "T_KEYWORD";
+    case T_CONCAT:               return "T_CONCAT";
+    case T_ASSIGNMENT:           return "T_ASSIGNMENT";
+    case T_MATCH:                return "T_MATCH";
+    case T_ALTERNATION:          return "T_ALTERNATION";
+    case T_ADDITION:             return "T_ADDITION";
+    case T_SUBTRACTION:          return "T_SUBTRACTION";
+    case T_MULTIPLICATION:       return "T_MULTIPLICATION";
+    case T_DIVISION:             return "T_DIVISION";
+    case T_EXPONENTIATION:       return "T_EXPONENTIATION";
+    case T_IMMEDIATE_ASSIGN:     return "T_IMMEDIATE_ASSIGN";
+    case T_COND_ASSIGN:          return "T_COND_ASSIGN";
+    case T_AMPERSAND:            return "T_AMPERSAND";
+    case T_AT_SIGN:              return "T_AT_SIGN";
+    case T_POUND:                return "T_POUND";
+    case T_PERCENT:              return "T_PERCENT";
+    case T_TILDE:                return "T_TILDE";
+    case T_EQ:                   return "T_EQ";
+    case T_NE:                   return "T_NE";
+    case T_LT:                   return "T_LT";
+    case T_GT:                   return "T_GT";
+    case T_LE:                   return "T_LE";
+    case T_GE:                   return "T_GE";
+    case T_LEQ:                  return "T_LEQ";
+    case T_LNE:                  return "T_LNE";
+    case T_LLT:                  return "T_LLT";
+    case T_LGT:                  return "T_LGT";
+    case T_LLE:                  return "T_LLE";
+    case T_LGE:                  return "T_LGE";
+    case T_IDENT_OP:             return "T_IDENT_OP";
+    case T_DIFFER:               return "T_DIFFER";
+    case T_PLUS_ASSIGN:          return "T_PLUS_ASSIGN";
+    case T_MINUS_ASSIGN:         return "T_MINUS_ASSIGN";
+    case T_STAR_ASSIGN:          return "T_STAR_ASSIGN";
+    case T_SLASH_ASSIGN:         return "T_SLASH_ASSIGN";
+    case T_CARET_ASSIGN:         return "T_CARET_ASSIGN";
+    case T_UN_PLUS:              return "T_UN_PLUS";
+    case T_UN_MINUS:             return "T_UN_MINUS";
+    case T_UN_ASTERISK:          return "T_UN_ASTERISK";
+    case T_UN_SLASH:             return "T_UN_SLASH";
+    case T_UN_PERCENT:           return "T_UN_PERCENT";
+    case T_UN_AT_SIGN:           return "T_UN_AT_SIGN";
+    case T_UN_TILDE:             return "T_UN_TILDE";
+    case T_UN_DOLLAR_SIGN:       return "T_UN_DOLLAR_SIGN";
+    case T_UN_PERIOD:            return "T_UN_PERIOD";
+    case T_UN_POUND:             return "T_UN_POUND";
+    case T_UN_VERTICAL_BAR:      return "T_UN_VERTICAL_BAR";
+    case T_UN_EQUAL:             return "T_UN_EQUAL";
+    case T_UN_QUESTION_MARK:     return "T_UN_QUESTION_MARK";
+    case T_UN_AMPERSAND:         return "T_UN_AMPERSAND";
+    case T_LPAREN:               return "T_LPAREN";
+    case T_RPAREN:               return "T_RPAREN";
+    case T_LBRACE:               return "T_LBRACE";
+    case T_RBRACE:               return "T_RBRACE";
+    case T_LBRACK:               return "T_LBRACK";
+    case T_RBRACK:               return "T_RBRACK";
+    case T_COMMA:                return "T_COMMA";
+    case T_SEMICOLON:            return "T_SEMICOLON";
+    case T_COLON:                return "T_COLON";
+    case T_KW_IF:                return "T_KW_IF";
+    case T_KW_ELSE:              return "T_KW_ELSE";
+    case T_KW_WHILE:             return "T_KW_WHILE";
+    case T_KW_DO:                return "T_KW_DO";
+    case T_KW_UNTIL:             return "T_KW_UNTIL";
+    case T_KW_FOR:               return "T_KW_FOR";
+    case T_KW_SWITCH:            return "T_KW_SWITCH";
+    case T_KW_CASE:              return "T_KW_CASE";
+    case T_KW_DEFAULT:           return "T_KW_DEFAULT";
+    case T_KW_BREAK:             return "T_KW_BREAK";
+    case T_KW_CONTINUE:          return "T_KW_CONTINUE";
+    case T_KW_GOTO:              return "T_KW_GOTO";
+    case T_KW_FUNCTION:          return "T_KW_FUNCTION";
+    case T_KW_RETURN:            return "T_KW_RETURN";
+    case T_KW_FRETURN:           return "T_KW_FRETURN";
+    case T_KW_NRETURN:           return "T_KW_NRETURN";
+    case T_KW_STRUCT:            return "T_KW_STRUCT";
+    case T_EOF:                  return "T_EOF";
+    case T_UNKNOWN:              return "T_UNKNOWN";
+    default:                     return "T_???";
     }
 }
