@@ -142,7 +142,11 @@ static const KwEntry KW_TABLE[] = {
     { "continue", T_CONTINUE },
     { "goto",     T_GOTO     },
     { "function",   T_FUNCTION },
-    { "procedure",  T_FUNCTION },  /* LS-4.k: synonym until corpus migrated to function (LS-5) */
+    /* `procedure` synonym removed session 2026-05-01 #7 — corpus
+     * migrated to `function` (61 files, 297 replacements) via
+     * util_migrate_snocone_procedure_to_function.py.  Bare
+     * `procedure` is now an IDENT (almost certainly a syntax error
+     * in any post-migration .sc file). */
     { "return",   T_RETURN   },
     { "freturn",  T_FRETURN  },
     { "nreturn",  T_NRETURN  },
