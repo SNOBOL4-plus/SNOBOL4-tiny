@@ -62,6 +62,13 @@ extern int sc_debug;
  * collide with Bison's enum sc_tokentype.  See the %code top block above. */
 struct LexCtx;
 
+/* LS-4.f — control-flow handoff structs.  Built by if_head / while_head
+ * non-terminals; consumed by sc_finalize_* in the parent rule's final
+ * action.  Forward-declared here so the %union can reference them; the
+ * full layout is defined in the epilogue alongside the helpers. */
+struct IfHead;
+struct WhileHead;
+
 /* Parser state — passed to sc_parse() via %parse-param.  Carries the
  * FSM lexer context (the single producer of tokens), the code under
  * construction, and a small error counter.  Uses CODE_t (typedef alias
@@ -72,9 +79,10 @@ typedef struct ScParseState {
     CODE_t        *code;
     const char    *filename;
     int            nerrors;
+    int            label_seq;     /* LS-4.f: synthetic label counter */
 } ScParseState;
 
-#line 78 "snocone_parse.tab.h"
+#line 86 "snocone_parse.tab.h"
 
 /* Token kinds.  */
 #ifndef SC_TOKENTYPE
@@ -146,27 +154,27 @@ typedef struct ScParseState {
     T_1EQUAL = 316,                /* T_1EQUAL  */
     T_1QUEST = 317,                /* T_1QUEST  */
     T_1AMP = 318,                  /* T_1AMP  */
-    T_LBRACE = 319,                /* T_LBRACE  */
-    T_RBRACE = 320,                /* T_RBRACE  */
-    T_COLON = 321,                 /* T_COLON  */
-    T_KW_IF = 322,                 /* T_KW_IF  */
-    T_KW_ELSE = 323,               /* T_KW_ELSE  */
-    T_KW_WHILE = 324,              /* T_KW_WHILE  */
-    T_KW_DO = 325,                 /* T_KW_DO  */
-    T_KW_UNTIL = 326,              /* T_KW_UNTIL  */
-    T_KW_FOR = 327,                /* T_KW_FOR  */
-    T_KW_SWITCH = 328,             /* T_KW_SWITCH  */
-    T_KW_CASE = 329,               /* T_KW_CASE  */
-    T_KW_DEFAULT = 330,            /* T_KW_DEFAULT  */
-    T_KW_BREAK = 331,              /* T_KW_BREAK  */
-    T_KW_CONTINUE = 332,           /* T_KW_CONTINUE  */
-    T_KW_GOTO = 333,               /* T_KW_GOTO  */
-    T_KW_FUNCTION = 334,           /* T_KW_FUNCTION  */
-    T_KW_RETURN = 335,             /* T_KW_RETURN  */
-    T_KW_FRETURN = 336,            /* T_KW_FRETURN  */
-    T_KW_NRETURN = 337,            /* T_KW_NRETURN  */
-    T_KW_STRUCT = 338,             /* T_KW_STRUCT  */
-    T_UNKNOWN = 339                /* T_UNKNOWN  */
+    T_COLON = 319,                 /* T_COLON  */
+    T_KW_DO = 320,                 /* T_KW_DO  */
+    T_KW_UNTIL = 321,              /* T_KW_UNTIL  */
+    T_KW_FOR = 322,                /* T_KW_FOR  */
+    T_KW_SWITCH = 323,             /* T_KW_SWITCH  */
+    T_KW_CASE = 324,               /* T_KW_CASE  */
+    T_KW_DEFAULT = 325,            /* T_KW_DEFAULT  */
+    T_KW_BREAK = 326,              /* T_KW_BREAK  */
+    T_KW_CONTINUE = 327,           /* T_KW_CONTINUE  */
+    T_KW_GOTO = 328,               /* T_KW_GOTO  */
+    T_KW_FUNCTION = 329,           /* T_KW_FUNCTION  */
+    T_KW_RETURN = 330,             /* T_KW_RETURN  */
+    T_KW_FRETURN = 331,            /* T_KW_FRETURN  */
+    T_KW_NRETURN = 332,            /* T_KW_NRETURN  */
+    T_KW_STRUCT = 333,             /* T_KW_STRUCT  */
+    T_UNKNOWN = 334,               /* T_UNKNOWN  */
+    T_LBRACE = 335,                /* T_LBRACE  */
+    T_RBRACE = 336,                /* T_RBRACE  */
+    T_KW_IF = 337,                 /* T_KW_IF  */
+    T_KW_ELSE = 338,               /* T_KW_ELSE  */
+    T_KW_WHILE = 339               /* T_KW_WHILE  */
   };
   typedef enum sc_tokentype sc_token_kind_t;
 #endif
@@ -175,14 +183,22 @@ typedef struct ScParseState {
 #if ! defined SC_STYPE && ! defined SC_STYPE_IS_DECLARED
 union SC_STYPE
 {
-#line 333 "snocone_parse.y"
+#line 373 "snocone_parse.y"
 
     EXPR_t *expr;
     char   *str;
     long    ival;
     double  dval;
+    /* LS-4.f — control-flow handoff types.  IfHead/WhileHead are
+     * returned by the head-prefix non-terminals (if_head, while_head)
+     * and consumed by the finalize-* helpers.  stmt_ptr is returned
+     * by `else_keyword` to snapshot the linked-list cursor before
+     * the else-branch begins, enabling splice-in-the-middle. */
+    struct IfHead    *ifhead;
+    struct WhileHead *whilehead;
+    STMT_t           *stmt_ptr;
 
-#line 186 "snocone_parse.tab.h"
+#line 202 "snocone_parse.tab.h"
 
 };
 typedef union SC_STYPE SC_STYPE;

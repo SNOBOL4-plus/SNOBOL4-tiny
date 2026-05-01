@@ -276,6 +276,13 @@
  * collide with Bison's enum sc_tokentype.  See the %code top block above. */
 struct LexCtx;
 
+/* LS-4.f — control-flow handoff structs.  Built by if_head / while_head
+ * non-terminals; consumed by sc_finalize_* in the parent rule's final
+ * action.  Forward-declared here so the %union can reference them; the
+ * full layout is defined in the epilogue alongside the helpers. */
+struct IfHead;
+struct WhileHead;
+
 /* Parser state — passed to sc_parse() via %parse-param.  Carries the
  * FSM lexer context (the single producer of tokens), the code under
  * construction, and a small error counter.  Uses CODE_t (typedef alias
@@ -286,6 +293,7 @@ typedef struct ScParseState {
     CODE_t        *code;
     const char    *filename;
     int            nerrors;
+    int            label_seq;     /* LS-4.f: synthetic label counter */
 } ScParseState;
 }
 
@@ -309,6 +317,38 @@ static EXPR_t  *sc_int_literal        (const char *txt);
 static EXPR_t  *sc_real_literal       (const char *txt);
 static EXPR_t  *sc_str_literal        (const char *txt);
 static EXPR_t  *sc_clone_expr_simple  (EXPR_t *e);  /* LS-4.c — for compound-assigns */
+
+/* LS-4.f — control-flow lowering helpers.
+ * Architecture: control-flow head non-terminals (if_head, while_head)
+ * snapshot the linked-list tail BEFORE the body is parsed and return
+ * the snapshot via a heap-allocated handoff struct.  The body's stmts
+ * append normally to st->code in their order.  The parent rule's
+ * final action calls sc_finalize_* with the head struct (and, for
+ * if-else, also the else_keyword snapshot of where the else-body
+ * begins) to splice the cond-stmt and label-stmts into the correct
+ * positions.  This emit-and-splice avoids needing MRAs in the middle
+ * of the rule, which is what causes reduce/reduce conflicts in
+ * Bison's balanced if-else grammars.
+ */
+struct IfHead {
+    EXPR_t *cond;          /* condition expression                              */
+    STMT_t *before_body;   /* st->code->tail snapshot at end of if_head reduction
+                              (NULL if list was empty); body starts at
+                              before_body->next or st->code->head if NULL.     */
+    int     lineno;        /* lineno of if_head for the cond-stmt's lineno     */
+};
+struct WhileHead {
+    EXPR_t *cond;
+    STMT_t *before_body;
+    int     lineno;
+};
+
+static char    *sc_label_new          (ScParseState *st, const char *prefix);
+static struct IfHead    *sc_if_head_new    (ScParseState *st, EXPR_t *cond);
+static struct WhileHead *sc_while_head_new (ScParseState *st, EXPR_t *cond);
+static void     sc_finalize_if_no_else(ScParseState *st, struct IfHead *h);
+static void     sc_finalize_if_else   (ScParseState *st, struct IfHead *h, STMT_t *before_else);
+static void     sc_finalize_while     (ScParseState *st, struct WhileHead *h);
 
 /* sc_kind_to_tok — translate FSM ScKind (1..N) to Bison's sc_tokentype.
  *
@@ -335,6 +375,14 @@ static int sc_kind_to_tok(int sc_kind);
     char   *str;
     long    ival;
     double  dval;
+    /* LS-4.f — control-flow handoff types.  IfHead/WhileHead are
+     * returned by the head-prefix non-terminals (if_head, while_head)
+     * and consumed by the finalize-* helpers.  stmt_ptr is returned
+     * by `else_keyword` to snapshot the linked-list cursor before
+     * the else-branch begins, enabling splice-in-the-middle. */
+    struct IfHead    *ifhead;
+    struct WhileHead *whilehead;
+    STMT_t           *stmt_ptr;
 }
 
 /* ---- Atoms ---- */
@@ -388,15 +436,23 @@ static int sc_kind_to_tok(int sc_kind);
 %token T_1STAR T_1SLASH T_1PERCENT
 %token T_1AT T_1TILDE T_1DOLLAR T_1DOT T_1POUND
 %token T_1PIPE T_1EQUAL T_1QUEST T_1AMP
-%token T_LBRACE T_RBRACE
 %token T_COLON
-%token T_KW_IF T_KW_ELSE T_KW_WHILE T_KW_DO T_KW_UNTIL T_KW_FOR
+%token T_KW_DO T_KW_UNTIL T_KW_FOR
 %token T_KW_SWITCH T_KW_CASE T_KW_DEFAULT
 %token T_KW_BREAK T_KW_CONTINUE T_KW_GOTO
 %token T_KW_FUNCTION T_KW_RETURN T_KW_FRETURN T_KW_NRETURN T_KW_STRUCT
 %token T_UNKNOWN
 
+/* ---- Block delimiters and control-flow keywords (LS-4.f) ---- */
+%token T_LBRACE T_RBRACE
+%token T_KW_IF T_KW_ELSE T_KW_WHILE
+
 %type <expr> expr0 expr1 expr3 expr4 expr5 expr6 expr9 expr11 expr15 expr17 exprlist exprlist_ne
+
+/* LS-4.f — control-flow non-terminal types */
+%type <ifhead>    if_head
+%type <whilehead> while_head
+%type <stmt_ptr>  else_keyword
 
 %%
 
@@ -409,8 +465,86 @@ stmt_list   : stmt_list stmt
             | stmt
             ;
 
-stmt        : expr0 T_SEMICOLON                { sc_append_stmt(st, $1); }
+/* ---- LS-4.f: matched / unmatched split for control flow ----
+ *
+ * Pascal/Algol balanced grammar for the dangling-else.  An `if`
+ * paired with a matching `else` is matched_stmt; an `if` without
+ * (yet) a paired `else`, or whose else-branch contains an unmatched
+ * if, is unmatched_stmt.  Inside matched_stmt's then- and else-
+ * branches only matched_stmt is permitted, so an `else` always
+ * binds to the nearest unmatched `if`.  Zero shift/reduce / zero
+ * reduce/reduce conflicts.
+ *
+ * Lowering — emit-and-splice: control-flow heads (if_head,
+ * while_head) snapshot st->code->tail at the moment of reduction
+ * but emit nothing.  The body parses and appends statements
+ * normally.  The parent rule's final action calls sc_finalize_*
+ * to splice the cond-stmt and label-stmts into their correct
+ * positions in the linked list.  This pattern avoids MRAs in the
+ * middle of the rule — which would cause reduce/reduce conflicts
+ * when multiple matched/unmatched alternatives share a prefix.
+ *
+ * Goal-file note (LS-4.d forward note): "use balanced matched_stmt /
+ * unmatched_stmt clause-phrase split (Pascal/Algol style, zero
+ * conflicts) rather than C's default-shift acceptance".  Honored.
+ */
+stmt        : matched_stmt
+            | unmatched_stmt
+            ;
+
+matched_stmt
+            : simple_stmt
+            | block_stmt
+            | if_head matched_stmt else_keyword matched_stmt
+                                        { sc_finalize_if_else(st, $1, $3); }
+            | while_head matched_stmt
+                                        { sc_finalize_while(st, $1); }
+            ;
+
+unmatched_stmt
+            : if_head stmt
+                                        { sc_finalize_if_no_else(st, $1); }
+            | if_head matched_stmt else_keyword unmatched_stmt
+                                        { sc_finalize_if_else(st, $1, $3); }
+            | while_head unmatched_stmt
+                                        { sc_finalize_while(st, $1); }
+            ;
+
+if_head     : T_KW_IF T_LPAREN expr0 T_RPAREN opt_head_sep
+                                        { $$ = sc_if_head_new(st, $3); }
+            ;
+
+while_head  : T_KW_WHILE T_LPAREN expr0 T_RPAREN opt_head_sep
+                                        { $$ = sc_while_head_new(st, $3); }
+            ;
+
+/* opt_head_sep — absorbs the spurious T_CONCAT the LS-3 lexer emits
+ * between an if/while head's `)` and a value-starting body token (e.g.
+ * `if (c) y = 1;` — between `)` and `y` the W{OP}W envelope sees a
+ * value-then-value space gap and synthesizes T_CONCAT).  Inside an
+ * expression that CONCAT is meaningful concatenation; after a control-
+ * flow head it must be discarded.  Accepting it here, separate from
+ * the expr4 concat tier, keeps the grammar unambiguous. */
+opt_head_sep
+            : /* empty */
+            | T_CONCAT
+            ;
+
+/* else_keyword reduces on T_KW_ELSE, snapshotting the linked-list tail
+ * at the moment the else is recognised.  The if-else finalizer uses
+ * this snapshot to delimit then-body's last stmt vs else-body's first.
+ * One non-terminal shared between the matched and unmatched if-else
+ * rules — the same anonymous reduction would have been a conflict. */
+else_keyword
+            : T_KW_ELSE                 { $$ = st->code->tail; }
+            ;
+
+simple_stmt : expr0 T_SEMICOLON                { sc_append_stmt(st, $1); }
             | T_SEMICOLON                      { /* empty stmt */         }
+            ;
+
+block_stmt  : T_LBRACE stmt_list T_RBRACE      { /* statements already appended */ }
+            | T_LBRACE T_RBRACE                { /* empty block */                  }
             ;
 
 /* ---- Expression precedence levels ----
@@ -937,6 +1071,221 @@ static EXPR_t *sc_clone_expr_simple(EXPR_t *e) {
         expr_add_child(c, sc_clone_expr_simple(e->children[i]));
     }
     return c;
+}
+
+/* =========================================================================
+ *  LS-4.f — control-flow lowering helpers
+ *
+ *  Architecture: emit-and-splice.  Control-flow head non-terminals
+ *  (if_head, while_head) reduce on T_RPAREN of the head, snapshot
+ *  st->code->tail at that moment, and emit no statements.  The body
+ *  parses normally and appends its statements to st->code.  At the
+ *  parent rule's final action, sc_finalize_* is called with the head
+ *  struct (and, for if-else, the else_keyword snapshot).  These
+ *  finalizers splice the cond-stmt and label-stmts into the correct
+ *  positions in the linked list.
+ *
+ *  Why splice?  Because emitting in mid-rule MRAs causes Bison
+ *  reduce/reduce conflicts when multiple matched/unmatched alternatives
+ *  share a prefix (the four if-using rules with their per-rule MRAs at
+ *  the same parser state).  Snapshot + final-action splice keeps
+ *  emissions out of the contended region.
+ *
+ *  Naming: synthetic labels are "_Ltop_NNNN", "_Lelse_NNNN",
+ *  "_Lend_NNNN" with NNNN a zero-padded 4-digit per-parse counter
+ *  (st->label_seq).  The leading underscore guarantees no collision
+ *  with user labels (which start with a letter).
+ *
+ *  Lowering shapes (using L1, L2 for clarity):
+ *
+ *    if (C) S
+ *        →   subj=C  go.onfailure=L1
+ *            <stmts of S>
+ *            label=L1     (empty landing pad)
+ *
+ *    if (C) S1 else S2
+ *        →   subj=C  go.onfailure=L1
+ *            <stmts of S1>
+ *            label=NULL  go.uncond=L2
+ *            label=L1     (empty landing pad)
+ *            <stmts of S2>
+ *            label=L2     (empty landing pad)
+ *
+ *    while (C) S
+ *        →   label=L1     (loop top — empty pad)
+ *            subj=C  go.onfailure=L2
+ *            <stmts of S>
+ *            label=NULL  go.uncond=L1
+ *            label=L2     (loop end — empty pad)
+ *
+ *  All landing-pad statements are STMT_t with subject=NULL, has_eq=0,
+ *  replacement=NULL.  The downstream IR-walk treats them as no-ops
+ *  with a label, exactly as SPITBOL `L1  ` would.
+ * ========================================================================= */
+
+static char *sc_label_new(ScParseState *st, const char *prefix) {
+    char buf[64];
+    snprintf(buf, sizeof buf, "%s_%04d", prefix, ++st->label_seq);
+    return strdup(buf);
+}
+
+/* Snapshot helper: build an IfHead capturing cond and the current tail. */
+static struct IfHead *sc_if_head_new(ScParseState *st, EXPR_t *cond) {
+    struct IfHead *h = calloc(1, sizeof *h);
+    h->cond        = cond;
+    h->before_body = st->code->tail;       /* may be NULL */
+    h->lineno      = st->ctx ? st->ctx->line : 0;
+    return h;
+}
+
+static struct WhileHead *sc_while_head_new(ScParseState *st, EXPR_t *cond) {
+    struct WhileHead *h = calloc(1, sizeof *h);
+    h->cond        = cond;
+    h->before_body = st->code->tail;
+    h->lineno      = st->ctx ? st->ctx->line : 0;
+    return h;
+}
+
+/* Build a label-only landing-pad STMT (subject=NULL).  Takes ownership
+ * of `label`.  Does NOT link it into st->code — caller does that. */
+static STMT_t *sc_make_label_stmt(ScParseState *st, char *label) {
+    STMT_t *s = stmt_new();
+    s->lineno = st->ctx ? st->ctx->line : 0;
+    s->stno   = ++st->code->nstmts;
+    s->label  = label;
+    return s;
+}
+
+/* Build a STMT whose subject is `cond` and whose go.onfailure points at
+ * `fail_target`.  Takes ownership of both. */
+static STMT_t *sc_make_cond_fail_stmt(ScParseState *st, EXPR_t *cond, char *fail_target, int lineno) {
+    STMT_t *s = stmt_new();
+    s->lineno = lineno;
+    s->stno   = ++st->code->nstmts;
+    s->subject = cond;
+    s->go      = sgoto_new();
+    s->go->onfailure = fail_target;
+    return s;
+}
+
+/* Build a STMT carrying only an unconditional goto.  Takes ownership. */
+static STMT_t *sc_make_goto_uncond_stmt(ScParseState *st, char *target) {
+    STMT_t *s = stmt_new();
+    s->lineno = st->ctx ? st->ctx->line : 0;
+    s->stno   = ++st->code->nstmts;
+    s->go     = sgoto_new();
+    s->go->uncond = target;
+    return s;
+}
+
+/* Splice helpers — operate on st->code's linked list.
+ *
+ * sc_splice_after(st, anchor, chain_head, chain_tail)
+ *   Inserts the chain [chain_head..chain_tail] (linked via next pointers)
+ *   right after `anchor`.  If `anchor` is NULL, prepends to st->code->head.
+ *   Updates st->code->tail if appending at end.
+ */
+static void sc_splice_after(ScParseState *st, STMT_t *anchor,
+                            STMT_t *chain_head, STMT_t *chain_tail) {
+    if (!chain_head) return;
+    if (!chain_tail) chain_tail = chain_head;
+    if (anchor) {
+        chain_tail->next = anchor->next;
+        anchor->next     = chain_head;
+        if (st->code->tail == anchor) st->code->tail = chain_tail;
+    } else {
+        chain_tail->next = st->code->head;
+        st->code->head   = chain_head;
+        if (!st->code->tail) st->code->tail = chain_tail;
+    }
+}
+
+/* Append a chain to the end of st->code. */
+static void sc_append_chain(ScParseState *st, STMT_t *chain_head, STMT_t *chain_tail) {
+    if (!chain_head) return;
+    if (!chain_tail) chain_tail = chain_head;
+    if (!st->code->head) st->code->head = chain_head;
+    else                 st->code->tail->next = chain_head;
+    st->code->tail = chain_tail;
+}
+
+/* Finalize `if (cond) body` (no else).
+ *
+ *   <existing stmts up to before_body>
+ *   cond  :F(Lend)            <- spliced after before_body
+ *   <body stmts>
+ *   Lend                      <- appended at end
+ */
+static void sc_finalize_if_no_else(ScParseState *st, struct IfHead *h) {
+    char   *Lend       = sc_label_new(st, "_Lend");
+    STMT_t *cond_stmt  = sc_make_cond_fail_stmt(st, h->cond, strdup(Lend), h->lineno);
+    STMT_t *end_label  = sc_make_label_stmt(st, Lend);
+    sc_splice_after(st, h->before_body, cond_stmt, cond_stmt);
+    sc_append_chain(st, end_label, end_label);
+    free(h);
+}
+
+/* Finalize `if (cond) S1 else S2`.
+ *
+ *   <existing stmts up to before_body>
+ *   cond  :F(Lelse)           <- spliced after before_body
+ *   <S1 stmts up to before_else>
+ *   :(Lend)                   <- spliced after before_else, before S2 begins
+ *   Lelse                     <- spliced after the goto
+ *   <S2 stmts>
+ *   Lend                      <- appended at end
+ *
+ * before_else snapshots st->code->tail at the moment T_KW_ELSE is
+ * recognised (after S1 was fully parsed).  The else-body is whatever
+ * was appended after that point.  If S1 was empty (e.g. `if (c) ; else ...`)
+ * before_else == h->before_body (or NULL); the splice math still works.
+ */
+static void sc_finalize_if_else(ScParseState *st, struct IfHead *h, STMT_t *before_else) {
+    char   *Lelse     = sc_label_new(st, "_Lelse");
+    char   *Lend      = sc_label_new(st, "_Lend");
+    STMT_t *cond_stmt = sc_make_cond_fail_stmt(st, h->cond, strdup(Lelse), h->lineno);
+    STMT_t *goto_end  = sc_make_goto_uncond_stmt(st, strdup(Lend));
+    STMT_t *else_pad  = sc_make_label_stmt(st, Lelse);
+    STMT_t *end_pad   = sc_make_label_stmt(st, Lend);
+    /* (1) Splice cond_stmt right after before_body (i.e. before S1). */
+    sc_splice_after(st, h->before_body, cond_stmt, cond_stmt);
+    /* (2) Build chain [goto_end -> else_pad].  Splice anchor: the last
+     *     stmt of S1.  When S1 was empty, before_else == h->before_body,
+     *     so after step (1) the correct anchor is cond_stmt itself
+     *     (otherwise we'd insert before cond, not after).  Otherwise
+     *     before_else is the last S1 stmt and remains valid (splicing
+     *     cond before S1 only edited h->before_body's next link). */
+    STMT_t *anchor = (before_else == h->before_body) ? cond_stmt : before_else;
+    goto_end->next = else_pad;
+    sc_splice_after(st, anchor, goto_end, else_pad);
+    /* (3) Append end_pad at the very end. */
+    sc_append_chain(st, end_pad, end_pad);
+    free(h);
+}
+
+/* Finalize `while (cond) body`.
+ *
+ *   <existing stmts up to before_body>
+ *   Ltop                      <- spliced after before_body
+ *   cond  :F(Lend)            <- next in chain
+ *   <body stmts>
+ *   :(Ltop)                   <- appended at end
+ *   Lend                      <- appended at end
+ */
+static void sc_finalize_while(ScParseState *st, struct WhileHead *h) {
+    char   *Ltop      = sc_label_new(st, "_Ltop");
+    char   *Lend      = sc_label_new(st, "_Lend");
+    STMT_t *top_pad   = sc_make_label_stmt(st, Ltop);
+    STMT_t *cond_stmt = sc_make_cond_fail_stmt(st, h->cond, strdup(Lend), h->lineno);
+    STMT_t *goto_top  = sc_make_goto_uncond_stmt(st, strdup(Ltop));
+    STMT_t *end_pad   = sc_make_label_stmt(st, Lend);
+    /* (1) Splice [top_pad -> cond_stmt] after before_body. */
+    top_pad->next = cond_stmt;
+    sc_splice_after(st, h->before_body, top_pad, cond_stmt);
+    /* (2) Append [goto_top -> end_pad] at the end. */
+    goto_top->next = end_pad;
+    sc_append_chain(st, goto_top, end_pad);
+    free(h);
 }
 
 /* =========================================================================
