@@ -434,6 +434,109 @@ static DESCR_t *data_field_ptr(const char *fname, DESCR_t inst) {
     return NULL;
 }
 
+/* IC-9: Icon string-section assignment.
+ * Implements `s[i:j] := v`, `s[i+:n] := v`, `s[i-:n] := v`, and `s[i] := v`
+ * when `s` is a string variable.
+ *
+ * Strings in Icon are immutable values — but variables holding strings can
+ * have a section "replaced" by rebuilding the whole string and writing it
+ * back to the underlying variable cell.
+ *
+ * Returns 1 on success (cell written), 0 on FAIL (OOB) or if the LHS shape
+ * is not handled here.  Caller should treat 0 as FAIL of the whole assign
+ * unless the LHS kind is E_IDX (in which case caller falls back to
+ * subscript_set for list/table semantics).
+ *
+ * Only handles the simple case: lhs->children[0] is an addressable lvalue
+ * (E_VAR / E_FIELD / E_NAME / E_INDIRECT) whose current value is a string.
+ * Nested patterns like `t[k][i:j] := v` are not (yet) supported. */
+static int icn_string_section_assign(EXPR_t *lhs, DESCR_t val) {
+    if (!lhs) return 0;
+    int kind = lhs->kind;
+    if (kind != E_SECTION && kind != E_SECTION_PLUS &&
+        kind != E_SECTION_MINUS && kind != E_IDX) return 0;
+    if (lhs->nchildren < 2) return 0;
+    if (kind == E_SECTION && lhs->nchildren < 3) return 0;
+
+    /* Get a pointer to the underlying cell (so we can write back).  Prefer
+     * local slot for E_VAR (when in an icon frame), falling back to NV via
+     * interp_eval_ref.  This mirrors the read-side logic in case E_VAR. */
+    EXPR_t *bch = lhs->children[0];
+    DESCR_t *cell = NULL;
+    if (bch && bch->kind == E_VAR && icn_frame_depth > 0) {
+        int sl = (int)bch->ival;
+        if (sl >= 0 && sl < ICN_CUR.env_n) cell = &ICN_CUR.env[sl];
+    }
+    if (!cell) cell = interp_eval_ref(bch);
+    if (!cell) return 0;
+    DESCR_t base = *cell;
+    /* For E_IDX: only handle string base — list/table goes through subscript_set. */
+    if (kind == E_IDX) {
+        if (base.v != DT_S && base.v != DT_SNUL) return 0;
+    }
+    const char *s = (base.v == DT_SNUL) ? "" : VARVAL_fn(base);
+    if (!s) s = "";
+    int slen = (int)strlen(s);
+
+    /* Compute lo, hi (1-based section bounds, lo ≤ hi, range [lo, hi)). */
+    int lo = 0, hi = 0;
+    if (kind == E_SECTION) {
+        int i = (int)to_int(interp_eval(lhs->children[1]));
+        int j = (int)to_int(interp_eval(lhs->children[2]));
+        if (i == 0) i = slen + 1; else if (i < 0) i = slen + 1 + i;
+        if (j == 0) j = slen + 1; else if (j < 0) j = slen + 1 + j;
+        if (i < 1 || i > slen+1 || j < 1 || j > slen+1) return 0;
+        lo = i < j ? i : j; hi = i < j ? j : i;
+    } else if (kind == E_SECTION_PLUS) {
+        int i = (int)to_int(interp_eval(lhs->children[1]));
+        int n = (int)to_int(interp_eval(lhs->children[2]));
+        if (i == 0) i = slen + 1; else if (i < 0) i = slen + 1 + i;
+        if (i < 1 || i > slen+1) return 0;
+        if (n < 0) return 0;
+        if (i + n > slen + 1) return 0;
+        lo = i; hi = i + n;
+    } else if (kind == E_SECTION_MINUS) {
+        int i = (int)to_int(interp_eval(lhs->children[1]));
+        int n = (int)to_int(interp_eval(lhs->children[2]));
+        if (i == 0) i = slen + 1; else if (i < 0) i = slen + 1 + i;
+        if (i < 1 || i > slen+1) return 0;
+        if (n < 0) return 0;
+        if (i - n < 1) return 0;
+        lo = i - n; hi = i;
+    } else { /* E_IDX */
+        int i = (int)to_int(interp_eval(lhs->children[1]));
+        if (i == 0) return 0;
+        if (i < 0) i = slen + 1 + i;
+        if (i < 1 || i > slen) return 0;  /* single-char index must point at a real char */
+        lo = i; hi = i + 1;
+    }
+
+    /* Build new string = s[1..lo) + val + s[hi..slen+1). */
+    const char *vs = VARVAL_fn(val); if (!vs) vs = "";
+    int vlen = (int)strlen(vs);
+    int prefix = lo - 1;             /* chars before the section */
+    int suffix = slen - (hi - 1);    /* chars after the section */
+    int newlen = prefix + vlen + suffix;
+    char *buf = (char *)GC_malloc((size_t)newlen + 1);
+    if (prefix > 0) memcpy(buf, s, (size_t)prefix);
+    if (vlen > 0)   memcpy(buf + prefix, vs, (size_t)vlen);
+    if (suffix > 0) memcpy(buf + prefix + vlen, s + hi - 1, (size_t)suffix);
+    buf[newlen] = '\0';
+
+    /* Write back to the cell.  If the base is a global variable, also route
+     * through set_and_trace so VALUE traces fire — mirrors E_ASSIGN. */
+    EXPR_t *base_expr = lhs->children[0];
+    if (base_expr && base_expr->kind == E_VAR && base_expr->sval &&
+        base_expr->sval[0] != '&' &&
+        !(icn_frame_depth > 0 && base_expr->ival >= 0 && base_expr->ival < ICN_CUR.env_n))
+    {
+        set_and_trace(base_expr->sval, STRVAL(buf));
+    } else {
+        *cell = STRVAL(buf);
+    }
+    return 1;
+}
+
 /* SC-1: forward declarations for DATA registry (defined near _builtin_DATA below) */
 typedef struct { char name[64]; int nfields; char fields[64][64]; } ScDatType;
 static ScDatType *sc_dat_register(const char *spec);
@@ -1028,6 +1131,23 @@ DESCR_t interp_eval(EXPR_t *e)
             DESCR_t val = interp_eval(e->children[1]);
             if (IS_FAIL_fn(val)) return FAILDESCR;
             EXPR_t *lhs = e->children[0];
+            /* IC-9: string-section / string-index lvalue.  Try this first;
+             * if it returns 1 the assign happened.  Returns 0 for FAIL (OOB)
+             * or for E_IDX with non-string base (falls through to subscript_set). */
+            if (lhs && (lhs->kind == E_SECTION || lhs->kind == E_SECTION_PLUS ||
+                        lhs->kind == E_SECTION_MINUS)) {
+                if (icn_string_section_assign(lhs, val)) return val;
+                return FAILDESCR;
+            }
+            if (lhs && lhs->kind == E_IDX && lhs->nchildren >= 2) {
+                /* Try string-index first; if base is non-string, fall through. */
+                if (icn_string_section_assign(lhs, val)) return val;
+                /* If base IS a string but assign returned 0, that's an OOB → FAIL. */
+                {
+                    DESCR_t _b = interp_eval(lhs->children[0]);
+                    if (_b.v == DT_S || _b.v == DT_SNUL) return FAILDESCR;
+                }
+            }
             if (lhs && lhs->kind == E_VAR) {
                 int slot = (int)lhs->ival;
                 if (slot >= 0 && slot < ICN_CUR.env_n) { ICN_CUR.env[slot] = val; return val; }
@@ -2401,6 +2521,10 @@ DESCR_t interp_eval(EXPR_t *e)
                 else t="string";
                 return STRVAL(t);
             }
+            if (!strcmp(fn,"image") && nargs == 0) {
+                /* IC-9: image() with no args — Icon spec: missing arg defaults to &null */
+                return STRVAL("&null");
+            }
             if (!strcmp(fn,"image") && nargs == 1) {
                 DESCR_t av = interp_eval(e->children[1]);
                 if (IS_FAIL_fn(av)) return FAILDESCR;  /* IC-9: image(?T_empty) etc must fail */
@@ -3038,6 +3162,18 @@ DESCR_t interp_eval(EXPR_t *e)
         DESCR_t val = interp_eval(e->children[1]);
         if (IS_FAIL_fn(val)) return FAILDESCR;
         EXPR_t *lv = e->children[0];
+        /* IC-9: string-section / string-index lvalue. */
+        if (lv && (lv->kind == E_SECTION || lv->kind == E_SECTION_PLUS ||
+                   lv->kind == E_SECTION_MINUS)) {
+            if (icn_string_section_assign(lv, val)) return val;
+            return FAILDESCR;
+        }
+        if (lv && lv->kind == E_IDX && lv->nchildren == 2) {
+            /* Try string-index first; if base is non-string, fall through to subscript_set. */
+            if (icn_string_section_assign(lv, val)) return val;
+            DESCR_t _b = interp_eval(lv->children[0]);
+            if (_b.v == DT_S || _b.v == DT_SNUL) return FAILDESCR;
+        }
         if (lv && lv->kind == E_VAR && lv->sval)
             NV_SET_fn(lv->sval, val);  /* inner expr assign: no trace (stmt-level already traced) */
         else if (lv && lv->kind == E_IDX && lv->nchildren >= 2) {
@@ -4110,11 +4246,46 @@ DESCR_t interp_eval(EXPR_t *e)
                     memcpy(_buf,_ls,_ll);memcpy(_buf+_ll,_rs,_rl);_buf[_ll+_rl]='\0'; \
                     _res=STRVAL(_buf); break; \
                 } \
+                /* IC-9: comparison-augops — `lv OP:= rv` evaluates `lv OP rv`; \
+                 * on success the result is rv (which is then written back to lhs), \
+                 * on failure the augop fails (alternation `| "none"` then runs). */ \
+                case TK_AUGEQ:   _res = (_li == _ri) ? _rv : FAILDESCR; break; \
+                case TK_AUGNE:   _res = (_li != _ri) ? _rv : FAILDESCR; break; \
+                case TK_AUGLT:   _res = (_li <  _ri) ? _rv : FAILDESCR; break; \
+                case TK_AUGLE:   _res = (_li <= _ri) ? _rv : FAILDESCR; break; \
+                case TK_AUGGT:   _res = (_li >  _ri) ? _rv : FAILDESCR; break; \
+                case TK_AUGGE:   _res = (_li >= _ri) ? _rv : FAILDESCR; break; \
+                case TK_AUGSEQ: case TK_AUGSNE: \
+                case TK_AUGSLT: case TK_AUGSLE: case TK_AUGSGT: case TK_AUGSGE: { \
+                    const char *_lcs=VARVAL_fn(_lv),*_rcs=VARVAL_fn(_rv); \
+                    if(!_lcs)_lcs="";if(!_rcs)_rcs=""; \
+                    int _cmp = strcmp(_lcs, _rcs); int _ok = 0; \
+                    switch ((IcnTkKind)e->ival) { \
+                        case TK_AUGSEQ: _ok = (_cmp == 0); break; \
+                        case TK_AUGSNE: _ok = (_cmp != 0); break; \
+                        case TK_AUGSLT: _ok = (_cmp <  0); break; \
+                        case TK_AUGSLE: _ok = (_cmp <= 0); break; \
+                        case TK_AUGSGT: _ok = (_cmp >  0); break; \
+                        case TK_AUGSGE: _ok = (_cmp >= 0); break; \
+                        default: break; \
+                    } \
+                    _res = _ok ? _rv : FAILDESCR; break; \
+                } \
                 default: _res=INTVAL(_li+_ri); break; \
             } \
-            if (!IS_FAIL_fn(_res) && lhs->kind == E_VAR && icn_frame_depth > 0) { \
+            if (!IS_FAIL_fn(_res) && lhs->kind == E_VAR) { \
                 int _slot=(int)lhs->ival; \
-                if(_slot>=0&&_slot<ICN_CUR.env_n) ICN_CUR.env[_slot]=_res; \
+                if (icn_frame_depth > 0 && _slot>=0 && _slot<ICN_CUR.env_n) \
+                    ICN_CUR.env[_slot]=_res; \
+                else if (_slot < 0 && lhs->sval && lhs->sval[0] != '&') \
+                    set_and_trace(lhs->sval, _res); \
+            } else if (!IS_FAIL_fn(_res) && lhs->kind == E_IDX && lhs->nchildren >= 2) { \
+                DESCR_t _base = interp_eval(lhs->children[0]); \
+                DESCR_t _idx  = interp_eval(lhs->children[1]); \
+                if (!IS_FAIL_fn(_base) && !IS_FAIL_fn(_idx)) subscript_set(_base, _idx, _res); \
+            } else if (!IS_FAIL_fn(_res) && lhs->kind == E_FIELD && lhs->sval && lhs->nchildren >= 1) { \
+                DESCR_t _obj = interp_eval(lhs->children[0]); \
+                if (!IS_FAIL_fn(_obj)) { DESCR_t *_cell = data_field_ptr(lhs->sval, _obj); if (_cell) *_cell = _res; } \
             } \
             _augop_result = _res; \
         } while(0)
@@ -4306,7 +4477,12 @@ DESCR_t interp_eval(EXPR_t *e)
         return ld;
     }
 
-    /* ── IC-5: E_SECTION — s[i:j] string section ───────────────────────── */
+    /* ── IC-5: E_SECTION — s[i:j] string section ─────────────────────────
+     * Icon position rules:
+     *   p ≥ 1     → position p (1-based; position 1 is before first char)
+     *   p == 0    → position past last char (= slen+1)
+     *   p < 0     → position slen+1+p   (-1 → slen, -2 → slen-1, …)
+     * Out-of-bounds (after normalization, p < 1 or p > slen+1) → fail. */
     case E_SECTION: {
         if (e->nchildren < 3) return NULVCL;
         DESCR_t sd = interp_eval(e->children[0]);
@@ -4314,13 +4490,12 @@ DESCR_t interp_eval(EXPR_t *e)
         int slen = (int)strlen(s);
         int i = (int)to_int(interp_eval(e->children[1]));
         int j = (int)to_int(interp_eval(e->children[2]));
-        /* Icon 1-based, negative wraps: -1 = slen+1 */
-        if (i < 0) i = slen + 1 + i + 1;
-        if (j < 0) j = slen + 1 + j + 1;
-        if (i < 1) i = 1; if (j > slen+1) j = slen+1;
-        if (i > j) { char *e2=GC_malloc(1); e2[0]='\0'; return STRVAL(e2); }
-        int len = j - i;
-        char *buf = GC_malloc(len+1); memcpy(buf, s+i-1, len); buf[len]='\0';
+        if (i == 0) i = slen + 1; else if (i < 0) i = slen + 1 + i;
+        if (j == 0) j = slen + 1; else if (j < 0) j = slen + 1 + j;
+        if (i < 1 || i > slen+1 || j < 1 || j > slen+1) return FAILDESCR;
+        int lo = i < j ? i : j, hi = i < j ? j : i;
+        int len = hi - lo;
+        char *buf = GC_malloc(len+1); memcpy(buf, s+lo-1, len); buf[len]='\0';
         return STRVAL(buf);
     }
 
