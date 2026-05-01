@@ -469,6 +469,11 @@ int icn_is_gen(EXPR_t *e) {
         /* E_ASSIGN is generative if its RHS is generative — e.g. x := (1|2|3) */
         case E_ASSIGN:
             return (e->nchildren >= 2 && icn_is_gen(e->children[1])) ? 1 : 0;
+        /* E_REVASSIGN is always generative — Byrd box succeeds once, then on β
+         * reverts the cell and fails.  This is what makes `every x[3] <- 19`
+         * leave x[3] at its prior value after the every loop completes.       */
+        case E_REVASSIGN:
+            return 1;
         /* Arithmetic / relational binops and string concat are generative if any child is */
         case E_ADD: case E_SUB: case E_MUL: case E_DIV: case E_MOD:
         case E_LT:  case E_LE:  case E_GT:  case E_GE:
@@ -681,6 +686,102 @@ static DESCR_t icn_bb_assign_gen(void *zeta, int entry) {
     }
     return val;
 }
+
+/*----------------------------------------------------------------------------------------------------------------------------
+ * icn_bb_revassign — E_REVASSIGN  (lhs <- rhs)  reversible assignment
+ *
+ * IC-9 fix for `every x[3] <- 19` in rung36_jcon_table.  Icon's `<-` saves the
+ * current value of lhs, sets it to rhs, succeeds with rhs.  On backtracking,
+ * restores the saved value.  Under `every`, that means: succeed once at α,
+ * then revert at β so the every-loop's "ask for next" pump rolls the side
+ * effect back before exhausting.  Net effect: rhs evaluated and bound briefly,
+ * but the durable post-loop state matches the pre-loop state of lhs.
+ *
+ *   α: snapshot lhs cell, write rhs, return rhs.
+ *   β: write saved value back, return FAILDESCR (every then exits).
+ *
+ * Currently supports E_VAR and E_IDX (table/list/array) on the LHS — the
+ * shapes that appear in the JCON suite.  E_FIELD and other lvalues fall
+ * back to a simple non-reverting assign (better than nothing; revisit if a
+ * test exercises them).
+ *--------------------------------------------------------------------------------------------------------------------------*/
+typedef struct {
+    EXPR_t  *lhs_expr;
+    EXPR_t  *rhs_expr;
+    DESCR_t *cell;       /* direct cell pointer (E_IDX path) */
+    DESCR_t  base_d;     /* base container for subscript_set revert (no stable cell) */
+    DESCR_t  idx_d;      /* index for subscript_set revert */
+    int      have_subscript;  /* base_d/idx_d valid → revert via subscript_set */
+    int      var_slot;   /* env slot (E_VAR path; -1 if NV) */
+    char    *var_name;   /* NV name (E_VAR fallback) */
+    DESCR_t  saved;
+    int      have_saved;
+} icn_revassign_state_t;
+
+static DESCR_t icn_bb_revassign(void *zeta, int entry) {
+    icn_revassign_state_t *z = (icn_revassign_state_t *)zeta;
+    if (entry == α) {
+        DESCR_t rv = interp_eval(z->rhs_expr);
+        if (IS_FAIL_fn(rv)) return FAILDESCR;
+        EXPR_t *lhs = z->lhs_expr;
+        if (lhs && lhs->kind == E_VAR) {
+            int slot = (int)lhs->ival;
+            if (slot >= 0 && slot < ICN_CUR.env_n) {
+                z->saved      = ICN_CUR.env[slot];
+                z->var_slot   = slot;
+                z->have_saved = 1;
+                ICN_CUR.env[slot] = rv;
+            } else if (lhs->sval && lhs->sval[0] != '&') {
+                z->saved      = NV_GET_fn(lhs->sval);
+                z->var_slot   = -1;
+                z->var_name   = lhs->sval;
+                z->have_saved = 1;
+                NV_SET_fn(lhs->sval, rv);
+            }
+        } else if (lhs && lhs->kind == E_IDX && lhs->nchildren >= 2) {
+            DESCR_t base = interp_eval(lhs->children[0]);
+            DESCR_t idx  = interp_eval(lhs->children[1]);
+            if (!IS_FAIL_fn(base) && !IS_FAIL_fn(idx)) {
+                /* Snapshot the *effective* prior value via subscript_get so we
+                 * pick up the table-default for missing keys (rather than the
+                 * raw cell init).  Then use table_ptr / array_ptr to grab a
+                 * stable cell pointer for the revert.                       */
+                z->saved      = subscript_get(base, idx);
+                z->have_saved = 1;
+                if (base.v == DT_T) {
+                    DESCR_t *cell = table_ptr(base.tbl, idx);
+                    if (cell) { z->cell = cell; *cell = rv; }
+                    else { z->base_d = base; z->idx_d = idx; z->have_subscript = 1; subscript_set(base, idx, rv); }
+                } else if (base.v == DT_A) {
+                    DESCR_t *cell = array_ptr(base.arr, (int)to_int(idx));
+                    if (cell) { z->cell = cell; *cell = rv; }
+                    else { z->base_d = base; z->idx_d = idx; z->have_subscript = 1; subscript_set(base, idx, rv); }
+                } else {
+                    /* Lists, strings, records — no stable cell ptr; revert via
+                     * subscript_set on β.                                    */
+                    z->base_d = base; z->idx_d = idx; z->have_subscript = 1;
+                    subscript_set(base, idx, rv);
+                }
+            }
+        }
+        return rv;
+    }
+    /* β / ω — revert and exhaust */
+    if (z->have_saved) {
+        if (z->cell) {
+            *z->cell = z->saved;
+        } else if (z->have_subscript) {
+            subscript_set(z->base_d, z->idx_d, z->saved);
+        } else if (z->var_slot >= 0 && z->var_slot < ICN_CUR.env_n) {
+            ICN_CUR.env[z->var_slot] = z->saved;
+        } else if (z->var_name) {
+            NV_SET_fn(z->var_name, z->saved);
+        }
+        z->have_saved = 0;
+    }
+    return FAILDESCR;
+}
+
 
 /*----------------------------------------------------------------------------------------------------------------------------
  * icn_bb_identical_gen — E_IDENTICAL  (a === b)  with one or both operands generative
@@ -1163,6 +1264,19 @@ bb_node_t icn_eval_gen(EXPR_t *e) {
         z->rhs_gen = icn_eval_gen(e->children[1]);
         z->lhs     = e->children[0];
         return (bb_node_t){ icn_bb_assign_gen, z, 0 };
+    }
+
+    /* ── E_REVASSIGN — IC-9: x[k] <- v reversible assign ─────────────────────
+     * α: snapshot lhs, write rhs, return rhs.
+     * β: revert lhs to snapshot, fail.
+     * Net effect: under `every`, the post-loop state of lhs equals its
+     * pre-loop state; rhs was visible for the body of one tick only.       */
+    if (e->kind == E_REVASSIGN && e->nchildren >= 2) {
+        icn_revassign_state_t *z = calloc(1, sizeof(*z));
+        z->lhs_expr = e->children[0];
+        z->rhs_expr = e->children[1];
+        z->var_slot = -2;        /* sentinel for "unset" */
+        return (bb_node_t){ icn_bb_revassign, z, 0 };
     }
 
     /* ── E_VAR / E_INTLIT / scalar literals — lazy box (re-evaluates each α pump)

@@ -1038,14 +1038,83 @@ DESCR_t interp_eval(EXPR_t *e)
                  * pattern-match path. */
                 if (slot < 0 && lhs->sval && lhs->sval[0] != '&') set_and_trace(lhs->sval, val);
             } else if (lhs && lhs->kind == E_IDX && lhs->nchildren >= 2) {
-                /* t["key"] := val  — subscript assignment in Icon frame */
+                /* t["key"] := val  — subscript assignment in Icon frame.
+                 * IC-9: if the index child is generative (e.g. t[key(t)] := 99),
+                 * drive the gen and write val into every generated cell.  Single
+                 * `interp_eval` pass — under `every` this fires once and assigns
+                 * all cells, mirroring the E_ITERATE LHS branch below. */
+                DESCR_t base = interp_eval(lhs->children[0]);
+                if (!IS_FAIL_fn(base)) {
+                    if (icn_is_gen(lhs->children[1])) {
+                        bb_node_t ig = icn_eval_gen(lhs->children[1]);
+                        DESCR_t k = ig.fn(ig.ζ, α);
+                        while (!IS_FAIL_fn(k)) {
+                            subscript_set(base, k, val);
+                            k = ig.fn(ig.ζ, β);
+                        }
+                    } else {
+                        DESCR_t idx = interp_eval(lhs->children[1]);
+                        if (!IS_FAIL_fn(idx)) subscript_set(base, idx, val);
+                    }
+                }
+            } else if (lhs && lhs->kind == E_FIELD && lhs->sval && lhs->nchildren >= 1) {
+                /* p.x := val  — record field assignment in Icon frame */
+                DESCR_t obj = interp_eval(lhs->children[0]);
+                if (!IS_FAIL_fn(obj)) {
+                    DESCR_t *cell = data_field_ptr(lhs->sval, obj);
+                    if (cell) *cell = val;
+                }
+            } else if (lhs && lhs->kind == E_ITERATE && lhs->nchildren >= 1) {
+                /* IC-9: !container := val — bang-iterate as lvalue.
+                 * Walks every element/entry of the container and writes val into each cell.
+                 * Single pass — under `every` this fires once and assigns all cells.
+                 *   !T := v  (table) — write v into every TBPAIR_t::val
+                 *   !L := v  (list)  — write v into every icn_elems[i]
+                 *   !s := v  (string)— not supported (immutable), silently no-op
+                 */
+                DESCR_t cv = interp_eval(lhs->children[0]);
+                if (!IS_FAIL_fn(cv)) {
+                    if (cv.v == DT_T && cv.tbl) {
+                        for (int b = 0; b < TABLE_BUCKETS; b++)
+                            for (TBPAIR_t *p = cv.tbl->buckets[b]; p; p = p->next)
+                                p->val = val;
+                    } else if (cv.v == DT_DATA) {
+                        DESCR_t tag = FIELD_GET_fn(cv, "icn_type");
+                        if (tag.v == DT_S && tag.s && strcmp(tag.s, "list") == 0) {
+                            DESCR_t ea = FIELD_GET_fn(cv, "icn_elems");
+                            int n = (int)FIELD_GET_fn(cv, "icn_size").i;
+                            DESCR_t *elems = (ea.v == DT_DATA) ? (DESCR_t *)ea.ptr : NULL;
+                            if (elems && n > 0) for (int i = 0; i < n; i++) elems[i] = val;
+                        }
+                    }
+                }
+            }
+            return val;
+        }
+        case E_REVASSIGN: {
+            /* IC-9: x <- v  — reversible assign, standalone path.
+             * Outside `every`, no driver backtracks the operation, so we just
+             * perform the assign and succeed.  The revert semantics live in
+             * icn_bb_revassign (icn_runtime.c), reached only when icn_eval_gen
+             * is asked for a box (every / alt-driven contexts).
+             * Mirrors E_ASSIGN's E_VAR / E_IDX / E_FIELD branches; the rare
+             * E_ITERATE LHS isn't meaningful with `<-` (you'd be saving and
+             * reverting an immediately-discarded sequence). */
+            if (e->nchildren < 2) return NULVCL;
+            DESCR_t val = interp_eval(e->children[1]);
+            if (IS_FAIL_fn(val)) return FAILDESCR;
+            EXPR_t *lhs = e->children[0];
+            if (lhs && lhs->kind == E_VAR) {
+                int slot = (int)lhs->ival;
+                if (slot >= 0 && slot < ICN_CUR.env_n) ICN_CUR.env[slot] = val;
+                else if (slot < 0 && lhs->sval && lhs->sval[0] != '&') set_and_trace(lhs->sval, val);
+            } else if (lhs && lhs->kind == E_IDX && lhs->nchildren >= 2) {
                 DESCR_t base = interp_eval(lhs->children[0]);
                 if (!IS_FAIL_fn(base)) {
                     DESCR_t idx = interp_eval(lhs->children[1]);
                     if (!IS_FAIL_fn(idx)) subscript_set(base, idx, val);
                 }
             } else if (lhs && lhs->kind == E_FIELD && lhs->sval && lhs->nchildren >= 1) {
-                /* p.x := val  — record field assignment in Icon frame */
                 DESCR_t obj = interp_eval(lhs->children[0]);
                 if (!IS_FAIL_fn(obj)) {
                     DESCR_t *cell = data_field_ptr(lhs->sval, obj);
@@ -2033,10 +2102,15 @@ DESCR_t interp_eval(EXPR_t *e)
                 table_set_descr(td.tbl, ks, kd, vd);
                 return td;
             }
-            if (!strcmp(fn,"delete") && nargs == 2) {
+            if (!strcmp(fn,"delete") && nargs >= 1) {
+                /* IC-9: delete arity fix — Icon delete(T, k, …) takes one key;
+                 * extra args are ignored.  delete(T) with no key uses &null
+                 * as the key (Icon's null-arg padding semantics).            */
                 DESCR_t td = interp_eval(e->children[1]);
                 if (td.v != DT_T) return FAILDESCR;
-                DESCR_t kd = interp_eval(e->children[2]);
+                DESCR_t kd;
+                if (nargs >= 2) kd = interp_eval(e->children[2]);
+                else            kd = NULVCL;       /* delete(T) → key=&null */
                 char kb[64]; const char *ks;
                 if (IS_INT_fn(kd))       { snprintf(kb,sizeof kb,"%lld",(long long)kd.i); ks=kb; }
                 else if (IS_REAL_fn(kd)) { snprintf(kb,sizeof kb,"%g",kd.r); ks=kb; }
@@ -2052,10 +2126,15 @@ DESCR_t interp_eval(EXPR_t *e)
                 }
                 return td;
             }
-            if (!strcmp(fn,"member") && nargs == 2) {
+            if (!strcmp(fn,"member") && nargs >= 1) {
+                /* IC-9: Icon member(T, k, …) tests whether k is a key.
+                 * 1-arg member(T) uses &null as the key (Icon null-arg padding).
+                 * Extra args ignored.                                          */
                 DESCR_t td = interp_eval(e->children[1]);
                 if (td.v != DT_T) return FAILDESCR;
-                DESCR_t kd = interp_eval(e->children[2]);
+                DESCR_t kd;
+                if (nargs >= 2) kd = interp_eval(e->children[2]);
+                else            kd = NULVCL;       /* member(T) → key=&null */
                 char kb[64]; const char *ks;
                 if (IS_INT_fn(kd))       { snprintf(kb,sizeof kb,"%lld",(long long)kd.i); ks=kb; }
                 else if (IS_REAL_fn(kd)) { snprintf(kb,sizeof kb,"%g",kd.r); ks=kb; }
@@ -2359,8 +2438,40 @@ DESCR_t interp_eval(EXPR_t *e)
                 return STRVAL(out);
             }
             if (!strcmp(fn,"copy") && nargs == 1) {
-                /* shallow copy — for our purposes return same value */
-                return interp_eval(e->children[1]);
+                /* IC-9: shallow copy — Icon `copy(X)` returns a new container
+                 * whose elements are the same descriptors (no deep copy of
+                 * referenced values).  Previously a no-op (returned the same
+                 * DESCR_t), which aliased the original — every !y +:= V
+                 * mutated x as well.  Now allocates a fresh TBBLK_t / icnlist
+                 * and copies entries.                                       */
+                DESCR_t src = interp_eval(e->children[1]);
+                if (src.v == DT_T && src.tbl) {
+                    TBBLK_t *nt = table_new();
+                    nt->dflt = src.tbl->dflt;
+                    nt->init = src.tbl->init;
+                    nt->inc  = src.tbl->inc;
+                    for (int b = 0; b < TABLE_BUCKETS; b++)
+                        for (TBPAIR_t *p = src.tbl->buckets[b]; p; p = p->next)
+                            table_set_descr(nt, p->key, p->key_descr, p->val);
+                    DESCR_t d; d.v = DT_T; d.slen = 0; d.tbl = nt;
+                    return d;
+                }
+                if (src.v == DT_DATA) {
+                    DESCR_t tag = FIELD_GET_fn(src, "icn_type");
+                    if (tag.v == DT_S && tag.s && strcmp(tag.s, "list") == 0) {
+                        DESCR_t ea = FIELD_GET_fn(src, "icn_elems");
+                        int n = (int)FIELD_GET_fn(src, "icn_size").i;
+                        DESCR_t *src_elems = (ea.v == DT_DATA) ? (DESCR_t *)ea.ptr : NULL;
+                        /* Build a fresh icnlist mirroring the E_MAKELIST shape. */
+                        DESCR_t *new_elems = (DESCR_t *)GC_malloc((size_t)(n > 0 ? n : 1) * sizeof(DESCR_t));
+                        if (src_elems && n > 0) memcpy(new_elems, src_elems, (size_t)n * sizeof(DESCR_t));
+                        DESCR_t eptr; eptr.v = DT_DATA; eptr.slen = 0; eptr.ptr = (void *)new_elems;
+                        return DATCON_fn("icnlist", eptr, INTVAL(n), STRVAL("list"));
+                    }
+                }
+                /* For strings, integers, reals, sets — value semantics already
+                 * give a fresh descriptor; return src directly.              */
+                return src;
             }
 
             /* ── IC-5: swap(L, k) is actually handled as E_SWAP op ─────── */
@@ -4012,7 +4123,56 @@ DESCR_t interp_eval(EXPR_t *e)
          * This implements  every sum +:= (1 to 5)  →  sum=1,3,6,10,15
          * and  every result ||:= !s  →  result="x","xy"  */
         DESCR_t _augop_result = NULVCL;
-        if (rhs && icn_is_gen(rhs)) {
+        /* IC-9: !container OP:= rhs  — bang-iterate as augmented-assign lvalue.
+         * Walks every cell of the container, applies the augop in place, in one pass.
+         * Mirrors the E_ITERATE LHS branch in E_ASSIGN.  rhs evaluated once.
+         *   !T +:= v  (table) — buckets walk, modify TBPAIR_t::val
+         *   !L +:= v  (list)  — array walk, modify icn_elems[i]
+         */
+        if (lhs && lhs->kind == E_ITERATE && lhs->nchildren >= 1) {
+            DESCR_t cv = interp_eval(lhs->children[0]);
+            DESCR_t rv = interp_eval(rhs);
+            if (!IS_FAIL_fn(cv) && !IS_FAIL_fn(rv)) {
+                #define AUGOP_CELL(cell_) do { \
+                    DESCR_t _lv = (cell_); \
+                    if (IS_FAIL_fn(_lv)) break; \
+                    long _li = IS_INT_fn(_lv)?_lv.i:(long)_lv.r; \
+                    long _ri = IS_INT_fn(rv)?rv.i:(long)rv.r; \
+                    DESCR_t _res = NULVCL; \
+                    switch((IcnTkKind)e->ival){ \
+                        case TK_AUGPLUS:   _res=INTVAL(_li+_ri); break; \
+                        case TK_AUGMINUS:  _res=INTVAL(_li-_ri); break; \
+                        case TK_AUGSTAR:   _res=INTVAL(_li*_ri); break; \
+                        case TK_AUGSLASH:  _res=_ri?INTVAL(_li/_ri):FAILDESCR; break; \
+                        case TK_AUGMOD:    _res=_ri?INTVAL(_li%_ri):FAILDESCR; break; \
+                        case TK_AUGCONCAT: { \
+                            const char *_ls=VARVAL_fn(_lv),*_rs=VARVAL_fn(rv); \
+                            if(!_ls)_ls="";if(!_rs)_rs=""; \
+                            size_t _ll=strlen(_ls),_rl=strlen(_rs); \
+                            char *_buf=GC_malloc(_ll+_rl+1); \
+                            memcpy(_buf,_ls,_ll);memcpy(_buf+_ll,_rs,_rl);_buf[_ll+_rl]='\0'; \
+                            _res=STRVAL(_buf); break; \
+                        } \
+                        default: _res=INTVAL(_li+_ri); break; \
+                    } \
+                    if (!IS_FAIL_fn(_res)) { (cell_) = _res; _augop_result = _res; } \
+                } while(0)
+                if (cv.v == DT_T && cv.tbl) {
+                    for (int b = 0; b < TABLE_BUCKETS; b++)
+                        for (TBPAIR_t *p = cv.tbl->buckets[b]; p; p = p->next)
+                            AUGOP_CELL(p->val);
+                } else if (cv.v == DT_DATA) {
+                    DESCR_t tag = FIELD_GET_fn(cv, "icn_type");
+                    if (tag.v == DT_S && tag.s && strcmp(tag.s, "list") == 0) {
+                        DESCR_t ea = FIELD_GET_fn(cv, "icn_elems");
+                        int n = (int)FIELD_GET_fn(cv, "icn_size").i;
+                        DESCR_t *elems = (ea.v == DT_DATA) ? (DESCR_t *)ea.ptr : NULL;
+                        if (elems && n > 0) for (int i = 0; i < n; i++) AUGOP_CELL(elems[i]);
+                    }
+                }
+                #undef AUGOP_CELL
+            }
+        } else if (rhs && icn_is_gen(rhs)) {
             bb_node_t rbox = icn_eval_gen(rhs);
             DESCR_t tick = rbox.fn(rbox.ζ, α);
             while (!IS_FAIL_fn(tick) && !ICN_CUR.loop_break && !ICN_CUR.returning) {
