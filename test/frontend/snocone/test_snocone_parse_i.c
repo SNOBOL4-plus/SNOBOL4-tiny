@@ -8,6 +8,8 @@
  *                                                                  (tests 32–45)
  * Sub-step LS-4.i.4: alt-eval `(a, b, c)` → E_VLIST + `()` → E_NUL.
  *                                                                  (tests 46–58)
+ * Sub-step LS-4.i.5: `struct NAME { f1, f2, ... }` → DATA('NAME(f1,f2,...)').
+ *                                                                  (tests 59–69)
  *
  * LS-4.i.1 lowering shapes:
  *
@@ -1670,6 +1672,265 @@ static void test_vlist_literals(void) {
     free(stmts);
 }
 
+/* =========================================================================
+ * LS-4.i.5 — `struct NAME { f1, f2, ... }` record declarations
+ *
+ * Lowering shape (single bare-expression statement, no goto, no label):
+ *
+ *     subject = E_FNC("DATA", E_QLIT("NAME(f1,f2,...)"))
+ *
+ * Empty-fields case: `struct NAME { }` → `DATA('NAME()')`.
+ *
+ * Andrew's `.sc` line 162 introduces struct on top of the SPITBOL
+ * bootstrap; underlying primitive is SPITBOL `DATA('NAME(...)')` which
+ * installs a constructor + per-field accessors in one call.  The
+ * accessors double as L-values (e.g. `next(x) = newval`).
+ *
+ * Real-world corpus shapes verified (corpus/programs/include-sc/):
+ *   stack.sc      `struct link { next, value }`
+ *   tree.sc       `struct tree { t, v, n, c }`
+ *   counter.sc    `struct link_counter { next, value }`
+ *                 `struct link_tag { next, value }`     (back-to-back)
+ *
+ * No trailing semicolon — matches Andrew's surface and all corpus uses.
+ * ========================================================================= */
+
+/* Helper: True if stmt is a bare DATA('SPEC') call — i.e. subject is
+ * E_FNC named "DATA" with one E_QLIT child whose sval matches `expected`. */
+static int is_struct_data_call(STMT_t *s, const char *expected_spec) {
+    if (!s || !is_bare_expr(s)) return 0;
+    EXPR_t *e = s->subject;
+    if (!e || e->kind != E_FNC) return 0;
+    if (!e->sval || strcmp(e->sval, "DATA") != 0) return 0;
+    if (e->nchildren != 1) return 0;
+    EXPR_t *q = e->children[0];
+    if (!q || q->kind != E_QLIT) return 0;
+    if (!q->sval) return 0;
+    return strcmp(q->sval, expected_spec) == 0;
+}
+
+/* =========================================================================
+ * Test 59 — headline: `struct link { next, value }` (Andrew's stack.sc shape)
+ *   Expected:
+ *     stmt[0]   bare-expr  DATA('link(next,value)')
+ * ========================================================================= */
+static void test_struct_two_fields_headline(void) {
+    Program *prog = snocone_parse_program("struct link { next, value }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(n == 1, "expected 1 stmt, got %d", n);
+    if (n >= 1) {
+        ASSERT(is_struct_data_call(stmts[0], "link(next,value)"),
+               "stmt[0] should be DATA('link(next,value)')");
+    }
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 60 — single-field struct
+ *   `struct one { only }` → DATA('one(only)')
+ * ========================================================================= */
+static void test_struct_single_field(void) {
+    Program *prog = snocone_parse_program("struct one { only }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(n == 1, "expected 1 stmt, got %d", n);
+    if (n >= 1) ASSERT(is_struct_data_call(stmts[0], "one(only)"),
+                       "stmt[0] should be DATA('one(only)')");
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 61 — empty struct `{ }`
+ *   `struct empty { }` → DATA('empty()')
+ *   SPITBOL accepts a zero-field record; rare but legal.
+ * ========================================================================= */
+static void test_struct_empty_fields(void) {
+    Program *prog = snocone_parse_program("struct empty { }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(n == 1, "expected 1 stmt, got %d", n);
+    if (n >= 1) ASSERT(is_struct_data_call(stmts[0], "empty()"),
+                       "stmt[0] should be DATA('empty()')");
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 62 — four-field real-world shape (Andrew's tree.sc verbatim)
+ *   `struct tree { t, v, n, c }` → DATA('tree(t,v,n,c)')
+ *   Verifies struct_field_list left-recursive accumulation handles
+ *   N>2 cases.
+ * ========================================================================= */
+static void test_struct_four_fields(void) {
+    Program *prog = snocone_parse_program("struct tree { t, v, n, c }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(n == 1, "expected 1 stmt, got %d", n);
+    if (n >= 1) ASSERT(is_struct_data_call(stmts[0], "tree(t,v,n,c)"),
+                       "stmt[0] should be DATA('tree(t,v,n,c)')");
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 63 — splice integrity: struct between assignments
+ *   `x = 1; struct s { a, b, c } y = 2;`
+ *   Expected: 3 stmts in order — assign, struct, assign.  Confirms
+ *   sc_emit_struct doesn't disturb the linked-list around it.
+ * ========================================================================= */
+static void test_struct_in_sequence(void) {
+    Program *prog = snocone_parse_program(
+        "x = 1; struct s { a, b, c } y = 2;", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(n == 3, "expected 3 stmts, got %d", n);
+    if (n >= 1) ASSERT(is_assignment(stmts[0]),
+                       "stmt[0] should be assignment x = 1");
+    if (n >= 2) ASSERT(is_struct_data_call(stmts[1], "s(a,b,c)"),
+                       "stmt[1] should be DATA('s(a,b,c)')");
+    if (n >= 3) ASSERT(is_assignment(stmts[2]),
+                       "stmt[2] should be assignment y = 2");
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 64 — back-to-back structs (Andrew's counter.sc shape verbatim)
+ *   `struct link_counter { next, value } struct link_tag { next, value }`
+ *   Two adjacent struct decls.  No semicolons between them — matches the
+ *   actual corpus file.  Each lowers to its own DATA() call.
+ * ========================================================================= */
+static void test_struct_back_to_back(void) {
+    Program *prog = snocone_parse_program(
+        "struct link_counter { next, value } struct link_tag { next, value }",
+        "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(n == 2, "expected 2 stmts, got %d", n);
+    if (n >= 1) ASSERT(is_struct_data_call(stmts[0], "link_counter(next,value)"),
+                       "stmt[0] should be DATA('link_counter(next,value)')");
+    if (n >= 2) ASSERT(is_struct_data_call(stmts[1], "link_tag(next,value)"),
+                       "stmt[1] should be DATA('link_tag(next,value)')");
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 65 — name with underscore preserved verbatim
+ *   `struct my_record { a, b }` → DATA('my_record(a,b)') — confirms the
+ *   case-sensitive, bytes-preserved lexer rule (RULES.md) carries through.
+ * ========================================================================= */
+static void test_struct_name_with_underscore(void) {
+    Program *prog = snocone_parse_program("struct my_record { a, b }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(n == 1, "expected 1 stmt, got %d", n);
+    if (n >= 1) ASSERT(is_struct_data_call(stmts[0], "my_record(a,b)"),
+                       "stmt[0] should be DATA('my_record(a,b)')");
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 66 — mixed-case identifiers preserved (case-sensitive name space)
+ *   `struct Cons { Car, Cdr }` — capitals, mixed case.  Per RULES.md,
+ *   no folding anywhere; the QLIT spec must contain the bytes verbatim.
+ * ========================================================================= */
+static void test_struct_mixed_case(void) {
+    Program *prog = snocone_parse_program("struct Cons { Car, Cdr }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(n == 1, "expected 1 stmt, got %d", n);
+    if (n >= 1) ASSERT(is_struct_data_call(stmts[0], "Cons(Car,Cdr)"),
+                       "stmt[0] should be DATA('Cons(Car,Cdr)')");
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 67 — struct followed by use of the constructor
+ *   `struct cons { car, cdr } x = cons(1, 2);`
+ *   The struct decl precedes a call to the now-defined cons() ctor.
+ *   At parse time we don't run anything — just verify both stmts emit
+ *   in order with the right shapes.  The IR is what gets handed to the
+ *   runtime, where DATA() actually installs the function bindings.
+ * ========================================================================= */
+static void test_struct_followed_by_use(void) {
+    Program *prog = snocone_parse_program(
+        "struct cons { car, cdr } x = cons(1, 2);", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(n == 2, "expected 2 stmts, got %d", n);
+    if (n >= 1) ASSERT(is_struct_data_call(stmts[0], "cons(car,cdr)"),
+                       "stmt[0] should be DATA('cons(car,cdr)')");
+    if (n >= 2) {
+        ASSERT(is_assignment(stmts[1]),
+               "stmt[1] should be assignment x = cons(1, 2)");
+        if (is_assignment(stmts[1])) {
+            EXPR_t *rhs = stmts[1]->replacement;
+            ASSERT(rhs && rhs->kind == E_FNC && rhs->sval &&
+                   strcmp(rhs->sval, "cons") == 0,
+                   "RHS should be E_FNC(\"cons\", ...)");
+            ASSERT(rhs && rhs->nchildren == 2,
+                   "cons call should have 2 args");
+        }
+    }
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 68 — regression: struct does NOT consume a trailing semicolon
+ *   `struct s { a, b } ; x = 1;`
+ *   The explicit `;` after `}` must parse as an empty stmt (T_SEMICOLON
+ *   alone in simple_stmt's catchall).  Three stmts total: struct,
+ *   empty-stmt, assign.  The empty stmt is the T_SEMICOLON-only rule
+ *   in simple_stmt, which produces no Program::head entry — so we
+ *   actually expect 2 stmts (the empty one is a no-op at parse time).
+ * ========================================================================= */
+static void test_struct_with_explicit_trailing_semi(void) {
+    Program *prog = snocone_parse_program(
+        "struct s { a, b } ; x = 1;", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    /* T_SEMICOLON-alone rule produces no stmt — see simple_stmt's
+     * "empty stmt" rule (T_SEMICOLON alone) in snocone_parse.y.  So the
+     * sequence collapses to 2 stmts: struct, then assign. */
+    ASSERT(n == 2, "expected 2 stmts, got %d", n);
+    if (n >= 1) ASSERT(is_struct_data_call(stmts[0], "s(a,b)"),
+                       "stmt[0] should be DATA('s(a,b)')");
+    if (n >= 2) ASSERT(is_assignment(stmts[1]),
+                       "stmt[1] should be assignment x = 1");
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 69 — error: struct without a name is a syntax error
+ *   `struct { a, b }` — no identifier.  T_STRUCT must be followed by
+ *   T_IDENT; the empty form is rejected by the grammar.
+ * ========================================================================= */
+static void test_struct_no_name_error(void) {
+    Program *prog = snocone_parse_program("struct { a, b }", "test");
+    ASSERT(prog == NULL, "parse should have failed (no struct name)");
+    if (prog) {
+        /* If it somehow parsed, the IR shape is meaningless — leak. */
+    }
+}
+
 int main(void) {
     /* LS-4.i.1 — goto/label */
     test_goto_bare();
@@ -1733,6 +1994,18 @@ int main(void) {
     test_vlist_bare_statement();
     test_vlist_as_while_condition();
     test_vlist_literals();
+    /* LS-4.i.5 — struct NAME { f1, f2, ... } → DATA('NAME(f1,f2,...)') */
+    test_struct_two_fields_headline();
+    test_struct_single_field();
+    test_struct_empty_fields();
+    test_struct_four_fields();
+    test_struct_in_sequence();
+    test_struct_back_to_back();
+    test_struct_name_with_underscore();
+    test_struct_mixed_case();
+    test_struct_followed_by_use();
+    test_struct_with_explicit_trailing_semi();
+    test_struct_no_name_error();
     printf("=== Results: %d passed, %d failed ===\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;
 }

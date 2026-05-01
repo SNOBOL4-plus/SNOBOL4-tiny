@@ -564,6 +564,12 @@ static struct SwitchHead *sc_switch_head_new(ScParseState *st, EXPR_t *disc);
 static void     sc_switch_case_label   (ScParseState *st, EXPR_t *value);
 static void     sc_switch_default_label(ScParseState *st);
 static void     sc_finalize_switch     (ScParseState *st, struct SwitchHead *h);
+/* LS-4.i.5 — struct NAME { f1, f2, ... } — Andrew's .sc line 162 record-decl.
+ * Lowers to a single SPITBOL DATA('NAME(f1,f2,...)') bare-expression statement.
+ * SPITBOL's DATA primitive defines the constructor + per-field accessors in
+ * one call; struct is sugar for that.  Empty `struct NAME { }` lowers to
+ * DATA('NAME()') — legal SPITBOL (a zero-field record). */
+static void     sc_emit_struct         (ScParseState *st, char *name, char *fields);
 
 /* sc_kind_to_tok — translate FSM ScKind (1..N) to Bison's sc_tokentype.
  *
@@ -682,6 +688,10 @@ static int sc_kind_to_tok(int sc_kind);
 %type <str>       func_arglist func_arglist_ne
 /* LS-4.i.3 — switch/case/default head */
 %type <switchhead> switch_head
+/* LS-4.i.5 — struct field list — comma-separated IDENT list, accumulated
+ * left-to-right into a single malloc'd "f1,f2,f3" string handed to
+ * sc_emit_struct.  Mirrors func_arglist_ne shape verbatim. */
+%type <str>       struct_field_list
 
 %%
 
@@ -752,6 +762,16 @@ matched_stmt
                                         { sc_finalize_switch(st, $1); }
             | switch_head T_LBRACE T_RBRACE
                                         { sc_finalize_switch(st, $1); }
+            /* LS-4.i.5 — struct NAME { f1, f2, ... } record declaration.
+             * Lowers to a single bare-expression stmt: DATA('NAME(f1,f2,...)').
+             * Empty `struct NAME { }` lowers to DATA('NAME()').  No trailing
+             * semicolon — matches Andrew's .sc surface and the corpus
+             * (include-sc/stack.sc, tree.sc, counter.sc all written as
+             * `struct NAME { fields }` with no `;`). */
+            | T_STRUCT T_IDENT T_LBRACE struct_field_list T_RBRACE
+                                        { sc_emit_struct(st, $2, $4); free($2); free($4); }
+            | T_STRUCT T_IDENT T_LBRACE T_RBRACE
+                                        { sc_emit_struct(st, $2, strdup("")); free($2); }
             /* LS-4.i.1 — labeled stmt: `name:` followed by a stmt */
             | label_decl matched_stmt
             ;
@@ -908,6 +928,21 @@ func_arglist_ne
                   char *s = malloc(len); snprintf(s, len, "%s,%s", $1, $3);
                   free($1); free($3); $$ = s; }
             | func_arglist_ne T_COMMA T_IDENT
+                { int len = strlen($1) + 1 + strlen($3) + 1;
+                  char *s = malloc(len); snprintf(s, len, "%s,%s", $1, $3);
+                  free($1); free($3); $$ = s; }
+            ;
+
+/* LS-4.i.5 — struct_field_list: comma-separated IDENT list inside the
+ * `{ ... }` of a `struct NAME { ... }` declaration.  Yields a single
+ * malloc'd string of the form "f1,f2,f3" (no leading/trailing comma,
+ * no spaces) handed to sc_emit_struct, which embeds it inside the
+ * DATA('NAME(...)') argument string.  Mirrors func_arglist_ne's
+ * left-to-right accumulation pattern verbatim. */
+struct_field_list
+            : T_IDENT
+                { $$ = strdup($1); free($1); }
+            | struct_field_list T_COMMA T_IDENT
                 { int len = strlen($1) + 1 + strlen($3) + 1;
                   char *s = malloc(len); snprintf(s, len, "%s,%s", $1, $3);
                   free($1); free($3); $$ = s; }
@@ -2447,6 +2482,57 @@ static void sc_finalize_switch(ScParseState *st, struct SwitchHead *h) {
     free(h->end_label);
     free(h->default_label);
     free(h);
+}
+
+/* =========================================================================
+ *  LS-4.i.5 — sc_emit_struct: emit the SPITBOL DATA() call for a struct decl.
+ *
+ *  Snocone:        struct NAME { f1, f2, f3 }
+ *  Lowers to:      DATA('NAME(f1,f2,f3)')         (one bare-expr stmt)
+ *
+ *  Andrew's `.sc` line 162 introduces `struct` as a record-declaration
+ *  keyword; the SNOBOL4/SPITBOL underlying primitive is DATA('NAME(...)'),
+ *  which simultaneously installs:
+ *    • a constructor function NAME(arg1, arg2, ..., argN), creating a
+ *      record value with N fields
+ *    • per-field accessor functions f1(), f2(), ..., each acting as both
+ *      a getter (`fk(x)` returns the k-th field) and an L-value
+ *      (`fk(x) = newval` updates it)
+ *
+ *  This rung is the bare minimum for Andrew's stack.sc / tree.sc /
+ *  counter.sc shapes — `struct link { next, value }` etc. lower to a
+ *  single `DATA('link(next,value)')` statement that sits exactly where
+ *  the source `struct` did.
+ *
+ *  IR shape (mirrors sc_func_head_new's DEFINE-emission idiom):
+ *
+ *    EXPR_t  qarg     = E_QLIT  sval = "NAME(f1,f2,f3)"
+ *    EXPR_t  data_call= E_FNC   sval = "DATA"   children = [ qarg ]
+ *    STMT_t  bare-expr stmt with subject = data_call,  no goto, no label.
+ *
+ *  Empty-fields case: `struct NAME { }` lowers to `DATA('NAME()')`, which
+ *  SPITBOL accepts as a zero-field record (rare but legal).  Caller
+ *  passes `fields = strdup("")`.
+ *
+ *  ⛔ This emits in the same place sc_func_head_new emits its DEFINE
+ *  call — at top level (or within whatever block the struct decl sits
+ *  in).  It does NOT push a new context, has no body to splice, and
+ *  needs no finalize companion — struct is a single statement.
+ * ========================================================================= */
+static void sc_emit_struct(ScParseState *st, char *name, char *fields) {
+    /* Build "NAME(fields)" — the QLIT argument to DATA(). */
+    int slen = strlen(name) + 1 + strlen(fields) + 2;     /* NAME(fields) + NUL */
+    char *spec = malloc(slen);
+    snprintf(spec, slen, "%s(%s)", name, fields);
+
+    EXPR_t *qarg = expr_new(E_QLIT);
+    qarg->sval   = spec;                                   /* takes ownership */
+
+    EXPR_t *data_call = expr_new(E_FNC);
+    data_call->sval   = strdup("DATA");
+    expr_add_child(data_call, qarg);
+
+    sc_append_stmt(st, data_call);                         /* bare-expr stmt */
 }
 
 /* =========================================================================

@@ -239,7 +239,7 @@ typedef struct ScParseState {
 #if ! defined SC_STYPE && ! defined SC_STYPE_IS_DECLARED
 union SC_STYPE
 {
-#line 588 "snocone_parse.y"
+#line 594 "snocone_parse.y"
 
     EXPR_t *expr;
     char   *str;
