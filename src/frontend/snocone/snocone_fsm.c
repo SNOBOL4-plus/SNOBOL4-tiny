@@ -57,21 +57,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "snocone_lex2.h"
-/* ---------------------------------------------------------------- */
-/* LexCtx -- per-scan state.  Lives across calls to sc_lex_next.    */
-/* ---------------------------------------------------------------- */
-typedef struct LexCtx {
-    const char *p;
-    int         line;
-    int         last_kind;
-    char        text[65536];
-    char        strbuf[65536];
-    int         strpos;
-} LexCtx;
-/* ---------------------------------------------------------------- */
-/* Character-class predicates -- pure expressions, no control flow. */
-/* ---------------------------------------------------------------- */
+#include "snocone_fsm.h"
+/*--------------------------------------------------------------------------------------------------------------------*/
 static inline int is_alpha(int c)        { return ((c | 32) >= 'a' && (c | 32) <= 'z') || c == '_'; }
 static inline int is_digit(int c)        { return c >= '0' && c <= '9'; }
 static inline int is_idcont(int c)       { return is_alpha(c) || is_digit(c); }
@@ -600,49 +587,7 @@ E_STR:
 /*--------------------------------------------------------------------------------------------------------------------*/
 E_UNKNOWN:       EMIT_V(T_UNKNOWN);
 }
-/* ---------------------------------------------------------------- */
-/* LS-1.b acceptance-harness compatibility wrapper.                 */
-/* Drains tokens into a flat ScTokenBuf via repeated sc_lex_next.   */
-/* The recursion stops at T_EOF (no source-level loop).             */
-/* ---------------------------------------------------------------- */
-static void drain(LexCtx *ctx, ScTokenBuf *buf) {
-    int kind = sc_lex_next(ctx);
-    if (buf->count >= buf->capacity) {
-        buf->capacity = buf->capacity ? buf->capacity * 2 : 64;
-        buf->tokens   = realloc(buf->tokens, buf->capacity * sizeof(ScToken2));
-    }
-    ScToken2 *t = &buf->tokens[buf->count++];
-    t->kind = kind;
-    t->line = ctx->line;
-    t->text = strdup(ctx->text);
-    if (kind == T_EOF) return;
-    drain(ctx, buf);
-}
-ScTokenBuf snocone_lex2(const char *source) {
-    ScTokenBuf buf;
-    memset(&buf, 0, sizeof(buf));
-    LexCtx ctx;
-    memset(&ctx, 0, sizeof(ctx));
-    ctx.p    = source;
-    ctx.line = 1;
-    drain(&ctx, &buf);
-    return buf;
-}
-void sc_token_buf_free(ScTokenBuf *buf) {
-    int i = 0;
-free_loop:
-    if (i >= buf->count)                                                                                            goto free_done;
-    free(buf->tokens[i].text); i++;                                                                                 goto free_loop;
-free_done:
-    free(buf->tokens);
-    buf->tokens = NULL;
-    buf->count = 0;
-    buf->capacity = 0;
-}
-/* ---------------------------------------------------------------- */
-/* sc2_kind_name -- diagnostic name for a token kind.               */
-/* Table-driven so no switch.  Built at first call, idempotent.     */
-/* ---------------------------------------------------------------- */
+/*--------------------------------------------------------------------------------------------------------------------*/
 static const char *sc_name_table[256];
 static int         sc_name_table_built = 0;
 static void sc_name_table_build(void) {

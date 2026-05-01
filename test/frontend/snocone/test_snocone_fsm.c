@@ -1,47 +1,51 @@
 /*
- * test_snocone_lex2.c — LS-3.c acceptance test
+ * test_snocone_fsm.c -- Snocone LS-1.b 31-test acceptance harness
  *
- * Runs the 30-test token-stream corpus from GOAL-SNOCONE-LANG-SPACE §5.
- * Each test tokenises a source snippet and checks the token stream
- * against the expected sequence.  A mismatch prints a diff-style report.
+ * Drives sc_lex_next(ctx) directly.  Each TestCase carries an
+ * expected sequence of token kinds (T_EOF-terminated).  The
+ * runner pulls one token at a time from the FSM and compares.
+ * No buffering -- the harness is the consumer, the FSM is the
+ * producer, and the loop runs token-by-token.
  *
  * Build:
- *   cc -Wall -o test_snocone_lex2 test_snocone_lex2.c snocone.lex.c -lfl
+ *   cc -Wall -o test_snocone_fsm test_snocone_fsm.c \
+ *       ../../src/frontend/snocone/snocone_fsm.c \
+ *       -I ../../src/frontend/snocone
  *
- * Commit identity: LCherryholmes / lcherryh@yahoo.com
+ * Commit identity: LCherryholmes / lcherryh@yahoo.com  (RULES.md)
  */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "snocone_lex2.h"
-
-/* -----------------------------------------------------------------------
- * A test case: input source + expected token kinds (terminated by T_EOF)
- * ----------------------------------------------------------------------- */
+#include "snocone_fsm.h"
 typedef struct {
     const char *name;
     const char *source;
-    int         expected[64];  /* T_EOF-terminated */
+    int         expected[64];                      /* T_EOF-terminated */
 } TestCase;
-
 static int passed = 0, failed = 0;
-
 static void run_test(const TestCase *tc) {
-    ScTokenBuf buf = snocone_lex2(tc->source);
-
+    LexCtx ctx;
+    memset(&ctx, 0, sizeof(ctx));
+    ctx.p    = tc->source;
+    ctx.line = 1;
     int ok = 1;
-    int i = 0;
-    for (i = 0; tc->expected[i] != T_EOF; i++) {
-        if (i >= buf.count || buf.tokens[i].kind != tc->expected[i]) {
+    int i  = 0;
+    int got_kinds[128];
+    int got_count = 0;
+    /* Pull tokens one at a time and compare against expected[i].
+     * Keep going until we've seen T_EOF so we can print full diagnostics on failure. */
+    for (;;) {
+        int k = sc_lex_next(&ctx);
+        if (got_count < 128) got_kinds[got_count++] = k;
+        if (tc->expected[i] == T_EOF) {
+            if (k != T_EOF) ok = 0;
+        } else if (k != tc->expected[i]) {
             ok = 0;
-            break;
         }
+        if (k == T_EOF) break;
+        i++;
     }
-    /* Also check that we consumed everything (next should be T_EOF) */
-    if (ok && (i >= buf.count || buf.tokens[i].kind != T_EOF))
-        ok = 0;
-
     if (ok) {
         printf("  PASS  %s\n", tc->name);
         passed++;
@@ -49,21 +53,14 @@ static void run_test(const TestCase *tc) {
         printf("  FAIL  %s\n", tc->name);
         printf("        source: %s\n", tc->source);
         printf("        expected: ");
-        for (int j = 0; tc->expected[j] != T_EOF; j++)
-            printf("%s ", sc2_kind_name(tc->expected[j]));
+        for (int j = 0; tc->expected[j] != T_EOF; j++) printf("%s ", sc2_kind_name(tc->expected[j]));
         printf("EOF\n");
         printf("        got:      ");
-        for (int j = 0; j < buf.count; j++)
-            printf("%s(%s) ", sc2_kind_name(buf.tokens[j].kind),
-                   buf.tokens[j].text[0] ? buf.tokens[j].text : "");
+        for (int j = 0; j < got_count; j++) printf("%s ", sc2_kind_name(got_kinds[j]));
         printf("\n");
         failed++;
     }
-
-    sc_token_buf_free(&buf);
 }
-
-
 int main(void) {
     printf("=== Snocone LS-3 lexer acceptance tests ===\n\n");
 
