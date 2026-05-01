@@ -1,9 +1,9 @@
 /*
- * snocone_parse.y — Snocone Bison grammar (GOAL-SNOCONE-LANG-SPACE LS-4.{a,b,c,cn})
+ * snocone_parse.y — Snocone Bison grammar (GOAL-SNOCONE-LANG-SPACE LS-4.{a,b,c,cn,d})
  *
  * Andrew Koenig's .sc self-host operator design + Lon's restoration of
  * SPITBOL space-as-concat semantics.  This file covers LS-4.a, LS-4.b,
- * LS-4.c, and LS-4.cn:
+ * LS-4.c, LS-4.cn, and LS-4.d:
  *   * atoms (T_INT/T_REAL/T_STR/T_IDENT/T_KEYWORD)
  *   * arithmetic (+ - * / ^)
  *   * paren-grouping
@@ -19,10 +19,11 @@
  *     - file rename snocone.y → snocone_parse.y (matches snocone_lex.{c,h})
  *     - public entry now returns CODE_t* (typedef alias of Program)
  *       for symmetry with EXPR_t — the type EVAL operates on
+ *   * LS-4.d (this rung): postfix subscript `a[i, j]` → E_IDX (n-ary,
+ *     left-recursive so `a[i][j]` chains)
  *
- * Everything else — more unaries, subscripting, control flow, switch,
- * break/continue, goto, alt-eval, struct — lands in LS-4.d through
- * LS-4.i.
+ * Everything else — more unaries, control flow, switch, break/continue,
+ * goto, alt-eval, struct — lands in LS-4.e through LS-4.i.
  *
  * Pipeline:
  *   snocone_lex.c  (threaded-code FSM lexer) -- sc_lex_next(ctx) -- single token per call
@@ -375,16 +376,19 @@ static int sc_kind_to_tok(int sc_kind);
 %token T_SEMICOLON
 %token T_COMMA
 
+/* ---- Subscript brackets (LS-4.d) ---- */
+%token T_LBRACK T_RBRACK
+
 /* All other tokens the FSM may emit are declared here so the translation
  * table can index every FSM kind, but they have no productions yet —
- * encountering one in the input is a parse error.  LS-4.d–LS-4.i will
+ * encountering one in the input is a parse error.  LS-4.e–LS-4.i will
  * give them rules. */
 %token T_2DOLLAR T_2DOT
 %token T_2AMP T_2AT T_2POUND T_2PERCENT T_2TILDE
 %token T_1STAR T_1SLASH T_1PERCENT
 %token T_1AT T_1TILDE T_1DOLLAR T_1DOT T_1POUND
 %token T_1PIPE T_1EQUAL T_1QUEST T_1AMP
-%token T_LBRACK T_RBRACK T_LBRACE T_RBRACE
+%token T_LBRACE T_RBRACE
 %token T_COLON
 %token T_KW_IF T_KW_ELSE T_KW_WHILE T_KW_DO T_KW_UNTIL T_KW_FOR
 %token T_KW_SWITCH T_KW_CASE T_KW_DEFAULT
@@ -392,7 +396,7 @@ static int sc_kind_to_tok(int sc_kind);
 %token T_KW_FUNCTION T_KW_RETURN T_KW_FRETURN T_KW_NRETURN T_KW_STRUCT
 %token T_UNKNOWN
 
-%type <expr> expr0 expr1 expr3 expr4 expr5 expr6 expr9 expr11 expr17 exprlist exprlist_ne
+%type <expr> expr0 expr1 expr3 expr4 expr5 expr6 expr9 expr11 expr15 expr17 exprlist exprlist_ne
 
 %%
 
@@ -426,12 +430,13 @@ stmt        : expr0 T_SEMICOLON                { sc_append_stmt(st, $1); }
  *   expr6  — addition / subtraction                                pri 6/7 (SPITBOL/Andrew) left-assoc
  *   expr9  — multiplication / division                             pri 8/9 left-assoc
  *   expr11 — exponentiation                                        pri 11  right-assoc
+ *   expr15 — postfix subscript `a[i,j]` → E_IDX (n-ary)             pri 15  left-assoc chain
  *   expr17 — atoms (literals, idents, keywords, parens, T_FUNCTION,
  *            unary +/-)
  *
- * Skipped levels (expr2, expr7, expr8, expr10, expr12..expr16) are
- * reserved for OPSYN slots and the dual-role unary-on-atom tier;
- * they fill in across LS-4.d–LS-4.i.  Each tier delegates to the
+ * Skipped levels (expr2, expr7, expr8, expr10, expr12..expr14, expr16)
+ * are reserved for OPSYN slots and the dual-role unary-on-atom tier;
+ * they fill in across LS-4.e–LS-4.i.  Each tier delegates to the
  * next-higher level in its base case (`| expr<next> { $$ = $1; }`),
  * giving a clean precedence climber with no shift/reduce conflicts.
  */
@@ -600,9 +605,46 @@ expr9       : expr9 T_2STAR expr11
                                 { $$ = $1; }
             ;
 
-/* Right-associative exponentiation: expr17 ^ expr11. */
-expr11      : expr17 T_2CARET expr11
+/* Right-associative exponentiation: expr15 ^ expr11.
+ * (Was expr17 before LS-4.d; now goes through expr15 so the new
+ * subscript tier can sit between exponent and atoms.) */
+expr11      : expr15 T_2CARET expr11
                                 { $$ = expr_binary(E_POW, $1, $3); }
+            | expr15
+                                { $$ = $1; }
+            ;
+
+/* ---- Subscript tier (LS-4.d) --------------------------------------------
+ *
+ * Postfix subscript `a[i, j]` → E_IDX(a, i, j).  Mirrors snobol4.y's
+ * `expr15` shape (snobol4.y:183) — same priority, same n-ary IR shape,
+ * same left-recursive chaining so `a[i][j]` parses as
+ *   E_IDX(E_IDX(a, i), j)
+ * and `a[i, j]` parses as the single n-ary
+ *   E_IDX(a, i, j).
+ *
+ * The lexer always emits T_LBRACK for `[` regardless of preceding
+ * whitespace (`a[i]` and `a [i]` both lex the same way — see
+ * snocone_lex.c E_LBRACK rule).  No CONCAT injection between a value-
+ * token and `[`.
+ *
+ * Empty subscript `a[]` is permitted at the lexer/grammar level (uses
+ * the empty-list arm of `exprlist`); semantic legality is a downstream
+ * concern.  Arity-checking, bounds-checking, etc. happen at lower /
+ * runtime stages, not here.
+ *
+ * The `exprlist` non-terminal already exists from LS-4.b (function-call
+ * arg lists); we reuse it.  Container-unpacking idiom matches the
+ * T_FUNCTION rule in expr17 — drain children into the E_IDX node, then
+ * free the E_NUL temporary holder.
+ */
+expr15      : expr15 T_LBRACK exprlist T_RBRACK
+                                { EXPR_t *idx = expr_new(E_IDX);
+                                  expr_add_child(idx, $1);
+                                  for (int i = 0; i < $3->nchildren; i++)
+                                      expr_add_child(idx, $3->children[i]);
+                                  free($3->children); free($3);
+                                  $$ = idx; }
             | expr17
                                 { $$ = $1; }
             ;
