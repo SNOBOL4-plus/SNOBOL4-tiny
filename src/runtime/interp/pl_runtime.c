@@ -254,6 +254,19 @@ Term *pl_unified_term_from_expr(EXPR_t *e, Term **env) {
             Term *args2[2]; args2[0]=pl_unified_term_from_expr(e->children[0],env); args2[1]=pl_unified_term_from_expr(e->children[1],env);
             return term_new_compound(atom, 2, args2);
         }
+        case E_UNIFY: {
+            /* =/2 used as a term (e.g. G = (X = 5), assertz(p(X = 5))): wrap as
+             * compound. Without this, the default arm below silently produced
+             * atom("?") and any later call(G) / catch(G,_,_) saw a literal
+             * `?` instead of the unification goal. (PL-12 latent bug.) */
+            int atom = prolog_atom_intern("=");
+            Term *args2[2];
+            args2[0] = e->nchildren > 0 ? pl_unified_term_from_expr(e->children[0], env) : term_new_atom(atom);
+            args2[1] = e->nchildren > 1 ? pl_unified_term_from_expr(e->children[1], env) : term_new_atom(atom);
+            return term_new_compound(atom, 2, args2);
+        }
+        case E_CUT:  return term_new_atom(prolog_atom_intern("!"));
+        case E_NUL:  return term_new_atom(prolog_atom_intern("[]"));
         case E_FNC: {
             int arity = e->nchildren;
             int atom  = prolog_atom_intern(e->sval ? e->sval : "f");
