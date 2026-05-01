@@ -35,6 +35,16 @@ echo "GEN snobol4.lex.c from snobol4.l"
 flex --noline -o snobol4.lex.c snobol4.l
 echo "OK  snobol4.lex.c"
 
+# ── snocone parser: snocone.y → snocone.tab.c + snocone.tab.h ────────────────
+# (LS-4.a — atoms + arithmetic + parens + assignment; LS-4.b–LS-4.i extend.)
+# The Snocone lexer is a hand-written threaded-code FSM (snocone_lex.c), not
+# a Flex source — so this stanza generates only the parser, not a lex file.
+SNOCONE="$ONE4ALL/src/frontend/snocone"
+echo "GEN snocone.tab.c from snocone.y"
+cd "$SNOCONE"
+bison -d -o snocone.tab.c snocone.y
+echo "OK  snocone.tab.c snocone.tab.h"
+
 # ── rebus parser: rebus.y → rebus.tab.c + rebus.tab.h ───────────────────────
 echo "GEN rebus.tab.c from rebus.y"
 cd "$REBUS"

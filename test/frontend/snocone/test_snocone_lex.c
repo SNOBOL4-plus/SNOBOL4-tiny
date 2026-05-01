@@ -1,5 +1,5 @@
 /*
- * test_snocone_fsm.c -- Snocone LS-1.b 31-test acceptance harness
+ * test_snocone_lex.c -- Snocone LS-1.b 31-test acceptance harness
  *
  * Drives sc_lex_next(ctx) directly.  Each TestCase carries an
  * expected sequence of token kinds (T_EOF-terminated).  The
@@ -8,8 +8,8 @@
  * producer, and the loop runs token-by-token.
  *
  * Build:
- *   cc -Wall -o test_snocone_fsm test_snocone_fsm.c \
- *       ../../src/frontend/snocone/snocone_fsm.c \
+ *   cc -Wall -o test_snocone_lex test_snocone_lex.c \
+ *       ../../src/frontend/snocone/snocone_lex.c \
  *       -I ../../src/frontend/snocone
  *
  * Commit identity: LCherryholmes / lcherryh@yahoo.com  (RULES.md)
@@ -17,7 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "snocone_fsm.h"
+#include "snocone_lex.h"
 typedef struct {
     const char *name;
     const char *source;

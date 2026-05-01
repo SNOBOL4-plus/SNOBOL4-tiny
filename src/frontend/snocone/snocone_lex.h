@@ -1,148 +1,61 @@
 /*
- * snocone_lex.h — Snocone lexer public API
+ * snocone_lex.h -- Snocone threaded-code FSM lexer public API
  *
- * Ported from snobol4jvm/src/SNOBOL4clojure/snocone.clj (Clojure reference).
- * Token kind names match the JVM KIND-* constants exactly (SC_ prefix here).
+ * One function: sc_lex_next(ctx) returns the next token kind.
+ * Token text payload (for value tokens) lands in ctx->text.
+ * Token kinds (T_*) match snobol4.tab.h naming -- same name
+ * everywhere for any concept equivalence (RULES.md / Lon's
+ * session-#9 directive).
  *
- * Source model (Snocone language spec / snocone.clj):
- *   - Comments: # to end of line; not in token stream
- *   - Continuation: newline suppressed when last non-ws char is one of:
- *       @ $ % ^ & * ( - + = [ < > | ~ , ? :
- *   - Semicolons terminate statements within a line (same as newline)
- *   - Strings: delimited by matching ' or "
- *   - Numbers: integer or real (optional exponent eEdD+/-); leading-dot (.5) legal
- *   - Identifiers: [A-Za-z_][A-Za-z0-9_]*  reclassified to keyword if match
- *   - Operators: longest-match from op-entries table
+ * No buffer types.  Callers either pull tokens one at a time
+ * (Bison's yylex pattern) or accumulate locally if needed.
+ *
+ * Renamed from snocone_fsm.h at LS-4.a (session 2026-04-30 #3) — this
+ * IS the Snocone lexer now; the old hand-written one moved to
+ * one4all/archive/snocone_lex.c when this threaded-code FSM took
+ * its place as the standard frontend lexer.  "FSM" remains in the
+ * description (it accurately names the implementation technique).
  */
-
 #ifndef SNOCONE_LEX_H
 #define SNOCONE_LEX_H
-
 #include <stddef.h>
-
-/* ---------------------------------------------------------------------------
- * Token kinds  (matches JVM KIND-* enum order)
- * ------------------------------------------------------------------------- */
 typedef enum {
-    /* Literals */
-    SNOCONE_INTEGER,
-    SNOCONE_REAL,
-    SNOCONE_STRING,
-    SNOCONE_IDENT,
-
-    /* Keywords -- matched as identifiers, then reclassified */
-    SNOCONE_KW_IF,
-    SNOCONE_KW_ELSE,
-    SNOCONE_KW_WHILE,
-    SNOCONE_KW_DO,
-    SNOCONE_KW_FOR,
-    SNOCONE_KW_RETURN,
-    SNOCONE_KW_FRETURN,
-    SNOCONE_KW_NRETURN,
-    SNOCONE_KW_GO,
-    SNOCONE_KW_TO,
-    SNOCONE_KW_PROCEDURE,
-    SNOCONE_KW_STRUCT,
-
-    /* Punctuation */
-    SNOCONE_LPAREN,
-    SNOCONE_RPAREN,
-    SNOCONE_LBRACE,
-    SNOCONE_RBRACE,
-    SNOCONE_LBRACKET,
-    SNOCONE_RBRACKET,
-    SNOCONE_COMMA,
-    SNOCONE_SEMICOLON,
-    SNOCONE_COLON,
-
-    /* Binary operators (precedence low->high, from bconv table in snocone.sc) */
-    SNOCONE_ASSIGN,       /* =    prec 1/2  -> SNOBOL4 =          */
-    SNOCONE_QUESTION,     /* ?    prec 2    -> SNOBOL4 ?           */
-    SNOCONE_PIPE,         /* |    prec 3    -> SNOBOL4 |           */
-    SNOCONE_OR,           /* ||   prec 4    -> SNOBOL4 (a,b)       */
-    SNOCONE_CONCAT,       /* &&   prec 5    -> SNOBOL4 blank       */
-    SNOCONE_EQ,           /* ==   prec 6    -> EQ(a,b)             */
-    SNOCONE_NE,           /* !=   prec 6    -> NE(a,b)             */
-    SNOCONE_LT,           /* <    prec 6    -> LT(a,b)             */
-    SNOCONE_GT,           /* >    prec 6    -> GT(a,b)             */
-    SNOCONE_LE,           /* <=   prec 6    -> LE(a,b)             */
-    SNOCONE_GE,           /* >=   prec 6    -> GE(a,b)             */
-    SNOCONE_STR_IDENT,    /* ::   prec 6    -> IDENT(a,b)          */
-    SNOCONE_STR_DIFFER,   /* :!:  prec 6    -> DIFFER(a,b)         */
-    SNOCONE_STR_LT,       /* :<:  prec 6    -> LLT(a,b)            */
-    SNOCONE_STR_GT,       /* :>:  prec 6    -> LGT(a,b)            */
-    SNOCONE_STR_LE,       /* :<=: prec 6    -> LLE(a,b)            */
-    SNOCONE_STR_GE,       /* :>=: prec 6    -> LGE(a,b)            */
-    SNOCONE_STR_EQ,       /* :==: prec 6    -> LEQ(a,b)            */
-    SNOCONE_STR_NE,       /* :!=: prec 6    -> LNE(a,b)            */
-    SNOCONE_PLUS,         /* +    prec 7                           */
-    SNOCONE_MINUS,        /* -    prec 7                           */
-    SNOCONE_SLASH,        /* /    prec 8                           */
-    SNOCONE_STAR,         /* *    prec 8                           */
-    SNOCONE_PERCENT,      /* %    prec 8    -> REMDR(a,b)          */
-    SNOCONE_CARET,        /* ^ ** prec 9/10 right-assoc -> **      */
-    SNOCONE_PERIOD,       /* .    prec 10   -> SNOBOL4 .           */
-    SNOCONE_DOLLAR,       /* $    prec 10   -> SNOBOL4 $           */
-
-    /* Unary-only operators */
-    SNOCONE_AT,           /* @                                     */
-    SNOCONE_AMPERSAND,    /* &                                     */
-    SNOCONE_TILDE,        /* ~ logical negation                    */
-
-    /* Compound assignment operators (SC-1 C-style extensions) */
-    SNOCONE_PLUS_ASSIGN,  /* +=  -> x = x + rhs                   */
-    SNOCONE_MINUS_ASSIGN, /* -=  -> x = x - rhs                   */
-    SNOCONE_STAR_ASSIGN,  /* *=  -> x = x * rhs                   */
-    SNOCONE_SLASH_ASSIGN, /* /=  -> x = x / rhs                   */
-    SNOCONE_PERCENT_ASSIGN,/* %= -> x = x % rhs                   */
-    SNOCONE_CARET_ASSIGN, /* ^=  -> x = x ^ rhs                   */
-
-    /* Keywords added after original spec (SC-1) — before UNKNOWN to avoid
-     * collision with SNOCONE_CALL/ARRAY_REF synthetic tokens in snocone_parse.h */
-    SNOCONE_KW_THEN,      /* "then"     — optional after if(cond)  */
-    SNOCONE_KW_GOTO,      /* "goto"     — C-style one-word form    */
-    SNOCONE_KW_BREAK,     /* "break"    — exit innermost loop      */
-    SNOCONE_KW_CONTINUE,  /* "continue" — next iteration           */
-
-    /* Synthetic */
-    SNOCONE_NEWLINE,      /* logical end-of-statement              */
-    SNOCONE_EOF,
-    SNOCONE_UNKNOWN
-} SnoconeKind;
-
-/* ---------------------------------------------------------------------------
- * Token struct
- * ------------------------------------------------------------------------- */
-typedef struct {
-    SnoconeKind  kind;
-    char   *text;   /* heap-allocated, NUL-terminated verbatim source text */
-    int     line;   /* 1-based physical line where token began              */
-} SnoconeToken;
-
-/* ---------------------------------------------------------------------------
- * Token array (returned by snocone_lex)
- * ------------------------------------------------------------------------- */
-typedef struct {
-    SnoconeToken *tokens;
-    int      count;   /* includes the trailing SNOCONE_EOF */
-} ScTokenArray;
-
-/* ---------------------------------------------------------------------------
- * Public API
- *
- * snocone_lex(source)
- *   Tokenise a complete Snocone source string.
- *   Returns a heap-allocated ScTokenArray terminated by SNOCONE_EOF.
- *   Caller must free with sc_tokens_free().
- *
- * sc_tokens_free(arr)
- *   Free all memory owned by the token array.
- *
- * sc_kind_name(kind)
- *   Return a static string name for debugging/testing.
- * ------------------------------------------------------------------------- */
-ScTokenArray snocone_lex(const char *source);
-void         sc_tokens_free(ScTokenArray *arr);
-const char  *sc_kind_name(SnoconeKind kind);
-
-#endif /* SNOCONE_LEX_H */
+    T_INT = 1, T_REAL, T_STR, T_IDENT,
+    T_FUNCTION,                                    /* ident immediately followed by '(' */
+    T_KEYWORD,                                     /* &IDENT */
+    T_CONCAT,                                      /* whitespace between two atoms */
+    T_ASSIGNMENT, T_MATCH, T_ALTERNATION,
+    T_EQ, T_NE, T_LT, T_GT, T_LE, T_GE,            /* numeric compare pri 6 */
+    T_LEQ, T_LNE, T_LLT, T_LGT, T_LLE, T_LGE,      /* string compare :==: etc. */
+    T_IDENT_OP,                                    /* ::   pri 6 IDENT() */
+    T_DIFFER,                                      /* :!:  pri 6 DIFFER() */
+    T_ADDITION, T_SUBTRACTION, T_DIVISION, T_MULTIPLICATION,
+    T_EXPONENTIATION,                              /* ^ ** ! pri 11 right */
+    T_IMMEDIATE_ASSIGN,                            /* $    pri 12 binary */
+    T_COND_ASSIGN,                                 /* .    pri 12 binary */
+    T_AMPERSAND, T_AT_SIGN, T_POUND, T_PERCENT, T_TILDE,
+    T_PLUS_ASSIGN, T_MINUS_ASSIGN, T_STAR_ASSIGN, T_SLASH_ASSIGN, T_CARET_ASSIGN,
+    T_UN_PLUS, T_UN_MINUS, T_UN_ASTERISK, T_UN_SLASH, T_UN_PERCENT,
+    T_UN_AT_SIGN, T_UN_TILDE, T_UN_DOLLAR_SIGN, T_UN_PERIOD, T_UN_POUND,
+    T_UN_VERTICAL_BAR, T_UN_EQUAL, T_UN_QUESTION_MARK, T_UN_AMPERSAND,
+    T_LPAREN, T_RPAREN, T_LBRACK, T_RBRACK, T_LBRACE, T_RBRACE,
+    T_COMMA, T_SEMICOLON, T_COLON,
+    T_KW_IF, T_KW_ELSE, T_KW_WHILE, T_KW_DO, T_KW_UNTIL, T_KW_FOR,
+    T_KW_SWITCH, T_KW_CASE, T_KW_DEFAULT,
+    T_KW_BREAK, T_KW_CONTINUE, T_KW_GOTO,
+    T_KW_FUNCTION, T_KW_RETURN, T_KW_FRETURN, T_KW_NRETURN,
+    T_KW_STRUCT,
+    T_EOF, T_UNKNOWN
+} ScKind;
+typedef struct LexCtx {
+    const char *p;                                 /* cursor into source (advances per call) */
+    int         line;                              /* 1-based line number */
+    int         last_kind;                         /* kind of last emitted token, 0 at start */
+    char        text[65536];                       /* payload for the most recent value token */
+    char        strbuf[65536];                     /* string-literal accumulation buffer */
+    int         strpos;
+} LexCtx;
+int         sc_lex_next     (LexCtx *ctx);
+int         sc_kind_is_value(int kind);
+const char *sc2_kind_name   (int kind);
+#endif

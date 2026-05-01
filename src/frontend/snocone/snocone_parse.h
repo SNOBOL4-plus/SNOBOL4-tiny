@@ -38,7 +38,7 @@
 #ifndef SNOCONE_PARSE_H
 #define SNOCONE_PARSE_H
 
-#include "snocone_lex.h"
+#include "../../../archive/snocone_lex.h"
 #include <stddef.h>
 
 /* ---------------------------------------------------------------------------
