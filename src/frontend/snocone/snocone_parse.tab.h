@@ -133,9 +133,13 @@ typedef struct ScParseState {
     int           pending_user_labels_cap;
     char        **stash_for_pending_labels;
     int           stash_for_pending_labels_count;
+    /* LS-4.i.3 — innermost-switch pointer.  Used by case_or_default_label
+     * actions to find the SwitchHead that owns them.  Saved/restored on
+     * SwitchHead.prev_switch for nested switches. */
+    struct SwitchHead *cur_switch;
 } ScParseState;
 
-#line 139 "snocone_parse.tab.h"
+#line 143 "snocone_parse.tab.h"
 
 /* Token kinds.  */
 #ifndef SC_TOKENTYPE
@@ -235,7 +239,7 @@ typedef struct ScParseState {
 #if ! defined SC_STYPE && ! defined SC_STYPE_IS_DECLARED
 union SC_STYPE
 {
-#line 519 "snocone_parse.y"
+#line 588 "snocone_parse.y"
 
     EXPR_t *expr;
     char   *str;
@@ -252,9 +256,11 @@ union SC_STYPE
     struct ForHead   *forhead;
     /* LS-4.h — function definition handoff type. */
     struct FuncHead  *funchead;
+    /* LS-4.i.3 — switch/case/default handoff type. */
+    struct SwitchHead *switchhead;
     STMT_t           *stmt_ptr;
 
-#line 258 "snocone_parse.tab.h"
+#line 264 "snocone_parse.tab.h"
 
 };
 typedef union SC_STYPE SC_STYPE;

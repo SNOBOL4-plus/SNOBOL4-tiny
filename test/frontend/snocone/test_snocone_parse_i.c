@@ -4,6 +4,8 @@
  * Sub-step LS-4.i.1: `goto LABEL;` and `LABEL:` prefix.            (tests 1–15)
  * Sub-step LS-4.i.2: `break;` `break LABEL;` `continue;` `continue LABEL;`.
  *                                                                  (tests 16–31)
+ * Sub-step LS-4.i.3: `switch (e) { case v1: ... case v2: ... default: ... }`.
+ *                                                                  (tests 32–45)
  *
  * LS-4.i.1 lowering shapes:
  *
@@ -905,6 +907,364 @@ static void test_continue_outside_loop_error(void) {
     ASSERT(prog == NULL, "bare continue; at top level must fail");
 }
 
+/* =========================================================================
+ * LS-4.i.3 — switch / case / default tests (32–45)
+ *
+ * Lowering shape (per Q6 — modern no-fall-through, implicit break at end
+ * of each case body except the last):
+ *
+ *   switch (e) { case v1: A; case v2: B; default: D; }
+ *
+ *     tmp = e
+ *     IDENT(tmp, v1)        :S(_Lcase_NNNN)
+ *     IDENT(tmp, v2)        :S(_Lcase_NNNN)
+ *                           :(_Ldefault_NNNN)        <- catch-all goto
+ *     _Lcase_NNNN  A        :(_Lend_NNNN)            <- implicit break
+ *     _Lcase_NNNN  B        :(_Lend_NNNN)            <- implicit break
+ *     _Ldefault_NNNN D                                <- last clause: no goto
+ *     _Lend_NNNN
+ *
+ * Stacked case labels (`case 1: case 2: stmts;`) suppress the implicit
+ * break between adjacent labels — both labels chain forward to the
+ * shared body via SNOBOL4 label-pad chaining semantics.
+ *
+ * Label numbering for `switch (x) { case 1: ... }` with one case:
+ *   _Lswitch_t_0001  (the synthetic tmp variable name — uses label_seq too)
+ *   _Lend_0002       (break target)
+ *   _Ldefault_0003   (default jump; allocated unconditionally even if no default)
+ *   _Lcase_0004      (first case label — allocated as bodies parse)
+ *
+ * Caveat: `_Ldefault_0003` is allocated up front in sc_switch_head_new
+ * even when no `default:` clause appears in the source.  In that path
+ * the dispatch's catch-all goto targets `_Lend` directly (not _Ldefault),
+ * and no _Ldefault label-pad is ever emitted.  The allocated label
+ * string is owned by SwitchHead and freed in finalize.
+ * ========================================================================= */
+
+/* Helper: count uncond gotos that target a specific label. */
+/* (count_gotos_to is already defined above.) */
+
+/* Helper: count `IDENT(tmp_name, value) :S(target)` dispatch stmts in IR.
+ * Identifies dispatch stmts by checking `subject->kind == E_FNC` with
+ * `subject->sval == "IDENT"` and presence of an onsuccess goto. */
+static int count_dispatch_stmts(STMT_t **stmts, int n) {
+    int c = 0;
+    for (int i = 0; i < n; i++) {
+        if (stmts[i]->subject &&
+            stmts[i]->subject->kind == E_FNC &&
+            stmts[i]->subject->sval &&
+            strcmp(stmts[i]->subject->sval, "IDENT") == 0 &&
+            stmts[i]->go && stmts[i]->go->onsuccess) c++;
+    }
+    return c;
+}
+
+/* =========================================================================
+ * Test 32 — empty switch body
+ *   switch (x) { }
+ *   Expected:
+ *     tmp = x          (assignment)
+ *     :(_Lend_0002)    (catch-all goto — no cases)
+ *     _Lend_0002 pad
+ *   3 stmts total.  No dispatch entries.
+ * ========================================================================= */
+static void test_switch_empty_body(void) {
+    Program *prog = snocone_parse_program("switch (x) { }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(n == 3, "expected 3 stmts (tmp-assign, catch-all goto, _Lend pad), got %d", n);
+    if (n >= 1) ASSERT(is_assignment(stmts[0]), "stmt[0] should be tmp = x");
+    ASSERT(count_dispatch_stmts(stmts, n) == 0, "no dispatch stmts in empty switch");
+    ASSERT(count_gotos_to(stmts, n, "_Lend_0002") == 1,
+           "catch-all goto :(_Lend_0002) should be present");
+    /* Find the _Lend pad — should be there. */
+    ASSERT(find_label_with_prefix(stmts, n, "_Lend_") != NULL,
+           "_Lend pad should be at end");
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 33 — single case, no default
+ *   switch (x) { case 1: y = 1; }
+ *   Expected: 6 stmts:
+ *     [0] tmp = x
+ *     [1] IDENT(tmp,1) :S(_Lcase_0004)
+ *     [2] :(_Lend_0002)            <- catch-all (no default)
+ *     [3] _Lcase_0004 pad
+ *     [4] y = 1
+ *     [5] _Lend_0002 pad
+ * ========================================================================= */
+static void test_switch_single_case(void) {
+    Program *prog = snocone_parse_program("switch (x) { case 1: y = 1; }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(n == 6, "expected 6 stmts, got %d", n);
+    ASSERT(count_dispatch_stmts(stmts, n) == 1, "expected 1 dispatch stmt");
+    ASSERT(count_gotos_to(stmts, n, "_Lend_0002") == 1,
+           "catch-all goto should target _Lend_0002");
+    ASSERT(count_labels_with_prefix(stmts, n, "_Lcase") == 1,
+           "expected 1 _Lcase label pad");
+    ASSERT(count_labels_with_prefix(stmts, n, "_Ldefault") == 0,
+           "no _Ldefault pad emitted (no default clause)");
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 34 — two cases, no default
+ *   switch (x) { case 1: y = 1; case 2: y = 2; }
+ *   Body of case 1 ends with implicit `:(_Lend_0002)`;
+ *   body of case 2 falls through to _Lend (last clause — no implicit break).
+ * ========================================================================= */
+static void test_switch_two_cases_no_default(void) {
+    Program *prog = snocone_parse_program(
+        "switch (x) { case 1: y = 1; case 2: y = 2; }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(count_dispatch_stmts(stmts, n) == 2, "expected 2 dispatch stmts");
+    ASSERT(count_labels_with_prefix(stmts, n, "_Lcase") == 2,
+           "expected 2 _Lcase label pads");
+    /* _Lend_0002 receives: 1 catch-all goto + 1 implicit-break (after case 1).
+     * Case 2 is the LAST clause so no implicit break — falls through naturally. */
+    ASSERT(count_gotos_to(stmts, n, "_Lend_0002") == 2,
+           "_Lend_0002 should receive 2 gotos (catch-all + 1 implicit break), got %d",
+           count_gotos_to(stmts, n, "_Lend_0002"));
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 35 — two cases with default at end
+ *   switch (x) { case 1: y = 1; case 2: y = 2; default: y = 99; }
+ *   Catch-all goto targets _Ldefault_0003 (not _Lend_0002).
+ *   Implicit break after case 1 AND case 2 (default is last; default body
+ *   itself falls through to _Lend with no implicit break).
+ * ========================================================================= */
+static void test_switch_two_cases_with_default(void) {
+    Program *prog = snocone_parse_program(
+        "switch (x) { case 1: y = 1; case 2: y = 2; default: y = 99; }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(count_dispatch_stmts(stmts, n) == 2,
+           "expected 2 IDENT dispatch stmts (default has no probe)");
+    ASSERT(count_gotos_to(stmts, n, "_Ldefault_0003") == 1,
+           "catch-all goto should target _Ldefault_0003 since default present");
+    /* Implicit breaks after case 1 + case 2 = 2 gotos to _Lend; default last → no break. */
+    ASSERT(count_gotos_to(stmts, n, "_Lend_0002") == 2,
+           "_Lend_0002 should receive 2 implicit-break gotos (case 1 + case 2 bodies)");
+    ASSERT(count_labels_with_prefix(stmts, n, "_Ldefault") == 1,
+           "expected 1 _Ldefault label pad");
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 36 — default first (allowed; default clause anywhere in body)
+ *   switch (x) { default: y = 99; case 1: y = 1; }
+ *   default body needs an implicit `:(_Lend)` because case 1 follows;
+ *   case 1 is the LAST clause so its body falls through naturally.
+ * ========================================================================= */
+static void test_switch_default_first(void) {
+    Program *prog = snocone_parse_program(
+        "switch (x) { default: y = 99; case 1: y = 1; }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(count_dispatch_stmts(stmts, n) == 1, "expected 1 IDENT dispatch (one case)");
+    ASSERT(count_gotos_to(stmts, n, "_Ldefault_0003") == 1,
+           "catch-all should still target _Ldefault");
+    /* default body's implicit-break goto to _Lend_0002 = 1 goto */
+    ASSERT(count_gotos_to(stmts, n, "_Lend_0002") == 1,
+           "_Lend should receive 1 implicit-break goto (after default body)");
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 37 — stacked case labels (no body between)
+ *   switch (x) { case 1: case 2: y = 'oneortwo'; }
+ *   Both _Lcase pads emitted back-to-back; NO implicit `:(_Lend)` between
+ *   them (suppressed because last_case_label_tail == code->tail when the
+ *   second case head fires — no body appended in between).
+ * ========================================================================= */
+static void test_switch_stacked_case_labels(void) {
+    Program *prog = snocone_parse_program(
+        "switch (x) { case 1: case 2: y = 'oneortwo'; }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(count_dispatch_stmts(stmts, n) == 2, "expected 2 dispatch stmts");
+    ASSERT(count_labels_with_prefix(stmts, n, "_Lcase") == 2,
+           "expected 2 _Lcase pads");
+    /* Critical: only ONE goto to _Lend exists — the catch-all.  No implicit
+     * break between case 1 and case 2 (empty body between them) and no
+     * implicit break after the shared body (case 2 is last clause). */
+    ASSERT(count_gotos_to(stmts, n, "_Lend_0002") == 1,
+           "stacked labels with no body between must NOT emit implicit break — "
+           "expected 1 goto to _Lend (catch-all only), got %d",
+           count_gotos_to(stmts, n, "_Lend_0002"));
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 38 — explicit break inside switch case
+ *   switch (x) { case 1: y = 1; break; case 2: y = 2; }
+ *   The user's `break;` resolves the switch's LoopFrame (is_loop=0) and
+ *   emits an extra `:(_Lend_0002)` — added on top of the implicit break
+ *   that already happens at the start of case 2's label.
+ * ========================================================================= */
+static void test_switch_explicit_break_in_case(void) {
+    Program *prog = snocone_parse_program(
+        "switch (x) { case 1: y = 1; break; case 2: y = 2; }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    /* _Lend gets: 1 catch-all + 1 implicit break (after case 1's body, before
+     * case 2 label) + 1 explicit user break = 3 gotos total. */
+    ASSERT(count_gotos_to(stmts, n, "_Lend_0002") == 3,
+           "expected 3 gotos to _Lend_0002 (catch-all + implicit + explicit), got %d",
+           count_gotos_to(stmts, n, "_Lend_0002"));
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 39 — continue inside switch is a parse error
+ *   switch (x) { case 1: continue; }
+ *   `continue;` requires a loop frame.  sc_loop_find_innermost(want_loop=1)
+ *   skips the switch's is_loop=0 frame and finds nothing → sc_error fires.
+ * ========================================================================= */
+static void test_switch_continue_is_error(void) {
+    Program *prog = snocone_parse_program(
+        "switch (x) { case 1: continue; }", "test");
+    ASSERT(prog == NULL, "continue inside switch (no enclosing loop) must fail");
+}
+
+/* =========================================================================
+ * Test 40 — multiple defaults is a parse error
+ *   switch (x) { default: y = 1; default: y = 2; }
+ * ========================================================================= */
+static void test_switch_multiple_defaults_error(void) {
+    Program *prog = snocone_parse_program(
+        "switch (x) { default: y = 1; default: y = 2; }", "test");
+    ASSERT(prog == NULL, "duplicate default label must fail");
+}
+
+/* =========================================================================
+ * Test 41 — nested switches
+ *   switch (x) { case 1: switch (y) { case 2: z = 1; } }
+ *   Inner and outer switches each have their own _Lend / _Lcase / tmp
+ *   labels.  No collision; cur_switch save/restore preserves outer.
+ * ========================================================================= */
+static void test_switch_nested(void) {
+    Program *prog = snocone_parse_program(
+        "switch (x) { case 1: switch (y) { case 2: z = 1; } }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(count_dispatch_stmts(stmts, n) == 2, "expected 2 dispatch stmts (one each)");
+    /* Two distinct _Lend pads (one per switch).  Outer = _Lend_0002, inner
+     * = _Lend_0006 (allocated after outer's _Ldefault_0003 and _Lcase_0004). */
+    ASSERT(count_labels_with_prefix(stmts, n, "_Lend") == 2,
+           "expected 2 _Lend pads (nested switches), got %d",
+           count_labels_with_prefix(stmts, n, "_Lend"));
+    ASSERT(count_labels_with_prefix(stmts, n, "_Lcase") == 2,
+           "expected 2 _Lcase pads");
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 42 — break LABEL out of switch nested in loop (LS-4.i.2 forward-compat)
+ *   outer: while (DIFFER(x)) { switch (x) { case 1: break outer; } }
+ *   The `break outer` must target the outer LOOP's _Lend, NOT the switch's.
+ *   Verifies LS-4.i.2's sc_loop_find_by_user_label correctly walks across
+ *   the switch's LoopFrame to find the labeled loop frame above it.
+ * ========================================================================= */
+static void test_switch_break_outer_label_in_loop(void) {
+    Program *prog = snocone_parse_program(
+        "outer: while (DIFFER(x)) { switch (x) { case 1: break outer; } }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    /* Outer while: _Ltop_0001, _Lend_0002.  Switch: _Lswitch_t_0003,
+     * _Lend_0004, _Ldefault_0005, _Lcase_0006.  `break outer` must hit
+     * _Lend_0002 (outer while's end), not _Lend_0004 (switch's end). */
+    ASSERT(count_gotos_to(stmts, n, "_Lend_0002") == 1,
+           "break outer should produce 1 goto to outer's _Lend_0002, got %d",
+           count_gotos_to(stmts, n, "_Lend_0002"));
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 43 — switch in if-then position (matched_stmt nesting)
+ *   if (DIFFER(x)) switch (x) { case 1: y = 1; }
+ *   Verifies switch_head + body parses correctly inside an if's then-arm.
+ * ========================================================================= */
+static void test_switch_inside_if(void) {
+    Program *prog = snocone_parse_program(
+        "if (DIFFER(x)) switch (x) { case 1: y = 1; }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    /* Outer if: cond stmt :F(_Lend_if), body, _Lend_if pad.
+     * Body = entire switch lowering. */
+    ASSERT(count_dispatch_stmts(stmts, n) == 1, "expected 1 IDENT dispatch in switch");
+    /* Two _Lend pads — one for if, one for switch. */
+    ASSERT(count_labels_with_prefix(stmts, n, "_Lend") == 2,
+           "expected 2 _Lend pads (if + switch), got %d",
+           count_labels_with_prefix(stmts, n, "_Lend"));
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 44 — switch with user label
+ *   tag: switch (x) { case 1: y = 1; }
+ *   The user label `tag` attaches to the tmp-assign (sc_append_stmt clears
+ *   pending — same disambiguation as `a: x = 1; while(...)` in LS-4.i.2).
+ *   So `break tag;` from inside would NOT find the switch frame.
+ *   Verified separately; here we just confirm parse succeeds and `tag`
+ *   pad is at the front.
+ * ========================================================================= */
+static void test_switch_with_user_label(void) {
+    Program *prog = snocone_parse_program(
+        "tag: switch (x) { case 1: y = 1; }", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(n >= 1 && stmts[0]->label && strcmp(stmts[0]->label, "tag") == 0,
+           "stmt[0] should be 'tag' label pad, got %s",
+           (n >= 1 && stmts[0]->label) ? stmts[0]->label : "(null)");
+    /* The switch's tmp-assign comes after, NOT carrying tag — that confirms
+     * the LS-4.i.2 pending-clear behavior is consistent: switch isn't a loop,
+     * but it goes through sc_append_stmt for the tmp-assign which clears
+     * pending. */
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 45 — case label inside if's then-arm (regression guard)
+ *   `case 1: stmt;` outside any switch must be a parse error — even
+ *   inside a non-switch construct.  Without proper grammar restriction,
+ *   case_or_default_label could "leak" into other contexts.
+ * ========================================================================= */
+static void test_case_outside_switch_error(void) {
+    /* No way to trigger case outside switch in our grammar — case_or_default_label
+     * only appears under switch_body.  But verify: a top-level `case 1:`
+     * is a parse error. */
+    Program *prog = snocone_parse_program("case 1: y = 1;", "test");
+    ASSERT(prog == NULL, "case outside switch must be a parse error");
+}
+
 int main(void) {
     /* LS-4.i.1 — goto/label */
     test_goto_bare();
@@ -939,6 +1299,21 @@ int main(void) {
     test_break_label_attached_to_non_loop_error();
     test_break_outside_loop_error();
     test_continue_outside_loop_error();
+    /* LS-4.i.3 — switch/case/default */
+    test_switch_empty_body();
+    test_switch_single_case();
+    test_switch_two_cases_no_default();
+    test_switch_two_cases_with_default();
+    test_switch_default_first();
+    test_switch_stacked_case_labels();
+    test_switch_explicit_break_in_case();
+    test_switch_continue_is_error();
+    test_switch_multiple_defaults_error();
+    test_switch_nested();
+    test_switch_break_outer_label_in_loop();
+    test_switch_inside_if();
+    test_switch_with_user_label();
+    test_case_outside_switch_error();
     printf("=== Results: %d passed, %d failed ===\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;
 }

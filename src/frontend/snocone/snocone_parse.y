@@ -349,6 +349,10 @@ typedef struct ScParseState {
     int           pending_user_labels_cap;
     char        **stash_for_pending_labels;
     int           stash_for_pending_labels_count;
+    /* LS-4.i.3 — innermost-switch pointer.  Used by case_or_default_label
+     * actions to find the SwitchHead that owns them.  Saved/restored on
+     * SwitchHead.prev_switch for nested switches. */
+    struct SwitchHead *cur_switch;
 } ScParseState;
 }
 
@@ -461,6 +465,66 @@ struct FuncHead {
     int     lineno;
 };
 
+/* LS-4.i.3 — switch / case / default lowering handoff.
+ *
+ *   switch (e) { case v1: A; case v2: B; default: D; }
+ *
+ * lowers to:
+ *
+ *      tmp = e                                 <- emitted by sc_switch_head_new
+ *      IDENT(tmp, v1)        :S(_Lcase_0001)   <-+
+ *      IDENT(tmp, v2)        :S(_Lcase_0002)   <-+ dispatch chain — built
+ *                            :(_Ldefault_0003) <-+ in head->dispatch_*, spliced
+ *                                                   in finalize after after_tmp_assign
+ *      _Lcase_0001  A      :(_Lend_0004)       <- A's body, then implicit break
+ *      _Lcase_0002  B      :(_Lend_0004)       <- B's body, then implicit break
+ *      _Ldefault_0003 D                          <- D's body — NO trailing goto
+ *                                                   (last case naturally falls
+ *                                                   through to _Lend below)
+ *      _Lend_0004                                <- appended at finalize
+ *
+ * Each case's body falls through to _Lend implicitly at the start of the next
+ * case label (or at finalize for the last one) — modern no-fall-through
+ * semantics per Q6.  An empty body between two case labels (`case 1: case 2:
+ * stmts;`) suppresses the implicit break: detected via last_case_label_tail
+ * being the same as code->tail when the next case head fires (no body stmts
+ * appended in between).  Both labels point at the same body via SNOBOL4
+ * label-chaining — the grammar emits two label pads back-to-back; the second
+ * is the resolved jump target for `IDENT(tmp, 1)`, the first is the resolved
+ * target for `IDENT(tmp, 2)`, both label pads chain forward to the actual body.
+ *
+ * `default:` is a special case-head that allocates `_Ldefault_NNNN` instead
+ * of `_Lcase_NNNN`, doesn't emit a dispatch IDENT() entry (the dispatch chain
+ * just appends `:(_Ldefault_NNNN)` as the catch-all), and sets has_default=1.
+ * Multiple `default:` clauses in one switch is a parse error.  If no default
+ * appears, the dispatch's catch-all goto targets _Lend directly.
+ *
+ * `break;` inside a switch body resolves to the switch's end_label via the
+ * existing LoopFrame stack — sc_switch_head_new pushes a frame with is_loop=0
+ * (forward-compat groundwork from LS-4.i.2), so sc_append_break finds it but
+ * sc_append_continue skips it (continue is a parse error in switch).
+ */
+struct CaseEntry {
+    char   *case_label;    /* "_Lcase_NNNN" or "_Ldefault_NNNN" — owned */
+    EXPR_t *value;         /* case value expression (still owned); NULL = default */
+};
+struct SwitchHead {
+    EXPR_t *disc;                  /* discriminant expression (consumed by tmp=disc) */
+    char   *tmp_name;              /* "_Lswitch_t_NNNN" — synthetic var name */
+    char   *end_label;             /* "_Lend_NNNN" — break target */
+    char   *default_label;         /* "_Ldefault_NNNN" or strdup(end_label) if no default */
+    int     has_default;
+    STMT_t *after_tmp_assign;      /* splice anchor for dispatch list */
+    struct CaseEntry *cases;       /* dynamic array */
+    int     cases_count;
+    int     cases_cap;
+    /* For implicit-break suppression on stacked case labels (`case 1: case 2:`). */
+    STMT_t *last_case_label_tail;
+    /* Saved outer-switch pointer for nested switches. */
+    struct SwitchHead *prev_switch;
+    int     lineno;
+};
+
 static char    *sc_label_new          (ScParseState *st, const char *prefix);
 static struct IfHead    *sc_if_head_new    (ScParseState *st, EXPR_t *cond);
 static struct WhileHead *sc_while_head_new (ScParseState *st, EXPR_t *cond);
@@ -495,6 +559,11 @@ static void     sc_loop_pop            (ScParseState *st);
 static LoopFrame *sc_loop_find_by_user_label(ScParseState *st, const char *name, int want_loop);
 static void     sc_append_break        (ScParseState *st, char *user_label /* NULL = innermost */);
 static void     sc_append_continue     (ScParseState *st, char *user_label /* NULL = innermost loop */);
+/* LS-4.i.3 — switch / case / default */
+static struct SwitchHead *sc_switch_head_new(ScParseState *st, EXPR_t *disc);
+static void     sc_switch_case_label   (ScParseState *st, EXPR_t *value);
+static void     sc_switch_default_label(ScParseState *st);
+static void     sc_finalize_switch     (ScParseState *st, struct SwitchHead *h);
 
 /* sc_kind_to_tok — translate FSM ScKind (1..N) to Bison's sc_tokentype.
  *
@@ -532,6 +601,8 @@ static int sc_kind_to_tok(int sc_kind);
     struct ForHead   *forhead;
     /* LS-4.h — function definition handoff type. */
     struct FuncHead  *funchead;
+    /* LS-4.i.3 — switch/case/default handoff type. */
+    struct SwitchHead *switchhead;
     STMT_t           *stmt_ptr;
 }
 
@@ -609,6 +680,8 @@ static int sc_kind_to_tok(int sc_kind);
 /* LS-4.h — function definition head */
 %type <funchead>  func_head
 %type <str>       func_arglist func_arglist_ne
+/* LS-4.i.3 — switch/case/default head */
+%type <switchhead> switch_head
 
 %%
 
@@ -670,6 +743,15 @@ matched_stmt
                                         { sc_finalize_function(st, $1); }
             | func_head T_LBRACE T_RBRACE
                                         { sc_finalize_function(st, $1); }
+            /* LS-4.i.3 — switch (e) { case v1: ... case v2: ... default: ... }
+             * Always matched (no dangling-else risk — switch is a self-contained
+             * brace block).  Empty switch body `{ }` is permitted; non-empty
+             * body must start with a case_clause (case or default label —
+             * raw stmts before the first case label is a parse error). */
+            | switch_head T_LBRACE switch_body T_RBRACE
+                                        { sc_finalize_switch(st, $1); }
+            | switch_head T_LBRACE T_RBRACE
+                                        { sc_finalize_switch(st, $1); }
             /* LS-4.i.1 — labeled stmt: `name:` followed by a stmt */
             | label_decl matched_stmt
             ;
@@ -731,6 +813,46 @@ for_lead    : T_FOR                  { sc_pending_to_stash(st); }
 for_head    : for_lead T_LPAREN expr0 T_SEMICOLON expr0 T_SEMICOLON expr0 T_RPAREN opt_head_sep
                                         { sc_append_stmt(st, $3);
                                           $$ = sc_for_head_new(st, $5, $7); }
+            ;
+
+/* LS-4.i.3 — switch_head fires at `switch (expr0)` close-paren reduction,
+ * BEFORE the brace body is parsed.  Allocates the synthetic tmp variable,
+ * emits `tmp = expr0;` as a real stmt, snapshots code->tail as the splice
+ * anchor for the dispatch chain (built in sc_switch_case_label / finalize),
+ * and pushes a LoopFrame with is_loop=0 — break; targets the switch's
+ * end_label, continue; rejects (skips switch frames per LS-4.i.2's
+ * sc_loop_find_innermost(want_loop=1)).
+ *
+ * Note: no opt_head_sep here.  T_LBRACE follows directly; the FSM does
+ * NOT synthesize T_CONCAT between `)` and `{` because `{` is not a
+ * value-starter (it's a block delimiter that opens a new scope).  Same
+ * reason `func_head ... T_LBRACE` doesn't need opt_head_sep. */
+switch_head : T_SWITCH T_LPAREN expr0 T_RPAREN
+                                        { $$ = sc_switch_head_new(st, $3); }
+            ;
+
+/* switch_body must start with at least one case_clause — raw stmts before
+ * the first case label are a parse error (matches C semantics).  Empty
+ * switch body `{ }` handled by the parent rule's separate T_LBRACE T_RBRACE
+ * alternative (no switch_body involved). */
+switch_body : case_clause
+            | switch_body case_clause
+            ;
+
+/* A case_clause is one case-or-default label followed by zero or more body
+ * stmts.  Multiple case-or-default labels in succession (`case 1: case 2:`)
+ * each become their own clause — the LR(1) lookahead at T_CASE / T_DEFAULT
+ * unambiguously starts a new clause.  Empty body between adjacent labels
+ * triggers the implicit-break suppression in sc_switch_case_label /
+ * sc_switch_default_label (when last_case_label_tail == code->tail, no
+ * body has been appended since, so no implicit `:(_Lend)` is emitted). */
+case_clause : case_or_default_label
+            | case_clause stmt
+            ;
+
+case_or_default_label
+            : T_CASE expr0 T_COLON      { sc_switch_case_label(st, $2); }
+            | T_DEFAULT T_COLON         { sc_switch_default_label(st); }
             ;
 
 /* opt_head_sep — absorbs the spurious T_CONCAT the LS-3 lexer emits
@@ -2063,6 +2185,237 @@ static void sc_append_continue(ScParseState *st, char *user_label) {
     sc_pending_label_clear(st);
     STMT_t *g = sc_make_goto_uncond_stmt(st, strdup(f->cont_label));
     sc_append_chain(st, g, g);
+}
+
+/* =========================================================================
+ *  LS-4.i.3 — switch / case / default support
+ *
+ *  Lowering shape (per Q6 — modern no-fall-through):
+ *
+ *    switch (e) { case v1: A; case v2: B; default: D; }
+ *
+ *      tmp = e
+ *      IDENT(tmp, v1)        :S(_Lcase_0001)
+ *      IDENT(tmp, v2)        :S(_Lcase_0002)
+ *                            :(_Ldefault_0003)        <- fallthrough = default jump
+ *      _Lcase_0001  A        :(_Lend_0004)
+ *      _Lcase_0002  B        :(_Lend_0004)
+ *      _Ldefault_0003 D                                <- last clause: no goto
+ *      _Lend_0004
+ *
+ *  If no `default:` clause is present, the dispatch's catch-all goto
+ *  targets `_Lend` directly.  Empty `case 1: case 2: stmts;` (stacked
+ *  labels with no body between) emits two label pads but no implicit
+ *  break between them — both labels chain forward to the body via
+ *  SNOBOL4 label-pad chaining semantics.  Detection: when a new
+ *  case-or-default label fires, if `code->tail == last_case_label_tail`
+ *  no body has been appended since the previous label, suppress the
+ *  implicit `:(_Lend)` goto.
+ *
+ *  `break;` inside the body finds the switch's LoopFrame (is_loop=0)
+ *  via sc_loop_find_innermost(want_loop=0) — already-implemented in
+ *  LS-4.i.2.  `continue;` skips switch frames (want_loop=1) — also
+ *  already-implemented in LS-4.i.2.  All forward-compat groundwork
+ *  is now consumed.
+ * ========================================================================= */
+
+/* Architecture note re: head/finalize symmetry with while/for/dowhile:
+ *
+ *   sc_switch_head_new   — eager: emits `tmp = e;` immediately, allocates
+ *                           all labels, snapshots after_tmp_assign, pushes
+ *                           the frame.  Returns SwitchHead for the parent
+ *                           rule to thread through to finalize.
+ *
+ *   sc_switch_case_label — fires DURING body parsing on each `case v:` head.
+ *                           Emits implicit-break-to-end if previous case
+ *                           had body, then emits the case-label pad, records
+ *                           the (label, value) pair on the SwitchHead's
+ *                           cases[] array (consumed by finalize for dispatch
+ *                           construction), and snapshots the new last-case-
+ *                           label-tail for the next case's break-suppression
+ *                           check.
+ *
+ *   sc_switch_default_label — same as case but with no value (NULL marker)
+ *                              and the _Ldefault_NNNN spelling.  Sets
+ *                              has_default=1 — multiple defaults are a
+ *                              parse error.
+ *
+ *   sc_finalize_switch   — builds the dispatch chain from cases[] (n
+ *                           IDENT(tmp, vN) :S(case_label) stmts plus a
+ *                           trailing :(default-or-end) goto), splices it
+ *                           after after_tmp_assign, appends the _Lend
+ *                           pad at the very end, pops the loop frame,
+ *                           frees the SwitchHead and its cases[] array.
+ */
+
+static void sc_switch_cases_grow(struct SwitchHead *h) {
+    if (h->cases_count >= h->cases_cap) {
+        int newcap = h->cases_cap ? h->cases_cap * 2 : 4;
+        h->cases = realloc(h->cases, newcap * sizeof *h->cases);
+        h->cases_cap = newcap;
+    }
+}
+
+static struct SwitchHead *sc_switch_head_new(ScParseState *st, EXPR_t *disc) {
+    struct SwitchHead *h = calloc(1, sizeof *h);
+    h->disc          = disc;
+    h->lineno        = st->ctx ? st->ctx->line : 0;
+    h->prev_switch   = st->cur_switch;
+    /* Allocate synthetic tmp variable name + the three switch-control labels.
+     * Order matters for predictable label numbering: tmp-var, end, default
+     * are all allocated up front; per-case labels come later as bodies parse. */
+    char buf[64];
+    snprintf(buf, sizeof buf, "_Lswitch_t_%04d", ++st->label_seq);
+    h->tmp_name      = strdup(buf);
+    h->end_label     = sc_label_new(st, "_Lend");
+    h->default_label = sc_label_new(st, "_Ldefault");
+    h->has_default   = 0;
+    /* Emit `tmp = disc;` as a regular assignment statement — sc_append_stmt
+     * handles the E_ASSIGN-to-subject-and-replacement split. */
+    EXPR_t *lhs = expr_new(E_VAR);
+    lhs->sval   = strdup(h->tmp_name);
+    EXPR_t *assign = expr_new(E_ASSIGN);
+    expr_add_child(assign, lhs);
+    expr_add_child(assign, disc);   /* takes ownership of disc */
+    sc_append_stmt(st, assign);
+    /* Snapshot tail AFTER the tmp-assign — this is the splice anchor for
+     * the dispatch chain that finalize will build. */
+    h->after_tmp_assign     = st->code->tail;
+    h->last_case_label_tail = NULL;   /* no case label emitted yet */
+    /* Push loop frame with is_loop=0 — break finds it, continue skips. */
+    sc_loop_push(st, strdup(h->end_label) /* unused for switch */,
+                 strdup(h->end_label), 0 /* is_loop */, 0 /* from_stash */);
+    /* Activate this switch as innermost. */
+    st->cur_switch = h;
+    return h;
+}
+
+/* Find the current switch's SwitchHead.  We don't carry it on the LoopFrame
+ * (that would couple the LS-4.i.2 frame layout to switch internals), so the
+ * grammar instead routes each case_or_default_label action through st via
+ * a small per-state pointer.  Set in sc_switch_head_new, cleared in finalize.
+ *
+ * For nested switches (allowed: `switch (a) { case 1: switch (b) { ... } }`)
+ * the inner switch's head saves the outer pointer onto its struct and
+ * restores at finalize.  Both switches' cases[] arrays remain independent.
+ */
+/* Implemented via st->cur_switch field added below. */
+
+/* Emit the implicit-break goto (if needed) right before a case-or-default
+ * label is laid down.  "Needed" means: we are not the very first case
+ * (last_case_label_tail != NULL) AND a body stmt has been appended since
+ * the previous case label (code->tail != last_case_label_tail). */
+static void sc_switch_emit_implicit_break(ScParseState *st, struct SwitchHead *h) {
+    if (!h->last_case_label_tail) return;            /* first case in the switch */
+    if (st->code->tail == h->last_case_label_tail) return;  /* empty body */
+    STMT_t *g = sc_make_goto_uncond_stmt(st, strdup(h->end_label));
+    sc_append_chain(st, g, g);
+}
+
+static void sc_switch_case_label(ScParseState *st, EXPR_t *value) {
+    struct SwitchHead *h = st->cur_switch;
+    if (!h) {
+        sc_error(st, "case label outside of switch");
+        /* `value` leaks on this error path — matches codebase convention
+         * (no general expr_free helper exists; cleanup is end-of-parse). */
+        (void)value;
+        return;
+    }
+    sc_switch_emit_implicit_break(st, h);
+    /* Allocate fresh case label and emit the label pad. */
+    char *case_label = sc_label_new(st, "_Lcase");
+    STMT_t *pad      = sc_make_label_stmt(st, strdup(case_label));
+    sc_append_chain(st, pad, pad);
+    /* Record dispatch entry (consumed by finalize). */
+    sc_switch_cases_grow(h);
+    h->cases[h->cases_count].case_label = case_label;
+    h->cases[h->cases_count].value      = value;
+    h->cases_count++;
+    h->last_case_label_tail = st->code->tail;
+    /* A case label is a real "stmt commit" — clear pending user labels so
+     * stacked `a: case 1:` (if anyone writes that) doesn't mis-attach. */
+    sc_pending_label_clear(st);
+}
+
+static void sc_switch_default_label(ScParseState *st) {
+    struct SwitchHead *h = st->cur_switch;
+    if (!h) {
+        sc_error(st, "default label outside of switch");
+        return;
+    }
+    if (h->has_default) {
+        sc_error(st, "duplicate default label in switch");
+        return;
+    }
+    h->has_default = 1;
+    sc_switch_emit_implicit_break(st, h);
+    /* Use the pre-allocated _Ldefault label from sc_switch_head_new. */
+    STMT_t *pad = sc_make_label_stmt(st, strdup(h->default_label));
+    sc_append_chain(st, pad, pad);
+    /* Record default as a case-entry with NULL value.  Dispatch chain
+     * skips NULL-value entries (they carry no IDENT() probe — default is
+     * the trailing catch-all goto). */
+    sc_switch_cases_grow(h);
+    h->cases[h->cases_count].case_label = strdup(h->default_label);
+    h->cases[h->cases_count].value      = NULL;
+    h->cases_count++;
+    h->last_case_label_tail = st->code->tail;
+    sc_pending_label_clear(st);
+}
+
+static void sc_finalize_switch(ScParseState *st, struct SwitchHead *h) {
+    /* Build the dispatch chain.  For each case entry with a non-NULL value:
+     *   IDENT(tmp, value)   :S(case_label)
+     * Followed by a single uncond goto to default_label (if has_default)
+     * or end_label (if no default). */
+    STMT_t *chain_head = NULL;
+    STMT_t *chain_tail = NULL;
+    for (int i = 0; i < h->cases_count; i++) {
+        if (!h->cases[i].value) continue;   /* default entry — no probe */
+        EXPR_t *probe = expr_new(E_FNC);
+        probe->sval   = strdup("IDENT");
+        EXPR_t *tmp_ref = expr_new(E_VAR);
+        tmp_ref->sval   = strdup(h->tmp_name);
+        expr_add_child(probe, tmp_ref);
+        expr_add_child(probe, h->cases[i].value);   /* takes ownership */
+        h->cases[i].value = NULL;                   /* prevent double-free */
+        STMT_t *s = sc_make_cond_succ_stmt(st, probe,
+                                           strdup(h->cases[i].case_label),
+                                           h->lineno);
+        if (!chain_head) chain_head = chain_tail = s;
+        else { chain_tail->next = s; chain_tail = s; }
+    }
+    /* Catch-all goto: targets default_label if a default existed, else end_label. */
+    char *catchall = h->has_default ? strdup(h->default_label) : strdup(h->end_label);
+    STMT_t *catchgo = sc_make_goto_uncond_stmt(st, catchall);
+    if (!chain_head) chain_head = chain_tail = catchgo;
+    else { chain_tail->next = catchgo; chain_tail = catchgo; }
+    /* Splice dispatch chain after the tmp-assign anchor. */
+    sc_splice_after(st, h->after_tmp_assign, chain_head, chain_tail);
+    /* Append _Lend pad at the very end. */
+    STMT_t *end_pad = sc_make_label_stmt(st, strdup(h->end_label));
+    sc_append_chain(st, end_pad, end_pad);
+    /* Clean up: pop loop frame, free case-label strings + tmp_name + labels.
+     * Note: case[].value is NULL here (transferred to probe nodes above);
+     * any unconsumed case-label strings (the case_label allocated by
+     * sc_switch_case_label) are owned by the cases[] array and freed here. */
+    sc_loop_pop(st);
+    /* Restore cur_switch — supports nested switches.  prev_switch is saved
+     * in the SwitchHead struct itself by the parent grammar rule (see the
+     * { sc_switch_head_new } action, which saves/restores via a temp). */
+    st->cur_switch = h->prev_switch;
+    for (int i = 0; i < h->cases_count; i++) {
+        free(h->cases[i].case_label);
+        /* h->cases[i].value should be NULL here (transferred to probe nodes
+         * above).  Any non-NULL is a defensive defect — leaked, matches
+         * codebase convention (no expr_free helper exists). */
+        (void)h->cases[i].value;
+    }
+    free(h->cases);
+    free(h->tmp_name);
+    free(h->end_label);
+    free(h->default_label);
+    free(h);
 }
 
 /* =========================================================================
