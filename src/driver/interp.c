@@ -2279,6 +2279,29 @@ DESCR_t interp_eval(EXPR_t *e)
                 if (IS_INT_fn(av)) return av;
                 if (IS_REAL_fn(av)) return INTVAL((long long)av.r);
                 const char *s = VARVAL_fn(av); if (!s) return FAILDESCR;
+                /* IC-9 (2026-05-01): Icon radix prefix `BASErDIGITS` —
+                 * 2..36, case-insensitive 'r'/'R', digits 0-9 + a-z (10..35). */
+                {
+                    const char *p = s;
+                    while (*p == ' ' || *p == '\t') p++;
+                    int neg = 0; if (*p == '+') p++; else if (*p == '-') { neg = 1; p++; }
+                    int base = 0; const char *bstart = p;
+                    while (*p >= '0' && *p <= '9') { base = base * 10 + (*p - '0'); p++; }
+                    if (p > bstart && (*p == 'r' || *p == 'R') && base >= 2 && base <= 36) {
+                        p++; const char *dstart = p; long long v = 0;
+                        while (*p) {
+                            int d = -1;
+                            if (*p >= '0' && *p <= '9') d = *p - '0';
+                            else if (*p >= 'a' && *p <= 'z') d = *p - 'a' + 10;
+                            else if (*p >= 'A' && *p <= 'Z') d = *p - 'A' + 10;
+                            if (d < 0 || d >= base) break;
+                            v = v * base + d;
+                            p++;
+                        }
+                        while (*p == ' ' || *p == '\t') p++;
+                        if (p > dstart && *p == '\0') return INTVAL(neg ? -v : v);
+                    }
+                }
                 char *end; long long iv = strtoll(s, &end, 10);
                 if (end != s && (*end=='\0'||*end==' ')) return INTVAL(iv);
                 /* try real→int */
@@ -2308,11 +2331,62 @@ DESCR_t interp_eval(EXPR_t *e)
                 DESCR_t av = interp_eval(e->children[1]);
                 if (IS_INT_fn(av)||IS_REAL_fn(av)) return av;
                 const char *s = VARVAL_fn(av); if (!s||!*s) return FAILDESCR;
+                /* IC-9: Icon radix prefix `BASErDIGITS` (numeric also accepts radix). */
+                {
+                    const char *p = s;
+                    while (*p == ' ' || *p == '\t') p++;
+                    int neg = 0; if (*p == '+') p++; else if (*p == '-') { neg = 1; p++; }
+                    int base = 0; const char *bstart = p;
+                    while (*p >= '0' && *p <= '9') { base = base * 10 + (*p - '0'); p++; }
+                    if (p > bstart && (*p == 'r' || *p == 'R') && base >= 2 && base <= 36) {
+                        p++; const char *dstart = p; long long v = 0;
+                        while (*p) {
+                            int d = -1;
+                            if (*p >= '0' && *p <= '9') d = *p - '0';
+                            else if (*p >= 'a' && *p <= 'z') d = *p - 'a' + 10;
+                            else if (*p >= 'A' && *p <= 'Z') d = *p - 'A' + 10;
+                            if (d < 0 || d >= base) break;
+                            v = v * base + d;
+                            p++;
+                        }
+                        while (*p == ' ' || *p == '\t') p++;
+                        if (p > dstart && *p == '\0') return INTVAL(neg ? -v : v);
+                    }
+                }
                 char *end; long long iv = strtoll(s, &end, 10);
                 if (end!=s && (*end=='\0'||*end==' ')) return INTVAL(iv);
                 double rv = strtod(s, &end);
                 if (end!=s && (*end=='\0'||*end==' ')) return REALVAL(rv);
                 return FAILDESCR;
+            }
+
+            /* IC-9 (2026-05-01): Icon `list(n, x)` constructor.
+             *   list()       — empty list
+             *   list(n)      — n elements all &null
+             *   list(n, x)   — n elements all = x
+             * Omitted/&null `n` defaults to 0.  Negative or non-integer n fails. */
+            if (!strcmp(fn,"list") && nargs >= 0) {
+                int n = 0;
+                DESCR_t init = NULVCL;
+                if (nargs >= 1) {
+                    DESCR_t nv = interp_eval(e->children[1]);
+                    if (!IS_FAIL_fn(nv) && nv.v != DT_SNUL) {
+                        if (IS_INT_fn(nv)) n = (int)nv.i;
+                        else if (IS_REAL_fn(nv)) n = (int)nv.r;
+                        else return FAILDESCR;
+                        if (n < 0) return FAILDESCR;
+                    }
+                }
+                if (nargs >= 2) {
+                    DESCR_t iv = interp_eval(e->children[2]);
+                    if (!IS_FAIL_fn(iv)) init = iv;
+                }
+                static int icnlist_reg2 = 0;
+                if (!icnlist_reg2) { DEFDAT_fn("icnlist(icn_elems,icn_size,icn_type)"); icnlist_reg2 = 1; }
+                DESCR_t *elems = GC_malloc((n>0?n:1)*sizeof(DESCR_t));
+                for (int i = 0; i < n; i++) elems[i] = init;
+                DESCR_t eptr; eptr.v=DT_DATA; eptr.slen=0; eptr.ptr=(void*)elems;
+                return DATCON_fn("icnlist", eptr, INTVAL(n), STRVAL("list"));
             }
 
             /* ── IC-5: Icon list builtins: push/pull/put/get ───────────────
@@ -2396,35 +2470,105 @@ DESCR_t interp_eval(EXPR_t *e)
             }
 
             /* ── IC-5: left/right/center/repl/reverse/map/trim ─────────── */
-            if (!strcmp(fn,"left") && nargs >= 2) {
+            /* Icon spec: left(s, i, p) — i defaults to 1, p defaults to " ".
+             * Omitted args (`left(s, , p)` or `left(s, &null, p)`) take the default.
+             * Pad rule (verified against JCON test corpus):
+             *   - LEFT-pads (right's left, center's left): fill[i % fl] from start of pad.
+             *   - RIGHT-pads (left's right, center's right): pad ends at fill[fl-1] —
+             *     pad[i] = fill[(i + fl - padlen) % fl] so the last pad char is fill[fl-1].
+             */
+            if (!strcmp(fn,"left") && nargs >= 1) {
                 DESCR_t sv=interp_eval(e->children[1]); const char *s=VARVAL_fn(sv); if(!s)s="";
-                int n=(int)to_int(interp_eval(e->children[2])); if(n<0)n=0;
-                const char *fill=" "; if(nargs>=3){DESCR_t fd=interp_eval(e->children[3]);const char*fs=VARVAL_fn(fd);if(fs&&*fs)fill=fs;}
-                char *buf=GC_malloc(n+1); int sl=(int)strlen(s);
-                for(int i=0;i<n;i++) buf[i]=(i<sl)?s[i]:fill[0]; buf[n]='\0';
+                int sl=(int)strlen(s);
+                int n = 1;
+                if (nargs >= 2) {
+                    DESCR_t nv = interp_eval(e->children[2]);
+                    if (!IS_FAIL_fn(nv) && nv.v != DT_SNUL) n = (int)to_int(nv);
+                }
+                if (n < 0) n = 0;
+                const char *fill=" "; int fl=1;
+                if (nargs >= 3) {
+                    DESCR_t fd = interp_eval(e->children[3]);
+                    if (!IS_FAIL_fn(fd) && fd.v != DT_SNUL) {
+                        const char *fs = VARVAL_fn(fd);
+                        if (fs && *fs) { fill = fs; fl = (int)strlen(fs); }
+                    }
+                }
+                char *buf=GC_malloc(n+1);
+                int copy = sl < n ? sl : n;
+                for (int i = 0; i < copy; i++) buf[i] = s[i];
+                int rpad = n - copy;
+                /* Right-pad: pad ends at fill[fl-1].  Padlen rpad, pad index k=0..rpad-1,
+                 * pad char = fill[(k + fl - rpad) % fl] (clamped non-negative). */
+                for (int k = 0; k < rpad; k++) {
+                    int idx = ((k + fl - rpad) % fl + fl) % fl;
+                    buf[copy + k] = fill[idx];
+                }
+                buf[n]='\0';
                 return STRVAL(buf);
             }
-            if (!strcmp(fn,"right") && nargs >= 2) {
+            if (!strcmp(fn,"right") && nargs >= 1) {
                 DESCR_t sv=interp_eval(e->children[1]); const char *s=VARVAL_fn(sv); if(!s)s="";
-                int n=(int)to_int(interp_eval(e->children[2])); if(n<0)n=0;
-                const char *fill=" "; if(nargs>=3){DESCR_t fd=interp_eval(e->children[3]);const char*fs=VARVAL_fn(fd);if(fs&&*fs)fill=fs;}
-                int sl=(int)strlen(s); char *buf=GC_malloc(n+1);
-                int pad=n-sl; if(pad<0)pad=0;
-                for(int i=0;i<pad;i++) buf[i]=fill[0];
-                for(int i=0;i<n-pad;i++) buf[pad+i]=s[sl-(n-pad)+i];
-                buf[n]='\0'; return STRVAL(buf);
+                int sl=(int)strlen(s);
+                int n = 1;
+                if (nargs >= 2) {
+                    DESCR_t nv = interp_eval(e->children[2]);
+                    if (!IS_FAIL_fn(nv) && nv.v != DT_SNUL) n = (int)to_int(nv);
+                }
+                if (n < 0) n = 0;
+                const char *fill=" "; int fl=1;
+                if (nargs >= 3) {
+                    DESCR_t fd = interp_eval(e->children[3]);
+                    if (!IS_FAIL_fn(fd) && fd.v != DT_SNUL) {
+                        const char *fs = VARVAL_fn(fd);
+                        if (fs && *fs) { fill = fs; fl = (int)strlen(fs); }
+                    }
+                }
+                char *buf=GC_malloc(n+1);
+                int pad = n - sl; if (pad < 0) pad = 0;
+                /* Left-pad: fill cycles starting at fill[0]. */
+                for (int i = 0; i < pad; i++) buf[i] = fill[i % fl];
+                int srcoff = (sl > n) ? (sl - n) : 0;
+                int copy = sl - srcoff; if (pad + copy > n) copy = n - pad;
+                for (int i = 0; i < copy; i++) buf[pad + i] = s[srcoff + i];
+                buf[n]='\0';
+                return STRVAL(buf);
             }
-            if (!strcmp(fn,"center") && nargs >= 2) {
+            if (!strcmp(fn,"center") && nargs >= 1) {
                 DESCR_t sv=interp_eval(e->children[1]); const char *s=VARVAL_fn(sv); if(!s)s="";
-                int n=(int)to_int(interp_eval(e->children[2])); if(n<0)n=0;
-                const char *fill=" "; if(nargs>=3){DESCR_t fd=interp_eval(e->children[3]);const char*fs=VARVAL_fn(fd);if(fs&&*fs)fill=fs;}
-                int sl=(int)strlen(s); char *buf=GC_malloc(n+1);
-                int lpad=(n-sl)/2; if(lpad<0)lpad=0;
-                int rpad=n-sl-lpad; if(rpad<0)rpad=0;
-                for(int i=0;i<lpad;i++) buf[i]=fill[0];
-                for(int i=0;i<sl&&lpad+i<n;i++) buf[lpad+i]=s[i];
-                for(int i=0;i<rpad;i++) buf[lpad+sl+i]=fill[0];
-                buf[n]='\0'; return STRVAL(buf);
+                int sl=(int)strlen(s);
+                int n = 1;
+                if (nargs >= 2) {
+                    DESCR_t nv = interp_eval(e->children[2]);
+                    if (!IS_FAIL_fn(nv) && nv.v != DT_SNUL) n = (int)to_int(nv);
+                }
+                if (n < 0) n = 0;
+                const char *fill=" "; int fl=1;
+                if (nargs >= 3) {
+                    DESCR_t fd = interp_eval(e->children[3]);
+                    if (!IS_FAIL_fn(fd) && fd.v != DT_SNUL) {
+                        const char *fs = VARVAL_fn(fd);
+                        if (fs && *fs) { fill = fs; fl = (int)strlen(fs); }
+                    }
+                }
+                char *buf=GC_malloc(n+1);
+                int lpad = (n - sl) / 2; if (lpad < 0) lpad = 0;
+                /* When source longer than n, take middle n chars; offset rounds UP
+                 * (right-bias) per Icon spec.  Verified against JCON center test. */
+                int srcoff = (sl > n) ? (sl - n + 1) / 2 : 0;
+                int copy = sl - srcoff; if (lpad + copy > n) copy = n - lpad;
+                int rpad = n - lpad - copy;
+                /* lpad — left-aligned cycle starting at fill[0] */
+                for (int i = 0; i < lpad; i++) buf[i] = fill[i % fl];
+                /* source */
+                for (int i = 0; i < copy; i++) buf[lpad + i] = s[srcoff + i];
+                /* rpad — pad ends at fill[fl-1] */
+                for (int k = 0; k < rpad; k++) {
+                    int idx = ((k + fl - rpad) % fl + fl) % fl;
+                    buf[lpad + copy + k] = fill[idx];
+                }
+                buf[n]='\0';
+                return STRVAL(buf);
             }
             if (!strcmp(fn,"repl") && nargs == 2) {
                 DESCR_t sv=interp_eval(e->children[1]); const char *s=VARVAL_fn(sv); if(!s)s="";
@@ -3070,8 +3214,9 @@ DESCR_t interp_eval(EXPR_t *e)
         DESCR_t l = interp_eval(e->children[0]);
         DESCR_t r = interp_eval(e->children[1]);
         if (IS_FAIL_fn(l) || IS_FAIL_fn(r)) return FAILDESCR;
-        /* SNOBOL4: int**int with non-negative exponent → integer; any real operand → real */
-        if (IS_INT_fn(l) && IS_INT_fn(r) && r.i >= 0) {
+        /* SNOBOL4: int**int with non-negative exponent → integer; any real operand → real.
+         * Icon (g_lang==1): `^` always produces real, even with integer operands.    */
+        if (g_lang != 1 && IS_INT_fn(l) && IS_INT_fn(r) && r.i >= 0) {
             long base = l.i, result = 1; int exp = (int)r.i;
             for (int k = 0; k < exp; k++) result *= base;
             return INTVAL(result);
@@ -3143,13 +3288,23 @@ DESCR_t interp_eval(EXPR_t *e)
                 /* SPITBOL rule: if either operand is null string, return the
                  * other operand UNCHANGED (no type coercion). Spec §concat:
                  * "if either operand is the null string, the other operand is
-                 *  returned unchanged. It is not coerced into the string type." */
-                if (acc.v == DT_SNUL)
+                 *  returned unchanged. It is not coerced into the string type."
+                 * IC-9 (2026-05-01): Icon mode is different — `""` is a real
+                 * (empty) string, not `&null`. `"" || ""` must yield `""`
+                 * (DT_S, slen=0), not `&null` (DT_SNUL). Force string concat
+                 * via CONCAT_fn unconditionally in Icon mode, AND post-coerce
+                 * a DT_SNUL/null result back to a real empty DT_S so image()
+                 * etc. distinguish empty-string from &null. */
+                if (g_lang != 1 && acc.v == DT_SNUL)
                     acc = nxt;
-                else if (nxt.v == DT_SNUL)
+                else if (g_lang != 1 && nxt.v == DT_SNUL)
                     { /* acc unchanged */ }
                 else
                     acc = CONCAT_fn(acc, nxt);
+                if (g_lang == 1 && (acc.v == DT_SNUL || (acc.v == DT_S && !acc.s))) {
+                    DESCR_t empty; empty.v = DT_S; empty.s = GC_strdup(""); empty.slen = 0;
+                    acc = empty;
+                }
             }
             if (IS_FAIL_fn(acc)) return FAILDESCR;
         }
@@ -4493,6 +4648,47 @@ DESCR_t interp_eval(EXPR_t *e)
         if (j == 0) j = slen + 1; else if (j < 0) j = slen + 1 + j;
         if (i < 1 || i > slen+1 || j < 1 || j > slen+1) return FAILDESCR;
         int lo = i < j ? i : j, hi = i < j ? j : i;
+        int len = hi - lo;
+        char *buf = GC_malloc(len+1); memcpy(buf, s+lo-1, len); buf[len]='\0';
+        return STRVAL(buf);
+    }
+
+    /* IC-9 (2026-05-01): E_SECTION_PLUS — s[i+:n] read.  Position i, length n.
+     * Equivalent to s[i : i+n] with negative-position normalization on i. */
+    case E_SECTION_PLUS: {
+        if (e->nchildren < 3) return NULVCL;
+        DESCR_t sd = interp_eval(e->children[0]);
+        const char *s = VARVAL_fn(sd); if (!s) s = "";
+        int slen = (int)strlen(s);
+        int i = (int)to_int(interp_eval(e->children[1]));
+        int n = (int)to_int(interp_eval(e->children[2]));
+        if (i == 0) i = slen + 1; else if (i < 0) i = slen + 1 + i;
+        if (i < 1 || i > slen+1) return FAILDESCR;
+        /* n may be negative — equivalent to extending leftward. */
+        int lo, hi;
+        if (n >= 0) { lo = i; hi = i + n; }
+        else        { lo = i + n; hi = i; }
+        if (lo < 1 || hi > slen+1) return FAILDESCR;
+        int len = hi - lo;
+        char *buf = GC_malloc(len+1); memcpy(buf, s+lo-1, len); buf[len]='\0';
+        return STRVAL(buf);
+    }
+
+    /* IC-9 (2026-05-01): E_SECTION_MINUS — s[i-:n] read.  Position i, span n
+     * to the LEFT of i.  Equivalent to s[i-n : i] with negative-n flipping. */
+    case E_SECTION_MINUS: {
+        if (e->nchildren < 3) return NULVCL;
+        DESCR_t sd = interp_eval(e->children[0]);
+        const char *s = VARVAL_fn(sd); if (!s) s = "";
+        int slen = (int)strlen(s);
+        int i = (int)to_int(interp_eval(e->children[1]));
+        int n = (int)to_int(interp_eval(e->children[2]));
+        if (i == 0) i = slen + 1; else if (i < 0) i = slen + 1 + i;
+        if (i < 1 || i > slen+1) return FAILDESCR;
+        int lo, hi;
+        if (n >= 0) { lo = i - n; hi = i; }
+        else        { lo = i;     hi = i - n; }
+        if (lo < 1 || hi > slen+1) return FAILDESCR;
         int len = hi - lo;
         char *buf = GC_malloc(len+1); memcpy(buf, s+lo-1, len); buf[len]='\0';
         return STRVAL(buf);

@@ -744,8 +744,10 @@ static EXPR_t *parse_stmt(IcnParser *p) {
         return e;
     }
     if (check(p, TK_LOCAL) || check(p, TK_STATIC)) {
+        int is_static = check(p, TK_STATIC);
         advance(p);
         EXPR_t *e = expr_new(E_GLOBAL);
+        e->ival = is_static ? 1 : 0;  /* ival=1 marks "static" — vars persist across calls */
         while (!check(p, TK_SEMICOL) && !check(p, TK_EOF)) {
             if (p->cur.kind == TK_IDENT) {
                 push_child(e, e_leaf_sval(E_VAR, p->cur.val.sval.data, (int)p->cur.val.sval.len));

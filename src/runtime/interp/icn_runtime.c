@@ -97,6 +97,44 @@ void icn_global_register(const char *name) {
     icn_global_names[icn_global_count++] = name;
 }
 
+/* IC-9 (2026-05-01): per-(proc, var) static-variable storage.  Statics are
+ * declared `static x;` inside a procedure; their values persist across calls
+ * to that procedure but are scoped to the procedure (statics with the same
+ * name in different procs do not share storage).  Keyed on the proc EXPR_t*
+ * (unique per source procedure since icon_parse builds one node per proc). */
+typedef struct { EXPR_t *proc; const char *name; DESCR_t val; } icn_static_ent_t;
+#define ICN_STATIC_MAX 256
+static icn_static_ent_t icn_static_tab[ICN_STATIC_MAX];
+static int              icn_static_n = 0;
+
+int icn_static_get(EXPR_t *proc, const char *name, DESCR_t *out) {
+    if (!proc || !name || !out) return 0;
+    for (int i = 0; i < icn_static_n; i++) {
+        if (icn_static_tab[i].proc == proc && icn_static_tab[i].name &&
+            strcmp(icn_static_tab[i].name, name) == 0) {
+            *out = icn_static_tab[i].val;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+void icn_static_set(EXPR_t *proc, const char *name, DESCR_t val) {
+    if (!proc || !name) return;
+    for (int i = 0; i < icn_static_n; i++) {
+        if (icn_static_tab[i].proc == proc && icn_static_tab[i].name &&
+            strcmp(icn_static_tab[i].name, name) == 0) {
+            icn_static_tab[i].val = val;
+            return;
+        }
+    }
+    if (icn_static_n >= ICN_STATIC_MAX) return;
+    icn_static_tab[icn_static_n].proc = proc;
+    icn_static_tab[icn_static_n].name = name;
+    icn_static_tab[icn_static_n].val  = val;
+    icn_static_n++;
+}
+
 int icn_drive(EXPR_t *e) {
     if (!e) return 0;
     if (icn_gen_active(e)) return 0;
@@ -355,6 +393,26 @@ DESCR_t icn_call_proc(EXPR_t *proc, DESCR_t *args, int nargs) {
     for (int i = 0; i < nparams && i < nargs && i < ICN_SLOT_MAX; i++)
         f->env[i] = args[i];
 
+    /* IC-9 (2026-05-01): static-variable persistence.  Walk body for E_GLOBAL
+     * decls with ival==1 (set by parser when keyword was `static`).  For each
+     * static var, look up its persisted value via icn_static_get(proc, name);
+     * if present, copy into the slot.  At proc exit (below), write each
+     * static var's current slot value back.  Per-proc table; statics with
+     * the same name in different procs do not share storage.   */
+    for (int i = 0; i < nbody; i++) {
+        EXPR_t *st = proc->children[body_start + i];
+        if (!st || st->kind != E_GLOBAL || st->ival != 1) continue;
+        for (int j = 0; j < st->nchildren; j++) {
+            EXPR_t *vn = st->children[j];
+            if (!vn || !vn->sval) continue;
+            int slot = icn_scope_get(&sc, vn->sval);
+            if (slot < 0 || slot >= nslots) continue;
+            DESCR_t saved;
+            if (icn_static_get(proc, vn->sval, &saved))
+                f->env[slot] = saved;
+        }
+    }
+
     /* Execute body statements — mirrors icn_drive_fnc's suspend-aware stmt loop.
      * On E_SUSPEND: yield to coroutine caller via swapcontext, run do-clause on
      * resume, then pin stmt index so loop stmts (E_WHILE/E_REPEAT/E_UNTIL) are
@@ -392,6 +450,20 @@ DESCR_t icn_call_proc(EXPR_t *proc, DESCR_t *args, int nargs) {
     /* Icon semantics: explicit return → return the value; fall off end → fail. */
     if (ICN_CUR.returning) result = ICN_CUR.return_val;
     else result = FAILDESCR;
+
+    /* IC-9: persist static-variable values back to per-proc static table
+     * before frame is destroyed.  Mirror the entry-restore loop above. */
+    for (int i = 0; i < nbody; i++) {
+        EXPR_t *st = proc->children[body_start + i];
+        if (!st || st->kind != E_GLOBAL || st->ival != 1) continue;
+        for (int j = 0; j < st->nchildren; j++) {
+            EXPR_t *vn = st->children[j];
+            if (!vn || !vn->sval) continue;
+            int slot = icn_scope_get(&sc, vn->sval);
+            if (slot < 0 || slot >= nslots) continue;
+            icn_static_set(proc, vn->sval, f->env[slot]);
+        }
+    }
 
     /* Pop frame — restores caller's ICN_CUR automatically */
     icn_init_save_frame();   /* IC-5: persist initial-block statics before env is gone */
@@ -653,14 +725,24 @@ static EXPR_t *icn_find_leaf_gen(EXPR_t *e) {
  *--------------------------------------------------------------------------------------------------------------------------*/
 typedef struct { bb_node_t gen; EXPR_t *cat_expr; EXPR_t *leaf; } icn_cat_gen_state_t;
 static DESCR_t icn_bb_cat_gen(void *zeta, int entry) {
+    /* IC-9 fix (2026-05-01): per-tick re-eval of cat_expr can itself fail
+     * (e.g. s[0 to 7] where s[0] is OOB).  Per Icon GDE semantics, a per-tick
+     * failure should not exhaust the box — the underlying generator may still
+     * have values that DO succeed.  Pump the leaf until either a tick produces
+     * a non-fail full-expression result, or the leaf exhausts.  Switch to β
+     * after the first inner tick at α-entry so subsequent attempts re-pump.   */
     icn_cat_gen_state_t *z = (icn_cat_gen_state_t *)zeta;
-    DESCR_t tick = z->gen.fn(z->gen.ζ, entry);
-    if (IS_FAIL_fn(tick)) return FAILDESCR;
-    icn_drive_node = z->leaf;
-    icn_drive_val  = tick;
-    DESCR_t result = interp_eval(z->cat_expr);
-    icn_drive_node = NULL;
-    return result;
+    int e2 = entry;
+    for (;;) {
+        DESCR_t tick = z->gen.fn(z->gen.ζ, e2);
+        if (IS_FAIL_fn(tick)) return FAILDESCR;
+        icn_drive_node = z->leaf;
+        icn_drive_val  = tick;
+        DESCR_t result = interp_eval(z->cat_expr);
+        icn_drive_node = NULL;
+        if (!IS_FAIL_fn(result)) return result;
+        e2 = β;  /* try next leaf value */
+    }
 }
 
 /*----------------------------------------------------------------------------------------------------------------------------
