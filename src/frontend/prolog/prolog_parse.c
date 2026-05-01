@@ -110,6 +110,7 @@ typedef struct {
     VarScope   sc;
     const char *filename;
     int         nerrors;
+    int         in_args;       /* >0 inside a compound's argument list — comma is a separator, not an operator */
     IfFrame     ifst[IF_STACK_MAX];
     int         ifst_top;     /* depth (0 = no enclosing if) */
 } Parser;
@@ -200,8 +201,13 @@ static Term *parse_list(Parser *p) {
         return term_new_atom(ATOM_NIL);
     }
 
+    /* Inside a list, comma is a separator. Bump in_args so parse_term
+     * treats top-level commas as boundaries; we still parse each element
+     * at prec 1200 so ;/-> etc. fold inside elements. */
+    p->in_args++;
     /* Build list spine: cons cells using '.' functor */
-    Term *head = parse_term(p, 999); /* below comma precedence */
+    Term *head = parse_term(p, 1200);
+    p->in_args--;
     if (!head) return term_new_atom(ATOM_NIL);
 
     tk = lexer_peek(&p->lx);
@@ -212,7 +218,9 @@ static Term *parse_list(Parser *p) {
         tail = parse_list(p); /* recurse for rest */
     } else if (tk.kind == TK_PIPE) {
         lexer_next(&p->lx);
-        tail = parse_term(p, 999);
+        p->in_args++;
+        tail = parse_term(p, 1200);
+        p->in_args--;
         tk = lexer_peek(&p->lx);
         if (tk.kind == TK_RBRACKET) lexer_next(&p->lx);
         else perror_at(p, tk.line, "expected ] after list tail");
@@ -242,15 +250,22 @@ static int parse_args(Parser *p, Term ***args_out) {
         return 0;
     }
 
+    p->in_args++;
     for (;;) {
         if (n >= cap) { cap *= 2; args = realloc(args, cap * sizeof(Term *)); }
-        Term *t = parse_term(p, 999); /* below comma */
+        /* Inside an argument list, commas are separators (not operators).
+         * parse_term checks p->in_args and breaks at top-level commas
+         * regardless of max_prec, which lets us pass 1200 here so that
+         * higher-prec operators (->, ;, :- etc.) can fold inside an arg
+         * — needed for SWI-style call(;(true->X=a), X=b). */
+        Term *t = parse_term(p, 1200);
         if (!t) break;
         args[n++] = t;
         Token tk = lexer_peek(&p->lx);
         if (tk.kind != TK_COMMA) break;
         lexer_next(&p->lx); /* consume comma */
     }
+    p->in_args--;
 
     *args_out = args;
     return n;
@@ -330,7 +345,13 @@ static Term *parse_primary(Parser *p) {
             return term_new_atom(ATOM_CUT);
 
         case TK_LPAREN: {
+            /* Inside ( ... ), comma is an operator (forms ','(A,B) tuples).
+             * Temporarily restore in_args=0 so the inner parse_term treats
+             * comma as the prec-1000 operator, not as an outer separator. */
+            int saved_in_args = p->in_args;
+            p->in_args = 0;
             Term *t = parse_term(p, 1200);
+            p->in_args = saved_in_args;
             Token rp = lexer_peek(&p->lx);
             if (rp.kind == TK_RPAREN) lexer_next(&p->lx);
             else perror_at(p, rp.line, "expected )");
@@ -340,6 +361,29 @@ static Term *parse_primary(Parser *p) {
         case TK_LBRACKET:
             return parse_list(p);
 
+        /* TK_COMMA and TK_SEMI as primary tokens — only valid here when
+         * immediately followed by '(' meaning ','(...) or ';'(...) used
+         * as a compound functor.  Bare ; / , in primary position is a
+         * parse error (operator climbing handles them as binary ops). */
+        case TK_COMMA:
+        case TK_SEMI: {
+            const char *opname = (tk.kind == TK_COMMA) ? "," : ";";
+            Token pk = lexer_peek(&p->lx);
+            if (pk.kind == TK_LPAREN) {
+                lexer_next(&p->lx); /* consume ( */
+                Term **args = NULL;
+                int nargs = parse_args(p, &args);
+                Token rp = lexer_peek(&p->lx);
+                if (rp.kind == TK_RPAREN) lexer_next(&p->lx);
+                else perror_at(p, rp.line, "expected ) after args");
+                int fid = prolog_atom_intern(opname);
+                Term *t = term_new_compound(fid, nargs, args);
+                free(args);
+                return t;
+            }
+            perror_at(p, tk.line, "unexpected token in term");
+            return NULL;
+        }
         case TK_OP: {
             /* Prefix operator: \+ or - or not */
             if (strcmp(tk.text, "\\+") == 0 || strcmp(tk.text, "not") == 0) {
@@ -442,6 +486,7 @@ static Term *parse_term(Parser *p, int max_prec) {
 
         if (pk.kind == TK_OP)   optext = pk.text;
         else if (pk.kind == TK_ATOM) optext = pk.text; /* mod, is, etc */
+        else if (pk.kind == TK_COMMA && p->in_args > 0) break; /* comma is arg separator */
         else if (pk.kind == TK_COMMA && max_prec >= 1000) optext = ",";
         else if (pk.kind == TK_SEMI  && max_prec >= 1100) optext = ";";
         else if (pk.kind == TK_NECK  && max_prec >= 1200) optext = ":-";
@@ -944,6 +989,7 @@ PlProgram *prolog_parse(const char *src, const char *filename) {
     p.filename = filename ? filename : "<input>";
     p.nerrors  = 0;
     p.ifst_top = 0;
+    p.in_args  = 0;
     scope_reset(&p.sc);
 
     PlProgram *prog = calloc(1, sizeof(PlProgram));
