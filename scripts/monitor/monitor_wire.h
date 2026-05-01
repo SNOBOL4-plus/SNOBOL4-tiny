@@ -67,6 +67,18 @@
 #define MWK_END       4u
 #define MWK_LABEL     5u   /* statement entry — carries STNO label name (or empty) */
 #define MWK_NAME_DEF  6u   /* SN-26-bridge-coverage-e: streaming-intern name binding */
+/* Byrd-box pattern-match traversal events (S-2-bridge-7-byrd-pattern).
+ * Each fires per AST-node Match attempt:
+ *   PM_CALL — Match() entered for node                 (forward, new attempt)
+ *   PM_EXIT — node Scan returned SUCCESS               (forward, advancing to subsequent)
+ *   PM_REDO — RestoreAlternate popped this node        (backward, retry from saved cursor)
+ *   PM_FAIL — node FAILED, no alternate restored       (backward, propagating outward)
+ * The name field carries a node-tag string (e.g. *snoString, BREAK, LITERAL);
+ * type=MWT_INTEGER, value=8-byte LE cursor position.  Comparison: (kind, name, cursor). */
+#define MWK_PM_CALL   7u
+#define MWK_PM_EXIT   8u
+#define MWK_PM_REDO   9u
+#define MWK_PM_FAIL  10u
 
 /* --- SNOBOL4 datatype codes (record.type) --------------------------------- */
 /* Chosen as a stable, dialect-neutral enumeration.  Both ABIs map their

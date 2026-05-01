@@ -62,10 +62,16 @@ MWK_RETURN    = 3
 MWK_END       = 4
 MWK_LABEL     = 5
 MWK_NAME_DEF  = 6
+# S-2-bridge-7-byrd-pattern: per-AST-node Byrd-box pattern-match events.
+MWK_PM_CALL   = 7
+MWK_PM_EXIT   = 8
+MWK_PM_REDO   = 9
+MWK_PM_FAIL   = 10
 
 KIND_NAMES = {
     1: 'VALUE', 2: 'CALL', 3: 'RETURN', 4: 'END',
     5: 'LABEL', 6: 'NAME_DEF',
+    7: 'PM_CALL', 8: 'PM_EXIT', 9: 'PM_REDO', 10: 'PM_FAIL',
 }
 
 # Type tags (must match monitor_wire.h MWT_*)
@@ -350,6 +356,9 @@ def fmt_event(ev, names_table, stno=None):
         return f'{prefix}RETURN {nm} ({kind_str})'
     if ev.kind == MWK_LABEL:
         return f'{kn} stno={fmt_value(ev.type, ev.value)}'
+    # S-2-bridge-7-byrd-pattern: PM_CALL/EXIT/REDO/FAIL — node-tag + cursor.
+    if ev.kind in (MWK_PM_CALL, MWK_PM_EXIT, MWK_PM_REDO, MWK_PM_FAIL):
+        return f'{prefix}{kn} {nm} cursor={fmt_value(ev.type, ev.value)}'
     return f'{prefix}{kn} {nm} = {fmt_value(ev.type, ev.value)}'
 
 

@@ -22,7 +22,8 @@ import os
 import sys
 import struct
 
-KIND_NAMES = {1: "VALUE", 2: "CALL", 3: "RETURN", 4: "END", 5: "LABEL", 6: "NAME_DEF"}
+KIND_NAMES = {1: "VALUE", 2: "CALL", 3: "RETURN", 4: "END", 5: "LABEL", 6: "NAME_DEF",
+              7: "PM_CALL", 8: "PM_EXIT", 9: "PM_REDO", 10: "PM_FAIL"}
 TYPE_NAMES = {0: "NULL", 1: "STRING", 2: "INTEGER", 3: "REAL", 4: "NAME",
               5: "PATTERN", 6: "EXPRESSION", 7: "ARRAY", 8: "TABLE",
               9: "CODE", 10: "DATA", 11: "FILE", 255: "UNKNOWN"}
@@ -74,6 +75,7 @@ def main():
         # Streaming intern: absorb NAME_DEF, ack, do not surface.
         if kind == MWK_NAME_DEF:
             names[name_id] = value
+            print(f"[ctrl] [NAME_DEF id={name_id} name={value!r}]", file=sys.stderr)
             try:
                 os.write(go_fd, b"G")
             except OSError as e:
