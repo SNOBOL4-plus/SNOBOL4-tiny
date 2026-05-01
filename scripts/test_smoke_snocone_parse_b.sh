@@ -29,7 +29,7 @@ BIN="/tmp/test_snocone_parse_b"
 
 cc -Wall -o "$BIN" \
     "$TEST" \
-    "$SRCDIR/snocone.tab.c" \
+    "$SRCDIR/snocone_parse.tab.c" \
     "$SRCDIR/snocone_lex.c" \
     -I "$SRCDIR" \
     -I "$ONE4ALL/src/frontend/snobol4" \

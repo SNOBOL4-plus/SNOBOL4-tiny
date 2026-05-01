@@ -127,6 +127,18 @@ typedef struct {
     ImportEntry *imports;   /* singly-linked list of IMPORT directives */
 } Program;
 
+/* CODE_t — symmetric alias for Program.  EXPR_t is the IR for one
+ * expression (the type EVAL operates on); CODE_t is the IR for a list
+ * of statements (the type CODE operates on).  See eval_code.c:
+ *   eval_expr(src) -> walks the resulting EXPR_t
+ *   code(src)      -> stashes the resulting CODE_t* in a DT_C DESCR_t
+ * Existing call sites that use `Program*` continue to work; new code
+ * may use either name.  The eventual rename to CODE_t-only is tracked
+ * in GOAL-SNOCONE-LANG-SPACE LS-4.cn (session 2026-04-30 #7) for the
+ * Snocone frontend; broader migration is a separate goal.
+ */
+typedef Program CODE_t;
+
 /* ---- allocators ---- */
 static inline EXPR_t *expr_new(EKind k) {
     EXPR_t *e = calloc(1, sizeof *e); e->kind = k; return e;

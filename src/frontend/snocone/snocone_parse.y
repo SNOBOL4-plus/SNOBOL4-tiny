@@ -1,9 +1,9 @@
 /*
- * snocone.y — Snocone Bison grammar  (GOAL-SNOCONE-LANG-SPACE LS-4.{a,b,c})
+ * snocone_parse.y — Snocone Bison grammar (GOAL-SNOCONE-LANG-SPACE LS-4.{a,b,c,cn})
  *
  * Andrew Koenig's .sc self-host operator design + Lon's restoration of
  * SPITBOL space-as-concat semantics.  This file covers LS-4.a, LS-4.b,
- * and LS-4.c:
+ * LS-4.c, and LS-4.cn:
  *   * atoms (T_INT/T_REAL/T_STR/T_IDENT/T_KEYWORD)
  *   * arithmetic (+ - * / ^)
  *   * paren-grouping
@@ -15,6 +15,10 @@
  *   * pattern match `?`              → E_SCAN
  *   * pattern alternation `|`        → E_ALT (n-ary fold)
  *   * synthetic concat T_CONCAT      → E_SEQ (n-ary fold)
+ *   * LS-4.cn (session-#7 cosmetic):
+ *     - file rename snocone.y → snocone_parse.y (matches snocone_lex.{c,h})
+ *     - public entry now returns CODE_t* (typedef alias of Program)
+ *       for symmetry with EXPR_t — the type EVAL operates on
  *
  * Everything else — more unaries, subscripting, control flow, switch,
  * break/continue, goto, alt-eval, struct — lands in LS-4.d through
@@ -22,21 +26,21 @@
  *
  * Pipeline:
  *   snocone_lex.c  (threaded-code FSM lexer) -- sc_lex_next(ctx) -- single token per call
- *   snocone.y      (this file)               -- yylex thunk pulls from sc_lex_next
- *   Program*       (STMT_t list, EXPR_t IR)
+ *   snocone_parse.y      (this file)               -- yylex thunk pulls from sc_lex_next
+ *   CODE_t        (STMT_t list, EXPR_t IR — alias of Program)
  *
  * Token-kind decoupling note (LS-4.a session 2026-04-30 #3):
  *   The FSM declares its own enum `ScKind` in snocone_lex.h with values
  *   1, 2, 3, ...  Bison generates its own `enum sc_tokentype` in
- *   snocone.tab.h with values 258, 259, 260, ...  The two enums share
+ *   snocone_parse.tab.h with values 258, 259, 260, ...  The two enums share
  *   the same enumerator NAMES (T_INT, T_REAL, ...) — that was a
  *   deliberate session-#9 choice for readability — but the VALUES
  *   differ.  C does not allow two enums with the same enumerator name
  *   in one translation unit.  We resolve this by:
  *     (1) NOT including snocone_lex.h in `%code requires` (which goes
- *         into snocone.tab.h) — only struct-tag-forward-declared.
+ *         into snocone_parse.tab.h) — only struct-tag-forward-declared.
  *     (2) Including snocone_lex.h in `%code top` (which goes ONLY into
- *         snocone.tab.c, BEFORE snocone.tab.h's enum sc_tokentype is
+ *         snocone_parse.tab.c, BEFORE snocone_parse.tab.h's enum sc_tokentype is
  *         emitted).  The %code top block is processed before all other
  *         emitted code; we use it to alias the FSM's T_* names to SC_T_*
  *         via #define before the FSM header is read, so the FSM enum
@@ -55,7 +59,10 @@
  * goes into the subject field.
  *
  * Public entry:
- *   Program *snocone_parse_program(const char *src, const char *filename);
+ *   CODE_t *snocone_parse_program(const char *src, const char *filename);
+ *
+ *   CODE_t is a typedef alias of Program (added LS-4.cn for symmetry
+ *   with EXPR_t).  The two names refer to the same type.
  *
  * AUTHORS: Lon Jones Cherryholmes · Claude Sonnet
  * Commit identity: LCherryholmes / lcherryh@yahoo.com  (RULES.md)
@@ -269,11 +276,13 @@
 struct LexCtx;
 
 /* Parser state — passed to sc_parse() via %parse-param.  Carries the
- * FSM lexer context (the single producer of tokens), the program under
- * construction, and a small error counter. */
+ * FSM lexer context (the single producer of tokens), the code under
+ * construction, and a small error counter.  Uses CODE_t (typedef alias
+ * of Program) for symmetry with EXPR_t — Snocone's parser produces
+ * code, not just an expression. */
 typedef struct ScParseState {
     struct LexCtx *ctx;
-    Program       *prog;
+    CODE_t        *code;
     const char    *filename;
     int            nerrors;
 } ScParseState;
@@ -797,7 +806,7 @@ static void sc_append_stmt(ScParseState *st, EXPR_t *top) {
     if (!top) return;
     STMT_t *s = stmt_new();
     s->lineno = st->ctx ? st->ctx->line : 0;
-    s->stno   = ++st->prog->nstmts;
+    s->stno   = ++st->code->nstmts;
     if (top->kind == E_ASSIGN && top->nchildren == 2) {
         s->subject     = top->children[0];
         s->replacement = top->children[1];
@@ -807,8 +816,8 @@ static void sc_append_stmt(ScParseState *st, EXPR_t *top) {
     } else {
         s->subject = top;
     }
-    if (!st->prog->head) st->prog->head = st->prog->tail = s;
-    else { st->prog->tail->next = s; st->prog->tail = s; }
+    if (!st->code->head) st->code->head = st->code->tail = s;
+    else { st->code->tail->next = s; st->code->tail = s; }
 }
 
 /* ---- Literal builders ---- */
@@ -864,30 +873,35 @@ static EXPR_t *sc_clone_expr_simple(EXPR_t *e) {
 /* =========================================================================
  *  Public entry — snocone_parse_program
  *
- *  Parses a complete Snocone source string into a Program*.  On parse
+ *  Parses a complete Snocone source string into a CODE_t*.  On parse
  *  failure returns NULL (and st.nerrors > 0); on success returns a
- *  freshly-allocated Program ready for the IR/SM pipeline.
+ *  freshly-allocated CODE_t ready for the IR/SM pipeline.
+ *
+ *  CODE_t is the typedef alias of Program (added in LS-4.cn — session
+ *  2026-04-30 #7 — for symmetry with EXPR_t).  Existing callers that
+ *  declared the result as `Program *` continue to work; the two names
+ *  refer to the same type.
  *
  *  This is the LS-4.a entry point.  When LS-4.j wires it into scrip's
  *  driver, snocone_compile() will collapse to a thin wrapper around
  *  this function (~5 lines), mirroring sno_parse_string() at
  *  snobol4.y:316.
  * ========================================================================= */
-Program *snocone_parse_program(const char *src, const char *filename) {
+CODE_t *snocone_parse_program(const char *src, const char *filename) {
     LexCtx          ctx = {0};
     ctx.p           = src ? src : "";
     ctx.line        = 1;
     ScParseState    state = {0};
     state.ctx       = (struct LexCtx *)&ctx;
-    state.prog      = calloc(1, sizeof *state.prog);
+    state.code      = calloc(1, sizeof *state.code);
     state.filename  = filename;
     state.nerrors   = 0;
 
     int rc = sc_parse(&state);
 
     if (rc != 0 || state.nerrors > 0) {
-        free(state.prog);
+        free(state.code);
         return NULL;
     }
-    return state.prog;
+    return state.code;
 }

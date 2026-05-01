@@ -35,8 +35,8 @@
    especially those whose name start with YY_ or yy_.  They are
    private implementation details that can be changed or removed.  */
 
-#ifndef YY_SC_SNOCONE_TAB_H_INCLUDED
-# define YY_SC_SNOCONE_TAB_H_INCLUDED
+#ifndef YY_SC_SNOCONE_PARSE_TAB_H_INCLUDED
+# define YY_SC_SNOCONE_PARSE_TAB_H_INCLUDED
 /* Debug traces.  */
 #ifndef SC_DEBUG
 # if defined YYDEBUG
@@ -53,7 +53,7 @@
 extern int sc_debug;
 #endif
 /* "%code requires" blocks.  */
-#line 263 "snocone.y"
+#line 270 "snocone_parse.y"
 
 #include "scrip_cc.h"
 
@@ -63,16 +63,18 @@ extern int sc_debug;
 struct LexCtx;
 
 /* Parser state — passed to sc_parse() via %parse-param.  Carries the
- * FSM lexer context (the single producer of tokens), the program under
- * construction, and a small error counter. */
+ * FSM lexer context (the single producer of tokens), the code under
+ * construction, and a small error counter.  Uses CODE_t (typedef alias
+ * of Program) for symmetry with EXPR_t — Snocone's parser produces
+ * code, not just an expression. */
 typedef struct ScParseState {
     struct LexCtx *ctx;
-    Program       *prog;
+    CODE_t        *code;
     const char    *filename;
     int            nerrors;
 } ScParseState;
 
-#line 76 "snocone.tab.h"
+#line 78 "snocone_parse.tab.h"
 
 /* Token kinds.  */
 #ifndef SC_TOKENTYPE
@@ -173,14 +175,14 @@ typedef struct ScParseState {
 #if ! defined SC_STYPE && ! defined SC_STYPE_IS_DECLARED
 union SC_STYPE
 {
-#line 323 "snocone.y"
+#line 332 "snocone_parse.y"
 
     EXPR_t *expr;
     char   *str;
     long    ival;
     double  dval;
 
-#line 184 "snocone.tab.h"
+#line 186 "snocone_parse.tab.h"
 
 };
 typedef union SC_STYPE SC_STYPE;
@@ -194,4 +196,4 @@ typedef union SC_STYPE SC_STYPE;
 int sc_parse (ScParseState *st);
 
 
-#endif /* !YY_SC_SNOCONE_TAB_H_INCLUDED  */
+#endif /* !YY_SC_SNOCONE_PARSE_TAB_H_INCLUDED  */

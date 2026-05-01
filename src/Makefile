@@ -25,7 +25,7 @@ FRONTEND_PROLOG = \
 
 FRONTEND_SNOCONE = \
     ../archive/snocone_lex.c \
-    frontend/snocone/snocone_parse.c \
+    ../archive/snocone_parse.c \
     frontend/snocone/snocone_driver.c \
     frontend/snocone/snocone_lower.c \
     frontend/snocone/snocone_control.c

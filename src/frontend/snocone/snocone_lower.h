@@ -58,7 +58,7 @@
 #ifndef SNOCONE_LOWER_H
 #define SNOCONE_LOWER_H
 
-#include "snocone_parse.h"
+#include "../../../archive/snocone_parse.h"
 #include "scrip_cc.h"      /* EXPR_t, STMT_t, Program */
 
 /* ---------------------------------------------------------------------------

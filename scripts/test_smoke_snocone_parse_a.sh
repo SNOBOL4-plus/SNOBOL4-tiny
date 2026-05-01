@@ -2,7 +2,7 @@
 # test_smoke_snocone_parse_a.sh — GOAL-SNOCONE-LANG-SPACE LS-4.a gate
 #
 # Builds and runs test_snocone_parse_a, which verifies that the new
-# Bison-based Snocone parser (snocone.y, snocone.tab.c) produces the
+# Bison-based Snocone parser (snocone_parse.y, snocone_parse.tab.c) produces the
 # expected IR shape for atoms + arithmetic + parens + assignment +
 # `;`-terminated statements.
 #
@@ -26,7 +26,7 @@ BIN="/tmp/test_snocone_parse_a"
 
 cc -Wall -o "$BIN" \
     "$TEST" \
-    "$SRCDIR/snocone.tab.c" \
+    "$SRCDIR/snocone_parse.tab.c" \
     "$SRCDIR/snocone_lex.c" \
     -I "$SRCDIR" \
     -I "$ONE4ALL/src/frontend/snobol4" \

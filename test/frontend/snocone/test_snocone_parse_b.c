@@ -15,7 +15,7 @@
  *
  * Build:
  *   cc -Wall -o test_snocone_parse_b test_snocone_parse_b.c \
- *       ../../src/frontend/snocone/snocone.tab.c \
+ *       ../../src/frontend/snocone/snocone_parse.tab.c \
  *       ../../src/frontend/snocone/snocone_lex.c \
  *       -I ../../src/frontend/snocone \
  *       -I ../../src/frontend/snobol4 \
@@ -33,7 +33,7 @@
 #define IR_DEFINE_NAMES
 #include "scrip_cc.h"
 
-/* Public entry from snocone.tab.c */
+/* Public entry from snocone_parse.tab.c */
 Program *snocone_parse_program(const char *src, const char *filename);
 
 /* Mini IR printer — same format as parse_a so dumps are uniform. */

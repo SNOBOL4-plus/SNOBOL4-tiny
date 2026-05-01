@@ -24,7 +24,7 @@
  *
  * Build:
  *   cc -Wall -o test_snocone_parse_c test_snocone_parse_c.c \
- *       ../../src/frontend/snocone/snocone.tab.c \
+ *       ../../src/frontend/snocone/snocone_parse.tab.c \
  *       ../../src/frontend/snocone/snocone_lex.c \
  *       -I ../../src/frontend/snocone \
  *       -I ../../src/frontend/snobol4 \

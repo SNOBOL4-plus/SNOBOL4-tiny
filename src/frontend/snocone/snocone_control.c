@@ -51,7 +51,7 @@
 
 #include "snocone_control.h"
 #include "../../../archive/snocone_lex.h"
-#include "snocone_parse.h"
+#include "../../../archive/snocone_parse.h"
 #include "snocone_lower.h"
 
 #include <stdio.h>
