@@ -154,7 +154,7 @@
 #define T_SEMICOLON        SC_T_SEMICOLON
 #define T_COLON            SC_T_COLON
 
-/* Keywords — Snocone reserved words.  T_FUNCTION is the `function`
+/* Keywords — Snocone reserved words.  T_DEFINE is the `function`
  * keyword; T_CALL is the IDENT-followed-by-zero-space-`(` call-form
  * token from the FSM (carries the identifier name, consumes the `(`). */
 #define T_IF            SC_T_IF
@@ -169,7 +169,7 @@
 #define T_BREAK         SC_T_BREAK
 #define T_CONTINUE      SC_T_CONTINUE
 #define T_GOTO          SC_T_GOTO
-#define T_FUNCTION      SC_T_FUNCTION
+#define T_DEFINE      SC_T_DEFINE
 #define T_RETURN        SC_T_RETURN
 #define T_FRETURN       SC_T_FRETURN
 #define T_NRETURN       SC_T_NRETURN
@@ -261,7 +261,7 @@
 #undef T_BREAK
 #undef T_CONTINUE
 #undef T_GOTO
-#undef T_FUNCTION
+#undef T_DEFINE
 #undef T_RETURN
 #undef T_FRETURN
 #undef T_NRETURN
@@ -668,7 +668,7 @@ static int sc_kind_to_tok(int sc_kind);
 %token T_DO T_FOR
 %token T_SWITCH T_CASE T_DEFAULT
 %token T_BREAK T_CONTINUE T_GOTO
-%token T_FUNCTION T_RETURN T_FRETURN T_NRETURN T_STRUCT
+%token T_DEFINE T_RETURN T_FRETURN T_NRETURN T_STRUCT
 %token T_UNKNOWN
 
 /* ---- Block delimiters and control-flow keywords (LS-4.f) ---- */
@@ -890,11 +890,13 @@ opt_head_sep
 
 /* LS-4.h — func_head: `function NAME ( arglist )` opt_head_sep.
  *
- * The function name is carried by T_CALL (IDENT immediately followed
- * by zero-whitespace `(` — the call-form token from the FSM).  The arg
- * list is zero or more comma-separated IDENT names, returned as a single
- * malloc'd string of the form "arg1,arg2,arg3".  An empty arg list
- * returns "".
+ * The function name is carried by T_IDENT.  The lexer's E_CALL state
+ * detects the `function name(...)` definition pattern (prev token is
+ * T_DEFINE) and redirects to E_IDENT — so `name` arrives here as a
+ * plain identifier, not the T_CALL call-form token.  T_LPAREN follows
+ * normally.  The arg list is zero or more comma-separated IDENT names,
+ * returned as a single malloc'd string of the form "arg1,arg2,arg3".
+ * An empty arg list returns "".
  *
  * func_head emits:
  *   1. A DEFINE('name(args)') call statement — appended immediately.
@@ -907,13 +909,13 @@ opt_head_sep
  * cur_func_name is set so return/freturn/nreturn inside the body can
  * reference the function name.
  */
-func_head   : T_FUNCTION T_CALL T_LPAREN func_arglist opt_head_sep
+func_head   : T_DEFINE T_IDENT T_LPAREN func_arglist opt_head_sep
                                         { $$ = sc_func_head_new(st, $2, $4); free($2); free($4); }
             ;
 
 /* func_arglist — the argument portion of `function name(args)`.
- * T_CALL already consumed the name and the `(`; we now consume
- * the comma-separated IDENT list and the closing `)`.
+ * T_LPAREN was just consumed; we now consume the comma-separated IDENT
+ * list and the closing `)`.
  * The value is a malloc'd string "arg1,arg2" (empty string if no args).
  */
 func_arglist
@@ -1309,13 +1311,14 @@ exprlist_ne : exprlist_ne T_COMMA expr0
  * LS-4.b adds T_CALL call-form: `EQ(2+2, 4)` → E_FNC("EQ", ...).
  * The lexer has already classified the IDENT-followed-by-zero-space-(
  * as T_CALL (the "f(args) vs f (args)" disambiguation rule from
- * the goal); the matching ( is the next token in the stream. */
-expr17      : T_CALL T_LPAREN exprlist T_RPAREN
+ * the goal); T_CALL atomically consumes the `(`, so the grammar
+ * reads `T_CALL exprlist T_RPAREN` — no separate T_LPAREN. */
+expr17      : T_CALL exprlist T_RPAREN
                                 { EXPR_t *e = expr_new(E_FNC);
                                   e->sval = $1;             /* takes ownership */
-                                  for (int i = 0; i < $3->nchildren; i++)
-                                      expr_add_child(e, $3->children[i]);
-                                  free($3->children); free($3);
+                                  for (int i = 0; i < $2->nchildren; i++)
+                                      expr_add_child(e, $2->children[i]);
+                                  free($2->children); free($2);
                                   $$ = e; }
             | T_IDENT
                                 { EXPR_t *e = expr_new(E_VAR);
@@ -1411,7 +1414,7 @@ expr17      : T_CALL T_LPAREN exprlist T_RPAREN
  * ========================================================================= */
 int sc_lex(SC_STYPE *yylval, ScParseState *st) {
     int sc_kind = sc_lex_next(st->ctx);
-    if (sc_kind_is_value(sc_kind)) {
+    if (sc_kind_has_payload(sc_kind)) {
         yylval->str = strdup(st->ctx->text);
     } else {
         yylval->str = NULL;
@@ -1514,7 +1517,7 @@ static int sc_kind_to_tok(int sc_kind) {
         case SC_T_BREAK:         return T_BREAK;
         case SC_T_CONTINUE:      return T_CONTINUE;
         case SC_T_GOTO:          return T_GOTO;
-        case SC_T_FUNCTION:      return T_FUNCTION;
+        case SC_T_DEFINE:      return T_DEFINE;
         case SC_T_RETURN:        return T_RETURN;
         case SC_T_FRETURN:       return T_FRETURN;
         case SC_T_NRETURN:       return T_NRETURN;

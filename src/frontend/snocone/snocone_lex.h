@@ -43,7 +43,7 @@ typedef enum {
     T_IF, T_ELSE, T_WHILE, T_DO, T_UNTIL, T_FOR,
     T_SWITCH, T_CASE, T_DEFAULT,
     T_BREAK, T_CONTINUE, T_GOTO,
-    T_FUNCTION, T_RETURN, T_FRETURN, T_NRETURN,
+    T_DEFINE, T_RETURN, T_FRETURN, T_NRETURN,
     T_STRUCT,
     T_EOF, T_UNKNOWN
 } ScKind;
@@ -57,5 +57,6 @@ typedef struct LexCtx {
 } LexCtx;
 int         sc_lex_next     (LexCtx *ctx);
 int         sc_kind_is_value(int kind);
+int         sc_kind_has_payload(int kind);
 const char *sc2_kind_name   (int kind);
 #endif

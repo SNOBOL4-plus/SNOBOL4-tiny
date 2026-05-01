@@ -107,21 +107,43 @@ static inline int is_rws_at(const char *p, int n) {
 /* Filled at first call (idempotent).                               */
 /* ---------------------------------------------------------------- */
 static signed char sc_value_table[256];
+static signed char sc_payload_table[256];
 static int         sc_value_table_built = 0;
 static void sc_value_table_build(void) {
+    /* sc_value_table — "is this a value-ender" for the lexer's own
+     * CONCAT-injection / binary-vs-unary dispatch decisions. */
     sc_value_table[T_IDENT]    = 1;
-    sc_value_table[T_CALL] = 1;
+    /* T_CALL is NOT a value-ender: it atomically consumes IDENT + `(`,
+     * so the next token sits inside the arg list (post-LPAREN state).
+     * Treating T_CALL as a value would make `*` after `f(` lex as
+     * binary multiplication instead of unary defer. */
     sc_value_table[T_INT]      = 1;
     sc_value_table[T_REAL]     = 1;
     sc_value_table[T_STR]      = 1;
     sc_value_table[T_KEYWORD]  = 1;
     sc_value_table[T_RPAREN]   = 1;
     sc_value_table[T_RBRACK]   = 1;
+
+    /* sc_payload_table — "does this token carry a text payload in
+     * ctx->text" for the parser thunk to strdup into yylval->str.
+     * T_CALL belongs here (the identifier name) even though it is
+     * not a value-ender. */
+    sc_payload_table[T_IDENT]   = 1;
+    sc_payload_table[T_CALL]    = 1;
+    sc_payload_table[T_INT]     = 1;
+    sc_payload_table[T_REAL]    = 1;
+    sc_payload_table[T_STR]     = 1;
+    sc_payload_table[T_KEYWORD] = 1;
+
     sc_value_table_built       = 1;
 }
 int sc_kind_is_value(int kind) {
     if (!sc_value_table_built) sc_value_table_build();
     return (kind >= 0 && kind < 256) ? sc_value_table[kind] : 0;
+}
+int sc_kind_has_payload(int kind) {
+    if (!sc_value_table_built) sc_value_table_build();
+    return (kind >= 0 && kind < 256) ? sc_payload_table[kind] : 0;
 }
 /* ---------------------------------------------------------------- */
 /* Keyword classifier -- tail-recursive table walk.                 */
@@ -141,7 +163,7 @@ static const KwEntry KW_TABLE[] = {
     { "break",    T_BREAK    },
     { "continue", T_CONTINUE },
     { "goto",     T_GOTO     },
-    { "function",   T_FUNCTION },
+    { "function",   T_DEFINE },
     /* `procedure` synonym removed session 2026-05-01 #7 — corpus
      * migrated to `function` (61 files, 297 replacements) via
      * util_migrate_snocone_procedure_to_function.py.  Bare
@@ -351,7 +373,7 @@ S_OP_COLON:
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_EQ:
     if (PEEK(1) == '=' )                                           {  ADV(2);                                              goto E_EQ;        }
-    if (had_ws && last_value)                                      {  ADV(1);                                              goto E_ASSIGN;    }
+    if (last_value)                                                {  ADV(1);                                              goto E_ASSIGN;    }
                                                                    {  ADV(1);                                              goto E_UN_EQUAL;  }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_BANG:
@@ -560,7 +582,33 @@ E_INT:           EMIT_V(T_INT);
 /*--------------------------------------------------------------------------------------------------------------------*/
 E_REAL:          EMIT_V(T_REAL);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_CALL:          EMIT_V(T_CALL);
+E_CALL:
+    /* T_CALL is the call-form token: IDENT immediately followed by `(`,
+     * emitted as a single atomic token (the `(` is consumed here).  The
+     * grammar form is `T_CALL exprlist T_RPAREN` — no separate T_LPAREN.
+     *
+     * Two cases must NOT produce T_CALL:
+     *   (a) the IDENT is a keyword (e.g. `if(cond)`, `while(cond)`) —
+     *       the keyword retains its keyword token; `(` stays in stream.
+     *   (b) the prev token is T_DEFINE (e.g. `function name(args)`) —
+     *       this is a definition, not a call; the name is plain T_IDENT
+     *       and the `(` stays in stream as T_LPAREN.
+     * In both cases redirect to E_IDENT, which emits the proper token
+     * without consuming `(`. */
+    if (classify_keyword_range(tok_start, p) != T_IDENT) goto E_IDENT;
+    if (ctx->last_kind == T_DEFINE)                      goto E_IDENT;
+    {
+        /* Capture identifier name (range [tok_start, p)) into ctx->text,
+         * then advance p past the `(` so it is consumed atomically. */
+        int n = (int)(p - tok_start);
+        if (n >= (int)sizeof(ctx->text)) n = (int)sizeof(ctx->text) - 1;
+        memcpy(ctx->text, tok_start, n);
+        ctx->text[n] = '\0';
+        ADV(1);  /* consume the `(` */
+        ctx->p = p;
+        ctx->last_kind = T_CALL;
+        return T_CALL;
+    }
 /*--------------------------------------------------------------------------------------------------------------------*/
 E_IDENT:
     {
@@ -673,7 +721,7 @@ static void sc_name_table_build(void) {
     sc_name_table[T_BREAK]         = "T_BREAK";
     sc_name_table[T_CONTINUE]      = "T_CONTINUE";
     sc_name_table[T_GOTO]          = "T_GOTO";
-    sc_name_table[T_FUNCTION]      = "T_FUNCTION";
+    sc_name_table[T_DEFINE]      = "T_DEFINE";
     sc_name_table[T_RETURN]        = "T_RETURN";
     sc_name_table[T_FRETURN]       = "T_FRETURN";
     sc_name_table[T_NRETURN]       = "T_NRETURN";
