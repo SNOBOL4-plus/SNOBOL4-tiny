@@ -91,14 +91,14 @@ int main(void) {
     run_test(&(TestCase){
         "T03a keyword name &FULLSCAN = 1;",
         "&FULLSCAN = 1;",
-        { T_KEYWORD, T_ASSIGNMENT, T_INT, T_SEMICOLON, T_EOF }
+        { T_KEYWORD, T_2EQUAL, T_INT, T_SEMICOLON, T_EOF }
     });
 
     /* Test 3b — unary & with space */
     run_test(&(TestCase){
         "T03b unary amp & FULLSCAN",
         "& FULLSCAN",
-        { T_UN_AMPERSAND, T_IDENT, T_EOF }
+        { T_1AMP, T_IDENT, T_EOF }
     });
 
     /* Test 4 — bare expression with concat after call rparen */
@@ -106,14 +106,14 @@ int main(void) {
         "T04 EQ(x,0) x = 1;",
         "EQ(x, 0) x = 1;",
         { T_FUNCTION, T_LPAREN, T_IDENT, T_COMMA, T_INT, T_RPAREN,
-          T_CONCAT, T_IDENT, T_ASSIGNMENT, T_INT, T_SEMICOLON, T_EOF }
+          T_CONCAT, T_IDENT, T_2EQUAL, T_INT, T_SEMICOLON, T_EOF }
     });
 
     /* Test 5 — alt-eval (commas inside parens — replaces ||) */
     run_test(&(TestCase){
         "T05 alt-eval A=(LT(I,J) I, GT(I,J) J, 'Same');",
         "A = (LT(I,J) I, GT(I,J) J, 'Same');",
-        { T_IDENT, T_ASSIGNMENT,
+        { T_IDENT, T_2EQUAL,
           T_LPAREN,
             T_FUNCTION, T_LPAREN, T_IDENT, T_COMMA, T_IDENT, T_RPAREN, T_CONCAT, T_IDENT,
           T_COMMA,
@@ -127,7 +127,7 @@ int main(void) {
     run_test(&(TestCase){
         "T06 if (x ? 'foo' = 'bar') doit();",
         "if (x ? 'foo' = 'bar') doit();",
-        { T_KW_IF, T_LPAREN, T_IDENT, T_MATCH, T_STR, T_ASSIGNMENT,
+        { T_KW_IF, T_LPAREN, T_IDENT, T_2QUEST, T_STR, T_2EQUAL,
           T_STR, T_RPAREN,
           T_CONCAT,
           T_FUNCTION, T_LPAREN, T_RPAREN, T_SEMICOLON, T_EOF }
@@ -137,28 +137,28 @@ int main(void) {
     run_test(&(TestCase){
         "T07 string with &&",
         "s = '&&';",
-        { T_IDENT, T_ASSIGNMENT, T_STR, T_SEMICOLON, T_EOF }
+        { T_IDENT, T_2EQUAL, T_STR, T_SEMICOLON, T_EOF }
     });
 
     /* Test 8 — string with embedded || */
     run_test(&(TestCase){
         "T08 string with ||",
         "s = '||';",
-        { T_IDENT, T_ASSIGNMENT, T_STR, T_SEMICOLON, T_EOF }
+        { T_IDENT, T_2EQUAL, T_STR, T_SEMICOLON, T_EOF }
     });
 
     /* Test 9 — bare && is now two AMPERSAND tokens */
     run_test(&(TestCase){
         "T09 bare && -> AMPERSAND AMPERSAND",
         "x && y",
-        { T_IDENT, T_CONCAT, T_UN_AMPERSAND, T_UN_AMPERSAND, T_IDENT, T_EOF }
+        { T_IDENT, T_CONCAT, T_1AMP, T_1AMP, T_IDENT, T_EOF }
     });
 
     /* Test 10 — bare || is now two PIPE tokens */
     run_test(&(TestCase){
         "T10 bare || -> PIPE PIPE",
         "x || y",
-        { T_IDENT, T_CONCAT, T_UN_VERTICAL_BAR, T_UN_VERTICAL_BAR, T_IDENT, T_EOF }
+        { T_IDENT, T_CONCAT, T_1PIPE, T_1PIPE, T_IDENT, T_EOF }
     });
 
     /* Test 11 — identity comparison :: */
@@ -179,28 +179,28 @@ int main(void) {
     run_test(&(TestCase){
         "T13a caret a ^ b",
         "a ^ b",
-        { T_IDENT, T_EXPONENTIATION, T_IDENT, T_EOF }
+        { T_IDENT, T_2CARET, T_IDENT, T_EOF }
     });
 
     /* Test 13b — ** exponent synonym */
     run_test(&(TestCase){
         "T13b ** exponent a ** b",
         "a ** b",
-        { T_IDENT, T_EXPONENTIATION, T_IDENT, T_EOF }
+        { T_IDENT, T_2CARET, T_IDENT, T_EOF }
     });
 
     /* Test 13c — ! exponent synonym */
     run_test(&(TestCase){
         "T13c ! exponent a ! b",
         "a ! b",
-        { T_IDENT, T_EXPONENTIATION, T_IDENT, T_EOF }
+        { T_IDENT, T_2CARET, T_IDENT, T_EOF }
     });
 
     /* Test 14 — % is OPSYN slot, not modulo */
     run_test(&(TestCase){
         "T14 percent OPSYN slot",
         "x % y",
-        { T_IDENT, T_PERCENT, T_IDENT, T_EOF }
+        { T_IDENT, T_2PERCENT, T_IDENT, T_EOF }
     });
 
     /* Test 16 — block comment between values triggers CONCAT */
@@ -214,8 +214,8 @@ int main(void) {
     run_test(&(TestCase){
         "T17 line comment",
         "x = y; // a comment\nz = w;",
-        { T_IDENT, T_ASSIGNMENT, T_IDENT, T_SEMICOLON,
-          T_IDENT, T_ASSIGNMENT, T_IDENT, T_SEMICOLON, T_EOF }
+        { T_IDENT, T_2EQUAL, T_IDENT, T_SEMICOLON,
+          T_IDENT, T_2EQUAL, T_IDENT, T_SEMICOLON, T_EOF }
     });
 
     /* Test 18b — if with parens: CONCAT fires between RPAREN and body */
@@ -229,7 +229,7 @@ int main(void) {
     run_test(&(TestCase){
         "T19 label top: x = 1;",
         "top: x = 1;",
-        { T_IDENT, T_COLON, T_IDENT, T_ASSIGNMENT, T_INT, T_SEMICOLON, T_EOF }
+        { T_IDENT, T_COLON, T_IDENT, T_2EQUAL, T_INT, T_SEMICOLON, T_EOF }
     });
 
     /* Test 20 — goto */
@@ -258,8 +258,8 @@ int main(void) {
         "T22 switch",
         "switch (x) { case 1: a = 1; default: a = 3; }",
         { T_KW_SWITCH, T_LPAREN, T_IDENT, T_RPAREN, T_LBRACE,
-          T_KW_CASE, T_INT, T_COLON, T_IDENT, T_ASSIGNMENT, T_INT, T_SEMICOLON,
-          T_KW_DEFAULT, T_COLON, T_IDENT, T_ASSIGNMENT, T_INT, T_SEMICOLON,
+          T_KW_CASE, T_INT, T_COLON, T_IDENT, T_2EQUAL, T_INT, T_SEMICOLON,
+          T_KW_DEFAULT, T_COLON, T_IDENT, T_2EQUAL, T_INT, T_SEMICOLON,
           T_RBRACE, T_EOF }
     });
 
@@ -268,7 +268,7 @@ int main(void) {
         "T23 do/until",
         "do { x = x + 1; } until (GT(x, 10));",
         { T_KW_DO, T_LBRACE,
-          T_IDENT, T_ASSIGNMENT, T_IDENT, T_ADDITION, T_INT, T_SEMICOLON,
+          T_IDENT, T_2EQUAL, T_IDENT, T_2PLUS, T_INT, T_SEMICOLON,
           T_RBRACE,
           T_KW_UNTIL, T_LPAREN,
           T_FUNCTION, T_LPAREN, T_IDENT, T_COMMA, T_INT, T_RPAREN,

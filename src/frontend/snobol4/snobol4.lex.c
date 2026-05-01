@@ -1306,92 +1306,92 @@ YY_RULE_SETUP
 case 28:
 /* rule 28 can match eol */
 YY_RULE_SETUP
-{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_EXPONENTIATION;  }
+{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2CARET;  }
 	YY_BREAK
 case 29:
 /* rule 29 can match eol */
 YY_RULE_SETUP
-{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_EXPONENTIATION;  }
+{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2CARET;  }
 	YY_BREAK
 case 30:
 /* rule 30 can match eol */
 YY_RULE_SETUP
-{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_EXPONENTIATION;  }
+{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2CARET;  }
 	YY_BREAK
 case 31:
 /* rule 31 can match eol */
 YY_RULE_SETUP
-{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_ADDITION;        }
+{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2PLUS;        }
 	YY_BREAK
 case 32:
 /* rule 32 can match eol */
 YY_RULE_SETUP
-{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_SUBTRACTION;     }
+{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2MINUS;     }
 	YY_BREAK
 case 33:
 /* rule 33 can match eol */
 YY_RULE_SETUP
-{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_MULTIPLICATION;  }
+{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2STAR;  }
 	YY_BREAK
 case 34:
 /* rule 34 can match eol */
 YY_RULE_SETUP
-{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_DIVISION;        }
+{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2SLASH;        }
 	YY_BREAK
 case 35:
 /* rule 35 can match eol */
 YY_RULE_SETUP
-{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_IMMEDIATE_ASSIGN;}
+{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2DOLLAR;}
 	YY_BREAK
 case 36:
 /* rule 36 can match eol */
 YY_RULE_SETUP
-{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_COND_ASSIGN;     }
+{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2DOT;     }
 	YY_BREAK
 case 37:
 /* rule 37 can match eol */
 YY_RULE_SETUP
-{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_ALTERNATION;     }
+{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2PIPE;     }
 	YY_BREAK
 case 38:
 /* rule 38 can match eol */
 YY_RULE_SETUP
-{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_ASSIGNMENT;      }
+{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2EQUAL;      }
 	YY_BREAK
 case 39:
 /* rule 39 can match eol */
 YY_RULE_SETUP
-{ return T_ASSIGNMENT; }  /* = at EOL with no trailing space — DYN-63 */
+{ return T_2EQUAL; }  /* = at EOL with no trailing space — DYN-63 */
 	YY_BREAK
 case 40:
 /* rule 40 can match eol */
 YY_RULE_SETUP
-{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_MATCH;           }
+{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2QUEST;           }
 	YY_BREAK
 case 41:
 /* rule 41 can match eol */
 YY_RULE_SETUP
-{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_AMPERSAND;       }
+{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2AMP;       }
 	YY_BREAK
 case 42:
 /* rule 42 can match eol */
 YY_RULE_SETUP
-{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_AT_SIGN;         }
+{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2AT;         }
 	YY_BREAK
 case 43:
 /* rule 43 can match eol */
 YY_RULE_SETUP
-{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_POUND;           }
+{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2POUND;           }
 	YY_BREAK
 case 44:
 /* rule 44 can match eol */
 YY_RULE_SETUP
-{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_PERCENT;         }
+{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2PERCENT;         }
 	YY_BREAK
 case 45:
 /* rule 45 can match eol */
 YY_RULE_SETUP
-{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_TILDE;           }
+{ for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2TILDE;           }
 	YY_BREAK
 /* Structural: open absorbs trailing Gray; close absorbs leading Gray */
 case 46:
@@ -1461,71 +1461,71 @@ YY_RULE_SETUP
 /* Unary ops: arrive bare (no leading space) */
 case 60:
 YY_RULE_SETUP
-{ return T_EXPONENTIATION;  }
+{ return T_2CARET;  }
 	YY_BREAK
 case 61:
 YY_RULE_SETUP
-{ return T_EXPONENTIATION;  }
+{ return T_2CARET;  }
 	YY_BREAK
 case 62:
 YY_RULE_SETUP
-{ return T_UN_PLUS;         }
+{ return T_1PLUS;         }
 	YY_BREAK
 case 63:
 YY_RULE_SETUP
-{ return T_UN_MINUS;        }
+{ return T_1MINUS;        }
 	YY_BREAK
 case 64:
 YY_RULE_SETUP
-{ return T_UN_ASTERISK;     }
+{ return T_1STAR;     }
 	YY_BREAK
 case 65:
 YY_RULE_SETUP
-{ return T_UN_SLASH;        }
+{ return T_1SLASH;        }
 	YY_BREAK
 case 66:
 YY_RULE_SETUP
-{ return T_UN_PERCENT;      }
+{ return T_1PERCENT;      }
 	YY_BREAK
 case 67:
 YY_RULE_SETUP
-{ return T_UN_AT_SIGN;      }
+{ return T_1AT;      }
 	YY_BREAK
 case 68:
 YY_RULE_SETUP
-{ return T_UN_TILDE;        }
+{ return T_1TILDE;        }
 	YY_BREAK
 case 69:
 YY_RULE_SETUP
-{ return T_UN_DOLLAR_SIGN;  }
+{ return T_1DOLLAR;  }
 	YY_BREAK
 case 70:
 YY_RULE_SETUP
-{ return T_UN_PERIOD;       }
+{ return T_1DOT;       }
 	YY_BREAK
 case 71:
 YY_RULE_SETUP
-{ return T_UN_EXCLAMATION;  }
+{ return T_1BANG;  }
 	YY_BREAK
 case 72:
 YY_RULE_SETUP
-{ return T_UN_POUND;        }
+{ return T_1POUND;        }
 	YY_BREAK
 case 73:
 YY_RULE_SETUP
-{ return T_UN_VERTICAL_BAR; }
+{ return T_1PIPE; }
 	YY_BREAK
 case 74:
 YY_RULE_SETUP
-{ return T_UN_EQUAL;        }
+{ return T_1EQUAL;        }
 	YY_BREAK
 case 75:
 YY_RULE_SETUP
-{ return T_UN_QUESTION_MARK;}
+{ return T_1QUEST;}
 	YY_BREAK
 case 76:
 YY_RULE_SETUP
-{ return T_UN_AMPERSAND;    }
+{ return T_1AMP;    }
 	YY_BREAK
 case 77:
 YY_RULE_SETUP
@@ -1647,7 +1647,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 95:
 YY_RULE_SETUP
-{ return T_UN_DOLLAR_SIGN; }
+{ return T_1DOLLAR; }
 	YY_BREAK
 case 96:
 YY_RULE_SETUP

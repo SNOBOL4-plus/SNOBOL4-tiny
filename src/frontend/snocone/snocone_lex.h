@@ -24,20 +24,20 @@ typedef enum {
     T_FUNCTION,                                    /* ident immediately followed by '(' */
     T_KEYWORD,                                     /* &IDENT */
     T_CONCAT,                                      /* whitespace between two atoms */
-    T_ASSIGNMENT, T_MATCH, T_ALTERNATION,
+    T_2EQUAL, T_2QUEST, T_2PIPE,
     T_EQ, T_NE, T_LT, T_GT, T_LE, T_GE,            /* numeric compare pri 6 */
     T_LEQ, T_LNE, T_LLT, T_LGT, T_LLE, T_LGE,      /* string compare :==: etc. */
     T_IDENT_OP,                                    /* ::   pri 6 IDENT() */
     T_DIFFER,                                      /* :!:  pri 6 DIFFER() */
-    T_ADDITION, T_SUBTRACTION, T_DIVISION, T_MULTIPLICATION,
-    T_EXPONENTIATION,                              /* ^ ** ! pri 11 right */
-    T_IMMEDIATE_ASSIGN,                            /* $    pri 12 binary */
-    T_COND_ASSIGN,                                 /* .    pri 12 binary */
-    T_AMPERSAND, T_AT_SIGN, T_POUND, T_PERCENT, T_TILDE,
+    T_2PLUS, T_2MINUS, T_2SLASH, T_2STAR,
+    T_2CARET,                              /* ^ ** ! pri 11 right */
+    T_2DOLLAR,                            /* $    pri 12 binary */
+    T_2DOT,                                 /* .    pri 12 binary */
+    T_2AMP, T_2AT, T_2POUND, T_2PERCENT, T_2TILDE,
     T_PLUS_ASSIGN, T_MINUS_ASSIGN, T_STAR_ASSIGN, T_SLASH_ASSIGN, T_CARET_ASSIGN,
-    T_UN_PLUS, T_UN_MINUS, T_UN_ASTERISK, T_UN_SLASH, T_UN_PERCENT,
-    T_UN_AT_SIGN, T_UN_TILDE, T_UN_DOLLAR_SIGN, T_UN_PERIOD, T_UN_POUND,
-    T_UN_VERTICAL_BAR, T_UN_EQUAL, T_UN_QUESTION_MARK, T_UN_AMPERSAND,
+    T_1PLUS, T_1MINUS, T_1STAR, T_1SLASH, T_1PERCENT,
+    T_1AT, T_1TILDE, T_1DOLLAR, T_1DOT, T_1POUND,
+    T_1PIPE, T_1EQUAL, T_1QUEST, T_1AMP,
     T_LPAREN, T_RPAREN, T_LBRACK, T_RBRACK, T_LBRACE, T_RBRACE,
     T_COMMA, T_SEMICOLON, T_COLON,
     T_KW_IF, T_KW_ELSE, T_KW_WHILE, T_KW_DO, T_KW_UNTIL, T_KW_FOR,

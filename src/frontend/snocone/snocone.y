@@ -8,7 +8,7 @@
  *   * arithmetic (+ - * / ^)
  *   * paren-grouping
  *   * `;`-terminated statements
- *   * assignment (T_ASSIGNMENT) + compound-assigns (+= -= *= /= ^=)
+ *   * assignment (T_2EQUAL) + compound-assigns (+= -= *= /= ^=)
  *   * comparison/identity (==, !=, <, >, <=, >=, :==:, :!=:, :<:, :>:,
  *     :<=:, :>=:, ::, :!:) → E_FNC named calls
  *   * T_FUNCTION call-form `EQ(2+2, 4)` → E_FNC("EQ", ...)
@@ -64,7 +64,13 @@
 %code top {
 /* %code top runs BEFORE Bison's enum sc_tokentype is generated, so we
  * can alias the FSM's T_* enum names to SC_T_* and pull in its header
- * here without colliding with Bison's later T_* generation. */
+ * here without colliding with Bison's later T_* generation.
+ *
+ * Naming-scheme note (session 2026-04-30 #6 rename): tokens for the
+ * dual-role keyboard characters use T_<arity><charname> (e.g. T_1PLUS
+ * unary +, T_2PLUS binary +).  Multi-character operators (== :==: ::
+ * etc.) keep their existing names since they have no arity ambiguity.
+ * Atoms and punctuation also keep their existing names. */
 #define T_INT              SC_T_INT
 #define T_REAL             SC_T_REAL
 #define T_STR              SC_T_STR
@@ -72,9 +78,25 @@
 #define T_FUNCTION         SC_T_FUNCTION
 #define T_KEYWORD          SC_T_KEYWORD
 #define T_CONCAT           SC_T_CONCAT
-#define T_ASSIGNMENT       SC_T_ASSIGNMENT
-#define T_MATCH            SC_T_MATCH
-#define T_ALTERNATION      SC_T_ALTERNATION
+
+/* Binary operators (T_2*) — character-derived names */
+#define T_2EQUAL           SC_T_2EQUAL
+#define T_2QUEST           SC_T_2QUEST
+#define T_2PIPE            SC_T_2PIPE
+#define T_2PLUS            SC_T_2PLUS
+#define T_2MINUS           SC_T_2MINUS
+#define T_2SLASH           SC_T_2SLASH
+#define T_2STAR            SC_T_2STAR
+#define T_2CARET           SC_T_2CARET
+#define T_2DOLLAR          SC_T_2DOLLAR
+#define T_2DOT             SC_T_2DOT
+#define T_2AMP             SC_T_2AMP
+#define T_2AT              SC_T_2AT
+#define T_2POUND           SC_T_2POUND
+#define T_2PERCENT         SC_T_2PERCENT
+#define T_2TILDE           SC_T_2TILDE
+
+/* Multi-character comparison/identity ops — character-name kept */
 #define T_EQ               SC_T_EQ
 #define T_NE               SC_T_NE
 #define T_LT               SC_T_LT
@@ -89,37 +111,31 @@
 #define T_LGE              SC_T_LGE
 #define T_IDENT_OP         SC_T_IDENT_OP
 #define T_DIFFER           SC_T_DIFFER
-#define T_ADDITION         SC_T_ADDITION
-#define T_SUBTRACTION      SC_T_SUBTRACTION
-#define T_DIVISION         SC_T_DIVISION
-#define T_MULTIPLICATION   SC_T_MULTIPLICATION
-#define T_EXPONENTIATION   SC_T_EXPONENTIATION
-#define T_IMMEDIATE_ASSIGN SC_T_IMMEDIATE_ASSIGN
-#define T_COND_ASSIGN      SC_T_COND_ASSIGN
-#define T_AMPERSAND        SC_T_AMPERSAND
-#define T_AT_SIGN          SC_T_AT_SIGN
-#define T_POUND            SC_T_POUND
-#define T_PERCENT          SC_T_PERCENT
-#define T_TILDE            SC_T_TILDE
+
+/* Compound-assigns — naturally binary, no arity prefix */
 #define T_PLUS_ASSIGN      SC_T_PLUS_ASSIGN
 #define T_MINUS_ASSIGN     SC_T_MINUS_ASSIGN
 #define T_STAR_ASSIGN      SC_T_STAR_ASSIGN
 #define T_SLASH_ASSIGN     SC_T_SLASH_ASSIGN
 #define T_CARET_ASSIGN     SC_T_CARET_ASSIGN
-#define T_UN_PLUS          SC_T_UN_PLUS
-#define T_UN_MINUS         SC_T_UN_MINUS
-#define T_UN_ASTERISK      SC_T_UN_ASTERISK
-#define T_UN_SLASH         SC_T_UN_SLASH
-#define T_UN_PERCENT       SC_T_UN_PERCENT
-#define T_UN_AT_SIGN       SC_T_UN_AT_SIGN
-#define T_UN_TILDE         SC_T_UN_TILDE
-#define T_UN_DOLLAR_SIGN   SC_T_UN_DOLLAR_SIGN
-#define T_UN_PERIOD        SC_T_UN_PERIOD
-#define T_UN_POUND         SC_T_UN_POUND
-#define T_UN_VERTICAL_BAR  SC_T_UN_VERTICAL_BAR
-#define T_UN_EQUAL         SC_T_UN_EQUAL
-#define T_UN_QUESTION_MARK SC_T_UN_QUESTION_MARK
-#define T_UN_AMPERSAND     SC_T_UN_AMPERSAND
+
+/* Unary operators (T_1*) — character-derived names */
+#define T_1PLUS            SC_T_1PLUS
+#define T_1MINUS           SC_T_1MINUS
+#define T_1STAR            SC_T_1STAR
+#define T_1SLASH           SC_T_1SLASH
+#define T_1PERCENT         SC_T_1PERCENT
+#define T_1AT              SC_T_1AT
+#define T_1TILDE           SC_T_1TILDE
+#define T_1DOLLAR          SC_T_1DOLLAR
+#define T_1DOT             SC_T_1DOT
+#define T_1POUND           SC_T_1POUND
+#define T_1PIPE            SC_T_1PIPE
+#define T_1EQUAL           SC_T_1EQUAL
+#define T_1QUEST           SC_T_1QUEST
+#define T_1AMP             SC_T_1AMP
+
+/* Punctuation — keep existing names */
 #define T_LPAREN           SC_T_LPAREN
 #define T_RPAREN           SC_T_RPAREN
 #define T_LBRACK           SC_T_LBRACK
@@ -129,6 +145,8 @@
 #define T_COMMA            SC_T_COMMA
 #define T_SEMICOLON        SC_T_SEMICOLON
 #define T_COLON            SC_T_COLON
+
+/* Keywords — keep existing names */
 #define T_KW_IF            SC_T_KW_IF
 #define T_KW_ELSE          SC_T_KW_ELSE
 #define T_KW_WHILE         SC_T_KW_WHILE
@@ -146,6 +164,8 @@
 #define T_KW_FRETURN       SC_T_KW_FRETURN
 #define T_KW_NRETURN       SC_T_KW_NRETURN
 #define T_KW_STRUCT        SC_T_KW_STRUCT
+
+/* End-of-input + unknown */
 #define T_EOF              SC_T_EOF
 #define T_UNKNOWN          SC_T_UNKNOWN
 
@@ -162,9 +182,21 @@
 #undef T_FUNCTION
 #undef T_KEYWORD
 #undef T_CONCAT
-#undef T_ASSIGNMENT
-#undef T_MATCH
-#undef T_ALTERNATION
+#undef T_2EQUAL
+#undef T_2QUEST
+#undef T_2PIPE
+#undef T_2PLUS
+#undef T_2MINUS
+#undef T_2SLASH
+#undef T_2STAR
+#undef T_2CARET
+#undef T_2DOLLAR
+#undef T_2DOT
+#undef T_2AMP
+#undef T_2AT
+#undef T_2POUND
+#undef T_2PERCENT
+#undef T_2TILDE
 #undef T_EQ
 #undef T_NE
 #undef T_LT
@@ -179,37 +211,25 @@
 #undef T_LGE
 #undef T_IDENT_OP
 #undef T_DIFFER
-#undef T_ADDITION
-#undef T_SUBTRACTION
-#undef T_DIVISION
-#undef T_MULTIPLICATION
-#undef T_EXPONENTIATION
-#undef T_IMMEDIATE_ASSIGN
-#undef T_COND_ASSIGN
-#undef T_AMPERSAND
-#undef T_AT_SIGN
-#undef T_POUND
-#undef T_PERCENT
-#undef T_TILDE
 #undef T_PLUS_ASSIGN
 #undef T_MINUS_ASSIGN
 #undef T_STAR_ASSIGN
 #undef T_SLASH_ASSIGN
 #undef T_CARET_ASSIGN
-#undef T_UN_PLUS
-#undef T_UN_MINUS
-#undef T_UN_ASTERISK
-#undef T_UN_SLASH
-#undef T_UN_PERCENT
-#undef T_UN_AT_SIGN
-#undef T_UN_TILDE
-#undef T_UN_DOLLAR_SIGN
-#undef T_UN_PERIOD
-#undef T_UN_POUND
-#undef T_UN_VERTICAL_BAR
-#undef T_UN_EQUAL
-#undef T_UN_QUESTION_MARK
-#undef T_UN_AMPERSAND
+#undef T_1PLUS
+#undef T_1MINUS
+#undef T_1STAR
+#undef T_1SLASH
+#undef T_1PERCENT
+#undef T_1AT
+#undef T_1TILDE
+#undef T_1DOLLAR
+#undef T_1DOT
+#undef T_1POUND
+#undef T_1PIPE
+#undef T_1EQUAL
+#undef T_1QUEST
+#undef T_1AMP
 #undef T_LPAREN
 #undef T_RPAREN
 #undef T_LBRACK
@@ -316,11 +336,11 @@ static int sc_kind_to_tok(int sc_kind);
 %token <str> T_FUNCTION /* IDENT-followed-by-zero-space-( per Andrew's `f(args)` rule */
 
 /* ---- Binary arithmetic operators (LS-4.a) ---- */
-%token T_ADDITION
-%token T_SUBTRACTION
-%token T_MULTIPLICATION
-%token T_DIVISION
-%token T_EXPONENTIATION
+%token T_2PLUS
+%token T_2MINUS
+%token T_2STAR
+%token T_2SLASH
+%token T_2CARET
 
 /* ---- Comparison / identity operators (LS-4.b) — all lower to E_FNC named calls ---- */
 %token T_EQ T_NE T_LT T_GT T_LE T_GE              /* numeric:  EQ NE LT GT LE GE  */
@@ -328,16 +348,16 @@ static int sc_kind_to_tok(int sc_kind);
 %token T_IDENT_OP T_DIFFER                        /* identity: IDENT DIFFER (Andrew's :: and :!:) */
 
 /* ---- Unary operators (LS-4.a — only the arithmetic ones) ---- */
-%token T_UN_PLUS
-%token T_UN_MINUS
+%token T_1PLUS
+%token T_1MINUS
 
 /* ---- Assignment + compound-assign (LS-4.a / LS-4.c) ---- */
-%token T_ASSIGNMENT
+%token T_2EQUAL
 %token T_PLUS_ASSIGN T_MINUS_ASSIGN T_STAR_ASSIGN T_SLASH_ASSIGN T_CARET_ASSIGN
 
 /* ---- Pattern operators (LS-4.c) ---- */
-%token T_MATCH                                    /* `?` — pri 1, lowers to E_SCAN */
-%token T_ALTERNATION                              /* `|` — pri 3, lowers to E_ALT  */
+%token T_2QUEST                                    /* `?` — pri 1, lowers to E_SCAN */
+%token T_2PIPE                              /* `|` — pri 3, lowers to E_ALT  */
 %token T_CONCAT                                   /* synthesised by FSM at value boundaries — pri 4, lowers to E_SEQ */
 
 /* ---- Punctuation ---- */
@@ -350,11 +370,11 @@ static int sc_kind_to_tok(int sc_kind);
  * table can index every FSM kind, but they have no productions yet —
  * encountering one in the input is a parse error.  LS-4.d–LS-4.i will
  * give them rules. */
-%token T_IMMEDIATE_ASSIGN T_COND_ASSIGN
-%token T_AMPERSAND T_AT_SIGN T_POUND T_PERCENT T_TILDE
-%token T_UN_ASTERISK T_UN_SLASH T_UN_PERCENT
-%token T_UN_AT_SIGN T_UN_TILDE T_UN_DOLLAR_SIGN T_UN_PERIOD T_UN_POUND
-%token T_UN_VERTICAL_BAR T_UN_EQUAL T_UN_QUESTION_MARK T_UN_AMPERSAND
+%token T_2DOLLAR T_2DOT
+%token T_2AMP T_2AT T_2POUND T_2PERCENT T_2TILDE
+%token T_1STAR T_1SLASH T_1PERCENT
+%token T_1AT T_1TILDE T_1DOLLAR T_1DOT T_1POUND
+%token T_1PIPE T_1EQUAL T_1QUEST T_1AMP
 %token T_LBRACK T_RBRACK T_LBRACE T_RBRACE
 %token T_COLON
 %token T_KW_IF T_KW_ELSE T_KW_WHILE T_KW_DO T_KW_UNTIL T_KW_FOR
@@ -419,7 +439,7 @@ stmt        : expr0 T_SEMICOLON                { sc_append_stmt(st, $1); }
  * (e.g. `f(x) += 1`) gets a trap'd assertion at clone time.  This
  * matches typical compound-assign use (`count += step`, `total *= 2`).
  */
-expr0       : expr1 T_ASSIGNMENT    expr0
+expr0       : expr1 T_2EQUAL    expr0
                                 { $$ = expr_binary(E_ASSIGN, $1, $3); }
             | expr1 T_PLUS_ASSIGN   expr0
                                 { EXPR_t *cl = sc_clone_expr_simple($1);
@@ -449,12 +469,12 @@ expr0       : expr1 T_ASSIGNMENT    expr0
  *
  * SPITBOL `?` at priority 1, right-associative — `a ? b ? c` parses
  * as `a ? (b ? c)`.  Lowers to E_SCAN(subject, pattern), matching
- * snobol4.y's `expr0 : expr2 T_MATCH expr0` shape (snobol4.y bundles
+ * snobol4.y's `expr0 : expr2 T_2QUEST expr0` shape (snobol4.y bundles
  * match alongside assignment at expr0; we pull it out to its own
  * level for clarity, but the IR shape is identical).  Right-assoc
- * is handled by the `expr1 T_MATCH expr1` form on the right.
+ * is handled by the `expr1 T_2QUEST expr1` form on the right.
  */
-expr1       : expr3 T_MATCH expr1
+expr1       : expr3 T_2QUEST expr1
                                 { $$ = expr_binary(E_SCAN, $1, $3); }
             | expr3
                                 { $$ = $1; }
@@ -470,7 +490,7 @@ expr1       : expr3 T_MATCH expr1
  * operands.  Bison's left-recursion drives the fold one operand at
  * a time, giving the n-ary collapse for free.
  */
-expr3       : expr3 T_ALTERNATION expr4
+expr3       : expr3 T_2PIPE expr4
                                 { if ($1->kind == E_ALT) { expr_add_child($1, $3); $$ = $1; }
                                   else { EXPR_t *a = expr_new(E_ALT);
                                          expr_add_child(a, $1); expr_add_child(a, $3);
@@ -555,24 +575,24 @@ expr5       : expr5 T_EQ        expr6
                                 { $$ = $1; }
             ;
 
-expr6       : expr6 T_ADDITION    expr9
+expr6       : expr6 T_2PLUS    expr9
                                 { $$ = expr_binary(E_ADD, $1, $3); }
-            | expr6 T_SUBTRACTION expr9
+            | expr6 T_2MINUS expr9
                                 { $$ = expr_binary(E_SUB, $1, $3); }
             | expr9
                                 { $$ = $1; }
             ;
 
-expr9       : expr9 T_MULTIPLICATION expr11
+expr9       : expr9 T_2STAR expr11
                                 { $$ = expr_binary(E_MUL, $1, $3); }
-            | expr9 T_DIVISION       expr11
+            | expr9 T_2SLASH       expr11
                                 { $$ = expr_binary(E_DIV, $1, $3); }
             | expr11
                                 { $$ = $1; }
             ;
 
 /* Right-associative exponentiation: expr17 ^ expr11. */
-expr11      : expr17 T_EXPONENTIATION expr11
+expr11      : expr17 T_2CARET expr11
                                 { $$ = expr_binary(E_POW, $1, $3); }
             | expr17
                                 { $$ = $1; }
@@ -629,9 +649,9 @@ expr17      : T_FUNCTION T_LPAREN exprlist T_RPAREN
                                 { $$ = sc_str_literal($1); free($1); }
             | T_LPAREN expr0 T_RPAREN
                                 { $$ = $2; }
-            | T_UN_PLUS  expr17
+            | T_1PLUS  expr17
                                 { $$ = expr_unary(E_PLS, $2); }
-            | T_UN_MINUS expr17
+            | T_1MINUS expr17
                                 { $$ = expr_unary(E_MNS, $2); }
             ;
 
@@ -666,7 +686,15 @@ void sc_error(ScParseState *st, const char *msg) {
     st->nerrors++;
 }
 
-/* ---- FSM kind → Bison token translation ---- */
+/* ---- FSM kind → Bison token translation ----
+ *
+ * After the session-#6 rename, both sides of this map use the
+ * T_<arity><charname> scheme for dual-role characters.  The FSM enum
+ * (SC_T_*) was renamed in lockstep, so this is now the trivial
+ * identity-with-prefix mapping for every entry.  Kept as an explicit
+ * switch (not a table-driven offset) so a hypothetical future
+ * divergence between the two enums has a single place to handle it.
+ */
 static int sc_kind_to_tok(int sc_kind) {
     switch (sc_kind) {
         case SC_T_INT:              return T_INT;
@@ -676,9 +704,9 @@ static int sc_kind_to_tok(int sc_kind) {
         case SC_T_FUNCTION:         return T_FUNCTION;
         case SC_T_KEYWORD:          return T_KEYWORD;
         case SC_T_CONCAT:           return T_CONCAT;
-        case SC_T_ASSIGNMENT:       return T_ASSIGNMENT;
-        case SC_T_MATCH:            return T_MATCH;
-        case SC_T_ALTERNATION:      return T_ALTERNATION;
+        case SC_T_2EQUAL:           return T_2EQUAL;
+        case SC_T_2QUEST:           return T_2QUEST;
+        case SC_T_2PIPE:            return T_2PIPE;
         case SC_T_EQ:               return T_EQ;
         case SC_T_NE:               return T_NE;
         case SC_T_LT:               return T_LT;
@@ -693,37 +721,37 @@ static int sc_kind_to_tok(int sc_kind) {
         case SC_T_LGE:              return T_LGE;
         case SC_T_IDENT_OP:         return T_IDENT_OP;
         case SC_T_DIFFER:           return T_DIFFER;
-        case SC_T_ADDITION:         return T_ADDITION;
-        case SC_T_SUBTRACTION:      return T_SUBTRACTION;
-        case SC_T_DIVISION:         return T_DIVISION;
-        case SC_T_MULTIPLICATION:   return T_MULTIPLICATION;
-        case SC_T_EXPONENTIATION:   return T_EXPONENTIATION;
-        case SC_T_IMMEDIATE_ASSIGN: return T_IMMEDIATE_ASSIGN;
-        case SC_T_COND_ASSIGN:      return T_COND_ASSIGN;
-        case SC_T_AMPERSAND:        return T_AMPERSAND;
-        case SC_T_AT_SIGN:          return T_AT_SIGN;
-        case SC_T_POUND:            return T_POUND;
-        case SC_T_PERCENT:          return T_PERCENT;
-        case SC_T_TILDE:            return T_TILDE;
+        case SC_T_2PLUS:            return T_2PLUS;
+        case SC_T_2MINUS:           return T_2MINUS;
+        case SC_T_2SLASH:           return T_2SLASH;
+        case SC_T_2STAR:            return T_2STAR;
+        case SC_T_2CARET:           return T_2CARET;
+        case SC_T_2DOLLAR:          return T_2DOLLAR;
+        case SC_T_2DOT:             return T_2DOT;
+        case SC_T_2AMP:             return T_2AMP;
+        case SC_T_2AT:              return T_2AT;
+        case SC_T_2POUND:           return T_2POUND;
+        case SC_T_2PERCENT:         return T_2PERCENT;
+        case SC_T_2TILDE:           return T_2TILDE;
         case SC_T_PLUS_ASSIGN:      return T_PLUS_ASSIGN;
         case SC_T_MINUS_ASSIGN:     return T_MINUS_ASSIGN;
         case SC_T_STAR_ASSIGN:      return T_STAR_ASSIGN;
         case SC_T_SLASH_ASSIGN:     return T_SLASH_ASSIGN;
         case SC_T_CARET_ASSIGN:     return T_CARET_ASSIGN;
-        case SC_T_UN_PLUS:          return T_UN_PLUS;
-        case SC_T_UN_MINUS:         return T_UN_MINUS;
-        case SC_T_UN_ASTERISK:      return T_UN_ASTERISK;
-        case SC_T_UN_SLASH:         return T_UN_SLASH;
-        case SC_T_UN_PERCENT:       return T_UN_PERCENT;
-        case SC_T_UN_AT_SIGN:       return T_UN_AT_SIGN;
-        case SC_T_UN_TILDE:         return T_UN_TILDE;
-        case SC_T_UN_DOLLAR_SIGN:   return T_UN_DOLLAR_SIGN;
-        case SC_T_UN_PERIOD:        return T_UN_PERIOD;
-        case SC_T_UN_POUND:         return T_UN_POUND;
-        case SC_T_UN_VERTICAL_BAR:  return T_UN_VERTICAL_BAR;
-        case SC_T_UN_EQUAL:         return T_UN_EQUAL;
-        case SC_T_UN_QUESTION_MARK: return T_UN_QUESTION_MARK;
-        case SC_T_UN_AMPERSAND:     return T_UN_AMPERSAND;
+        case SC_T_1PLUS:            return T_1PLUS;
+        case SC_T_1MINUS:           return T_1MINUS;
+        case SC_T_1STAR:            return T_1STAR;
+        case SC_T_1SLASH:           return T_1SLASH;
+        case SC_T_1PERCENT:         return T_1PERCENT;
+        case SC_T_1AT:              return T_1AT;
+        case SC_T_1TILDE:           return T_1TILDE;
+        case SC_T_1DOLLAR:          return T_1DOLLAR;
+        case SC_T_1DOT:             return T_1DOT;
+        case SC_T_1POUND:           return T_1POUND;
+        case SC_T_1PIPE:            return T_1PIPE;
+        case SC_T_1EQUAL:           return T_1EQUAL;
+        case SC_T_1QUEST:           return T_1QUEST;
+        case SC_T_1AMP:             return T_1AMP;
         case SC_T_LPAREN:           return T_LPAREN;
         case SC_T_RPAREN:           return T_RPAREN;
         case SC_T_LBRACK:           return T_LBRACK;

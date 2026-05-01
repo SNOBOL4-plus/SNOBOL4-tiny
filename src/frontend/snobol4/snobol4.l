@@ -258,24 +258,24 @@ G       ({WS}|{CONT})*
 <BODY>{W}  { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_CONCAT; }
 
     /* Binary ops: White OP White — mandatory space distinguishes from unary */
-<BODY>{W}"**"{W}  { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_EXPONENTIATION;  }
-<BODY>{W}"^"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_EXPONENTIATION;  }
-<BODY>{W}"!"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_EXPONENTIATION;  }
-<BODY>{W}"+"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_ADDITION;        }
-<BODY>{W}"-"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_SUBTRACTION;     }
-<BODY>{W}"*"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_MULTIPLICATION;  }
-<BODY>{W}"/"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_DIVISION;        }
-<BODY>{W}"$"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_IMMEDIATE_ASSIGN;}
-<BODY>{W}"."{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_COND_ASSIGN;     }
-<BODY>{W}"|"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_ALTERNATION;     }
-<BODY>{W}"="{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_ASSIGNMENT;      }
-<BODY>{W}"="       { return T_ASSIGNMENT; }  /* = at EOL with no trailing space — DYN-63 */
-<BODY>{W}"?"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_MATCH;           }
-<BODY>{W}"&"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_AMPERSAND;       }
-<BODY>{W}"@"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_AT_SIGN;         }
-<BODY>{W}"#"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_POUND;           }
-<BODY>{W}"%"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_PERCENT;         }
-<BODY>{W}"~"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_TILDE;           }
+<BODY>{W}"**"{W}  { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2CARET;  }
+<BODY>{W}"^"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2CARET;  }
+<BODY>{W}"!"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2CARET;  }
+<BODY>{W}"+"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2PLUS;        }
+<BODY>{W}"-"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2MINUS;     }
+<BODY>{W}"*"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2STAR;  }
+<BODY>{W}"/"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2SLASH;        }
+<BODY>{W}"$"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2DOLLAR;}
+<BODY>{W}"."{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2DOT;     }
+<BODY>{W}"|"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2PIPE;     }
+<BODY>{W}"="{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2EQUAL;      }
+<BODY>{W}"="       { return T_2EQUAL; }  /* = at EOL with no trailing space — DYN-63 */
+<BODY>{W}"?"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2QUEST;           }
+<BODY>{W}"&"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2AMP;       }
+<BODY>{W}"@"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2AT;         }
+<BODY>{W}"#"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2POUND;           }
+<BODY>{W}"%"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2PERCENT;         }
+<BODY>{W}"~"{W}   { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_2TILDE;           }
 
     /* Structural: open absorbs trailing Gray; close absorbs leading Gray */
 <BODY>"("{G}  { for(int _i=0;_i<yyleng;_i++) if(yytext[_i]=='\n') lineno++; return T_LPAREN; }
@@ -296,23 +296,23 @@ G       ({WS}|{CONT})*
 <BODY>\"                       { strpos=0; BEGIN(STR2); }
 
     /* Unary ops: arrive bare (no leading space) */
-<BODY>"**"   { return T_EXPONENTIATION;  }
-<BODY>"^"    { return T_EXPONENTIATION;  }
-<BODY>"+"    { return T_UN_PLUS;         }
-<BODY>"-"    { return T_UN_MINUS;        }
-<BODY>"*"    { return T_UN_ASTERISK;     }
-<BODY>"/"    { return T_UN_SLASH;        }
-<BODY>"%"    { return T_UN_PERCENT;      }
-<BODY>"@"    { return T_UN_AT_SIGN;      }
-<BODY>"~"    { return T_UN_TILDE;        }
-<BODY>"$"    { return T_UN_DOLLAR_SIGN;  }
-<BODY>"."    { return T_UN_PERIOD;       }
-<BODY>"!"    { return T_UN_EXCLAMATION;  }
-<BODY>"#"    { return T_UN_POUND;        }
-<BODY>"|"    { return T_UN_VERTICAL_BAR; }
-<BODY>"="    { return T_UN_EQUAL;        }
-<BODY>"?"    { return T_UN_QUESTION_MARK;}
-<BODY>"&"    { return T_UN_AMPERSAND;    }
+<BODY>"**"   { return T_2CARET;  }
+<BODY>"^"    { return T_2CARET;  }
+<BODY>"+"    { return T_1PLUS;         }
+<BODY>"-"    { return T_1MINUS;        }
+<BODY>"*"    { return T_1STAR;     }
+<BODY>"/"    { return T_1SLASH;        }
+<BODY>"%"    { return T_1PERCENT;      }
+<BODY>"@"    { return T_1AT;      }
+<BODY>"~"    { return T_1TILDE;        }
+<BODY>"$"    { return T_1DOLLAR;  }
+<BODY>"."    { return T_1DOT;       }
+<BODY>"!"    { return T_1BANG;  }
+<BODY>"#"    { return T_1POUND;        }
+<BODY>"|"    { return T_1PIPE; }
+<BODY>"="    { return T_1EQUAL;        }
+<BODY>"?"    { return T_1QUEST;}
+<BODY>"&"    { return T_1AMP;    }
 
 <BODY>.      { sno_error(lineno,"unexpected char '%s'",yytext); }
 
@@ -371,7 +371,7 @@ G       ({WS}|{CONT})*
 <GT>")"                 { return T_GOTO_RPAREN; }
 <GT>"<"                 { return T_GOTO_LPAREN; }
 <GT>">"                 { return T_GOTO_RPAREN; }
-<GT>"$"                 { return T_UN_DOLLAR_SIGN; }
+<GT>"$"                 { return T_1DOLLAR; }
 <GT>[A-Za-z][A-Za-z0-9_.]* {
     strbuf[0]='\0'; strncat(strbuf, yytext, sizeof(strbuf)-1);
     return T_IDENT;

@@ -454,11 +454,11 @@ E_SEMICOLON:     EMIT(T_SEMICOLON);
 /*--------------------------------------------------------------------------------------------------------------------*/
 E_COLON:         EMIT(T_COLON);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_ASSIGN:        EMIT(T_ASSIGNMENT);
+E_ASSIGN:        EMIT(T_2EQUAL);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_MATCH:         EMIT(T_MATCH);
+E_MATCH:         EMIT(T_2QUEST);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_ALT:           EMIT(T_ALTERNATION);
+E_ALT:           EMIT(T_2PIPE);
 /*--------------------------------------------------------------------------------------------------------------------*/
 E_LEQ:           EMIT(T_LEQ);
 /*--------------------------------------------------------------------------------------------------------------------*/
@@ -488,29 +488,29 @@ E_LT:            EMIT(T_LT);
 /*--------------------------------------------------------------------------------------------------------------------*/
 E_GT:            EMIT(T_GT);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_ADD:           EMIT(T_ADDITION);
+E_ADD:           EMIT(T_2PLUS);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_SUB:           EMIT(T_SUBTRACTION);
+E_SUB:           EMIT(T_2MINUS);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_MUL:           EMIT(T_MULTIPLICATION);
+E_MUL:           EMIT(T_2STAR);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_DIV:           EMIT(T_DIVISION);
+E_DIV:           EMIT(T_2SLASH);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_EXP:           EMIT(T_EXPONENTIATION);
+E_EXP:           EMIT(T_2CARET);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_IMM_ASSIGN:    EMIT(T_IMMEDIATE_ASSIGN);
+E_IMM_ASSIGN:    EMIT(T_2DOLLAR);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_COND_ASSIGN:   EMIT(T_COND_ASSIGN);
+E_COND_ASSIGN:   EMIT(T_2DOT);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_AMP:           EMIT(T_AMPERSAND);
+E_AMP:           EMIT(T_2AMP);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_AT:            EMIT(T_AT_SIGN);
+E_AT:            EMIT(T_2AT);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_POUND:         EMIT(T_POUND);
+E_POUND:         EMIT(T_2POUND);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_PERCENT:       EMIT(T_PERCENT);
+E_PERCENT:       EMIT(T_2PERCENT);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_TILDE:         EMIT(T_TILDE);
+E_TILDE:         EMIT(T_2TILDE);
 /*--------------------------------------------------------------------------------------------------------------------*/
 E_PLUS_ASSIGN:   EMIT(T_PLUS_ASSIGN);
 /*--------------------------------------------------------------------------------------------------------------------*/
@@ -522,33 +522,33 @@ E_SLASH_ASSIGN:  EMIT(T_SLASH_ASSIGN);
 /*--------------------------------------------------------------------------------------------------------------------*/
 E_CARET_ASSIGN:  EMIT(T_CARET_ASSIGN);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_UN_PLUS:       EMIT(T_UN_PLUS);
+E_UN_PLUS:       EMIT(T_1PLUS);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_UN_MINUS:      EMIT(T_UN_MINUS);
+E_UN_MINUS:      EMIT(T_1MINUS);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_UN_STAR:       EMIT(T_UN_ASTERISK);
+E_UN_STAR:       EMIT(T_1STAR);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_UN_SLASH:      EMIT(T_UN_SLASH);
+E_UN_SLASH:      EMIT(T_1SLASH);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_UN_PERCENT:    EMIT(T_UN_PERCENT);
+E_UN_PERCENT:    EMIT(T_1PERCENT);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_UN_AT:         EMIT(T_UN_AT_SIGN);
+E_UN_AT:         EMIT(T_1AT);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_UN_TILDE:      EMIT(T_UN_TILDE);
+E_UN_TILDE:      EMIT(T_1TILDE);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_UN_DOLLAR:     EMIT(T_UN_DOLLAR_SIGN);
+E_UN_DOLLAR:     EMIT(T_1DOLLAR);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_UN_DOT:        EMIT(T_UN_PERIOD);
+E_UN_DOT:        EMIT(T_1DOT);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_UN_POUND:      EMIT(T_UN_POUND);
+E_UN_POUND:      EMIT(T_1POUND);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_UN_PIPE:       EMIT(T_UN_VERTICAL_BAR);
+E_UN_PIPE:       EMIT(T_1PIPE);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_UN_EQUAL:      EMIT(T_UN_EQUAL);
+E_UN_EQUAL:      EMIT(T_1EQUAL);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_UN_QUEST:      EMIT(T_UN_QUESTION_MARK);
+E_UN_QUEST:      EMIT(T_1QUEST);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_UN_AMP:        EMIT(T_UN_AMPERSAND);
+E_UN_AMP:        EMIT(T_1AMP);
 /*--------------------------------------------------------------------------------------------------------------------*/
 E_INT:           EMIT_V(T_INT);
 /*--------------------------------------------------------------------------------------------------------------------*/
@@ -598,21 +598,21 @@ static void sc_name_table_build(void) {
     sc_name_table[T_FUNCTION]         = "T_FUNCTION";
     sc_name_table[T_KEYWORD]          = "T_KEYWORD";
     sc_name_table[T_CONCAT]           = "T_CONCAT";
-    sc_name_table[T_ASSIGNMENT]       = "T_ASSIGNMENT";
-    sc_name_table[T_MATCH]            = "T_MATCH";
-    sc_name_table[T_ALTERNATION]      = "T_ALTERNATION";
-    sc_name_table[T_ADDITION]         = "T_ADDITION";
-    sc_name_table[T_SUBTRACTION]      = "T_SUBTRACTION";
-    sc_name_table[T_MULTIPLICATION]   = "T_MULTIPLICATION";
-    sc_name_table[T_DIVISION]         = "T_DIVISION";
-    sc_name_table[T_EXPONENTIATION]   = "T_EXPONENTIATION";
-    sc_name_table[T_IMMEDIATE_ASSIGN] = "T_IMMEDIATE_ASSIGN";
-    sc_name_table[T_COND_ASSIGN]      = "T_COND_ASSIGN";
-    sc_name_table[T_AMPERSAND]        = "T_AMPERSAND";
-    sc_name_table[T_AT_SIGN]          = "T_AT_SIGN";
-    sc_name_table[T_POUND]            = "T_POUND";
-    sc_name_table[T_PERCENT]          = "T_PERCENT";
-    sc_name_table[T_TILDE]            = "T_TILDE";
+    sc_name_table[T_2EQUAL]       = "T_2EQUAL";
+    sc_name_table[T_2QUEST]            = "T_2QUEST";
+    sc_name_table[T_2PIPE]      = "T_2PIPE";
+    sc_name_table[T_2PLUS]         = "T_2PLUS";
+    sc_name_table[T_2MINUS]      = "T_2MINUS";
+    sc_name_table[T_2STAR]   = "T_2STAR";
+    sc_name_table[T_2SLASH]         = "T_2SLASH";
+    sc_name_table[T_2CARET]   = "T_2CARET";
+    sc_name_table[T_2DOLLAR] = "T_2DOLLAR";
+    sc_name_table[T_2DOT]      = "T_2DOT";
+    sc_name_table[T_2AMP]        = "T_2AMP";
+    sc_name_table[T_2AT]          = "T_2AT";
+    sc_name_table[T_2POUND]            = "T_2POUND";
+    sc_name_table[T_2PERCENT]          = "T_2PERCENT";
+    sc_name_table[T_2TILDE]            = "T_2TILDE";
     sc_name_table[T_EQ]               = "T_EQ";
     sc_name_table[T_NE]               = "T_NE";
     sc_name_table[T_LT]               = "T_LT";
@@ -632,20 +632,20 @@ static void sc_name_table_build(void) {
     sc_name_table[T_STAR_ASSIGN]      = "T_STAR_ASSIGN";
     sc_name_table[T_SLASH_ASSIGN]     = "T_SLASH_ASSIGN";
     sc_name_table[T_CARET_ASSIGN]     = "T_CARET_ASSIGN";
-    sc_name_table[T_UN_PLUS]          = "T_UN_PLUS";
-    sc_name_table[T_UN_MINUS]         = "T_UN_MINUS";
-    sc_name_table[T_UN_ASTERISK]      = "T_UN_ASTERISK";
-    sc_name_table[T_UN_SLASH]         = "T_UN_SLASH";
-    sc_name_table[T_UN_PERCENT]       = "T_UN_PERCENT";
-    sc_name_table[T_UN_AT_SIGN]       = "T_UN_AT_SIGN";
-    sc_name_table[T_UN_TILDE]         = "T_UN_TILDE";
-    sc_name_table[T_UN_DOLLAR_SIGN]   = "T_UN_DOLLAR_SIGN";
-    sc_name_table[T_UN_PERIOD]        = "T_UN_PERIOD";
-    sc_name_table[T_UN_POUND]         = "T_UN_POUND";
-    sc_name_table[T_UN_VERTICAL_BAR]  = "T_UN_VERTICAL_BAR";
-    sc_name_table[T_UN_EQUAL]         = "T_UN_EQUAL";
-    sc_name_table[T_UN_QUESTION_MARK] = "T_UN_QUESTION_MARK";
-    sc_name_table[T_UN_AMPERSAND]     = "T_UN_AMPERSAND";
+    sc_name_table[T_1PLUS]          = "T_1PLUS";
+    sc_name_table[T_1MINUS]         = "T_1MINUS";
+    sc_name_table[T_1STAR]      = "T_1STAR";
+    sc_name_table[T_1SLASH]         = "T_1SLASH";
+    sc_name_table[T_1PERCENT]       = "T_1PERCENT";
+    sc_name_table[T_1AT]       = "T_1AT";
+    sc_name_table[T_1TILDE]         = "T_1TILDE";
+    sc_name_table[T_1DOLLAR]   = "T_1DOLLAR";
+    sc_name_table[T_1DOT]        = "T_1DOT";
+    sc_name_table[T_1POUND]         = "T_1POUND";
+    sc_name_table[T_1PIPE]  = "T_1PIPE";
+    sc_name_table[T_1EQUAL]         = "T_1EQUAL";
+    sc_name_table[T_1QUEST] = "T_1QUEST";
+    sc_name_table[T_1AMP]     = "T_1AMP";
     sc_name_table[T_LPAREN]           = "T_LPAREN";
     sc_name_table[T_RPAREN]           = "T_RPAREN";
     sc_name_table[T_LBRACE]           = "T_LBRACE";

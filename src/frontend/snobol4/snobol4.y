@@ -36,15 +36,15 @@ static EKind pat_prim_kind(const char *s) {
 /* Statement structure */
 %token <tok> T_LABEL T_GOTO_S T_GOTO_F T_GOTO_LPAREN T_GOTO_RPAREN T_STMT_END
 /* Binary operators (WHITE op WHITE) */
-%token T_ASSIGNMENT T_MATCH T_ALTERNATION T_ADDITION T_SUBTRACTION
-%token T_MULTIPLICATION T_DIVISION T_EXPONENTIATION
-%token T_IMMEDIATE_ASSIGN T_COND_ASSIGN
-%token T_AMPERSAND T_AT_SIGN T_POUND T_PERCENT T_TILDE
+%token T_2EQUAL T_2QUEST T_2PIPE T_2PLUS T_2MINUS
+%token T_2STAR T_2SLASH T_2CARET
+%token T_2DOLLAR T_2DOT
+%token T_2AMP T_2AT T_2POUND T_2PERCENT T_2TILDE
 /* Unary operators (no leading space) — named per SPITBOL Chapter 15 */
-%token T_UN_AT_SIGN T_UN_TILDE T_UN_QUESTION_MARK T_UN_AMPERSAND
-%token T_UN_PLUS T_UN_MINUS T_UN_ASTERISK T_UN_DOLLAR_SIGN T_UN_PERIOD
-%token T_UN_EXCLAMATION T_UN_PERCENT T_UN_SLASH T_UN_POUND
-%token T_UN_EQUAL T_UN_VERTICAL_BAR
+%token T_1AT T_1TILDE T_1QUEST T_1AMP
+%token T_1PLUS T_1MINUS T_1STAR T_1DOLLAR T_1DOT
+%token T_1BANG T_1PERCENT T_1SLASH T_1POUND
+%token T_1EQUAL T_1PIPE
 /* Structural */
 %token T_CONCAT T_COMMA T_LPAREN T_RPAREN T_LBRACK T_RBRACK T_LANGLE T_RANGLE
 
@@ -60,12 +60,12 @@ top        : program                                                            
            ;
 program    : program stmt | stmt                                                                    ;
 stmt       : T_LABEL opt_subject opt_repl opt_goto T_STMT_END                        { Token l=$1; sno4_stmt_commit_go(yyparse_param,l,$2,NULL,($3!=NULL),$3,$4); }
-           | T_LABEL expr2 T_MATCH opt_pattern opt_repl opt_goto T_STMT_END          { Token l=$1; EXPR_t*sc=expr_binary(E_SCAN,$2,$4); sno4_stmt_commit_go(yyparse_param,l,sc,NULL,($5!=NULL),$5,$6); }
+           | T_LABEL expr2 T_2QUEST opt_pattern opt_repl opt_goto T_STMT_END          { Token l=$1; EXPR_t*sc=expr_binary(E_SCAN,$2,$4); sno4_stmt_commit_go(yyparse_param,l,sc,NULL,($5!=NULL),$5,$6); }
            | unlabeled_stmt
            ;
 unlabeled_stmt
            : opt_subject opt_repl opt_goto T_STMT_END                                { Token l; l.sval=NULL;l.ival=0;l.lineno=0;l.kind=0; sno4_stmt_commit_go(yyparse_param,l,$1,NULL,($2!=NULL),$2,$3); }
-           | expr2 T_MATCH opt_pattern opt_repl opt_goto T_STMT_END                  { Token l; l.sval=NULL;l.ival=0;l.lineno=0;l.kind=0; EXPR_t*sc=expr_binary(E_SCAN,$1,$3); sno4_stmt_commit_go(yyparse_param,l,sc,NULL,($4!=NULL),$4,$5); }
+           | expr2 T_2QUEST opt_pattern opt_repl opt_goto T_STMT_END                  { Token l; l.sval=NULL;l.ival=0;l.lineno=0;l.kind=0; EXPR_t*sc=expr_binary(E_SCAN,$1,$3); sno4_stmt_commit_go(yyparse_param,l,sc,NULL,($4!=NULL),$4,$5); }
            ;
 opt_subject: expr3                                                                                { $$=$1; }
            | /* empty */                                                                           { $$=NULL; }
@@ -73,8 +73,8 @@ opt_subject: expr3                                                              
 opt_pattern: expr3                                                                                 { $$=$1; }
            | /* empty */                                                                           { $$=NULL; }
            ;
-opt_repl   : T_ASSIGNMENT expr0                                                                   { $$=$2; }
-           | T_ASSIGNMENT                                                                          { EXPR_t*e=expr_new(E_QLIT);e->sval=strdup("");$$=e; }
+opt_repl   : T_2EQUAL expr0                                                                   { $$=$2; }
+           | T_2EQUAL                                                                          { EXPR_t*e=expr_new(E_QLIT);e->sval=strdup("");$$=e; }
            | /* empty */                                                                           { $$=NULL; }
            ;
 
@@ -95,9 +95,9 @@ goto_label_expr
            : T_GOTO_LPAREN T_IDENT T_GOTO_RPAREN              { $$=sgoto_new(); $$->uncond=strdup($2.sval); }
            | T_GOTO_LPAREN T_END T_GOTO_RPAREN                { $$=sgoto_new(); $$->uncond=strdup($2.sval); }
            | T_GOTO_LPAREN T_FUNCTION T_GOTO_RPAREN           { $$=sgoto_new(); $$->uncond=strdup($2.sval); }
-           | T_GOTO_LPAREN T_UN_DOLLAR_SIGN T_IDENT T_GOTO_RPAREN { $$=sgoto_new(); char buf[512]; snprintf(buf,sizeof buf,"$%s",$3.sval); $$->uncond=strdup(buf); }
-           | T_GOTO_LPAREN T_UN_DOLLAR_SIGN T_GOTO_LPAREN goto_expr T_GOTO_RPAREN T_GOTO_RPAREN { $$=sgoto_new(); $$->computed_uncond_expr=($4); }
-           | T_GOTO_LPAREN T_UN_DOLLAR_SIGN T_STR T_GOTO_RPAREN { $$=sgoto_new(); EXPR_t*e=expr_new(E_QLIT); e->sval=strdup($3.sval); $$->computed_uncond_expr=e; }
+           | T_GOTO_LPAREN T_1DOLLAR T_IDENT T_GOTO_RPAREN { $$=sgoto_new(); char buf[512]; snprintf(buf,sizeof buf,"$%s",$3.sval); $$->uncond=strdup(buf); }
+           | T_GOTO_LPAREN T_1DOLLAR T_GOTO_LPAREN goto_expr T_GOTO_RPAREN T_GOTO_RPAREN { $$=sgoto_new(); $$->computed_uncond_expr=($4); }
+           | T_GOTO_LPAREN T_1DOLLAR T_STR T_GOTO_RPAREN { $$=sgoto_new(); EXPR_t*e=expr_new(E_QLIT); e->sval=strdup($3.sval); $$->computed_uncond_expr=e; }
            ;
 
 opt_goto   : goto_label_expr                                  { $$=$1; }
@@ -121,63 +121,63 @@ opt_goto   : goto_label_expr                                  { $$=$1; }
            ;
 
 /* Expression grammar — levels match beauty.sno Expr0–Expr17 and SPITBOL manual priorities */
-expr0      : expr2 T_ASSIGNMENT expr0                                                             { $$=expr_binary(E_ASSIGN,          $1,$3); }
-           | expr2 T_MATCH      expr0                                                             { $$=expr_binary(E_SCAN,            $1,$3); }
+expr0      : expr2 T_2EQUAL expr0                                                             { $$=expr_binary(E_ASSIGN,          $1,$3); }
+           | expr2 T_2QUEST      expr0                                                             { $$=expr_binary(E_SCAN,            $1,$3); }
            | expr2                                                                                 { $$=$1; }
            ;
-expr2      : expr2 T_AMPERSAND  expr3                                                             { EXPR_t*_e=expr_binary(E_OPSYN,$1,$3); _e->sval=strdup("&"); $$=_e; }
+expr2      : expr2 T_2AMP  expr3                                                             { EXPR_t*_e=expr_binary(E_OPSYN,$1,$3); _e->sval=strdup("&"); $$=_e; }
            | expr3                                                                                 { $$=$1; }
            ;
-expr3      : expr3 T_ALTERNATION expr4                                                            { if($1->kind==E_ALT){expr_add_child($1,$3);$$=$1;}else{EXPR_t*a=expr_new(E_ALT);expr_add_child(a,$1);expr_add_child(a,$3);$$=a;} }
+expr3      : expr3 T_2PIPE expr4                                                            { if($1->kind==E_ALT){expr_add_child($1,$3);$$=$1;}else{EXPR_t*a=expr_new(E_ALT);expr_add_child(a,$1);expr_add_child(a,$3);$$=a;} }
            | expr4                                                                                 { $$=$1; }
            ;
 expr4      : expr4 T_CONCAT expr5                                                                           { if($1->kind==E_SEQ){expr_add_child($1,$3);$$=$1;}else{EXPR_t*s=expr_new(E_SEQ);expr_add_child(s,$1);expr_add_child(s,$3);$$=s;} }
            | expr5                                                                                 { $$=$1; }
            ;
-expr5      : expr5 T_AT_SIGN    expr6                                                             { EXPR_t*_e=expr_binary(E_OPSYN,$1,$3); _e->sval=strdup("@"); $$=_e; }
+expr5      : expr5 T_2AT    expr6                                                             { EXPR_t*_e=expr_binary(E_OPSYN,$1,$3); _e->sval=strdup("@"); $$=_e; }
            | expr6                                                                                 { $$=$1; }
            ;
-expr6      : expr6 T_ADDITION   expr7                                                             { $$=expr_binary(E_ADD,             $1,$3); }
-           | expr6 T_SUBTRACTION expr7                                                            { $$=expr_binary(E_SUB,             $1,$3); }
+expr6      : expr6 T_2PLUS   expr7                                                             { $$=expr_binary(E_ADD,             $1,$3); }
+           | expr6 T_2MINUS expr7                                                            { $$=expr_binary(E_SUB,             $1,$3); }
            | expr7                                                                                 { $$=$1; }
            ;
-expr7      : expr7 T_POUND      expr8                                                             { $$=expr_binary(E_MUL,             $1,$3); }
+expr7      : expr7 T_2POUND      expr8                                                             { $$=expr_binary(E_MUL,             $1,$3); }
            | expr8                                                                                 { $$=$1; }
            ;
-expr8      : expr8 T_DIVISION   expr9                                                             { $$=expr_binary(E_DIV,             $1,$3); }
+expr8      : expr8 T_2SLASH   expr9                                                             { $$=expr_binary(E_DIV,             $1,$3); }
            | expr9                                                                                 { $$=$1; }
            ;
-expr9      : expr9 T_MULTIPLICATION expr10                                                        { $$=expr_binary(E_MUL,             $1,$3); }
+expr9      : expr9 T_2STAR expr10                                                        { $$=expr_binary(E_MUL,             $1,$3); }
            | expr10                                                                                { $$=$1; }
            ;
-expr10     : expr10 T_PERCENT   expr11                                                            { $$=expr_binary(E_DIV,             $1,$3); }
+expr10     : expr10 T_2PERCENT   expr11                                                            { $$=expr_binary(E_DIV,             $1,$3); }
            | expr11                                                                                { $$=$1; }
            ;
-expr11     : expr12 T_EXPONENTIATION expr11                                                       { $$=expr_binary(E_POW,             $1,$3); }
+expr11     : expr12 T_2CARET expr11                                                       { $$=expr_binary(E_POW,             $1,$3); }
            | expr12                                                                                { $$=$1; }
            ;
-expr12     : expr12 T_IMMEDIATE_ASSIGN expr13                                                     { $$=expr_binary(E_CAPT_IMMED_ASGN,$1,$3); }
-           | expr12 T_COND_ASSIGN      expr13                                                     { $$=expr_binary(E_CAPT_COND_ASGN, $1,$3); }
+expr12     : expr12 T_2DOLLAR expr13                                                     { $$=expr_binary(E_CAPT_IMMED_ASGN,$1,$3); }
+           | expr12 T_2DOT      expr13                                                     { $$=expr_binary(E_CAPT_COND_ASGN, $1,$3); }
            | expr13                                                                                { $$=$1; }
            ;
-expr13     : expr14 T_TILDE     expr13                                                            { EXPR_t*_e=expr_binary(E_OPSYN,$1,$3); _e->sval=strdup("~"); $$=_e; }
+expr13     : expr14 T_2TILDE     expr13                                                            { EXPR_t*_e=expr_binary(E_OPSYN,$1,$3); _e->sval=strdup("~"); $$=_e; }
            | expr14                                                                                { $$=$1; }
            ;
-expr14     : T_UN_AT_SIGN      expr14                                                             { $$=expr_unary(E_CAPT_CURSOR,     $2); }
-           | T_UN_TILDE        expr14                                                             { $$=expr_unary(E_NOT,             $2); }
-           | T_UN_QUESTION_MARK expr14                                                            { $$=expr_unary(E_INTERROGATE,     $2); }
-           | T_UN_AMPERSAND    expr14                                                             { EXPR_t*_e=expr_unary(E_OPSYN,$2); _e->sval=strdup("&"); $$=_e; }
-           | T_UN_PLUS         expr14                                                             { $$=expr_unary(E_PLS,             $2); }
-           | T_UN_MINUS        expr14                                                             { $$=expr_unary(E_MNS,             $2); }
-           | T_UN_ASTERISK     expr14                                                             { $$=expr_unary(E_DEFER,           $2); }
-           | T_UN_DOLLAR_SIGN  expr14                                                             { $$=expr_unary(E_INDIRECT,        $2); }
-           | T_UN_PERIOD       expr14                                                             { $$=expr_unary(E_NAME,            $2); }
-           | T_UN_EXCLAMATION  expr14                                                             { $$=expr_unary(E_POW,             $2); }  /* user-definable */
-           | T_UN_PERCENT      expr14                                                             { $$=expr_unary(E_DIV,             $2); }  /* user-definable */
-           | T_UN_SLASH        expr14                                                             { $$=expr_unary(E_DIV,             $2); }  /* user-definable */
-           | T_UN_POUND        expr14                                                             { $$=expr_unary(E_MUL,             $2); }  /* user-definable */
-           | T_UN_EQUAL        expr14                                                             { $$=expr_unary(E_ASSIGN,          $2); }  /* user-definable */
-           | T_UN_VERTICAL_BAR expr14                                                             { EXPR_t*_e=expr_unary(E_OPSYN,$2); _e->sval=strdup("|"); $$=_e; }  /* user-definable */
+expr14     : T_1AT      expr14                                                             { $$=expr_unary(E_CAPT_CURSOR,     $2); }
+           | T_1TILDE        expr14                                                             { $$=expr_unary(E_NOT,             $2); }
+           | T_1QUEST expr14                                                            { $$=expr_unary(E_INTERROGATE,     $2); }
+           | T_1AMP    expr14                                                             { EXPR_t*_e=expr_unary(E_OPSYN,$2); _e->sval=strdup("&"); $$=_e; }
+           | T_1PLUS         expr14                                                             { $$=expr_unary(E_PLS,             $2); }
+           | T_1MINUS        expr14                                                             { $$=expr_unary(E_MNS,             $2); }
+           | T_1STAR     expr14                                                             { $$=expr_unary(E_DEFER,           $2); }
+           | T_1DOLLAR  expr14                                                             { $$=expr_unary(E_INDIRECT,        $2); }
+           | T_1DOT       expr14                                                             { $$=expr_unary(E_NAME,            $2); }
+           | T_1BANG  expr14                                                             { $$=expr_unary(E_POW,             $2); }  /* user-definable */
+           | T_1PERCENT      expr14                                                             { $$=expr_unary(E_DIV,             $2); }  /* user-definable */
+           | T_1SLASH        expr14                                                             { $$=expr_unary(E_DIV,             $2); }  /* user-definable */
+           | T_1POUND        expr14                                                             { $$=expr_unary(E_MUL,             $2); }  /* user-definable */
+           | T_1EQUAL        expr14                                                             { $$=expr_unary(E_ASSIGN,          $2); }  /* user-definable */
+           | T_1PIPE expr14                                                             { EXPR_t*_e=expr_unary(E_OPSYN,$2); _e->sval=strdup("|"); $$=_e; }  /* user-definable */
            | expr15                                                                                { $$=$1; }
            ;
 expr15     : expr15 T_LBRACK exprlist T_RBRACK                                                  { EXPR_t*i=expr_new(E_IDX);expr_add_child(i,$1);for(int j=0;j<$3->nchildren;j++)expr_add_child(i,$3->children[j]);free($3->children);free($3);$$=i; }

@@ -358,8 +358,8 @@ static void test_concat_with_arith(void) {
     /* (1+2) ' equals ' (3) — arithmetic binds tighter than concat.
      * NB: SNOBOL4/Snocone require whitespace around binary `+` (the
      * lexer's W{OP}W envelope rule), so `1+2` would lex as
-     * `T_INT, T_UN_PLUS, T_INT` — a unary expression that parses
-     * differently.  We write `1 + 2` to get the binary T_ADDITION. */
+     * `T_INT, T_1PLUS, T_INT` — a unary expression that parses
+     * differently.  We write `1 + 2` to get the binary T_2PLUS. */
     const char *src = "X = 1 + 2 ' equals ' 3;";
     printf("=== test: %s ===\n", src);
     Program *prog = snocone_parse_program(src, "<test>");
