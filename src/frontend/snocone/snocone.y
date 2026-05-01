@@ -1,13 +1,15 @@
 /*
- * snocone.y — Snocone Bison grammar  (GOAL-SNOCONE-LANG-SPACE LS-4.a skeleton)
+ * snocone.y — Snocone Bison grammar  (GOAL-SNOCONE-LANG-SPACE LS-4.a/b)
  *
  * Andrew Koenig's .sc self-host operator design + Lon's restoration of
- * SPITBOL space-as-concat semantics.  This file is the LS-4.a skeleton:
+ * SPITBOL space-as-concat semantics.  This file is the LS-4.a/b skeleton:
  * atoms (T_INT/T_REAL/T_STR/T_IDENT/T_KEYWORD), arithmetic (+ - * / ^),
- * paren-grouping, assignment, and `;`-terminated statements.  Everything
- * else — comparison, identity, concat, alternation, match, control flow,
- * functions, switch, break/continue, goto, alt-eval — lands in LS-4.b
- * through LS-4.i.
+ * paren-grouping, assignment, `;`-terminated statements, and (LS-4.b)
+ * comparison/identity operators (== != < > <= >= :==: :!=: :<: :>: :<=:
+ * :>=: :: :!:) lowered to E_FNC named calls, plus T_FUNCTION call-form
+ * `EQ(2+2, 4)` → E_FNC("EQ", ...).  Everything else — concat,
+ * alternation, match, control flow, switch, break/continue, goto,
+ * alt-eval, more unaries — lands in LS-4.c through LS-4.i.
  *
  * Pipeline:
  *   snocone_lex.c  (threaded-code FSM lexer) -- sc_lex_next(ctx) -- single token per call
@@ -301,6 +303,7 @@ static int sc_kind_to_tok(int sc_kind);
 %token <str> T_INT      /* FSM emits raw text; thunk converts to long */
 %token <str> T_REAL     /* same — thunk converts to double */
 %token <str> T_STR      /* FSM emits unquoted, escapes resolved */
+%token <str> T_FUNCTION /* IDENT-followed-by-zero-space-( per Andrew's `f(args)` rule */
 
 /* ---- Binary arithmetic operators (LS-4.a) ---- */
 %token T_ADDITION
@@ -308,6 +311,11 @@ static int sc_kind_to_tok(int sc_kind);
 %token T_MULTIPLICATION
 %token T_DIVISION
 %token T_EXPONENTIATION
+
+/* ---- Comparison / identity operators (LS-4.b) — all lower to E_FNC named calls ---- */
+%token T_EQ T_NE T_LT T_GT T_LE T_GE              /* numeric:  EQ NE LT GT LE GE  */
+%token T_LEQ T_LNE T_LLT T_LGT T_LLE T_LGE        /* lexical:  LEQ LNE LLT LGT LLE LGE */
+%token T_IDENT_OP T_DIFFER                        /* identity: IDENT DIFFER (Andrew's :: and :!:) */
 
 /* ---- Unary operators (LS-4.a — only the arithmetic ones) ---- */
 %token T_UN_PLUS
@@ -320,31 +328,28 @@ static int sc_kind_to_tok(int sc_kind);
 %token T_LPAREN
 %token T_RPAREN
 %token T_SEMICOLON
+%token T_COMMA
 
 /* All other tokens the FSM may emit are declared here so the translation
  * table can index every FSM kind, but they have no productions yet —
- * encountering one in the input is a parse error.  LS-4.b–LS-4.i will
+ * encountering one in the input is a parse error.  LS-4.c–LS-4.i will
  * give them rules. */
 %token T_CONCAT T_MATCH T_ALTERNATION
-%token T_EQ T_NE T_LT T_GT T_LE T_GE
-%token T_LEQ T_LNE T_LLT T_LGT T_LLE T_LGE
-%token T_IDENT_OP T_DIFFER
 %token T_IMMEDIATE_ASSIGN T_COND_ASSIGN
 %token T_AMPERSAND T_AT_SIGN T_POUND T_PERCENT T_TILDE
 %token T_PLUS_ASSIGN T_MINUS_ASSIGN T_STAR_ASSIGN T_SLASH_ASSIGN T_CARET_ASSIGN
 %token T_UN_ASTERISK T_UN_SLASH T_UN_PERCENT
 %token T_UN_AT_SIGN T_UN_TILDE T_UN_DOLLAR_SIGN T_UN_PERIOD T_UN_POUND
 %token T_UN_VERTICAL_BAR T_UN_EQUAL T_UN_QUESTION_MARK T_UN_AMPERSAND
-%token T_FUNCTION
 %token T_LBRACK T_RBRACK T_LBRACE T_RBRACE
-%token T_COMMA T_COLON
+%token T_COLON
 %token T_KW_IF T_KW_ELSE T_KW_WHILE T_KW_DO T_KW_UNTIL T_KW_FOR
 %token T_KW_SWITCH T_KW_CASE T_KW_DEFAULT
 %token T_KW_BREAK T_KW_CONTINUE T_KW_GOTO
 %token T_KW_FUNCTION T_KW_RETURN T_KW_FRETURN T_KW_NRETURN T_KW_STRUCT
 %token T_UNKNOWN
 
-%type <expr> expr0 expr6 expr9 expr11 expr17
+%type <expr> expr0 expr5 expr6 expr9 expr11 expr17 exprlist exprlist_ne
 
 %%
 
@@ -370,14 +375,79 @@ stmt        : expr0 T_SEMICOLON                { sc_append_stmt(st, $1); }
  * top atomic tier (literals, identifiers, keywords, parenthesised
  * expression, signed-prefix unaries).
  *
- * The level numbers (expr0/expr6/expr9/expr11/expr17) match snobol4.y's
- * naming so a reader who follows the SNOBOL4 grammar can map across
- * directly.  Skipped levels (expr2..expr5, expr7, expr8, expr10,
- * expr12..expr16) appear in LS-4.b–LS-4.i.
+ * LS-4.b adds expr5 — the comparison/identity tier, sitting between
+ * expr0 (assignment) and expr6 (add/sub).  Per Andrew Koenig's
+ * bconv[] (snocone.sc lines 32-60) all 14 comparison/identity
+ * operators are at the same priority, BELOW arithmetic add/sub —
+ * so `a + b == c + d` parses as `(a + b) == (c + d)`.  Each
+ * comparison lowers to an E_FNC named call: `a == b` → E_FNC("EQ", a, b).
+ * Left-associative chaining (rare but unambiguous: `a == b == c`
+ * lowers to E_FNC("EQ", E_FNC("EQ", a, b), c)).
+ *
+ * The level numbers (expr0/expr5/expr6/expr9/expr11/expr17) match
+ * snobol4.y's naming so a reader who follows the SNOBOL4 grammar
+ * can map across directly.  Skipped levels (expr2..expr4, expr7,
+ * expr8, expr10, expr12..expr16) appear in LS-4.c–LS-4.i.
  */
 
-expr0       : expr6 T_ASSIGNMENT expr0
+expr0       : expr5 T_ASSIGNMENT expr0
                                 { $$ = expr_binary(E_ASSIGN, $1, $3); }
+            | expr5
+                                { $$ = $1; }
+            ;
+
+/* ---- Comparison / identity tier (LS-4.b) ----
+ *
+ * Andrew's `.sc` self-host puts all 14 comparison/identity operators
+ * at one priority, function-style (fn=1).  Each lowers to an E_FNC
+ * named call; the function name is the SPITBOL primitive's UPPERCASE
+ * spelling (EQ, NE, LT, GT, LE, GE — numeric; LEQ, LNE, LLT, LGT,
+ * LLE, LGE — lexical; IDENT, DIFFER — identity).  This places the
+ * compile-time syntactic sugar onto the runtime's existing primitive
+ * dispatch — no new SM opcodes, no new IR kinds.
+ */
+expr5       : expr5 T_EQ        expr6
+                                { EXPR_t *e = expr_new(E_FNC); e->sval = strdup("EQ");
+                                  expr_add_child(e, $1); expr_add_child(e, $3); $$ = e; }
+            | expr5 T_NE        expr6
+                                { EXPR_t *e = expr_new(E_FNC); e->sval = strdup("NE");
+                                  expr_add_child(e, $1); expr_add_child(e, $3); $$ = e; }
+            | expr5 T_LT        expr6
+                                { EXPR_t *e = expr_new(E_FNC); e->sval = strdup("LT");
+                                  expr_add_child(e, $1); expr_add_child(e, $3); $$ = e; }
+            | expr5 T_GT        expr6
+                                { EXPR_t *e = expr_new(E_FNC); e->sval = strdup("GT");
+                                  expr_add_child(e, $1); expr_add_child(e, $3); $$ = e; }
+            | expr5 T_LE        expr6
+                                { EXPR_t *e = expr_new(E_FNC); e->sval = strdup("LE");
+                                  expr_add_child(e, $1); expr_add_child(e, $3); $$ = e; }
+            | expr5 T_GE        expr6
+                                { EXPR_t *e = expr_new(E_FNC); e->sval = strdup("GE");
+                                  expr_add_child(e, $1); expr_add_child(e, $3); $$ = e; }
+            | expr5 T_LEQ       expr6
+                                { EXPR_t *e = expr_new(E_FNC); e->sval = strdup("LEQ");
+                                  expr_add_child(e, $1); expr_add_child(e, $3); $$ = e; }
+            | expr5 T_LNE       expr6
+                                { EXPR_t *e = expr_new(E_FNC); e->sval = strdup("LNE");
+                                  expr_add_child(e, $1); expr_add_child(e, $3); $$ = e; }
+            | expr5 T_LLT       expr6
+                                { EXPR_t *e = expr_new(E_FNC); e->sval = strdup("LLT");
+                                  expr_add_child(e, $1); expr_add_child(e, $3); $$ = e; }
+            | expr5 T_LGT       expr6
+                                { EXPR_t *e = expr_new(E_FNC); e->sval = strdup("LGT");
+                                  expr_add_child(e, $1); expr_add_child(e, $3); $$ = e; }
+            | expr5 T_LLE       expr6
+                                { EXPR_t *e = expr_new(E_FNC); e->sval = strdup("LLE");
+                                  expr_add_child(e, $1); expr_add_child(e, $3); $$ = e; }
+            | expr5 T_LGE       expr6
+                                { EXPR_t *e = expr_new(E_FNC); e->sval = strdup("LGE");
+                                  expr_add_child(e, $1); expr_add_child(e, $3); $$ = e; }
+            | expr5 T_IDENT_OP  expr6
+                                { EXPR_t *e = expr_new(E_FNC); e->sval = strdup("IDENT");
+                                  expr_add_child(e, $1); expr_add_child(e, $3); $$ = e; }
+            | expr5 T_DIFFER    expr6
+                                { EXPR_t *e = expr_new(E_FNC); e->sval = strdup("DIFFER");
+                                  expr_add_child(e, $1); expr_add_child(e, $3); $$ = e; }
             | expr6
                                 { $$ = $1; }
             ;
@@ -405,11 +475,42 @@ expr11      : expr17 T_EXPONENTIATION expr11
                                 { $$ = $1; }
             ;
 
+/* ---- exprlist (LS-4.b) — for call-form argument lists ----
+ *
+ * Mirror snobol4.y's exprlist/exprlist_ne pair: a non-empty list
+ * uses an E_NUL container as a temporary holder; the empty list
+ * is just an E_NUL with no children.  Caller (T_FUNCTION rule)
+ * unpacks children into the E_FNC node and frees the container.
+ */
+exprlist    : exprlist_ne
+                                { $$ = $1; }
+            | /* empty */
+                                { $$ = expr_new(E_NUL); }
+            ;
+
+exprlist_ne : exprlist_ne T_COMMA expr0
+                                { expr_add_child($1, $3); $$ = $1; }
+            | expr0
+                                { EXPR_t *l = expr_new(E_NUL); expr_add_child(l, $1); $$ = l; }
+            ;
+
 /* Atomic tier — atoms, parens, signed unaries.  Unary applied here
  * (highest priority, just below atoms) matches SPITBOL Manual Ch.15
  * "all unaries are higher priority than any binary."  In LS-4.e the
- * full set of unaries (* . $ @ ~ ? &) joins this tier. */
-expr17      : T_IDENT
+ * full set of unaries (* . $ @ ~ ? &) joins this tier.
+ *
+ * LS-4.b adds T_FUNCTION call-form: `EQ(2+2, 4)` → E_FNC("EQ", ...).
+ * The lexer has already classified the IDENT-followed-by-zero-space-(
+ * as T_FUNCTION (the "f(args) vs f (args)" disambiguation rule from
+ * the goal); the matching ( is the next token in the stream. */
+expr17      : T_FUNCTION T_LPAREN exprlist T_RPAREN
+                                { EXPR_t *e = expr_new(E_FNC);
+                                  e->sval = $1;             /* takes ownership */
+                                  for (int i = 0; i < $3->nchildren; i++)
+                                      expr_add_child(e, $3->children[i]);
+                                  free($3->children); free($3);
+                                  $$ = e; }
+            | T_IDENT
                                 { EXPR_t *e = expr_new(E_VAR);
                                   e->sval = $1;             /* takes ownership */
                                   $$ = e; }

@@ -53,7 +53,7 @@
 extern int sc_debug;
 #endif
 /* "%code requires" blocks.  */
-#line 232 "snocone.y"
+#line 234 "snocone.y"
 
 #include "scrip_cc.h"
 
@@ -88,64 +88,64 @@ typedef struct ScParseState {
     T_INT = 260,                   /* T_INT  */
     T_REAL = 261,                  /* T_REAL  */
     T_STR = 262,                   /* T_STR  */
-    T_ADDITION = 263,              /* T_ADDITION  */
-    T_SUBTRACTION = 264,           /* T_SUBTRACTION  */
-    T_MULTIPLICATION = 265,        /* T_MULTIPLICATION  */
-    T_DIVISION = 266,              /* T_DIVISION  */
-    T_EXPONENTIATION = 267,        /* T_EXPONENTIATION  */
-    T_UN_PLUS = 268,               /* T_UN_PLUS  */
-    T_UN_MINUS = 269,              /* T_UN_MINUS  */
-    T_ASSIGNMENT = 270,            /* T_ASSIGNMENT  */
-    T_LPAREN = 271,                /* T_LPAREN  */
-    T_RPAREN = 272,                /* T_RPAREN  */
-    T_SEMICOLON = 273,             /* T_SEMICOLON  */
-    T_CONCAT = 274,                /* T_CONCAT  */
-    T_MATCH = 275,                 /* T_MATCH  */
-    T_ALTERNATION = 276,           /* T_ALTERNATION  */
-    T_EQ = 277,                    /* T_EQ  */
-    T_NE = 278,                    /* T_NE  */
-    T_LT = 279,                    /* T_LT  */
-    T_GT = 280,                    /* T_GT  */
-    T_LE = 281,                    /* T_LE  */
-    T_GE = 282,                    /* T_GE  */
-    T_LEQ = 283,                   /* T_LEQ  */
-    T_LNE = 284,                   /* T_LNE  */
-    T_LLT = 285,                   /* T_LLT  */
-    T_LGT = 286,                   /* T_LGT  */
-    T_LLE = 287,                   /* T_LLE  */
-    T_LGE = 288,                   /* T_LGE  */
-    T_IDENT_OP = 289,              /* T_IDENT_OP  */
-    T_DIFFER = 290,                /* T_DIFFER  */
-    T_IMMEDIATE_ASSIGN = 291,      /* T_IMMEDIATE_ASSIGN  */
-    T_COND_ASSIGN = 292,           /* T_COND_ASSIGN  */
-    T_AMPERSAND = 293,             /* T_AMPERSAND  */
-    T_AT_SIGN = 294,               /* T_AT_SIGN  */
-    T_POUND = 295,                 /* T_POUND  */
-    T_PERCENT = 296,               /* T_PERCENT  */
-    T_TILDE = 297,                 /* T_TILDE  */
-    T_PLUS_ASSIGN = 298,           /* T_PLUS_ASSIGN  */
-    T_MINUS_ASSIGN = 299,          /* T_MINUS_ASSIGN  */
-    T_STAR_ASSIGN = 300,           /* T_STAR_ASSIGN  */
-    T_SLASH_ASSIGN = 301,          /* T_SLASH_ASSIGN  */
-    T_CARET_ASSIGN = 302,          /* T_CARET_ASSIGN  */
-    T_UN_ASTERISK = 303,           /* T_UN_ASTERISK  */
-    T_UN_SLASH = 304,              /* T_UN_SLASH  */
-    T_UN_PERCENT = 305,            /* T_UN_PERCENT  */
-    T_UN_AT_SIGN = 306,            /* T_UN_AT_SIGN  */
-    T_UN_TILDE = 307,              /* T_UN_TILDE  */
-    T_UN_DOLLAR_SIGN = 308,        /* T_UN_DOLLAR_SIGN  */
-    T_UN_PERIOD = 309,             /* T_UN_PERIOD  */
-    T_UN_POUND = 310,              /* T_UN_POUND  */
-    T_UN_VERTICAL_BAR = 311,       /* T_UN_VERTICAL_BAR  */
-    T_UN_EQUAL = 312,              /* T_UN_EQUAL  */
-    T_UN_QUESTION_MARK = 313,      /* T_UN_QUESTION_MARK  */
-    T_UN_AMPERSAND = 314,          /* T_UN_AMPERSAND  */
-    T_FUNCTION = 315,              /* T_FUNCTION  */
-    T_LBRACK = 316,                /* T_LBRACK  */
-    T_RBRACK = 317,                /* T_RBRACK  */
-    T_LBRACE = 318,                /* T_LBRACE  */
-    T_RBRACE = 319,                /* T_RBRACE  */
-    T_COMMA = 320,                 /* T_COMMA  */
+    T_FUNCTION = 263,              /* T_FUNCTION  */
+    T_ADDITION = 264,              /* T_ADDITION  */
+    T_SUBTRACTION = 265,           /* T_SUBTRACTION  */
+    T_MULTIPLICATION = 266,        /* T_MULTIPLICATION  */
+    T_DIVISION = 267,              /* T_DIVISION  */
+    T_EXPONENTIATION = 268,        /* T_EXPONENTIATION  */
+    T_EQ = 269,                    /* T_EQ  */
+    T_NE = 270,                    /* T_NE  */
+    T_LT = 271,                    /* T_LT  */
+    T_GT = 272,                    /* T_GT  */
+    T_LE = 273,                    /* T_LE  */
+    T_GE = 274,                    /* T_GE  */
+    T_LEQ = 275,                   /* T_LEQ  */
+    T_LNE = 276,                   /* T_LNE  */
+    T_LLT = 277,                   /* T_LLT  */
+    T_LGT = 278,                   /* T_LGT  */
+    T_LLE = 279,                   /* T_LLE  */
+    T_LGE = 280,                   /* T_LGE  */
+    T_IDENT_OP = 281,              /* T_IDENT_OP  */
+    T_DIFFER = 282,                /* T_DIFFER  */
+    T_UN_PLUS = 283,               /* T_UN_PLUS  */
+    T_UN_MINUS = 284,              /* T_UN_MINUS  */
+    T_ASSIGNMENT = 285,            /* T_ASSIGNMENT  */
+    T_LPAREN = 286,                /* T_LPAREN  */
+    T_RPAREN = 287,                /* T_RPAREN  */
+    T_SEMICOLON = 288,             /* T_SEMICOLON  */
+    T_COMMA = 289,                 /* T_COMMA  */
+    T_CONCAT = 290,                /* T_CONCAT  */
+    T_MATCH = 291,                 /* T_MATCH  */
+    T_ALTERNATION = 292,           /* T_ALTERNATION  */
+    T_IMMEDIATE_ASSIGN = 293,      /* T_IMMEDIATE_ASSIGN  */
+    T_COND_ASSIGN = 294,           /* T_COND_ASSIGN  */
+    T_AMPERSAND = 295,             /* T_AMPERSAND  */
+    T_AT_SIGN = 296,               /* T_AT_SIGN  */
+    T_POUND = 297,                 /* T_POUND  */
+    T_PERCENT = 298,               /* T_PERCENT  */
+    T_TILDE = 299,                 /* T_TILDE  */
+    T_PLUS_ASSIGN = 300,           /* T_PLUS_ASSIGN  */
+    T_MINUS_ASSIGN = 301,          /* T_MINUS_ASSIGN  */
+    T_STAR_ASSIGN = 302,           /* T_STAR_ASSIGN  */
+    T_SLASH_ASSIGN = 303,          /* T_SLASH_ASSIGN  */
+    T_CARET_ASSIGN = 304,          /* T_CARET_ASSIGN  */
+    T_UN_ASTERISK = 305,           /* T_UN_ASTERISK  */
+    T_UN_SLASH = 306,              /* T_UN_SLASH  */
+    T_UN_PERCENT = 307,            /* T_UN_PERCENT  */
+    T_UN_AT_SIGN = 308,            /* T_UN_AT_SIGN  */
+    T_UN_TILDE = 309,              /* T_UN_TILDE  */
+    T_UN_DOLLAR_SIGN = 310,        /* T_UN_DOLLAR_SIGN  */
+    T_UN_PERIOD = 311,             /* T_UN_PERIOD  */
+    T_UN_POUND = 312,              /* T_UN_POUND  */
+    T_UN_VERTICAL_BAR = 313,       /* T_UN_VERTICAL_BAR  */
+    T_UN_EQUAL = 314,              /* T_UN_EQUAL  */
+    T_UN_QUESTION_MARK = 315,      /* T_UN_QUESTION_MARK  */
+    T_UN_AMPERSAND = 316,          /* T_UN_AMPERSAND  */
+    T_LBRACK = 317,                /* T_LBRACK  */
+    T_RBRACK = 318,                /* T_RBRACK  */
+    T_LBRACE = 319,                /* T_LBRACE  */
+    T_RBRACE = 320,                /* T_RBRACE  */
     T_COLON = 321,                 /* T_COLON  */
     T_KW_IF = 322,                 /* T_KW_IF  */
     T_KW_ELSE = 323,               /* T_KW_ELSE  */
@@ -173,7 +173,7 @@ typedef struct ScParseState {
 #if ! defined SC_STYPE && ! defined SC_STYPE_IS_DECLARED
 union SC_STYPE
 {
-#line 291 "snocone.y"
+#line 293 "snocone.y"
 
     EXPR_t *expr;
     char   *str;
