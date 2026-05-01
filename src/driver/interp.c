@@ -1062,10 +1062,17 @@ DESCR_t interp_eval(EXPR_t *e)
             int nargs = e->nchildren - 1;
             if (!strcmp(fn,"write")) {
                 if (nargs == 0) { printf("\n"); return NULVCL; }
+                /* Icon write/writes: evaluate ALL args first; fail (no output) if any fails.
+                 * IC-9: pre-fix evaluated and printed incrementally, so writes("x",fail())
+                 * would print "x" before failing — wrong.  Now buffers args first. */
+                DESCR_t *vals = (DESCR_t *)GC_malloc((size_t)nargs * sizeof(DESCR_t));
+                for (int _wi = 0; _wi < nargs; _wi++) {
+                    vals[_wi] = interp_eval(e->children[1+_wi]);
+                    if (IS_FAIL_fn(vals[_wi])) return FAILDESCR;
+                }
                 DESCR_t last = NULVCL;
                 for (int _wi = 0; _wi < nargs; _wi++) {
-                    DESCR_t a = interp_eval(e->children[1+_wi]);
-                    if (IS_FAIL_fn(a)) return FAILDESCR;
+                    DESCR_t a = vals[_wi];
                     last = a;
                     if (a.v == DT_SNUL) continue;
                     if (IS_INT_fn(a)) printf("%lld",(long long)a.i);
@@ -1077,10 +1084,14 @@ DESCR_t interp_eval(EXPR_t *e)
             }
             if (!strcmp(fn,"writes")) {
                 if (nargs == 0) return NULVCL;
+                DESCR_t *vals = (DESCR_t *)GC_malloc((size_t)nargs * sizeof(DESCR_t));
+                for (int _wi = 0; _wi < nargs; _wi++) {
+                    vals[_wi] = interp_eval(e->children[1+_wi]);
+                    if (IS_FAIL_fn(vals[_wi])) return FAILDESCR;
+                }
                 DESCR_t last = NULVCL;
                 for (int _wi = 0; _wi < nargs; _wi++) {
-                    DESCR_t a = interp_eval(e->children[1+_wi]);
-                    if (IS_FAIL_fn(a)) return FAILDESCR;
+                    DESCR_t a = vals[_wi];
                     last = a;
                     if (a.v == DT_SNUL) continue;
                     if (IS_INT_fn(a)) printf("%lld",(long long)a.i);
@@ -2313,6 +2324,7 @@ DESCR_t interp_eval(EXPR_t *e)
             }
             if (!strcmp(fn,"image") && nargs == 1) {
                 DESCR_t av = interp_eval(e->children[1]);
+                if (IS_FAIL_fn(av)) return FAILDESCR;  /* IC-9: image(?T_empty) etc must fail */
                 char *buf = GC_malloc(128);
                 if (av.v == DT_SNUL)     return STRVAL("&null");
                 if (IS_INT_fn(av))       { snprintf(buf,128,"%lld",(long long)av.i); return STRVAL(buf); }
@@ -3895,6 +3907,71 @@ DESCR_t interp_eval(EXPR_t *e)
         if (v.v == DT_SNUL) return FAILDESCR;
         if (v.v == DT_S && (!v.s || v.s[0] == '\0')) return FAILDESCR;
         return v;
+    }
+
+    case E_RANDOM: {
+        /* ?E — Icon random selector.  IC-9 (session 2026-04-30 #20):
+         *   ?n  (integer)  → random integer in [1,n]; fails if n ≤ 0
+         *   ?s  (string)   → random character of s; fails if s is empty
+         *   ?&null         → fails (treated as empty string)
+         *   ?T  (table)    → random entry value; fails if T is empty
+         *   ?L  (list)     → random element; fails if L is empty
+         * Pre-fix this was unhandled (default→NULVCL), so ?T_empty returned
+         * &null rather than failing — surfaced in rung36_jcon_table line
+         * `should fail &null` and rung36_jcon_evalx `?table() ----> &null`.
+         *
+         * RNG: local static LCG (Knuth MMIX constants), self-contained.
+         * No cross-file linkage; matches frontend's icn_random shape. */
+        if (e->nchildren < 1) return FAILDESCR;
+        DESCR_t v = interp_eval(e->children[0]);
+        if (IS_FAIL_fn(v)) return FAILDESCR;
+        static unsigned long _rnd_seed = 12345UL;
+        _rnd_seed = _rnd_seed * 6364136223846793005UL + 1442695040888963407UL;
+        unsigned long _rnd = _rnd_seed >> 33;
+
+        /* DT_T table — pick random entry value, fail if empty */
+        if (v.v == DT_T) {
+            if (!v.tbl || v.tbl->size <= 0) return FAILDESCR;
+            int target = (int)(_rnd % (unsigned long)v.tbl->size);
+            int seen = 0;
+            for (int b = 0; b < TABLE_BUCKETS; b++) {
+                for (TBPAIR_t *p = v.tbl->buckets[b]; p; p = p->next) {
+                    if (seen == target) return p->val;
+                    seen++;
+                }
+            }
+            return FAILDESCR;  /* unreachable when size matches reality */
+        }
+        /* DT_DATA icnlist — pick random element, fail if empty */
+        if (v.v == DT_DATA) {
+            DESCR_t tag = FIELD_GET_fn(v, "icn_type");
+            if (tag.v == DT_S && tag.s && strcmp(tag.s, "list") == 0) {
+                int n = (int)FIELD_GET_fn(v, "icn_size").i;
+                if (n <= 0) return FAILDESCR;
+                DESCR_t ea = FIELD_GET_fn(v, "icn_elems");
+                if (ea.v != DT_DATA || !ea.ptr) return FAILDESCR;
+                DESCR_t *elems = (DESCR_t *)ea.ptr;
+                return elems[_rnd % (unsigned long)n];
+            }
+            return FAILDESCR;
+        }
+        /* Integer — random in [1,n]; fail if n ≤ 0 */
+        if (IS_INT_fn(v)) {
+            long long n = v.i;
+            if (n <= 0) return FAILDESCR;
+            return INTVAL((long long)((_rnd % (unsigned long)n) + 1));
+        }
+        /* &null — fail */
+        if (v.v == DT_SNUL) return FAILDESCR;
+        /* String — random character, fail if empty */
+        const char *s = VARVAL_fn(v);
+        if (!s || !*s) return FAILDESCR;
+        long slen = v.slen > 0 ? v.slen : (long)strlen(s);
+        if (slen <= 0) return FAILDESCR;
+        char *out = (char *)GC_malloc(2);
+        out[0] = s[_rnd % (unsigned long)slen];
+        out[1] = '\0';
+        return STRVAL(out);
     }
 
     case E_AUGOP: {
