@@ -372,6 +372,7 @@ void sc_error(ScParseState *st, const char *msg);
 
 /* Helpers — defined after %% */
 static void     sc_append_stmt        (ScParseState *st, EXPR_t *top);
+static void     sc_split_subject_pattern(EXPR_t **subj_io, EXPR_t **pat_io); /* LS-4.l */
 static EXPR_t  *sc_int_literal        (const char *txt);
 static EXPR_t  *sc_real_literal       (const char *txt);
 static EXPR_t  *sc_str_literal        (const char *txt);
@@ -674,7 +675,7 @@ static int sc_kind_to_tok(int sc_kind);
 %token T_LBRACE T_RBRACE
 %token T_IF T_ELSE T_WHILE
 
-%type <expr> expr0 expr1 expr3 expr4 expr5 expr6 expr9 expr11 expr15 expr17 exprlist exprlist_ne
+%type <expr> expr0 expr1 expr3 expr4 expr5 expr6 expr9 expr11 expr12 expr15 expr17 exprlist exprlist_ne
 
 /* LS-4.f — control-flow non-terminal types */
 %type <ifhead>    if_head
@@ -1187,11 +1188,49 @@ expr9       : expr9 T_2STAR expr11
                                 { $$ = $1; }
             ;
 
-/* Right-associative exponentiation: expr15 ^ expr11.
- * (Was expr17 before LS-4.d; now goes through expr15 so the new
- * subscript tier can sit between exponent and atoms.) */
-expr11      : expr15 T_2CARET expr11
+/* Right-associative exponentiation: expr12 ^ expr11.
+ * (Was expr15 before LS-4.l fence/semantic fix; now goes through expr12
+ * so binary `.` and `$` pattern-binding ops sit between exponent and
+ * subscript — matching snobol4.y:156-162.) */
+expr11      : expr12 T_2CARET expr11
                                 { $$ = expr_binary(E_POW, $1, $3); }
+            | expr12
+                                { $$ = $1; }
+            ;
+
+/* ---- Pattern-bind tier (LS-4.l fence/semantic fix) ----------------------
+ *
+ * Binary `.` and `$` — SPITBOL pattern-binding operators, priority 12,
+ * left-associative.  Mirrors snobol4.y:159-161 byte-for-byte (modulo
+ * tier name — snobol4.y's expr13 is our expr15).
+ *
+ *   pat . var   →  E_CAPT_COND_ASGN(pat, var)   conditional-on-success
+ *   pat $ var   →  E_CAPT_IMMED_ASGN(pat, var)  immediate (during match)
+ *
+ * Examples (all SPITBOL Manual Ch.15 idioms):
+ *   'ab' ? LEN(1) . X        → bind X='a' on overall match success
+ *   epsilon . *Counter()     → call Counter() each time pattern reaches
+ *                               this point (immediate-side-effect idiom)
+ *   subj ? (LEN(1) . X | FENCE)
+ *                              → tried first, FENCE seals on backtrack
+ *
+ * Andrew's `.sc` self-host has these at lp/rp 10/10 (his top scale);
+ * we slot them at the SPITBOL Manual priority-12 position which is
+ * tighter than `^`/exponent (pri 11) and looser than subscript (pri 15).
+ * Same relative ordering as Andrew, same as SPITBOL Manual table.
+ *
+ * Left-associative chain — `pat . X $ Y` parses as `(pat . X) $ Y`.
+ *
+ * Note: the unary forms `.X` and `$X` (E_NAME and E_INDIRECT) live at
+ * expr17 — they are different tokens (T_1DOT/T_1DOLLAR, no leading
+ * whitespace) emitted by the FSM lexer's W{OP}W envelope rule.  The
+ * binary forms here use T_2DOT/T_2DOLLAR (whitespace-enveloped, two-
+ * operand context).
+ */
+expr12      : expr12 T_2DOLLAR expr15
+                                { $$ = expr_binary(E_CAPT_IMMED_ASGN, $1, $3); }
+            | expr12 T_2DOT    expr15
+                                { $$ = expr_binary(E_CAPT_COND_ASGN,  $1, $3); }
             | expr15
                                 { $$ = $1; }
             ;
@@ -1482,7 +1521,75 @@ static int sc_kind_to_tok(int sc_kind) {
  * Mirrors sno4_stmt_commit_go's split logic for the top-level E_ASSIGN
  * case (snobol4.y line ~250).  Pattern-match split (E_SCAN), label
  * handling, and goto-field assembly arrive in later LS-4.* steps.
+ *
+ * LS-4.l fence/match/semantic/trace fix: also split E_SCAN(subj, pat)
+ * out of `s->subject` into separate `s->subject = subj` /
+ * `s->pattern = pat` slots so the runtime's pattern-match engine
+ * fires.  Without this split, the runtime would evaluate E_SCAN as a
+ * value (always succeeding) instead of doing the SNOBOL4 pattern
+ * match.  Mirrors snobol4.y:248-270 byte-for-byte.
+ *
+ * Two split forms (mirror snobol4.y):
+ *
+ *   1. E_SCAN(subj, pat)
+ *        -> s->subject = subj, s->pattern = pat
+ *      Comes from the binary `?` operator: `subj ? pat` and the
+ *      replace form `subj ? pat = repl` (where E_ASSIGN's lhs is
+ *      the E_SCAN).
+ *
+ *   2. E_SEQ(name, rest...) where first child is a name-yielding
+ *      atom (E_VAR / E_KEYWORD / E_QLIT / E_INDIRECT)
+ *        -> s->subject = name, s->pattern = rest
+ *      Comes from bare juxtaposition: in Snocone with space-as-
+ *      concat, `s pat;` lexes as `IDENT(s) T_CONCAT IDENT(pat) ;`
+ *      which lowers to E_SEQ(s, pat).  This is the SNOBOL4
+ *      stmt-level "subject pattern" idiom and the runtime expects
+ *      the same split.
+ *
+ * The split applies ONLY to the subject slot.  Replacement is left
+ * unchanged: `result = subj ? pat` is E_ASSIGN(result, E_SCAN(subj,
+ * pat)) and the replacement E_SCAN evaluates as a value (the
+ * matched substring) — that path is correct as is, no split needed.
  */
+static void sc_split_subject_pattern(EXPR_t **subj_io, EXPR_t **pat_io) {
+    EXPR_t *subj = *subj_io;
+    if (*pat_io || !subj) return;
+
+    /* Form 1: E_SCAN(subj, pat) */
+    if (subj->kind == E_SCAN && subj->nchildren == 2) {
+        EXPR_t *new_subj = subj->children[0];
+        EXPR_t *new_pat  = subj->children[1];
+        free(subj->children);
+        free(subj);
+        *subj_io = new_subj;
+        *pat_io  = new_pat;
+        return;
+    }
+
+    /* Form 2: E_SEQ(name, rest...) where first child is name-like */
+    if (subj->kind == E_SEQ && subj->nchildren >= 2) {
+        EXPR_t *first = subj->children[0];
+        if (first->kind == E_VAR || first->kind == E_KEYWORD ||
+            first->kind == E_QLIT || first->kind == E_INDIRECT) {
+            int nc = subj->nchildren - 1;
+            EXPR_t *rest;
+            if (nc == 1) {
+                rest = subj->children[1];
+            } else {
+                rest = expr_new(E_SEQ);
+                for (int i = 1; i < subj->nchildren; i++)
+                    expr_add_child(rest, subj->children[i]);
+            }
+            /* Detach the children we kept; free the now-empty E_SEQ shell. */
+            free(subj->children);
+            free(subj);
+            *subj_io = first;
+            *pat_io  = rest;
+            return;
+        }
+    }
+}
+
 static void sc_append_stmt(ScParseState *st, EXPR_t *top) {
     if (!top) return;
     /* LS-4.i.2 — a "real" stmt commit consumes any pending user labels:
@@ -1502,6 +1609,11 @@ static void sc_append_stmt(ScParseState *st, EXPR_t *top) {
     } else {
         s->subject = top;
     }
+    /* LS-4.l: split E_SCAN/E_SEQ out of subject into subject+pattern.
+     * Applies after E_ASSIGN-split so `subj ? pat = repl` (which
+     * lowers to E_ASSIGN(E_SCAN(subj,pat), repl)) gets correctly
+     * split into s->subject=subj, s->pattern=pat, s->replacement=repl. */
+    sc_split_subject_pattern(&s->subject, &s->pattern);
     if (!st->code->head) st->code->head = st->code->tail = s;
     else { st->code->tail->next = s; st->code->tail = s; }
 }
@@ -1825,12 +1937,19 @@ static STMT_t *sc_make_label_stmt(ScParseState *st, char *label) {
 }
 
 /* Build a STMT whose subject is `cond` and whose go.onfailure points at
- * `fail_target`.  Takes ownership of both. */
+ * `fail_target`.  Takes ownership of both.
+ *
+ * LS-4.l fix — applies the same E_SCAN/E_SEQ split used by
+ * sc_append_stmt so `if (subj ? pat) {…}`, `while (subj ? pat) {…}`,
+ * etc. drive the runtime's pattern-match engine instead of evaluating
+ * E_SCAN as a value (which always succeeds and breaks the if/while
+ * failure-driven branch). */
 static STMT_t *sc_make_cond_fail_stmt(ScParseState *st, EXPR_t *cond, char *fail_target, int lineno) {
     STMT_t *s = stmt_new();
     s->lineno = lineno;
     s->stno   = ++st->code->nstmts;
     s->subject = cond;
+    sc_split_subject_pattern(&s->subject, &s->pattern);
     s->go      = sgoto_new();
     s->go->onfailure = fail_target;
     return s;
@@ -2014,12 +2133,18 @@ static void sc_finalize_while(ScParseState *st, struct WhileHead *h) {
  * ========================================================================= */
 
 /* Build a STMT whose subject is `cond` and whose go.onsuccess points at
- * `succ_target`.  Takes ownership of both. */
+ * `succ_target`.  Takes ownership of both.
+ *
+ * LS-4.l fix — same E_SCAN/E_SEQ split as sc_make_cond_fail_stmt so
+ * `do { ... } while (subj ? pat);` drives the pattern-match engine
+ * (without the split, the cond evaluates E_SCAN as a value, always
+ * succeeding, turning do/while into an infinite loop). */
 static STMT_t *sc_make_cond_succ_stmt(ScParseState *st, EXPR_t *cond, char *succ_target, int lineno) {
     STMT_t *s = stmt_new();
     s->lineno  = lineno;
     s->stno    = ++st->code->nstmts;
     s->subject = cond;
+    sc_split_subject_pattern(&s->subject, &s->pattern);
     s->go      = sgoto_new();
     s->go->onsuccess = succ_target;
     return s;
