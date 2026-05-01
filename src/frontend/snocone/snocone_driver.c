@@ -3,17 +3,23 @@
  *
  * snocone_compile(source, filename) → Program*
  *
- * Delegates to snocone_control_compile() which runs the full pipeline:
- *   snocone_lex() → snocone_control lowering (if/while/for/procedure) →
- *   per-expression: snocone_parse() + snocone_lower() → Program*
+ * LS-4.j: delegates directly to snocone_parse_program() — the Bison
+ * parser + FSM lexer (snocone_parse.tab.c / snocone_lex.c).
+ *
+ * Prior to LS-4.j this called snocone_control_compile() (the legacy
+ * Sprint-SC1 shunting-yard pipeline via archive/snocone_parse.c and
+ * archive/snocone_lex.c).  Those archive files remain in the build
+ * as dead code until LS-4.k moves them out of FRONTEND_SNOCONE.
  */
 
 #include "snocone_driver.h"
-#include "snocone_control.h"
 #include <stdio.h>
+
+/* Forward declaration — defined in snocone_parse.tab.c */
+CODE_t *snocone_parse_program(const char *src, const char *filename);
 
 Program *snocone_compile(const char *source, const char *filename)
 {
     if (!filename) filename = "<stdin>";
-    return snocone_control_compile(source, filename);
+    return snocone_parse_program(source, filename);
 }
