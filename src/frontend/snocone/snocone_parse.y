@@ -342,13 +342,32 @@ struct WhileHead {
     STMT_t *before_body;
     int     lineno;
 };
+/* LS-4.g — do/while and do/until: snapshot before body (at KW_DO), cond
+ * provided when the trailing while/until clause is parsed. */
+struct DoHead {
+    STMT_t *before_body;   /* tail snapshot at KW_DO */
+    int     lineno;
+};
+/* LS-4.g — for (init; cond; step): snapshot after init emits, before
+ * the loop-top label and cond-stmt are spliced. */
+struct ForHead {
+    STMT_t *before_loop;   /* tail snapshot after init stmt appended */
+    EXPR_t *cond;          /* loop condition */
+    EXPR_t *step;          /* step expression (emitted at loop bottom) */
+    int     lineno;
+};
 
 static char    *sc_label_new          (ScParseState *st, const char *prefix);
 static struct IfHead    *sc_if_head_new    (ScParseState *st, EXPR_t *cond);
 static struct WhileHead *sc_while_head_new (ScParseState *st, EXPR_t *cond);
+static struct DoHead    *sc_do_head_new    (ScParseState *st);
+static struct ForHead   *sc_for_head_new   (ScParseState *st, EXPR_t *cond, EXPR_t *step);
 static void     sc_finalize_if_no_else(ScParseState *st, struct IfHead *h);
 static void     sc_finalize_if_else   (ScParseState *st, struct IfHead *h, STMT_t *before_else);
 static void     sc_finalize_while     (ScParseState *st, struct WhileHead *h);
+static void     sc_finalize_do_while  (ScParseState *st, struct DoHead *h, EXPR_t *cond);
+static void     sc_finalize_do_until  (ScParseState *st, struct DoHead *h, EXPR_t *cond);
+static void     sc_finalize_for       (ScParseState *st, struct ForHead *h);
 
 /* sc_kind_to_tok — translate FSM ScKind (1..N) to Bison's sc_tokentype.
  *
@@ -382,6 +401,8 @@ static int sc_kind_to_tok(int sc_kind);
      * the else-branch begins, enabling splice-in-the-middle. */
     struct IfHead    *ifhead;
     struct WhileHead *whilehead;
+    struct DoHead    *dohead;
+    struct ForHead   *forhead;
     STMT_t           *stmt_ptr;
 }
 
@@ -452,7 +473,10 @@ static int sc_kind_to_tok(int sc_kind);
 /* LS-4.f — control-flow non-terminal types */
 %type <ifhead>    if_head
 %type <whilehead> while_head
+%type <dohead>    do_head
 %type <stmt_ptr>  else_keyword
+/* LS-4.g — for head carries cond+step captured after init parses */
+%type <forhead>   for_head
 
 %%
 
@@ -499,6 +523,18 @@ matched_stmt
                                         { sc_finalize_if_else(st, $1, $3); }
             | while_head matched_stmt
                                         { sc_finalize_while(st, $1); }
+            /* LS-4.g — do/while and do/until (always matched — no dangling-else risk).
+             * Uses do_body (always a brace block) to avoid the shift/reduce tension
+             * that arises when T_KW_WHILE follows a matched_stmt on the stack:
+             * the parser would want to start a new while_head rather than close
+             * the do-loop.  Requiring { } makes the body unambiguous. */
+            | do_head do_body T_KW_WHILE T_LPAREN expr0 T_RPAREN T_SEMICOLON
+                                        { sc_finalize_do_while(st, $1, $5); }
+            | do_head do_body T_KW_UNTIL T_LPAREN expr0 T_RPAREN T_SEMICOLON
+                                        { sc_finalize_do_until(st, $1, $5); }
+            /* LS-4.g — for (init; cond; step) body */
+            | for_head matched_stmt
+                                        { sc_finalize_for(st, $1); }
             ;
 
 unmatched_stmt
@@ -508,6 +544,9 @@ unmatched_stmt
                                         { sc_finalize_if_else(st, $1, $3); }
             | while_head unmatched_stmt
                                         { sc_finalize_while(st, $1); }
+            /* LS-4.g — for with unmatched body */
+            | for_head unmatched_stmt
+                                        { sc_finalize_for(st, $1); }
             ;
 
 if_head     : T_KW_IF T_LPAREN expr0 T_RPAREN opt_head_sep
@@ -516,6 +555,32 @@ if_head     : T_KW_IF T_LPAREN expr0 T_RPAREN opt_head_sep
 
 while_head  : T_KW_WHILE T_LPAREN expr0 T_RPAREN opt_head_sep
                                         { $$ = sc_while_head_new(st, $3); }
+            ;
+
+/* LS-4.g — do_head fires at the `do` keyword before the body block.
+ * The trailing while/until clause (with the condition) is parsed by the
+ * parent rule; do_head just snapshots the linked-list tail. */
+do_head     : T_KW_DO                  { $$ = sc_do_head_new(st); }
+            ;
+
+/* do_body — always a brace block.  Requiring { } here is not a semantic
+ * restriction (C-style do {} while always uses braces in practice) and
+ * is a necessary grammar disambiguation: if do_body were `stmt` the
+ * parser would face a shift/reduce conflict at T_KW_WHILE — it could
+ * not decide whether WHILE starts a new while_head (another matched_stmt)
+ * or closes the do-loop.  Brace-delimited bodies have a clear endpoint. */
+do_body     : T_LBRACE stmt_list T_RBRACE
+            | T_LBRACE T_RBRACE
+            ;
+
+/* LS-4.g — for_head: `for ( init ; cond ; step )` opt_head_sep.
+ * init is a full expr0 that is immediately emitted as a statement.
+ * cond and step are captured in the ForHead struct for use in finalize.
+ * The snapshot of st->code->tail happens AFTER init is emitted —
+ * that is the before_loop anchor used to splice Ltop + cond-stmt. */
+for_head    : T_KW_FOR T_LPAREN expr0 T_SEMICOLON expr0 T_SEMICOLON expr0 T_RPAREN opt_head_sep
+                                        { sc_append_stmt(st, $3);
+                                          $$ = sc_for_head_new(st, $5, $7); }
             ;
 
 /* opt_head_sep — absorbs the spurious T_CONCAT the LS-3 lexer emits
@@ -1146,6 +1211,25 @@ static struct WhileHead *sc_while_head_new(ScParseState *st, EXPR_t *cond) {
     return h;
 }
 
+/* LS-4.g — do_head: snapshot before the do-body is parsed. */
+static struct DoHead *sc_do_head_new(ScParseState *st) {
+    struct DoHead *h = calloc(1, sizeof *h);
+    h->before_body = st->code->tail;
+    h->lineno      = st->ctx ? st->ctx->line : 0;
+    return h;
+}
+
+/* LS-4.g — for_head: called AFTER the init expr is emitted, so
+ * before_loop snaps the tail that now includes the init stmt. */
+static struct ForHead *sc_for_head_new(ScParseState *st, EXPR_t *cond, EXPR_t *step) {
+    struct ForHead *h = calloc(1, sizeof *h);
+    h->before_loop = st->code->tail;
+    h->cond        = cond;
+    h->step        = step;
+    h->lineno      = st->ctx ? st->ctx->line : 0;
+    return h;
+}
+
 /* Build a label-only landing-pad STMT (subject=NULL).  Takes ownership
  * of `label`.  Does NOT link it into st->code — caller does that. */
 static STMT_t *sc_make_label_stmt(ScParseState *st, char *label) {
@@ -1285,6 +1369,90 @@ static void sc_finalize_while(ScParseState *st, struct WhileHead *h) {
     /* (2) Append [goto_top -> end_pad] at the end. */
     goto_top->next = end_pad;
     sc_append_chain(st, goto_top, end_pad);
+    free(h);
+}
+
+/* =========================================================================
+ *  LS-4.g — do/while, do/until, for lowering helpers
+ *
+ *  do { S } while (C);
+ *      →   Ltop                      <- spliced after before_body
+ *          <S stmts>
+ *          C  :S(Ltop)               <- appended (success loops back)
+ *          Lend                      <- appended
+ *
+ *  do { S } until (C);
+ *      →   Ltop                      <- spliced after before_body
+ *          <S stmts>
+ *          C  :F(Ltop)               <- appended (failure loops back)
+ *          Lend                      <- appended
+ *
+ *  for (init; C; step) S
+ *      →   <init stmt>               <- already in list (emitted by for_head rule)
+ *          Ltop                      <- spliced after before_loop (= after init)
+ *          C  :F(Lend)               <- next in chain
+ *          <S stmts>
+ *          <step stmt>               <- appended
+ *          :(Ltop)                   <- appended
+ *          Lend                      <- appended
+ * ========================================================================= */
+
+/* Build a STMT whose subject is `cond` and whose go.onsuccess points at
+ * `succ_target`.  Takes ownership of both. */
+static STMT_t *sc_make_cond_succ_stmt(ScParseState *st, EXPR_t *cond, char *succ_target, int lineno) {
+    STMT_t *s = stmt_new();
+    s->lineno  = lineno;
+    s->stno    = ++st->code->nstmts;
+    s->subject = cond;
+    s->go      = sgoto_new();
+    s->go->onsuccess = succ_target;
+    return s;
+}
+
+static void sc_finalize_do_while(ScParseState *st, struct DoHead *h, EXPR_t *cond) {
+    char   *Ltop      = sc_label_new(st, "_Ltop");
+    char   *Lend      = sc_label_new(st, "_Lend");
+    STMT_t *top_pad   = sc_make_label_stmt(st, Ltop);
+    STMT_t *cond_stmt = sc_make_cond_succ_stmt(st, cond, strdup(Ltop), h->lineno);
+    STMT_t *end_pad   = sc_make_label_stmt(st, Lend);
+    /* Splice Ltop-pad right before the do-body. */
+    sc_splice_after(st, h->before_body, top_pad, top_pad);
+    /* Append cond :S(Ltop) and then Lend. */
+    cond_stmt->next = end_pad;
+    sc_append_chain(st, cond_stmt, end_pad);
+    free(h);
+}
+
+static void sc_finalize_do_until(ScParseState *st, struct DoHead *h, EXPR_t *cond) {
+    char   *Ltop      = sc_label_new(st, "_Ltop");
+    char   *Lend      = sc_label_new(st, "_Lend");
+    STMT_t *top_pad   = sc_make_label_stmt(st, Ltop);
+    STMT_t *cond_stmt = sc_make_cond_fail_stmt(st, cond, strdup(Ltop), h->lineno);
+    STMT_t *end_pad   = sc_make_label_stmt(st, Lend);
+    sc_splice_after(st, h->before_body, top_pad, top_pad);
+    cond_stmt->next = end_pad;
+    sc_append_chain(st, cond_stmt, end_pad);
+    free(h);
+}
+
+static void sc_finalize_for(ScParseState *st, struct ForHead *h) {
+    char   *Ltop      = sc_label_new(st, "_Ltop");
+    char   *Lend      = sc_label_new(st, "_Lend");
+    STMT_t *top_pad   = sc_make_label_stmt(st, Ltop);
+    STMT_t *cond_stmt = sc_make_cond_fail_stmt(st, h->cond, strdup(Lend), h->lineno);
+    STMT_t *step_stmt = stmt_new();
+    step_stmt->lineno  = h->lineno;
+    step_stmt->stno    = ++st->code->nstmts;
+    step_stmt->subject = h->step;
+    STMT_t *goto_top  = sc_make_goto_uncond_stmt(st, strdup(Ltop));
+    STMT_t *end_pad   = sc_make_label_stmt(st, Lend);
+    /* Splice [top_pad -> cond_stmt] right after before_loop (after init). */
+    top_pad->next = cond_stmt;
+    sc_splice_after(st, h->before_loop, top_pad, cond_stmt);
+    /* Append step, goto Ltop, Lend. */
+    step_stmt->next = goto_top;
+    goto_top->next  = end_pad;
+    sc_append_chain(st, step_stmt, end_pad);
     free(h);
 }
 

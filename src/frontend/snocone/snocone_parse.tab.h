@@ -183,7 +183,7 @@ typedef struct ScParseState {
 #if ! defined SC_STYPE && ! defined SC_STYPE_IS_DECLARED
 union SC_STYPE
 {
-#line 373 "snocone_parse.y"
+#line 392 "snocone_parse.y"
 
     EXPR_t *expr;
     char   *str;
@@ -196,9 +196,11 @@ union SC_STYPE
      * the else-branch begins, enabling splice-in-the-middle. */
     struct IfHead    *ifhead;
     struct WhileHead *whilehead;
+    struct DoHead    *dohead;
+    struct ForHead   *forhead;
     STMT_t           *stmt_ptr;
 
-#line 202 "snocone_parse.tab.h"
+#line 204 "snocone_parse.tab.h"
 
 };
 typedef union SC_STYPE SC_STYPE;
