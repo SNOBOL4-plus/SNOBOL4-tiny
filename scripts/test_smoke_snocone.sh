@@ -19,18 +19,18 @@ snocone() {
 echo "=== Snocone smoke ==="
 
 snocone "output" "hello" << 'EOF'
-OUTPUT = "hello"
+OUTPUT = "hello";
 EOF
 
 snocone "arith" "5" << 'EOF'
-OUTPUT = 2 + 3
+OUTPUT = 2 + 3;
 EOF
 
 snocone "procedure" "42" << 'EOF'
 function Double(n) {
     Double = n + n; return;
 }
-OUTPUT = Double(21)
+OUTPUT = Double(21);
 EOF
 
 snocone "if_eq" "yes" << 'EOF'

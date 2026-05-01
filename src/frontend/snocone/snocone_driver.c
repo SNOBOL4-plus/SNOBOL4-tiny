@@ -8,8 +8,8 @@
  *
  * Prior to LS-4.j this called snocone_control_compile() (the legacy
  * Sprint-SC1 shunting-yard pipeline via archive/snocone_parse.c and
- * archive/snocone_lex.c).  Those archive files remain in the build
- * as dead code until LS-4.k moves them out of FRONTEND_SNOCONE.
+ * archive/snocone_lex.c).  LS-4.k moved snocone_lower.c / snocone_control.c
+ * to archive/ and removed all archive/snocone entries from FRONTEND_SNOCONE.
  */
 
 #include "snocone_driver.h"

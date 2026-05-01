@@ -44,7 +44,6 @@
 /* CMPILE.h removed — bison/flex path only (GOAL-REMOVE-CMPILE S-5) */
 extern Program *sno_parse(FILE *f, const char *filename);
 #include "../frontend/snocone/snocone_driver.h"
-#include "../frontend/snocone/snocone_control.h"
 #include "../frontend/prolog/prolog_driver.h"
 #include "../frontend/prolog/term.h"            /* Term — needed by Prolog globals block */
 #include "../frontend/prolog/prolog_runtime.h"  /* Trail — needed by Prolog globals block */
@@ -301,7 +300,7 @@ int main(int argc, char **argv)
                 : lang_prolog ? prolog_compile(src, input_path)
                 : lang_icon   ? icon_compile(src, input_path)
                 : lang_rebus  ? rebus_compile(src, input_path)
-                :               snocone_control_compile(src, input_path);
+                :               snocone_compile(src, input_path);
             free(src);
             /* SC-26 investigation: allow --dump-ir on Snocone .sc files so
              * we can diff Snocone IR vs SNOBOL4 IR for the same program. */

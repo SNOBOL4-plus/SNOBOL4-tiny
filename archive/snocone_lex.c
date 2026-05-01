@@ -97,11 +97,6 @@ static const KwEntry KW_TABLE[] = {
     { "nreturn",   SNOCONE_KW_NRETURN   },
     /* "go" and "to" removed — use goto (SC-1). Enum slots kept to avoid shifts. */
     { "procedure", SNOCONE_KW_PROCEDURE },
-    /* LS-4.h — `function` accepted as synonym for `procedure` in the legacy
-     * shunting-yard parser path (used until LS-4.j wires in the new Bison
-     * parser).  Same SNOCONE_KW_PROCEDURE enum value; no other change
-     * needed to the legacy parser. */
-    { "function",  SNOCONE_KW_PROCEDURE },
     { "struct",    SNOCONE_KW_STRUCT    },
     { NULL,        SNOCONE_UNKNOWN      }
 };

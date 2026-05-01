@@ -24,13 +24,9 @@ FRONTEND_PROLOG = \
     frontend/prolog/pl_broker.c
 
 FRONTEND_SNOCONE = \
-    ../archive/snocone_lex.c \
-    ../archive/snocone_parse.c \
     frontend/snocone/snocone_lex.c \
     frontend/snocone/snocone_parse.tab.c \
-    frontend/snocone/snocone_driver.c \
-    frontend/snocone/snocone_lower.c \
-    frontend/snocone/snocone_control.c
+    frontend/snocone/snocone_driver.c
 
 FRONTEND_REBUS = \
     frontend/rebus/rebus_lower.c \

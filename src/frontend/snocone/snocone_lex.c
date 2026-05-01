@@ -141,7 +141,8 @@ static const KwEntry KW_TABLE[] = {
     { "break",    T_BREAK    },
     { "continue", T_CONTINUE },
     { "goto",     T_GOTO     },
-    { "function", T_FUNCTION },
+    { "function",   T_FUNCTION },
+    { "procedure",  T_FUNCTION },  /* LS-4.k: synonym until corpus migrated to function (LS-5) */
     { "return",   T_RETURN   },
     { "freturn",  T_FRETURN  },
     { "nreturn",  T_NRETURN  },
@@ -359,34 +360,29 @@ S_OP_GT:
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_PLUS:
     if (PEEK(1) == '=' )                                           {  ADV(2);                                              goto E_PLUS_ASSIGN;  }
-    if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_ADD;       }
-    if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
+    if (last_value)                                                {  ADV(1);                                              goto E_ADD;       }
                                                                    {  ADV(1);                                              goto E_UN_PLUS;   }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_MINUS:
     if (PEEK(1) == '=' )                                           {  ADV(2);                                              goto E_MINUS_ASSIGN; }
-    if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_SUB;       }
-    if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
+    if (last_value)                                                {  ADV(1);                                              goto E_SUB;       }
                                                                    {  ADV(1);                                              goto E_UN_MINUS;  }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_STAR:
     if (PEEK(1) == '*' && is_rws_at(p, 2))                         {  ADV(2);                                              goto E_EXP;       }
     if (PEEK(1) == '=' )                                           {  ADV(2);                                              goto E_STAR_ASSIGN;  }
-    if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_MUL;       }
-    if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
+    if (last_value)                                                {  ADV(1);                                              goto E_MUL;       }
     if (PEEK(1) == '*' )                                           {  ADV(2);                                              goto E_EXP;       }
                                                                    {  ADV(1);                                              goto E_UN_STAR;   }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_SLASH:
     if (PEEK(1) == '=' )                                           {  ADV(2);                                              goto E_SLASH_ASSIGN; }
-    if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_DIV;       }
-    if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
+    if (last_value)                                                {  ADV(1);                                              goto E_DIV;       }
                                                                    {  ADV(1);                                              goto E_UN_SLASH;  }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_CARET:
     if (PEEK(1) == '=' )                                           {  ADV(2);                                              goto E_CARET_ASSIGN; }
-    if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_EXP;       }
-    if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
+    if (last_value)                                                {  ADV(1);                                              goto E_EXP;       }
                                                                    {  ADV(1);                                              goto E_EXP;       }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_PIPE:
