@@ -1247,6 +1247,37 @@ expr17      : T_CALL T_LPAREN exprlist T_RPAREN
                                 { $$ = sc_str_literal($1); free($1); }
             | T_LPAREN expr0 T_RPAREN
                                 { $$ = $2; }
+            /* ---- LS-4.i.4 alt-eval ----
+             * SPITBOL extension (Manual Ch.15 footnote):
+             *   A = (LT(I,J) I , GT(I,J) J , "Same")
+             * A parenthesised, comma-separated list of expressions is
+             * evaluated left-to-right; the value of the first to succeed
+             * is the value of the whole; if all fail, the whole fails.
+             * Goal file calls this "alt-eval" — Andrew Koenig's `||`
+             * lowered to this form, so dropping `||` and exposing the
+             * primitive directly is the canonical replacement.
+             *
+             * Lower to E_VLIST n-ary node — IR kind already exists in
+             * src/ir/ir.h:83 with this exact semantics.  Mirrors
+             * snobol4.y:195 byte-for-byte.  Distinct from E_ALT
+             * (pattern alternation, lazy at match time).
+             *
+             * LR(1) lookahead disambiguates the two paren-rules cleanly:
+             *   T_LPAREN expr0  ·  { T_RPAREN | T_COMMA }
+             * — T_RPAREN reduces to plain grouping; T_COMMA shifts into
+             * the VLIST production.  Zero shift/reduce conflicts.    */
+            | T_LPAREN expr0 T_COMMA exprlist_ne T_RPAREN
+                                { EXPR_t *a = expr_new(E_VLIST);
+                                  expr_add_child(a, $2);
+                                  for (int i = 0; i < $4->nchildren; i++)
+                                      expr_add_child(a, $4->children[i]);
+                                  free($4->children); free($4);
+                                  $$ = a; }
+            /* Empty parens `()` — mirror snobol4.y:196.  Yields E_NUL,
+             * the canonical null/empty expression.  Same semantics as
+             * SPITBOL `()` evaluating to the null string.             */
+            | T_LPAREN T_RPAREN
+                                { $$ = expr_new(E_NUL); }
             | T_1PLUS  expr17
                                 { $$ = expr_unary(E_PLS, $2); }
             | T_1MINUS expr17

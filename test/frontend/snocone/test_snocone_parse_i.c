@@ -6,6 +6,8 @@
  *                                                                  (tests 16–31)
  * Sub-step LS-4.i.3: `switch (e) { case v1: ... case v2: ... default: ... }`.
  *                                                                  (tests 32–45)
+ * Sub-step LS-4.i.4: alt-eval `(a, b, c)` → E_VLIST + `()` → E_NUL.
+ *                                                                  (tests 46–58)
  *
  * LS-4.i.1 lowering shapes:
  *
@@ -1265,6 +1267,409 @@ static void test_case_outside_switch_error(void) {
     ASSERT(prog == NULL, "case outside switch must be a parse error");
 }
 
+/* =========================================================================
+ * LS-4.i.4 — alt-eval `(a, b, c)` → E_VLIST  (tests 46–58)
+ *
+ * Goal-file lowering shape:
+ *
+ *   (e1, e2, ..., en)   ->   E_VLIST(e1, e2, ..., en)
+ *                            n-ary node, one child per comma-separated expr.
+ *                            Goal-directed value-context disjunction —
+ *                            evaluate left-to-right, value of first
+ *                            non-failing child is value of whole; if all
+ *                            fail, whole fails.
+ *
+ *   ()                  ->   E_NUL  (empty parens, mirrors snobol4.y:196)
+ *   (e)                 ->   <e>    (single-expr grouping unchanged —
+ *                                    LR(1) lookahead at T_RPAREN
+ *                                    distinguishes from VLIST's T_COMMA)
+ *
+ * Distinct from E_ALT (pattern alternation, lazy at match time) — IR
+ * comment at src/ir/ir.h:83-87 is explicit on this.  E_VLIST is the
+ * canonical replacement for Andrew Koenig's `||` operator (goal file
+ * Q2) and the SPITBOL Manual Ch.15 footnote primitive.
+ * ========================================================================= */
+
+/* True if expr is an E_VLIST with the given child count. */
+static int is_vlist(EXPR_t *e, int n) {
+    return e && e->kind == E_VLIST && e->nchildren == n;
+}
+
+/* True if expr is the literal E_NUL kind (empty-parens result). */
+static int is_nul(EXPR_t *e) {
+    return e && e->kind == E_NUL;
+}
+
+/* True if expr is a bare variable reference with the given name. */
+static int is_var_named(EXPR_t *e, const char *name) {
+    return e && e->kind == E_VAR && e->sval && strcmp(e->sval, name) == 0;
+}
+
+/* =========================================================================
+ * Test 46 — headline 3-arity alt-eval
+ *   x = (a, b, c);
+ *   Expected:
+ *     stmt[0] assignment: x = E_VLIST(VAR a, VAR b, VAR c)
+ * ========================================================================= */
+static void test_vlist_three_args(void) {
+    Program *prog = snocone_parse_program("x = (a, b, c);", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(n == 1, "expected 1 stmt, got %d", n);
+    if (n >= 1) {
+        ASSERT(is_assignment(stmts[0]), "stmt[0] should be assignment");
+        EXPR_t *rhs = stmts[0]->replacement;
+        ASSERT(is_vlist(rhs, 3), "RHS should be E_VLIST with 3 children, kind=%d nch=%d",
+               rhs ? rhs->kind : -1, rhs ? rhs->nchildren : -1);
+        if (is_vlist(rhs, 3)) {
+            ASSERT(is_var_named(rhs->children[0], "a"), "child[0] should be VAR a");
+            ASSERT(is_var_named(rhs->children[1], "b"), "child[1] should be VAR b");
+            ASSERT(is_var_named(rhs->children[2], "c"), "child[2] should be VAR c");
+        }
+    }
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 47 — minimum 2-arity alt-eval
+ *   x = (a, b);
+ * ========================================================================= */
+static void test_vlist_two_args(void) {
+    Program *prog = snocone_parse_program("x = (a, b);", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    if (n >= 1) {
+        EXPR_t *rhs = stmts[0]->replacement;
+        ASSERT(is_vlist(rhs, 2), "RHS should be E_VLIST with 2 children");
+        if (is_vlist(rhs, 2)) {
+            ASSERT(is_var_named(rhs->children[0], "a"), "child[0] should be VAR a");
+            ASSERT(is_var_named(rhs->children[1], "b"), "child[1] should be VAR b");
+        }
+    }
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 48 — single-expr grouping unchanged (regression guard)
+ *   x = (a);
+ *   The single-expr paren rule must STILL fire — RHS is bare VAR a, NOT
+ *   a 1-arity E_VLIST.  This exercises the LR(1) lookahead path (T_RPAREN
+ *   after expr0 reduces to plain grouping).
+ * ========================================================================= */
+static void test_paren_grouping_unchanged(void) {
+    Program *prog = snocone_parse_program("x = (a);", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    if (n >= 1) {
+        EXPR_t *rhs = stmts[0]->replacement;
+        ASSERT(is_var_named(rhs, "a"),
+               "RHS of x = (a) should be bare VAR a — not E_VLIST. kind=%d",
+               rhs ? rhs->kind : -1);
+    }
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 49 — empty parens → E_NUL
+ *   x = ();
+ *   Mirrors snobol4.y:196.  E_NUL is the canonical null/empty expression.
+ * ========================================================================= */
+static void test_empty_parens(void) {
+    Program *prog = snocone_parse_program("x = ();", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    if (n >= 1) {
+        EXPR_t *rhs = stmts[0]->replacement;
+        ASSERT(is_nul(rhs), "RHS of x = () should be E_NUL, kind=%d",
+               rhs ? rhs->kind : -1);
+    }
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 50 — SPITBOL Manual Ch.15 footnote example
+ *   A = (LT(I,J) I, GT(I,J) J, "Same");
+ *   The canonical alt-eval example.  RHS is E_VLIST(3) where each child
+ *   is a complex sub-expression: child[0] is concat of LT call and I,
+ *   child[1] is concat of GT call and J, child[2] is the string "Same".
+ *
+ *   Note the FSM lexer's W{OP}W envelope — `LT(I,J) I` lexes the gap
+ *   between `)` and `I` as T_CONCAT, so that child becomes E_SEQ(call, I).
+ * ========================================================================= */
+static void test_vlist_spitbol_manual_example(void) {
+    Program *prog = snocone_parse_program(
+        "A = (LT(I,J) I, GT(I,J) J, \"Same\");", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    if (n >= 1) {
+        EXPR_t *rhs = stmts[0]->replacement;
+        ASSERT(is_vlist(rhs, 3), "RHS should be E_VLIST(3), kind=%d nch=%d",
+               rhs ? rhs->kind : -1, rhs ? rhs->nchildren : -1);
+        if (is_vlist(rhs, 3)) {
+            /* child[0]: LT(I,J) I — a concat: E_SEQ(E_FNC LT, E_VAR I) */
+            EXPR_t *c0 = rhs->children[0];
+            ASSERT(c0->kind == E_SEQ && c0->nchildren == 2,
+                   "child[0] should be E_SEQ(2), kind=%d nch=%d",
+                   c0->kind, c0->nchildren);
+            if (c0->kind == E_SEQ && c0->nchildren == 2) {
+                ASSERT(c0->children[0]->kind == E_FNC,
+                       "child[0].child[0] should be E_FNC (LT call)");
+                ASSERT(is_var_named(c0->children[1], "I"),
+                       "child[0].child[1] should be VAR I");
+            }
+            /* child[2]: "Same" — string literal */
+            EXPR_t *c2 = rhs->children[2];
+            ASSERT(c2->kind == E_QLIT && c2->sval &&
+                   strcmp(c2->sval, "Same") == 0,
+                   "child[2] should be QLIT \"Same\", kind=%d sval=%s",
+                   c2->kind, c2->sval ? c2->sval : "(null)");
+        }
+    }
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 51 — nested VLIST
+ *   x = ((a, b), c);
+ *   Outer is E_VLIST(2): children = [E_VLIST(2, a, b), VAR c].
+ *   Demonstrates that a VLIST is itself an expr0, so it can sit inside
+ *   another VLIST without flattening.  (E_VLIST is NOT a left-recursive
+ *   fold like E_SEQ/E_ALT — each paren-pair builds its own node.)
+ * ========================================================================= */
+static void test_vlist_nested(void) {
+    Program *prog = snocone_parse_program("x = ((a, b), c);", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    if (n >= 1) {
+        EXPR_t *rhs = stmts[0]->replacement;
+        ASSERT(is_vlist(rhs, 2), "outer RHS should be E_VLIST(2), nch=%d",
+               rhs ? rhs->nchildren : -1);
+        if (is_vlist(rhs, 2)) {
+            ASSERT(is_vlist(rhs->children[0], 2),
+                   "child[0] should be inner E_VLIST(2)");
+            ASSERT(is_var_named(rhs->children[1], "c"),
+                   "child[1] should be VAR c");
+        }
+    }
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 52 — VLIST as if-condition
+ *   if ((a, b)) y = 1;
+ *   Per goal Q2: alt-eval is the canonical replacement for `||` in
+ *   conditions.  The cond expr is E_VLIST(2); LS-4.f's emit-and-splice
+ *   architecture lowers it to `<vlist> :F(_Lend_NNNN)` with the assignment
+ *   in between.  We verify the cond stmt has E_VLIST as its subject.
+ * ========================================================================= */
+static void test_vlist_as_if_condition(void) {
+    Program *prog = snocone_parse_program("if ((a, b)) y = 1;", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    /* Expected shape (from LS-4.f):
+     *   stmt[0]  cond:F(_Lend)        — subject is VLIST, has F-branch
+     *   stmt[1]  y = 1                — body assignment
+     *   stmt[2]  _Lend_NNNN           — end label pad
+     */
+    ASSERT(n == 3, "expected 3 stmts (cond, body, _Lend), got %d", n);
+    if (n >= 1) {
+        EXPR_t *cond = stmts[0]->subject;
+        ASSERT(is_vlist(cond, 2),
+               "stmt[0] subject should be E_VLIST(2), kind=%d nch=%d",
+               cond ? cond->kind : -1, cond ? cond->nchildren : -1);
+        ASSERT(stmts[0]->go != NULL,
+               "stmt[0] should have an :F goto branch");
+    }
+    if (n >= 2) {
+        ASSERT(is_assignment(stmts[1]), "stmt[1] should be the y = 1 body");
+    }
+    if (n >= 3) {
+        ASSERT(is_label_pad(stmts[2]),
+               "stmt[2] should be the _Lend label pad");
+    }
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 53 — VLIST inside arithmetic
+ *   x = (a, b) + 1;
+ *   VLIST yields a value, so it can be an operand of any binary operator.
+ *   RHS is E_ADD(E_VLIST(2, a, b), 1).
+ * ========================================================================= */
+static void test_vlist_in_arithmetic(void) {
+    Program *prog = snocone_parse_program("x = (a, b) + 1;", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    if (n >= 1) {
+        EXPR_t *rhs = stmts[0]->replacement;
+        ASSERT(rhs && rhs->kind == E_ADD && rhs->nchildren == 2,
+               "RHS should be E_ADD(2), kind=%d", rhs ? rhs->kind : -1);
+        if (rhs && rhs->kind == E_ADD && rhs->nchildren == 2) {
+            ASSERT(is_vlist(rhs->children[0], 2),
+                   "ADD's left operand should be E_VLIST(2)");
+            ASSERT(rhs->children[1]->kind == E_ILIT &&
+                   rhs->children[1]->ival == 1,
+                   "ADD's right operand should be ILIT 1");
+        }
+    }
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 54 — VLIST distinct from E_ALT (pattern alternation)
+ *   x = (a | b, c);
+ *   Inside parens, `,` separates VLIST children; `|` (within one child)
+ *   is pattern alternation and folds into E_ALT.  Result: outer is
+ *   E_VLIST(2) where child[0] is E_ALT(a, b) and child[1] is VAR c.
+ *   This proves the IR distinction documented at src/ir/ir.h:82-87.
+ * ========================================================================= */
+static void test_vlist_distinct_from_ealt(void) {
+    Program *prog = snocone_parse_program("x = (a | b, c);", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    if (n >= 1) {
+        EXPR_t *rhs = stmts[0]->replacement;
+        ASSERT(is_vlist(rhs, 2), "RHS should be E_VLIST(2), kind=%d nch=%d",
+               rhs ? rhs->kind : -1, rhs ? rhs->nchildren : -1);
+        if (is_vlist(rhs, 2)) {
+            EXPR_t *c0 = rhs->children[0];
+            ASSERT(c0->kind == E_ALT && c0->nchildren == 2,
+                   "child[0] should be E_ALT(2), kind=%d nch=%d",
+                   c0->kind, c0->nchildren);
+            ASSERT(is_var_named(rhs->children[1], "c"),
+                   "child[1] should be VAR c");
+        }
+    }
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 55 — call (E_FNC) is NOT VLIST (regression guard)
+ *   x = f(a, b);
+ *   The T_CALL T_LPAREN exprlist T_RPAREN rule (zero-space-after-IDENT)
+ *   wins over the new T_LPAREN expr0 T_COMMA exprlist_ne T_RPAREN rule
+ *   because the lexer emits T_CALL for `f(`, not T_IDENT then T_LPAREN.
+ *   RHS is E_FNC("f", a, b), not E_VLIST.
+ * ========================================================================= */
+static void test_call_not_vlist(void) {
+    Program *prog = snocone_parse_program("x = f(a, b);", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    if (n >= 1) {
+        EXPR_t *rhs = stmts[0]->replacement;
+        ASSERT(rhs && rhs->kind == E_FNC,
+               "RHS should be E_FNC (call), kind=%d", rhs ? rhs->kind : -1);
+        ASSERT(rhs && rhs->sval && strcmp(rhs->sval, "f") == 0,
+               "E_FNC sval should be \"f\"");
+        ASSERT(rhs && rhs->nchildren == 2,
+               "E_FNC should have 2 children");
+    }
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 56 — VLIST as bare expression statement
+ *   (a, b);
+ *   A bare expression statement (per goal "Bare expressions, statements,
+ *   failure" section) is just expr0 + ';'.  Failure is silent; success
+ *   has no further consequence.  Verifies VLIST works at top-level
+ *   stmt position.
+ * ========================================================================= */
+static void test_vlist_bare_statement(void) {
+    Program *prog = snocone_parse_program("(a, b);", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    ASSERT(n == 1, "expected 1 stmt, got %d", n);
+    if (n >= 1) {
+        ASSERT(is_bare_expr(stmts[0]),
+               "stmt[0] should be bare expression (subject, no goto)");
+        ASSERT(is_vlist(stmts[0]->subject, 2),
+               "subject should be E_VLIST(2), kind=%d",
+               stmts[0]->subject ? stmts[0]->subject->kind : -1);
+    }
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 57 — VLIST inside while-condition
+ *   while ((a, b)) y = 1;
+ *   Same shape as Test 52 but for while: cond is E_VLIST(2), drives the
+ *   loop's :F-on-fail exit.  Per LS-4.f lowering: _Ltop, cond:F(_Lend),
+ *   <body>, :(_Ltop), _Lend.
+ * ========================================================================= */
+static void test_vlist_as_while_condition(void) {
+    Program *prog = snocone_parse_program("while ((a, b)) y = 1;", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    /* Expected: _Ltop, cond:F(_Lend), body, :(_Ltop), _Lend */
+    ASSERT(n == 5, "expected 5 stmts, got %d", n);
+    if (n >= 2) {
+        EXPR_t *cond = stmts[1]->subject;
+        ASSERT(is_vlist(cond, 2),
+               "stmt[1] subject should be E_VLIST(2), kind=%d nch=%d",
+               cond ? cond->kind : -1, cond ? cond->nchildren : -1);
+        ASSERT(stmts[1]->go != NULL,
+               "stmt[1] should have an :F goto branch");
+    }
+    free(stmts);
+}
+
+/* =========================================================================
+ * Test 58 — VLIST with all-literal children
+ *   x = (1, 2, "three");
+ *   A no-VAR alt-eval — every child is a literal.  All three succeed
+ *   trivially under SPITBOL semantics, so this evaluates to 1, but at
+ *   parse-time we just verify the VLIST shape.
+ * ========================================================================= */
+static void test_vlist_literals(void) {
+    Program *prog = snocone_parse_program("x = (1, 2, \"three\");", "test");
+    ASSERT(prog != NULL, "parse failed");
+    if (!prog) return;
+
+    int n; STMT_t **stmts = collect_stmts(prog, &n);
+    if (n >= 1) {
+        EXPR_t *rhs = stmts[0]->replacement;
+        ASSERT(is_vlist(rhs, 3), "RHS should be E_VLIST(3)");
+        if (is_vlist(rhs, 3)) {
+            ASSERT(rhs->children[0]->kind == E_ILIT &&
+                   rhs->children[0]->ival == 1,
+                   "child[0] should be ILIT 1");
+            ASSERT(rhs->children[1]->kind == E_ILIT &&
+                   rhs->children[1]->ival == 2,
+                   "child[1] should be ILIT 2");
+            ASSERT(rhs->children[2]->kind == E_QLIT &&
+                   rhs->children[2]->sval &&
+                   strcmp(rhs->children[2]->sval, "three") == 0,
+                   "child[2] should be QLIT \"three\"");
+        }
+    }
+    free(stmts);
+}
+
 int main(void) {
     /* LS-4.i.1 — goto/label */
     test_goto_bare();
@@ -1314,6 +1719,20 @@ int main(void) {
     test_switch_inside_if();
     test_switch_with_user_label();
     test_case_outside_switch_error();
+    /* LS-4.i.4 — alt-eval (a, b, c) → E_VLIST */
+    test_vlist_three_args();
+    test_vlist_two_args();
+    test_paren_grouping_unchanged();
+    test_empty_parens();
+    test_vlist_spitbol_manual_example();
+    test_vlist_nested();
+    test_vlist_as_if_condition();
+    test_vlist_in_arithmetic();
+    test_vlist_distinct_from_ealt();
+    test_call_not_vlist();
+    test_vlist_bare_statement();
+    test_vlist_as_while_condition();
+    test_vlist_literals();
     printf("=== Results: %d passed, %d failed ===\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;
 }
