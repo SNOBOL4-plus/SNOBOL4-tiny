@@ -12,6 +12,7 @@
  */
 #include "pl_runtime.h"
 #include <math.h>
+#include <limits.h>
 #include "../../ir/ir.h"
 #include "../../frontend/snobol4/scrip_cc.h"
 #include "../../frontend/prolog/prolog_driver.h"
@@ -324,9 +325,25 @@ static Term *pl_unified_eval_arith_term(EXPR_t *e, Term **env) {
             Term *lb=pl_unified_eval_arith_term(e->children[1],env);
             int fl=(la&&la->tag==TT_FLOAT)||(lb&&lb->tag==TT_FLOAT);
             if (fl) { double d=_ED(e->children[1]); return term_new_float(d?_ED(e->children[0])/d:0.0); }
-            else    { long  d=_EI(e->children[1]);  return term_new_int(d?_EI(e->children[0])/d:0); }
+            else    {
+                long  n=_EI(e->children[0]);
+                long  d=_EI(e->children[1]);
+                if (!d) return term_new_int(0);
+                /* INT_MIN/-1 overflows on x86 — would raise SIGFPE.
+                 * Standard Prolog: throw evaluation_error(int_overflow);
+                 * we return LONG_MIN to avoid the crash (matches GNU Prolog
+                 * unbounded fallback shape; refined when bigint lands). */
+                if (n == LONG_MIN && d == -1) return term_new_int(LONG_MIN);
+                return term_new_int(n/d);
+            }
         }
-        case E_MOD: { long d=_EI(e->children[1]); return term_new_int(d?_EI(e->children[0])%d:0); }
+        case E_MOD: {
+            long n=_EI(e->children[0]);
+            long d=_EI(e->children[1]);
+            if (!d) return term_new_int(0);
+            if (n == LONG_MIN && d == -1) return term_new_int(0);  /* INT_MIN%-1 == 0, also FPEs */
+            return term_new_int(n%d);
+        }
         case E_FNC: {
             const char *fn = e->sval ? e->sval : "";
             /* two-arg integer bitwise / misc */
@@ -336,8 +353,18 @@ static Term *pl_unified_eval_arith_term(EXPR_t *e, Term **env) {
             if (strcmp(fn,"<<")==0&&e->nchildren==2)  return term_new_int(_EI(e->children[0])<<_EI(e->children[1]));
             if (strcmp(fn,">>")==0&&e->nchildren==2)  return term_new_int(_EI(e->children[0])>>_EI(e->children[1]));
             if (strcmp(fn,"\\")==0&&e->nchildren==1)  return term_new_int(~_EI(e->children[0]));
-            if (strcmp(fn,"mod")==0&&e->nchildren==2) { long d=_EI(e->children[1]); return term_new_int(d?_EI(e->children[0])%d:0); }
-            if (strcmp(fn,"rem")==0&&e->nchildren==2) { long d=_EI(e->children[1]); return term_new_int(d?_EI(e->children[0])%d:0); }
+            if (strcmp(fn,"mod")==0&&e->nchildren==2) {
+                long n=_EI(e->children[0]); long d=_EI(e->children[1]);
+                if (!d) return term_new_int(0);
+                if (n == LONG_MIN && d == -1) return term_new_int(0);
+                return term_new_int(n%d);
+            }
+            if (strcmp(fn,"rem")==0&&e->nchildren==2) {
+                long n=_EI(e->children[0]); long d=_EI(e->children[1]);
+                if (!d) return term_new_int(0);
+                if (n == LONG_MIN && d == -1) return term_new_int(0);
+                return term_new_int(n%d);
+            }
             /* two-arg float-aware */
             if (strcmp(fn,"**")==0&&e->nchildren==2) return term_new_float(pow(_ED(e->children[0]),_ED(e->children[1])));
             if (strcmp(fn,"max")==0&&e->nchildren==2) { Term *la=pl_unified_eval_arith_term(e->children[0],env),*lb=pl_unified_eval_arith_term(e->children[1],env); int fl=(la&&la->tag==TT_FLOAT)||(lb&&lb->tag==TT_FLOAT); return fl?(_ED(e->children[0])>=_ED(e->children[1])?la:lb):(_EI(e->children[0])>=_EI(e->children[1])?la:lb); }
