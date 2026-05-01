@@ -1204,8 +1204,26 @@ DESCR_t interp_eval(EXPR_t *e)
                             int n = (int)FIELD_GET_fn(cv, "icn_size").i;
                             DESCR_t *elems = (ea.v == DT_DATA) ? (DESCR_t *)ea.ptr : NULL;
                             if (elems && n > 0) for (int i = 0; i < n; i++) elems[i] = val;
+                        } else if (cv.u && cv.u->type && cv.u->type->nfields > 0 && cv.u->fields) {
+                            /* IC-9 (2026-05-01): every !record := V — write val into every field cell */
+                            for (int i = 0; i < cv.u->type->nfields; i++) cv.u->fields[i] = val;
                         }
                     }
+                }
+            } else if (lhs && lhs->kind == E_RANDOM && lhs->nchildren >= 1) {
+                /* IC-9 (2026-05-01): ?container := V — write val into a random cell.
+                 * Mirrors E_RANDOM read: deterministic LCG (Knuth MMIX) so output
+                 * is reproducible. Currently only DT_DATA records — table/list random
+                 * write would need its own RNG state to match read-side picks (the
+                 * E_RANDOM read at line ~4313 has its own static seed; sharing it
+                 * here would be incorrect since reads and writes interleave). */
+                DESCR_t cv = interp_eval(lhs->children[0]);
+                if (!IS_FAIL_fn(cv) && cv.v == DT_DATA && cv.u && cv.u->type
+                    && cv.u->type->nfields > 0 && cv.u->fields) {
+                    static unsigned long _rnd_w_seed = 67890UL;
+                    _rnd_w_seed = _rnd_w_seed * 6364136223846793005UL + 1442695040888963407UL;
+                    int n = cv.u->type->nfields;
+                    cv.u->fields[(_rnd_w_seed >> 33) % (unsigned long)n] = val;
                 }
             }
             return val;
@@ -4354,6 +4372,11 @@ DESCR_t interp_eval(EXPR_t *e)
                 DESCR_t *elems = (DESCR_t *)ea.ptr;
                 return elems[_rnd % (unsigned long)n];
             }
+            /* IC-9 (2026-05-01): DT_DATA record — pick random field value, fail if no fields */
+            if (v.u && v.u->type && v.u->type->nfields > 0 && v.u->fields) {
+                int n = v.u->type->nfields;
+                return v.u->fields[_rnd % (unsigned long)n];
+            }
             return FAILDESCR;
         }
         /* Integer — random in [1,n]; fail if n ≤ 0 */
@@ -4493,6 +4516,10 @@ DESCR_t interp_eval(EXPR_t *e)
                         int n = (int)FIELD_GET_fn(cv, "icn_size").i;
                         DESCR_t *elems = (ea.v == DT_DATA) ? (DESCR_t *)ea.ptr : NULL;
                         if (elems && n > 0) for (int i = 0; i < n; i++) AUGOP_CELL(elems[i]);
+                    } else if (cv.u && cv.u->type && cv.u->type->nfields > 0 && cv.u->fields) {
+                        /* IC-9 (2026-05-01): every !record OP:= V — apply OP to each field cell.
+                         * Mirrors the table/list branches above; same AUGOP_CELL macro semantics. */
+                        for (int i = 0; i < cv.u->type->nfields; i++) AUGOP_CELL(cv.u->fields[i]);
                     }
                 }
                 #undef AUGOP_CELL
@@ -4558,6 +4585,13 @@ DESCR_t interp_eval(EXPR_t *e)
                     DESCR_t *elems=(ea.v==DT_DATA)?(DESCR_t*)ea.ptr:NULL;
                     if(!elems||n<=0) return FAILDESCR;
                     return elems[0];
+                }
+                /* IC-9 (2026-05-01): DT_DATA record — !R returns first field value.
+                 * Mirrors the icnlist branch above: scalar context yields child 0,
+                 * every-context drives the rest via icn_bb_record_iterate.  See
+                 * icn_eval_gen E_ITERATE for the box. */
+                if (sv.u && sv.u->type && sv.u->type->nfields > 0 && sv.u->fields) {
+                    return sv.u->fields[0];
                 }
             }
         }

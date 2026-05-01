@@ -68,6 +68,10 @@ typedef struct { TBBLK_t *tbl; int bucket; TBPAIR_t *entry; }                   
 typedef struct { DESCR_t list_obj; int pos; }                                         icn_list_iterate_state_t;
 DESCR_t icn_bb_list_iterate(void *zeta, int entry);
 DESCR_t icn_bb_tbl_key_iterate(void *zeta, int entry);
+/* IC-9 (2026-05-01): !record — yield each field value of a DT_DATA record (non-icnlist).
+ *   inst is the live DATINST_t descriptor; pos walks 0..type->nfields. */
+typedef struct { DESCR_t inst; int pos; }                                             icn_record_iterate_state_t;
+DESCR_t icn_bb_record_iterate(void *zeta, int entry);
 typedef struct { const char *needle; const char *hay; int nlen; const char *next; }  icn_find_state_t;
 typedef struct {
     ucontext_t  gen_ctx;

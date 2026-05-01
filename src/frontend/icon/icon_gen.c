@@ -157,6 +157,25 @@ DESCR_t icn_bb_list_iterate(void *zeta, int entry) {
 }
 
 /*============================================================================================================================
+ * IC-9 (2026-05-01): icn_bb_record_iterate — E_ITERATE Byrd box for DT_DATA records (!R yields field values).
+ *   Records are DT_DATA but NOT the icnlist shape (no "icn_type" tag of "list"); their structure lives in
+ *   inst.u->type->nfields and inst.u->fields[i].  Iterates fields in declaration order.  Re-reads the live
+ *   instance each tick so mutations made between ticks (rare; field-iteration usually one-pass) are visible.
+ *   α: pos=0, return fields[0] (or fail if nfields==0).
+ *   β: pos++, return fields[pos] (or fail when pos >= nfields).
+ *============================================================================================================================*/
+DESCR_t icn_bb_record_iterate(void *zeta, int entry) {
+    icn_record_iterate_state_t *z = (icn_record_iterate_state_t *)zeta;
+    if (z->inst.v != DT_DATA || !z->inst.u || !z->inst.u->type) return FAILDESCR;
+    int n = z->inst.u->type->nfields;
+    if (n <= 0 || !z->inst.u->fields) return FAILDESCR;
+    if (entry == α) z->pos = 0;
+    else            z->pos++;
+    if (z->pos >= n) return FAILDESCR;
+    return z->inst.u->fields[z->pos];
+}
+
+/*============================================================================================================================
  * IC-6: icn_bb_tbl_key_iterate — key(T) generator: yields each key in table T
  *   Same bucket-walk as icn_bb_tbl_iterate but returns entry->key_descr instead of entry->val.
  *============================================================================================================================*/

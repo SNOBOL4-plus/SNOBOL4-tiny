@@ -1022,6 +1022,18 @@ bb_node_t icn_eval_gen(EXPR_t *e) {
                 lz->pos      = 0;
                 return (bb_node_t){ icn_bb_list_iterate, lz, 0 };
             }
+            /* IC-9 (2026-05-01): DT_DATA record — !R yields each field value.
+             * Only routes here when the DT_DATA carries a real DATINST_t with a type
+             * (lists themselves also use DT_DATA but with the icnlist shape above and
+             * an icn_elems pointer that wouldn't have a usable .u->type).  Falls
+             * through to char-iterate if type is missing — keeps the historical
+             * char-iterate-on-string-shaped-DT_DATA behaviour for any other path. */
+            if (sv.u && sv.u->type && sv.u->type->nfields > 0) {
+                icn_record_iterate_state_t *rz = calloc(1, sizeof(*rz));
+                rz->inst = sv;
+                rz->pos  = 0;
+                return (bb_node_t){ icn_bb_record_iterate, rz, 0 };
+            }
         }
         /* Icon char mode */
         icn_iterate_state_t *z = calloc(1, sizeof(*z));
