@@ -1,15 +1,24 @@
 /*
- * snocone.y — Snocone Bison grammar  (GOAL-SNOCONE-LANG-SPACE LS-4.a/b)
+ * snocone.y — Snocone Bison grammar  (GOAL-SNOCONE-LANG-SPACE LS-4.{a,b,c})
  *
  * Andrew Koenig's .sc self-host operator design + Lon's restoration of
- * SPITBOL space-as-concat semantics.  This file is the LS-4.a/b skeleton:
- * atoms (T_INT/T_REAL/T_STR/T_IDENT/T_KEYWORD), arithmetic (+ - * / ^),
- * paren-grouping, assignment, `;`-terminated statements, and (LS-4.b)
- * comparison/identity operators (== != < > <= >= :==: :!=: :<: :>: :<=:
- * :>=: :: :!:) lowered to E_FNC named calls, plus T_FUNCTION call-form
- * `EQ(2+2, 4)` → E_FNC("EQ", ...).  Everything else — concat,
- * alternation, match, control flow, switch, break/continue, goto,
- * alt-eval, more unaries — lands in LS-4.c through LS-4.i.
+ * SPITBOL space-as-concat semantics.  This file covers LS-4.a, LS-4.b,
+ * and LS-4.c:
+ *   * atoms (T_INT/T_REAL/T_STR/T_IDENT/T_KEYWORD)
+ *   * arithmetic (+ - * / ^)
+ *   * paren-grouping
+ *   * `;`-terminated statements
+ *   * assignment (T_ASSIGNMENT) + compound-assigns (+= -= *= /= ^=)
+ *   * comparison/identity (==, !=, <, >, <=, >=, :==:, :!=:, :<:, :>:,
+ *     :<=:, :>=:, ::, :!:) → E_FNC named calls
+ *   * T_FUNCTION call-form `EQ(2+2, 4)` → E_FNC("EQ", ...)
+ *   * pattern match `?`              → E_SCAN
+ *   * pattern alternation `|`        → E_ALT (n-ary fold)
+ *   * synthetic concat T_CONCAT      → E_SEQ (n-ary fold)
+ *
+ * Everything else — more unaries, subscripting, control flow, switch,
+ * break/continue, goto, alt-eval, struct — lands in LS-4.d through
+ * LS-4.i.
  *
  * Pipeline:
  *   snocone_lex.c  (threaded-code FSM lexer) -- sc_lex_next(ctx) -- single token per call
@@ -265,10 +274,11 @@ int  sc_lex  (SC_STYPE *yylval, ScParseState *st);
 void sc_error(ScParseState *st, const char *msg);
 
 /* Helpers — defined after %% */
-static void     sc_append_stmt   (ScParseState *st, EXPR_t *top);
-static EXPR_t  *sc_int_literal   (const char *txt);
-static EXPR_t  *sc_real_literal  (const char *txt);
-static EXPR_t  *sc_str_literal   (const char *txt);
+static void     sc_append_stmt        (ScParseState *st, EXPR_t *top);
+static EXPR_t  *sc_int_literal        (const char *txt);
+static EXPR_t  *sc_real_literal       (const char *txt);
+static EXPR_t  *sc_str_literal        (const char *txt);
+static EXPR_t  *sc_clone_expr_simple  (EXPR_t *e);  /* LS-4.c — for compound-assigns */
 
 /* sc_kind_to_tok — translate FSM ScKind (1..N) to Bison's sc_tokentype.
  *
@@ -321,8 +331,14 @@ static int sc_kind_to_tok(int sc_kind);
 %token T_UN_PLUS
 %token T_UN_MINUS
 
-/* ---- Assignment ---- */
+/* ---- Assignment + compound-assign (LS-4.a / LS-4.c) ---- */
 %token T_ASSIGNMENT
+%token T_PLUS_ASSIGN T_MINUS_ASSIGN T_STAR_ASSIGN T_SLASH_ASSIGN T_CARET_ASSIGN
+
+/* ---- Pattern operators (LS-4.c) ---- */
+%token T_MATCH                                    /* `?` — pri 1, lowers to E_SCAN */
+%token T_ALTERNATION                              /* `|` — pri 3, lowers to E_ALT  */
+%token T_CONCAT                                   /* synthesised by FSM at value boundaries — pri 4, lowers to E_SEQ */
 
 /* ---- Punctuation ---- */
 %token T_LPAREN
@@ -332,12 +348,10 @@ static int sc_kind_to_tok(int sc_kind);
 
 /* All other tokens the FSM may emit are declared here so the translation
  * table can index every FSM kind, but they have no productions yet —
- * encountering one in the input is a parse error.  LS-4.c–LS-4.i will
+ * encountering one in the input is a parse error.  LS-4.d–LS-4.i will
  * give them rules. */
-%token T_CONCAT T_MATCH T_ALTERNATION
 %token T_IMMEDIATE_ASSIGN T_COND_ASSIGN
 %token T_AMPERSAND T_AT_SIGN T_POUND T_PERCENT T_TILDE
-%token T_PLUS_ASSIGN T_MINUS_ASSIGN T_STAR_ASSIGN T_SLASH_ASSIGN T_CARET_ASSIGN
 %token T_UN_ASTERISK T_UN_SLASH T_UN_PERCENT
 %token T_UN_AT_SIGN T_UN_TILDE T_UN_DOLLAR_SIGN T_UN_PERIOD T_UN_POUND
 %token T_UN_VERTICAL_BAR T_UN_EQUAL T_UN_QUESTION_MARK T_UN_AMPERSAND
@@ -349,7 +363,7 @@ static int sc_kind_to_tok(int sc_kind);
 %token T_KW_FUNCTION T_KW_RETURN T_KW_FRETURN T_KW_NRETURN T_KW_STRUCT
 %token T_UNKNOWN
 
-%type <expr> expr0 expr5 expr6 expr9 expr11 expr17 exprlist exprlist_ne
+%type <expr> expr0 expr1 expr3 expr4 expr5 expr6 expr9 expr11 expr17 exprlist exprlist_ne
 
 %%
 
@@ -368,30 +382,119 @@ stmt        : expr0 T_SEMICOLON                { sc_append_stmt(st, $1); }
 
 /* ---- Expression precedence levels ----
  *
- * LS-4.a covers SPITBOL priorities 0 (assignment, right-assoc), 6 (+ -,
- * left-assoc), 8/9 (/ *, left-assoc — for LS-4.a we collapse to one
- * level; SPITBOL's distinct priority-8-vs-9 between / and * arrives
- * with full operator coverage in LS-4.c), 11 (^, right-assoc), and a
- * top atomic tier (literals, identifiers, keywords, parenthesised
- * expression, signed-prefix unaries).
+ * Level numbering matches snobol4.y so a reader who follows the
+ * SNOBOL4 grammar can map across directly.  Snocone's surface
+ * differs (`==`/`!=`/etc., space-as-concat instead of `&&`) but the
+ * underlying SPITBOL priorities are unchanged.  Active tiers
+ * after LS-4.{a,b,c}:
  *
- * LS-4.b adds expr5 — the comparison/identity tier, sitting between
- * expr0 (assignment) and expr6 (add/sub).  Per Andrew Koenig's
- * bconv[] (snocone.sc lines 32-60) all 14 comparison/identity
- * operators are at the same priority, BELOW arithmetic add/sub —
- * so `a + b == c + d` parses as `(a + b) == (c + d)`.  Each
- * comparison lowers to an E_FNC named call: `a == b` → E_FNC("EQ", a, b).
- * Left-associative chaining (rare but unambiguous: `a == b == c`
- * lowers to E_FNC("EQ", E_FNC("EQ", a, b), c)).
+ *   expr0  — assignment `=` + compound-assigns (+= -= *= /= ^=)   pri 0   right-assoc
+ *   expr1  — pattern match `?`                                     pri 1   right-assoc
+ *   expr3  — pattern alternation `|` (n-ary E_ALT)                 pri 3   right-assoc fold
+ *   expr4  — concatenation T_CONCAT (n-ary E_SEQ)                  pri 4   right-assoc fold
+ *   expr5  — comparison/identity sugar (==, !=, <, >, <=, >=,      pri 6 (Andrew)
+ *            :==:, :!=:, :<:, :>:, :<=:, :>=:, ::, :!:) → E_FNC    left-assoc
+ *   expr6  — addition / subtraction                                pri 6/7 (SPITBOL/Andrew) left-assoc
+ *   expr9  — multiplication / division                             pri 8/9 left-assoc
+ *   expr11 — exponentiation                                        pri 11  right-assoc
+ *   expr17 — atoms (literals, idents, keywords, parens, T_FUNCTION,
+ *            unary +/-)
  *
- * The level numbers (expr0/expr5/expr6/expr9/expr11/expr17) match
- * snobol4.y's naming so a reader who follows the SNOBOL4 grammar
- * can map across directly.  Skipped levels (expr2..expr4, expr7,
- * expr8, expr10, expr12..expr16) appear in LS-4.c–LS-4.i.
+ * Skipped levels (expr2, expr7, expr8, expr10, expr12..expr16) are
+ * reserved for OPSYN slots and the dual-role unary-on-atom tier;
+ * they fill in across LS-4.d–LS-4.i.  Each tier delegates to the
+ * next-higher level in its base case (`| expr<next> { $$ = $1; }`),
+ * giving a clean precedence climber with no shift/reduce conflicts.
  */
 
-expr0       : expr5 T_ASSIGNMENT expr0
+/* ---- Assignment tier (LS-4.a) + compound-assigns (LS-4.c) ----
+ *
+ * Plain `=` is SPITBOL priority 0, right-associative; `a = b = c`
+ * parses as `a = (b = c)`.  Compound-assigns (`+=` `-=` `*=` `/=` `^=`)
+ * are Snocone-only sugar (Andrew's .sc doesn't have them but the FSM
+ * lexer already recognises them).  Each lowers to a clone-LHS pattern:
+ *   `a += b`  →  E_ASSIGN(a, E_ADD(clone(a), b))
+ * Restricted to "simple" (atomic) LHS — E_VAR, E_KEYWORD, E_IDX, and
+ * leaf literals — via sc_clone_expr_simple's coverage; complex LHS
+ * (e.g. `f(x) += 1`) gets a trap'd assertion at clone time.  This
+ * matches typical compound-assign use (`count += step`, `total *= 2`).
+ */
+expr0       : expr1 T_ASSIGNMENT    expr0
                                 { $$ = expr_binary(E_ASSIGN, $1, $3); }
+            | expr1 T_PLUS_ASSIGN   expr0
+                                { EXPR_t *cl = sc_clone_expr_simple($1);
+                                  EXPR_t *rhs = expr_binary(E_ADD, cl, $3);
+                                  $$ = expr_binary(E_ASSIGN, $1, rhs); }
+            | expr1 T_MINUS_ASSIGN  expr0
+                                { EXPR_t *cl = sc_clone_expr_simple($1);
+                                  EXPR_t *rhs = expr_binary(E_SUB, cl, $3);
+                                  $$ = expr_binary(E_ASSIGN, $1, rhs); }
+            | expr1 T_STAR_ASSIGN   expr0
+                                { EXPR_t *cl = sc_clone_expr_simple($1);
+                                  EXPR_t *rhs = expr_binary(E_MUL, cl, $3);
+                                  $$ = expr_binary(E_ASSIGN, $1, rhs); }
+            | expr1 T_SLASH_ASSIGN  expr0
+                                { EXPR_t *cl = sc_clone_expr_simple($1);
+                                  EXPR_t *rhs = expr_binary(E_DIV, cl, $3);
+                                  $$ = expr_binary(E_ASSIGN, $1, rhs); }
+            | expr1 T_CARET_ASSIGN  expr0
+                                { EXPR_t *cl = sc_clone_expr_simple($1);
+                                  EXPR_t *rhs = expr_binary(E_POW, cl, $3);
+                                  $$ = expr_binary(E_ASSIGN, $1, rhs); }
+            | expr1
+                                { $$ = $1; }
+            ;
+
+/* ---- Pattern-match tier (LS-4.c) ----
+ *
+ * SPITBOL `?` at priority 1, right-associative — `a ? b ? c` parses
+ * as `a ? (b ? c)`.  Lowers to E_SCAN(subject, pattern), matching
+ * snobol4.y's `expr0 : expr2 T_MATCH expr0` shape (snobol4.y bundles
+ * match alongside assignment at expr0; we pull it out to its own
+ * level for clarity, but the IR shape is identical).  Right-assoc
+ * is handled by the `expr1 T_MATCH expr1` form on the right.
+ */
+expr1       : expr3 T_MATCH expr1
+                                { $$ = expr_binary(E_SCAN, $1, $3); }
+            | expr3
+                                { $$ = $1; }
+            ;
+
+/* ---- Pattern alternation tier (LS-4.c) ----
+ *
+ * SPITBOL `|` at priority 3, right-associative.  Folds into a flat
+ * n-ary E_ALT — `a | b | c` produces a single E_ALT(a, b, c) rather
+ * than a nested E_ALT(a, E_ALT(b, c)).  This matches snobol4.y:131's
+ * shape exactly: when the LHS is already E_ALT we extend it with
+ * expr_add_child; otherwise we create a fresh E_ALT containing both
+ * operands.  Bison's left-recursion drives the fold one operand at
+ * a time, giving the n-ary collapse for free.
+ */
+expr3       : expr3 T_ALTERNATION expr4
+                                { if ($1->kind == E_ALT) { expr_add_child($1, $3); $$ = $1; }
+                                  else { EXPR_t *a = expr_new(E_ALT);
+                                         expr_add_child(a, $1); expr_add_child(a, $3);
+                                         $$ = a; } }
+            | expr4
+                                { $$ = $1; }
+            ;
+
+/* ---- Concatenation tier (LS-4.c) ----
+ *
+ * SPITBOL space-as-concat at priority 4, right-associative per the
+ * SPITBOL Manual but Bison left-recursion gives the same n-ary fold
+ * via E_SEQ — same approach as snobol4.y:134.  The lexer emits
+ * synthetic T_CONCAT tokens at boundaries where prev-token can-end-expr
+ * and next-token can-start-expr (the W{OP}W envelope pattern from
+ * LS-3 / one4all 02db637d).  Folds into a flat n-ary E_SEQ; lowering
+ * to runtime-side concatenation is the SNOBOL4 frontend's existing
+ * E_SEQ semantics — no new IR kind needed.
+ */
+expr4       : expr4 T_CONCAT expr5
+                                { if ($1->kind == E_SEQ) { expr_add_child($1, $3); $$ = $1; }
+                                  else { EXPR_t *s = expr_new(E_SEQ);
+                                         expr_add_child(s, $1); expr_add_child(s, $3);
+                                         $$ = s; } }
             | expr5
                                 { $$ = $1; }
             ;
@@ -697,6 +800,37 @@ static EXPR_t *sc_str_literal(const char *txt) {
     EXPR_t *e = expr_new(E_QLIT);
     e->sval = strdup(txt);
     return e;
+}
+
+/* sc_clone_expr_simple — shallow-recursive clone for compound-assign LHS.
+ *
+ * Compound-assigns (`a += b`, `a *= b`, etc.) lower to
+ *   E_ASSIGN(a, E_BINOP(clone(a), b))
+ * which means the LHS expression is referenced in two distinct subtrees
+ * of the same IR.  The IR's tree representation requires distinct nodes
+ * (children pointer arrays would otherwise alias and double-free at
+ * cleanup), so we clone the LHS.
+ *
+ * Coverage: the kinds Snocone source can produce as a compound-assign
+ * LHS at this point in the grammar — atomic E_VAR / E_KEYWORD / E_ILIT
+ * / E_FLIT / E_QLIT, plus n-ary E_IDX / E_FNC for `a[i] += 1` and the
+ * (rare) `f(x) += 1`.  Anything else is a parse-time bug; we return NULL
+ * to surface it loudly via the parse error path rather than silently
+ * producing a malformed IR.  When LS-4.d adds subscripts and unaries,
+ * extend the switch as needed.
+ */
+static EXPR_t *sc_clone_expr_simple(EXPR_t *e) {
+    if (!e) return NULL;
+    EXPR_t *c = expr_new(e->kind);
+    /* Scalar fields — copied verbatim. */
+    c->ival = e->ival;
+    c->dval = e->dval;
+    if (e->sval) c->sval = strdup(e->sval);
+    /* Children — recursive clone, preserving order. */
+    for (int i = 0; i < e->nchildren; i++) {
+        expr_add_child(c, sc_clone_expr_simple(e->children[i]));
+    }
+    return c;
 }
 
 /* =========================================================================

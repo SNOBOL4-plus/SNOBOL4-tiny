@@ -53,7 +53,7 @@
 extern int sc_debug;
 #endif
 /* "%code requires" blocks.  */
-#line 234 "snocone.y"
+#line 243 "snocone.y"
 
 #include "scrip_cc.h"
 
@@ -111,25 +111,25 @@ typedef struct ScParseState {
     T_UN_PLUS = 283,               /* T_UN_PLUS  */
     T_UN_MINUS = 284,              /* T_UN_MINUS  */
     T_ASSIGNMENT = 285,            /* T_ASSIGNMENT  */
-    T_LPAREN = 286,                /* T_LPAREN  */
-    T_RPAREN = 287,                /* T_RPAREN  */
-    T_SEMICOLON = 288,             /* T_SEMICOLON  */
-    T_COMMA = 289,                 /* T_COMMA  */
-    T_CONCAT = 290,                /* T_CONCAT  */
+    T_PLUS_ASSIGN = 286,           /* T_PLUS_ASSIGN  */
+    T_MINUS_ASSIGN = 287,          /* T_MINUS_ASSIGN  */
+    T_STAR_ASSIGN = 288,           /* T_STAR_ASSIGN  */
+    T_SLASH_ASSIGN = 289,          /* T_SLASH_ASSIGN  */
+    T_CARET_ASSIGN = 290,          /* T_CARET_ASSIGN  */
     T_MATCH = 291,                 /* T_MATCH  */
     T_ALTERNATION = 292,           /* T_ALTERNATION  */
-    T_IMMEDIATE_ASSIGN = 293,      /* T_IMMEDIATE_ASSIGN  */
-    T_COND_ASSIGN = 294,           /* T_COND_ASSIGN  */
-    T_AMPERSAND = 295,             /* T_AMPERSAND  */
-    T_AT_SIGN = 296,               /* T_AT_SIGN  */
-    T_POUND = 297,                 /* T_POUND  */
-    T_PERCENT = 298,               /* T_PERCENT  */
-    T_TILDE = 299,                 /* T_TILDE  */
-    T_PLUS_ASSIGN = 300,           /* T_PLUS_ASSIGN  */
-    T_MINUS_ASSIGN = 301,          /* T_MINUS_ASSIGN  */
-    T_STAR_ASSIGN = 302,           /* T_STAR_ASSIGN  */
-    T_SLASH_ASSIGN = 303,          /* T_SLASH_ASSIGN  */
-    T_CARET_ASSIGN = 304,          /* T_CARET_ASSIGN  */
+    T_CONCAT = 293,                /* T_CONCAT  */
+    T_LPAREN = 294,                /* T_LPAREN  */
+    T_RPAREN = 295,                /* T_RPAREN  */
+    T_SEMICOLON = 296,             /* T_SEMICOLON  */
+    T_COMMA = 297,                 /* T_COMMA  */
+    T_IMMEDIATE_ASSIGN = 298,      /* T_IMMEDIATE_ASSIGN  */
+    T_COND_ASSIGN = 299,           /* T_COND_ASSIGN  */
+    T_AMPERSAND = 300,             /* T_AMPERSAND  */
+    T_AT_SIGN = 301,               /* T_AT_SIGN  */
+    T_POUND = 302,                 /* T_POUND  */
+    T_PERCENT = 303,               /* T_PERCENT  */
+    T_TILDE = 304,                 /* T_TILDE  */
     T_UN_ASTERISK = 305,           /* T_UN_ASTERISK  */
     T_UN_SLASH = 306,              /* T_UN_SLASH  */
     T_UN_PERCENT = 307,            /* T_UN_PERCENT  */
@@ -173,7 +173,7 @@ typedef struct ScParseState {
 #if ! defined SC_STYPE && ! defined SC_STYPE_IS_DECLARED
 union SC_STYPE
 {
-#line 293 "snocone.y"
+#line 303 "snocone.y"
 
     EXPR_t *expr;
     char   *str;
