@@ -71,9 +71,11 @@ int  icn_gen_active(EXPR_t *n) {
     for (int i=0;i<f->gen_depth;i++) if(f->gen[i].node==n) return 1; return 0;
 }
 
-/* Icon scan state globals (not per-frame: scan nesting is within one call) */
-const char *icn_scan_subj  = NULL;
-int         icn_scan_pos   = 0;
+/* Icon scan state globals (not per-frame: scan nesting is within one call).
+ * IC-9 (2026-05-01): defaults match Icon spec — at program start, before any `?`,
+ * &pos = 1 and &subject = "" (the empty string), not 0 / &null. */
+const char *icn_scan_subj  = "";
+int         icn_scan_pos   = 1;
 IcnScanEntry icn_scan_stack[ICN_SCAN_STACK_MAX];
 int         icn_scan_depth = 0;
 

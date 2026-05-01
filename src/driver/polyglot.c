@@ -83,7 +83,7 @@ void polyglot_init(Program *prog, uint32_t lang_mask)
         icn_proc_count = 0; icn_global_count = 0;  /* U-23: reset global name bridge */
         icn_frame_depth = 0;
         memset(icn_frame_stack, 0, sizeof icn_frame_stack);
-        icn_scan_subj = NULL; icn_scan_pos = 0; icn_scan_depth = 0;
+        icn_scan_subj = ""; icn_scan_pos = 1; icn_scan_depth = 0;
         g_icn_root = NULL;
     }
 

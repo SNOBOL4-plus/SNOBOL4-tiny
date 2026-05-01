@@ -82,6 +82,7 @@ static void parser_error(IcnParser *p, const char *msg) {
 }
 
 static IcnToken advance(IcnParser *p) {
+    p->prev_kind = p->cur.kind;
     p->cur  = p->peek;
     p->peek = icn_lex_next(p->lex);
     return p->cur;
@@ -760,9 +761,14 @@ static EXPR_t *parse_stmt(IcnParser *p) {
     }
     /* Expression statement */
     EXPR_t *e = parse_expr(p);
+    /* IC-9 (2026-05-01): Icon allows omitting `;` between an expression statement
+     * that ended with `}` (block-as-expr — `expr ? { … }`, `if … then { … } else { … }`,
+     * `case … of { … }`, etc.) and the following statement.  Mirrors Icon's actual
+     * lexical rule and matches the JCON test corpus. */
     if (!check(p, TK_RBRACE) && !check(p, TK_EOF) &&
         !check(p, TK_END)    && !check(p, TK_ELSE) && !check(p, TK_THEN) &&
-        !check(p, TK_RETURN) && !check(p, TK_SUSPEND))
+        !check(p, TK_RETURN) && !check(p, TK_SUSPEND) &&
+        p->prev_kind != TK_RBRACE)
         expect(p, TK_SEMICOL, "expression statement");
     else
         match(p, TK_SEMICOL);
@@ -823,6 +829,9 @@ static EXPR_t *parse_proc(IcnParser *p) {
         if (!match(p, TK_COMMA)) break;
     }
     expect(p, TK_RPAREN, "procedure params");
+    /* IC-9 (2026-05-01): Icon allows an optional `;` after the procedure header
+     * (`procedure ws();` followed by body — a JCON-style idiom). */
+    match(p, TK_SEMICOL);
 
     /* body stmts */
     EXPR_t **stmts = NULL; int nstmts = 0, scap = 0;

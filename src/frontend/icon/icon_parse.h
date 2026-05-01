@@ -20,6 +20,10 @@ typedef struct {
     IcnLexer   *lex;
     IcnToken    cur;        /* current (already consumed) token */
     IcnToken    peek;       /* one-token lookahead */
+    IcnTkKind   prev_kind;  /* kind of last token consumed by advance() — used
+                             * to make `;` optional after a `}` ending an
+                             * expression statement (Icon "block-as-expression"
+                             * convention; see parse_stmt line ~765). */
     int         had_error;
     char        errmsg[512];
 } IcnParser;

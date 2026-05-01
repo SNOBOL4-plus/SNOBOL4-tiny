@@ -1093,6 +1093,40 @@ DESCR_t icn_call_builtin(EXPR_t *call, DESCR_t *args, int nargs) {
 
 /* Forward declaration (also declared above for call_user_function) */
 
+/* IC-9 (2026-05-01): Icon-keyword write helper.
+ * Returns 1 on success, 0 on FAIL (out-of-range &pos write).
+ * Keywords without a write contract (e.g. &letters, &lcase) are read-only
+ * and silently no-op (return 1) — Icon's own behaviour is "no error, no effect".
+ *
+ * &pos := N semantics:
+ *   subj length = L; valid N is in [-L, L+1]; N == 0 → after-last (= L+1);
+ *   N < 0 → L+1+N (so -1 → L; -2 → L-1 …).  Out of range → FAIL,
+ *   pos unchanged.
+ *
+ * &subject := s semantics:
+ *   set scan subject to string form of s; reset &pos to 1 (Icon spec). */
+static int icn_kw_assign(const char *kw, DESCR_t val) {
+    if (!strcmp(kw, "pos")) {
+        long n = to_int(val);
+        int slen = icn_scan_subj ? (int)strlen(icn_scan_subj) : 0;
+        long norm;
+        if (n == 0)      norm = slen + 1;
+        else if (n < 0)  norm = slen + 1 + n;
+        else             norm = n;
+        if (norm < 1 || norm > slen + 1) return 0;
+        icn_scan_pos = norm;
+        return 1;
+    }
+    if (!strcmp(kw, "subject")) {
+        const char *s = VARVAL_fn(val); if (!s) s = "";
+        icn_scan_subj = GC_strdup(s);
+        icn_scan_pos = 1;
+        return 1;
+    }
+    /* Other keywords: silently accept (no write contract here) */
+    return 1;
+}
+
 DESCR_t interp_eval(EXPR_t *e)
 {
     if (!e) return NULVCL;
@@ -1148,6 +1182,11 @@ DESCR_t interp_eval(EXPR_t *e)
                 }
             }
             if (lhs && lhs->kind == E_VAR) {
+                /* IC-9 (2026-05-01): Icon keyword lvalue — &pos := N, &subject := s */
+                if (lhs->sval && lhs->sval[0] == '&') {
+                    if (!icn_kw_assign(lhs->sval + 1, val)) return FAILDESCR;
+                    return val;
+                }
                 int slot = (int)lhs->ival;
                 if (slot >= 0 && slot < ICN_CUR.env_n) { ICN_CUR.env[slot] = val; return val; }
                 /* SS-MON: route through set_and_trace so VALUE traces fire on
@@ -4623,16 +4662,27 @@ DESCR_t interp_eval(EXPR_t *e)
         if (e->nchildren < 2 || icn_frame_depth <= 0) return NULVCL;
         EXPR_t *lhs = e->children[0], *rhs = e->children[1];
         DESCR_t lv = interp_eval(lhs), rv = interp_eval(rhs);
-        /* write rv→lhs slot, lv→rhs slot */
+        /* write rv→lhs slot, lv→rhs slot
+         * IC-9 (2026-05-01): Icon-keyword lvalue (&pos / &subject) — left-to-right;
+         * if a keyword write fails OOB (e.g. &pos := 9 when subj len 6), let it fail
+         * silently and proceed with the other side, mirroring Icon's :=: spec. */
         if (lhs && lhs->kind == E_VAR) {
-            int sl=(int)lhs->ival;
-            if (sl>=0&&sl<ICN_CUR.env_n) ICN_CUR.env[sl]=rv;
-            else if (sl<0&&lhs->sval) NV_SET_fn(lhs->sval,rv);
+            if (lhs->sval && lhs->sval[0] == '&') {
+                icn_kw_assign(lhs->sval + 1, rv);  /* fail = no-op */
+            } else {
+                int sl=(int)lhs->ival;
+                if (sl>=0&&sl<ICN_CUR.env_n) ICN_CUR.env[sl]=rv;
+                else if (sl<0&&lhs->sval) NV_SET_fn(lhs->sval,rv);
+            }
         }
         if (rhs && rhs->kind == E_VAR) {
-            int sl=(int)rhs->ival;
-            if (sl>=0&&sl<ICN_CUR.env_n) ICN_CUR.env[sl]=lv;
-            else if (sl<0&&rhs->sval) NV_SET_fn(rhs->sval,lv);
+            if (rhs->sval && rhs->sval[0] == '&') {
+                icn_kw_assign(rhs->sval + 1, lv);
+            } else {
+                int sl=(int)rhs->ival;
+                if (sl>=0&&sl<ICN_CUR.env_n) ICN_CUR.env[sl]=lv;
+                else if (sl<0&&rhs->sval) NV_SET_fn(rhs->sval,lv);
+            }
         }
         return rv;
     }

@@ -502,6 +502,28 @@ DESCR_t subscript_get(DESCR_t arr, DESCR_t idx) {
             if (!elems || i < 1 || i > n) return FAILDESCR;
             return elems[i-1];
         }
+        /* IC-9 (2026-05-01): DT_DATA record subscript — record(N) and record("fN").
+         * Mirrors session #24's `!record` shape contract: a real DATINST_t with type
+         * carrying nfields and a fields[] array.  Two key shapes:
+         *   integer N → fields[N-1]   (1-based, fail OOB; matches Icon list convention)
+         *   string  K → fields[i] where type->fields[i] == K   (case-sensitive strcmp)
+         * Falls through to the tree-child-access fallback when type is absent. */
+        if (arr.u && arr.u->type && arr.u->type->nfields > 0 && arr.u->fields) {
+            DATBLK_t *blk = arr.u->type;
+            if (IS_INT_fn(idx)) {
+                int i = (int)idx.i;
+                if (i < 1 || i > blk->nfields) return FAILDESCR;
+                return arr.u->fields[i-1];
+            }
+            if (idx.v == DT_S || idx.v == DT_SNUL) {
+                const char *k = idx.s ? idx.s : "";
+                for (int i = 0; i < blk->nfields; i++)
+                    if (blk->fields[i] && strcmp(blk->fields[i], k) == 0)
+                        return arr.u->fields[i];
+                return FAILDESCR;
+            }
+            /* other idx types: defer to legacy tree-child path below */
+        }
         /* tree/record child access: c(x)[i] */
         int i = (int)to_int(idx);
         DESCR_t children = FIELD_GET_fn(arr, "c");
