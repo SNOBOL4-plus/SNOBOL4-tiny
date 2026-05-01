@@ -1,0 +1,93 @@
+diff --git a/programs/prolog/plunit.pl b/programs/prolog/plunit.pl
+index a6ecdf0..3d52b07 100644
+--- a/programs/prolog/plunit.pl
++++ b/programs/prolog/plunit.pl
+@@ -135,4 +135,88 @@ current_prolog_flag(_,_) :- fail.
+ set_test_options(_). acyclic_term(_). cyclic_term(_) :- fail.
+ ground(X) :- \+ \+ (numbervars(X,0,_),true).
+ 
++/* PL-12 session #7: SWI-suite stdlib gap fill (paired with Fix #2 v3 bridge).
++ * Naive Prolog impls — sufficient to make plunit-driven tests reach their
++ * actual goal logic without tripping "undefined predicate". */
++
++memberchk(X, L) :- member(X, L), !.
++length([], 0). length([_|T], N) :- length(T, N0), N is N0 + 1.
++between(L, H, X) :- integer(X), !, X >= L, X =< H.
++between(L, H, L) :- L =< H.
++between(L, H, X) :- L < H, L1 is L+1, between(L1, H, X).
++false :- fail.
++call(G) :- G.
++call(G, A) :- G =.. L0, append(L0, [A], L1), G1 =.. L1, G1.
++call(G, A, B) :- G =.. L0, append(L0, [A,B], L1), G1 =.. L1, G1.
++call(G, A, B, C) :- G =.. L0, append(L0, [A,B,C], L1), G1 =.. L1, G1.
++apply(G, Args) :- G =.. L0, append(L0, Args, L1), G1 =.. L1, G1.
++
++/* term_variables/2 — collect unique vars in a Term (preserve order). */
++term_variables(T, Vs) :- pj_tv(T, [], Vs0), pj_reverse(Vs0, Vs).
++pj_tv(T, Acc, Acc) :- ground(T), !.
++pj_tv(T, Acc, [T|Acc]) :- var(T), !, pj_not_member(T, Acc), !.
++pj_tv(T, Acc, Acc) :- var(T), !.
++pj_tv(T, Acc, R) :- compound(T), T =.. [_|Args], pj_tv_list(Args, Acc, R).
++pj_tv(_, Acc, Acc).
++pj_tv_list([], Acc, Acc).
++pj_tv_list([H|T], Acc, R) :- pj_tv(H, Acc, Acc1), pj_tv_list(T, Acc1, R).
++pj_not_member(X, [Y|_]) :- X == Y, !, fail.
++pj_not_member(X, [_|T]) :- !, pj_not_member(X, T).
++pj_not_member(_, []).
++pj_reverse(L, R) :- pj_rev(L, [], R).
++pj_rev([], R, R). pj_rev([H|T], A, R) :- pj_rev(T, [H|A], R).
++
++/* numbervars/4 — like /3 but bind upper bound variable. */
++numbervars(T, S, E) :- numbervars(T, S, E, []).
++
++/* compound/term identity helpers. */
++compound_name_arity(T, N, A) :- compound(T), !, functor(T, N, A).
++compound_name_arity(T, N, 0) :- atom(T), !, N = T.
++compound_name_arguments(T, N, Args) :- compound(T), !, T =.. [N|Args].
++compound_name_arguments(T, T, []) :- atom(T).
++
++/* is_most_general_term/1 — compound where all args are distinct unbound vars. */
++is_most_general_term(T) :- compound(T), T =.. [_|Args], pj_all_unique_vars(Args, []).
++is_most_general_term(T) :- atom(T).
++pj_all_unique_vars([], _).
++pj_all_unique_vars([V|T], Seen) :- var(V), pj_not_member(V, Seen), pj_all_unique_vars(T, [V|Seen]).
++
++/* clause/2 — naive: only succeeds for asserted clauses, no static program access. */
++clause(_, _) :- fail.
++
++/* op/3, user/0 — silent stubs. */
++op(_, _, _).
++user.
++
++/* setof/3 — sort+dedup over findall. */
++setof(T, G, S) :- findall(T, G, L), L \== [], sort(L, S).
++
++/* setup_call_cleanup/3 — naive: setup, call, cleanup unconditionally. */
++setup_call_cleanup(Setup, Goal, Cleanup) :-
++    Setup, ( catch(Goal, E, (Cleanup, throw(E))) -> Cleanup ; Cleanup, fail ).
++
++/* format/3 — ignore stream arg, delegate to format/2. */
++format(_, F, A) :- format(F, A).
++
++/* expand_term/2, expand_goal/2 — identity expansion. */
++expand_term(X, X). expand_goal(X, X).
++
++/* string predicates — scrip atoms-as-strings. */
++string_chars(S, Cs) :- atom_chars(S, Cs).
++string_codes(S, Cs) :- atom_codes(S, Cs).
++string_lower(S, L)  :- downcase_atom(S, L).
++string_upper(S, U)  :- upcase_atom(S, U).
++string_length(S, N) :- atom_length(S, N).
++number_string(N, S) :- atom(S), atom_number(S, N), !.
++number_string(N, S) :- number(N), atom_number(S, N).
++
++/* atom_to_term/3 — naive: only succeeds if Atom parses as a literal. */
++atom_to_term(A, A, []).
++
++/* stream_property/2 — silent-fail stub (no real stream concept here). */
++stream_property(_, _) :- fail.
++
++/* $current_prolog_flag/5 — internal SWI shim, fail silently. */
++'$current_prolog_flag'(_, _, _, _, _) :- fail.
++
+ run_suite(S) :- pj_run_suite(S).

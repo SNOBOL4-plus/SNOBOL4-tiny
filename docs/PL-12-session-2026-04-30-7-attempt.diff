@@ -1,0 +1,252 @@
+diff --git a/src/runtime/interp/pl_runtime.c b/src/runtime/interp/pl_runtime.c
+index b49fd7c4..e58b72e9 100644
+--- a/src/runtime/interp/pl_runtime.c
++++ b/src/runtime/interp/pl_runtime.c
+@@ -468,8 +468,12 @@ typedef struct { Term *orig; Term *copy; } CopyVarMap;
+ static Term *copy_term_rec(Term *t, CopyVarMap *map, int *nmap) {
+     t = term_deref(t);
+     if (!t) {
+-        /* unbound variable — create or reuse fresh var */
+-        Term *fresh = term_new_var(-1);
++        /* unbound variable — create or reuse fresh var.
++         * NOTE: var_slot must be non-negative so bind() trails this var.
++         * -1 means "anonymous wildcard, don't trail" — wrong for copy_term.
++         * PL-12 session #7: use synthetic slot 1<<20 + nmap to avoid env
++         * collisions (real env slots are 0..arity, typically <64). */
++        Term *fresh = term_new_var((1 << 20) + *nmap);
+         return fresh;
+     }
+     switch (t->tag) {
+@@ -477,7 +481,8 @@ static Term *copy_term_rec(Term *t, CopyVarMap *map, int *nmap) {
+             /* unbound — look up or create a fresh copy */
+             for (int i = 0; i < *nmap; i++)
+                 if (map[i].orig == t) return map[i].copy;
+-            Term *fresh = term_new_var(-1);
++            /* PL-12 session #7: see comment above — slot != -1 needed. */
++            Term *fresh = term_new_var((1 << 20) + *nmap);
+             if (*nmap < COPY_TERM_MAX_VARS) {
+                 map[*nmap].orig = t; map[*nmap].copy = fresh; (*nmap)++;
+             }
+@@ -505,6 +510,184 @@ static Term *pl_copy_term(Term *t) {
+     return copy_term_rec(t, map, &nmap);
+ }
+ 
++/*============================================================================
++ * pl_term_to_synth_expr / pl_invoke_var_goal — Term→EXPR bridge for var-bound
++ * goal dispatch (catch/3, \+/1, once/1, not/1).
++ *
++ * Defect background (PL-12 fix #2 v3):
++ * When `catch(G,_,_)`'s G is a runtime variable (e.g. plunit asserts test
++ * goals into a clause and dispatches them via catch), the EXPR at the catch
++ * call site has goal_e->kind == E_VAR. The previous fall-through dispatched
++ * `interp_exec_pl_builtin(E_VAR, env)` which had no E_VAR case and returned
++ * 1 (silent success) via the `default:` arm. The Var-bound goal never ran.
++ * Same defect afflicts \+/1, once/1, not/1 (lines 681/689).
++ *
++ * Lifecycle / env-sharing strategy:
++ * Session #4 (2026-04-30 #4) attempted a bridge that allocated a separate
++ * tenv decoupled from the caller's env, then dispatched via pl_box_goal_from_ir
++ * + bb_broker. That collapsed the SWI suite 43→7. Root cause hypothesis: the
++ * bb_broker's choice-point machinery interacted badly with the tenv slot
++ * Term*s.
++ *
++ * v3 simplification: the synth EXPR's E_VAR slots store **the original Term**
++ * (deref'd) directly. Dispatch goes through `interp_exec_pl_builtin(synth, tenv)`
++ * — same routine the surrounding catch code already uses for non-Var goals.
++ * No new bb_broker entry. When the synth E_VAR is resolved by
++ * `pl_unified_term_from_expr(child=E_VAR, env=tenv)`, it returns `tenv[k]`
++ * which IS the original Term* from the goal. Bindings made on that Term
++ * (TT_REF chained back to the caller's env vars) propagate naturally; on
++ * caller's unify-stage uargs[k] is bound TT_REF -> tenv[k] which itself is
++ * TT_REF -> caller_env[m], so the chain flows correctly.
++ *
++ * Only the kinds plunit-style goal Terms actually carry are handled:
++ *   TT_VAR    -> E_VAR slot (deduped by pointer identity, X+X = one slot)
++ *   TT_INT    -> E_ILIT
++ *   TT_FLOAT  -> E_FLIT
++ *   TT_ATOM   -> E_FNC nchildren=0 sval=name (true/fail/etc. handled there)
++ *   TT_COMPOUND with functor f arity n:
++ *     `=` arity 2  -> E_UNIFY
++ *     `+`/`-`/`*`/`/`/`mod` arity 2 -> E_ADD/E_SUB/E_MUL/E_DIV/E_MOD
++ *       (only when used inside is/2 RHS or similar arith-eval context;
++ *       at goal level these aren't valid Prolog goals — but interp_exec_pl_builtin
++ *       still recurses on children, so the kinds match what lower_term emits)
++ *     anything else -> E_FNC sval=fn nchildren=n
++ *
++ * Memory: synth EXPR allocated on heap, freed on exit. Var dedup via
++ * pointer-identity scan of tenv (linear; fine for typical goal sizes <16).
++ *==========================================================================*/
++
++#define PL_SYNTH_TENV_MAX 64
++
++static EXPR_t *pl_synth_new(EKind k) {
++    EXPR_t *e = (EXPR_t *)calloc(1, sizeof(EXPR_t));
++    e->kind = k;
++    return e;
++}
++
++static void pl_synth_add_child(EXPR_t *e, EXPR_t *c) {
++    if (e->nchildren >= e->nalloc) {
++        e->nalloc = e->nalloc ? e->nalloc * 2 : 4;
++        e->children = (EXPR_t **)realloc(e->children, e->nalloc * sizeof(EXPR_t *));
++    }
++    e->children[e->nchildren++] = c;
++}
++
++static void pl_synth_free(EXPR_t *e) {
++    if (!e) return;
++    for (int i = 0; i < e->nchildren; i++) pl_synth_free(e->children[i]);
++    free(e->children);
++    if (e->sval) free(e->sval);
++    free(e);
++}
++
++static int pl_tenv_add_dedup(Term **tenv, int *pn, Term *v) {
++    /* Dedup by pointer identity — same Term twice -> same slot */
++    for (int i = 0; i < *pn; i++) if (tenv[i] == v) return i;
++    if (*pn >= PL_SYNTH_TENV_MAX) return -1;
++    tenv[*pn] = v;
++    return (*pn)++;
++}
++
++static EXPR_t *pl_term_to_synth_expr(Term *t, Term **tenv, int *pn) {
++    t = term_deref(t);
++    if (!t) {
++        EXPR_t *e = pl_synth_new(E_FNC);
++        e->sval = strdup("[]");
++        return e;
++    }
++    switch (t->tag) {
++        case TT_VAR: {
++            int slot = pl_tenv_add_dedup(tenv, pn, t);
++            EXPR_t *e = pl_synth_new(E_VAR);
++            e->ival = slot >= 0 ? slot : 0;
++            return e;
++        }
++        case TT_INT: {
++            EXPR_t *e = pl_synth_new(E_ILIT);
++            e->ival = t->ival;
++            return e;
++        }
++        case TT_FLOAT: {
++            EXPR_t *e = pl_synth_new(E_FLIT);
++            e->dval = t->fval;
++            return e;
++        }
++        case TT_ATOM: {
++            const char *nm = prolog_atom_name(t->atom_id);
++            EXPR_t *e = pl_synth_new(E_FNC);
++            e->sval = strdup(nm ? nm : "");
++            return e;
++        }
++        case TT_COMPOUND: {
++            const char *fn = prolog_atom_name(t->compound.functor);
++            if (!fn) fn = "?";
++            int arity = t->compound.arity;
++            /* =/2 -> E_UNIFY */
++            if (arity == 2 && strcmp(fn, "=") == 0) {
++                EXPR_t *e = pl_synth_new(E_UNIFY);
++                pl_synth_add_child(e, pl_term_to_synth_expr(t->compound.args[0], tenv, pn));
++                pl_synth_add_child(e, pl_term_to_synth_expr(t->compound.args[1], tenv, pn));
++                return e;
++            }
++            /* arith ops -> E_ADD etc. only meaningful inside is/2 RHS, but
++             * interp_exec_pl_builtin only recurses on children of recognised
++             * top-level goals — this is fine because is/2 calls
++             * pl_unified_eval_arith_term which knows these kinds. */
++            if (arity == 2) {
++                EKind ak = E_KIND_COUNT;
++                if      (!strcmp(fn,"+"))   ak = E_ADD;
++                else if (!strcmp(fn,"-"))   ak = E_SUB;
++                else if (!strcmp(fn,"*"))   ak = E_MUL;
++                else if (!strcmp(fn,"/"))   ak = E_DIV;
++                else if (!strcmp(fn,"mod")) ak = E_MOD;
++                if (ak != E_KIND_COUNT) {
++                    EXPR_t *e = pl_synth_new(ak);
++                    pl_synth_add_child(e, pl_term_to_synth_expr(t->compound.args[0], tenv, pn));
++                    pl_synth_add_child(e, pl_term_to_synth_expr(t->compound.args[1], tenv, pn));
++                    return e;
++                }
++            }
++            /* General compound -> E_FNC sval=fn */
++            EXPR_t *e = pl_synth_new(E_FNC);
++            e->sval = strdup(fn);
++            for (int i = 0; i < arity; i++)
++                pl_synth_add_child(e, pl_term_to_synth_expr(t->compound.args[i], tenv, pn));
++            return e;
++        }
++    }
++    /* unreachable */
++    return pl_synth_new(E_FNC);
++}
++
++/* pl_invoke_var_goal — entry point.
++ * Caller passes a Term that should be invoked as a goal. Returns 1 = success,
++ * 0 = failure. Throws are propagated via the existing catch-frame longjmp
++ * mechanism; this routine itself does not catch them.
++ *
++ * NOTE: caller_env is unused by this function — the bridge owns its tenv —
++ * but is kept in the signature for future use (e.g. if we ever need to alias
++ * synth E_VAR slots to specific caller_env[k] indices instead of via tenv
++ * Term*s). Today it's unused; tenv-by-Term*-identity already preserves the
++ * caller's variable bindings via the deref chains. */
++static int pl_invoke_var_goal(Term *gt, Term **caller_env) {
++    (void)caller_env;
++    gt = term_deref(gt);
++    if (!gt) return 0;
++    /* Unbound var as goal: instantiation_error in standard Prolog; we just fail. */
++    if (gt->tag == TT_VAR)   return 0;
++    /* Numbers aren't callable */
++    if (gt->tag == TT_INT)   return 0;
++    if (gt->tag == TT_FLOAT) return 0;
++
++    Term *tenv[PL_SYNTH_TENV_MAX];
++    for (int i = 0; i < PL_SYNTH_TENV_MAX; i++) tenv[i] = NULL;
++    int    tn = 0;
++    EXPR_t *synth = pl_term_to_synth_expr(gt, tenv, &tn);
++    int ok = interp_exec_pl_builtin(synth, tenv);
++    pl_synth_free(synth);
++    return ok;
++}
++
+ /*---- interp_exec_pl_builtin — execute one Prolog builtin goal ----*/
+ /* Uses file-scope globals g_pl_trail, g_pl_cut_flag, g_pl_pred_table, g_pl_env.
+  * Returns 1=success, 0=fail. Called by pl_box_builtin in pl_broker.c. */
+@@ -1315,7 +1498,14 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
+                 bb_node_t goal_box=pl_box_goal_from_ir(goal_expr,env);
+                 DESCR_t fa_r=goal_box.fn(goal_box.ζ,α);
+                 while(!IS_FAIL_fn(fa_r)){
+-                    Term *snap=pl_unified_deep_copy(pl_unified_term_from_expr(tmpl_expr,env));
++                    /* PL-12 session #7: use pl_copy_term (preserves var
++                     * sharing within snapshot via CopyVarMap) instead of
++                     * pl_unified_deep_copy (collapsed every TT_VAR to atom `_`,
++                     * which destroyed test goal vars carried through findall).
++                     * plunit's pj_run_suite stores test bodies as findall
++                     * snapshots; without this fix the goals would lose their
++                     * var bindings even before reaching catch's bridge. */
++                    Term *snap=pl_copy_term(pl_unified_term_from_expr(tmpl_expr,env));
+                     if(nsol>=sol_cap){sol_cap=sol_cap?sol_cap*2:8;solutions=realloc(solutions,sol_cap*sizeof(Term*));}
+                     solutions[nsol++]=snap;
+                     fa_r=goal_box.fn(goal_box.ζ,β);
+@@ -1540,7 +1730,20 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
+                 if (!threw) {
+                     /* run the goal */
+                     int ok;
+-                    if (is_pl_user_call(goal_e)) {
++                    /* PL-12 fix #2 v3: E_VAR-shaped goal (catch's first arg is a
++                     * runtime variable bound to a callable Term, e.g. plunit
++                     * pj_do_succeed(...) calling catch(Goal,_,...)). Without
++                     * this branch the else-arm dispatched
++                     * interp_exec_pl_builtin(E_VAR, env) which fell through to
++                     * `default: return 1;` — the silent-success defect that
++                     * gates ~3-4 plunit suites. Bridge derefs the env-resolved
++                     * Term and dispatches via Term->synth EXPR with tenv slots
++                     * holding the original Term*s (preserving binding chains
++                     * back to caller env). */
++                    if (goal_e && goal_e->kind == E_VAR) {
++                        Term *gt = pl_unified_term_from_expr(goal_e, env);
++                        ok = pl_invoke_var_goal(gt, env);
++                    } else if (is_pl_user_call(goal_e)) {
+                         char ukey[256];
+                         snprintf(ukey,sizeof ukey,"%s/%d",
+                                  goal_e->sval?goal_e->sval:"",goal_e->nchildren);
