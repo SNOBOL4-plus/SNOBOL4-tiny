@@ -70,6 +70,38 @@ struct IfHead;
 struct WhileHead;
 struct FuncHead;
 
+/* LS-4.i.2 — LoopFrame: tracks one enclosing loop (or switch, in LS-4.i.3)
+ * for the purpose of resolving break/continue.  Pushed onto a stack rooted
+ * at ScParseState.loop_top when a loop's head fires (sc_while_head_new,
+ * sc_do_head_new, sc_for_head_new); popped when the matching finalize_*
+ * runs.  Each frame carries the synthetic labels the corresponding
+ * finalize_* will use, so break/continue stmts emitted DURING body parsing
+ * can target them by name.
+ *
+ * user_labels[] holds any user labels that immediately preceded the loop
+ * (i.e. were in pending_user_labels when the head fired).  Stacked labels
+ * (`a: b: while(...) {...}`) all attach — break a; and break b; both work,
+ * naming the same loop.  Java-style.
+ *
+ * is_loop = 1 for while/do/for; LS-4.i.3 will add 0 for switch (continue
+ * skips switch frames when looking for its target). */
+typedef struct LoopFrame {
+    char    *cont_label;          /* continue target (loop top or "Lcont" for for/do) */
+    char    *end_label;           /* break target (loop end / switch end) */
+    char   **user_labels;         /* names that the user attached (own'd, strdup'd) */
+    int      user_labels_count;
+    int      is_loop;             /* 1 = loop (continue legal); 0 = switch (LS-4.i.3) */
+    /* LS-4.i.2 — usage flags: tracks whether the body actually emitted any
+     * break/continue stmts targeting this frame.  Used by finalize_* to
+     * decide whether to emit the Lcont pad (for/do/while) — keeping the
+     * emit lazy preserves the LS-4.f/g lowering shapes for code that
+     * doesn't use continue, and avoids dead label pads in the IR.  break
+     * targets don't need a flag — the Lend pad is always emitted (it's
+     * the loop's exit target regardless). */
+    int      cont_used;
+    struct LoopFrame *outer;      /* link toward outer scope; NULL at outermost */
+} LoopFrame;
+
 /* Parser state — passed to sc_parse() via %parse-param.  Carries the
  * FSM lexer context (the single producer of tokens), the code under
  * construction, and a small error counter.  Uses CODE_t (typedef alias
@@ -82,9 +114,28 @@ typedef struct ScParseState {
     int            nerrors;
     int            label_seq;     /* LS-4.f: synthetic label counter */
     char          *cur_func_name; /* LS-4.h: enclosing function name (NULL at top level) */
+    /* LS-4.i.2 — break/continue support.
+     *
+     * pending_user_labels accumulates label names emitted by recent
+     * label_decl reductions that have not yet been "consumed" by either
+     * a non-control stmt commit (which clears them) or a loop/switch
+     * head (which captures them onto a LoopFrame).  This lets
+     * `outer: while(...) { ... break outer; ... }` resolve the break to
+     * the labeled loop frame.
+     *
+     * stash_for_pending_labels — a one-slot temporary that the for_lead
+     * non-terminal moves pending into BEFORE the for-loop's init expr
+     * gets emitted (which would otherwise clear pending via sc_append_stmt
+     * before sc_for_head_new runs).  for_head's action consumes the stash. */
+    LoopFrame    *loop_top;
+    char        **pending_user_labels;
+    int           pending_user_labels_count;
+    int           pending_user_labels_cap;
+    char        **stash_for_pending_labels;
+    int           stash_for_pending_labels_count;
 } ScParseState;
 
-#line 88 "snocone_parse.tab.h"
+#line 139 "snocone_parse.tab.h"
 
 /* Token kinds.  */
 #ifndef SC_TOKENTYPE
@@ -184,7 +235,7 @@ typedef struct ScParseState {
 #if ! defined SC_STYPE && ! defined SC_STYPE_IS_DECLARED
 union SC_STYPE
 {
-#line 443 "snocone_parse.y"
+#line 519 "snocone_parse.y"
 
     EXPR_t *expr;
     char   *str;
@@ -203,7 +254,7 @@ union SC_STYPE
     struct FuncHead  *funchead;
     STMT_t           *stmt_ptr;
 
-#line 207 "snocone_parse.tab.h"
+#line 258 "snocone_parse.tab.h"
 
 };
 typedef union SC_STYPE SC_STYPE;

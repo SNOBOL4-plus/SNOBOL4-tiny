@@ -286,6 +286,38 @@ struct IfHead;
 struct WhileHead;
 struct FuncHead;
 
+/* LS-4.i.2 — LoopFrame: tracks one enclosing loop (or switch, in LS-4.i.3)
+ * for the purpose of resolving break/continue.  Pushed onto a stack rooted
+ * at ScParseState.loop_top when a loop's head fires (sc_while_head_new,
+ * sc_do_head_new, sc_for_head_new); popped when the matching finalize_*
+ * runs.  Each frame carries the synthetic labels the corresponding
+ * finalize_* will use, so break/continue stmts emitted DURING body parsing
+ * can target them by name.
+ *
+ * user_labels[] holds any user labels that immediately preceded the loop
+ * (i.e. were in pending_user_labels when the head fired).  Stacked labels
+ * (`a: b: while(...) {...}`) all attach — break a; and break b; both work,
+ * naming the same loop.  Java-style.
+ *
+ * is_loop = 1 for while/do/for; LS-4.i.3 will add 0 for switch (continue
+ * skips switch frames when looking for its target). */
+typedef struct LoopFrame {
+    char    *cont_label;          /* continue target (loop top or "Lcont" for for/do) */
+    char    *end_label;           /* break target (loop end / switch end) */
+    char   **user_labels;         /* names that the user attached (own'd, strdup'd) */
+    int      user_labels_count;
+    int      is_loop;             /* 1 = loop (continue legal); 0 = switch (LS-4.i.3) */
+    /* LS-4.i.2 — usage flags: tracks whether the body actually emitted any
+     * break/continue stmts targeting this frame.  Used by finalize_* to
+     * decide whether to emit the Lcont pad (for/do/while) — keeping the
+     * emit lazy preserves the LS-4.f/g lowering shapes for code that
+     * doesn't use continue, and avoids dead label pads in the IR.  break
+     * targets don't need a flag — the Lend pad is always emitted (it's
+     * the loop's exit target regardless). */
+    int      cont_used;
+    struct LoopFrame *outer;      /* link toward outer scope; NULL at outermost */
+} LoopFrame;
+
 /* Parser state — passed to sc_parse() via %parse-param.  Carries the
  * FSM lexer context (the single producer of tokens), the code under
  * construction, and a small error counter.  Uses CODE_t (typedef alias
@@ -298,6 +330,25 @@ typedef struct ScParseState {
     int            nerrors;
     int            label_seq;     /* LS-4.f: synthetic label counter */
     char          *cur_func_name; /* LS-4.h: enclosing function name (NULL at top level) */
+    /* LS-4.i.2 — break/continue support.
+     *
+     * pending_user_labels accumulates label names emitted by recent
+     * label_decl reductions that have not yet been "consumed" by either
+     * a non-control stmt commit (which clears them) or a loop/switch
+     * head (which captures them onto a LoopFrame).  This lets
+     * `outer: while(...) { ... break outer; ... }` resolve the break to
+     * the labeled loop frame.
+     *
+     * stash_for_pending_labels — a one-slot temporary that the for_lead
+     * non-terminal moves pending into BEFORE the for-loop's init expr
+     * gets emitted (which would otherwise clear pending via sc_append_stmt
+     * before sc_for_head_new runs).  for_head's action consumes the stash. */
+    LoopFrame    *loop_top;
+    char        **pending_user_labels;
+    int           pending_user_labels_count;
+    int           pending_user_labels_cap;
+    char        **stash_for_pending_labels;
+    int           stash_for_pending_labels_count;
 } ScParseState;
 }
 
@@ -345,12 +396,23 @@ struct WhileHead {
     EXPR_t *cond;
     STMT_t *before_body;
     int     lineno;
+    /* LS-4.i.2 — synthetic labels owned by the head, allocated eagerly so
+     * break/continue stmts emitted DURING body parsing target them by
+     * name.  finalize_while uses these same names instead of allocating
+     * fresh ones. */
+    char   *cont_label;     /* loop top — continue target */
+    char   *end_label;      /* loop end — break target */
 };
 /* LS-4.g — do/while: snapshot before body (at KW_DO), cond
  * provided when the trailing while clause is parsed. */
 struct DoHead {
     STMT_t *before_body;   /* tail snapshot at KW_DO */
     int     lineno;
+    /* LS-4.i.2 — eager labels.  cont_label is a fresh "_Lcont_NNNN" pad
+     * that finalize_do_while splices in just before the trailing
+     * cond stmt — `continue;` in a do/while re-evaluates the cond. */
+    char   *cont_label;
+    char   *end_label;
 };
 /* LS-4.g — for (init; cond; step): snapshot after init emits, before
  * the loop-top label and cond-stmt are spliced. */
@@ -359,6 +421,11 @@ struct ForHead {
     EXPR_t *cond;          /* loop condition */
     EXPR_t *step;          /* step expression (emitted at loop bottom) */
     int     lineno;
+    /* LS-4.i.2 — eager labels.  cont_label is "_Lcont_NNNN" — `continue;`
+     * in a for-loop must execute the step expression before re-testing
+     * cond, so its target is just before the step stmt, not Ltop. */
+    char   *cont_label;
+    char   *end_label;
 };
 /* LS-4.h — function definition handoff.
  *
@@ -419,6 +486,15 @@ static void     sc_finalize_function  (ScParseState *st, struct FuncHead *h);
 /* LS-4.i.1 — goto / label */
 static void     sc_emit_label_pad     (ScParseState *st, char *label);
 static void     sc_append_goto_label  (ScParseState *st, char *target);
+/* LS-4.i.2 — break / continue */
+static void     sc_pending_label_add   (ScParseState *st, const char *name);
+static void     sc_pending_label_clear (ScParseState *st);
+static void     sc_pending_to_stash    (ScParseState *st);     /* for_lead */
+static void     sc_loop_push           (ScParseState *st, char *cont_label, char *end_label, int is_loop, int from_stash);
+static void     sc_loop_pop            (ScParseState *st);
+static LoopFrame *sc_loop_find_by_user_label(ScParseState *st, const char *name, int want_loop);
+static void     sc_append_break        (ScParseState *st, char *user_label /* NULL = innermost */);
+static void     sc_append_continue     (ScParseState *st, char *user_label /* NULL = innermost loop */);
 
 /* sc_kind_to_tok — translate FSM ScKind (1..N) to Bison's sc_tokentype.
  *
@@ -640,8 +716,19 @@ do_body     : T_LBRACE stmt_list T_RBRACE
  * init is a full expr0 that is immediately emitted as a statement.
  * cond and step are captured in the ForHead struct for use in finalize.
  * The snapshot of st->code->tail happens AFTER init is emitted —
- * that is the before_loop anchor used to splice Ltop + cond-stmt. */
-for_head    : T_FOR T_LPAREN expr0 T_SEMICOLON expr0 T_SEMICOLON expr0 T_RPAREN opt_head_sep
+ * that is the before_loop anchor used to splice Ltop + cond-stmt.
+ *
+ * LS-4.i.2 — for_lead is a tiny non-terminal that fires on T_FOR alone,
+ * BEFORE init's expr0 starts parsing.  Its action moves
+ * pending_user_labels into a one-slot stash on ScParseState.  This is
+ * needed because init's emission via sc_append_stmt would otherwise
+ * clear pending_user_labels before sc_for_head_new can capture them
+ * onto the loop frame.  (For while/do, the head action runs before any
+ * stmt commit — pending is still alive there.) */
+for_lead    : T_FOR                  { sc_pending_to_stash(st); }
+            ;
+
+for_head    : for_lead T_LPAREN expr0 T_SEMICOLON expr0 T_SEMICOLON expr0 T_RPAREN opt_head_sep
                                         { sc_append_stmt(st, $3);
                                           $$ = sc_for_head_new(st, $5, $7); }
             ;
@@ -740,6 +827,11 @@ simple_stmt : expr0 T_SEMICOLON                { sc_append_stmt(st, $1); }
             | T_NRETURN T_SEMICOLON         { sc_append_nreturn(st); }
             /* LS-4.i.1 — goto LABEL; */
             | T_GOTO T_IDENT T_SEMICOLON    { sc_append_goto_label(st, $2); free($2); }
+            /* LS-4.i.2 — break / continue (with optional user label per Q13 Option A) */
+            | T_BREAK T_SEMICOLON           { sc_append_break(st, NULL); }
+            | T_BREAK T_IDENT T_SEMICOLON   { sc_append_break(st, $2); free($2); }
+            | T_CONTINUE T_SEMICOLON        { sc_append_continue(st, NULL); }
+            | T_CONTINUE T_IDENT T_SEMICOLON { sc_append_continue(st, $2); free($2); }
             ;
 
 block_stmt  : T_LBRACE stmt_list T_RBRACE      { /* statements already appended */ }
@@ -1205,6 +1297,11 @@ static int sc_kind_to_tok(int sc_kind) {
  */
 static void sc_append_stmt(ScParseState *st, EXPR_t *top) {
     if (!top) return;
+    /* LS-4.i.2 — a "real" stmt commit consumes any pending user labels:
+     * label_decl already emitted a label-pad which chains forward by
+     * SNOBOL4 semantics, so the labels semantically attach to this
+     * stmt; subsequent loops should not re-capture them. */
+    sc_pending_label_clear(st);
     STMT_t *s = stmt_new();
     s->lineno = st->ctx ? st->ctx->line : 0;
     s->stno   = ++st->code->nstmts;
@@ -1341,6 +1438,13 @@ static struct WhileHead *sc_while_head_new(ScParseState *st, EXPR_t *cond) {
     h->cond        = cond;
     h->before_body = st->code->tail;
     h->lineno      = st->ctx ? st->ctx->line : 0;
+    /* LS-4.i.2 — eager labels.  finalize_while will reuse these instead of
+     * allocating fresh ones, so the body's break/continue stmts target
+     * the same names finalize_while emits. */
+    h->cont_label  = sc_label_new(st, "_Ltop");
+    h->end_label   = sc_label_new(st, "_Lend");
+    /* Push a loop frame; consumes pending_user_labels. */
+    sc_loop_push(st, strdup(h->cont_label), strdup(h->end_label), 1, 0);
     return h;
 }
 
@@ -1349,17 +1453,33 @@ static struct DoHead *sc_do_head_new(ScParseState *st) {
     struct DoHead *h = calloc(1, sizeof *h);
     h->before_body = st->code->tail;
     h->lineno      = st->ctx ? st->ctx->line : 0;
+    /* LS-4.i.2 — eager labels.  do/while's `continue` re-evaluates the
+     * cond, so cont_label sits before the cond stmt (a fresh "_Lcont_NNNN"
+     * that finalize_do_while will splice into the right spot). */
+    h->cont_label  = sc_label_new(st, "_Lcont");
+    h->end_label   = sc_label_new(st, "_Lend");
+    sc_loop_push(st, strdup(h->cont_label), strdup(h->end_label), 1, 0);
     return h;
 }
 
 /* LS-4.g — for_head: called AFTER the init expr is emitted, so
- * before_loop snaps the tail that now includes the init stmt. */
+ * before_loop snaps the tail that now includes the init stmt.
+ *
+ * LS-4.i.2 — pending user labels were already moved to st->stash_*
+ * by for_lead's action (which fired on T_FOR before init parsed).
+ * We pass `from_stash=1` to sc_loop_push so it picks them up there
+ * instead of from the (now-cleared) pending list. */
 static struct ForHead *sc_for_head_new(ScParseState *st, EXPR_t *cond, EXPR_t *step) {
     struct ForHead *h = calloc(1, sizeof *h);
     h->before_loop = st->code->tail;
     h->cond        = cond;
     h->step        = step;
     h->lineno      = st->ctx ? st->ctx->line : 0;
+    /* LS-4.i.2 — eager labels.  for-loop's `continue` runs the step,
+     * so cont_label sits just before the step stmt. */
+    h->cont_label  = sc_label_new(st, "_Lcont");
+    h->end_label   = sc_label_new(st, "_Lend");
+    sc_loop_push(st, strdup(h->cont_label), strdup(h->end_label), 1, 1);
     return h;
 }
 
@@ -1462,6 +1582,7 @@ static void sc_finalize_function(ScParseState *st, struct FuncHead *h) {
  * depending on dialect).  We do not enforce structural validity here.
  */
 static void sc_append_return(ScParseState *st, EXPR_t *retval) {
+    sc_pending_label_clear(st);
     STMT_t *s = stmt_new();
     s->lineno = st->ctx ? st->ctx->line : 0;
     s->stno   = ++st->code->nstmts;
@@ -1484,6 +1605,7 @@ static void sc_append_return(ScParseState *st, EXPR_t *retval) {
 }
 
 static void sc_append_freturn(ScParseState *st) {
+    sc_pending_label_clear(st);
     STMT_t *s = stmt_new();
     s->lineno = st->ctx ? st->ctx->line : 0;
     s->stno   = ++st->code->nstmts;
@@ -1494,6 +1616,7 @@ static void sc_append_freturn(ScParseState *st) {
 }
 
 static void sc_append_nreturn(ScParseState *st) {
+    sc_pending_label_clear(st);
     STMT_t *s = stmt_new();
     s->lineno = st->ctx ? st->ctx->line : 0;
     s->stno   = ++st->code->nstmts;
@@ -1541,18 +1664,27 @@ static STMT_t *sc_make_goto_uncond_stmt(ScParseState *st, char *target) {
  * with `label = name`, no subject, no replacement, no goto.  In
  * SNOBOL4, such a stmt is a valid branch target and chains the
  * label to the next non-empty stmt — exactly matching what the user
- * wrote: `top: x = 1;` should make `top` reach `x = 1` semantically. */
+ * wrote: `top: x = 1;` should make `top` reach `x = 1` semantically.
+ *
+ * LS-4.i.2 — also tracks `name` in pending_user_labels so that if the
+ * next thing parsed is a loop head, the loop frame can record this
+ * label as a `break/continue LABEL;` target.  Stacked labels accumulate
+ * (a: b: while(...) — both a and b name the same loop). */
 static void sc_emit_label_pad(ScParseState *st, char *label) {
     STMT_t *pad = sc_make_label_stmt(st, strdup(label));
     sc_append_chain(st, pad, pad);
+    sc_pending_label_add(st, label);
 }
 
 /* LS-4.i.1 — sc_append_goto_label: emit `:(target)` unconditional goto.
  *
  * Used by the `T_GOTO T_IDENT T_SEMICOLON` rule in simple_stmt.  The
  * target is a user-written label name; we duplicate it (since the
- * caller still owns the original IDENT string for free()). */
+ * caller still owns the original IDENT string for free()).
+ *
+ * LS-4.i.2 — clears pending user labels (a stmt commit, like sc_append_stmt). */
 static void sc_append_goto_label(ScParseState *st, char *target) {
+    sc_pending_label_clear(st);
     STMT_t *g = sc_make_goto_uncond_stmt(st, strdup(target));
     sc_append_chain(st, g, g);
 }
@@ -1652,8 +1784,11 @@ static void sc_finalize_if_else(ScParseState *st, struct IfHead *h, STMT_t *befo
  *   Lend                      <- appended at end
  */
 static void sc_finalize_while(ScParseState *st, struct WhileHead *h) {
-    char   *Ltop      = sc_label_new(st, "_Ltop");
-    char   *Lend      = sc_label_new(st, "_Lend");
+    /* LS-4.i.2 — reuse the eager labels allocated by sc_while_head_new
+     * so any `break`/`continue` emitted inside the body targets the
+     * same names we lay down here. */
+    char   *Ltop      = h->cont_label;       /* take ownership */
+    char   *Lend      = h->end_label;
     STMT_t *top_pad   = sc_make_label_stmt(st, Ltop);
     STMT_t *cond_stmt = sc_make_cond_fail_stmt(st, h->cond, strdup(Lend), h->lineno);
     STMT_t *goto_top  = sc_make_goto_uncond_stmt(st, strdup(Ltop));
@@ -1664,6 +1799,7 @@ static void sc_finalize_while(ScParseState *st, struct WhileHead *h) {
     /* (2) Append [goto_top -> end_pad] at the end. */
     goto_top->next = end_pad;
     sc_append_chain(st, goto_top, end_pad);
+    sc_loop_pop(st);
     free(h);
 }
 
@@ -1702,22 +1838,48 @@ static STMT_t *sc_make_cond_succ_stmt(ScParseState *st, EXPR_t *cond, char *succ
 }
 
 static void sc_finalize_do_while(ScParseState *st, struct DoHead *h, EXPR_t *cond) {
+    /* LS-4.i.2 — eager labels.  Ltop is a fresh "_Ltop_NNNN"; cont_label
+     * was allocated eagerly by sc_do_head_new for use by `continue;` stmts
+     * inside the body.  For do/while, `continue` must re-evaluate cond,
+     * so the cont_label sits BEFORE the cond stmt.  Lazy emit: only
+     * splice the cont pad if the body actually referenced it (frame's
+     * cont_used flag set by sc_append_continue) — keeps the IR shape
+     * unchanged for do/while bodies that don't use continue. */
     char   *Ltop      = sc_label_new(st, "_Ltop");
-    char   *Lend      = sc_label_new(st, "_Lend");
+    char   *Lcont     = h->cont_label;       /* take ownership */
+    char   *Lend      = h->end_label;
+    int     cont_used = st->loop_top ? st->loop_top->cont_used : 0;
     STMT_t *top_pad   = sc_make_label_stmt(st, Ltop);
     STMT_t *cond_stmt = sc_make_cond_succ_stmt(st, cond, strdup(Ltop), h->lineno);
     STMT_t *end_pad   = sc_make_label_stmt(st, Lend);
     /* Splice Ltop-pad right before the do-body. */
     sc_splice_after(st, h->before_body, top_pad, top_pad);
-    /* Append cond :S(Ltop) and then Lend. */
-    cond_stmt->next = end_pad;
-    sc_append_chain(st, cond_stmt, end_pad);
+    if (cont_used) {
+        STMT_t *cont_pad = sc_make_label_stmt(st, Lcont);
+        cont_pad->next  = cond_stmt;
+        cond_stmt->next = end_pad;
+        sc_append_chain(st, cont_pad, end_pad);
+    } else {
+        free(Lcont);   /* no continue used; pad and label both unused */
+        cond_stmt->next = end_pad;
+        sc_append_chain(st, cond_stmt, end_pad);
+    }
+    sc_loop_pop(st);
     free(h);
 }
 
 static void sc_finalize_for(ScParseState *st, struct ForHead *h) {
+    /* LS-4.i.2 — eager labels.  Ltop is fresh; cont_label was allocated
+     * eagerly by sc_for_head_new for use by `continue;` stmts inside the
+     * body.  For for-loop, `continue` must run the step before re-testing
+     * cond, so the cont_label sits just before the step stmt.  Lazy emit:
+     * only splice the cont pad if the body actually referenced it
+     * (frame's cont_used flag set by sc_append_continue) — keeps the IR
+     * shape unchanged for bodies that don't use continue. */
     char   *Ltop      = sc_label_new(st, "_Ltop");
-    char   *Lend      = sc_label_new(st, "_Lend");
+    char   *Lcont     = h->cont_label;       /* take ownership */
+    char   *Lend      = h->end_label;
+    int     cont_used = st->loop_top ? st->loop_top->cont_used : 0;
     STMT_t *top_pad   = sc_make_label_stmt(st, Ltop);
     STMT_t *cond_stmt = sc_make_cond_fail_stmt(st, h->cond, strdup(Lend), h->lineno);
     STMT_t *step_stmt = stmt_new();
@@ -1729,11 +1891,178 @@ static void sc_finalize_for(ScParseState *st, struct ForHead *h) {
     /* Splice [top_pad -> cond_stmt] right after before_loop (after init). */
     top_pad->next = cond_stmt;
     sc_splice_after(st, h->before_loop, top_pad, cond_stmt);
-    /* Append step, goto Ltop, Lend. */
-    step_stmt->next = goto_top;
-    goto_top->next  = end_pad;
-    sc_append_chain(st, step_stmt, end_pad);
+    if (cont_used) {
+        STMT_t *cont_pad = sc_make_label_stmt(st, Lcont);
+        /* Append cont_pad, step, goto Ltop, Lend. */
+        cont_pad->next  = step_stmt;
+        step_stmt->next = goto_top;
+        goto_top->next  = end_pad;
+        sc_append_chain(st, cont_pad, end_pad);
+    } else {
+        free(Lcont);   /* no continue used; label allocated but unused */
+        /* Append step, goto Ltop, Lend (original LS-4.g shape). */
+        step_stmt->next = goto_top;
+        goto_top->next  = end_pad;
+        sc_append_chain(st, step_stmt, end_pad);
+    }
+    sc_loop_pop(st);
     free(h);
+}
+
+/* =========================================================================
+ *  LS-4.i.2 — break / continue support
+ *
+ *  Lowering shapes:
+ *
+ *    break ;            ->   :(end_label_of_innermost_frame)
+ *    break LABEL ;      ->   :(end_label_of_frame_with_user_label_LABEL)
+ *    continue ;         ->   :(cont_label_of_innermost_loop_frame)
+ *    continue LABEL ;   ->   :(cont_label_of_loop_frame_with_user_label_LABEL)
+ *
+ *  The cont/end labels are allocated eagerly by sc_*_head_new (so that
+ *  break/continue stmts emitted DURING body parsing target them by name)
+ *  and reused in sc_finalize_*.  user_labels[] on each frame holds any
+ *  labels the user attached just before the loop (`a: while(...)`); both
+ *  break a; and break LABEL; (named) and break; (innermost) work.
+ *
+ *  Out-of-context break/continue and unresolved-label cases call sc_error.
+ * ========================================================================= */
+
+static void sc_pending_label_add(ScParseState *st, const char *name) {
+    if (st->pending_user_labels_count >= st->pending_user_labels_cap) {
+        int newcap = st->pending_user_labels_cap ? st->pending_user_labels_cap * 2 : 4;
+        st->pending_user_labels = realloc(st->pending_user_labels, newcap * sizeof(char *));
+        st->pending_user_labels_cap = newcap;
+    }
+    st->pending_user_labels[st->pending_user_labels_count++] = strdup(name);
+}
+
+static void sc_pending_label_clear(ScParseState *st) {
+    for (int i = 0; i < st->pending_user_labels_count; i++) free(st->pending_user_labels[i]);
+    st->pending_user_labels_count = 0;
+}
+
+/* Move pending list to the one-slot stash (used by for_lead, since for's
+ * init expr emission would otherwise clear pending before sc_for_head_new
+ * fires).  Releases any prior stash contents (defensive — should be empty
+ * unless someone wrote a top-level `for (for(...; ...; ...);  ...; ...)`
+ * which is grammatically valid but unusual). */
+static void sc_pending_to_stash(ScParseState *st) {
+    /* Free any leftover stash from a prior for_lead that didn't get
+     * consumed (shouldn't happen in well-formed input — defensive). */
+    for (int i = 0; i < st->stash_for_pending_labels_count; i++) free(st->stash_for_pending_labels[i]);
+    free(st->stash_for_pending_labels);
+    st->stash_for_pending_labels       = st->pending_user_labels;
+    st->stash_for_pending_labels_count = st->pending_user_labels_count;
+    st->pending_user_labels       = NULL;
+    st->pending_user_labels_count = 0;
+    st->pending_user_labels_cap   = 0;
+}
+
+/* Push a new LoopFrame onto the loop stack.  Takes ownership of cont_label
+ * and end_label.  user_labels are sourced from either pending_user_labels
+ * (from_stash=0) or stash_for_pending_labels (from_stash=1, used by for-loop
+ * since for_lead moved them to the stash before init parsed). */
+static void sc_loop_push(ScParseState *st, char *cont_label, char *end_label, int is_loop, int from_stash) {
+    LoopFrame *f = calloc(1, sizeof *f);
+    f->cont_label = cont_label;
+    f->end_label  = end_label;
+    f->is_loop    = is_loop;
+    f->outer      = st->loop_top;
+    /* Capture user labels: take them by ownership from pending or stash. */
+    if (from_stash) {
+        f->user_labels       = st->stash_for_pending_labels;
+        f->user_labels_count = st->stash_for_pending_labels_count;
+        st->stash_for_pending_labels       = NULL;
+        st->stash_for_pending_labels_count = 0;
+    } else {
+        f->user_labels       = st->pending_user_labels;
+        f->user_labels_count = st->pending_user_labels_count;
+        st->pending_user_labels       = NULL;
+        st->pending_user_labels_count = 0;
+        st->pending_user_labels_cap   = 0;
+    }
+    st->loop_top = f;
+}
+
+static void sc_loop_pop(ScParseState *st) {
+    LoopFrame *f = st->loop_top;
+    if (!f) return;
+    st->loop_top = f->outer;
+    free(f->cont_label);
+    free(f->end_label);
+    for (int i = 0; i < f->user_labels_count; i++) free(f->user_labels[i]);
+    free(f->user_labels);
+    free(f);
+}
+
+/* Search the loop stack innermost-first for a frame whose user_labels
+ * contains `name`.  If want_loop is set, switch frames are skipped (LS-4.i.3
+ * will make is_loop=0 frames possible; for LS-4.i.2 every frame is a loop). */
+static LoopFrame *sc_loop_find_by_user_label(ScParseState *st, const char *name, int want_loop) {
+    for (LoopFrame *f = st->loop_top; f; f = f->outer) {
+        if (want_loop && !f->is_loop) continue;
+        for (int i = 0; i < f->user_labels_count; i++) {
+            if (strcmp(f->user_labels[i], name) == 0) return f;
+        }
+    }
+    return NULL;
+}
+
+/* Find the innermost frame matching want_loop (1 = loop only, 0 = any). */
+static LoopFrame *sc_loop_find_innermost(ScParseState *st, int want_loop) {
+    for (LoopFrame *f = st->loop_top; f; f = f->outer) {
+        if (want_loop && !f->is_loop) continue;
+        return f;
+    }
+    return NULL;
+}
+
+/* `break;` (NULL label) jumps to the innermost loop or switch frame's end.
+ * `break LABEL;` jumps to the named frame's end.
+ * Out-of-context or unresolved labels emit a parse error and emit no stmt. */
+static void sc_append_break(ScParseState *st, char *user_label) {
+    LoopFrame *f = user_label
+        ? sc_loop_find_by_user_label(st, user_label, 0)   /* break can target switch too */
+        : sc_loop_find_innermost(st, 0);
+    if (!f) {
+        if (user_label) {
+            char buf[256];
+            snprintf(buf, sizeof buf, "break: no enclosing loop or switch labeled '%s'", user_label);
+            sc_error(st, buf);
+        } else {
+            sc_error(st, "break outside of loop or switch");
+        }
+        sc_pending_label_clear(st);
+        return;
+    }
+    sc_pending_label_clear(st);
+    STMT_t *g = sc_make_goto_uncond_stmt(st, strdup(f->end_label));
+    sc_append_chain(st, g, g);
+}
+
+/* `continue;` (NULL label) jumps to the innermost LOOP frame's cont target.
+ * `continue LABEL;` jumps to the named loop frame's cont target.
+ * Switch frames are not valid `continue` targets. */
+static void sc_append_continue(ScParseState *st, char *user_label) {
+    LoopFrame *f = user_label
+        ? sc_loop_find_by_user_label(st, user_label, 1)   /* continue requires loop */
+        : sc_loop_find_innermost(st, 1);
+    if (!f) {
+        if (user_label) {
+            char buf[256];
+            snprintf(buf, sizeof buf, "continue: no enclosing loop labeled '%s'", user_label);
+            sc_error(st, buf);
+        } else {
+            sc_error(st, "continue outside of loop");
+        }
+        sc_pending_label_clear(st);
+        return;
+    }
+    f->cont_used = 1;          /* tells finalize_* to emit the Lcont pad (do/for) */
+    sc_pending_label_clear(st);
+    STMT_t *g = sc_make_goto_uncond_stmt(st, strdup(f->cont_label));
+    sc_append_chain(st, g, g);
 }
 
 /* =========================================================================
@@ -1764,6 +2093,15 @@ CODE_t *snocone_parse_program(const char *src, const char *filename) {
     state.nerrors   = 0;
 
     int rc = sc_parse(&state);
+
+    /* LS-4.i.2 — clean up any pending label state.  Should be empty at
+     * end of a well-formed parse, but errors can leave residue. */
+    sc_pending_label_clear(&state);
+    free(state.pending_user_labels);
+    for (int i = 0; i < state.stash_for_pending_labels_count; i++)
+        free(state.stash_for_pending_labels[i]);
+    free(state.stash_for_pending_labels);
+    while (state.loop_top) sc_loop_pop(&state);
 
     if (rc != 0 || state.nerrors > 0) {
         free(state.code);
