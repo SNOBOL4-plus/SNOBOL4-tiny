@@ -21,7 +21,7 @@
 #include <stddef.h>
 typedef enum {
     T_INT = 1, T_REAL, T_STR, T_IDENT,
-    T_FUNCTION,                                    /* ident immediately followed by '(' */
+    T_CALL,                                    /* ident immediately followed by '(' */
     T_KEYWORD,                                     /* &IDENT */
     T_CONCAT,                                      /* whitespace between two atoms */
     T_2EQUAL, T_2QUEST, T_2PIPE,
@@ -43,7 +43,7 @@ typedef enum {
     T_IF, T_ELSE, T_WHILE, T_DO, T_UNTIL, T_FOR,
     T_SWITCH, T_CASE, T_DEFAULT,
     T_BREAK, T_CONTINUE, T_GOTO,
-    T_FUNCTION_KW, T_RETURN, T_FRETURN, T_NRETURN,
+    T_FUNCTION, T_RETURN, T_FRETURN, T_NRETURN,
     T_STRUCT,
     T_EOF, T_UNKNOWN
 } ScKind;

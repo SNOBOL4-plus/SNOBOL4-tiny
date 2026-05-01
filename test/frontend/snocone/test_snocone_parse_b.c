@@ -5,7 +5,7 @@
  *   ==  !=  <  >  <=  >=                  (numeric:  EQ NE LT GT LE GE)
  *   :==:  :!=:  :<:  :>:  :<=:  :>=:      (lexical:  LEQ LNE LLT LGT LLE LGE)
  *   ::  :!:                               (identity: IDENT DIFFER)
- * each lower to an E_FNC named call.  And the T_FUNCTION call-form
+ * each lower to an E_FNC named call.  And the T_CALL call-form
  * lowers `EQ(2+2, 4)` to E_FNC("EQ", E_ADD(2,2), 4).  Plus the precedence
  * relation: comparisons sit BELOW arithmetic add/sub, so
  * `a + b == c + d` parses as `(a + b) == (c + d)`.

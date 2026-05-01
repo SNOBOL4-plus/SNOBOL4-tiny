@@ -77,7 +77,7 @@ int main(void) {
     run_test(&(TestCase){
         "T02a call f(x)",
         "f(x)",
-        { T_FUNCTION, T_LPAREN, T_IDENT, T_RPAREN, T_EOF }
+        { T_CALL, T_LPAREN, T_IDENT, T_RPAREN, T_EOF }
     });
 
     /* Test 2b — concat with paren: space before ( */
@@ -105,7 +105,7 @@ int main(void) {
     run_test(&(TestCase){
         "T04 EQ(x,0) x = 1;",
         "EQ(x, 0) x = 1;",
-        { T_FUNCTION, T_LPAREN, T_IDENT, T_COMMA, T_INT, T_RPAREN,
+        { T_CALL, T_LPAREN, T_IDENT, T_COMMA, T_INT, T_RPAREN,
           T_CONCAT, T_IDENT, T_2EQUAL, T_INT, T_SEMICOLON, T_EOF }
     });
 
@@ -115,9 +115,9 @@ int main(void) {
         "A = (LT(I,J) I, GT(I,J) J, 'Same');",
         { T_IDENT, T_2EQUAL,
           T_LPAREN,
-            T_FUNCTION, T_LPAREN, T_IDENT, T_COMMA, T_IDENT, T_RPAREN, T_CONCAT, T_IDENT,
+            T_CALL, T_LPAREN, T_IDENT, T_COMMA, T_IDENT, T_RPAREN, T_CONCAT, T_IDENT,
           T_COMMA,
-            T_FUNCTION, T_LPAREN, T_IDENT, T_COMMA, T_IDENT, T_RPAREN, T_CONCAT, T_IDENT,
+            T_CALL, T_LPAREN, T_IDENT, T_COMMA, T_IDENT, T_RPAREN, T_CONCAT, T_IDENT,
           T_COMMA,
             T_STR,
           T_RPAREN, T_SEMICOLON, T_EOF }
@@ -130,7 +130,7 @@ int main(void) {
         { T_IF, T_LPAREN, T_IDENT, T_2QUEST, T_STR, T_2EQUAL,
           T_STR, T_RPAREN,
           T_CONCAT,
-          T_FUNCTION, T_LPAREN, T_RPAREN, T_SEMICOLON, T_EOF }
+          T_CALL, T_LPAREN, T_RPAREN, T_SEMICOLON, T_EOF }
     });
 
     /* Test 7 — string with embedded && (must NOT lex as separate tokens) */
@@ -271,7 +271,7 @@ int main(void) {
           T_IDENT, T_2EQUAL, T_IDENT, T_2PLUS, T_INT, T_SEMICOLON,
           T_RBRACE,
           T_UNTIL, T_LPAREN,
-          T_FUNCTION, T_LPAREN, T_IDENT, T_COMMA, T_INT, T_RPAREN,
+          T_CALL, T_LPAREN, T_IDENT, T_COMMA, T_INT, T_RPAREN,
           T_RPAREN, T_SEMICOLON, T_EOF }
     });
 
@@ -287,7 +287,7 @@ int main(void) {
     run_test(&(TestCase){
         "T_function keyword",
         "function foo(x) { return x; }",
-        { T_FUNCTION_KW, T_FUNCTION, T_LPAREN, T_IDENT, T_RPAREN,
+        { T_FUNCTION, T_CALL, T_LPAREN, T_IDENT, T_RPAREN,
           T_LBRACE,
           T_RETURN, T_IDENT, T_SEMICOLON,
           T_RBRACE, T_EOF }

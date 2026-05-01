@@ -110,7 +110,7 @@ static signed char sc_value_table[256];
 static int         sc_value_table_built = 0;
 static void sc_value_table_build(void) {
     sc_value_table[T_IDENT]    = 1;
-    sc_value_table[T_FUNCTION] = 1;
+    sc_value_table[T_CALL] = 1;
     sc_value_table[T_INT]      = 1;
     sc_value_table[T_REAL]     = 1;
     sc_value_table[T_STR]      = 1;
@@ -141,7 +141,7 @@ static const KwEntry KW_TABLE[] = {
     { "break",    T_BREAK    },
     { "continue", T_CONTINUE },
     { "goto",     T_GOTO     },
-    { "function", T_FUNCTION_KW },
+    { "function", T_FUNCTION },
     { "return",   T_RETURN   },
     { "freturn",  T_FRETURN  },
     { "nreturn",  T_NRETURN  },
@@ -275,7 +275,7 @@ S_DISPATCH:
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_IDENT:
     if (is_idcont(PEEK(0)))                                        {  ADV(1);                                              goto S_IDENT;     }
-    if (PEEK(0) == '('  )                                                                                                  goto E_FUNCTION;
+    if (PEEK(0) == '('  )                                                                                                  goto E_CALL;
                                                                    {                                                       goto E_IDENT;     }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_KEYWORD:
@@ -554,7 +554,7 @@ E_INT:           EMIT_V(T_INT);
 /*--------------------------------------------------------------------------------------------------------------------*/
 E_REAL:          EMIT_V(T_REAL);
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_FUNCTION:      EMIT_V(T_FUNCTION);
+E_CALL:          EMIT_V(T_CALL);
 /*--------------------------------------------------------------------------------------------------------------------*/
 E_IDENT:
     {
@@ -595,7 +595,7 @@ static void sc_name_table_build(void) {
     sc_name_table[T_REAL]             = "T_REAL";
     sc_name_table[T_STR]              = "T_STR";
     sc_name_table[T_IDENT]            = "T_IDENT";
-    sc_name_table[T_FUNCTION]         = "T_FUNCTION";
+    sc_name_table[T_CALL]         = "T_CALL";
     sc_name_table[T_KEYWORD]          = "T_KEYWORD";
     sc_name_table[T_CONCAT]           = "T_CONCAT";
     sc_name_table[T_2EQUAL]       = "T_2EQUAL";
@@ -667,7 +667,7 @@ static void sc_name_table_build(void) {
     sc_name_table[T_BREAK]         = "T_BREAK";
     sc_name_table[T_CONTINUE]      = "T_CONTINUE";
     sc_name_table[T_GOTO]          = "T_GOTO";
-    sc_name_table[T_FUNCTION_KW]      = "T_FUNCTION_KW";
+    sc_name_table[T_FUNCTION]      = "T_FUNCTION";
     sc_name_table[T_RETURN]        = "T_RETURN";
     sc_name_table[T_FRETURN]       = "T_FRETURN";
     sc_name_table[T_NRETURN]       = "T_NRETURN";

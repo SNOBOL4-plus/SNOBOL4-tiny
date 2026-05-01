@@ -11,7 +11,7 @@
  *   * assignment (T_2EQUAL) + compound-assigns (+= -= *= /= ^=)
  *   * comparison/identity (==, !=, <, >, <=, >=, :==:, :!=:, :<:, :>:,
  *     :<=:, :>=:, ::, :!:) → E_FNC named calls
- *   * T_FUNCTION call-form `EQ(2+2, 4)` → E_FNC("EQ", ...)
+ *   * T_CALL call-form `EQ(2+2, 4)` → E_FNC("EQ", ...)
  *   * pattern match `?`              → E_SCAN
  *   * pattern alternation `|`        → E_ALT (n-ary fold)
  *   * synthetic concat T_CONCAT      → E_SEQ (n-ary fold)
@@ -83,7 +83,7 @@
 #define T_REAL             SC_T_REAL
 #define T_STR              SC_T_STR
 #define T_IDENT            SC_T_IDENT
-#define T_FUNCTION         SC_T_FUNCTION
+#define T_CALL         SC_T_CALL
 #define T_KEYWORD          SC_T_KEYWORD
 #define T_CONCAT           SC_T_CONCAT
 
@@ -154,9 +154,9 @@
 #define T_SEMICOLON        SC_T_SEMICOLON
 #define T_COLON            SC_T_COLON
 
-/* Keywords — Snocone reserved words.  T_FUNCTION_KW (the `function`
- * keyword) is named with a _KW suffix to avoid colliding with T_FUNCTION
- * (the IDENT-followed-by-zero-space-`(` call-form token). */
+/* Keywords — Snocone reserved words.  T_FUNCTION is the `function`
+ * keyword; T_CALL is the IDENT-followed-by-zero-space-`(` call-form
+ * token from the FSM (carries the identifier name, consumes the `(`). */
 #define T_IF            SC_T_IF
 #define T_ELSE          SC_T_ELSE
 #define T_WHILE         SC_T_WHILE
@@ -169,7 +169,7 @@
 #define T_BREAK         SC_T_BREAK
 #define T_CONTINUE      SC_T_CONTINUE
 #define T_GOTO          SC_T_GOTO
-#define T_FUNCTION_KW      SC_T_FUNCTION_KW
+#define T_FUNCTION      SC_T_FUNCTION
 #define T_RETURN        SC_T_RETURN
 #define T_FRETURN       SC_T_FRETURN
 #define T_NRETURN       SC_T_NRETURN
@@ -189,7 +189,7 @@
 #undef T_REAL
 #undef T_STR
 #undef T_IDENT
-#undef T_FUNCTION
+#undef T_CALL
 #undef T_KEYWORD
 #undef T_CONCAT
 #undef T_2EQUAL
@@ -261,7 +261,7 @@
 #undef T_BREAK
 #undef T_CONTINUE
 #undef T_GOTO
-#undef T_FUNCTION_KW
+#undef T_FUNCTION
 #undef T_RETURN
 #undef T_FRETURN
 #undef T_NRETURN
@@ -462,7 +462,7 @@ static int sc_kind_to_tok(int sc_kind);
 %token <str> T_INT      /* FSM emits raw text; thunk converts to long */
 %token <str> T_REAL     /* same — thunk converts to double */
 %token <str> T_STR      /* FSM emits unquoted, escapes resolved */
-%token <str> T_FUNCTION /* IDENT-followed-by-zero-space-( per Andrew's `f(args)` rule */
+%token <str> T_CALL /* IDENT-followed-by-zero-space-( per Andrew's `f(args)` rule */
 
 /* ---- Binary arithmetic operators (LS-4.a) ---- */
 %token T_2PLUS
@@ -511,7 +511,7 @@ static int sc_kind_to_tok(int sc_kind);
 %token T_DO T_FOR
 %token T_SWITCH T_CASE T_DEFAULT
 %token T_BREAK T_CONTINUE T_GOTO
-%token T_FUNCTION_KW T_RETURN T_FRETURN T_NRETURN T_STRUCT
+%token T_FUNCTION T_RETURN T_FRETURN T_NRETURN T_STRUCT
 %token T_UNKNOWN
 
 /* ---- Block delimiters and control-flow keywords (LS-4.f) ---- */
@@ -653,7 +653,7 @@ opt_head_sep
 
 /* LS-4.h — func_head: `function NAME ( arglist )` opt_head_sep.
  *
- * The function name is carried by T_FUNCTION (IDENT immediately followed
+ * The function name is carried by T_CALL (IDENT immediately followed
  * by zero-whitespace `(` — the call-form token from the FSM).  The arg
  * list is zero or more comma-separated IDENT names, returned as a single
  * malloc'd string of the form "arg1,arg2,arg3".  An empty arg list
@@ -670,12 +670,12 @@ opt_head_sep
  * cur_func_name is set so return/freturn/nreturn inside the body can
  * reference the function name.
  */
-func_head   : T_FUNCTION_KW T_FUNCTION T_LPAREN func_arglist opt_head_sep
+func_head   : T_FUNCTION T_CALL T_LPAREN func_arglist opt_head_sep
                                         { $$ = sc_func_head_new(st, $2, $4); free($2); free($4); }
             ;
 
 /* func_arglist — the argument portion of `function name(args)`.
- * T_FUNCTION already consumed the name and the `(`; we now consume
+ * T_CALL already consumed the name and the `(`; we now consume
  * the comma-separated IDENT list and the closing `)`.
  * The value is a malloc'd string "arg1,arg2" (empty string if no args).
  */
@@ -737,7 +737,7 @@ block_stmt  : T_LBRACE stmt_list T_RBRACE      { /* statements already appended 
  *   expr9  — multiplication / division                             pri 8/9 left-assoc
  *   expr11 — exponentiation                                        pri 11  right-assoc
  *   expr15 — postfix subscript `a[i,j]` → E_IDX (n-ary)             pri 15  left-assoc chain
- *   expr17 — atoms (literals, idents, keywords, parens, T_FUNCTION,
+ *   expr17 — atoms (literals, idents, keywords, parens, T_CALL,
  *            unary +/-)
  *
  * Skipped levels (expr2, expr7, expr8, expr10, expr12..expr14, expr16)
@@ -941,7 +941,7 @@ expr11      : expr15 T_2CARET expr11
  *
  * The `exprlist` non-terminal already exists from LS-4.b (function-call
  * arg lists); we reuse it.  Container-unpacking idiom matches the
- * T_FUNCTION rule in expr17 — drain children into the E_IDX node, then
+ * T_CALL rule in expr17 — drain children into the E_IDX node, then
  * free the E_NUL temporary holder.
  */
 expr15      : expr15 T_LBRACK exprlist T_RBRACK
@@ -959,7 +959,7 @@ expr15      : expr15 T_LBRACK exprlist T_RBRACK
  *
  * Mirror snobol4.y's exprlist/exprlist_ne pair: a non-empty list
  * uses an E_NUL container as a temporary holder; the empty list
- * is just an E_NUL with no children.  Caller (T_FUNCTION rule)
+ * is just an E_NUL with no children.  Caller (T_CALL rule)
  * unpacks children into the E_FNC node and frees the container.
  */
 exprlist    : exprlist_ne
@@ -979,11 +979,11 @@ exprlist_ne : exprlist_ne T_COMMA expr0
  * "all unaries are higher priority than any binary."  In LS-4.e the
  * full set of unaries (* . $ @ ~ ? &) joins this tier.
  *
- * LS-4.b adds T_FUNCTION call-form: `EQ(2+2, 4)` → E_FNC("EQ", ...).
+ * LS-4.b adds T_CALL call-form: `EQ(2+2, 4)` → E_FNC("EQ", ...).
  * The lexer has already classified the IDENT-followed-by-zero-space-(
- * as T_FUNCTION (the "f(args) vs f (args)" disambiguation rule from
+ * as T_CALL (the "f(args) vs f (args)" disambiguation rule from
  * the goal); the matching ( is the next token in the stream. */
-expr17      : T_FUNCTION T_LPAREN exprlist T_RPAREN
+expr17      : T_CALL T_LPAREN exprlist T_RPAREN
                                 { EXPR_t *e = expr_new(E_FNC);
                                   e->sval = $1;             /* takes ownership */
                                   for (int i = 0; i < $3->nchildren; i++)
@@ -1085,7 +1085,7 @@ static int sc_kind_to_tok(int sc_kind) {
         case SC_T_REAL:             return T_REAL;
         case SC_T_STR:              return T_STR;
         case SC_T_IDENT:            return T_IDENT;
-        case SC_T_FUNCTION:         return T_FUNCTION;
+        case SC_T_CALL:         return T_CALL;
         case SC_T_KEYWORD:          return T_KEYWORD;
         case SC_T_CONCAT:           return T_CONCAT;
         case SC_T_2EQUAL:           return T_2EQUAL;
@@ -1156,7 +1156,7 @@ static int sc_kind_to_tok(int sc_kind) {
         case SC_T_BREAK:         return T_BREAK;
         case SC_T_CONTINUE:      return T_CONTINUE;
         case SC_T_GOTO:          return T_GOTO;
-        case SC_T_FUNCTION_KW:      return T_FUNCTION_KW;
+        case SC_T_FUNCTION:      return T_FUNCTION;
         case SC_T_RETURN:        return T_RETURN;
         case SC_T_FRETURN:       return T_FRETURN;
         case SC_T_NRETURN:       return T_NRETURN;

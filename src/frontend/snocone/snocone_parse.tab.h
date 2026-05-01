@@ -100,7 +100,7 @@ typedef struct ScParseState {
     T_INT = 260,                   /* T_INT  */
     T_REAL = 261,                  /* T_REAL  */
     T_STR = 262,                   /* T_STR  */
-    T_FUNCTION = 263,              /* T_FUNCTION  */
+    T_CALL = 263,                  /* T_CALL  */
     T_2PLUS = 264,                 /* T_2PLUS  */
     T_2MINUS = 265,                /* T_2MINUS  */
     T_2STAR = 266,                 /* T_2STAR  */
@@ -165,7 +165,7 @@ typedef struct ScParseState {
     T_BREAK = 325,                 /* T_BREAK  */
     T_CONTINUE = 326,              /* T_CONTINUE  */
     T_GOTO = 327,                  /* T_GOTO  */
-    T_FUNCTION_KW = 328,           /* T_FUNCTION_KW  */
+    T_FUNCTION = 328,              /* T_FUNCTION  */
     T_RETURN = 329,                /* T_RETURN  */
     T_FRETURN = 330,               /* T_FRETURN  */
     T_NRETURN = 331,               /* T_NRETURN  */

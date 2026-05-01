@@ -191,7 +191,7 @@ static void test_unary_on_literal(void) {
 
 static void test_unary_on_call(void) {
     /* *f(x)  — E_DEFER applied to an E_FNC node                    */
-    /* Lexer sees: T_1STAR T_FUNCTION LPAREN T_IDENT RPAREN SEMI    */
+    /* Lexer sees: T_1STAR T_CALL LPAREN T_IDENT RPAREN SEMI    */
     EXPR_t *e = parse_first_stmt("*f(x) ;");
     ASSERT(e, "parsed *f(x)");
     ASSERT(e->kind == E_DEFER, "outer E_DEFER");
