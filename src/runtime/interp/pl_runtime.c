@@ -317,9 +317,38 @@ static Term *pl_unified_eval_arith_term(EXPR_t *e, Term **env) {
             if (!t) return term_new_int(0);
             return t;
         }
-        case E_ADD: return _EF(+, e->children[0], e->children[1]);
-        case E_SUB: return _EF(-, e->children[0], e->children[1]);
-        case E_MUL: return _EF(*, e->children[0], e->children[1]);
+        case E_ADD: {
+            Term *la=pl_unified_eval_arith_term(e->children[0],env);
+            Term *lb=pl_unified_eval_arith_term(e->children[1],env);
+            int fl=(la&&la->tag==TT_FLOAT)||(lb&&lb->tag==TT_FLOAT);
+            if (fl) return term_new_float(_ED(e->children[0]) + _ED(e->children[1]));
+            /* signed-overflow detection — promote to float on wrap (matches SWI
+             * bounded=true semantics: minint_promotion expects a float result). */
+            long a=_EI(e->children[0]), b=_EI(e->children[1]), r;
+            if (__builtin_add_overflow(a, b, &r))
+                return term_new_float((double)a + (double)b);
+            return term_new_int(r);
+        }
+        case E_SUB: {
+            Term *la=pl_unified_eval_arith_term(e->children[0],env);
+            Term *lb=pl_unified_eval_arith_term(e->children[1],env);
+            int fl=(la&&la->tag==TT_FLOAT)||(lb&&lb->tag==TT_FLOAT);
+            if (fl) return term_new_float(_ED(e->children[0]) - _ED(e->children[1]));
+            long a=_EI(e->children[0]), b=_EI(e->children[1]), r;
+            if (__builtin_sub_overflow(a, b, &r))
+                return term_new_float((double)a - (double)b);
+            return term_new_int(r);
+        }
+        case E_MUL: {
+            Term *la=pl_unified_eval_arith_term(e->children[0],env);
+            Term *lb=pl_unified_eval_arith_term(e->children[1],env);
+            int fl=(la&&la->tag==TT_FLOAT)||(lb&&lb->tag==TT_FLOAT);
+            if (fl) return term_new_float(_ED(e->children[0]) * _ED(e->children[1]));
+            long a=_EI(e->children[0]), b=_EI(e->children[1]), r;
+            if (__builtin_mul_overflow(a, b, &r))
+                return term_new_float((double)a * (double)b);
+            return term_new_int(r);
+        }
         case E_DIV: {
             Term *la=pl_unified_eval_arith_term(e->children[0],env);
             Term *lb=pl_unified_eval_arith_term(e->children[1],env);
