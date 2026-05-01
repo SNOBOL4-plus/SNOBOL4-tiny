@@ -79,12 +79,46 @@ static Term *scope_get(VarScope *sc, const char *name) {
 /* =========================================================================
  * Parser state
  * ======================================================================= */
+
+/* Conditional-compilation stack — one frame per :- if(...). nesting level.
+ * `active` is whether clauses at this nesting are currently emitted.
+ * `taken` records whether any branch (if/elif) at this nesting has been
+ * taken yet — once true, no further elif/else branch may activate.
+ * The top frame's `active` flag is the only one that matters for any
+ * given clause; deeper inactive frames force every nested branch to be
+ * inactive regardless of its own condition.
+ *
+ * Conditions are evaluated at parse time against a small fixed table —
+ * scrip is a bounded integer Prolog with no rationals, no GMP. Any
+ * unrecognised condition is treated as TRUE (conservative — load the
+ * code, do not silently drop tests). The known-false patterns are
+ * precisely the bigint-needing blocks that segfault when loaded:
+ *   :- if(current_prolog_flag(bounded, false)).         -> FALSE (skip)
+ *   :- if(\+ current_prolog_flag(bounded, true)).        -> FALSE (skip)
+ *   :- if(current_prolog_flag(prefer_rationals, true)).  -> FALSE (skip)
+ */
+#define IF_STACK_MAX 32
+typedef struct {
+    int active;     /* clauses currently emitted at this level */
+    int taken;      /* a branch at this level has already been active */
+    int parent_active; /* parent's active state — used to compute child active */
+    int line;       /* :- if line, for error reporting on unmatched endif */
+} IfFrame;
+
 typedef struct {
     Lexer      lx;
     VarScope   sc;
     const char *filename;
     int         nerrors;
+    IfFrame     ifst[IF_STACK_MAX];
+    int         ifst_top;     /* depth (0 = no enclosing if) */
 } Parser;
+
+/* True if the parser is currently in code that should be emitted. */
+static int if_currently_active(const Parser *p) {
+    if (p->ifst_top == 0) return 1;
+    return p->ifst[p->ifst_top - 1].active;
+}
 
 static void perror_at(Parser *p, int line, const char *msg) {
     fprintf(stderr, "%s:%d: parse error: %s\n", p->filename, line, msg);
@@ -678,6 +712,151 @@ static void dcg_expand_clause(PlClause *cl, Term *dcg_body, Term *pushback, VarS
 }
 
 /* =========================================================================
+ * Conditional-compilation evaluator
+ *
+ * Evaluates the Term inside :- if(Cond). against scrip's fixed flag set.
+ * Returns 1 (true), 0 (false), or -1 (unknown — caller treats as true).
+ *
+ * scrip's static flag table:
+ *   bounded            = true   (no GMP, ints are int64)
+ *   prefer_rationals   = false  (no rational arithmetic)
+ *
+ * Recognised condition forms:
+ *   current_prolog_flag(Flag, Value)         -> matches table
+ *   \+ Cond                                  -> negate
+ *   not(Cond)                                -> negate
+ *   true / fail / false                      -> trivial
+ *
+ * Anything else returns -1 (unknown). The caller treats -1 as TRUE so we
+ * never silently drop test code we don't understand — only the known
+ * bigint-needing blocks get gated out.
+ * ======================================================================= */
+static int eval_if_condition(Term *cond) {
+    cond = term_deref(cond);
+    if (!cond) return -1;
+
+    if (cond->tag == TT_ATOM) {
+        const char *a = prolog_atom_name(cond->atom_id);
+        if (strcmp(a, "true") == 0) return 1;
+        if (strcmp(a, "fail") == 0 || strcmp(a, "false") == 0) return 0;
+        return -1;
+    }
+    if (cond->tag != TT_COMPOUND) return -1;
+
+    const char *fn = prolog_atom_name(cond->compound.functor);
+    int arity = cond->compound.arity;
+
+    if ((strcmp(fn, "\\+") == 0 || strcmp(fn, "not") == 0) && arity == 1) {
+        int v = eval_if_condition(cond->compound.args[0]);
+        if (v < 0) return -1;
+        return v ? 0 : 1;
+    }
+
+    if (strcmp(fn, "current_prolog_flag") == 0 && arity == 2) {
+        Term *flag_t = term_deref(cond->compound.args[0]);
+        Term *val_t  = term_deref(cond->compound.args[1]);
+        if (!flag_t || !val_t || flag_t->tag != TT_ATOM || val_t->tag != TT_ATOM)
+            return -1;
+        const char *flag = prolog_atom_name(flag_t->atom_id);
+        const char *val  = prolog_atom_name(val_t->atom_id);
+
+        if (strcmp(flag, "bounded") == 0) {
+            if (strcmp(val, "true")  == 0) return 1;
+            if (strcmp(val, "false") == 0) return 0;
+            return -1;
+        }
+        if (strcmp(flag, "prefer_rationals") == 0) {
+            if (strcmp(val, "true")  == 0) return 0;
+            if (strcmp(val, "false") == 0) return 1;
+            return -1;
+        }
+        return -1;
+    }
+
+    return -1;
+}
+
+/* True if `goal` is one of if/else/elif/endif and was handled by the
+ * if-stack. Caller must discard the synthetic clause when this returns 1.
+ * Returns 0 if the goal is not a conditional-compilation directive.
+ */
+static int try_handle_if_directive(Parser *p, Term *goal, int lineno) {
+    goal = term_deref(goal);
+    if (!goal) return 0;
+
+    const char *fn = NULL;
+    int arity = 0;
+    Term *arg0 = NULL;
+    if (goal->tag == TT_ATOM) {
+        fn = prolog_atom_name(goal->atom_id);
+        arity = 0;
+    } else if (goal->tag == TT_COMPOUND) {
+        fn = prolog_atom_name(goal->compound.functor);
+        arity = goal->compound.arity;
+        if (arity > 0) arg0 = goal->compound.args[0];
+    } else {
+        return 0;
+    }
+    if (!fn) return 0;
+
+    if (strcmp(fn, "if") == 0 && arity == 1) {
+        if (p->ifst_top >= IF_STACK_MAX) {
+            perror_at(p, lineno, ":- if/1 nesting too deep");
+            return 1;
+        }
+        int parent_active = if_currently_active(p);
+        int verdict = parent_active ? eval_if_condition(arg0) : 0;
+        /* Unknown (-1) becomes TRUE — load by default. */
+        int active = parent_active && (verdict != 0);
+        IfFrame *f = &p->ifst[p->ifst_top++];
+        f->active = active;
+        f->taken  = active;
+        f->parent_active = parent_active;
+        f->line   = lineno;
+        return 1;
+    }
+    if (strcmp(fn, "elif") == 0 && arity == 1) {
+        if (p->ifst_top == 0) {
+            perror_at(p, lineno, ":- elif without matching :- if");
+            return 1;
+        }
+        IfFrame *f = &p->ifst[p->ifst_top - 1];
+        if (!f->parent_active || f->taken) {
+            f->active = 0;
+        } else {
+            int verdict = eval_if_condition(arg0);
+            int active  = (verdict != 0);
+            f->active = active;
+            if (active) f->taken = 1;
+        }
+        return 1;
+    }
+    if (strcmp(fn, "else") == 0 && arity == 0) {
+        if (p->ifst_top == 0) {
+            perror_at(p, lineno, ":- else without matching :- if");
+            return 1;
+        }
+        IfFrame *f = &p->ifst[p->ifst_top - 1];
+        if (!f->parent_active || f->taken) {
+            f->active = 0;
+        } else {
+            f->active = 1;
+            f->taken  = 1;
+        }
+        return 1;
+    }
+    if (strcmp(fn, "endif") == 0 && arity == 0) {
+        if (p->ifst_top == 0) {
+            perror_at(p, lineno, ":- endif without matching :- if");
+            return 1;
+        }
+        p->ifst_top--;
+        return 1;
+    }
+    return 0;
+}
+
+/* =========================================================================
  * parse_clause — one clause or directive
  * ======================================================================= */
 static PlClause *parse_clause(Parser *p) {
@@ -696,6 +875,18 @@ static PlClause *parse_clause(Parser *p) {
         Token dot = lexer_next(&p->lx);
         if (dot.kind != TK_DOT)
             perror_at(p, dot.line, "expected . after directive");
+
+        /* Conditional-compilation meta-directives — handled here, returned as a
+         * sentinel clause (head=NULL, body=NULL, nbody=0) so prolog_parse skips it.
+         * The if-stack is updated regardless of current activity (we must keep
+         * tracking nesting even when we are inside an inactive block). */
+        if (try_handle_if_directive(p, goal, cl->lineno)) {
+            cl->head  = NULL;
+            cl->body  = NULL;
+            cl->nbody = 0;
+            return cl;
+        }
+
         cl->head  = NULL;
         cl->body  = malloc(sizeof(Term *));
         cl->body[0] = goal;
@@ -752,6 +943,7 @@ PlProgram *prolog_parse(const char *src, const char *filename) {
     lexer_init(&p.lx, src);
     p.filename = filename ? filename : "<input>";
     p.nerrors  = 0;
+    p.ifst_top = 0;
     scope_reset(&p.sc);
 
     PlProgram *prog = calloc(1, sizeof(PlProgram));
@@ -770,11 +962,32 @@ PlProgram *prolog_parse(const char *src, const char *filename) {
         PlClause *cl = parse_clause(&p);
         if (!cl) break;
 
+        /* Sentinel from a conditional-compilation meta-directive:
+         * (head==NULL && body==NULL) — the if-stack has already been
+         * updated by parse_clause; just discard the synthetic clause. */
+        if (cl->head == NULL && cl->body == NULL && cl->nbody == 0) {
+            free(cl);
+            continue;
+        }
+
+        /* Inside an inactive :- if(...) block — parse but discard. */
+        if (!if_currently_active(&p)) {
+            if (cl->body) free(cl->body);
+            free(cl);
+            continue;
+        }
+
         /* Append to program */
         if (!prog->head) prog->head = cl;
         else             prog->tail->next = cl;
         prog->tail = cl;
         prog->nclauses++;
+    }
+
+    if (p.ifst_top != 0) {
+        fprintf(stderr, "%s: parse error: unmatched :- if (opened at line %d)\n",
+                p.filename, p.ifst[p.ifst_top - 1].line);
+        p.nerrors++;
     }
 
     prog->nerrors = p.nerrors;
