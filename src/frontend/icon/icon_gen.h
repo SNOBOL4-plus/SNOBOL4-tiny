@@ -43,7 +43,7 @@ static inline void *icn_gen_enter(void **pp, size_t size) {
 #define ICN_ENTER(ref, T)  ((T *)icn_gen_enter((void **)(ref), sizeof(T)))
 
 /*----------------------------------------------------------------------------------------------------------------------------
- * Box state types — allocated by icn_eval_gen (in scrip.c) and passed as zeta
+ * Box state types — allocated by coro_eval (in scrip.c) and passed as zeta
  *--------------------------------------------------------------------------------------------------------------------------*/
 typedef struct { long lo; long hi; long cur; }                                        icn_to_state_t;
 /*----------------------------------------------------------------------------------------------------------------------------
@@ -58,20 +58,20 @@ typedef struct {
     int  li, hi2;   /* outer lo/hi pair indices */
     long cur;       /* current value in inner lo..hi range */
 } icn_to_nested_state_t;
-DESCR_t icn_bb_to_nested(void *zeta, int entry);
+DESCR_t coro_bb_to_nested(void *zeta, int entry);
 typedef struct { long lo; long hi; long step; long cur; }                             icn_to_by_state_t;
 typedef struct { double lo; double hi; double step; double cur; }                    icn_to_by_real_state_t;
-DESCR_t icn_bb_to_by_real(void *zeta, int entry);
+DESCR_t coro_bb_to_by_real(void *zeta, int entry);
 typedef struct { const char *str; long len; long pos; char ch[2]; }                  icn_iterate_state_t;
 typedef struct { TBBLK_t *tbl; int bucket; TBPAIR_t *entry; }                        icn_tbl_iterate_state_t;
 typedef struct { TBBLK_t *tbl; int bucket; TBPAIR_t *entry; }                        icn_tbl_key_iterate_state_t;
 typedef struct { DESCR_t list_obj; int pos; }                                         icn_list_iterate_state_t;
-DESCR_t icn_bb_list_iterate(void *zeta, int entry);
-DESCR_t icn_bb_tbl_key_iterate(void *zeta, int entry);
+DESCR_t coro_bb_list_iterate(void *zeta, int entry);
+DESCR_t coro_bb_tbl_key_iterate(void *zeta, int entry);
 /* IC-9 (2026-05-01): !record — yield each field value of a DT_DATA record (non-icnlist).
  *   inst is the live DATINST_t descriptor; pos walks 0..type->nfields. */
 typedef struct { DESCR_t inst; int pos; }                                             icn_record_iterate_state_t;
-DESCR_t icn_bb_record_iterate(void *zeta, int entry);
+DESCR_t coro_bb_record_iterate(void *zeta, int entry);
 typedef struct { const char *needle; const char *hay; int nlen; const char *next; }  icn_find_state_t;
 /* IC-9 (2026-05-02): find/upto with generative subject — drive subject gen, exhaust positions per subject */
 typedef struct {
@@ -82,7 +82,7 @@ typedef struct {
     const char *next;       /* scan cursor in current hay */
     int         subj_entry; /* entry for next subj_gen pump (α on first, β after) */
 } icn_find_gen_subj_t;
-DESCR_t icn_bb_find_gen_subj(void *zeta, int entry);
+DESCR_t coro_bb_find_subj(void *zeta, int entry);
 typedef struct {
     bb_node_t   subj_gen;
     const char *cset;       /* set of chars for upto */
@@ -91,7 +91,7 @@ typedef struct {
     int         pos;        /* 0-based scan position */
     int         subj_entry;
 } icn_upto_gen_subj_t;
-DESCR_t icn_bb_upto_gen_subj(void *zeta, int entry);
+DESCR_t coro_bb_upto_subj(void *zeta, int entry);
 typedef struct {
     ucontext_t  gen_ctx;
     ucontext_t  caller_ctx;
@@ -102,26 +102,26 @@ typedef struct {
     int         yielded_returned;   /* 1 after final return value has been delivered */
     void      (*trampoline)(void);
     void       *trampoline_arg;
-    /* RK-21: gather coroutine — proc stored here so trampoline doesn't need icn_coro_stage */
+    /* RK-21: gather coroutine — proc stored here so trampoline doesn't need coro_stage */
     struct EXPR_t *gather_proc;
-} icn_suspend_state_t;
+} coro_t;
 
 /*----------------------------------------------------------------------------------------------------------------------------
  * Box function declarations — implemented in icon_gen.c
  *--------------------------------------------------------------------------------------------------------------------------*/
-DESCR_t icn_bb_to(void *zeta, int entry);
-DESCR_t icn_bb_to_by(void *zeta, int entry);
-DESCR_t icn_bb_iterate(void *zeta, int entry);
-DESCR_t icn_bb_tbl_iterate(void *zeta, int entry);
-DESCR_t icn_bb_suspend(void *zeta, int entry);
-DESCR_t icn_bb_find(void *zeta, int entry);
+DESCR_t coro_bb_to(void *zeta, int entry);
+DESCR_t coro_bb_to_by(void *zeta, int entry);
+DESCR_t coro_bb_iterate(void *zeta, int entry);
+DESCR_t coro_bb_tbl_iterate(void *zeta, int entry);
+DESCR_t coro_bb_suspend(void *zeta, int entry);
+DESCR_t coro_bb_find(void *zeta, int entry);
 typedef struct { const char *s; const char *c1; const char *c2; const char *c3; int slen; int pos; int endp; } icn_bal_state_t;
-DESCR_t icn_bb_bal(void *zeta, int entry);
-DESCR_t icn_bb_binop_gen(void *zeta, int entry);
-DESCR_t icn_bb_alternate(void *zeta, int entry);
+DESCR_t coro_bb_bal(void *zeta, int entry);
+DESCR_t coro_bb_binop(void *zeta, int entry);
+DESCR_t coro_bb_alternate(void *zeta, int entry);
 
 /*----------------------------------------------------------------------------------------------------------------------------
- * icn_bb_binop_gen — generative binary operator box (IC-2a)
+ * coro_bb_binop — generative binary operator box (IC-2a)
  *
  * Handles arithmetic and relational ops where one or both operands are generators.
  * JCON irgen.icn §4.3: funcs-set ops — right.failure → left.resume (goal-directed retry).
@@ -144,7 +144,7 @@ typedef struct {
 } icn_binop_gen_state_t;
 
 /*----------------------------------------------------------------------------------------------------------------------------
- * icn_bb_alternate — E_ALTERNATE Byrd box (IC-2a)
+ * coro_bb_alternate — E_ALTERNATE Byrd box (IC-2a)
  *
  * JCON irgen.icn ir_a_Alt: try left until ω, then switch to right.
  * Binary variant: which=0 → pumping left; which=1 → pumping right.
@@ -164,7 +164,7 @@ typedef struct EXPR_t EXPR_t;
 #endif
 
 /*----------------------------------------------------------------------------------------------------------------------------
- * icn_bb_limit — E_LIMIT Byrd box  (gen \ N)   IC-2b
+ * coro_bb_limit — E_LIMIT Byrd box  (gen \ N)   IC-2b
  *
  * Drives inner generator, yields each value, stops after N ticks.
  * State: gen (inner box), max (limit count), count (ticks so far).
@@ -174,10 +174,10 @@ typedef struct {
     long      max;
     long      count;
 } icn_limit_state_t;
-DESCR_t icn_bb_limit(void *zeta, int entry);
+DESCR_t coro_bb_limit(void *zeta, int entry);
 
 /*----------------------------------------------------------------------------------------------------------------------------
- * icn_bb_every — E_EVERY Byrd box  (every gen [do body])   IC-2b
+ * coro_bb_every — E_EVERY Byrd box  (every gen [do body])   IC-2b
  *
  * Drives inner generator to exhaustion; evaluates body EXPR_t* per tick.
  * body may be NULL (bare "every gen" — just drives gen to exhaustion for side effects).
@@ -189,10 +189,10 @@ typedef struct {
     EXPR_t    *body;   /* may be NULL */
     int        started;
 } icn_every_state_t;
-DESCR_t icn_bb_every(void *zeta, int entry);
+DESCR_t coro_bb_every(void *zeta, int entry);
 
 /*----------------------------------------------------------------------------------------------------------------------------
- * icn_bb_bang_binary — E_BANG_BINARY Byrd box  (E1 ! E2)   IC-2b
+ * coro_bb_bang_binary — E_BANG_BINARY Byrd box  (E1 ! E2)   IC-2b
  *
  * Invoke E1 (a procedure EXPR_t*) with successive values from E2 (a generator).
  * E1 is re-evaluated for each value produced by E2.
@@ -203,10 +203,10 @@ typedef struct {
     bb_node_t arg_box;     /* E2 — the argument generator */
     DESCR_t   cur_arg;     /* current argument value */
 } icn_bang_binary_state_t;
-DESCR_t icn_bb_bang_binary(void *zeta, int entry);
+DESCR_t coro_bb_bang_binary(void *zeta, int entry);
 
 /*----------------------------------------------------------------------------------------------------------------------------
- * icn_bb_seq_expr — E_SEQ_EXPR Byrd box  (E1; E2; …; En)   IC-2b
+ * coro_bb_seq_expr — E_SEQ_EXPR Byrd box  (E1; E2; …; En)   IC-2b
  *
  * Evaluates each child in order; result = last child.
  * If last child is a generator, its values are forwarded.
@@ -218,12 +218,12 @@ typedef struct {
     bb_node_t  last_box;   /* generator box for last child (may be oneshot) */
     int        started;
 } icn_seq_state_t;
-DESCR_t icn_bb_seq_expr(void *zeta, int entry);
+DESCR_t coro_bb_seq_expr(void *zeta, int entry);
 
-bb_node_t icn_eval_gen(EXPR_t *e);
+bb_node_t coro_eval(EXPR_t *e);
 
 /* RK-21: gather coroutine trampoline — defined in icn_runtime.c, referenced in icon_gen.c */
-extern void icn_gather_trampoline(void);
-extern icn_suspend_state_t *icn_gather_trampoline_ss;
+extern void gather_trampoline(void);
+extern coro_t *gather_trampoline_ss;
 
 #endif /* ICON_GEN_H */

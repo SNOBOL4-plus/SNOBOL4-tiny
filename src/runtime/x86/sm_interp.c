@@ -66,7 +66,7 @@ extern DESCR_t  NV_GET_fn(const char *name);
 /* OE-10: Icon/Prolog BB opcode support */
 #include "bb_broker.h"
 #include <setjmp.h>
-extern bb_node_t icn_eval_gen(EXPR_t *e);   /* scrip.c — builds a drivable bb_node_t */
+extern bb_node_t coro_eval(EXPR_t *e);   /* scrip.c — builds a drivable bb_node_t */
 
 /* IM-4: SM step-limit for in-process sync monitor */
 int      g_sm_step_limit = 0;
@@ -632,11 +632,11 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
         /* ── OE-10/11: Byrd box broker opcodes — Icon/Prolog SM-run support ── */
         case SM_BB_PUMP: {
             /* Pop DT_E descriptor whose .ptr is the EXPR_t* of the Icon statement subject.
-             * Build a drivable bb_node_t via icn_eval_gen, pump all values via bb_broker. */
+             * Build a drivable bb_node_t via coro_eval, pump all values via bb_broker. */
             DESCR_t expr_d = sm_pop(st);
             EXPR_t *expr   = (EXPR_t *)expr_d.ptr;
             if (!expr) { st->last_ok = 0; break; }
-            bb_node_t node = icn_eval_gen(expr);
+            bb_node_t node = coro_eval(expr);
             int ticks = bb_broker(node, BB_PUMP, pump_print, NULL);
             st->last_ok = (ticks > 0);
             break;
@@ -644,12 +644,12 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
 
         case SM_BB_ONCE: {
             /* Pop DT_E descriptor whose .ptr is the EXPR_t* of the Prolog statement subject.
-             * Build a bb_node_t via icn_eval_gen (shared builder handles E_CHOICE/E_CLAUSE),
+             * Build a bb_node_t via coro_eval (shared builder handles E_CHOICE/E_CLAUSE),
              * drive once via bb_broker(BB_ONCE). */
             DESCR_t expr_d = sm_pop(st);
             EXPR_t *expr   = (EXPR_t *)expr_d.ptr;
             if (!expr) { st->last_ok = 0; break; }
-            bb_node_t node = icn_eval_gen(expr);
+            bb_node_t node = coro_eval(expr);
             int ticks = bb_broker(node, BB_ONCE, NULL, NULL);
             st->last_ok = (ticks > 0);
             break;

@@ -494,8 +494,8 @@ DESCR_t subscript_get(DESCR_t arr, DESCR_t idx) {
         /* check if it's an icnlist */
         DESCR_t tag = FIELD_GET_fn(arr, "icn_type");
         if (tag.v == DT_S && tag.s && strcmp(tag.s,"list")==0) {
-            int n = (int)FIELD_GET_fn(arr,"icn_size").i;
-            DESCR_t ea = FIELD_GET_fn(arr,"icn_elems");
+            int n = (int)FIELD_GET_fn(arr,"frame_size").i;
+            DESCR_t ea = FIELD_GET_fn(arr,"frame_elems");
             DESCR_t *elems = (ea.v==DT_DATA) ? (DESCR_t*)ea.ptr : NULL;
             int i = (int)to_int(idx);
             if (i < 0) i = n + 1 + i + 1;

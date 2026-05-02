@@ -1915,7 +1915,7 @@ yyreduce:
               (yyval.node) = make_for_range(iter->children[0], iter->children[1], vname, (yyvsp[0].node));
           } else {
               /* Always wrap in E_ITERATE so loopvar goes on the wrapper node.
-               * RK-16/RK-21: gen->sval = loopvar name for icn_drive / E_EVERY binding. */
+               * RK-16/RK-21: gen->sval = loopvar name for coro_drive / E_EVERY binding. */
               const char *vn = intern(strip_sigil((yyvsp[-1].sval)));
               EXPR_t *gen = expr_unary(E_ITERATE, iter);
               gen->sval = (char *)vn;
@@ -2141,8 +2141,8 @@ yyreduce:
           /* RK-21: gather { block } → anonymous coroutine sub + call.
            * 1. Build E_FNC def with SUB_TAG (like sub_decl) named __gather_N.
            * 2. add_proc() so it lands in the proc table.
-           * 3. Return a call E_FNC (no SUB_TAG) so icn_eval_gen wraps it as
-           *    icn_bb_suspend — a BB_PUMP coroutine collecting E_SUSPEND (take) values. */
+           * 3. Return a call E_FNC (no SUB_TAG) so coro_eval wraps it as
+           *    coro_bb_suspend — a BB_PUMP coroutine collecting E_SUSPEND (take) values. */
           static int gather_seq = 0;
           char gname[32]; snprintf(gname, sizeof gname, "__gather_%d", gather_seq++);
           /* Build the def node */
@@ -2152,7 +2152,7 @@ yyreduce:
           /* Splice block children into def */
           EXPR_t *blk = (yyvsp[0].node);
           for (int i = 0; i < blk->nchildren; i++) expr_add_child(def, blk->children[i]);
-          def->ival &= ~SUB_TAG;   /* strip sentinel — restore real nparams (0) for icn_call_proc */
+          def->ival &= ~SUB_TAG;   /* strip sentinel — restore real nparams (0) for coro_call */
           add_proc(def);
           /* Build the call node (no SUB_TAG) */
           EXPR_t *call = leaf_sval(E_FNC, gname);

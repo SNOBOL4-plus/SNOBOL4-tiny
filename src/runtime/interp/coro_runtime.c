@@ -1,9 +1,9 @@
 /*
- * icn_runtime.c — Icon interpreter runtime
+ * coro_runtime.c — Icon interpreter runtime
  *
  * FI-4: extracted from src/driver/scrip.c.
  * IcnFrame stack, icn_gen_*, icn_scan_*, global_*, proc_table,
- * coro_call, coro_drive, coro_eval, icn_oneshot_box, icn_scope_*.
+ * coro_call, coro_drive, coro_eval, coro_oneshot, icn_scope_*.
  *
  * interp_eval() stays in scrip.c — referenced via extern.
  *
@@ -28,8 +28,8 @@ extern DESCR_t NV_SET_fn(const char *name, DESCR_t val);
 
 /* ── Icon unified interpreter state ────────────────────────────────────────
  * Icon procedures use slot-indexed locals (e->ival on E_VAR nodes).
- * When interp_eval is running inside an Icon procedure call, icn_env points
- * to the current frame's slot array. E_VAR case checks icn_env first.
+ * When interp_eval is running inside an Icon procedure call, frame_env points
+ * to the current frame's slot array. E_VAR case checks frame_env first.
  * FRAME.env_n is the slot count. Both are NULL/0 when in SNOBOL4 context.
  *
  * Icon procedure table: built from CODE_t* at execute_program time.
@@ -41,7 +41,7 @@ int          g_lang         = 0;     /* 0=SNOBOL4 1=Icon */
 EXPR_t      *g_icn_root     = NULL;  /* current Icon drive root */
 
 /* OE-1: IcnFrame — per-call context for Icon procedure invocations.
- * Replaces the flat globals icn_env/FRAME.env_n/FRAME.returning/FRAME.return_val/
+ * Replaces the flat globals frame_env/FRAME.env_n/FRAME.returning/FRAME.return_val/
  * icn_gen_stack/icn_gen_depth/FRAME.loop_break with a pushed/popped frame stack.
  * FRAME refers to the active frame (frame_depth must be >0 in Icon context). */
 IcnFrame frame_stack[FRAME_STACK_MAX];
@@ -67,7 +67,7 @@ int  icn_frame_lookup_sv(EXPR_t *n, long *out, const char **sv) {
     IcnFrame *f = &FRAME;
     for (int i=f->gen_depth-1;i>=0;i--) if(f->gen[i].node==n){*out=f->gen[i].cur;*sv=f->gen[i].sval;return 1;} return 0;
 }
-int  icn_frame_active(EXPR_t *n) {
+int  frame_active(EXPR_t *n) {
     IcnFrame *f = &FRAME;
     for (int i=0;i<f->gen_depth;i++) if(f->gen[i].node==n) return 1; return 0;
 }
@@ -77,7 +77,7 @@ int  icn_frame_active(EXPR_t *n) {
  * &pos = 1 and &subject = "" (the empty string), not 0 / &null. */
 const char *scan_subj  = "";
 int         scan_pos   = 1;
-IcnScanEntry icn_scan_stack[SCAN_STACK_MAX];
+ScanEntry scan_stack[SCAN_STACK_MAX];
 int         scan_depth = 0;
 
 /* Active coroutine suspend state — set by trampoline before calling coro_call,
@@ -87,16 +87,16 @@ coro_t *active_coro = NULL;
 /* U-23: Icon global variable names -- bridge to SNO NV store.
  * Names declared `global X` in an Icon block are stored here.
  * icn_scope_patch skips slot assignment for these; E_VAR read/write
- * calls NV_GET_fn / NV_SET_fn instead of icn_env[slot]. */
-const char *global_names[ICN_GLOBAL_MAX];
+ * calls NV_GET_fn / NV_SET_fn instead of frame_env[slot]. */
+const char *global_names[GLOBAL_MAX];
 int         global_count = 0;
-int icn_is_global(const char *name) {
+int is_global(const char *name) {
     for (int i = 0; i < global_count; i++)
         if (global_names[i] && strcmp(global_names[i], name) == 0) return 1;
     return 0;
 }
 void global_register(const char *name) {
-    if (!name || icn_is_global(name) || global_count >= ICN_GLOBAL_MAX) return;
+    if (!name || is_global(name) || global_count >= GLOBAL_MAX) return;
     global_names[global_count++] = name;
 }
 
@@ -105,12 +105,12 @@ void global_register(const char *name) {
  * to that procedure but are scoped to the procedure (statics with the same
  * name in different procs do not share storage).  Keyed on the proc EXPR_t*
  * (unique per source procedure since icon_parse builds one node per proc). */
-typedef struct { EXPR_t *proc; const char *name; DESCR_t val; } icn_static_ent_t;
-#define ICN_STATIC_MAX 256
-static icn_static_ent_t static_tab[ICN_STATIC_MAX];
+typedef struct { EXPR_t *proc; const char *name; DESCR_t val; } static_ent_t;
+#define STATIC_MAX 256
+static static_ent_t static_tab[STATIC_MAX];
 static int              static_n = 0;
 
-int icn_static_get(EXPR_t *proc, const char *name, DESCR_t *out) {
+int static_get(EXPR_t *proc, const char *name, DESCR_t *out) {
     if (!proc || !name || !out) return 0;
     for (int i = 0; i < static_n; i++) {
         if (static_tab[i].proc == proc && static_tab[i].name &&
@@ -122,7 +122,7 @@ int icn_static_get(EXPR_t *proc, const char *name, DESCR_t *out) {
     return 0;
 }
 
-void icn_static_set(EXPR_t *proc, const char *name, DESCR_t val) {
+void static_set(EXPR_t *proc, const char *name, DESCR_t val) {
     if (!proc || !name) return;
     for (int i = 0; i < static_n; i++) {
         if (static_tab[i].proc == proc && static_tab[i].name &&
@@ -131,7 +131,7 @@ void icn_static_set(EXPR_t *proc, const char *name, DESCR_t val) {
             return;
         }
     }
-    if (static_n >= ICN_STATIC_MAX) return;
+    if (static_n >= STATIC_MAX) return;
     static_tab[static_n].proc = proc;
     static_tab[static_n].name = name;
     static_tab[static_n].val  = val;
@@ -140,7 +140,7 @@ void icn_static_set(EXPR_t *proc, const char *name, DESCR_t val) {
 
 int coro_drive(EXPR_t *e) {
     if (!e) return 0;
-    if (icn_frame_active(e)) return 0;
+    if (frame_active(e)) return 0;
     EXPR_t *root = FRAME.body_root;
     if (e->kind == E_TO && e->nchildren >= 2) {
         /* For scalar children: evaluate directly.
@@ -342,14 +342,14 @@ void icn_scope_patch(IcnScope *sc, EXPR_t *e) {
     }
     if (e->kind == E_VAR && e->sval) {
         /* U-23: globals bridge to SNO NV store — skip slot, preserve sval, set ival=-1 */
-        if (icn_is_global(e->sval)) { e->ival = -1; }
+        if (is_global(e->sval)) { e->ival = -1; }
         else { int s = scope_add(sc, e->sval); if (s >= 0) e->ival = s; else e->ival = -1; }
     }
     for (int i=0;i<e->nchildren;i++) icn_scope_patch(sc, e->children[i]);
 }
 
 /* coro_call: call an Icon procedure node (E_FNC with body children).
- * Mirrors icn_call() in icon_interp.c exactly, but uses DESCR_t and icn_env. */
+ * Mirrors icn_call() in icon_interp.c exactly, but uses DESCR_t and frame_env. */
 DESCR_t coro_call(EXPR_t *proc, DESCR_t *args, int nargs) {
     int nparams = (int)proc->ival;
     int body_start = 1 + nparams;
@@ -389,7 +389,7 @@ DESCR_t coro_call(EXPR_t *proc, DESCR_t *args, int nargs) {
 
     /* IC-9 (2026-05-01): static-variable persistence.  Walk body for E_GLOBAL
      * decls with ival==1 (set by parser when keyword was `static`).  For each
-     * static var, look up its persisted value via icn_static_get(proc, name);
+     * static var, look up its persisted value via static_get(proc, name);
      * if present, copy into the slot.  At proc exit (below), write each
      * static var's current slot value back.  Per-proc table; statics with
      * the same name in different procs do not share storage.   */
@@ -402,7 +402,7 @@ DESCR_t coro_call(EXPR_t *proc, DESCR_t *args, int nargs) {
             int slot = scope_get(&sc, vn->sval);
             if (slot < 0 || slot >= nslots) continue;
             DESCR_t saved;
-            if (icn_static_get(proc, vn->sval, &saved))
+            if (static_get(proc, vn->sval, &saved))
                 f->env[slot] = saved;
         }
     }
@@ -455,7 +455,7 @@ DESCR_t coro_call(EXPR_t *proc, DESCR_t *args, int nargs) {
             if (!vn || !vn->sval) continue;
             int slot = scope_get(&sc, vn->sval);
             if (slot < 0 || slot >= nslots) continue;
-            icn_static_set(proc, vn->sval, f->env[slot]);
+            static_set(proc, vn->sval, f->env[slot]);
         }
     }
 
@@ -565,7 +565,7 @@ int is_suspendable(EXPR_t *e) {
 
 /* One-shot fallback box state — holds a pre-evaluated DESCR_t, fires γ once then ω. */
 typedef struct { DESCR_t val; int fired; } icn_oneshot_state_t;
-static DESCR_t icn_oneshot_box(void *zeta, int entry) {
+static DESCR_t coro_oneshot(void *zeta, int entry) {
     icn_oneshot_state_t *z = (icn_oneshot_state_t *)zeta;
     if (entry == α) { z->fired = 0; }   /* reset on α so cross-product can replay */
     if (!z->fired && !IS_FAIL_fn(z->val)) { z->fired = 1; return z->val; }
@@ -1010,7 +1010,7 @@ bb_node_t coro_eval(EXPR_t *e) {
     if (!e) {
         icn_oneshot_state_t *z = calloc(1, sizeof(*z));
         z->val = FAILDESCR; z->fired = 1;   /* immediately ω */
-        return (bb_node_t){ icn_oneshot_box, z, 0 };
+        return (bb_node_t){ coro_oneshot, z, 0 };
     }
 
     /* ── E_TO: (lo to hi) ────────────────────────────────────────────────── */
@@ -1557,7 +1557,7 @@ bb_node_t coro_eval(EXPR_t *e) {
     /* ── Fallback: one-shot box wrapping interp_eval ─────────────────────── */
     icn_oneshot_state_t *z = calloc(1, sizeof(*z));
     z->val = interp_eval(e);
-    return (bb_node_t){ icn_oneshot_box, z, 0 };
+    return (bb_node_t){ coro_oneshot, z, 0 };
 }
 
 

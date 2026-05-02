@@ -20,14 +20,14 @@
 #include <ucontext.h>
 
 /*============================================================================================================================
- * B-3: icn_bb_to — E_TO Byrd box  (i to j)
+ * B-3: coro_bb_to — E_TO Byrd box  (i to j)
  *
  * State: lo, hi, cur.
  *   α: cur = lo; if cur > hi → ω; else return integer cur (γ).
  *   β: cur++; if cur > hi → ω; else return integer cur (γ).
  *============================================================================================================================*/
 
-DESCR_t icn_bb_to(void *zeta, int entry) {
+DESCR_t coro_bb_to(void *zeta, int entry) {
     icn_to_state_t *z = (icn_to_state_t *)zeta;
     if (entry == α) z->cur = z->lo;
     else            z->cur++;
@@ -36,19 +36,19 @@ DESCR_t icn_bb_to(void *zeta, int entry) {
 }
 
 /*============================================================================================================================
- * icn_bb_to_nested — (lo_gen) to (hi_gen) cross-product Byrd box
+ * coro_bb_to_nested — (lo_gen) to (hi_gen) cross-product Byrd box
  *
  * JCON irgen.icn ir_a_To nested case: when lo or hi is itself a generator,
  * pre-collect all values from each, then iterate outer lo × hi pairs,
  * yielding each inner lo_val..hi_val range in sequence.
  *
- * State pre-populated by icn_eval_gen before returning this box.
+ * State pre-populated by coro_eval before returning this box.
  * α: li=0, hi2=0, cur=lo_vals[0]; step through inner range.
  * β: cur++; if cur > hi_vals[hi2]: hi2++; if hi2 >= nhi: li++, hi2=0; reset cur.
  * ω: li >= nlo.
  *============================================================================================================================*/
 
-DESCR_t icn_bb_to_nested(void *zeta, int entry) {
+DESCR_t coro_bb_to_nested(void *zeta, int entry) {
     icn_to_nested_state_t *z = (icn_to_nested_state_t *)zeta;
     if (z->nlo == 0 || z->nhi == 0) return FAILDESCR;
     if (entry == α) { z->li = 0; z->hi2 = 0; z->cur = z->lo_vals[0]; }
@@ -67,7 +67,7 @@ DESCR_t icn_bb_to_nested(void *zeta, int entry) {
 }
 
 /*============================================================================================================================
- * B-4: icn_bb_to_by — E_TO_BY Byrd box  (i to j by k)
+ * B-4: coro_bb_to_by — E_TO_BY Byrd box  (i to j by k)
  *
  * State: lo, hi, step, cur.
  *   α: cur = lo.
@@ -75,7 +75,7 @@ DESCR_t icn_bb_to_nested(void *zeta, int entry) {
  *   if step > 0: cur > hi → ω.   if step < 0: cur < hi → ω.
  *============================================================================================================================*/
 
-DESCR_t icn_bb_to_by(void *zeta, int entry) {
+DESCR_t coro_bb_to_by(void *zeta, int entry) {
     icn_to_by_state_t *z = (icn_to_by_state_t *)zeta;
     if (entry == α) z->cur = z->lo;
     else            z->cur += z->step;
@@ -85,8 +85,8 @@ DESCR_t icn_bb_to_by(void *zeta, int entry) {
     return (DESCR_t){ .v = DT_I, .i = z->cur };
 }
 
-/* icn_bb_to_by_real — E_TO_BY with real (float) step/bounds */
-DESCR_t icn_bb_to_by_real(void *zeta, int entry) {
+/* coro_bb_to_by_real — E_TO_BY with real (float) step/bounds */
+DESCR_t coro_bb_to_by_real(void *zeta, int entry) {
     icn_to_by_real_state_t *z = (icn_to_by_real_state_t *)zeta;
     if (entry == α) z->cur = z->lo;
     else            z->cur += z->step;
@@ -97,13 +97,13 @@ DESCR_t icn_bb_to_by_real(void *zeta, int entry) {
 }
 
 /*============================================================================================================================
- * B-5: icn_bb_iterate — E_ITERATE Byrd box  (!str, Icon char iteration)
+ * B-5: coro_bb_iterate — E_ITERATE Byrd box  (!str, Icon char iteration)
  *
  * State: str, len, pos.
  *   α: pos = 0.  β: pos++.  ω: pos >= len.  γ: single-char string at pos.
  *============================================================================================================================*/
 
-DESCR_t icn_bb_iterate(void *zeta, int entry) {
+DESCR_t coro_bb_iterate(void *zeta, int entry) {
     icn_iterate_state_t *z = (icn_iterate_state_t *)zeta;
     if (entry == α) z->pos = 0;
     else            z->pos++;
@@ -114,7 +114,7 @@ DESCR_t icn_bb_iterate(void *zeta, int entry) {
 }
 
 /*============================================================================================================================
- * B-5b: icn_bb_tbl_iterate — E_ITERATE Byrd box for DT_T tables  (!T yields values)
+ * B-5b: coro_bb_tbl_iterate — E_ITERATE Byrd box for DT_T tables  (!T yields values)
  *
  * State: tbl, bucket (0..TABLE_BUCKETS-1), entry (current TBPAIR_t*).
  *   α: bucket=0, entry=tbl->buckets[0].
@@ -123,7 +123,7 @@ DESCR_t icn_bb_iterate(void *zeta, int entry) {
  *   γ: return entry->val.
  *============================================================================================================================*/
 
-DESCR_t icn_bb_tbl_iterate(void *zeta, int entry) {
+DESCR_t coro_bb_tbl_iterate(void *zeta, int entry) {
     icn_tbl_iterate_state_t *z = (icn_tbl_iterate_state_t *)zeta;
     if (!z->tbl) return FAILDESCR;
     if (entry == α) { z->bucket = 0; z->entry = z->tbl->buckets[0]; }
@@ -138,17 +138,17 @@ DESCR_t icn_bb_tbl_iterate(void *zeta, int entry) {
 }
 
 /*============================================================================================================================
- * IC-5: icn_bb_list_iterate — E_ITERATE Byrd box for DT_DATA icnlist  (!L yields elements)
+ * IC-5: coro_bb_list_iterate — E_ITERATE Byrd box for DT_DATA icnlist  (!L yields elements)
  *   Holds the live list DT_DATA descriptor so it sees elements added by put() after box creation.
  *   α: reset pos=0, return elems[0].
  *   β: advance pos, return elems[pos].
  *   ω: pos >= n.
  *============================================================================================================================*/
-DESCR_t icn_bb_list_iterate(void *zeta, int entry) {
+DESCR_t coro_bb_list_iterate(void *zeta, int entry) {
     icn_list_iterate_state_t *z = (icn_list_iterate_state_t *)zeta;
     /* Re-read elems and size from live object each tick */
-    DESCR_t ea = FIELD_GET_fn(z->list_obj, "icn_elems");
-    int n = (int)FIELD_GET_fn(z->list_obj, "icn_size").i;
+    DESCR_t ea = FIELD_GET_fn(z->list_obj, "frame_elems");
+    int n = (int)FIELD_GET_fn(z->list_obj, "frame_size").i;
     DESCR_t *elems = (ea.v == DT_DATA) ? (DESCR_t *)ea.ptr : NULL;
     if (!elems || n <= 0) return FAILDESCR;
     if (entry == α) z->pos = 0;
@@ -158,14 +158,14 @@ DESCR_t icn_bb_list_iterate(void *zeta, int entry) {
 }
 
 /*============================================================================================================================
- * IC-9 (2026-05-01): icn_bb_record_iterate — E_ITERATE Byrd box for DT_DATA records (!R yields field values).
+ * IC-9 (2026-05-01): coro_bb_record_iterate — E_ITERATE Byrd box for DT_DATA records (!R yields field values).
  *   Records are DT_DATA but NOT the icnlist shape (no "icn_type" tag of "list"); their structure lives in
  *   inst.u->type->nfields and inst.u->fields[i].  Iterates fields in declaration order.  Re-reads the live
  *   instance each tick so mutations made between ticks (rare; field-iteration usually one-pass) are visible.
  *   α: pos=0, return fields[0] (or fail if nfields==0).
  *   β: pos++, return fields[pos] (or fail when pos >= nfields).
  *============================================================================================================================*/
-DESCR_t icn_bb_record_iterate(void *zeta, int entry) {
+DESCR_t coro_bb_record_iterate(void *zeta, int entry) {
     icn_record_iterate_state_t *z = (icn_record_iterate_state_t *)zeta;
     if (z->inst.v != DT_DATA || !z->inst.u || !z->inst.u->type) return FAILDESCR;
     int n = z->inst.u->type->nfields;
@@ -177,10 +177,10 @@ DESCR_t icn_bb_record_iterate(void *zeta, int entry) {
 }
 
 /*============================================================================================================================
- * IC-6: icn_bb_tbl_key_iterate — key(T) generator: yields each key in table T
- *   Same bucket-walk as icn_bb_tbl_iterate but returns entry->key_descr instead of entry->val.
+ * IC-6: coro_bb_tbl_key_iterate — key(T) generator: yields each key in table T
+ *   Same bucket-walk as coro_bb_tbl_iterate but returns entry->key_descr instead of entry->val.
  *============================================================================================================================*/
-DESCR_t icn_bb_tbl_key_iterate(void *zeta, int entry) {
+DESCR_t coro_bb_tbl_key_iterate(void *zeta, int entry) {
     icn_tbl_key_iterate_state_t *z = (icn_tbl_key_iterate_state_t *)zeta;
     if (!z->tbl) return FAILDESCR;
     if (entry == α) { z->bucket = 0; z->entry = z->tbl->buckets[0]; }
@@ -196,7 +196,7 @@ DESCR_t icn_bb_tbl_key_iterate(void *zeta, int entry) {
 
 
 /*============================================================================================================================
- * B-6: icn_bb_suspend — E_SUSPEND Byrd box (coroutine wrapper)
+ * B-6: coro_bb_suspend — E_SUSPEND Byrd box (coroutine wrapper)
  *
  * Wraps existing ucontext coroutine machinery from scrip.c.
  * The zeta pointer carries an opaque Icn_coro_entry* already set up by the caller.
@@ -204,12 +204,12 @@ DESCR_t icn_bb_tbl_key_iterate(void *zeta, int entry) {
  * β: resume — swapcontext into coroutine again.
  * ω: coroutine set exhausted=1.
  *
- * This box does NOT own the coroutine — icn_eval_gen (B-8) wires it up.
- * The zeta is cast to icn_suspend_state_t which the broker caller populates.
+ * This box does NOT own the coroutine — coro_eval (B-8) wires it up.
+ * The zeta is cast to coro_t which the broker caller populates.
  *============================================================================================================================*/
 
-DESCR_t icn_bb_suspend(void *zeta, int entry) {
-    icn_suspend_state_t *z = (icn_suspend_state_t *)zeta;
+DESCR_t coro_bb_suspend(void *zeta, int entry) {
+    coro_t *z = (coro_t *)zeta;
     /* exhausted+yielded_returned: truly done, return ω */
     if (z->exhausted && z->yielded_returned) return FAILDESCR;
     if (entry == α && !z->started) {
@@ -221,8 +221,8 @@ DESCR_t icn_bb_suspend(void *zeta, int entry) {
         z->gen_ctx.uc_link          = NULL;
         /* RK-21: if using gather trampoline, pass ss via the static staging pointer
          * (makecontext cannot pass pointer args portably on x86-64). */
-        if (z->trampoline == icn_gather_trampoline)
-            icn_gather_trampoline_ss = z;
+        if (z->trampoline == gather_trampoline)
+            gather_trampoline_ss = z;
         makecontext(&z->gen_ctx, z->trampoline, 0);
         swapcontext(&z->caller_ctx, &z->gen_ctx);
     } else if (!z->exhausted) {
@@ -240,7 +240,7 @@ DESCR_t icn_bb_suspend(void *zeta, int entry) {
 }
 
 /*============================================================================================================================
- * B-8: icn_bb_bal — bal(c1,c2,c3) generator Byrd box
+ * B-8: coro_bb_bal — bal(c1,c2,c3) generator Byrd box
  *
  * Walks scan subject from current &pos, yields 1-based positions where chars in c1
  * appear at nesting depth 0 w.r.t. c2/c3 open/close delimiters.
@@ -249,7 +249,7 @@ DESCR_t icn_bb_suspend(void *zeta, int entry) {
  *   ω: no more matches.
  *============================================================================================================================*/
 
-DESCR_t icn_bb_bal(void *zeta, int entry) {
+DESCR_t coro_bb_bal(void *zeta, int entry) {
     icn_bal_state_t *z = (icn_bal_state_t *)zeta;
     if (entry == α) z->pos = (z->pos > 0 ? z->pos : 0); /* already set at construction */
     int p = z->pos, depth = 0;
@@ -267,7 +267,7 @@ DESCR_t icn_bb_bal(void *zeta, int entry) {
 }
 
 /*============================================================================================================================
- * B-7: icn_bb_find — find() generator Byrd box
+ * B-7: coro_bb_find — find() generator Byrd box
  *
  * State: needle, haystack, pos (byte offset into haystack, 0-based).
  *   α: pos = 0, find first match.
@@ -275,7 +275,7 @@ DESCR_t icn_bb_bal(void *zeta, int entry) {
  *   returns 1-based position of match, or ω.
  *============================================================================================================================*/
 
-DESCR_t icn_bb_find(void *zeta, int entry) {
+DESCR_t coro_bb_find(void *zeta, int entry) {
     icn_find_state_t *z = (icn_find_state_t *)zeta;
     if (entry == α) z->next = z->hay;
     const char *hit = strstr(z->next, z->needle);
@@ -286,11 +286,11 @@ DESCR_t icn_bb_find(void *zeta, int entry) {
 }
 
 /*============================================================================================================================
- * icn_bb_find_gen_subj — find(needle, gen_subject): drive subject generator, exhaust
+ * coro_bb_find_subj — find(needle, scan_subject): drive subject generator, exhaust
  * find positions for each subject before advancing to the next subject.
  *   α/β: advance within current subject first; when exhausted, pull next subject.
  *============================================================================================================================*/
-DESCR_t icn_bb_find_gen_subj(void *zeta, int entry) {
+DESCR_t coro_bb_find_subj(void *zeta, int entry) {
     icn_find_gen_subj_t *z = (icn_find_gen_subj_t *)zeta;
     for (;;) {
         if (z->hay) {
@@ -313,10 +313,10 @@ DESCR_t icn_bb_find_gen_subj(void *zeta, int entry) {
 }
 
 /*============================================================================================================================
- * icn_bb_upto_gen_subj — upto(cset, gen_subject): drive subject generator, yield
+ * coro_bb_upto_subj — upto(cset, scan_subject): drive subject generator, yield
  * positions of chars in cset for each subject before advancing.
  *============================================================================================================================*/
-DESCR_t icn_bb_upto_gen_subj(void *zeta, int entry) {
+DESCR_t coro_bb_upto_subj(void *zeta, int entry) {
     icn_upto_gen_subj_t *z = (icn_upto_gen_subj_t *)zeta;
     for (;;) {
         if (z->hay) {
@@ -346,7 +346,7 @@ DESCR_t icn_bb_upto_gen_subj(void *zeta, int entry) {
 }
 
 /*============================================================================================================================
- * icn_bb_binop_gen — IC-2a: generative binary operator Byrd box
+ * coro_bb_binop — IC-2a: generative binary operator Byrd box
  *
  * Protocol (JCON irgen.icn §4.3, funcs-set):
  *   α: pump left α → get left_val; pump right α → get right_val; apply op.
@@ -403,7 +403,7 @@ static DESCR_t icn_binop_apply(IcnBinopKind op, DESCR_t lv, DESCR_t rv, int *rel
     }
 }
 
-DESCR_t icn_bb_binop_gen(void *zeta, int entry) {
+DESCR_t coro_bb_binop(void *zeta, int entry) {
     icn_binop_gen_state_t *z = (icn_binop_gen_state_t *)zeta;
 
     if (entry == α) {
@@ -447,14 +447,14 @@ DESCR_t icn_bb_binop_gen(void *zeta, int entry) {
 }
 
 /*============================================================================================================================
- * icn_bb_alternate — IC-2a: E_ALTERNATE Byrd box
+ * coro_bb_alternate — IC-2a: E_ALTERNATE Byrd box
  *
  * JCON irgen.icn ir_a_Alt (binary case):
  *   α: pump gen[0] α; if γ → return. If ω → switch which=1, pump gen[1] α.
  *   β: pump current gen β; if ω and which==0 → switch to gen[1] α.
  *============================================================================================================================*/
 
-DESCR_t icn_bb_alternate(void *zeta, int entry) {
+DESCR_t coro_bb_alternate(void *zeta, int entry) {
     icn_alternate_state_t *z = (icn_alternate_state_t *)zeta;
     if (entry == α) {
         z->which = 0;
@@ -473,10 +473,10 @@ DESCR_t icn_bb_alternate(void *zeta, int entry) {
     return FAILDESCR;
 }
 
-/* icn_eval_gen — implemented in scrip.c where interp_eval and proc tables are visible. */
+/* coro_eval — implemented in scrip.c where interp_eval and proc tables are visible. */
 
 /*============================================================================================================================
- * Unit tests: B-2 constant box, B-3 icn_bb_to, B-4 icn_bb_to_by, B-5 icn_bb_iterate, B-7 icn_bb_find
+ * Unit tests: B-2 constant box, B-3 coro_bb_to, B-4 coro_bb_to_by, B-5 coro_bb_iterate, B-7 coro_bb_find
  *============================================================================================================================*/
 #ifdef ICON_GEN_UNIT_TEST
 
@@ -516,11 +516,11 @@ int main(void) {
         free(s);
     }
 
-    /* B-3: icn_bb_to (1 to 5) → 1,2,3,4,5 */
+    /* B-3: coro_bb_to (1 to 5) → 1,2,3,4,5 */
     {
         icn_to_state_t *s = calloc(1, sizeof(*s));
         s->lo = 1; s->hi = 5;
-        bb_node_t gen = { icn_bb_to, s, 0 };
+        bb_node_t gen = { coro_bb_to, s, 0 };
         long vals[8]; collector_t c = { vals, 0, 8 };
         int ticks = bb_broker(gen, BB_PUMP, collect_int, &c);
         ASSERT(ticks == 5, "B-3: ticks==5");
@@ -528,11 +528,11 @@ int main(void) {
         free(s);
     }
 
-    /* B-4: icn_bb_to_by (1 to 10 by 2) → 1,3,5,7,9 */
+    /* B-4: coro_bb_to_by (1 to 10 by 2) → 1,3,5,7,9 */
     {
         icn_to_by_state_t *s = calloc(1, sizeof(*s));
         s->lo = 1; s->hi = 10; s->step = 2;
-        bb_node_t gen = { icn_bb_to_by, s, 0 };
+        bb_node_t gen = { coro_bb_to_by, s, 0 };
         long vals[8]; collector_t c = { vals, 0, 8 };
         int ticks = bb_broker(gen, BB_PUMP, collect_int, &c);
         ASSERT(ticks == 5, "B-4: ticks==5");
@@ -540,11 +540,11 @@ int main(void) {
         free(s);
     }
 
-    /* B-5: icn_bb_iterate !("abc") → 'a','b','c' */
+    /* B-5: coro_bb_iterate !("abc") → 'a','b','c' */
     {
         icn_iterate_state_t *s = calloc(1, sizeof(*s));
         s->str = "abc"; s->len = 3;
-        bb_node_t gen = { icn_bb_iterate, s, 0 };
+        bb_node_t gen = { coro_bb_iterate, s, 0 };
         char got[4] = {0};
         str_collector_t sc = { got, 0, 3 };
         bb_broker(gen, BB_PUMP, collect_str, &sc);
@@ -552,11 +552,11 @@ int main(void) {
         free(s);
     }
 
-    /* B-7: icn_bb_find find("is","this is it") → 3,6 */
+    /* B-7: coro_bb_find find("is","this is it") → 3,6 */
     {
         icn_find_state_t *s = calloc(1, sizeof(*s));
         s->needle = "is"; s->hay = "this is it"; s->nlen = 2; s->next = s->hay;
-        bb_node_t gen = { icn_bb_find, s, 0 };
+        bb_node_t gen = { coro_bb_find, s, 0 };
         long vals[8]; collector_t c = { vals, 0, 8 };
         int ticks = bb_broker(gen, BB_PUMP, collect_int, &c);
         ASSERT(ticks == 2, "B-7: find ticks==2");

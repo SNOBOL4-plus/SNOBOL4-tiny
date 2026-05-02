@@ -217,9 +217,9 @@ static void h_push_expr(void)
  * LANG_ICN and LANG_PL statements; codegen previously left both as
  * h_unimpl, silently producing last_ok=0 on every Icon/Prolog statement.
  *
- * icn_eval_gen and pump_print live in scrip.c / sm_interp.c — declared
+ * coro_eval and pump_print live in scrip.c / sm_interp.c — declared
  * extern here so the handler bodies are identical to the sm_interp cases. */
-extern bb_node_t icn_eval_gen(EXPR_t *e);
+extern bb_node_t coro_eval(EXPR_t *e);
 static void jit_pump_print(DESCR_t val, void *arg)
 {
     (void)arg;
@@ -232,7 +232,7 @@ static void h_bb_pump(void)
     DESCR_t expr_d = POP();
     EXPR_t *expr   = (EXPR_t *)expr_d.ptr;
     if (!expr) { STATE->last_ok = 0; return; }
-    bb_node_t node = icn_eval_gen(expr);
+    bb_node_t node = coro_eval(expr);
     int ticks = bb_broker(node, BB_PUMP, jit_pump_print, NULL);
     STATE->last_ok = (ticks > 0);
 }
@@ -242,7 +242,7 @@ static void h_bb_once(void)
     DESCR_t expr_d = POP();
     EXPR_t *expr   = (EXPR_t *)expr_d.ptr;
     if (!expr) { STATE->last_ok = 0; return; }
-    bb_node_t node = icn_eval_gen(expr);
+    bb_node_t node = coro_eval(expr);
     int ticks = bb_broker(node, BB_ONCE, NULL, NULL);
     STATE->last_ok = (ticks > 0);
 }

@@ -1,13 +1,13 @@
 /*
- * icn_runtime.h — Icon interpreter runtime API
+ * coro_runtime.h — Icon interpreter runtime API
  *
- * FI-4: declarations for all symbols moved from scrip.c to icn_runtime.c.
+ * FI-4: declarations for all symbols moved from scrip.c to coro_runtime.c.
  * Include this in scrip.c (and anywhere else that needs Icon runtime access).
  *
  * AUTHORS: Lon Jones Cherryholmes · Claude Sonnet 4.6 (FI-4, 2026-04-14)
  */
-#ifndef DRIVER_ICN_RUNTIME_H
-#define DRIVER_ICN_RUNTIME_H
+#ifndef CORO_RUNTIME_H
+#define CORO_RUNTIME_H
 
 #include "../../ir/ir.h"
 #include "../../frontend/snobol4/scrip_cc.h"
@@ -22,7 +22,7 @@
 #define FRAME_DEPTH_MAX         16
 #define FRAME_STACK_MAX      256
 #define SCAN_STACK_MAX  16
-#define ICN_GLOBAL_MAX      64
+#define GLOBAL_MAX      64
 
 /*------------------------------------------------------------------------
  * Types
@@ -55,7 +55,7 @@ typedef struct {
 } IcnFrame;
 
 /*------------------------------------------------------------------------
- * Globals (defined in icn_runtime.c)
+ * Globals (defined in coro_runtime.c)
  *------------------------------------------------------------------------*/
 extern IcnProcEntry proc_table[PROC_TABLE_MAX];
 extern int          proc_count;
@@ -69,23 +69,23 @@ extern int          frame_depth;
 extern const char  *scan_subj;
 extern coro_t *active_coro;
 extern int          scan_pos;
-typedef struct { const char *subj; int pos; } IcnScanEntry;
-extern IcnScanEntry icn_scan_stack[SCAN_STACK_MAX];
+typedef struct { const char *subj; int pos; } ScanEntry;
+extern ScanEntry scan_stack[SCAN_STACK_MAX];
 extern int          scan_depth;
 
-extern const char  *global_names[ICN_GLOBAL_MAX];
+extern const char  *global_names[GLOBAL_MAX];
 extern int          global_count;
 
 /*------------------------------------------------------------------------
- * Functions (defined in icn_runtime.c)
+ * Functions (defined in coro_runtime.c)
  *------------------------------------------------------------------------*/
 void    frame_push(EXPR_t *n, long v, const char *sv);
 void    frame_pop(void);
 int     icn_frame_lookup(EXPR_t *n, long *out);
 int     icn_frame_lookup_sv(EXPR_t *n, long *out, const char **sv);
-int     icn_frame_active(EXPR_t *n);
+int     frame_active(EXPR_t *n);
 
-int     icn_is_global(const char *name);
+int     is_global(const char *name);
 void    global_register(const char *name);
 
 int     coro_drive(EXPR_t *e);
@@ -109,7 +109,7 @@ void      icn_init_save_frame(void);  /* IC-5: save initial-block statics before
 /* IC-8: real-to-string formatter (defined in driver/interp.c). Used by !N real iteration. */
 const char *real_str(double r, char *buf, int bufsz);
 
-/* IC-8: deep-identity test for Icon `===` (defined in icn_runtime.c). */
+/* IC-8: deep-identity test for Icon `===` (defined in coro_runtime.c). */
 int icn_descr_identical(DESCR_t a, DESCR_t b);
 
 /* IC-9 (session #26): Icon-keyword assign / probe (defined in driver/interp.c).
@@ -119,4 +119,4 @@ int icn_descr_identical(DESCR_t a, DESCR_t b);
 int kw_assign(const char *kw, DESCR_t val);
 int icn_kw_can_assign(const char *kw, DESCR_t val);
 
-#endif /* DRIVER_ICN_RUNTIME_H */
+#endif /* CORO_RUNTIME_H */

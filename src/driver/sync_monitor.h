@@ -11,7 +11,7 @@
 #define SYNC_MONITOR_H
 
 #include "runtime/x86/snobol4.h"          /* NvPair, DESCR_t */
-#include "runtime/interp/icn_runtime.h"   /* IcnFrame, icn_frame_depth */
+#include "runtime/interp/icn_runtime.h"   /* IcnFrame, frame_depth */
 #include "runtime/interp/pl_runtime.h"    /* Trail, trail_mark */
 
 /*------------------------------------------------------------------------
@@ -28,7 +28,7 @@ typedef struct {
     int64_t  kw_anchor;
 
     /* ICN frame stack depth (frame locals snapshotted in IM-10) */
-    int      icn_frame_depth;
+    int      frame_depth;
 
     /* Prolog trail mark — restore by unwinding to this position */
     int      pl_trail_mark;
@@ -47,9 +47,9 @@ typedef struct {
     /* IM-10: ICN/Raku frame-local variables.
      * Flat array of NvPair, one per named slot across all active frames.
      * Names are not owned (point into IcnScope string storage).
-     * icn_locals_count = 0 when no ICN frames are active. */
-    NvPair  *icn_locals;
-    int      icn_locals_count;
+     * frame_locals_count = 0 when no ICN frames are active. */
+    NvPair  *frame_locals;
+    int      frame_locals_count;
 
     /* IM-11: Prolog trail-bound variables.
      * One entry per trail slot that is currently bound (tag==TT_REF).

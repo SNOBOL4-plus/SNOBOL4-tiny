@@ -45,7 +45,7 @@ DESCR_t _builtin_DATA(DESCR_t *args, int nargs);
  * for pure builtins (FNCEX_fn && no body label) uses APPLY_fn directly
  * so FAILDESCR propagates correctly (DYN-74: fixes *ident(1,2) in EVAL).
  * U-22: cross-call extension — if name not found in SNO label table,
- * try icn_proc_table (BB_PUMP one-shot) then g_pl_pred_table (BB_ONCE). */
+ * try proc_table (BB_PUMP one-shot) then g_pl_pred_table (BB_ONCE). */
 DESCR_t _usercall_hook(const char *name, DESCR_t *args, int nargs) {
     /* S-10 fix: handle scrip.c-only predicates directly so *IDENT(x)/*DIFFER(x)
      * in pattern context correctly fail/succeed via bb_usercall -> g_user_call_hook. */
@@ -106,11 +106,11 @@ DESCR_t _usercall_hook(const char *name, DESCR_t *args, int nargs) {
      * by name, the same way the linker resolves an undefined symbol. */
     if (!_body) {
         /* Try Icon proc table (case-sensitive — Icon is case-sensitive) */
-        for (int _i = 0; _i < icn_proc_count; _i++) {
-            if (strcmp(icn_proc_table[_i].name, name) == 0) {
+        for (int _i = 0; _i < proc_count; _i++) {
+            if (strcmp(proc_table[_i].name, name) == 0) {
                 /* Call as one-shot: drive the Icon proc and return its value.
-                 * icn_call_proc returns FAILDESCR if the procedure fails. */
-                return icn_call_proc(icn_proc_table[_i].proc, args, nargs);
+                 * coro_call returns FAILDESCR if the procedure fails. */
+                return coro_call(proc_table[_i].proc, args, nargs);
             }
         }
         /* Try Prolog pred table: name/arity key, e.g. "color/1" */

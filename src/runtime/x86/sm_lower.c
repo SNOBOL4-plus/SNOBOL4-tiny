@@ -1031,7 +1031,7 @@ static void lower_stmt(SM_Program *p, LabelTable *lt, const STMT_t *s)
      * LANG_SNO (0) falls through to the existing SNOBOL4 lowering path. */
     if (s->lang == LANG_ICN) {
         /* Icon statement: push the raw EXPR_t* so SM_BB_PUMP handler can call
-         * icn_eval_gen(expr) to build a bb_node_t, then drive via bb_broker(BB_PUMP). */
+         * coro_eval(expr) to build a bb_node_t, then drive via bb_broker(BB_PUMP). */
         sm_emit_ptr(p, SM_PUSH_EXPR, (void *)s->subject);
         sm_emit(p, SM_BB_PUMP);
         goto emit_gotos;

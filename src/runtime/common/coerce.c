@@ -1,7 +1,7 @@
 /* coerce.c — shared coercion and arithmetic helpers (RS-6, RS-7)
  *
  * RS-6 D-1/D-2/D-3: descr_to_str_icn() — int/real → DT_S coercion using
- *   icn_real_str() for round-trip-correct real formatting.
+ *   real_str() for round-trip-correct real formatting.
  *
  * RS-7 F-1: shared_arith() — unified arithmetic dispatch replacing the
  *   duplicate sm_arith() in sm_interp.c and jit_arith() in sm_codegen.c.
@@ -16,7 +16,7 @@
 #include <math.h>
 #include <gc/gc.h>
 
-const char *icn_real_str(double r, char *buf, int bufsz); /* interp_eval.c */
+const char *real_str(double r, char *buf, int bufsz); /* interp_eval.c */
 int64_t     to_int(DESCR_t v);                            /* snobol4.c */
 double      to_real(DESCR_t v);                           /* snobol4.c */
 
@@ -30,7 +30,7 @@ DESCR_t descr_to_str_icn(DESCR_t d)
     }
     if (IS_REAL_fn(d)) {
         char tmp[64];
-        icn_real_str(d.r, tmp, sizeof tmp);
+        real_str(d.r, tmp, sizeof tmp);
         size_t len = strlen(tmp);
         char *nbuf = GC_malloc(len + 1);
         memcpy(nbuf, tmp, len + 1);

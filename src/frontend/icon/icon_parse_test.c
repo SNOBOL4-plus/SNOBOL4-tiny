@@ -156,9 +156,9 @@ static void test_relational(void) {
 static void test_call(void) {
     printf("--- function call ---\n");
     {
-        /* write(42) → ICN_CALL(VAR(write), INT(42)) */
+        /* write(42) → PROC_CALL(VAR(write), INT(42)) */
         IcnNode *n = parse_one_expr("write(42)");
-        if (is_kind(n, ICN_CALL) && n->nchildren == 2 &&
+        if (is_kind(n, PROC_CALL) && n->nchildren == 2 &&
             is_var(n->children[0], "write") && is_int(n->children[1], 42))
             PASS("write(42)");
         else FAIL("write(42)", "kind=%s nc=%d", n ? icn_kind_name(n->kind) : "null", n ? n->nchildren : -1);
@@ -167,7 +167,7 @@ static void test_call(void) {
     {
         /* write(1 to 5) — arg is ICN_TO */
         IcnNode *n = parse_one_expr("write(1 to 5)");
-        if (is_kind(n, ICN_CALL) && n->nchildren == 2 && is_kind(n->children[1], ICN_TO)) PASS("write(1 to 5)");
+        if (is_kind(n, PROC_CALL) && n->nchildren == 2 && is_kind(n->children[1], ICN_TO)) PASS("write(1 to 5)");
         else FAIL("write(1 to 5)", "bad");
         icn_node_free(n);
     }
@@ -175,11 +175,11 @@ static void test_call(void) {
 
 static void test_every(void) {
     printf("--- every ---\n");
-    /* every write(1 to 5); → ICN_EVERY(ICN_CALL(...)) */
+    /* every write(1 to 5); → ICN_EVERY(PROC_CALL(...)) */
     const char *src = "procedure main();\n  every write(1 to 5);\nend";
     IcnNode *stmt = parse_file_first_stmt(src);
     if (stmt && is_kind(stmt, ICN_EVERY) && stmt->nchildren == 1 &&
-        is_kind(stmt->children[0], ICN_CALL))
+        is_kind(stmt->children[0], PROC_CALL))
         PASS("every write(1 to 5)");
     else
         FAIL("every write(1 to 5)", "stmt=%s", stmt ? icn_kind_name(stmt->kind) : "null");
@@ -209,17 +209,17 @@ static void test_rung1_parse(void) {
     const char *corpus = "test/frontend/icon/corpus/rung01_paper";
     struct { const char *file; IcnKind stmt_kind; IcnKind arg_kind; } cases[] = {
         /* t01: every write(1 to 5)  → EVERY(CALL(...TO...)) */
-        {"t01_to5.icn",        ICN_EVERY, ICN_CALL},
+        {"t01_to5.icn",        ICN_EVERY, PROC_CALL},
         /* t02: every write((1 to 3) * (1 to 2)) → EVERY(CALL(...MUL...)) */
-        {"t02_mult.icn",       ICN_EVERY, ICN_CALL},
+        {"t02_mult.icn",       ICN_EVERY, PROC_CALL},
         /* t03: every write((1 to 2) to (2 to 3)) → EVERY(CALL(...TO...)) */
-        {"t03_nested_to.icn",  ICN_EVERY, ICN_CALL},
+        {"t03_nested_to.icn",  ICN_EVERY, PROC_CALL},
         /* t04: every write(2 < (1 to 4)) → EVERY(CALL(...LT...)) */
-        {"t04_lt.icn",         ICN_EVERY, ICN_CALL},
+        {"t04_lt.icn",         ICN_EVERY, PROC_CALL},
         /* t05: every write(3 < ((1 to 3)*(1 to 2))) → EVERY(CALL(...LT...)) */
-        {"t05_compound.icn",   ICN_EVERY, ICN_CALL},
+        {"t05_compound.icn",   ICN_EVERY, PROC_CALL},
         /* t06: every write(5 > (...)) → EVERY(CALL(...)) + write("done") */
-        {"t06_paper_expr.icn", ICN_EVERY, ICN_CALL},
+        {"t06_paper_expr.icn", ICN_EVERY, PROC_CALL},
         {NULL, 0, 0}
     };
     for (int i = 0; cases[i].file; i++) {

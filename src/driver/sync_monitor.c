@@ -57,7 +57,7 @@ void exec_snapshot_take(ExecSnapshot *s) {
     s->kw_anchor       = kw_anchor;
 
     /* ICN frame depth (locals captured in IM-10) */
-    s->icn_frame_depth = icn_frame_depth;
+    s->frame_depth = frame_depth;
 
     /* Prolog trail mark */
     s->pl_trail_mark   = trail_mark(&g_pl_trail);
@@ -103,27 +103,27 @@ void exec_snapshot_take(ExecSnapshot *s) {
     }
 
     /* IM-10: ICN frame locals — walk all active frames, collect named slots */
-    s->icn_locals       = NULL;
-    s->icn_locals_count = 0;
-    if (icn_frame_depth > 0) {
+    s->frame_locals       = NULL;
+    s->frame_locals_count = 0;
+    if (frame_depth > 0) {
         /* Count total named slots across all frames */
         int total = 0;
-        for (int fi = 0; fi < icn_frame_depth; fi++)
-            total += icn_frame_stack[fi].sc.n;
+        for (int fi = 0; fi < frame_depth; fi++)
+            total += frame_stack[fi].sc.n;
         if (total > 0) {
-            s->icn_locals = malloc((size_t)total * sizeof(NvPair));
+            s->frame_locals = malloc((size_t)total * sizeof(NvPair));
             int out = 0;
-            for (int fi = 0; fi < icn_frame_depth; fi++) {
-                IcnFrame *f = &icn_frame_stack[fi];
+            for (int fi = 0; fi < frame_depth; fi++) {
+                IcnFrame *f = &frame_stack[fi];
                 for (int si = 0; si < f->sc.n; si++) {
-                    s->icn_locals[out].name = f->sc.e[si].name;
+                    s->frame_locals[out].name = f->sc.e[si].name;
                     int slot = f->sc.e[si].slot;
-                    s->icn_locals[out].val  = (slot >= 0 && slot < f->env_n)
+                    s->frame_locals[out].val  = (slot >= 0 && slot < f->env_n)
                                               ? f->env[slot] : NULVCL;
                     out++;
                 }
             }
-            s->icn_locals_count = out;
+            s->frame_locals_count = out;
         }
     }
 
@@ -152,7 +152,7 @@ void exec_snapshot_restore(const ExecSnapshot *s) {
     kw_anchor  = s->kw_anchor;
 
     /* 3. ICN frame stack — unwind to depth 0 */
-    icn_frame_depth = 0;
+    frame_depth = 0;
 
     /* 4. Prolog trail — unwind to mark */
     trail_unwind(&g_pl_trail, s->pl_trail_mark);
@@ -170,9 +170,9 @@ void exec_snapshot_free(ExecSnapshot *s) {
     s->label_path     = NULL;
     s->label_path_n   = 0;
     s->label_path_cap = 0;
-    free(s->icn_locals);
-    s->icn_locals       = NULL;
-    s->icn_locals_count = 0;
+    free(s->frame_locals);
+    s->frame_locals       = NULL;
+    s->frame_locals_count = 0;
     /* IM-11: free owned Prolog local strings */
     for (int i = 0; i < s->pl_locals_count; i++) {
         free(s->pl_locals[i].name);
@@ -406,12 +406,12 @@ int sync_monitor_run(void *prog_arg, int verbose, const char *sno_path) {
             print_exec_line("JIT", &jit_snap);
 
             /* IM-10: ICN locals — print if any frame is active */
-            if (ir_snap.icn_locals_count > 0) {
+            if (ir_snap.frame_locals_count > 0) {
                 fprintf(stderr, "  ICN locals (IR):\n");
-                for (int li = 0; li < ir_snap.icn_locals_count; li++) {
-                    const char *v = VARVAL_fn(ir_snap.icn_locals[li].val);
+                for (int li = 0; li < ir_snap.frame_locals_count; li++) {
+                    const char *v = VARVAL_fn(ir_snap.frame_locals[li].val);
                     fprintf(stderr, "    %-16s = %s\n",
-                            ir_snap.icn_locals[li].name, v ? v : "");
+                            ir_snap.frame_locals[li].name, v ? v : "");
                 }
             }
 

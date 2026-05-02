@@ -805,7 +805,7 @@ static EXPR_t *parse_record(IcnParser *p) {
 /* =========================================================================
  * Procedure parsing → E_FNC
  *
- * E_FNC layout (matches icon_lower.c ICN_PROC case, expected by icn_call_proc):
+ * E_FNC layout (matches icon_lower.c ICN_PROC case, expected by coro_call):
  *   e->sval          = proc name
  *   e->ival          = nparams
  *   e->children[0]   = E_VAR (proc name)

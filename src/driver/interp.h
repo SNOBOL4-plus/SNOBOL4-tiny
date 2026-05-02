@@ -35,7 +35,7 @@ typedef struct {
     int          sno_label_start;
     int          sno_label_count;
     int          icn_proc_start;
-    int          icn_proc_count;
+    int          proc_count;
 } ScripModule;
 typedef struct {
     ScripModule  mods[SCRIP_MOD_MAX];

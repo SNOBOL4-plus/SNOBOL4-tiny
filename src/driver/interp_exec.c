@@ -117,7 +117,7 @@ void execute_program(CODE_t *prog)
         /* ── U-15: per-statement dispatch by st->lang ─────────────── */
         if (s->lang == LANG_ICN || s->lang == LANG_RAKU) {
             /* Icon / Raku STMT_t nodes are procedure definitions — already registered
-             * in icn_proc_table by polyglot_init.  Skip inline; main() is
+             * in proc_table by polyglot_init.  Skip inline; main() is
              * called once after the SNO/PL statement loop completes. */
             s = s->next; continue;
         }
@@ -401,17 +401,17 @@ void execute_program(CODE_t *prog)
         for (int _mi = 0; _mi < g_registry.nmod; _mi++) {
             ScripModule *_m = &g_registry.mods[_mi];
             if (_m->lang == LANG_ICN || _m->lang == LANG_RAKU) {
-                int _pend = _m->icn_proc_start + _m->icn_proc_count;
+                int _pend = _m->icn_proc_start + _m->proc_count;
                 int _found = 0;
-                g_lang = 1;   /* OE-7: Icon top-level mode required for icn_call_proc */
-                for (int _pi = _m->icn_proc_start; _pi < _pend && _pi < icn_proc_count; _pi++) {
-                    if (strcmp(icn_proc_table[_pi].name, "main") == 0)
-                        { icn_call_proc(icn_proc_table[_pi].proc, NULL, 0); _found=1; break; }
+                g_lang = 1;   /* OE-7: Icon top-level mode required for coro_call */
+                for (int _pi = _m->icn_proc_start; _pi < _pend && _pi < proc_count; _pi++) {
+                    if (strcmp(proc_table[_pi].name, "main") == 0)
+                        { coro_call(proc_table[_pi].proc, NULL, 0); _found=1; break; }
                 }
                 if (!_found)
-                    for (int _pi=0; _pi<icn_proc_count; _pi++)
-                        if (strcmp(icn_proc_table[_pi].name,"main")==0)
-                            { icn_call_proc(icn_proc_table[_pi].proc,NULL,0); break; }
+                    for (int _pi=0; _pi<proc_count; _pi++)
+                        if (strcmp(proc_table[_pi].name,"main")==0)
+                            { coro_call(proc_table[_pi].proc,NULL,0); break; }
                 g_lang = 0;
             } else if (_m->lang == LANG_PL) {
                 EXPR_t *pl_main = pl_pred_table_lookup(&g_pl_pred_table, "main/0");
@@ -426,10 +426,10 @@ void execute_program(CODE_t *prog)
     }
 
     /* ── Legacy single-section dispatch (U-15 / U-19) ──────────────────── */
-    if (icn_proc_count > 0) {
-        for (int _i = 0; _i < icn_proc_count; _i++) {
-            if (strcmp(icn_proc_table[_i].name, "main") == 0) {
-                icn_call_proc(icn_proc_table[_i].proc, NULL, 0);
+    if (proc_count > 0) {
+        for (int _i = 0; _i < proc_count; _i++) {
+            if (strcmp(proc_table[_i].name, "main") == 0) {
+                coro_call(proc_table[_i].proc, NULL, 0);
                 break;
             }
         }

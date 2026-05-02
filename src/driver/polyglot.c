@@ -80,10 +80,10 @@ void polyglot_init(CODE_t *prog, uint32_t lang_mask)
     /* ── ICN: proc table — only when Icon or Raku stmts present ─────── */
     if (lang_mask & ((1u << LANG_ICN) | (1u << LANG_RAKU))) {
         g_fi8_icn_init_count++;
-        icn_proc_count = 0; icn_global_count = 0;  /* U-23: reset global name bridge */
-        icn_frame_depth = 0;
-        memset(icn_frame_stack, 0, sizeof icn_frame_stack);
-        icn_scan_subj = ""; icn_scan_pos = 1; icn_scan_depth = 0;
+        proc_count = 0; global_count = 0;  /* U-23: reset global name bridge */
+        frame_depth = 0;
+        memset(frame_stack, 0, sizeof frame_stack);
+        scan_subj = ""; scan_pos = 1; scan_depth = 0;
         g_icn_root = NULL;
     }
 
@@ -126,8 +126,8 @@ void polyglot_init(CODE_t *prog, uint32_t lang_mask)
                 m->nstmts           = 0;
                 m->sno_label_start  = label_count;   /* labels added below */
                 m->sno_label_count  = 0;
-                m->icn_proc_start   = icn_proc_count;
-                m->icn_proc_count   = 0;
+                m->icn_proc_start   = proc_count;
+                m->proc_count   = 0;
             }
         }
 
@@ -141,13 +141,13 @@ void polyglot_init(CODE_t *prog, uint32_t lang_mask)
 
         if (s->lang == LANG_ICN || s->lang == LANG_RAKU) {
             /* Icon / Raku: collect E_FNC procedure definitions.
-             * raku_lower produces same E_FNC shape; share icn_proc_table (RK-6). */
+             * raku_lower produces same E_FNC shape; share proc_table (RK-6). */
             EXPR_t *proc = s->subject;
             /* U-23: collect global variable names from E_GLOBAL decl stmts */
             if (proc->kind == E_GLOBAL) {
                 for (int _gi = 0; _gi < proc->nchildren; _gi++)
                     if (proc->children[_gi] && proc->children[_gi]->sval)
-                        icn_global_register(proc->children[_gi]->sval);
+                        global_register(proc->children[_gi]->sval);
             }
             if (proc->kind == E_RECORD && proc->sval && *proc->sval) {
                 /* IC-5: record type declaration — register before main() runs */
@@ -166,11 +166,11 @@ void polyglot_init(CODE_t *prog, uint32_t lang_mask)
             if (proc->kind == E_FNC && proc->sval && *proc->sval) {
                 const char *name = proc->sval;
 
-                if (icn_proc_count < ICN_PROC_MAX) {
-                    icn_proc_table[icn_proc_count].name = name;
-                    icn_proc_table[icn_proc_count].proc = proc;
-                    icn_proc_count++;
-                    if (mod_idx >= 0) g_registry.mods[mod_idx].icn_proc_count++;
+                if (proc_count < PROC_TABLE_MAX) {
+                    proc_table[proc_count].name = name;
+                    proc_table[proc_count].proc = proc;
+                    proc_count++;
+                    if (mod_idx >= 0) g_registry.mods[mod_idx].proc_count++;
                     /* Detect main module  (U-21) */
                     if (strcmp(name, "main") == 0 && g_registry.main_mod < 0)
                         g_registry.main_mod = mod_idx;
@@ -256,9 +256,9 @@ void polyglot_execute(CODE_t *prog) {
     polyglot_init(prog, mask);
     if (slang == LANG_ICN) {
         g_lang = 1;
-        for (int i = 0; i < icn_proc_count; i++) {
-            if (strcmp(icn_proc_table[i].name, "main") == 0) {
-                icn_call_proc(icn_proc_table[i].proc, NULL, 0);
+        for (int i = 0; i < proc_count; i++) {
+            if (strcmp(proc_table[i].name, "main") == 0) {
+                coro_call(proc_table[i].proc, NULL, 0);
                 return;
             }
         }

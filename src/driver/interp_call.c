@@ -22,7 +22,7 @@ CallFrame  call_stack[CALL_STACK_MAX];
 int        call_depth = 0;
 
 /* ── IC-5: E_INITIAL persistence — file-scope table keyed on EXPR_t node id ── */
-IcnInitEnt icn_init_tab[ICN_INIT_MAX];
+IcnInitEnt init_tab[ICN_INIT_MAX];
 int        icn_init_n = 0;
 
 /* Called just before NV restore in call_user_function to update snapshots */
@@ -30,7 +30,7 @@ void icn_init_update_snapshot(char **snames, DESCR_t *svals, int nsaved) {
     /* For each init entry, check if any tracked var appears in snames (locals).
      * If so, capture its current NV value (pre-restore = end-of-call value). */
     for (int ei = 0; ei < icn_init_n; ei++) {
-        IcnInitEnt *ent = &icn_init_tab[ei];
+        IcnInitEnt *ent = &init_tab[ei];
         for (int si = 0; si < ent->ns; si++) {
             for (int ni = 0; ni < nsaved; ni++) {
                 if (snames[ni] && strcasecmp(snames[ni], ent->s[si].nm) == 0) {
@@ -42,17 +42,17 @@ void icn_init_update_snapshot(char **snames, DESCR_t *svals, int nsaved) {
     }
 }
 
-/* IC-5: Save current ICN frame's local values back into icn_init_tab snapshots.
- * Called by icn_call_proc just before popping the frame, so initial-block
+/* IC-5: Save current ICN frame's local values back into init_tab snapshots.
+ * Called by coro_call just before popping the frame, so initial-block
  * statics (x in "initial x := 10") persist across calls. */
 void icn_init_save_frame(void) {
-    if (icn_frame_depth <= 0) return;
-    IcnFrame *f = &icn_frame_stack[icn_frame_depth - 1];
+    if (frame_depth <= 0) return;
+    IcnFrame *f = &frame_stack[frame_depth - 1];
     for (int ei = 0; ei < icn_init_n; ei++) {
-        IcnInitEnt *ent = &icn_init_tab[ei];
+        IcnInitEnt *ent = &init_tab[ei];
         for (int si = 0; si < ent->ns; si++) {
             /* Find this variable's slot in the current frame scope */
-            int slot = icn_scope_get(&f->sc, ent->s[si].nm);
+            int slot = scope_get(&f->sc, ent->s[si].nm);
             if (slot >= 0 && slot < f->env_n) {
                 ent->s[si].val = f->env[slot];
             } else {

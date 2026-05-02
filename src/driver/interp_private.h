@@ -57,7 +57,7 @@ extern void ir_print_node_nl(const EXPR_t *e, FILE *f);
 
 extern DESCR_t pat_at_cursor(const char *varname);
 
-#include "runtime/interp/icn_runtime.h"
+#include "runtime/interp/coro_runtime.h"
 #include "runtime/interp/pl_runtime.h"
 
 extern DESCR_t      eval_expr(const char *src);
@@ -125,7 +125,7 @@ int  shadow_has(const char *name);
 #define ICN_INIT_SLOTS  8
 typedef struct { char nm[64]; DESCR_t val; } IcnInitSlot;
 typedef struct { int id; int ns; IcnInitSlot s[ICN_INIT_SLOTS]; } IcnInitEnt;
-extern IcnInitEnt icn_init_tab[ICN_INIT_MAX];
+extern IcnInitEnt init_tab[ICN_INIT_MAX];
 extern int        icn_init_n;
 void icn_init_update_snapshot(char **snames, DESCR_t *svals, int nsaved);
 
@@ -174,7 +174,7 @@ DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs);
 
 /* ── icn helpers needed across eval/call (defined in interp_eval.c) ──── */
 DESCR_t icn_call_builtin(EXPR_t *call, DESCR_t *args, int nargs);
-const char *icn_real_str(double r, char *buf, int bufsz);
+const char *real_str(double r, char *buf, int bufsz);
 
 /* ── Prolog pred table size (used by execute_program) ───────────────── */
 #define PL_PRED_TABLE_SIZE PL_PRED_TABLE_SIZE_FWD
