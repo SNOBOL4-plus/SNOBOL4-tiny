@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-Program *prolog_compile(const char *source, const char *filename)
+CODE_t *prolog_compile(const char *source, const char *filename)
 {
     if (!filename) filename = "<stdin>";
     /* Case policy is a frontend concern (cf. commit 8aa5803b for DATATYPE).

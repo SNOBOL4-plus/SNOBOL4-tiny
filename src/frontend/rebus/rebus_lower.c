@@ -4,7 +4,7 @@
  * Milestone: M-G5-LOWER-REBUS-FIX
  * Authored: 2026-03-30, G-9 s19, Claude Sonnet 4.6
  *
- * Walks RProgram* (from rebus_parse()) and produces Program*
+ * Walks RProgram* (from rebus_parse()) and produces CODE_t*
  * (STMT_t list with EXPR_t nodes using EKind values).
  *
  * Architecture per archive/doc/IR_LOWER_REBUS.md:
@@ -30,7 +30,7 @@
  * ---------------------------------------------------------------------- */
 
 typedef struct {
-    Program    *prog;
+    CODE_t    *prog;
     const char *filename;
     int         nerrors;
     int         label_ctr;
@@ -672,11 +672,11 @@ static void lower_decl(RebLow *L, RDecl *d) {
  * Public entry point
  * ---------------------------------------------------------------------- */
 
-Program *rebus_lower(RProgram *rp) {
+CODE_t *rebus_lower(RProgram *rp) {
     if (!rp) return NULL;
 
     RebLow L = {0};
-    L.prog     = calloc(1, sizeof(Program));
+    L.prog     = calloc(1, sizeof(CODE_t));
     L.filename = "<rebus>";
 
     lower_decl(&L, rp->decls);
@@ -689,13 +689,13 @@ Program *rebus_lower(RProgram *rp) {
 }
 
 /* -------------------------------------------------------------------------
- * rebus_compile — full pipeline: src string -> Program*
+ * rebus_compile — full pipeline: src string -> CODE_t*
  *
  * FI-1A: mirrors icon_compile() exactly.
  * Parses src via rebus_parse(), lowers via rebus_lower(), then tags every
  * STMT_t with LANG_REB so the polyglot dispatch routes correctly.
  * ---------------------------------------------------------------------- */
-Program *rebus_compile(const char *src, const char *filename) {
+CODE_t *rebus_compile(const char *src, const char *filename) {
     if (!filename) filename = "<stdin>";
 
     /* Case policy is a frontend concern (cf. commit 8aa5803b for DATATYPE).
@@ -716,8 +716,8 @@ Program *rebus_compile(const char *src, const char *filename) {
         return NULL;
     }
 
-    /* Lower RProgram* -> Program* */
-    Program *prog = rebus_lower(rp);
+    /* Lower RProgram* -> CODE_t* */
+    CODE_t *prog = rebus_lower(rp);
     if (!prog) return NULL;
 
     /* Tag every statement with LANG_REB */

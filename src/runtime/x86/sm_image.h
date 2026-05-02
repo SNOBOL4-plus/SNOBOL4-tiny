@@ -1,5 +1,5 @@
 /*
- * sm_image.h — Unified SCRIP In-Memory Program Image (M-SCRIP-U1)
+ * sm_image.h — Unified SCRIP In-Memory CODE_t Image (M-SCRIP-U1)
  *
  * Manages the 5 mmap'd segments that make up a running SCRIP program:
  *

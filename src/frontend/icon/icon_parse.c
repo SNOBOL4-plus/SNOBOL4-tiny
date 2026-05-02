@@ -871,8 +871,8 @@ void icn_parse_init(IcnParser *p, IcnLexer *lex) {
     p->peek = icn_lex_next(lex);
 }
 
-Program *icn_parse_file(IcnParser *p) {
-    Program *prog = calloc(1, sizeof(Program));
+CODE_t *icn_parse_file(IcnParser *p) {
+    CODE_t *prog = calloc(1, sizeof(CODE_t));
     while (!check(p, TK_EOF) && !p->had_error) {
         EXPR_t *top = NULL;
         if (check(p, TK_PROCEDURE)) {

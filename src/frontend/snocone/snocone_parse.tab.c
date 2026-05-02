@@ -3839,9 +3839,9 @@ static void sc_emit_struct(ScParseState *st, char *name, char *fields) {
  *  failure returns NULL (and st.nerrors > 0); on success returns a
  *  freshly-allocated CODE_t ready for the IR/SM pipeline.
  *
- *  CODE_t is the typedef alias of Program (added in LS-4.cn — session
+ *  CODE_t is the typedef alias of CODE_t (added in LS-4.cn — session
  *  2026-04-30 #7 — for symmetry with EXPR_t).  Existing callers that
- *  declared the result as `Program *` continue to work; the two names
+ *  declared the result as `CODE_t *` continue to work; the two names
  *  refer to the same type.
  *
  *  This is the LS-4.a entry point.  When LS-4.j wires it into scrip's

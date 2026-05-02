@@ -11,7 +11,7 @@
 #define ICON_PARSE_H
 
 #include "icon_lex.h"
-#include "../snobol4/scrip_cc.h"   /* Program, STMT_t, EXPR_t, LANG_ICN */
+#include "../snobol4/scrip_cc.h"   /* CODE_t, STMT_t, EXPR_t, LANG_ICN */
 
 /* -------------------------------------------------------------------------
  * Parser state
@@ -36,8 +36,8 @@ typedef struct {
 void     icn_parse_init(IcnParser *p, IcnLexer *lex);
 
 /* Parse a complete Icon source file directly to IR.
- * Returns Program* (caller owns) or NULL on parse error. */
-Program *icn_parse_file(IcnParser *p);
+ * Returns CODE_t* (caller owns) or NULL on parse error. */
+CODE_t *icn_parse_file(IcnParser *p);
 
 /* Parse a single expression to EXPR_t (useful for unit tests) */
 EXPR_t  *icn_parse_expr(IcnParser *p);

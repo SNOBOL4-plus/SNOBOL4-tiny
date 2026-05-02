@@ -1,7 +1,7 @@
 /*
  * prolog_lower.c — Prolog ClauseAST -> scrip-cc IR lowering
  *
- * Takes a PlProgram (list of PlClause) and produces a Program* whose
+ * Takes a PlProgram (list of PlClause) and produces a CODE_t* whose
  * STMT_t nodes carry the Prolog IR node kinds added to EKind in scrip-cc.h.
  *
  * Pipeline:
@@ -369,8 +369,8 @@ static EXPR_t *lower_clause(PlClause *cl, PredKey key) {
 /* =========================================================================
  * prolog_lower — main entry point
  * ======================================================================= */
-Program *prolog_lower(PlProgram *pl_prog) {
-    Program *prog = calloc(1, sizeof(Program));
+CODE_t *prolog_lower(PlProgram *pl_prog) {
+    CODE_t *prog = calloc(1, sizeof(CODE_t));
 
     /* ---- Pass 0: plunit prescan — track begin_tests/end_tests directives
      * and record which suite each test/1,2 clause belongs to.
@@ -589,7 +589,7 @@ static void expr_dump(EXPR_t *e, int indent, FILE *out) {
         expr_dump(e->children[i], indent + 2, out);
 }
 
-void prolog_lower_pretty(Program *prog, FILE *out) {
+void prolog_lower_pretty(CODE_t *prog, FILE *out) {
     for (STMT_t *s = prog->head; s; s = s->next) {
         fprintf(out, "--- stmt (line %d) ---\n", s->lineno);
         expr_dump(s->subject, 2, out);

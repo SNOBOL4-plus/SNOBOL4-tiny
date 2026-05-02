@@ -10,7 +10,7 @@
  *
  *   DESCR_t     code(const char *src)
  *       Parse src as SNOBOL4 statements via sno_parse() (fmemopen),
- *       stash the Program* in a DT_C DESCR_t.
+ *       stash the CODE_t* in a DT_C DESCR_t.
  *       Returns FAILDESCR on parse failure.
  *
  *   const char *exec_code(DESCR_t code_block)
@@ -24,8 +24,8 @@
  *   always does with source that arrived late (ARCH-byrd-dynamic.md).
  *
  *   eval_expr: parse_expr_from_str → eval_node (recursive EXPR_t walk)
- *   code:      fmemopen → sno_parse → Program* stored as DT_C
- *   exec_code: walk Program stmts, call exec_stmt per stmt,
+ *   code:      fmemopen → sno_parse → CODE_t* stored as DT_C
+ *   exec_code: walk CODE_t stmts, call exec_stmt per stmt,
  *                     resolve gotos, return first branch target.
  *
  * RELATION TO EXISTING EVAL_fn
@@ -430,13 +430,13 @@ DESCR_t code(const char *src)
     if (!src || !*src) return FAILDESCR;
 
     /* Use bison sno_parse_string — CMPILE fully removed (GOAL-REMOVE-CMPILE S-3). */
-    Program *prog = sno_parse_string(src);
+    CODE_t *prog = sno_parse_string(src);
 
     if (!prog || !prog->head) return FAILDESCR;
 
     DESCR_t d;
     d.v   = DT_C;
-    d.ptr = prog;          /* Program* stored as generic GC pointer */
+    d.ptr = prog;          /* CODE_t* stored as generic GC pointer */
     d.slen = 0;
     return d;
 }
@@ -463,7 +463,7 @@ DESCR_t code(const char *src)
 const char *exec_code(DESCR_t code_block)
 {
     if (code_block.v != DT_C || !code_block.ptr) return NULL;
-    Program *prog = (Program *)code_block.ptr;
+    CODE_t *prog = (CODE_t *)code_block.ptr;
 
     for (STMT_t *s = prog->head; s; s = s->next) {
         if (s->is_end) return "";  /* END statement → fall through */

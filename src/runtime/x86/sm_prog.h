@@ -160,7 +160,7 @@ typedef struct {
     sm_operand_t  a[SM_MAX_OPERANDS];   /* a[0], a[1], a[2] */
 } SM_Instr;
 
-/* ── Program (flat array of instructions) ───────────────────────────── */
+/* ── CODE_t (flat array of instructions) ───────────────────────────── */
 
 typedef struct {
     SM_Instr    *instrs;

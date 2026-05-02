@@ -31,7 +31,7 @@ extern DESCR_t NV_SET_fn(const char *name, DESCR_t val);
  * to the current frame's slot array. E_VAR case checks icn_env first.
  * ICN_CUR.env_n is the slot count. Both are NULL/0 when in SNOBOL4 context.
  *
- * Icon procedure table: built from Program* at execute_program time.
+ * Icon procedure table: built from CODE_t* at execute_program time.
  * Each entry maps procname → the E_FNC node (from STMT_t subject).
  * ────────────────────────────────────────────────────────────────────────── */
 IcnProcEntry icn_proc_table[ICN_PROC_MAX];

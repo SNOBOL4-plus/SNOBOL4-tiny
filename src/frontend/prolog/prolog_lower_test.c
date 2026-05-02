@@ -28,7 +28,7 @@ static int tests_run = 0, tests_passed = 0;
 } while(0)
 
 /* Count STMT_t nodes whose subject has a given EKind */
-static int count_kind(Program *prog, EKind k) {
+static int count_kind(CODE_t *prog, EKind k) {
     int n = 0;
     for (STMT_t *s = prog->head; s; s = s->next)
         if (s->subject && s->subject->kind == k) n++;
@@ -36,7 +36,7 @@ static int count_kind(Program *prog, EKind k) {
 }
 
 /* Find E_CHOICE by functor/arity string "foo/2" */
-static EXPR_t *find_choice(Program *prog, const char *pred) {
+static EXPR_t *find_choice(CODE_t *prog, const char *pred) {
     for (STMT_t *s = prog->head; s; s = s->next)
         if (s->subject && s->subject->kind == E_CHOICE &&
             s->subject->sval && strcmp(s->subject->sval, pred) == 0)
@@ -53,7 +53,7 @@ static void test_facts(void) {
         "person(jones).\n"
         "person(smith).\n";
     PlProgram *pl = prolog_parse(src, "t_facts");
-    Program   *ir = prolog_lower(pl);
+    CODE_t   *ir = prolog_lower(pl);
 
     CHECK("facts: 1 E_CHOICE", count_kind(ir, E_CHOICE) == 1);
     EXPR_t *ch = find_choice(ir, "person/1");
@@ -73,7 +73,7 @@ static void test_rule(void) {
     const char *src =
         "double(X, Y) :- Y is X * 2.\n";
     PlProgram *pl = prolog_parse(src, "t_rule");
-    Program   *ir = prolog_lower(pl);
+    CODE_t   *ir = prolog_lower(pl);
 
     EXPR_t *ch = find_choice(ir, "double/2");
     CHECK("rule: choice double/2 exists", ch != NULL);
@@ -95,7 +95,7 @@ static void test_unify_node(void) {
     const char *src =
         "test :- X = foo.\n";
     PlProgram *pl = prolog_parse(src, "t_unify");
-    Program   *ir = prolog_lower(pl);
+    CODE_t   *ir = prolog_lower(pl);
 
     EXPR_t *ch = find_choice(ir, "test/0");
     CHECK("unify: choice test/0 exists", ch != NULL);
@@ -118,7 +118,7 @@ static void test_cut_node(void) {
         "differ(X, X) :- !, fail.\n"
         "differ(_, _).\n";
     PlProgram *pl = prolog_parse(src, "t_cut");
-    Program   *ir = prolog_lower(pl);
+    CODE_t   *ir = prolog_lower(pl);
 
     EXPR_t *ch = find_choice(ir, "differ/2");
     CHECK("cut: choice differ/2 exists", ch != NULL);
@@ -145,7 +145,7 @@ static void test_multi_pred(void) {
         "append([], L, L).\n"
         "append([H|T], L, [H|R]) :- append(T, L, R).\n";
     PlProgram *pl = prolog_parse(src, "t_multi");
-    Program   *ir = prolog_lower(pl);
+    CODE_t   *ir = prolog_lower(pl);
 
     CHECK("multi: 2 E_CHOICE nodes", count_kind(ir, E_CHOICE) == 2);
     CHECK("multi: member/2 exists", find_choice(ir, "member/2") != NULL);
@@ -163,7 +163,7 @@ static void test_directive(void) {
         ":- initialization(main).\n"
         "main :- write(hello), nl.\n";
     PlProgram *pl = prolog_parse(src, "t_dir");
-    Program   *ir = prolog_lower(pl);
+    CODE_t   *ir = prolog_lower(pl);
 
     CHECK("directive: nstmts >= 2", ir->nstmts >= 2);
     /* First stmt is directive (E_FNC) */
@@ -202,7 +202,7 @@ static const char *PUZZLE01 =
 static void test_puzzle01(void) {
     PlProgram *pl = prolog_parse(PUZZLE01, "puzzle01");
     CHECK("puzzle01: parse 0 errors", pl->nerrors == 0);
-    Program *ir = prolog_lower(pl);
+    CODE_t *ir = prolog_lower(pl);
     CHECK("puzzle01: E_CHOICE nodes >= 5", count_kind(ir, E_CHOICE) >= 5);
     CHECK("puzzle01: person/1 has 3 clauses",
           find_choice(ir, "person/1") &&

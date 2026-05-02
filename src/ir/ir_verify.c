@@ -12,7 +12,7 @@
  *
  * Public API:
  *   ir_verify_node(e, path, errors_out)  — verify subtree rooted at e
- *   ir_verify_program(prog, errors_out)  — verify all stmts in a Program
+ *   ir_verify_program(prog, errors_out)  — verify all stmts in a CODE_t
  *
  * Both return the number of violations found (0 = clean).
  *
@@ -215,9 +215,9 @@ int ir_verify_node(const EXPR_t *e, const char *path, FILE *err) {
     return vs.count;
 }
 
-int ir_verify_program(const Program *prog, FILE *err) {
+int ir_verify_program(const CODE_t *prog, FILE *err) {
     if (!prog) {
-        if (err) fprintf(err, "ir_verify: NULL Program pointer\n");
+        if (err) fprintf(err, "ir_verify: NULL CODE_t pointer\n");
         return 1;
     }
     VerifyState vs = { 0, err ? err : stderr };

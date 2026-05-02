@@ -47,6 +47,6 @@ Term   *pl_unified_term_from_expr(EXPR_t *e, Term **env);
 
 int     is_pl_user_call(EXPR_t *goal);
 int     interp_exec_pl_builtin(EXPR_t *goal, Term **env);
-void    pl_execute_program_unified(Program *prog);
+void    pl_execute_program_unified(CODE_t *prog);
 
 #endif /* DRIVER_PL_RUNTIME_H */

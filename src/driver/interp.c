@@ -21,7 +21,7 @@
 
 /* ── frontend ─────────────────────────────────────────────────────────── */
 #include "frontend/snobol4/scrip_cc.h"
-extern Program *sno_parse(FILE *f, const char *filename);
+extern CODE_t *sno_parse(FILE *f, const char *filename);
 #include "frontend/snocone/snocone_driver.h"
 #include "frontend/prolog/prolog_driver.h"
 #include "frontend/prolog/term.h"
@@ -129,7 +129,7 @@ typedef struct {
 static LabelEntry label_table[LABEL_MAX];
 int label_count = 0;
 
-void label_table_build(Program *prog)
+void label_table_build(CODE_t *prog)
 {
     label_count = 0;
     for (STMT_t *s = prog->head; s; s = s->next) {
@@ -256,7 +256,7 @@ static int shadow_has(const char *name) {
 }
 
 /* The program being interpreted (set in main before execute_program) */
-Program *g_prog = NULL;
+CODE_t *g_prog = NULL;
 int g_polyglot = 0; /* U-23: 1 when running a fenced polyglot .scrip file */
 int g_opt_trace   = 0;  /* --trace:   print STMT N on each statement */
 int g_opt_dump_bb = 0;  /* --dump-bb: print PATND tree before each match */
@@ -315,7 +315,7 @@ static const char *define_entry_from_expr(EXPR_t *subj)
 }
 
 /* ── Pre-scan program and register all DEFINE'd functions ── */
-void prescan_defines(Program *prog)
+void prescan_defines(CODE_t *prog)
 {
     for (STMT_t *s = prog->head; s; s = s->next) {
         if (!s->subject) continue;
@@ -5389,7 +5389,7 @@ DESCR_t interp_eval_pat(EXPR_t *e)
 
 
 
-void execute_program(Program *prog)
+void execute_program(CODE_t *prog)
 {
     polyglot_init(prog, polyglot_lang_mask(prog));   /* U-14 / FI-8: language-selective init */
     g_lang = 0;  /* SNOBOL4 mode */
@@ -5954,7 +5954,7 @@ DESCR_t _usercall_hook(const char *name, DESCR_t *args, int nargs) {
 
 /* IM-3: execute_program_steps — run at most N statements then return.
  * Sets up g_ir_step_jmp so the step-limit longjmp lands here safely. */
-void execute_program_steps(Program *prog, int n) {
+void execute_program_steps(CODE_t *prog, int n) {
     g_ir_step_limit = n;
     g_ir_steps_done = 0;
     if (setjmp(g_ir_step_jmp) == 0)
@@ -5988,8 +5988,8 @@ static void ir_print_stmt(STMT_t *st, FILE *f) {
     fprintf(f, ")\n");
 }
 
-/* Dump a full Program* as IR sexp — one line per statement. */
-void ir_dump_program(Program *prog, FILE *f) {
+/* Dump a full CODE_t* as IR sexp — one line per statement. */
+void ir_dump_program(CODE_t *prog, FILE *f) {
     if (!prog) { fprintf(f, "(NULL-PROGRAM)\n"); return; }
     for (STMT_t *st = prog->head; st; st = st->next)
         ir_print_stmt(st, f);

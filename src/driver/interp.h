@@ -14,14 +14,14 @@
 
 #include <stdint.h>
 #include <setjmp.h>
-#include "frontend/snobol4/scrip_cc.h"  /* EXPR_t, STMT_t, Program, DESCR_t */
+#include "frontend/snobol4/scrip_cc.h"  /* EXPR_t, STMT_t, CODE_t, DESCR_t */
 
 /* ── Diagnostic flags (set in main, read by execute_program / sm_interp) ── */
 extern int g_opt_trace;
 extern int g_opt_dump_bb;
 
-/* ── Program state ─────────────────────────────────────────────────────── */
-extern Program *g_prog;     /* current program (set before execute_program) */
+/* ── CODE_t state ─────────────────────────────────────────────────────── */
+extern CODE_t *g_prog;     /* current program (set before execute_program) */
 extern int      g_polyglot; /* 1 when running a fenced polyglot .scrip file */
 
 /* ── ScripModule registry — lives in scrip.c; execute_program uses it (FI-7 will move) ── */
@@ -44,22 +44,22 @@ typedef struct {
 } ScripModuleRegistry;
 extern ScripModuleRegistry g_registry;
 /* polyglot_init declared in polyglot.h — forward ref for execute_program */
-void polyglot_init(Program *prog, uint32_t lang_mask);
-uint32_t polyglot_lang_mask(Program *prog);
+void polyglot_init(CODE_t *prog, uint32_t lang_mask);
+uint32_t polyglot_lang_mask(CODE_t *prog);
 void icn_record_register(const char *spec);  /* IC-5: register record type at init time */
 
 /* ── Label table ───────────────────────────────────────────────────────── */
 extern int label_count;     /* needed by polyglot_init for sno_label_start */
-void    label_table_build(Program *prog);
+void    label_table_build(CODE_t *prog);
 STMT_t *label_lookup(const char *name);
-void    prescan_defines(Program *prog);
+void    prescan_defines(CODE_t *prog);
 
 /* ── Core interpreter entry points ────────────────────────────────────── */
 DESCR_t interp_eval    (EXPR_t *e);
 DESCR_t interp_eval_pat(EXPR_t *e);
-void    execute_program(Program *prog);
-void    execute_program_steps(Program *prog, int n);  /* IM-3: step-limited run */
-void    ir_dump_program(Program *prog, FILE *f);
+void    execute_program(CODE_t *prog);
+void    execute_program_steps(CODE_t *prog, int n);  /* IM-3: step-limited run */
+void    ir_dump_program(CODE_t *prog, FILE *f);
 
 /* IM-3: IR step-limit globals */
 extern int     g_ir_step_limit;

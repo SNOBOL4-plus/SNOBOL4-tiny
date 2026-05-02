@@ -125,19 +125,12 @@ typedef struct {
     int          nstmts;
     ExportEntry *exports;   /* singly-linked list of EXPORT directives */
     ImportEntry *imports;   /* singly-linked list of IMPORT directives */
-} Program;
+} CODE_t;
 
-/* CODE_t — symmetric alias for Program.  EXPR_t is the IR for one
- * expression (the type EVAL operates on); CODE_t is the IR for a list
- * of statements (the type CODE operates on).  See eval_code.c:
- *   eval_expr(src) -> walks the resulting EXPR_t
- *   code(src)      -> stashes the resulting CODE_t* in a DT_C DESCR_t
- * Existing call sites that use `Program*` continue to work; new code
- * may use either name.  The eventual rename to CODE_t-only is tracked
- * in GOAL-SNOCONE-LANG-SPACE LS-4.cn (session 2026-04-30 #7) for the
- * Snocone frontend; broader migration is a separate goal.
+/* CODE_t — the IR for a list of statements (what CODE operates on).
+ * EXPR_t is the IR for one expression (what EVAL operates on).
+ * See eval_code.c: eval_expr / code / exec_code.
  */
-typedef Program CODE_t;
 
 /* ---- allocators ---- */
 static inline EXPR_t *expr_new(EKind k) {
@@ -177,11 +170,11 @@ static inline char *intern_n(const char *s, int n) {
 /* ---- public API ---- */
 void     sno_add_include_dir(const char *d);
 void     sno_reset(void);          /* reset per-file state between multi-file compilations */
-Program *sno_parse(FILE *f, const char *filename);
+CODE_t *sno_parse(FILE *f, const char *filename);
 EXPR_t  *parse_expr_from_str(const char *src);
 EXPR_t  *parse_expr_pat_from_str(const char *src); /* bison: bare expr -> EXPR_t, pattern slot */
-Program *sno_parse_string(const char *src);         /* bison: multi-stmt string -> Program* */
-void     c_emit(Program *prog, FILE *out);
+CODE_t *sno_parse_string(const char *src);         /* bison: multi-stmt string -> CODE_t* */
+void     c_emit(CODE_t *prog, FILE *out);
 
 /* SN-19: case-sensitivity control. Default = case-INsensitive (fold to upper).
  * Pass 1 to switch to case-SENsitive mode (CSNOBOL4 -f equivalent). */

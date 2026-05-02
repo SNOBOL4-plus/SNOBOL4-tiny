@@ -42,7 +42,7 @@
 /* ── frontend ─────────────────────────────────────────────────────────── */
 #include "../frontend/snobol4/scrip_cc.h"
 /* CMPILE.h removed — bison/flex path only (GOAL-REMOVE-CMPILE S-5) */
-extern Program *sno_parse(FILE *f, const char *filename);
+extern CODE_t *sno_parse(FILE *f, const char *filename);
 #include "../frontend/snocone/snocone_driver.h"
 #include "../frontend/prolog/prolog_driver.h"
 #include "../frontend/prolog/term.h"            /* Term — needed by Prolog globals block */
@@ -211,7 +211,7 @@ int main(int argc, char **argv)
     }
     /* ── Multi-file load (U-MULTIFILE) ─────────────────────────────────────
      * All remaining argv entries are input files.  Each is compiled with the
-     * appropriate frontend (by extension) and merged into one Program* in
+     * appropriate frontend (by extension) and merged into one CODE_t* in
      * source order.  This enables:
      *   scrip --ir-run lib.pl main.pl
      *   scrip --ir-run shim.pl test_arith.pl
@@ -235,7 +235,7 @@ int main(int argc, char **argv)
             has_non_sno = 1;
     }
 
-    Program *prog = NULL;
+    CODE_t *prog = NULL;
 
     for (; argi < argc; argi++) {
         const char *input_path = argv[argi];
@@ -277,7 +277,7 @@ int main(int argc, char **argv)
         int lang_rebus    = dot && strcmp(dot, ".reb")  == 0;
         int lang_polyglot = dot && (strcmp(dot, ".scrip") == 0 || strcmp(dot, ".md") == 0);
 
-        Program *sub = NULL;
+        CODE_t *sub = NULL;
 
         if (lang_polyglot) {
             g_polyglot = 1;
@@ -313,7 +313,7 @@ int main(int argc, char **argv)
             FILE *f = fopen(input_path, "r");
             if (!f) { fprintf(stderr, "scrip: cannot open '%s'\n", input_path); return 1; }
             if (opt_bench) clock_gettime(CLOCK_MONOTONIC, &_t1);
-            Program *dprog = sno_parse(f, input_path);
+            CODE_t *dprog = sno_parse(f, input_path);
             fclose(f);
             ir_dump_program(dprog, stdout);
             return 0;
@@ -439,7 +439,7 @@ int main(int argc, char **argv)
 
     if (mode_monitor) {
         /* IM-7: --monitor — in-process sync comparator.
-         * Runs IR, SM, and JIT step-by-step over the same Program,
+         * Runs IR, SM, and JIT step-by-step over the same CODE_t,
          * snapshot/restoring state between each run.
          * Returns 0 if all three agree; exits non-zero on first divergence. */
         label_table_build(prog);

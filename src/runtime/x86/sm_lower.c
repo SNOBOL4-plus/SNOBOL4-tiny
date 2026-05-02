@@ -1,7 +1,7 @@
 /*
  * sm_lower.c — IR → SM_Program compiler pass (M-SCRIP-U3)
  *
- * Walks a Program* (linked list of STMT_t, each holding EXPR_t trees)
+ * Walks a CODE_t* (linked list of STMT_t, each holding EXPR_t trees)
  * and emits a flat SM_Program instruction sequence.
  *
  * SNOBOL4 statement model:
@@ -1230,7 +1230,7 @@ emit_gotos: {
 
 /* ── Public entry point ─────────────────────────────────────────────────── */
 
-SM_Program *sm_lower(const Program *prog)
+SM_Program *sm_lower(const CODE_t *prog)
 {
     if (!prog) return NULL;
 

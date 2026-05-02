@@ -177,13 +177,13 @@ static EXPR_t *make_for_range(EXPR_t *lo, EXPR_t *hi, const char *vname, EXPR_t 
 }
 
 /*--------------------------------------------------------------------
- * Program output
+ * CODE_t output
  *--------------------------------------------------------------------*/
-Program *raku_prog_result = NULL;
+CODE_t *raku_prog_result = NULL;
 
 static void add_proc(EXPR_t *e) {
     if (!e) return;
-    if (!raku_prog_result) raku_prog_result = calloc(1, sizeof(Program));
+    if (!raku_prog_result) raku_prog_result = calloc(1, sizeof(CODE_t));
     STMT_t *st = calloc(1, sizeof(STMT_t));
     st->subject = e; st->lineno = 0; st->lang = LANG_RAKU;
     if (!raku_prog_result->head) raku_prog_result->head = raku_prog_result->tail = st;
@@ -2787,7 +2787,7 @@ yyreturnlab:
 extern void *raku_yy_scan_string(const char *);
 extern void  raku_yy_delete_buffer(void *);
 
-Program *raku_parse_string(const char *src) {
+CODE_t *raku_parse_string(const char *src) {
     raku_prog_result = NULL;
     void *buf = raku_yy_scan_string(src);
     raku_yyparse();

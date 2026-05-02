@@ -18,8 +18,8 @@
 #include <gc.h>
 
 #include "frontend/snobol4/scrip_cc.h"
-extern Program *sno_parse(FILE *f, const char *filename);
-extern Program *sno_parse_string(const char *src);
+extern CODE_t *sno_parse(FILE *f, const char *filename);
+extern CODE_t *sno_parse_string(const char *src);
 extern int64_t kw_case;   /* &CASE: 0=fold, 1=sensitive; default 1 matches SPITBOL */
 #include "frontend/prolog/prolog_driver.h"
 #include "frontend/prolog/prolog_atom.h"
@@ -42,7 +42,7 @@ ScripModuleRegistry g_registry;   /* zero-initialised; nmod==0 for single-lang *
  * appears in at least one STMT_t.lang field.  Callers pass this into
  * polyglot_init so per-language init is skipped when not needed.
  * ══════════════════════════════════════════════════════════════════════════ */
-uint32_t polyglot_lang_mask(Program *prog)
+uint32_t polyglot_lang_mask(CODE_t *prog)
 {
     uint32_t mask = 0;
     if (!prog) return mask;
@@ -68,7 +68,7 @@ uint32_t polyglot_lang_mask(Program *prog)
 int g_fi8_icn_init_count = 0;
 int g_fi8_pl_init_count  = 0;
 
-void polyglot_init(Program *prog, uint32_t lang_mask)
+void polyglot_init(CODE_t *prog, uint32_t lang_mask)
 {
     if (!prog) return;
 
@@ -244,7 +244,7 @@ static int pl_directive_max_var_slot(EXPR_t *root)
  * For single-language programs: routes to the appropriate legacy entry point.
  * OE-8 will retire the legacy entry points entirely.
  *============================================================================================================================*/
-void polyglot_execute(Program *prog) {
+void polyglot_execute(CODE_t *prog) {
     if (!prog) return;
     if (g_polyglot) {
         execute_program(prog);   /* runs SNO + U-23 ICN/PL registry dispatch */
@@ -301,19 +301,19 @@ void polyglot_execute(Program *prog) {
 }
 
 /*============================================================================================================================
- * parse_scrip_polyglot — parse a fenced polyglot .scrip/.md file into one Program*  (U-13)
+ * parse_scrip_polyglot — parse a fenced polyglot .scrip/.md file into one CODE_t*  (U-13)
  *
  * Scans the source for fenced code blocks:
  *   ```SNOBOL4  ...  ```
  *   ```Icon     ...  ```
  *   ```Prolog   ...  ```
  * Each block is compiled with its own frontend.  All resulting STMT_t chains
- * are appended in source order into one Program*, with st->lang already set
+ * are appended in source order into one CODE_t*, with st->lang already set
  * by each frontend (U-12).  Unrecognised fence languages are skipped silently.
  *============================================================================================================================*/
-Program *parse_scrip_polyglot(const char *src, const char *filename)
+CODE_t *parse_scrip_polyglot(const char *src, const char *filename)
 {
-    Program *result = calloc(1, sizeof(Program));
+    CODE_t *result = calloc(1, sizeof(CODE_t));
     if (!result) return NULL;
 
     const char *p = src;
@@ -368,7 +368,7 @@ Program *parse_scrip_polyglot(const char *src, const char *filename)
         if (lang < 0) { free(block); continue; }   /* unknown language — skip */
 
         /* Compile block with the appropriate frontend */
-        Program *sub = NULL;
+        CODE_t *sub = NULL;
         if (lang == LANG_SNO || lang == LANG_SCRIP) {
             sub = sno_parse_string(block);
             /* LANG_SCRIP: compiled as SNO — shared constants are SNO assignments.

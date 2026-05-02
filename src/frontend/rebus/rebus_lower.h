@@ -11,11 +11,11 @@
 
 /*
  * rebus_lower(rp)
- *   Walk RProgram* produced by rebus_parse() and return a Program*
+ *   Walk RProgram* produced by rebus_parse() and return a CODE_t*
  *   whose STMT_t list is ready for asm_emit / jvm_emit / net_emit.
  *   Returns NULL on error (messages printed to stderr).
  */
-Program *rebus_lower(RProgram *rp);
+CODE_t *rebus_lower(RProgram *rp);
 
 /*
  * rebus_compile(src, filename) — FI-1A
@@ -23,6 +23,6 @@ Program *rebus_lower(RProgram *rp);
  *   rebus_lower(), tag all STMT_t with LANG_REB. Mirrors icon_compile().
  *   Returns NULL on parse or lower error.
  */
-Program *rebus_compile(const char *src, const char *filename);
+CODE_t *rebus_compile(const char *src, const char *filename);
 
 #endif /* REBUS_LOWER_H */

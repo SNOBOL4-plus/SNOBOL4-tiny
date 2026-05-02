@@ -195,7 +195,7 @@ typedef enum yysymbol_kind_t yysymbol_kind_t;
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-typedef struct { Program *prog; EXPR_t **result; } PP;
+typedef struct { CODE_t *prog; EXPR_t **result; } PP;
 static Lex     *g_lx;
 static void     sno4_stmt_commit_go(void*,Token,EXPR_t*,EXPR_t*,int,EXPR_t*,SnoGoto*);
 static void     fixup_val(EXPR_t*);
@@ -2145,13 +2145,13 @@ static void sno4_stmt_commit_go(void *param,Token lbl,EXPR_t *subj,EXPR_t *pat,i
     /* nstmts already incremented above when assigning s->stno (SN-26-bridge-coverage-j) */
 }
 static EXPR_t *parse_expr(Lex *lx){
-    Program *prog=calloc(1,sizeof*prog);PP p={prog,NULL};g_lx=lx;snobol4_parse(&p);
+    CODE_t *prog=calloc(1,sizeof*prog);PP p={prog,NULL};g_lx=lx;snobol4_parse(&p);
     return prog->head?prog->head->subject:NULL;
 }
-Program *parse_program_tokens(Lex *stream){
-    Program *prog=calloc(1,sizeof*prog);PP p={prog,NULL};g_lx=stream;snobol4_parse(&p);return prog;
+CODE_t *parse_program_tokens(Lex *stream){
+    CODE_t *prog=calloc(1,sizeof*prog);PP p={prog,NULL};g_lx=stream;snobol4_parse(&p);return prog;
 }
-Program *parse_program(LineArray *lines){(void)lines;return calloc(1,sizeof(Program));}
+CODE_t *parse_program(LineArray *lines){(void)lines;return calloc(1,sizeof(CODE_t));}
 EXPR_t *parse_expr_from_str(const char *src){
     if(!src||!*src) return NULL;Lex lx={0};lex_open_str(&lx,src,(int)strlen(src),0);return parse_expr(&lx);
 }
@@ -2168,7 +2168,7 @@ EXPR_t *parse_expr_pat_from_str(const char *src) {
     buf[slen+1] = '\0';
     Lex lx = {0};
     lex_open_str(&lx, buf, slen + 1, 0);
-    Program *prog = calloc(1, sizeof *prog);
+    CODE_t *prog = calloc(1, sizeof *prog);
     PP p = {prog, NULL};
     g_lx = &lx;
     snobol4_parse(&p);
@@ -2182,17 +2182,17 @@ EXPR_t *parse_expr_pat_from_str(const char *src) {
  * Uses lex_open_str_initial (INITIAL/col-1 start) so indented and labelled
  * statements are handled correctly.  lex_open_str pushes BODY — correct for
  * single-expression parsing only. */
-Program *sno_parse_string(const char *src) {
-    if (!src) return calloc(1, sizeof(Program));
+CODE_t *sno_parse_string(const char *src) {
+    if (!src) return calloc(1, sizeof(CODE_t));
     int slen = (int)strlen(src);
     char *buf = malloc(slen + 2);
-    if (!buf) return calloc(1, sizeof(Program));
+    if (!buf) return calloc(1, sizeof(CODE_t));
     memcpy(buf, src, slen);
     buf[slen]   = '\n';
     buf[slen+1] = '\0';
     Lex lx = {0};
     lex_open_str_initial(&lx, buf, slen + 1, 0);
-    Program *prog = calloc(1, sizeof *prog);
+    CODE_t *prog = calloc(1, sizeof *prog);
     PP p = {prog, NULL};
     g_lx = &lx;
     snobol4_parse(&p);

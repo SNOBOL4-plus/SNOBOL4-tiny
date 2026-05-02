@@ -1,5 +1,5 @@
 /*
- * scrip_image.c — Unified SCRIP In-Memory Program Image (M-SCRIP-U1)
+ * scrip_image.c — Unified SCRIP In-Memory CODE_t Image (M-SCRIP-U1)
  *
  * See sm_image.h for design notes.
  *

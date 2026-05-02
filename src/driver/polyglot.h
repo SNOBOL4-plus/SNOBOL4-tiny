@@ -19,9 +19,9 @@
 extern int g_fi8_icn_init_count;
 extern int g_fi8_pl_init_count;
 
-uint32_t polyglot_lang_mask(Program *prog);
-void     polyglot_init   (Program *prog, uint32_t lang_mask);
-void     polyglot_execute(Program *prog);
-Program *parse_scrip_polyglot(const char *src, const char *filename);
+uint32_t polyglot_lang_mask(CODE_t *prog);
+void     polyglot_init   (CODE_t *prog, uint32_t lang_mask);
+void     polyglot_execute(CODE_t *prog);
+CODE_t *parse_scrip_polyglot(const char *src, const char *filename);
 
 #endif /* POLYGLOT_H */

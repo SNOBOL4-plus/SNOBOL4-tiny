@@ -1,7 +1,7 @@
 /*
  * snocone_driver.c — Snocone frontend pipeline driver
  *
- * snocone_compile(source, filename) → Program*
+ * snocone_compile(source, filename) → CODE_t*
  *
  * LS-4.j: delegates directly to snocone_parse_program() — the Bison
  * parser + FSM lexer (snocone_parse.tab.c / snocone_lex.c).
@@ -18,7 +18,7 @@
 /* Forward declaration — defined in snocone_parse.tab.c */
 CODE_t *snocone_parse_program(const char *src, const char *filename);
 
-Program *snocone_compile(const char *source, const char *filename)
+CODE_t *snocone_compile(const char *source, const char *filename)
 {
     if (!filename) filename = "<stdin>";
     return snocone_parse_program(source, filename);

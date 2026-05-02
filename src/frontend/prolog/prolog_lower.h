@@ -8,8 +8,8 @@
 #include "prolog_parse.h"
 #include <stdio.h>
 
-Program *prolog_lower(PlProgram *pl_prog);
-void prolog_lower_pretty(Program *prog, FILE *out);
+CODE_t *prolog_lower(PlProgram *pl_prog);
+void prolog_lower_pretty(CODE_t *prog, FILE *out);
 
 /*
  * pl_assert_term — build an E_CLAUSE EXPR_t from a runtime Term* (for assertz/asserta).
