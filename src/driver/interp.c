@@ -3392,6 +3392,19 @@ DESCR_t interp_eval(EXPR_t *e)
     case E_CAT:
     case E_SEQ: {
         if (e->nchildren == 0) return NULVCL;
+        /* IC-9 (2026-05-02): In Icon mode, E_SEQ is the & (conjunction) operator —
+         * evaluate children left to right; if any fails, return FAILDESCR; return
+         * the last child's value.  This is completely different from SNOBOL4's
+         * E_SEQ which is string/pattern concatenation.  Gate on g_lang==1 AND
+         * e->kind==E_SEQ so the E_CAT fall-through (||) is unaffected. */
+        if (g_lang == 1 && e->kind == E_SEQ) {
+            DESCR_t last = NULVCL;
+            for (int ci = 0; ci < e->nchildren; ci++) {
+                last = interp_eval(e->children[ci]);
+                if (IS_FAIL_fn(last)) return FAILDESCR;
+            }
+            return last;
+        }
         /* DYN-59: interp_eval is STRING context by default; pattern context
          * uses interp_eval_pat() which calls pat_cat unconditionally.
          * DYN-68: mixed-mode: if the accumulated value is DT_P (pattern),
