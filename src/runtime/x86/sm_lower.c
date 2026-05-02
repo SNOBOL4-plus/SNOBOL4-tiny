@@ -178,6 +178,15 @@ static int emit_goto(SM_Program *p, LabelTable *lt,
 /* Forward declaration */
 static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e);
 
+/* F-2 RS-7: boilerplate macros for the two most common lowering patterns.
+ * LOWER2(op)     — lower both children then emit binary op (arith, etc.)
+ * LOWER1_PAT(op) — lower child[0] then emit single-arg pattern op */
+#define CH0(e) ((e)->nchildren > 0 ? (e)->children[0] : NULL)
+#define CH1(e) ((e)->nchildren > 1 ? (e)->children[1] : NULL)
+#define LOWER2(op)     do { lower_expr(p,lt,CH0(e)); lower_expr(p,lt,CH1(e)); sm_emit(p,(op)); return; } while(0)
+#define LOWER1_VAL(op) do { lower_expr(p,lt,CH0(e)); sm_emit(p,(op)); return; } while(0)
+#define LOWER1_PAT(op) do { lower_pat_expr(p,lt,CH0(e)); sm_emit(p,(op)); return; } while(0)
+
 /* TL-2: extract arg *names* from a *fn(var,var,...) E_FNC subtree so
  * SM_PAT_CAPTURE_FN can carry them in a[2].s for flush-time resolution.
  *
@@ -246,50 +255,17 @@ static void lower_pat_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
     case E_BAL:      sm_emit(p, SM_PAT_BAL);      return;
 
     /* Parameterised primitives — child[0] is the argument expr */
-    case E_ANY:
-        lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
-        sm_emit(p, SM_PAT_ANY);
-        return;
-    case E_NOTANY:
-        lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
-        sm_emit(p, SM_PAT_NOTANY);
-        return;
-    case E_SPAN:
-        lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
-        sm_emit(p, SM_PAT_SPAN);
-        return;
-    case E_BREAK:
-        lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
-        sm_emit(p, SM_PAT_BREAK);
-        return;
-    case E_BREAKX:
-        lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
-        sm_emit(p, SM_PAT_BREAK);   /* BREAKX → BREAK with backtrack semantics in bb */
-        return;
-    case E_LEN:
-        lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
-        sm_emit(p, SM_PAT_LEN);
-        return;
-    case E_POS:
-        lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
-        sm_emit(p, SM_PAT_POS);
-        return;
-    case E_RPOS:
-        lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
-        sm_emit(p, SM_PAT_RPOS);
-        return;
-    case E_TAB:
-        lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
-        sm_emit(p, SM_PAT_TAB);
-        return;
-    case E_RTAB:
-        lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
-        sm_emit(p, SM_PAT_RTAB);
-        return;
-    case E_ARBNO:
-        lower_pat_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
-        sm_emit(p, SM_PAT_ARBNO);   /* pop inner pat, push ARBNO(inner) */
-        return;
+    case E_ANY:    lower_expr(p, lt, CH0(e)); sm_emit(p, SM_PAT_ANY);    return;
+    case E_NOTANY: lower_expr(p, lt, CH0(e)); sm_emit(p, SM_PAT_NOTANY); return;
+    case E_SPAN:   lower_expr(p, lt, CH0(e)); sm_emit(p, SM_PAT_SPAN);   return;
+    case E_BREAK:  lower_expr(p, lt, CH0(e)); sm_emit(p, SM_PAT_BREAK);  return;
+    case E_BREAKX: lower_expr(p, lt, CH0(e)); sm_emit(p, SM_PAT_BREAK);  return; /* BREAKX → BREAK */
+    case E_LEN:    lower_expr(p, lt, CH0(e)); sm_emit(p, SM_PAT_LEN);    return;
+    case E_POS:    lower_expr(p, lt, CH0(e)); sm_emit(p, SM_PAT_POS);    return;
+    case E_RPOS:   lower_expr(p, lt, CH0(e)); sm_emit(p, SM_PAT_RPOS);   return;
+    case E_TAB:    lower_expr(p, lt, CH0(e)); sm_emit(p, SM_PAT_TAB);    return;
+    case E_RTAB:   lower_expr(p, lt, CH0(e)); sm_emit(p, SM_PAT_RTAB);   return;
+    case E_ARBNO:  LOWER1_PAT(SM_PAT_ARBNO);
 
     /* Concatenation (sequence in pattern) → left then right, then SM_PAT_CAT */
     case E_SEQ:
@@ -582,44 +558,14 @@ static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
         return;
 
     /* ── Arithmetic ── */
-    case E_ADD:
-        lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
-        lower_expr(p, lt, e->nchildren > 1 ? e->children[1] : NULL);
-        sm_emit(p, SM_ADD);
-        return;
-    case E_SUB:
-        lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
-        lower_expr(p, lt, e->nchildren > 1 ? e->children[1] : NULL);
-        sm_emit(p, SM_SUB);
-        return;
-    case E_MUL:
-        lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
-        lower_expr(p, lt, e->nchildren > 1 ? e->children[1] : NULL);
-        sm_emit(p, SM_MUL);
-        return;
-    case E_DIV:
-        lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
-        lower_expr(p, lt, e->nchildren > 1 ? e->children[1] : NULL);
-        sm_emit(p, SM_DIV);
-        return;
-    case E_POW:
-        lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
-        lower_expr(p, lt, e->nchildren > 1 ? e->children[1] : NULL);
-        sm_emit(p, SM_EXP);
-        return;
-    case E_MOD:
-        lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
-        lower_expr(p, lt, e->nchildren > 1 ? e->children[1] : NULL);
-        sm_emit(p, SM_MOD);   /* OC-1 RS-6: unified opcode replaces SM_CALL "REMDR" */
-        return;
-    case E_MNS:
-        lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
-        sm_emit(p, SM_NEG);
-        return;
-    case E_PLS:
-        lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
-        sm_emit(p, SM_COERCE_NUM);   /* unary +: string→int or real */
-        return;
+    case E_ADD: LOWER2(SM_ADD);
+    case E_SUB: LOWER2(SM_SUB);
+    case E_MUL: LOWER2(SM_MUL);
+    case E_DIV: LOWER2(SM_DIV);
+    case E_POW: LOWER2(SM_EXP);
+    case E_MOD: LOWER2(SM_MOD);
+    case E_MNS: LOWER1_VAL(SM_NEG);
+    case E_PLS: LOWER1_VAL(SM_COERCE_NUM);
 
     /* ── Goal-directed value-context disjunction ─────────────────────── */
     /* SPITBOL `(a, b, c)` paren-list and Snocone `||`.  Eager left-to-right

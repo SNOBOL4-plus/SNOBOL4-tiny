@@ -1,30 +1,26 @@
-/* coerce.c — shared numeric-to-string coercion helpers (D-1, RS-6)
+/* coerce.c — shared coercion and arithmetic helpers (RS-6, RS-7)
  *
- * Consolidates the int/real → DT_S coercion pattern that appeared
- * independently in icn_runtime.c (IC-8 iterate path, two sites) and
- * icon_gen.c (ICN_BINOP_CONCAT).  A single implementation using
- * icn_real_str() for round-trip-correct real formatting.
+ * RS-6 D-1/D-2/D-3: descr_to_str_icn() — int/real → DT_S coercion using
+ *   icn_real_str() for round-trip-correct real formatting.
  *
- * RS-5 finding D-1: the two icn_runtime.c sites both used inline
- * snprintf + icn_real_str; icon_gen.c used %.15g which does not
- * round-trip for values needing 16 or 17 significant digits (D-2).
- * Both defects are fixed here by routing through icn_real_str.
+ * RS-7 F-1: shared_arith() — unified arithmetic dispatch replacing the
+ *   duplicate sm_arith() in sm_interp.c and jit_arith() in sm_codegen.c.
+ *   Both had identical logic; the duplication caused the RS-6b SM_MOD bug
+ *   (new opcode added to one copy but not the other).
  *
- * AUTHORS: Lon Jones Cherryholmes · Claude Sonnet 4.6 (RS-6, 2026-05-02)
+ * AUTHORS: Lon Jones Cherryholmes · Claude Sonnet 4.6 (RS-6/RS-7, 2026-05-02)
  */
 #include "runtime/common/coerce.h"
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 #include <gc/gc.h>
 
-/* Forward declaration — defined in src/driver/interp_eval.c, declared in
- * src/driver/interp_private.h and src/runtime/interp/icn_runtime.h */
-const char *icn_real_str(double r, char *buf, int bufsz);
+const char *icn_real_str(double r, char *buf, int bufsz); /* interp_eval.c */
+int64_t     to_int(DESCR_t v);                            /* snobol4.c */
+double      to_real(DESCR_t v);                           /* snobol4.c */
 
-/* descr_to_str_icn — coerce DT_I or DT_R to DT_S using Icon semantics.
- * DT_S / DT_SNUL returned as-is.  DT_I: snprintf %lld.
- * DT_R: icn_real_str adaptive 15-17 digit round-trip formatter.
- * All other types return FAILDESCR. */
+/*-- descr_to_str_icn -------------------------------------------------------*/
 DESCR_t descr_to_str_icn(DESCR_t d)
 {
     if (IS_INT_fn(d)) {
@@ -40,7 +36,48 @@ DESCR_t descr_to_str_icn(DESCR_t d)
         memcpy(nbuf, tmp, len + 1);
         return STRVAL(nbuf);
     }
-    /* DT_S, DT_SNUL — identity */
     if (IS_STR_fn(d) || d.v == DT_SNUL) return d;
     return FAILDESCR;
+}
+
+/*-- shared_arith — unified binary arithmetic (F-1, RS-7) -------------------
+ * Replaces sm_arith() in sm_interp.c and jit_arith() in sm_codegen.c.
+ * Caller must coerce DT_S/DT_SNUL operands to numeric before calling. */
+DESCR_t shared_arith(DESCR_t l, DESCR_t r, sm_opcode_t op)
+{
+    if (l.v == DT_I && r.v == DT_I) {
+        switch (op) {
+        case SM_ADD: return INTVAL(l.i + r.i);
+        case SM_SUB: return INTVAL(l.i - r.i);
+        case SM_MUL: return INTVAL(l.i * r.i);
+        case SM_DIV:
+            if (r.i == 0) { fprintf(stderr, "Error 2: division by zero\n"); return FAILDESCR; }
+            return INTVAL(l.i / r.i);
+        case SM_MOD:
+            if (r.i == 0) { fprintf(stderr, "Error 2: division by zero\n"); return FAILDESCR; }
+            return INTVAL(l.i % r.i);
+        case SM_EXP:
+            if (r.i >= 0) {
+                int64_t base = l.i, exp = r.i, res = 1;
+                while (exp-- > 0) res *= base;
+                return INTVAL(res);
+            }
+            return REALVAL(pow((double)l.i, (double)r.i));
+        default: break;
+        }
+    }
+    double ld = to_real(l), rd = to_real(r);
+    switch (op) {
+    case SM_ADD: return REALVAL(ld + rd);
+    case SM_SUB: return REALVAL(ld - rd);
+    case SM_MUL: return REALVAL(ld * rd);
+    case SM_DIV:
+        if (rd == 0.0) { fprintf(stderr, "Error 2: division by zero\n"); return FAILDESCR; }
+        return REALVAL(ld / rd);
+    case SM_MOD:
+        if (rd == 0.0) { fprintf(stderr, "Error 2: division by zero\n"); return FAILDESCR; }
+        return REALVAL(fmod(ld, rd));
+    case SM_EXP: return REALVAL(pow(ld, rd));
+    default:     return FAILDESCR;
+    }
 }

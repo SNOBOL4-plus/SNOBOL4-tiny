@@ -10,6 +10,7 @@
 
 #include "sm_interp.h"
 #include "sm_prog.h"
+#include "../../runtime/common/coerce.h"  /* shared_arith (F-1 RS-7) */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -151,49 +152,20 @@ DESCR_t sm_peek(SM_State *st)
 }
 
 /* ── Arithmetic helpers ─────────────────────────────────────────────── */
+/* F-1 RS-7: sm_arith replaced by shared_arith() in runtime/common/coerce.c */
 
-static DESCR_t sm_arith(DESCR_t l, DESCR_t r, sm_opcode_t op)
-{
-    /* Prefer integer if both are integer */
-    if (l.v == DT_I && r.v == DT_I) {
-        switch (op) {
-        case SM_ADD: return INTVAL(l.i + r.i);
-        case SM_SUB: return INTVAL(l.i - r.i);
-        case SM_MUL: return INTVAL(l.i * r.i);
-        case SM_DIV:
-            if (r.i == 0) { fprintf(stderr, "Error 2: division by zero\n"); return FAILDESCR; }
-            return INTVAL(l.i / r.i);
-        case SM_MOD:   /* OC-1 RS-6 */
-            if (r.i == 0) { fprintf(stderr, "Error 2: division by zero\n"); return FAILDESCR; }
-            return INTVAL(l.i % r.i);
-        case SM_EXP: {
-            /* integer ** non-negative integer → integer if result fits */
-            if (r.i >= 0) {
-                int64_t base = l.i, exp = r.i, res = 1;
-                while (exp-- > 0) res *= base;
-                return INTVAL(res);
-            }
-            return REALVAL(pow((double)l.i, (double)r.i));
-        }
-        default: break;
-        }
-    }
-    double ld = (l.v == DT_I) ? (double)l.i : l.r;
-    double rd = (r.v == DT_I) ? (double)r.i : r.r;
-    switch (op) {
-    case SM_ADD: return REALVAL(ld + rd);
-    case SM_SUB: return REALVAL(ld - rd);
-    case SM_MUL: return REALVAL(ld * rd);
-    case SM_DIV:
-        if (rd == 0.0) { fprintf(stderr, "Error 2: division by zero\n"); return FAILDESCR; }
-        return REALVAL(ld / rd);
-    case SM_MOD:   /* OC-1 RS-6 */
-        if (rd == 0.0) { fprintf(stderr, "Error 2: division by zero\n"); return FAILDESCR; }
-        return REALVAL(fmod(ld, rd));
-    case SM_EXP: return REALVAL(pow(ld, rd));
-    default: break;
-    }
-    return FAILDESCR;
+/* F-5 RS-7: nv_fold_get / nv_fold_set — name-fold-then-lookup helper.
+ * Collapses the repeated GC_strdup + sno_fold_name + NV_GET/SET_fn triad
+ * (SN-19 pattern) to a single call. */
+static DESCR_t nv_fold_get(const char *raw) {
+    if (!raw || !*raw) return NULVCL;
+    char *n = GC_strdup(raw); sno_fold_name(n);
+    return NV_GET_fn(n);
+}
+static void nv_fold_set(const char *raw, DESCR_t val) {
+    if (!raw || !*raw) return;
+    char *n = GC_strdup(raw); sno_fold_name(n);
+    NV_SET_fn(n, val);
 }
 
 /* ── Main dispatch loop ─────────────────────────────────────────────── */
@@ -374,7 +346,7 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
             /* coerce SNUL (unset/empty) to integer 0 — matches SPITBOL & --ir-run */
             if (l.v == DT_SNUL) l = INTVAL(0);
             if (r.v == DT_SNUL) r = INTVAL(0);
-            DESCR_t result = sm_arith(l, r, ins->op);
+            DESCR_t result = shared_arith(l, r, ins->op);
             sm_push(st, result);
             st->last_ok = (result.v != DT_FAIL);
             break;
@@ -702,13 +674,9 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
                 if (IS_NAMEPTR(name_d)) {
                     val = NAME_DEREF_PTR(name_d);   /* interior ptr → value directly */
                 } else if (IS_NAMEVAL(name_d)) {
-                    char *fn = GC_strdup(name_d.s); sno_fold_name(fn);  /* SN-19 */
-                    val = NV_GET_fn(fn);             /* name string → value of that var */
+                    val = nv_fold_get(name_d.s);
                 } else {
-                    const char *vname0 = VARVAL_fn(name_d);
-                    char *vname = (vname0 && *vname0) ? GC_strdup(vname0) : NULL;
-                    if (vname) sno_fold_name(vname);                     /* SN-19 */
-                    val = (vname && *vname) ? NV_GET_fn(vname) : NULVCL;
+                    val = nv_fold_get(VARVAL_fn(name_d));
                 }
                 sm_push(st, val);
                 st->last_ok = 1;
@@ -723,8 +691,7 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
                  * is ever read/written). */
                 DESCR_t name_d = sm_pop(st);
                 const char *vname0 = VARVAL_fn(name_d);
-                char *vname = GC_strdup(vname0 ? vname0 : "");
-                sno_fold_name(vname);                                    /* SN-19 */
+                char *vname = GC_strdup(vname0 ? vname0 : ""); sno_fold_name(vname);
                 sm_push(st, NAMEVAL(vname));
                 st->last_ok = 1;
                 break;
@@ -737,13 +704,10 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
                     /* $(.var) — write through name pointer directly */
                     *(DESCR_t*)name_d.ptr = val; ok = 1;
                 } else if (IS_NAMEVAL(name_d)) {
-                    char *fn = GC_strdup(name_d.s); sno_fold_name(fn);  /* SN-19 */
-                    NV_SET_fn(fn, val); ok = 1;
+                    nv_fold_set(name_d.s, val); ok = 1;
                 } else {
                     const char *vname0 = VARVAL_fn(name_d);
-                    char *vname = (vname0 && *vname0) ? GC_strdup(vname0) : NULL;
-                    if (vname) sno_fold_name(vname);                     /* SN-19 */
-                    if (vname && *vname) { NV_SET_fn(vname, val); ok = 1; }
+                    if (vname0 && *vname0) { nv_fold_set(vname0, val); ok = 1; }
                     /* else: empty/null name — fail the statement */
                 }
                 sm_push(st, val);

@@ -45,6 +45,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <math.h>
+#include "../../runtime/common/coerce.h"  /* shared_arith (F-1 RS-7) */
 #include <setjmp.h>
 #include <gc/gc.h>
 
@@ -131,56 +132,7 @@ extern DESCR_t pat_assign_imm(DESCR_t child, DESCR_t var);
 extern DESCR_t pat_assign_cond(DESCR_t child, DESCR_t var);
 extern DESCR_t pat_at_cursor(const char *varname);
 
-/* ── Arithmetic helper (mirrors sm_interp.c's sm_arith) ──────────────── */
-
-static int64_t to_int_jit(DESCR_t d)
-{
-    if (d.v == DT_I) return d.i;
-    if (d.v == DT_R) return (int64_t)d.r;
-    if (d.v == DT_S && d.s) return (int64_t)strtoll(d.s, NULL, 10);
-    return 0;
-}
-
-static double to_real_jit(DESCR_t d)
-{
-    if (d.v == DT_R) return d.r;
-    if (d.v == DT_I) return (double)d.i;
-    if (d.v == DT_S && d.s) return strtod(d.s, NULL);
-    return 0.0;
-}
-
-static DESCR_t jit_arith(DESCR_t l, DESCR_t r, sm_opcode_t op)
-{
-    if (l.v == DT_I && r.v == DT_I) {
-        switch (op) {
-        case SM_ADD: return INTVAL(l.i + r.i);
-        case SM_SUB: return INTVAL(l.i - r.i);
-        case SM_MUL: return INTVAL(l.i * r.i);
-        case SM_DIV: return (r.i == 0) ? FAILDESCR : INTVAL(l.i / r.i);
-        case SM_MOD: return (r.i == 0) ? FAILDESCR : INTVAL(l.i % r.i);   /* OC-1 RS-6 */
-        case SM_EXP: {
-            /* integer ** non-negative integer → integer (mirrors sm_interp.c) */
-            if (r.i >= 0) {
-                int64_t base = l.i, exp = r.i, res = 1;
-                while (exp-- > 0) res *= base;
-                return INTVAL(res);
-            }
-            return REALVAL(pow((double)l.i, (double)r.i));
-        }
-        default: break;
-        }
-    }
-    double ld = to_real_jit(l), rd = to_real_jit(r);
-    switch (op) {
-    case SM_ADD: return REALVAL(ld + rd);
-    case SM_SUB: return REALVAL(ld - rd);
-    case SM_MUL: return REALVAL(ld * rd);
-    case SM_DIV: return (rd == 0.0) ? FAILDESCR : REALVAL(ld / rd);
-    case SM_MOD: return (rd == 0.0) ? FAILDESCR : REALVAL(fmod(ld, rd));  /* OC-1 RS-6 */
-    case SM_EXP: return REALVAL(pow(ld, rd));
-    default: return FAILDESCR;
-    }
-}
+/* F-1 RS-7: jit_arith / to_int / to_real replaced by shared_arith() in runtime/common/coerce.c */
 
 /* ── Per-opcode handler functions ────────────────────────────────────── */
 /*
@@ -341,11 +293,11 @@ static void h_arith(void)
         STATE->last_ok = 0;
         return;
     }
-    if (l.v == DT_S) l = INTVAL(to_int_jit(l));
-    if (r.v == DT_S) r = INTVAL(to_int_jit(r));
+    if (l.v == DT_S) l = INTVAL(to_int(l));
+    if (r.v == DT_S) r = INTVAL(to_int(r));
     if (l.v == DT_SNUL) l = INTVAL(0);
     if (r.v == DT_SNUL) r = INTVAL(0);
-    DESCR_t result = jit_arith(l, r, CUR_INS->op);
+    DESCR_t result = shared_arith(l, r, CUR_INS->op);
     PUSH(result);
     STATE->last_ok = (result.v != DT_FAIL);
 }
@@ -354,7 +306,7 @@ static void h_neg(void)
 {
     DESCR_t v = POP();
     if (v.v == DT_I) PUSH(INTVAL(-v.i));
-    else              PUSH(REALVAL(-to_real_jit(v)));
+    else              PUSH(REALVAL(-to_real(v)));
 }
 
 static void h_concat(void)
@@ -369,9 +321,9 @@ static void h_coerce_num(void)
 {
     DESCR_t v = POP();
     if (v.v == DT_S) {
-        int64_t iv = to_int_jit(v);
+        int64_t iv = to_int(v);
         if (iv != 0 || (v.s && v.s[0] == '0')) PUSH(INTVAL(iv));
-        else PUSH(REALVAL(to_real_jit(v)));
+        else PUSH(REALVAL(to_real(v)));
     } else { PUSH(v); }
     STATE->last_ok = 1;
 }

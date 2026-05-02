@@ -638,6 +638,16 @@ static void icn_proc_trampoline(void) {
     swapcontext(&st.ss->gen_ctx, &st.ss->caller_ctx);
 }
 
+/* F-4 RS-7: icn_ss_alloc — suspend-state factory, eliminates duplicate
+ * calloc+malloc pattern. Stack size is a single constant here. */
+#define ICN_CORO_STACK_SZ (256 * 1024)
+static icn_suspend_state_t *icn_ss_alloc(void (*trampoline)(void)) {
+    icn_suspend_state_t *ss = calloc(1, sizeof(*ss));
+    ss->stack      = malloc(ICN_CORO_STACK_SZ);
+    ss->trampoline = trampoline;
+    return ss;
+}
+
 /* RK-21: gather trampoline — reads proc from ss->gather_proc, not icn_coro_stage.
  * This avoids the race where icn_coro_stage is overwritten between icn_eval_gen
  * and the first α call to icn_bb_suspend. The ss pointer is passed via a
@@ -1073,10 +1083,8 @@ bb_node_t icn_eval_gen(EXPR_t *e) {
                     /* RK-21: Build gather coroutine — store proc in ss->gather_proc so
                      * icn_gather_trampoline can read it at makecontext time, bypassing
                      * the icn_coro_stage global which may be overwritten before first α. */
-                    icn_suspend_state_t *ss = calloc(1, sizeof(*ss));
-                    ss->stack        = malloc(256 * 1024);
-                    ss->trampoline   = icn_gather_trampoline;
-                    ss->gather_proc  = icn_proc_table[pi].proc;
+                    icn_suspend_state_t *ss = icn_ss_alloc(icn_gather_trampoline);
+                    ss->gather_proc = icn_proc_table[pi].proc;
                     return (bb_node_t){ icn_bb_suspend, ss, 0 };
                 }
             }
@@ -1360,9 +1368,7 @@ bb_node_t icn_eval_gen(EXPR_t *e) {
             for (int j = 0; j < nargs; j++)
                 args[j] = interp_eval(e->children[1+j]);
             /* Allocate suspend state + stack */
-            icn_suspend_state_t *ss = calloc(1, sizeof(*ss));
-            ss->stack       = malloc(256 * 1024);
-            ss->trampoline  = icn_proc_trampoline;
+            icn_suspend_state_t *ss = icn_ss_alloc(icn_proc_trampoline);
             ss->trampoline_arg = NULL;   /* unused — trampoline reads icn_coro_stage */
             /* Stage the call parameters before makecontext */
             icn_coro_stage.ss    = ss;

@@ -344,6 +344,16 @@ static Term *pl_unified_deep_copy(Term *t) {
     return term_new_atom(prolog_atom_intern("_"));
 }
 
+/* F-3 RS-7: ISO mod — sign of divisor (floor division remainder).
+ * Appears in E_MOD case and E_FNC "mod" case — unified here. */
+static inline long pl_iso_mod(long n, long d) {
+    if (!d) return 0;
+    if (n == LONG_MIN && d == -1) return 0;
+    long r = n % d;
+    if (r != 0 && (r < 0) != (d < 0)) r += d;
+    return r;
+}
+
 /*---- pl_unified_eval_arith_term — float-aware, returns Term* ----*/
 static Term *pl_unified_eval_arith_term(EXPR_t *e, Term **env) {
     if (!e) return term_new_int(0);
@@ -411,16 +421,7 @@ static Term *pl_unified_eval_arith_term(EXPR_t *e, Term **env) {
                 return term_new_int(n/d);
             }
         }
-        case E_MOD: {
-            long n=_EI(e->children[0]);
-            long d=_EI(e->children[1]);
-            if (!d) return term_new_int(0);
-            if (n == LONG_MIN && d == -1) return term_new_int(0);
-            long r = n % d;
-            /* ISO mod: result has sign of divisor (floor division remainder) */
-            if (r != 0 && (r < 0) != (d < 0)) r += d;
-            return term_new_int(r);
-        }
+        case E_MOD: return term_new_int(pl_iso_mod(_EI(e->children[0]), _EI(e->children[1])));
         case E_FNC: {
             const char *fn = e->sval ? e->sval : "";
             /* two-arg integer bitwise / misc */
@@ -430,14 +431,7 @@ static Term *pl_unified_eval_arith_term(EXPR_t *e, Term **env) {
             if (strcmp(fn,"<<")==0&&e->nchildren==2)  return term_new_int(_EI(e->children[0])<<_EI(e->children[1]));
             if (strcmp(fn,">>")==0&&e->nchildren==2)  return term_new_int(_EI(e->children[0])>>_EI(e->children[1]));
             if (strcmp(fn,"\\")==0&&e->nchildren==1)  return term_new_int(~_EI(e->children[0]));
-            if (strcmp(fn,"mod")==0&&e->nchildren==2) {
-                long n=_EI(e->children[0]); long d=_EI(e->children[1]);
-                if (!d) return term_new_int(0);
-                if (n == LONG_MIN && d == -1) return term_new_int(0);
-                long r = n % d;
-                if (r != 0 && (r < 0) != (d < 0)) r += d;  /* ISO mod: sign of divisor */
-                return term_new_int(r);
-            }
+            if (strcmp(fn,"mod")==0&&e->nchildren==2) return term_new_int(pl_iso_mod(_EI(e->children[0]),_EI(e->children[1])));
             if (strcmp(fn,"rem")==0&&e->nchildren==2) {
                 long n=_EI(e->children[0]); long d=_EI(e->children[1]);
                 if (!d) return term_new_int(0);
