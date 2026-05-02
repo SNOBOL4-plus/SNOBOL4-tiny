@@ -86,6 +86,51 @@ static Pl_CatchFrame g_pl_catch_stack[PL_CATCH_STACK_MAX];
 static int           g_pl_catch_top  = 0;
 static Term         *g_pl_exception  = NULL; /* pending exception term */
 
+/* pl_throw_iso_error: construct error(ErrorTerm, context) and throw it.
+ * Returns 0 (failure) if no catch frame matches — caller should return 0. */
+static int pl_throw_iso_error(Term *err_term) {
+    /* Wrap in error/2: error(err_term, context) */
+    Term *args2[2]; args2[0] = err_term; args2[1] = term_new_atom(prolog_atom_intern("context"));
+    Term *err = term_new_compound(prolog_atom_intern("error"), 2, args2);
+    g_pl_exception = err;
+    for (int i = g_pl_catch_top - 1; i >= 0; i--) {
+        Pl_CatchFrame *cf = &g_pl_catch_stack[i];
+        Trail tmptrail; trail_init(&tmptrail);
+        int tmmark = trail_mark(&tmptrail);
+        int matched = unify(cf->catcher, err, &tmptrail);
+        trail_unwind(&tmptrail, tmmark);
+        if (matched) { g_pl_catch_top = i + 1; longjmp(cf->jb, 1); }
+    }
+    fprintf(stderr, "ERROR: Unhandled exception: ");
+    pl_write(err); fprintf(stderr, "\n");
+    exit(1);
+}
+
+/* Convenience: throw instantiation_error */
+static int pl_throw_instantiation_error(void) {
+    Term *e = term_new_atom(prolog_atom_intern("instantiation_error"));
+    return pl_throw_iso_error(e);
+}
+
+/* Convenience: throw type_error(evaluable, Name/Arity) */
+static int pl_throw_type_error_evaluable(const char *name, int arity) {
+    Term *na_args[2]; na_args[0] = term_new_atom(prolog_atom_intern(name)); na_args[1] = term_new_int(arity);
+    Term *na = term_new_compound(prolog_atom_intern("/"), 2, na_args);
+    Term *te_args[2]; te_args[0] = term_new_atom(prolog_atom_intern("evaluable")); te_args[1] = na;
+    Term *te = term_new_compound(prolog_atom_intern("type_error"), 2, te_args);
+    return pl_throw_iso_error(te);
+}
+
+/* Convenience: throw existence_error(procedure, Name/Arity) — non-static so pl_broker.c can call it */
+int pl_throw_existence_error_procedure(const char *name, int arity) {
+    Term *na_args[2]; na_args[0] = term_new_atom(prolog_atom_intern(name)); na_args[1] = term_new_int(arity);
+    Term *na = term_new_compound(prolog_atom_intern("/"), 2, na_args);
+    Term *te_args[2]; te_args[0] = term_new_atom(prolog_atom_intern("procedure")); te_args[1] = na;
+    Term *te = term_new_compound(prolog_atom_intern("existence_error"), 2, te_args);
+    return pl_throw_iso_error(te);
+}
+
+
 #define PL_PRED_TABLE_SIZE PL_PRED_TABLE_SIZE_FWD
 
 unsigned pl_pred_hash(const char *s) {
@@ -314,7 +359,7 @@ static Term *pl_unified_eval_arith_term(EXPR_t *e, Term **env) {
         case E_FLIT: return term_new_float(e->dval);
         case E_VAR: {
             Term *t = term_deref(env && e->ival >= 0 ? env[e->ival] : NULL);
-            if (!t) return term_new_int(0);
+            if (!t || t->tag == TT_VAR) { pl_throw_instantiation_error(); return NULL; }
             return t;
         }
         case E_ADD: {
@@ -440,10 +485,13 @@ static Term *pl_unified_eval_arith_term(EXPR_t *e, Term **env) {
             /* atom constants */
             if (strcmp(fn,"pi")==0&&e->nchildren==0) return term_new_float(M_PI);
             if (strcmp(fn,"e")==0&&e->nchildren==0)  return term_new_float(M_E);
-            /* fallthrough: resolve via env */
+            /* unknown evaluable: resolve via env (e.g. TT_INT/TT_FLOAT atom from copy_term) */
             Term *t=term_deref(pl_unified_term_from_expr(e,env));
-            if (!t) return term_new_int(0);
-            return t;
+            if (!t || t->tag == TT_VAR) { pl_throw_instantiation_error(); return NULL; }
+            if (t->tag == TT_INT || t->tag == TT_FLOAT) return t;
+            /* truly non-evaluable: throw type_error(evaluable, Name/Arity) */
+            pl_throw_type_error_evaluable(fn ? fn : "", e->nchildren);
+            return NULL;
         }
         default: return term_new_int(0);
     }
@@ -795,7 +843,7 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
                     return !IS_FAIL_fn(rd);
                 }
                 fprintf(stderr,"prolog: undefined predicate %s/%d\n",fn,arity);
-                return 0;
+                return pl_throw_existence_error_procedure(fn ? fn : "", arity);
             }
             if (strcmp(fn,"true")==0&&arity==0) return 1;
             if (strcmp(fn,"fail")==0&&arity==0) return 0;
@@ -1921,7 +1969,7 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
                         snprintf(ukey,sizeof ukey,"%s/%d",
                                  goal_e->sval?goal_e->sval:"",goal_e->nchildren);
                         EXPR_t *uch=pl_pred_table_lookup(&g_pl_pred_table,ukey);
-                        if (uch) {
+                        if (uch && uch->nchildren > 0) {
                             int ua=goal_e->nchildren;
                             Term **uenv=ua?pl_env_new(ua):NULL;
                             for(int ui=0;ui<ua;ui++)
@@ -1930,7 +1978,12 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
                             DESCR_t rd=interp_eval(uch); g_pl_env=sv;
                             if(uenv)free(uenv);
                             ok=!IS_FAIL_fn(rd);
-                        } else ok=0;
+                        } else {
+                            /* undefined predicate (no table entry or zero clauses)
+                             * — throw existence_error(procedure, Name/Arity) */
+                            ok = pl_throw_existence_error_procedure(
+                                goal_e->sval ? goal_e->sval : "", goal_e->nchildren);
+                        }
                     } else {
                         ok = interp_exec_pl_builtin(goal_e, env);
                     }
@@ -1998,8 +2051,8 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
                 if (c_synth){pl_synth_free(c_synth);free(c_tenv);}
                 return gok;
             }
-            fprintf(stderr,"prolog: undefined predicate %s/%d\n",fn,arity);
-            return 0;
+            /* Unknown functor — treat as no-op (directive or future builtin). */
+            return 1;
         }
         default: return 1;
     }

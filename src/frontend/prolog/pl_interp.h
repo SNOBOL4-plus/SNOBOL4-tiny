@@ -47,3 +47,6 @@ Term *pl_unified_term_from_expr(EXPR_t *e, Term **env);
 EXPR_t *pl_pred_table_lookup_global(const char *key);
 
 #endif /* PL_INTERP_H */
+
+/* ISO error throws (defined in pl_runtime.c) */
+int pl_throw_existence_error_procedure(const char *name, int arity);
