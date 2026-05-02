@@ -370,8 +370,11 @@ static Term *pl_unified_eval_arith_term(EXPR_t *e, Term **env) {
             long n=_EI(e->children[0]);
             long d=_EI(e->children[1]);
             if (!d) return term_new_int(0);
-            if (n == LONG_MIN && d == -1) return term_new_int(0);  /* INT_MIN%-1 == 0, also FPEs */
-            return term_new_int(n%d);
+            if (n == LONG_MIN && d == -1) return term_new_int(0);
+            long r = n % d;
+            /* ISO mod: result has sign of divisor (floor division remainder) */
+            if (r != 0 && (r < 0) != (d < 0)) r += d;
+            return term_new_int(r);
         }
         case E_FNC: {
             const char *fn = e->sval ? e->sval : "";
@@ -386,16 +389,29 @@ static Term *pl_unified_eval_arith_term(EXPR_t *e, Term **env) {
                 long n=_EI(e->children[0]); long d=_EI(e->children[1]);
                 if (!d) return term_new_int(0);
                 if (n == LONG_MIN && d == -1) return term_new_int(0);
-                return term_new_int(n%d);
+                long r = n % d;
+                if (r != 0 && (r < 0) != (d < 0)) r += d;  /* ISO mod: sign of divisor */
+                return term_new_int(r);
             }
             if (strcmp(fn,"rem")==0&&e->nchildren==2) {
                 long n=_EI(e->children[0]); long d=_EI(e->children[1]);
                 if (!d) return term_new_int(0);
                 if (n == LONG_MIN && d == -1) return term_new_int(0);
-                return term_new_int(n%d);
+                return term_new_int(n%d);  /* rem: truncating, sign of dividend */
             }
             /* two-arg float-aware */
             if (strcmp(fn,"**")==0&&e->nchildren==2) return term_new_float(pow(_ED(e->children[0]),_ED(e->children[1])));
+            if (strcmp(fn,"^")==0&&e->nchildren==2) {
+                /* ^ returns integer for non-negative integer exponents, else float */
+                Term *la=pl_unified_eval_arith_term(e->children[0],env);
+                Term *lb=pl_unified_eval_arith_term(e->children[1],env);
+                if (la&&lb&&la->tag==TT_INT&&lb->tag==TT_INT&&lb->ival>=0) {
+                    long base=la->ival, exp=lb->ival, acc=1;
+                    while (exp-- > 0) acc *= base;
+                    return term_new_int(acc);
+                }
+                return term_new_float(pow(_ED(e->children[0]),_ED(e->children[1])));
+            }
             if (strcmp(fn,"max")==0&&e->nchildren==2) { Term *la=pl_unified_eval_arith_term(e->children[0],env),*lb=pl_unified_eval_arith_term(e->children[1],env); int fl=(la&&la->tag==TT_FLOAT)||(lb&&lb->tag==TT_FLOAT); return fl?(_ED(e->children[0])>=_ED(e->children[1])?la:lb):(_EI(e->children[0])>=_EI(e->children[1])?la:lb); }
             if (strcmp(fn,"min")==0&&e->nchildren==2) { Term *la=pl_unified_eval_arith_term(e->children[0],env),*lb=pl_unified_eval_arith_term(e->children[1],env); int fl=(la&&la->tag==TT_FLOAT)||(lb&&lb->tag==TT_FLOAT); return fl?(_ED(e->children[0])<=_ED(e->children[1])?la:lb):(_EI(e->children[0])<=_EI(e->children[1])?la:lb); }
             if (strcmp(fn,"gcd")==0&&e->nchildren==2) { long a=labs(_EI(e->children[0])),b=labs(_EI(e->children[1])); while(b){long r=a%b;a=b;b=r;} return term_new_int(a); }
