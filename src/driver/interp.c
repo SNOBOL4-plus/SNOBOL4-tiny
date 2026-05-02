@@ -3220,6 +3220,15 @@ DESCR_t interp_eval(EXPR_t *e)
 
     case E_VAR:
         if (e->sval && *e->sval) {
+            /* IC-9: Icon scan-state keywords read in scan body outside any Icon proc frame.
+             * When icn_scan_depth > 0 and icn_frame_depth == 0 (e.g. "str" ? body in main()),
+             * the icon-frame switch above is skipped, so &pos and &subject must be handled here.
+             * Only fires for Icon scan context; SNOBOL4 mode uses NV_GET_fn for &pos etc. */
+            if (icn_scan_depth > 0 && !icn_frame_depth && e->sval[0] == '&') {
+                const char *kw = e->sval + 1;
+                if (!strcmp(kw,"pos"))     return INTVAL(icn_scan_pos);
+                if (!strcmp(kw,"subject")) return icn_scan_subj ? STRVAL(icn_scan_subj) : NULVCL;
+            }
             /* SN-3: shadow table takes priority — param/local named after a pattern
              * primitive (LEN, ANY, SPAN, …) is invisible to NV_GET_fn. */
             { DESCR_t _sv; if (shadow_get(e->sval, &_sv)) return _sv; }
@@ -3504,7 +3513,11 @@ DESCR_t interp_eval(EXPR_t *e)
             DESCR_t _b = interp_eval(lv->children[0]);
             if (_b.v == DT_S || _b.v == DT_SNUL) return FAILDESCR;
         }
-        if (lv && lv->kind == E_VAR && lv->sval)
+        if (lv && lv->kind == E_VAR && lv->sval && lv->sval[0] == '&' &&
+                icn_scan_depth > 0 && !icn_frame_depth) {
+            /* IC-9: Icon scan-state keyword write in scan body outside any Icon proc frame. */
+            if (!icn_kw_assign(lv->sval + 1, val)) return FAILDESCR;
+        } else if (lv && lv->kind == E_VAR && lv->sval)
             NV_SET_fn(lv->sval, val);  /* inner expr assign: no trace (stmt-level already traced) */
         else if (lv && lv->kind == E_IDX && lv->nchildren >= 2) {
             /* arr<i> = val  or  arr<i,j> = val */
@@ -4741,7 +4754,7 @@ DESCR_t interp_eval(EXPR_t *e)
          * non-fail, so E_NOT sees success and returns FAILDESCR unconditionally.
          * Fix: evaluate subject as string, evaluate pattern in pat context,
          * run exec_stmt, return NULVCL on success or FAILDESCR on failure. */
-        if (!icn_scan_depth && !g_pl_active) {
+        if (!icn_frame_depth && !g_pl_active) {
             /* SNOBOL4 mode — perform the match */
             DESCR_t subj_d = interp_eval(e->children[0]);
             if (IS_FAIL_fn(subj_d)) return FAILDESCR;
