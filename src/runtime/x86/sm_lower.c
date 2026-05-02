@@ -776,7 +776,7 @@ static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
         lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
         sm_emit_i(p, SM_PUSH_LIT_I, 0);   /* no replacement */
         sm_emit(p, SM_EXEC_STMT);
-        sm_emit(p, SM_PUSH_NULL);          /* balance value stack; last_ok already set */
+        sm_emit(p, SM_PUSH_NULL_NOFLIP);   /* balance value stack; preserve last_ok from scan */
         return;
 
     /* ── OPSYN operator & / @ / | — dispatch via APPLY_fn(sval, args, n) ── */
@@ -919,10 +919,14 @@ static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
     case E_NOT: {
         lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
         int js = sm_emit_i(p, SM_JUMP_S, 0);   /* child succeeded → fail */
-        sm_emit(p, SM_PUSH_NULL);               /* child failed → null (success) */
+        /* child failed → ~ succeeds: discard child value, push null, last_ok=1 */
+        sm_emit(p, SM_POP);
+        sm_emit(p, SM_PUSH_NULL);
         int jend = sm_emit_i(p, SM_JUMP, 0);
         int fail_lbl = sm_label(p);
         sm_patch_jump(p, js, fail_lbl);
+        /* child succeeded → ~ fails: discard child value, push fail, last_ok=0 */
+        sm_emit(p, SM_POP);
         sm_emit_si(p, SM_CALL, "FAIL", 0);     /* push fail descriptor */
         int end_lbl = sm_label(p);
         sm_patch_jump(p, jend, end_lbl);

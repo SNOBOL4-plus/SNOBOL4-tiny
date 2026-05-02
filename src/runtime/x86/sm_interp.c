@@ -281,6 +281,10 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
             st->last_ok = 1;    /* null is a valid (non-fail) result */
             break;
 
+        case SM_PUSH_NULL_NOFLIP:
+            sm_push(st, NULVCL); /* preserve last_ok — used after SM_EXEC_STMT */
+            break;
+
         case SM_PUSH_VAR: {
             const char *name = ins->a[0].s;
             DESCR_t val = NV_GET_fn(name);

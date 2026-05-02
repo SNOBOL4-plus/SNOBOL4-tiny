@@ -4720,6 +4720,26 @@ DESCR_t interp_eval(EXPR_t *e)
 
     case E_SCAN: {
         if (e->nchildren < 1) return FAILDESCR;
+        /* ── SNOBOL4 context: `subj ? pat` as expression — run exec_stmt ──
+         * When used inside ~(), EVAL(), or another expression in SNOBOL4 mode,
+         * E_SCAN must perform the actual pattern match (not just build a pattern
+         * descriptor as the Icon path does).  Without this, ~(s ? pat) always
+         * fails because interp_eval_pat(pat) returns a DT_P descriptor which is
+         * non-fail, so E_NOT sees success and returns FAILDESCR unconditionally.
+         * Fix: evaluate subject as string, evaluate pattern in pat context,
+         * run exec_stmt, return NULVCL on success or FAILDESCR on failure. */
+        if (!icn_scan_depth && !g_pl_active) {
+            /* SNOBOL4 mode — perform the match */
+            DESCR_t subj_d = interp_eval(e->children[0]);
+            if (IS_FAIL_fn(subj_d)) return FAILDESCR;
+            /* subject name for write-back */
+            const char *sname = (e->children[0]->kind == E_VAR) ? e->children[0]->sval : NULL;
+            DESCR_t pat_d = (e->nchildren >= 2) ? interp_eval_pat(e->children[1]) : pat_epsilon();
+            if (IS_FAIL_fn(pat_d)) return FAILDESCR;
+            int ok = exec_stmt(sname, sname ? NULL : &subj_d, pat_d, NULL, 0);
+            return ok ? NULVCL : FAILDESCR;
+        }
+        /* ── Icon / Prolog context: generator scan ── */
         DESCR_t subj_d = interp_eval(e->children[0]);
         if (IS_FAIL_fn(subj_d)) return FAILDESCR;
         const char *subj_s = VARVAL_fn(subj_d); if (!subj_s) subj_s = "";

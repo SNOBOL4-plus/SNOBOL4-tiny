@@ -32,6 +32,7 @@ typedef enum {
     SM_PUSH_LIT_I,
     SM_PUSH_LIT_F,
     SM_PUSH_NULL,
+    SM_PUSH_NULL_NOFLIP, /* push null but do NOT clobber last_ok — for E_SCAN value-balance */
     SM_PUSH_VAR,
     SM_PUSH_EXPR,    /* push DT_E frozen expression; a[0].ptr = EXPR_t* */
     SM_STORE_VAR,
