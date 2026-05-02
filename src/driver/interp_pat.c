@@ -162,45 +162,95 @@ DESCR_t interp_eval_pat(EXPR_t *e)
             return r;
         }
 
+    /* Zero-argument pattern primitives.
+     * Typed E_* nodes produced by the SNOBOL4 parser via pat_prim_kind().
+     * Belong here in interp_eval_pat, not in interp_eval
+     * (moved from DYN-55 location in interp_eval.c -- RS-5). */
+    case E_ARB:     return pat_arb();
+    case E_REM:     return pat_rem();
+    case E_FAIL:    return pat_fail();
+    case E_SUCCEED: return pat_succeed();
     case E_FENCE:
-        /* FENCE(P) in pattern context — must be handled here so the child
-         * is evaluated in pat context, not value context (default path). */
         if (e->nchildren > 0) {
             DESCR_t _inner = interp_eval_pat(e->children[0]);
             if (IS_FAIL_fn(_inner)) return FAILDESCR;
             return pat_fence_p(_inner);
         }
         return pat_fence();
+    case E_ABORT:   return pat_abort();
+    case E_BAL:     return pat_bal();
+
+    /* One-argument pattern primitives.
+     * POS(n), RPOS(n), TAB(n), RTAB(n), LEN(n) take integer args.
+     * ANY(s), NOTANY(s), SPAN(s), BREAK(s), BREAKX(s) take string args. */
+    case E_POS: {
+        if (e->nchildren < 1) return pat_pos(0);
+        DESCR_t a = interp_eval(e->children[0]);
+        return pat_pos((int64_t)(a.v==DT_I ? a.i : (int64_t)(a.v==DT_R ? (int64_t)a.r : 0)));
+    }
+    case E_RPOS: {
+        if (e->nchildren < 1) return pat_rpos(0);
+        DESCR_t a = interp_eval(e->children[0]);
+        return pat_rpos((int64_t)(a.v==DT_I ? a.i : (int64_t)(a.v==DT_R ? (int64_t)a.r : 0)));
+    }
+    case E_TAB: {
+        if (e->nchildren < 1) return pat_tab(0);
+        DESCR_t a = interp_eval(e->children[0]);
+        return pat_tab((int64_t)(a.v==DT_I ? a.i : (int64_t)(a.v==DT_R ? (int64_t)a.r : 0)));
+    }
+    case E_RTAB: {
+        if (e->nchildren < 1) return pat_rtab(0);
+        DESCR_t a = interp_eval(e->children[0]);
+        return pat_rtab((int64_t)(a.v==DT_I ? a.i : (int64_t)(a.v==DT_R ? (int64_t)a.r : 0)));
+    }
+    case E_LEN: {
+        if (e->nchildren < 1) return pat_len(0);
+        DESCR_t a = interp_eval(e->children[0]);
+        return pat_len((int64_t)(a.v==DT_I ? a.i : (int64_t)(a.v==DT_R ? (int64_t)a.r : 0)));
+    }
+    case E_ANY: {
+        if (e->nchildren < 1) return pat_any_cs("");
+        DESCR_t a = NAME_DEREF(interp_eval(e->children[0]));
+        const char *s = (a.v==DT_S||a.v==DT_SNUL) && a.s ? a.s : "";
+        return pat_any_cs(s);
+    }
+    case E_NOTANY: {
+        if (e->nchildren < 1) return pat_notany("");
+        DESCR_t a = NAME_DEREF(interp_eval(e->children[0]));
+        const char *s = (a.v==DT_S||a.v==DT_SNUL) && a.s ? a.s : "";
+        return pat_notany(s);
+    }
+    case E_SPAN: {
+        if (e->nchildren < 1) return pat_span("");
+        DESCR_t a = NAME_DEREF(interp_eval(e->children[0]));
+        const char *s = (a.v==DT_S||a.v==DT_SNUL) && a.s ? a.s : "";
+        return pat_span(s);
+    }
+    case E_BREAK: {
+        if (e->nchildren < 1) return pat_break_("");
+        DESCR_t a = NAME_DEREF(interp_eval(e->children[0]));
+        const char *s = (a.v==DT_S||a.v==DT_SNUL) && a.s ? a.s : "";
+        return pat_break_(s);
+    }
+    case E_BREAKX: {
+        extern DESCR_t pat_breakx(const char *);
+        if (e->nchildren < 1) return pat_breakx("");
+        DESCR_t a = NAME_DEREF(interp_eval(e->children[0]));
+        const char *s = (a.v==DT_S||a.v==DT_SNUL) && a.s ? a.s : "";
+        return pat_breakx(s);
+    }
+    case E_ARBNO: {
+        if (e->nchildren < 1) return pat_arb(); /* degenerate */
+        DESCR_t inner = interp_eval_pat(e->children[0]);
+        return pat_arbno(inner);
+    }
 
     case E_FNC:
-        /* SB-5c.1: Snocone emits ARBNO(P) and FENCE(P) as E_FNC nodes (the
-         * frontend doesn't lower function-call surface syntax to E_ARBNO /
-         * E_FENCE).  Both builtins take a *pattern* argument.  Falling
-         * through to interp_eval (the default below) evaluates the arg in
-         * value context, which turns a child like E_DEFER(E_VAR("group"))
-         * into a frozen DT_E rather than an XDSAR deferred-reference
-         * pattern node.  pat_arbno/pat_fence_p then call spat_of(DT_E) →
-         * NULL and build a malformed pattern (NULL child), which fails
-         * to advance the cursor on match.  The SNOBOL4 frontend hits the
-         * E_ARBNO / E_FENCE cases above which already do the right thing.
-         *
-         * Fix: when E_FNC is ARBNO or FENCE, evaluate the child in pattern
-         * context here.  Other pattern-builtin function calls (POS, RPOS,
-         * SPAN, BREAK, LEN, ANY, NOTANY, TAB, RTAB, ARB, REM, ...) take
-         * non-pattern args (strings or integers), so for them the default
-         * value-context path is correct. */
-        if (e->sval && e->nchildren > 0) {
-            if (strcmp(e->sval, "ARBNO") == 0) {
-                DESCR_t _inner = interp_eval_pat(e->children[0]);
-                if (IS_FAIL_fn(_inner)) return FAILDESCR;
-                return pat_arbno(_inner);
-            }
-            if (strcmp(e->sval, "FENCE") == 0) {
-                DESCR_t _inner = interp_eval_pat(e->children[0]);
-                if (IS_FAIL_fn(_inner)) return FAILDESCR;
-                return pat_fence_p(_inner);
-            }
-        }
+        /* Generic function call in pattern context -- evaluate as value,
+         * let the caller coerce via PATVAL.  The SB-5c.1 guards for
+         * E_FNC("ARBNO")/E_FNC("FENCE") are removed: no frontend produces
+         * those; the SNOBOL4 parser uses pat_prim_kind() to emit E_ARBNO /
+         * E_FENCE directly (RS-5). */
         return interp_eval(e);
 
     default:
