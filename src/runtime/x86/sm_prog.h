@@ -44,6 +44,7 @@ typedef enum {
     SM_MUL,
     SM_DIV,
     SM_EXP,
+    SM_MOD,   /* OC-1 RS-6: integer/real modulo — all languages use this */
     SM_CONCAT,
     SM_COERCE_NUM, /* unary +: coerce top of stack to int or real */
     SM_NEG,

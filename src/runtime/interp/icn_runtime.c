@@ -14,6 +14,7 @@
 #include "../../frontend/snobol4/scrip_cc.h"
 #include "../../runtime/x86/bb_broker.h"
 #include "../../frontend/icon/icon_gen.h"
+#include "../../runtime/common/coerce.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -233,17 +234,8 @@ int icn_drive(EXPR_t *e) {
     if (e->kind == E_ITERATE && e->nchildren >= 1) {
         DESCR_t sv_d = interp_eval(e->children[0]);
         if (IS_FAIL_fn(sv_d)) return 0;
-        /* IC-8: coerce numeric scalars to image-string before string-iterate path */
-        if (IS_INT_fn(sv_d)) {
-            char *nbuf = GC_malloc(32);
-            snprintf(nbuf, 32, "%lld", (long long)sv_d.i);
-            sv_d = STRVAL(nbuf);
-        } else if (IS_REAL_fn(sv_d)) {
-            char *nbuf = GC_malloc(64);
-            char tmp[64]; icn_real_str(sv_d.r, tmp, sizeof tmp);
-            strncpy(nbuf, tmp, 63); nbuf[63] = '\0';
-            sv_d = STRVAL(nbuf);
-        }
+        /* IC-8: coerce numeric scalars to image-string before string-iterate path (D-1) */
+        sv_d = descr_to_str_icn(sv_d);
         if (!IS_STR_fn(sv_d)) return 0;
         const char *str = sv_d.s ? sv_d.s : "";
         const char *loopvar = e->sval;   /* loop variable name, or NULL */
@@ -1091,17 +1083,8 @@ bb_node_t icn_eval_gen(EXPR_t *e) {
         }
         DESCR_t sv = interp_eval(e->children[0]);
         const char *loopvar = e->sval;
-        /* IC-8: coerce numeric scalars to image-string before string-iterate path */
-        if (IS_INT_fn(sv)) {
-            char *nbuf = GC_malloc(32);
-            snprintf(nbuf, 32, "%lld", (long long)sv.i);
-            sv = STRVAL(nbuf);
-        } else if (IS_REAL_fn(sv)) {
-            char *nbuf = GC_malloc(64);
-            char tmp[64]; icn_real_str(sv.r, tmp, sizeof tmp);
-            strncpy(nbuf, tmp, 63); nbuf[63] = '\0';
-            sv = STRVAL(nbuf);
-        }
+        /* IC-8: coerce numeric scalars to image-string before string-iterate path (D-1) */
+        sv = descr_to_str_icn(sv);
         /* IC-3: DT_T table iteration — !T yields each value */
         if (sv.v == DT_T) {
             icn_tbl_iterate_state_t *z = calloc(1, sizeof(*z));

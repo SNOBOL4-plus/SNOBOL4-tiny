@@ -13,6 +13,7 @@
 
 #include "icon_gen.h"
 #include "../../ir/ir.h"            /* EXPR_t, EXPR_e, E_TO, E_TO_BY, E_ITERATE, E_SUSPEND, E_FNC */
+#include "../../runtime/common/coerce.h"  /* descr_to_str_icn (D-1/D-2 RS-6) */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -384,19 +385,16 @@ static DESCR_t icn_binop_apply(IcnBinopKind op, DESCR_t lv, DESCR_t rv, int *rel
         case ICN_BINOP_EQ:  *rel_fail = !(either_real ? ld == rd : li == ri); return *rel_fail ? FAILDESCR : rv;
         case ICN_BINOP_NE:  *rel_fail = !(either_real ? ld != rd : li != ri); return *rel_fail ? FAILDESCR : rv;
         case ICN_BINOP_CONCAT: {
-            /* String concatenation — coerce operands to string if needed */
-            char lbuf[64], rbuf[64];
-            const char *ls, *rs; size_t ll, rl;
-            if (IS_INT_fn(lv))       { snprintf(lbuf,64,"%lld",(long long)lv.i); ls=lbuf; ll=strlen(ls); }
-            else if (IS_REAL_fn(lv)) { snprintf(lbuf,64,"%.15g",lv.r);
-                                       if(!strchr(lbuf,'.')&&!strchr(lbuf,'e')) strcat(lbuf,".0");
-                                       ls=lbuf; ll=strlen(ls); }
-            else                     { ls = lv.s ? lv.s : ""; ll = lv.slen > 0 ? (size_t)lv.slen : strlen(ls); }
-            if (IS_INT_fn(rv))       { snprintf(rbuf,64,"%lld",(long long)rv.i); rs=rbuf; rl=strlen(rs); }
-            else if (IS_REAL_fn(rv)) { snprintf(rbuf,64,"%.15g",rv.r);
-                                       if(!strchr(rbuf,'.')&&!strchr(rbuf,'e')) strcat(rbuf,".0");
-                                       rs=rbuf; rl=strlen(rs); }
-            else                     { rs = rv.s ? rv.s : ""; rl = rv.slen > 0 ? (size_t)rv.slen : strlen(rs); }
+            /* D-2/D-3 RS-6: coerce via descr_to_str_icn() — fixes %.15g real
+             * formatting (was not round-trip for 16/17-digit values) and
+             * eliminates code duplication with icn_runtime.c coerce sites. */
+            DESCR_t ls_d = descr_to_str_icn(lv);
+            DESCR_t rs_d = descr_to_str_icn(rv);
+            if (IS_FAIL_fn(ls_d) || IS_FAIL_fn(rs_d)) return FAILDESCR;
+            const char *ls = ls_d.s ? ls_d.s : "";
+            const char *rs = rs_d.s ? rs_d.s : "";
+            size_t ll = ls_d.slen > 0 ? (size_t)ls_d.slen : strlen(ls);
+            size_t rl = rs_d.slen > 0 ? (size_t)rs_d.slen : strlen(rs);
             char *buf = GC_malloc(ll + rl + 1);
             memcpy(buf, ls, ll); memcpy(buf + ll, rs, rl); buf[ll + rl] = '\0';
             return (DESCR_t){ .v = DT_S, .slen = (int)(ll + rl), .s = buf };

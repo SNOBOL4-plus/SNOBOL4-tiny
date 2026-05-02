@@ -163,6 +163,9 @@ static DESCR_t sm_arith(DESCR_t l, DESCR_t r, sm_opcode_t op)
         case SM_DIV:
             if (r.i == 0) { fprintf(stderr, "Error 2: division by zero\n"); return FAILDESCR; }
             return INTVAL(l.i / r.i);
+        case SM_MOD:   /* OC-1 RS-6 */
+            if (r.i == 0) { fprintf(stderr, "Error 2: division by zero\n"); return FAILDESCR; }
+            return INTVAL(l.i % r.i);
         case SM_EXP: {
             /* integer ** non-negative integer → integer if result fits */
             if (r.i >= 0) {
@@ -184,6 +187,9 @@ static DESCR_t sm_arith(DESCR_t l, DESCR_t r, sm_opcode_t op)
     case SM_DIV:
         if (rd == 0.0) { fprintf(stderr, "Error 2: division by zero\n"); return FAILDESCR; }
         return REALVAL(ld / rd);
+    case SM_MOD:   /* OC-1 RS-6 */
+        if (rd == 0.0) { fprintf(stderr, "Error 2: division by zero\n"); return FAILDESCR; }
+        return REALVAL(fmod(ld, rd));
     case SM_EXP: return REALVAL(pow(ld, rd));
     default: break;
     }
@@ -350,6 +356,7 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
         case SM_SUB:
         case SM_MUL:
         case SM_DIV:
+        case SM_MOD:   /* OC-1 RS-6 */
         case SM_EXP: {
             DESCR_t r = sm_pop(st);
             DESCR_t l = sm_pop(st);

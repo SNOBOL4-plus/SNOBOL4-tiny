@@ -608,10 +608,9 @@ static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
         sm_emit(p, SM_EXP);
         return;
     case E_MOD:
-        /* SNOBOL4 has no modulo; map to SM_CALL for now */
         lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
         lower_expr(p, lt, e->nchildren > 1 ? e->children[1] : NULL);
-        sm_emit_si(p, SM_CALL, "REMDR", 2);
+        sm_emit(p, SM_MOD);   /* OC-1 RS-6: unified opcode replaces SM_CALL "REMDR" */
         return;
     case E_MNS:
         lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
