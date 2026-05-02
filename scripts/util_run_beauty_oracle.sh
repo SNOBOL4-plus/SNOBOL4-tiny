@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # util_run_beauty_oracle.sh — run SPITBOL oracle on beauty.sno for a given input.
 #
-# Must be run from corpus/programs/snobol4/beauty/ so that -INCLUDE files resolve.
+# Must be run from corpus/programs/snobol4/demo/beauty/ so that -INCLUDE files resolve.
 # Outputs beautified SNOBOL4 to stdout.
 #
 # Usage:
@@ -9,7 +9,7 @@
 #
 # Options:
 #   --input  FILE   SNOBOL4 source to beautify (required, or use stdin with -)
-#   --beauty PATH   path to beauty.sno (default: corpus/programs/snobol4/demo/beauty.sno)
+#   --beauty PATH   path to beauty.sno (default: corpus/programs/snobol4/demo/beauty/beauty.sno)
 #   --corpus PATH   path to corpus root (default: /home/claude/corpus)
 #   --oracle PATH   path to sbl binary (default: /home/claude/x64/bin/sbl)
 #   --timeout N     seconds (default: 30)
@@ -41,8 +41,8 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-[[ -z "$BEAUTY_SRC" ]] && BEAUTY_SRC="$CORPUS/programs/snobol4/demo/beauty.sno"
-BEAUTY_INC="$CORPUS/programs/snobol4/beauty"
+[[ -z "$BEAUTY_SRC" ]] && BEAUTY_SRC="$CORPUS/programs/snobol4/demo/beauty/beauty.sno"
+BEAUTY_INC="$CORPUS/programs/snobol4/demo/beauty"
 
 if [[ ! -x "$ORACLE" ]]; then
     echo "SKIP oracle not found: $ORACLE" >&2; exit 1
@@ -55,8 +55,9 @@ if [[ ! -d "$BEAUTY_INC" ]]; then
 fi
 
 run_oracle() {
-    # Must cd to the include dir so -INCLUDE 'global.sno' etc. resolve
-    (cd "$BEAUTY_INC" && timeout "$TIMEOUT" "$ORACLE" "$BEAUTY_SRC")
+    # Must cd to the include dir so -INCLUDE 'global.inc' etc. resolve.
+    # -bf: -b suppress banner, -f case-sensitive (per RULES.md SN-30, SETL4PATH).
+    (cd "$BEAUTY_INC" && SETL4PATH=. timeout "$TIMEOUT" "$ORACLE" -bf "$BEAUTY_SRC")
 }
 
 if [[ -z "$INPUT_FILE" || "$INPUT_FILE" == "-" ]]; then
