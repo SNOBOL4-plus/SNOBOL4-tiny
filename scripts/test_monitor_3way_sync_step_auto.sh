@@ -169,6 +169,7 @@ if [[ "$want_spl" = "1" ]]; then
     MONITOR_GO_PIPE="$TMP/spl.go" \
     MONITOR_NAMES_OUT="$TMP/spl.names" \
     SETL4PATH=".:$INC" \
+    ${MONITOR_PM:+SPL_PM_TRACE=1} \
         timeout "$((TIMEOUT*2))" "$SPITBOL" -bf "$SNO" \
         < "$STDIN_SRC" > "$TMP/spl.out" 2> "$TMP/spl.err" &
     PIDS+=($!)
@@ -205,6 +206,7 @@ if [[ "$want_dot" = "1" ]]; then
     MONITOR_BIN=1 \
     MONITOR_READY_PIPE="$TMP/dot.ready" \
     MONITOR_GO_PIPE="$TMP/dot.go" \
+    ${MONITOR_PM:+MONITOR_PM_TRACE=1} \
         timeout "$((TIMEOUT*2))" dotnet "$SNO4_DLL" -bf "$SNO" \
         < "$STDIN_SRC" > "$TMP/dot.out" 2> "$TMP/dot.err" &
     PIDS+=($!)
