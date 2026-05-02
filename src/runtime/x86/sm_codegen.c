@@ -157,6 +157,7 @@ static DESCR_t jit_arith(DESCR_t l, DESCR_t r, sm_opcode_t op)
         case SM_SUB: return INTVAL(l.i - r.i);
         case SM_MUL: return INTVAL(l.i * r.i);
         case SM_DIV: return (r.i == 0) ? FAILDESCR : INTVAL(l.i / r.i);
+        case SM_MOD: return (r.i == 0) ? FAILDESCR : INTVAL(l.i % r.i);   /* OC-1 RS-6 */
         case SM_EXP: {
             /* integer ** non-negative integer → integer (mirrors sm_interp.c) */
             if (r.i >= 0) {
@@ -175,6 +176,7 @@ static DESCR_t jit_arith(DESCR_t l, DESCR_t r, sm_opcode_t op)
     case SM_SUB: return REALVAL(ld - rd);
     case SM_MUL: return REALVAL(ld * rd);
     case SM_DIV: return (rd == 0.0) ? FAILDESCR : REALVAL(ld / rd);
+    case SM_MOD: return (rd == 0.0) ? FAILDESCR : REALVAL(fmod(ld, rd));  /* OC-1 RS-6 */
     case SM_EXP: return REALVAL(pow(ld, rd));
     default: return FAILDESCR;
     }
@@ -784,6 +786,7 @@ static void init_handler_table(void)
     g_handlers[SM_SUB]        = h_arith;
     g_handlers[SM_MUL]        = h_arith;
     g_handlers[SM_DIV]        = h_arith;
+    g_handlers[SM_MOD]        = h_arith;   /* OC-1 RS-6 */
     g_handlers[SM_EXP]        = h_arith;
     g_handlers[SM_CONCAT]     = h_concat;
     g_handlers[SM_COERCE_NUM] = h_coerce_num;
