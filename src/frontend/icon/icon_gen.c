@@ -285,6 +285,66 @@ DESCR_t icn_bb_find(void *zeta, int entry) {
 }
 
 /*============================================================================================================================
+ * icn_bb_find_gen_subj — find(needle, gen_subject): drive subject generator, exhaust
+ * find positions for each subject before advancing to the next subject.
+ *   α/β: advance within current subject first; when exhausted, pull next subject.
+ *============================================================================================================================*/
+DESCR_t icn_bb_find_gen_subj(void *zeta, int entry) {
+    icn_find_gen_subj_t *z = (icn_find_gen_subj_t *)zeta;
+    for (;;) {
+        if (z->hay) {
+            /* Try to find next hit in current subject */
+            const char *hit = strstr(z->next, z->needle);
+            if (hit) {
+                long pos1 = (long)(hit - z->hay) + 1;
+                z->next = hit + (z->nlen > 0 ? z->nlen : 1);
+                return (DESCR_t){ .v = DT_I, .i = pos1 };
+            }
+        }
+        /* Current subject exhausted — advance subject generator */
+        DESCR_t sv = z->subj_gen.fn(z->subj_gen.ζ, z->subj_entry);
+        z->subj_entry = β;
+        if (IS_FAIL_fn(sv)) return FAILDESCR;  /* all subjects done */
+        const char *s = sv.s ? sv.s : (sv.v == DT_SNUL ? "" : "");
+        z->hay  = s;
+        z->next = s;
+    }
+}
+
+/*============================================================================================================================
+ * icn_bb_upto_gen_subj — upto(cset, gen_subject): drive subject generator, yield
+ * positions of chars in cset for each subject before advancing.
+ *============================================================================================================================*/
+DESCR_t icn_bb_upto_gen_subj(void *zeta, int entry) {
+    icn_upto_gen_subj_t *z = (icn_upto_gen_subj_t *)zeta;
+    for (;;) {
+        if (z->hay) {
+            /* Scan forward from current pos */
+            while (z->pos < z->slen) {
+                unsigned char c = (unsigned char)z->hay[z->pos];
+                z->pos++;
+                /* Check if c is in cset — byte-by-byte scan (8-bit safe) */
+                int in_cset = 0;
+                if (z->cset) {
+                    for (const char *p = z->cset; *p; p++) {
+                        if ((unsigned char)*p == c) { in_cset = 1; break; }
+                    }
+                }
+                if (in_cset) return INTVAL((long)z->pos);  /* 1-based, already incremented */
+            }
+        }
+        /* Current subject exhausted — advance subject generator */
+        DESCR_t sv = z->subj_gen.fn(z->subj_gen.ζ, z->subj_entry);
+        z->subj_entry = β;
+        if (IS_FAIL_fn(sv)) return FAILDESCR;
+        const char *s = sv.s ? sv.s : "";
+        z->hay  = s;
+        z->slen = (int)strlen(s);
+        z->pos  = 0;
+    }
+}
+
+/*============================================================================================================================
  * icn_bb_binop_gen — IC-2a: generative binary operator Byrd box
  *
  * Protocol (JCON irgen.icn §4.3, funcs-set):

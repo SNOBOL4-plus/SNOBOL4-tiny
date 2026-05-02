@@ -73,6 +73,25 @@ DESCR_t icn_bb_tbl_key_iterate(void *zeta, int entry);
 typedef struct { DESCR_t inst; int pos; }                                             icn_record_iterate_state_t;
 DESCR_t icn_bb_record_iterate(void *zeta, int entry);
 typedef struct { const char *needle; const char *hay; int nlen; const char *next; }  icn_find_state_t;
+/* IC-9 (2026-05-02): find/upto with generative subject — drive subject gen, exhaust positions per subject */
+typedef struct {
+    bb_node_t   subj_gen;   /* generator of subject strings */
+    const char *needle;
+    int         nlen;
+    const char *hay;        /* current subject */
+    const char *next;       /* scan cursor in current hay */
+    int         subj_entry; /* entry for next subj_gen pump (α on first, β after) */
+} icn_find_gen_subj_t;
+DESCR_t icn_bb_find_gen_subj(void *zeta, int entry);
+typedef struct {
+    bb_node_t   subj_gen;
+    const char *cset;       /* set of chars for upto */
+    const char *hay;
+    int         slen;
+    int         pos;        /* 0-based scan position */
+    int         subj_entry;
+} icn_upto_gen_subj_t;
+DESCR_t icn_bb_upto_gen_subj(void *zeta, int entry);
 typedef struct {
     ucontext_t  gen_ctx;
     ucontext_t  caller_ctx;

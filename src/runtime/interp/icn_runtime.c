@@ -1275,18 +1275,30 @@ bb_node_t icn_eval_gen(EXPR_t *e) {
         }
     }
 
-    /* ── E_FNC find(needle,str) with scalar args — icn_bb_find generator ── */
+    /* ── E_FNC find(needle,str) with scalar or generative subject ── */
     if (e->kind == E_FNC && e->nchildren >= 3 && e->children[0] && e->children[0]->sval
         && strcmp(e->children[0]->sval, "find") == 0) {
         DESCR_t s1 = interp_eval(e->children[1]);
-        DESCR_t s2 = interp_eval(e->children[2]);
-        if (!IS_FAIL_fn(s1) && !IS_FAIL_fn(s2)) {
-            icn_find_state_t *z = calloc(1, sizeof(*z));
-            z->needle = s1.s ? s1.s : "";
-            z->hay    = s2.s ? s2.s : "";
-            z->nlen   = (int)strlen(z->needle);
-            z->next   = z->hay;
-            return (bb_node_t){ icn_bb_find, z, 0 };
+        if (!IS_FAIL_fn(s1)) {
+            if (icn_is_gen(e->children[2])) {
+                /* Generative subject: drive subject gen, exhaust find positions per subject */
+                icn_find_gen_subj_t *z = calloc(1, sizeof(*z));
+                z->subj_gen   = icn_eval_gen(e->children[2]);
+                z->needle     = s1.s ? s1.s : "";
+                z->nlen       = (int)strlen(z->needle);
+                z->subj_entry = α;
+                z->hay        = NULL;
+                return (bb_node_t){ icn_bb_find_gen_subj, z, 0 };
+            }
+            DESCR_t s2 = interp_eval(e->children[2]);
+            if (!IS_FAIL_fn(s2)) {
+                icn_find_state_t *z = calloc(1, sizeof(*z));
+                z->needle = s1.s ? s1.s : "";
+                z->hay    = s2.s ? s2.s : "";
+                z->nlen   = (int)strlen(z->needle);
+                z->next   = z->hay;
+                return (bb_node_t){ icn_bb_find, z, 0 };
+            }
         }
     }
 
@@ -1375,6 +1387,21 @@ bb_node_t icn_eval_gen(EXPR_t *e) {
             icn_coro_stage.args  = args;
             icn_coro_stage.nargs = nargs;
             return (bb_node_t){ icn_bb_suspend, ss, 0 };
+        }
+        /* ── E_FNC upto(cset, gen_subject) — drive subject gen per subject ── */
+        if (fn && strcmp(fn, "upto") == 0 && nargs >= 2 && icn_is_gen(e->children[2])) {
+            DESCR_t cd = interp_eval(e->children[1]);
+            const char *cset = VARVAL_fn(cd);
+            if (cset) {
+                icn_upto_gen_subj_t *z = calloc(1, sizeof(*z));
+                z->subj_gen   = icn_eval_gen(e->children[2]);
+                z->cset       = cset;
+                z->subj_entry = α;
+                z->hay        = NULL;
+                z->slen       = 0;
+                z->pos        = 0;
+                return (bb_node_t){ icn_bb_upto_gen_subj, z, 0 };
+            }
         }
         /* ── Builtin E_FNC with generative arg — icn_bb_fnc_gen ─────────── */
         /* Find first argument that is itself a generator expression.
