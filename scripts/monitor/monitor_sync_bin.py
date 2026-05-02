@@ -237,6 +237,23 @@ WILDCARD_NAMES_PARTICIPANTS = set(
 SKIP_EXTRA_KEYWORD_VALUES = os.environ.get('MONITOR_SKIP_EXTRA_KEYWORD_VALUES', '').strip() in ('1', 'true', 'yes', 'on')
 SKIP_MAX_PER_STEP = 4  # at most this many extra reads per side per comparison step
 
+# MONITOR_PM_NAME_WILDCARD=1 — wildcard the name field on PM_CALL/EXIT/REDO/FAIL
+# events.  The dot side emits per-pattern-class tags (e.g. *snoString, BREAK,
+# LITERAL, ConditionalVariableAssociationPattern), while the spl side emits a
+# fixed "<spl-pm>" sentinel because SPITBOL's SIL pattern nodes are dispatched
+# by code address with no string-tag table.  Real structural divergence still
+# surfaces via the cursor field (low-32 bits of the value payload) and the
+# event sequence; the per-side node-tag is decorative metadata only.
+#
+# Additionally, when this flag is set, PM event value-byte comparison is
+# narrowed to the low 32 bits of the 8-byte payload (the cursor).  spl packs
+# (cursor | node_addr << 32) into the high 32 bits for forensic visibility;
+# dot packs only the cursor.  Comparing the full 8 bytes would diverge on
+# every PM event because the node-addr portion differs by construction.
+PM_NAME_WILDCARD = os.environ.get('MONITOR_PM_NAME_WILDCARD', '').strip() in ('1', 'true', 'yes', 'on')
+
+PM_KINDS = (MWK_PM_CALL, MWK_PM_EXIT, MWK_PM_REDO, MWK_PM_FAIL)
+
 
 def keys_match(a, b, a_name_wild=False, b_name_wild=False):
     """Compare two event_key tuples, with three principled wildcards:
@@ -291,6 +308,17 @@ def keys_match(a, b, a_name_wild=False, b_name_wild=False):
     (bk, bn, bt, bv) = b
     if ak != bk:
         return False
+
+    # S-2-bridge-7-byrd-pattern: PM events get cursor-only value comparison
+    # and a name-field wildcard when MONITOR_PM_NAME_WILDCARD is set.
+    # spl packs (cursor | node_addr << 32) in the 8-byte LE payload; dot
+    # packs only the cursor.  Mask to low 32 bits before comparing.
+    if PM_NAME_WILDCARD and ak in PM_KINDS:
+        if at != bt:
+            return False
+        a_cur = struct.unpack('<I', av[:4])[0] if len(av) >= 4 else 0
+        b_cur = struct.unpack('<I', bv[:4])[0] if len(bv) >= 4 else 0
+        return a_cur == b_cur
     # MWT_UNKNOWN wildcards type AND value bytes: when one side cannot
     # discriminate the typed block (e.g. SPITBOL's spl_block_to_wire on
     # nmblk/ptblk/atblk/tbblk/cdblk/efblk), it emits MWT_UNKNOWN with
