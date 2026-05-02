@@ -470,7 +470,7 @@ int is_pl_user_call(EXPR_t *goal) {
         "number_string","string_length","string_concat","string_codes","string_chars",
         "string_to_atom","sub_atom","atom_number","msort","sort","compare",
         "between","succ_or_zero","forall","aggregate_all","length",
-        "read_term","write_term","with_output_to","initialization","call",
+        "read_term","write_term","with_output_to","initialization","call","setup_call_cleanup",
         "@<","@>","@=<","@>=",
         NULL
     };
@@ -1936,6 +1936,51 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
                     int rok = interp_exec_pl_builtin(recovery, env);
                     return rok;
                 }
+            }
+            /* ---- setup_call_cleanup/3 (PR-19e) ---- */
+            /* setup_call_cleanup(+Setup, :Goal, +Cleanup)
+             * Setup runs once. Goal runs (BB_ONCE here). Cleanup runs once
+             * after Goal finishes (success or failure) or throws.
+             * E_VAR bridge applied to all three positions. */
+            if (strcmp(fn,"setup_call_cleanup")==0&&arity==3) {
+                EXPR_t *setup_e    = goal->children[0];
+                EXPR_t *scc_goal_e = goal->children[1];
+                EXPR_t *cleanup_e  = goal->children[2];
+                /* Resolve E_VAR arms to synth EXPRs */
+                EXPR_t *s_synth=NULL; Term **s_tenv=NULL;
+                EXPR_t *g_synth=NULL; Term **g_tenv=NULL;
+                EXPR_t *c_synth=NULL; Term **c_tenv=NULL;
+                if (setup_e && setup_e->kind==E_VAR) {
+                    Term *gt=term_deref(pl_unified_term_from_expr(setup_e,env));
+                    s_tenv=calloc(PL_SYNTH_TENV_MAX,sizeof(Term*)); int n=0;
+                    s_synth=pl_term_to_synth_expr(gt,s_tenv,&n); setup_e=s_synth;
+                }
+                if (scc_goal_e && scc_goal_e->kind==E_VAR) {
+                    Term *gt=term_deref(pl_unified_term_from_expr(scc_goal_e,env));
+                    g_tenv=calloc(PL_SYNTH_TENV_MAX,sizeof(Term*)); int n=0;
+                    g_synth=pl_term_to_synth_expr(gt,g_tenv,&n); scc_goal_e=g_synth;
+                }
+                if (cleanup_e && cleanup_e->kind==E_VAR) {
+                    Term *gt=term_deref(pl_unified_term_from_expr(cleanup_e,env));
+                    c_tenv=calloc(PL_SYNTH_TENV_MAX,sizeof(Term*)); int n=0;
+                    c_synth=pl_term_to_synth_expr(gt,c_tenv,&n); cleanup_e=c_synth;
+                }
+                /* Run Setup */
+                int sok = interp_exec_pl_builtin(setup_e, s_synth ? s_tenv : env);
+                if (!sok) {
+                    if (s_synth){pl_synth_free(s_synth);free(s_tenv);}
+                    if (g_synth){pl_synth_free(g_synth);free(g_tenv);}
+                    if (c_synth){pl_synth_free(c_synth);free(c_tenv);}
+                    return 0;
+                }
+                /* Run Goal */
+                int gok = interp_exec_pl_builtin(scc_goal_e, g_synth ? g_tenv : env);
+                /* Run Cleanup unconditionally */
+                interp_exec_pl_builtin(cleanup_e, c_synth ? c_tenv : env);
+                if (s_synth){pl_synth_free(s_synth);free(s_tenv);}
+                if (g_synth){pl_synth_free(g_synth);free(g_tenv);}
+                if (c_synth){pl_synth_free(c_synth);free(c_tenv);}
+                return gok;
             }
             fprintf(stderr,"prolog: undefined predicate %s/%d\n",fn,arity);
             return 0;
