@@ -53,13 +53,16 @@
 extern int sc_debug;
 #endif
 /* "%code requires" blocks.  */
-#line 275 "snocone_parse.y"
+#line 70 "snocone_parse.y"
 
 #include "scrip_cc.h"
 
-/* Forward-declare LexCtx — full definition lives in snocone_fsm.h, which
- * we deliberately do NOT include here so its T_* enumerators don't
- * collide with Bison's enum sc_tokentype.  See the %code top block above. */
+/* Forward-declare LexCtx — defined in snocone_lex.h.  We forward-declare
+ * here so this %code requires block (which lands in tab.h) stays minimal
+ * and avoids an include cycle: the lexer's IMPLEMENTATION (snocone_lex.c)
+ * includes tab.h to resolve T_* names, but the lexer's API header
+ * (snocone_lex.h) deliberately does not, so callers can pass `int kind`
+ * around without needing the parser's enum. */
 struct LexCtx;
 
 /* LS-4.f — control-flow handoff structs.  Built by if_head / while_head
@@ -139,7 +142,7 @@ typedef struct ScParseState {
     struct SwitchHead *cur_switch;
 } ScParseState;
 
-#line 143 "snocone_parse.tab.h"
+#line 146 "snocone_parse.tab.h"
 
 /* Token kinds.  */
 #ifndef SC_TOKENTYPE
@@ -240,7 +243,7 @@ typedef struct ScParseState {
 #if ! defined SC_STYPE && ! defined SC_STYPE_IS_DECLARED
 union SC_STYPE
 {
-#line 597 "snocone_parse.y"
+#line 385 "snocone_parse.y"
 
     EXPR_t *expr;
     char   *str;
@@ -261,7 +264,7 @@ union SC_STYPE
     struct SwitchHead *switchhead;
     STMT_t           *stmt_ptr;
 
-#line 265 "snocone_parse.tab.h"
+#line 268 "snocone_parse.tab.h"
 
 };
 typedef union SC_STYPE SC_STYPE;

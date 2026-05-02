@@ -30,27 +30,15 @@
  *   snocone_parse.y      (this file)               -- yylex thunk pulls from sc_lex_next
  *   CODE_t        (STMT_t list, EXPR_t IR — alias of Program)
  *
- * Token-kind decoupling note (LS-4.a session 2026-04-30 #3):
- *   The FSM declares its own enum `ScKind` in snocone_lex.h with values
- *   1, 2, 3, ...  Bison generates its own `enum sc_tokentype` in
- *   snocone_parse.tab.h with values 258, 259, 260, ...  The two enums share
- *   the same enumerator NAMES (T_INT, T_REAL, ...) — that was a
- *   deliberate session-#9 choice for readability — but the VALUES
- *   differ.  C does not allow two enums with the same enumerator name
- *   in one translation unit.  We resolve this by:
- *     (1) NOT including snocone_lex.h in `%code requires` (which goes
- *         into snocone_parse.tab.h) — only struct-tag-forward-declared.
- *     (2) Including snocone_lex.h in `%code top` (which goes ONLY into
- *         snocone_parse.tab.c, BEFORE snocone_parse.tab.h's enum sc_tokentype is
- *         emitted).  The %code top block is processed before all other
- *         emitted code; we use it to alias the FSM's T_* names to SC_T_*
- *         via #define before the FSM header is read, so the FSM enum
- *         arrives with names that don't collide with Bison's later T_*.
- *     (3) The yylex thunk uses the SC_T_* aliases to talk to the FSM
- *         and returns Bison's T_* values directly.
- *   Net: the FSM's source code is untouched; Bison owns the T_* names
- *   in this translation unit; a tiny translation table (sc_kind_to_tok)
- *   maps SC_T_* (FSM enum) to T_* (Bison tokens).
+ * Token-kind ownership (cleaned up session 2026-05-01, SB-6.H):
+ *   Bison owns the token enum.  `enum sc_tokentype` lives in
+ *   snocone_parse.tab.h with values 258..N+.  The lexer
+ *   (snocone_lex.{c,h}) uses the same names directly: snocone_lex.c
+ *   includes snocone_parse.tab.h to resolve T_*; snocone_lex.h's
+ *   public API returns kinds as plain `int` so callers don't need to
+ *   drag the enum around.  There is no parallel `ScKind` enum, no
+ *   #define alias dance, and no per-token translation table — the
+ *   yylex thunk returns sc_lex_next's value directly.
  *
  * IR construction follows snobol4.y line-for-line: leaf atoms are
  * E_VAR/E_KEYWORD/E_QLIT/E_ILIT/E_FLIT, arithmetic emits E_ADD/E_SUB/
@@ -70,214 +58,24 @@
  */
 
 %code top {
-/* %code top runs BEFORE Bison's enum sc_tokentype is generated, so we
- * can alias the FSM's T_* enum names to SC_T_* and pull in its header
- * here without colliding with Bison's later T_* generation.
- *
- * Naming-scheme note (session 2026-04-30 #6 rename): tokens for the
- * dual-role keyboard characters use T_<arity><charname> (e.g. T_1PLUS
- * unary +, T_2PLUS binary +).  Multi-character operators (== :==: ::
- * etc.) keep their existing names since they have no arity ambiguity.
- * Atoms and punctuation also keep their existing names. */
-#define T_INT              SC_T_INT
-#define T_REAL             SC_T_REAL
-#define T_STR              SC_T_STR
-#define T_IDENT            SC_T_IDENT
-#define T_CALL         SC_T_CALL
-#define T_KEYWORD          SC_T_KEYWORD
-#define T_CONCAT           SC_T_CONCAT
-
-/* Binary operators (T_2*) — character-derived names */
-#define T_2EQUAL           SC_T_2EQUAL
-#define T_2QUEST           SC_T_2QUEST
-#define T_2PIPE            SC_T_2PIPE
-#define T_2PLUS            SC_T_2PLUS
-#define T_2MINUS           SC_T_2MINUS
-#define T_2SLASH           SC_T_2SLASH
-#define T_2STAR            SC_T_2STAR
-#define T_2CARET           SC_T_2CARET
-#define T_2DOLLAR          SC_T_2DOLLAR
-#define T_2DOT             SC_T_2DOT
-#define T_2AMP             SC_T_2AMP
-#define T_2AT              SC_T_2AT
-#define T_2POUND           SC_T_2POUND
-#define T_2PERCENT         SC_T_2PERCENT
-#define T_2TILDE           SC_T_2TILDE
-
-/* Multi-character comparison/identity ops — character-name kept */
-#define T_EQ               SC_T_EQ
-#define T_NE               SC_T_NE
-#define T_LT               SC_T_LT
-#define T_GT               SC_T_GT
-#define T_LE               SC_T_LE
-#define T_GE               SC_T_GE
-#define T_LEQ              SC_T_LEQ
-#define T_LNE              SC_T_LNE
-#define T_LLT              SC_T_LLT
-#define T_LGT              SC_T_LGT
-#define T_LLE              SC_T_LLE
-#define T_LGE              SC_T_LGE
-#define T_IDENT_OP         SC_T_IDENT_OP
-#define T_DIFFER           SC_T_DIFFER
-
-/* Compound-assigns — naturally binary, no arity prefix */
-#define T_PLUS_ASSIGN      SC_T_PLUS_ASSIGN
-#define T_MINUS_ASSIGN     SC_T_MINUS_ASSIGN
-#define T_STAR_ASSIGN      SC_T_STAR_ASSIGN
-#define T_SLASH_ASSIGN     SC_T_SLASH_ASSIGN
-#define T_CARET_ASSIGN     SC_T_CARET_ASSIGN
-
-/* Unary operators (T_1*) — character-derived names */
-#define T_1PLUS            SC_T_1PLUS
-#define T_1MINUS           SC_T_1MINUS
-#define T_1STAR            SC_T_1STAR
-#define T_1SLASH           SC_T_1SLASH
-#define T_1PERCENT         SC_T_1PERCENT
-#define T_1AT              SC_T_1AT
-#define T_1TILDE           SC_T_1TILDE
-#define T_1DOLLAR          SC_T_1DOLLAR
-#define T_1DOT             SC_T_1DOT
-#define T_1POUND           SC_T_1POUND
-#define T_1PIPE            SC_T_1PIPE
-#define T_1EQUAL           SC_T_1EQUAL
-#define T_1QUEST           SC_T_1QUEST
-#define T_1AMP             SC_T_1AMP
-#define T_1BANG            SC_T_1BANG
-
-/* Punctuation — keep existing names */
-#define T_LPAREN           SC_T_LPAREN
-#define T_RPAREN           SC_T_RPAREN
-#define T_LBRACK           SC_T_LBRACK
-#define T_RBRACK           SC_T_RBRACK
-#define T_LBRACE           SC_T_LBRACE
-#define T_RBRACE           SC_T_RBRACE
-#define T_COMMA            SC_T_COMMA
-#define T_SEMICOLON        SC_T_SEMICOLON
-#define T_COLON            SC_T_COLON
-
-/* Keywords — Snocone reserved words.  T_DEFINE is the `function`
- * keyword; T_CALL is the IDENT-followed-by-zero-space-`(` call-form
- * token from the FSM (carries the identifier name, consumes the `(`). */
-#define T_IF            SC_T_IF
-#define T_ELSE          SC_T_ELSE
-#define T_WHILE         SC_T_WHILE
-#define T_DO            SC_T_DO
-#define T_UNTIL         SC_T_UNTIL
-#define T_FOR           SC_T_FOR
-#define T_SWITCH        SC_T_SWITCH
-#define T_CASE          SC_T_CASE
-#define T_DEFAULT       SC_T_DEFAULT
-#define T_BREAK         SC_T_BREAK
-#define T_CONTINUE      SC_T_CONTINUE
-#define T_GOTO          SC_T_GOTO
-#define T_DEFINE      SC_T_DEFINE
-#define T_RETURN        SC_T_RETURN
-#define T_FRETURN       SC_T_FRETURN
-#define T_NRETURN       SC_T_NRETURN
-#define T_STRUCT        SC_T_STRUCT
-
-/* End-of-input + unknown */
-#define T_EOF              SC_T_EOF
-#define T_UNKNOWN          SC_T_UNKNOWN
-
-#include "snocone_lex.h"
-
-/* After the FSM header has been pulled in (with the SC_T_* aliases
- * applied to its enumerators), undo the aliases so Bison's own enum
- * sc_tokentype can use the unprefixed T_* names that the rest of the
- * parser sees. */
-#undef T_INT
-#undef T_REAL
-#undef T_STR
-#undef T_IDENT
-#undef T_CALL
-#undef T_KEYWORD
-#undef T_CONCAT
-#undef T_2EQUAL
-#undef T_2QUEST
-#undef T_2PIPE
-#undef T_2PLUS
-#undef T_2MINUS
-#undef T_2SLASH
-#undef T_2STAR
-#undef T_2CARET
-#undef T_2DOLLAR
-#undef T_2DOT
-#undef T_2AMP
-#undef T_2AT
-#undef T_2POUND
-#undef T_2PERCENT
-#undef T_2TILDE
-#undef T_EQ
-#undef T_NE
-#undef T_LT
-#undef T_GT
-#undef T_LE
-#undef T_GE
-#undef T_LEQ
-#undef T_LNE
-#undef T_LLT
-#undef T_LGT
-#undef T_LLE
-#undef T_LGE
-#undef T_IDENT_OP
-#undef T_DIFFER
-#undef T_PLUS_ASSIGN
-#undef T_MINUS_ASSIGN
-#undef T_STAR_ASSIGN
-#undef T_SLASH_ASSIGN
-#undef T_CARET_ASSIGN
-#undef T_1PLUS
-#undef T_1MINUS
-#undef T_1STAR
-#undef T_1SLASH
-#undef T_1PERCENT
-#undef T_1AT
-#undef T_1TILDE
-#undef T_1DOLLAR
-#undef T_1DOT
-#undef T_1POUND
-#undef T_1PIPE
-#undef T_1EQUAL
-#undef T_1QUEST
-#undef T_1AMP
-#undef T_1BANG
-#undef T_LPAREN
-#undef T_RPAREN
-#undef T_LBRACK
-#undef T_RBRACK
-#undef T_LBRACE
-#undef T_RBRACE
-#undef T_COMMA
-#undef T_SEMICOLON
-#undef T_COLON
-#undef T_IF
-#undef T_ELSE
-#undef T_WHILE
-#undef T_DO
-#undef T_UNTIL
-#undef T_FOR
-#undef T_SWITCH
-#undef T_CASE
-#undef T_DEFAULT
-#undef T_BREAK
-#undef T_CONTINUE
-#undef T_GOTO
-#undef T_DEFINE
-#undef T_RETURN
-#undef T_FRETURN
-#undef T_NRETURN
-#undef T_STRUCT
-#undef T_EOF
-#undef T_UNKNOWN
+/* Token kinds (T_*) come from snocone_parse.tab.h — Bison's generated
+ * enum sc_tokentype is the single source of truth.  snocone_lex.c
+ * includes that header to resolve T_* names; snocone_lex.h (the
+ * lexer's API) returns kinds as plain `int` so it does not pull in
+ * tab.h.  No parallel `ScKind` enum, no #define alias dance, no
+ * per-token translation table.  Post-cleanup design (session
+ * 2026-05-01, GOAL-SNOCONE-BEAUTY SB-6.H). */
 }
 
 %code requires {
 #include "scrip_cc.h"
 
-/* Forward-declare LexCtx — full definition lives in snocone_fsm.h, which
- * we deliberately do NOT include here so its T_* enumerators don't
- * collide with Bison's enum sc_tokentype.  See the %code top block above. */
+/* Forward-declare LexCtx — defined in snocone_lex.h.  We forward-declare
+ * here so this %code requires block (which lands in tab.h) stays minimal
+ * and avoids an include cycle: the lexer's IMPLEMENTATION (snocone_lex.c)
+ * includes tab.h to resolve T_* names, but the lexer's API header
+ * (snocone_lex.h) deliberately does not, so callers can pass `int kind`
+ * around without needing the parser's enum. */
 struct LexCtx;
 
 /* LS-4.f — control-flow handoff structs.  Built by if_head / while_head
@@ -363,6 +161,7 @@ typedef struct ScParseState {
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include "snocone_lex.h"     /* full LexCtx definition + sc_lex_next API */
 
 /* Forward declarations of yylex/yyerror (Bison's generated parser
  * references them via the api.prefix-mangled names sc_lex / sc_error
@@ -573,17 +372,6 @@ static void     sc_finalize_switch     (ScParseState *st, struct SwitchHead *h);
  * one call; struct is sugar for that.  Empty `struct NAME { }` lowers to
  * DATA('NAME()') — legal SPITBOL (a zero-field record). */
 static void     sc_emit_struct         (ScParseState *st, char *name, char *fields);
-
-/* sc_kind_to_tok — translate FSM ScKind (1..N) to Bison's sc_tokentype.
- *
- * The two namespaces share enumerator NAMES (deliberate session-#9
- * convention: same name for the same concept everywhere) but VALUES
- * differ — FSM is 1..N, Bison is 256+M.  This function is the one
- * authoritative translation point.  Indexed by the FSM's enum value;
- * returns the Bison token number.  T_EOF (FSM) → 0 (Bison's end-of-input
- * sentinel).  Any FSM kind without a corresponding Bison token returns
- * the Bison T_UNKNOWN as a safe fallback (the grammar will reject). */
-static int sc_kind_to_tok(int sc_kind);
 }
 
 %define api.prefix {sc_}
@@ -1409,22 +1197,21 @@ expr17      : T_CALL exprlist T_RPAREN
 /* =========================================================================
  *  yylex thunk — single producer is the FSM (sc_lex_next).
  *
- *  The FSM emits one token kind per call (its own enum value) and
- *  stashes the textual payload in ctx->text for value tokens.  The thunk:
- *    1. Calls sc_lex_next to get the next FSM kind.
- *    2. For value tokens, strdups ctx->text into yylval->str.
- *    3. Translates the FSM kind to Bison's sc_tokentype value via
- *       sc_kind_to_tok, returning that to the parser.
+ *  The FSM emits one token kind per call (Bison's enum sc_tokentype value
+ *  — the lexer and the parser share one enum, see snocone_lex.h).  For
+ *  value tokens, the FSM stashes the textual payload in ctx->text; the
+ *  thunk strdups it into yylval->str.  T_EOF is mapped to 0 (Bison's
+ *  end-of-input sentinel); every other token is returned unchanged.
  * ========================================================================= */
 int sc_lex(SC_STYPE *yylval, ScParseState *st) {
-    int sc_kind = sc_lex_next(st->ctx);
-    if (sc_kind_has_payload(sc_kind)) {
+    int kind = sc_lex_next(st->ctx);
+    if (sc_kind_has_payload(kind)) {
         yylval->str = strdup(st->ctx->text);
     } else {
         yylval->str = NULL;
     }
-    if (sc_kind == SC_T_EOF) return 0;          /* Bison's end-of-input sentinel */
-    return sc_kind_to_tok(sc_kind);
+    if (kind == T_EOF) return 0;          /* Bison's end-of-input sentinel */
+    return kind;
 }
 
 void sc_error(ScParseState *st, const char *msg) {
@@ -1435,102 +1222,6 @@ void sc_error(ScParseState *st, const char *msg) {
     st->nerrors++;
 }
 
-/* ---- FSM kind → Bison token translation ----
- *
- * After the session-#6 rename, both sides of this map use the
- * T_<arity><charname> scheme for dual-role characters.  The FSM enum
- * (SC_T_*) was renamed in lockstep, so this is now the trivial
- * identity-with-prefix mapping for every entry.  Kept as an explicit
- * switch (not a table-driven offset) so a hypothetical future
- * divergence between the two enums has a single place to handle it.
- */
-static int sc_kind_to_tok(int sc_kind) {
-    switch (sc_kind) {
-        case SC_T_INT:              return T_INT;
-        case SC_T_REAL:             return T_REAL;
-        case SC_T_STR:              return T_STR;
-        case SC_T_IDENT:            return T_IDENT;
-        case SC_T_CALL:         return T_CALL;
-        case SC_T_KEYWORD:          return T_KEYWORD;
-        case SC_T_CONCAT:           return T_CONCAT;
-        case SC_T_2EQUAL:           return T_2EQUAL;
-        case SC_T_2QUEST:           return T_2QUEST;
-        case SC_T_2PIPE:            return T_2PIPE;
-        case SC_T_EQ:               return T_EQ;
-        case SC_T_NE:               return T_NE;
-        case SC_T_LT:               return T_LT;
-        case SC_T_GT:               return T_GT;
-        case SC_T_LE:               return T_LE;
-        case SC_T_GE:               return T_GE;
-        case SC_T_LEQ:              return T_LEQ;
-        case SC_T_LNE:              return T_LNE;
-        case SC_T_LLT:              return T_LLT;
-        case SC_T_LGT:              return T_LGT;
-        case SC_T_LLE:              return T_LLE;
-        case SC_T_LGE:              return T_LGE;
-        case SC_T_IDENT_OP:         return T_IDENT_OP;
-        case SC_T_DIFFER:           return T_DIFFER;
-        case SC_T_2PLUS:            return T_2PLUS;
-        case SC_T_2MINUS:           return T_2MINUS;
-        case SC_T_2SLASH:           return T_2SLASH;
-        case SC_T_2STAR:            return T_2STAR;
-        case SC_T_2CARET:           return T_2CARET;
-        case SC_T_2DOLLAR:          return T_2DOLLAR;
-        case SC_T_2DOT:             return T_2DOT;
-        case SC_T_2AMP:             return T_2AMP;
-        case SC_T_2AT:              return T_2AT;
-        case SC_T_2POUND:           return T_2POUND;
-        case SC_T_2PERCENT:         return T_2PERCENT;
-        case SC_T_2TILDE:           return T_2TILDE;
-        case SC_T_PLUS_ASSIGN:      return T_PLUS_ASSIGN;
-        case SC_T_MINUS_ASSIGN:     return T_MINUS_ASSIGN;
-        case SC_T_STAR_ASSIGN:      return T_STAR_ASSIGN;
-        case SC_T_SLASH_ASSIGN:     return T_SLASH_ASSIGN;
-        case SC_T_CARET_ASSIGN:     return T_CARET_ASSIGN;
-        case SC_T_1PLUS:            return T_1PLUS;
-        case SC_T_1MINUS:           return T_1MINUS;
-        case SC_T_1STAR:            return T_1STAR;
-        case SC_T_1SLASH:           return T_1SLASH;
-        case SC_T_1PERCENT:         return T_1PERCENT;
-        case SC_T_1AT:              return T_1AT;
-        case SC_T_1TILDE:           return T_1TILDE;
-        case SC_T_1DOLLAR:          return T_1DOLLAR;
-        case SC_T_1DOT:             return T_1DOT;
-        case SC_T_1POUND:           return T_1POUND;
-        case SC_T_1PIPE:            return T_1PIPE;
-        case SC_T_1EQUAL:           return T_1EQUAL;
-        case SC_T_1QUEST:           return T_1QUEST;
-        case SC_T_1AMP:             return T_1AMP;
-        case SC_T_1BANG:            return T_1BANG;
-        case SC_T_LPAREN:           return T_LPAREN;
-        case SC_T_RPAREN:           return T_RPAREN;
-        case SC_T_LBRACK:           return T_LBRACK;
-        case SC_T_RBRACK:           return T_RBRACK;
-        case SC_T_LBRACE:           return T_LBRACE;
-        case SC_T_RBRACE:           return T_RBRACE;
-        case SC_T_COMMA:            return T_COMMA;
-        case SC_T_SEMICOLON:        return T_SEMICOLON;
-        case SC_T_COLON:            return T_COLON;
-        case SC_T_IF:            return T_IF;
-        case SC_T_ELSE:          return T_ELSE;
-        case SC_T_WHILE:         return T_WHILE;
-        case SC_T_DO:            return T_DO;
-        case SC_T_FOR:           return T_FOR;
-        case SC_T_SWITCH:        return T_SWITCH;
-        case SC_T_CASE:          return T_CASE;
-        case SC_T_DEFAULT:       return T_DEFAULT;
-        case SC_T_BREAK:         return T_BREAK;
-        case SC_T_CONTINUE:      return T_CONTINUE;
-        case SC_T_GOTO:          return T_GOTO;
-        case SC_T_DEFINE:      return T_DEFINE;
-        case SC_T_RETURN:        return T_RETURN;
-        case SC_T_FRETURN:       return T_FRETURN;
-        case SC_T_NRETURN:       return T_NRETURN;
-        case SC_T_STRUCT:        return T_STRUCT;
-        case SC_T_UNKNOWN:          return T_UNKNOWN;
-        default:                    return T_UNKNOWN;
-    }
-}
 
 /* ---- Statement assembly ----
  *

@@ -58,6 +58,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "snocone_lex.h"
+#include "snocone_parse.tab.h"          /* T_* token enum (single source of truth) */
 /*--------------------------------------------------------------------------------------------------------------------*/
 static inline int is_alpha(int c)        { return ((c | 32) >= 'a' && (c | 32) <= 'z') || c == '_'; }
 static inline int is_digit(int c)        { return c >= '0' && c <= '9'; }
@@ -106,8 +107,11 @@ static inline int is_rws_at(const char *p, int n) {
 /* sc_kind_is_value -- table-driven; no branches at call site.      */
 /* Filled at first call (idempotent).                               */
 /* ---------------------------------------------------------------- */
-static signed char sc_value_table[256];
-static signed char sc_payload_table[256];
+/* Tables are indexed by token-kind value.  Bison's enum sc_tokentype
+ * (snocone_parse.tab.h) places user tokens starting at 258 and counts
+ * up to roughly 340 — so 512 is comfortably above the range. */
+static signed char sc_value_table[512];
+static signed char sc_payload_table[512];
 static int         sc_value_table_built = 0;
 static void sc_value_table_build(void) {
     /* sc_value_table — "is this a value-ender" for the lexer's own
@@ -648,7 +652,7 @@ E_STR:
 E_UNKNOWN:       EMIT_V(T_UNKNOWN);
 }
 /*--------------------------------------------------------------------------------------------------------------------*/
-static const char *sc_name_table[256];
+static const char *sc_name_table[512];
 static int         sc_name_table_built = 0;
 static void sc_name_table_build(void) {
     sc_name_table[T_INT]              = "T_INT";
@@ -739,7 +743,7 @@ static void sc_name_table_build(void) {
 }
 const char *sc2_kind_name(int kind) {
     if (!sc_name_table_built) sc_name_table_build();
-    if (kind < 0 || kind >= 256) return "T_???";
+    if (kind < 0 || kind >= 512) return "T_???";
     const char *s = sc_name_table[kind];
     return s ? s : "T_???";
 }
