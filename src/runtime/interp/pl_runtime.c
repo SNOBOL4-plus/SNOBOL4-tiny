@@ -678,7 +678,7 @@ static Term *pl_copy_term(Term *t) {
 
 #define PL_SYNTH_TENV_MAX 64
 
-static EXPR_t *pl_synth_new(EKind k) {
+static EXPR_t *pl_synth_new(EXPR_e k) {
     EXPR_t *e = (EXPR_t *)calloc(1, sizeof(EXPR_t));
     e->kind = k;
     return e;
@@ -754,7 +754,7 @@ static EXPR_t *pl_term_to_synth_expr(Term *t, Term **tenv, int *pn) {
              * top-level goals — this is fine because is/2 calls
              * pl_unified_eval_arith_term which knows these kinds. */
             if (arity == 2) {
-                EKind ak = E_KIND_COUNT;
+                EXPR_e ak = E_KIND_COUNT;
                 if      (!strcmp(fn,"+"))   ak = E_ADD;
                 else if (!strcmp(fn,"-"))   ak = E_SUB;
                 else if (!strcmp(fn,"*"))   ak = E_MUL;

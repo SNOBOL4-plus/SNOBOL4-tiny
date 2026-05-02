@@ -3,7 +3,7 @@
  *
  * THE single source of truth for all IR node kinds across all frontends
  * and all backends in scrip-cc. Every frontend lowers to EXPR_t nodes
- * using this EKind enum. Every backend consumes it.
+ * using this EXPR_e enum. Every backend consumes it.
  *
  * 59 canonical node kinds:
  *   5  Literals
@@ -38,10 +38,10 @@ extern "C" {
 #endif
 
 /* =========================================================================
- * EKind — unified expression node kind enum
+ * EXPR_e — unified expression node kind enum
  * ========================================================================= */
 
-typedef enum EKind {
+typedef enum EXPR_e {
 
     /* --- Literals -------------------------------------------------------- */
 
@@ -220,7 +220,7 @@ typedef enum EKind {
     E_KIND_COUNT    /* Total number of kinds — used for array sizing / asserts.
                      * NOT a valid node kind. Must remain last. */
 
-} EKind;
+} EXPR_e;
 
 /* =========================================================================
  * EXPR_t — unified n-ary expression node
@@ -249,7 +249,7 @@ typedef enum EKind {
 typedef struct EXPR_t EXPR_t;
 
 struct EXPR_t {
-    EKind    kind;          /* node kind from EKind enum above              */
+    EXPR_e    kind;          /* node kind from EXPR_e enum above              */
     char    *sval;          /* string payload (see comment above)           */
     long long ival;         /* integer payload                              */
     double   dval;          /* float payload (named dval throughout codebase) */
@@ -260,12 +260,12 @@ struct EXPR_t {
 };
 
 /* =========================================================================
- * EKind name table — for ir_print.c and debugging
+ * EXPR_e name table — for ir_print.c and debugging
  * ========================================================================= */
 
 #ifdef IR_DEFINE_NAMES
 
-static const char * const ekind_name[E_KIND_COUNT] = {
+static const char * const expr_e_name[E_KIND_COUNT] = {
     [E_QLIT]         = "E_QLIT",
     [E_ILIT]         = "E_ILIT",
     [E_FLIT]         = "E_FLIT",

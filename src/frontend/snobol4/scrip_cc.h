@@ -20,11 +20,11 @@
 
 /* ---- expression node kinds — from shared IR ---- */
 /*
- * M-G1-IR-HEADER-WIRE: EKind is now defined in ir/ir.h (the single source
+ * M-G1-IR-HEADER-WIRE: EXPR_e is now defined in ir/ir.h (the single source
  * of truth for all canonical node kinds).
  *
  * M-G3-ALIAS-CLEANUP: IR_COMPAT_ALIASES section removed — dead code,
- * never enabled. All code uses canonical EKind names directly:
+ * never enabled. All code uses canonical EXPR_e names directly:
  * E_VAR, E_ALT, E_MNS, E_POW, E_CAPT_COND_ASGN, E_CAPT_IMMED_ASGN,
  * E_CAPT_CURSOR, E_NUL, E_ASSIGN, E_SCAN, E_ITERATE, E_ALTERNATE, E_IDX.
  *
@@ -133,7 +133,7 @@ typedef struct {
  */
 
 /* ---- allocators ---- */
-static inline EXPR_t *expr_new(EKind k) {
+static inline EXPR_t *expr_new(EXPR_e k) {
     EXPR_t *e = calloc(1, sizeof *e); e->kind = k; return e;
 }
 static inline SnoGoto *sgoto_new(void) { return calloc(1, sizeof(SnoGoto)); }
@@ -147,14 +147,14 @@ static inline void expr_add_child(EXPR_t *e, EXPR_t *child) {
 }
 
 /* Convenience: build a unary node (one child). */
-static inline EXPR_t *expr_unary(EKind k, EXPR_t *operand) {
+static inline EXPR_t *expr_unary(EXPR_e k, EXPR_t *operand) {
     EXPR_t *e = expr_new(k);
     expr_add_child(e, operand);
     return e;
 }
 
 /* Convenience: build a binary node (two children). */
-static inline EXPR_t *expr_binary(EKind k, EXPR_t *left, EXPR_t *right) {
+static inline EXPR_t *expr_binary(EXPR_e k, EXPR_t *left, EXPR_t *right) {
     EXPR_t *e = expr_new(k);
     expr_add_child(e, left);
     expr_add_child(e, right);

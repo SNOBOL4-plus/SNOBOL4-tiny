@@ -202,9 +202,9 @@ static void     fixup_val(EXPR_t*);
 static int      is_pat(EXPR_t*);
 static EXPR_t  *parse_expr(Lex*);
 /* pat_prim_kind: map pattern primitive name → typed IR kind; E_VAR = not a prim */
-static EKind pat_prim_kind(const char *s) {
+static EXPR_e pat_prim_kind(const char *s) {
     if (!s) return E_VAR;
-    static const struct { const char *n; EKind k; } m[] = {
+    static const struct { const char *n; EXPR_e k; } m[] = {
         {"ANY",E_ANY},{"NOTANY",E_NOTANY},{"SPAN",E_SPAN},{"BREAK",E_BREAK},{"BREAKX",E_BREAKX},
         {"LEN",E_LEN},{"POS",E_POS},{"RPOS",E_RPOS},{"TAB",E_TAB},{"RTAB",E_RTAB},
         {"ARB",E_ARB},{"ARBNO",E_ARBNO},{"REM",E_REM},{"FAIL",E_FAIL},{"SUCCEED",E_SUCCEED},
@@ -1836,7 +1836,7 @@ yyreduce:
 
   case 92: /* expr17: T_FUNCTION T_LPAREN exprlist T_RPAREN  */
 #line 197 "snobol4.y"
-                                                                                               { EKind _k=pat_prim_kind((yyvsp[-3].tok).sval);EXPR_t*e=expr_new(_k==E_VAR?E_FNC:_k);if(_k==E_VAR)e->sval=(char*)(yyvsp[-3].tok).sval;for(int i=0;i<(yyvsp[-1].expr)->nchildren;i++)expr_add_child(e,(yyvsp[-1].expr)->children[i]);free((yyvsp[-1].expr)->children);free((yyvsp[-1].expr));(yyval.expr)=e; }
+                                                                                               { EXPR_e _k=pat_prim_kind((yyvsp[-3].tok).sval);EXPR_t*e=expr_new(_k==E_VAR?E_FNC:_k);if(_k==E_VAR)e->sval=(char*)(yyvsp[-3].tok).sval;for(int i=0;i<(yyvsp[-1].expr)->nchildren;i++)expr_add_child(e,(yyvsp[-1].expr)->children[i]);free((yyvsp[-1].expr)->children);free((yyvsp[-1].expr));(yyval.expr)=e; }
 #line 1841 "snobol4.tab.c"
     break;
 

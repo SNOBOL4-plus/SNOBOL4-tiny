@@ -4475,7 +4475,7 @@ DESCR_t interp_eval(EXPR_t *e)
                 EXPR_t *body    = e->children[i+2];
                 i += 3;
                 if (cmpnode->kind == E_NUL) return interp_eval(body);
-                EKind cmp = (EKind)(cmpnode->ival);
+                EXPR_e cmp = (EXPR_e)(cmpnode->ival);
                 DESCR_t wval = interp_eval(val);
                 int match = 0;
                 if (cmp == E_LEQ) {
@@ -5823,7 +5823,7 @@ void execute_program(CODE_t *prog)
 
 /* _eval_str_impl_fn — EVAL(string) hook for pattern-context strings.
  * Uses bison parse_expr_pat_from_str (snobol4.tab.c) which produces
- * EXPR_t with correct EKind values directly — no CMPILE/CMPND_t bridge. */
+ * EXPR_t with correct EXPR_e values directly — no CMPILE/CMPND_t bridge. */
 DESCR_t _eval_str_impl_fn(const char *s) {
     EXPR_t *tree = parse_expr_pat_from_str(s);
     if (!tree) return FAILDESCR;

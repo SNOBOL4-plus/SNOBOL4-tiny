@@ -27,8 +27,8 @@ static int tests_run = 0, tests_passed = 0;
     else        printf("FAIL: %s\n", label); \
 } while(0)
 
-/* Count STMT_t nodes whose subject has a given EKind */
-static int count_kind(CODE_t *prog, EKind k) {
+/* Count STMT_t nodes whose subject has a given EXPR_e */
+static int count_kind(CODE_t *prog, EXPR_e k) {
     int n = 0;
     for (STMT_t *s = prog->head; s; s = s->next)
         if (s->subject && s->subject->kind == k) n++;

@@ -21,7 +21,7 @@
  */
 
 #define IR_DEFINE_NAMES
-#include "scrip_cc.h"   /* → ir/ir.h (EKind, EXPR_t, compat aliases, ekind_name) */
+#include "scrip_cc.h"   /* → ir/ir.h (EXPR_e, EXPR_t, compat aliases, expr_e_name) */
 
 #include <stdio.h>
 #include <string.h>
@@ -171,7 +171,7 @@ static void verify_node(const EXPR_t *e, const char *path,
         return;   /* can't check further without a valid kind */
     }
 
-    const char *kname = ekind_name[e->kind] ? ekind_name[e->kind] : "?";
+    const char *kname = expr_e_name[e->kind] ? expr_e_name[e->kind] : "?";
     const KindSpec *spec = &kind_spec[e->kind];
 
     /* 2. sval required? */
@@ -249,7 +249,7 @@ int ir_verify_program(const CODE_t *prog, FILE *err) {
 #include <stdlib.h>
 #include <assert.h>
 
-static EXPR_t *mk(EKind k) {
+static EXPR_t *mk(EXPR_e k) {
     EXPR_t *e = calloc(1, sizeof *e);
     e->kind = k;
     return e;

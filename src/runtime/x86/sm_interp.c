@@ -21,7 +21,7 @@
 #include "snobol4.h"   /* DESCR_t, PATND_t, DT_* */
 #include "sil_macros.h" /* IS_NAMEPTR, NAME_DEREF_PTR, IS_NAMEVAL, etc. */
 
-/* EXPR_t / EKind for SM_PAT_CAPTURE_FN synthetic E_FNC node */
+/* EXPR_t / EXPR_e for SM_PAT_CAPTURE_FN synthetic E_FNC node */
 #include "../../ir/ir.h"
 #include "../../frontend/snobol4/scrip_cc.h"
 

@@ -2,7 +2,7 @@
  * prolog_lower.c — Prolog ClauseAST -> scrip-cc IR lowering
  *
  * Takes a PlProgram (list of PlClause) and produces a CODE_t* whose
- * STMT_t nodes carry the Prolog IR node kinds added to EKind in scrip-cc.h.
+ * STMT_t nodes carry the Prolog IR node kinds added to EXPR_e in scrip-cc.h.
  *
  * Pipeline:
  *   1. Group clauses by functor/arity key -> one E_CHOICE per predicate
@@ -172,7 +172,7 @@ static EXPR_t *lower_term(Term *t) {
             }
 
             /* Arithmetic operators within is/2 rhs */
-            struct { const char *name; EKind kind; } arith[] = {
+            struct { const char *name; EXPR_e kind; } arith[] = {
                 { "+", E_ADD }, { "-", E_SUB }, { "*", E_MUL },
                 { "/", E_DIV }, { "//", E_DIV }, { NULL, 0 }
             };

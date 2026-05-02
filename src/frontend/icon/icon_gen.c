@@ -12,7 +12,7 @@
  *============================================================================================================================*/
 
 #include "icon_gen.h"
-#include "../../ir/ir.h"            /* EXPR_t, EKind, E_TO, E_TO_BY, E_ITERATE, E_SUSPEND, E_FNC */
+#include "../../ir/ir.h"            /* EXPR_t, EXPR_e, E_TO, E_TO_BY, E_ITERATE, E_SUSPEND, E_FNC */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

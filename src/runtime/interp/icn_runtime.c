@@ -1207,7 +1207,7 @@ bb_node_t icn_eval_gen(EXPR_t *e) {
      * Detects when either child is a generator kind.  Non-generator children
      * are wrapped as oneshot boxes by the recursive icn_eval_gen call.      */
     {
-        static const struct { EKind ek; IcnBinopKind bk; int is_rel; } binop_map[] = {
+        static const struct { EXPR_e ek; IcnBinopKind bk; int is_rel; } binop_map[] = {
             { E_ADD, ICN_BINOP_ADD, 0 }, { E_SUB, ICN_BINOP_SUB, 0 },
             { E_MUL, ICN_BINOP_MUL, 0 }, { E_DIV, ICN_BINOP_DIV, 0 },
             { E_MOD, ICN_BINOP_MOD, 0 },

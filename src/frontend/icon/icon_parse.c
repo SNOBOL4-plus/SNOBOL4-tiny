@@ -54,18 +54,18 @@
  * Internal helpers — mirrors icon_lower.c helpers, now inline in parser
  * ======================================================================= */
 
-static EXPR_t *e_leaf_sval(EKind k, const char *s, int len) {
+static EXPR_t *e_leaf_sval(EXPR_e k, const char *s, int len) {
     EXPR_t *e = expr_new(k);
     if (len >= 0) e->sval = intern_n(s, len);
     else          e->sval = intern(s);
     return e;
 }
 
-static EXPR_t *e_unary(EKind k, EXPR_t *child) {
+static EXPR_t *e_unary(EXPR_e k, EXPR_t *child) {
     return expr_unary(k, child);
 }
 
-static EXPR_t *e_binary(EKind k, EXPR_t *left, EXPR_t *right) {
+static EXPR_t *e_binary(EXPR_e k, EXPR_t *left, EXPR_t *right) {
     return expr_binary(k, left, right);
 }
 
@@ -347,7 +347,7 @@ static EXPR_t *parse_mul(IcnParser *p) {
     EXPR_t *n = parse_pow(p);
     if (!n) return NULL;
     for (;;) {
-        EKind k;
+        EXPR_e k;
         if      (check(p, TK_STAR))  k = E_MUL;
         else if (check(p, TK_SLASH)) k = E_DIV;
         else if (check(p, TK_MOD))   k = E_MOD;
@@ -362,7 +362,7 @@ static EXPR_t *parse_add(IcnParser *p) {
     EXPR_t *n = parse_mul(p);
     if (!n) return NULL;
     for (;;) {
-        EKind k;
+        EXPR_e k;
         if      (check(p, TK_PLUS))  k = E_ADD;
         else if (check(p, TK_MINUS)) k = E_SUB;
         else break;
@@ -376,7 +376,7 @@ static EXPR_t *parse_cset(IcnParser *p) {
     EXPR_t *n = parse_add(p);
     if (!n) return NULL;
     for (;;) {
-        EKind k;
+        EXPR_e k;
         if      (check(p, TK_PLUSPLUS))   k = E_CSET_UNION;
         else if (check(p, TK_MINUSMINUS)) k = E_CSET_DIFF;
         else if (check(p, TK_STARSTAR))   k = E_CSET_INTER;
@@ -397,7 +397,7 @@ static EXPR_t *parse_concat(IcnParser *p) {
     EXPR_t *n = parse_cset(p);
     if (!n) return NULL;
     for (;;) {
-        EKind k;
+        EXPR_e k;
         if      (check(p, TK_LCONCAT)) k = E_LCONCAT;
         else if (check(p, TK_CONCAT))  k = E_CAT;
         else break;
@@ -414,7 +414,7 @@ static int is_relop(IcnTkKind k) {
            k==TK_SEQ || k==TK_SNE;
 }
 
-static EKind relop_ekind(IcnTkKind k) {
+static EXPR_e relop_ekind(IcnTkKind k) {
     switch (k) {
         case TK_LT:  return E_LT;   case TK_LE:  return E_LE;
         case TK_GT:  return E_GT;   case TK_GE:  return E_GE;
@@ -430,7 +430,7 @@ static EXPR_t *parse_rel(IcnParser *p) {
     EXPR_t *n = parse_concat(p);
     if (!n) return NULL;
     while (is_relop(p->cur.kind)) {
-        EKind k = relop_ekind(p->cur.kind);
+        EXPR_e k = relop_ekind(p->cur.kind);
         advance(p);
         n = e_binary(k, n, parse_concat(p));
     }

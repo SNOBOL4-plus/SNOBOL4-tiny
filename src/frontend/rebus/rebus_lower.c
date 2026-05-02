@@ -5,11 +5,11 @@
  * Authored: 2026-03-30, G-9 s19, Claude Sonnet 4.6
  *
  * Walks RProgram* (from rebus_parse()) and produces CODE_t*
- * (STMT_t list with EXPR_t nodes using EKind values).
+ * (STMT_t list with EXPR_t nodes using EXPR_e values).
  *
  * Architecture per archive/doc/IR_LOWER_REBUS.md:
- *   - P-component (pattern) → SNOBOL4 EKind pool
- *   - L-component (control) → Icon EKind pool / label+goto STMT_t chains
+ *   - P-component (pattern) → SNOBOL4 EXPR_e pool
+ *   - L-component (control) → Icon EXPR_e pool / label+goto STMT_t chains
  *
  * Control-flow lowering uses the same label/goto STMT_t pattern as
  * snocone_control.c.  Each structured construct becomes labeled SNOBOL4-style
@@ -187,7 +187,7 @@ static EXPR_t *lower_expr(RebLow *L, RExpr *e) {
     case RE_AUG:
         /* Synthesize: lhs := lhs augop rhs */
         {
-            EKind op;
+            EXPR_e op;
             switch (e->augop) {
             case RE_ADD: op = E_ADD; break;
             case RE_SUB: op = E_SUB; break;
@@ -244,7 +244,7 @@ static void lower_stmt(RebLow *L, RStmt *s) {
                 /* x +:= e  →  subject=x, has_eq=1, replacement=x+e */
                 EXPR_t *lhs = lower_expr(L, ex->left);
                 EXPR_t *rhs = lower_expr(L, ex->right);
-                EKind   op  = (ex->kind == RE_ADDASSIGN) ? E_ADD :
+                EXPR_e   op  = (ex->kind == RE_ADDASSIGN) ? E_ADD :
                               (ex->kind == RE_SUBASSIGN) ? E_SUB : E_CAT;
                 /* Need a fresh copy of lhs for the rhs operand */
                 EXPR_t *lhs2 = lower_expr(L, ex->left);

@@ -20,10 +20,10 @@
 
 /*
  * Include scrip-cc.h — it defines EXPR_T_DEFINED then includes ir/ir.h,
- * giving us EKind and EXPR_t.  IR_DEFINE_NAMES pulls in ekind_name[].
+ * giving us EXPR_e and EXPR_t.  IR_DEFINE_NAMES pulls in expr_e_name[].
  */
 #define IR_DEFINE_NAMES
-#include "scrip_cc.h"   /* → ir/ir.h (EKind, EXPR_t, ekind_name) */
+#include "scrip_cc.h"   /* → ir/ir.h (EXPR_e, EXPR_t, expr_e_name) */
 
 /* -------------------------------------------------------------------------
  * ir_print.h forward declarations (inlined here — no separate .h needed
@@ -69,7 +69,7 @@ static void print_node(const EXPR_t *e, FILE *f, int depth) {
 
     /* Node kind name */
     const char *kname = (e->kind >= 0 && e->kind < E_KIND_COUNT)
-                        ? ekind_name[e->kind]
+                        ? expr_e_name[e->kind]
                         : "E_???";
 
     /* Leaf nodes — no children, just payload */
@@ -172,7 +172,7 @@ void ir_print_node_nl(const EXPR_t *e, FILE *f) {
 /* Minimal EXPR_t for test — mirrors scrip-cc.h fields we use */
 #include <stdlib.h>
 
-static EXPR_t *mk(EKind k) {
+static EXPR_t *mk(EXPR_e k) {
     EXPR_t *e = calloc(1, sizeof *e);
     e->kind = k;
     return e;

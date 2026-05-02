@@ -116,7 +116,7 @@ static const char *strip_sigil(const char *s) {
     if (s && (s[0]=='$'||s[0]=='@'||s[0]=='%')) return s+1;
     return s;
 }
-static EXPR_t *leaf_sval(EKind k, const char *s) {
+static EXPR_t *leaf_sval(EXPR_e k, const char *s) {
     EXPR_t *e = expr_new(k); e->sval = intern(s); return e;
 }
 static EXPR_t *var_node(const char *name) {
@@ -1934,13 +1934,13 @@ yyreduce:
   case 50: /* given_stmt: KW_GIVEN expr '{' when_list '}'  */
 #line 387 "raku.y"
         { /* RK-18d: E_CASE[ topic, cmpnode0, val0, body0, cmpnode1, val1, body1, ... ]
-           * cmp kind stored in separate E_ILIT node (ival=EKind) to avoid corrupting val->ival. */
+           * cmp kind stored in separate E_ILIT node (ival=EXPR_e) to avoid corrupting val->ival. */
           EXPR_t *ec=expr_new(E_CASE);
           expr_add_child(ec,(yyvsp[-3].node));
           ExprList *whens=(yyvsp[-1].list);
           for(int i=0;i<whens->count;i++){
               EXPR_t *pair=whens->items[i];
-              EKind cmp=(EKind)(pair->ival);
+              EXPR_e cmp=(EXPR_e)(pair->ival);
               EXPR_t *val=pair->children[0], *body=pair->children[1];
               EXPR_t *cn=expr_new(E_ILIT); cn->ival=(long)cmp;
               expr_add_child(ec,cn); expr_add_child(ec,val); expr_add_child(ec,body);
@@ -1958,7 +1958,7 @@ yyreduce:
           ExprList *whens=(yyvsp[-3].list);
           for(int i=0;i<whens->count;i++){
               EXPR_t *pair=whens->items[i];
-              EKind cmp=(EKind)(pair->ival);
+              EXPR_e cmp=(EXPR_e)(pair->ival);
               EXPR_t *val=pair->children[0], *body=pair->children[1];
               EXPR_t *cn=expr_new(E_ILIT); cn->ival=(long)cmp;
               expr_add_child(ec,cn); expr_add_child(ec,val); expr_add_child(ec,body);
@@ -1977,7 +1977,7 @@ yyreduce:
 
   case 53: /* when_list: when_list KW_WHEN expr block  */
 #line 421 "raku.y"
-        { EKind cmp=((yyvsp[-1].node)->kind==E_QLIT)?E_LEQ:E_EQ;
+        { EXPR_e cmp=((yyvsp[-1].node)->kind==E_QLIT)?E_LEQ:E_EQ;
           EXPR_t *pair=expr_new(E_SEQ_EXPR);
           pair->ival=(long)cmp;
           expr_add_child(pair,(yyvsp[-1].node)); expr_add_child(pair,(yyvsp[0].node));
