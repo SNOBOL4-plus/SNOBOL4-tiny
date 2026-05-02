@@ -3565,6 +3565,33 @@ DESCR_t interp_eval(EXPR_t *e)
     case E_FNC: {
         if (!e->sval || !*e->sval) return FAILDESCR;
 
+        /* SB-6.X: ARBNO(P)/FENCE(P) take a *pattern* arg.  When evaluated in
+         * value context (e.g. RHS of  Pat = ARBNO(*Cmd) ), the default
+         * arg-eval path below uses interp_eval (value context) on each child,
+         * which turns E_DEFER(E_VAR) into DT_E (frozen value-form expr).
+         * APPLY_fn(ARBNO, DT_E, ...) then materialises the DT_E by thawing
+         * Cmd's *current* value as a literal — losing deferred-ref semantics
+         * (XDSAR), so subsequent re-binds of Cmd are not seen and the
+         * pattern even fails to match its own initial value.
+         *
+         * Mirror the pat-context fix at interp_eval_pat E_FNC (above): when
+         * the function name is ARBNO or FENCE, evaluate the first child in
+         * pattern context so E_DEFER(E_VAR) becomes a proper XDSAR ref node,
+         * then call pat_arbno/pat_fence_p directly.  All other E_FNC names
+         * fall through to the value-context arg eval as before. */
+        if (e->nchildren > 0) {
+            if (strcmp(e->sval, "ARBNO") == 0) {
+                DESCR_t _inner = interp_eval_pat(e->children[0]);
+                if (IS_FAIL_fn(_inner)) return FAILDESCR;
+                return pat_arbno(_inner);
+            }
+            if (strcmp(e->sval, "FENCE") == 0) {
+                DESCR_t _inner = interp_eval_pat(e->children[0]);
+                if (IS_FAIL_fn(_inner)) return FAILDESCR;
+                return pat_fence_p(_inner);
+            }
+        }
+
         /* DEFINE('spec'[,'entry']) — register user function.
          * SIL DEFIFN returns the function name string on success (DIFFER-able).
          * Extract name = everything before '(' or ',' in spec. */
