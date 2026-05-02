@@ -948,6 +948,73 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
                 if(!ok) trail_unwind(trail,mark);
                 return ok;
             }
+            /* call/N — PR-19c: dispatch goal-as-variable or reconstruct compound.
+             *
+             * call(G)          — G is a callable Term; dispatch via bridge.
+             * call(G, A1, ...) — G is an atom or compound; build G(G_args..., A1...)
+             *                    and dispatch the reconstructed compound.
+             *
+             * When call's first child is E_VAR (goal_e->kind == E_VAR after
+             * resolving child[0]), the deref'd Term becomes the goal or its
+             * base.  Extra args (call/2, call/3, ...) are resolved and appended.
+             *
+             * For call/1 with no extra args: straightforward bridge dispatch.
+             * For call/N (N>1): reconstruct a fresh TT_COMPOUND Term whose
+             * functor = G's functor and whose args = G's existing args ++ extras.
+             * Then dispatch via pl_invoke_var_goal on the reconstructed Term.
+             */
+            if (strcmp(fn,"call")==0 && arity>=1) {
+                EXPR_t *g_expr = goal->children[0];
+                /* Resolve the goal arg to a Term (handles E_VAR and direct E_FNC) */
+                Term *g_term = pl_unified_term_from_expr(g_expr, env);
+                g_term = term_deref(g_term);
+                if (!g_term) return 0;
+
+                int n_extra = arity - 1; /* number of extra args (call/2 → 1, etc.) */
+
+                if (n_extra == 0) {
+                    /* call(G) — simple dispatch via bridge */
+                    return pl_invoke_var_goal(g_term, env);
+                }
+
+                /* call(G, A1, ...) — build reconstructed compound */
+                /* Extract base functor name and existing args from g_term */
+                const char *cfn = NULL;
+                int carity_base = 0;
+                Term **cargs_base = NULL;
+                if (g_term->tag == TT_ATOM) {
+                    cfn = prolog_atom_name(g_term->atom_id);
+                    carity_base = 0; cargs_base = NULL;
+                } else if (g_term->tag == TT_COMPOUND) {
+                    cfn = prolog_atom_name(g_term->compound.functor);
+                    carity_base = g_term->compound.arity;
+                    cargs_base = g_term->compound.args;
+                } else {
+                    return 0; /* not callable */
+                }
+                if (!cfn) return 0;
+
+                /* Resolve extra args from the call/N expression */
+                int total_arity = carity_base + n_extra;
+                Term **all_args = (Term **)malloc(total_arity * sizeof(Term *));
+                for (int i = 0; i < carity_base; i++)
+                    all_args[i] = term_deref(cargs_base[i]);
+                for (int i = 0; i < n_extra; i++)
+                    all_args[carity_base + i] =
+                        pl_unified_term_from_expr(goal->children[1 + i], env);
+
+                /* Build a fresh TT_COMPOUND for the reconstructed call */
+                int fn_id = prolog_atom_intern(cfn);
+                Term **rargs2 = (Term **)malloc(total_arity * sizeof(Term *));
+                for (int i = 0; i < total_arity; i++) rargs2[i] = all_args[i];
+                free(all_args);
+                Term *reconstructed = term_new_compound(fn_id, total_arity, rargs2);
+                free(rargs2);
+
+                /* Dispatch via bridge (reconstructed is a concrete Term, not E_VAR,
+                 * so pl_invoke_var_goal handles it correctly via the TT_COMPOUND path) */
+                return pl_invoke_var_goal(reconstructed, env);
+            }
             /* functor/3 */
             if (strcmp(fn,"functor")==0&&arity==3){
                 int mark=trail_mark(trail);

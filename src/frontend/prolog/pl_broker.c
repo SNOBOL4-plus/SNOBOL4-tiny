@@ -326,6 +326,7 @@ static int pl_is_builtin_goal(EXPR_t *g) {
         "copy_term","atomic_list_concat","concat_atom","string_to_atom",
         "nb_setval","nb_getval","aggregate_all","throw","catch",
         "phrase",
+        "call",
         NULL
     };
     for (int i = 0; builtins[i]; i++)
