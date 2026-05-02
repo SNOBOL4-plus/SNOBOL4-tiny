@@ -142,6 +142,7 @@
 #define T_1EQUAL           SC_T_1EQUAL
 #define T_1QUEST           SC_T_1QUEST
 #define T_1AMP             SC_T_1AMP
+#define T_1BANG            SC_T_1BANG
 
 /* Punctuation — keep existing names */
 #define T_LPAREN           SC_T_LPAREN
@@ -240,6 +241,7 @@
 #undef T_1EQUAL
 #undef T_1QUEST
 #undef T_1AMP
+#undef T_1BANG
 #undef T_LPAREN
 #undef T_RPAREN
 #undef T_LBRACK
@@ -663,7 +665,7 @@ static int sc_kind_to_tok(int sc_kind);
 %token T_2AMP T_2AT T_2POUND T_2PERCENT T_2TILDE
 %token T_1STAR T_1SLASH T_1PERCENT
 %token T_1AT T_1TILDE T_1DOLLAR T_1DOT T_1POUND
-%token T_1PIPE T_1EQUAL T_1QUEST T_1AMP
+%token T_1PIPE T_1EQUAL T_1QUEST T_1AMP T_1BANG
 %token T_COLON
 %token T_DO T_FOR
 %token T_SWITCH T_CASE T_DEFAULT
@@ -1398,6 +1400,8 @@ expr17      : T_CALL exprlist T_RPAREN
                                   _e->sval = strdup("|"); $$ = _e; }
             | T_1EQUAL   expr17 { EXPR_t *_e = expr_unary(E_OPSYN, $2);
                                   _e->sval = strdup("="); $$ = _e; }
+            | T_1BANG    expr17 { EXPR_t *_e = expr_unary(E_OPSYN, $2);
+                                  _e->sval = strdup("!"); $$ = _e; }
             ;
 
 %%
@@ -1497,6 +1501,7 @@ static int sc_kind_to_tok(int sc_kind) {
         case SC_T_1EQUAL:           return T_1EQUAL;
         case SC_T_1QUEST:           return T_1QUEST;
         case SC_T_1AMP:             return T_1AMP;
+        case SC_T_1BANG:            return T_1BANG;
         case SC_T_LPAREN:           return T_LPAREN;
         case SC_T_RPAREN:           return T_RPAREN;
         case SC_T_LBRACK:           return T_LBRACK;

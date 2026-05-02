@@ -53,7 +53,7 @@
 extern int sc_debug;
 #endif
 /* "%code requires" blocks.  */
-#line 273 "snocone_parse.y"
+#line 275 "snocone_parse.y"
 
 #include "scrip_cc.h"
 
@@ -211,26 +211,27 @@ typedef struct ScParseState {
     T_1EQUAL = 316,                /* T_1EQUAL  */
     T_1QUEST = 317,                /* T_1QUEST  */
     T_1AMP = 318,                  /* T_1AMP  */
-    T_COLON = 319,                 /* T_COLON  */
-    T_DO = 320,                    /* T_DO  */
-    T_FOR = 321,                   /* T_FOR  */
-    T_SWITCH = 322,                /* T_SWITCH  */
-    T_CASE = 323,                  /* T_CASE  */
-    T_DEFAULT = 324,               /* T_DEFAULT  */
-    T_BREAK = 325,                 /* T_BREAK  */
-    T_CONTINUE = 326,              /* T_CONTINUE  */
-    T_GOTO = 327,                  /* T_GOTO  */
-    T_DEFINE = 328,                /* T_DEFINE  */
-    T_RETURN = 329,                /* T_RETURN  */
-    T_FRETURN = 330,               /* T_FRETURN  */
-    T_NRETURN = 331,               /* T_NRETURN  */
-    T_STRUCT = 332,                /* T_STRUCT  */
-    T_UNKNOWN = 333,               /* T_UNKNOWN  */
-    T_LBRACE = 334,                /* T_LBRACE  */
-    T_RBRACE = 335,                /* T_RBRACE  */
-    T_IF = 336,                    /* T_IF  */
-    T_ELSE = 337,                  /* T_ELSE  */
-    T_WHILE = 338                  /* T_WHILE  */
+    T_1BANG = 319,                 /* T_1BANG  */
+    T_COLON = 320,                 /* T_COLON  */
+    T_DO = 321,                    /* T_DO  */
+    T_FOR = 322,                   /* T_FOR  */
+    T_SWITCH = 323,                /* T_SWITCH  */
+    T_CASE = 324,                  /* T_CASE  */
+    T_DEFAULT = 325,               /* T_DEFAULT  */
+    T_BREAK = 326,                 /* T_BREAK  */
+    T_CONTINUE = 327,              /* T_CONTINUE  */
+    T_GOTO = 328,                  /* T_GOTO  */
+    T_DEFINE = 329,                /* T_DEFINE  */
+    T_RETURN = 330,                /* T_RETURN  */
+    T_FRETURN = 331,               /* T_FRETURN  */
+    T_NRETURN = 332,               /* T_NRETURN  */
+    T_STRUCT = 333,                /* T_STRUCT  */
+    T_UNKNOWN = 334,               /* T_UNKNOWN  */
+    T_LBRACE = 335,                /* T_LBRACE  */
+    T_RBRACE = 336,                /* T_RBRACE  */
+    T_IF = 337,                    /* T_IF  */
+    T_ELSE = 338,                  /* T_ELSE  */
+    T_WHILE = 339                  /* T_WHILE  */
   };
   typedef enum sc_tokentype sc_token_kind_t;
 #endif
@@ -239,7 +240,7 @@ typedef struct ScParseState {
 #if ! defined SC_STYPE && ! defined SC_STYPE_IS_DECLARED
 union SC_STYPE
 {
-#line 595 "snocone_parse.y"
+#line 597 "snocone_parse.y"
 
     EXPR_t *expr;
     char   *str;
@@ -260,7 +261,7 @@ union SC_STYPE
     struct SwitchHead *switchhead;
     STMT_t           *stmt_ptr;
 
-#line 264 "snocone_parse.tab.h"
+#line 265 "snocone_parse.tab.h"
 
 };
 typedef union SC_STYPE SC_STYPE;

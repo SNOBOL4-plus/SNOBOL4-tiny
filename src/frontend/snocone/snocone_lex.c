@@ -380,7 +380,7 @@ S_OP_BANG:
     if (PEEK(1) == '=' )                                           {  ADV(2);                                              goto E_NE;        }
     if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_EXP;       }
     if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
-                                                                   {  ADV(1);                                              goto E_EXP;       }
+                                                                   {  ADV(1);                                              goto E_UN_BANG;   }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_LT:
     if (PEEK(1) == '=' )                                           {  ADV(2);                                              goto E_LE;        }
@@ -582,6 +582,8 @@ E_UN_QUEST:      EMIT(T_1QUEST);
 /*--------------------------------------------------------------------------------------------------------------------*/
 E_UN_AMP:        EMIT(T_1AMP);
 /*--------------------------------------------------------------------------------------------------------------------*/
+E_UN_BANG:       EMIT(T_1BANG);
+/*--------------------------------------------------------------------------------------------------------------------*/
 E_INT:           EMIT_V(T_INT);
 /*--------------------------------------------------------------------------------------------------------------------*/
 E_REAL:          EMIT_V(T_REAL);
@@ -704,6 +706,7 @@ static void sc_name_table_build(void) {
     sc_name_table[T_1EQUAL]         = "T_1EQUAL";
     sc_name_table[T_1QUEST] = "T_1QUEST";
     sc_name_table[T_1AMP]     = "T_1AMP";
+    sc_name_table[T_1BANG]    = "T_1BANG";
     sc_name_table[T_LPAREN]           = "T_LPAREN";
     sc_name_table[T_RPAREN]           = "T_RPAREN";
     sc_name_table[T_LBRACE]           = "T_LBRACE";
