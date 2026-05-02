@@ -1,0 +1,101 @@
+/*
+ * interp_label.c — label table and DEFINE prescan
+ *
+ * Split from interp.c by RS-3 (GOAL-REWRITE-SCRIP).
+ * AUTHORS: Lon Jones Cherryholmes · Claude Sonnet 4.6
+ * DATE:    2026-05-02
+ */
+
+#include "interp_private.h"
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * label_table — map SNOBOL4 source labels → STMT_t*
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+
+
+LabelEntry label_table[LABEL_MAX];
+int label_count = 0;
+
+void label_table_build(CODE_t *prog)
+{
+    label_count = 0;
+    for (STMT_t *s = prog->head; s; s = s->next) {
+        if (s->label && *s->label && label_count < LABEL_MAX) {
+            label_table[label_count].name = s->label;
+            label_table[label_count].stmt = s;
+            label_count++;
+        }
+    }
+}
+
+STMT_t *label_lookup(const char *name)
+{
+    if (!name || !*name) return NULL;
+    for (int i = 0; i < label_count; i++)
+        if (strcmp(label_table[i].name, name) == 0)
+            return label_table[i].stmt;
+    return NULL;
+}
+
+/* ── Extract DEFINE spec string from E_FNC("DEFINE",...) subject node ── */
+const char *define_spec_from_expr(EXPR_t *subj)
+{
+    if (!subj || subj->kind != E_FNC) return NULL;
+    if (!subj->sval || strcmp(subj->sval, "DEFINE") != 0) return NULL;  /* SN-19 */
+    if (subj->nchildren < 1 || !subj->children[0]) return NULL;
+    EXPR_t *arg = subj->children[0];
+    if (arg->kind == E_QLIT) return arg->sval;
+    if (arg->kind == E_CAT || arg->kind == E_SEQ) {
+        static char flatbuf[1024];
+        size_t pos = 0;
+        flatbuf[0] = '\0';
+        for (int i = 0; i < arg->nchildren && pos < sizeof(flatbuf)-1; i++) {
+            EXPR_t *c = arg->children[i];
+            if (c && c->kind == E_QLIT && c->sval) {
+                size_t clen = strlen(c->sval);
+                if (pos + clen >= sizeof(flatbuf)-1) break;
+                memcpy(flatbuf + pos, c->sval, clen);
+                pos += clen;
+            }
+        }
+        flatbuf[pos] = '\0';
+        return pos ? flatbuf : NULL;
+    }
+    return NULL;
+}
+
+/* ── Extract optional entry-label string from second arg of DEFINE ── */
+const char *define_entry_from_expr(EXPR_t *subj)
+{
+    if (!subj || subj->kind != E_FNC) return NULL;
+    if (!subj->sval || strcmp(subj->sval, "DEFINE") != 0) return NULL;  /* SN-19 */
+    if (subj->nchildren < 2 || !subj->children[1]) return NULL;
+    EXPR_t *arg2 = subj->children[1];
+    /* .label_name → E_NAME(E_VAR sval="label_name") or E_CAPT_COND_ASGN */
+    if (arg2->kind == E_NAME && arg2->nchildren == 1) {
+        EXPR_t *inner = arg2->children[0];
+        if (inner->kind == E_VAR && inner->sval) return inner->sval;
+    }
+    if (arg2->kind == E_CAPT_COND_ASGN && arg2->nchildren == 1) {
+        EXPR_t *inner = arg2->children[0];
+        if (inner->kind == E_VAR && inner->sval) return inner->sval;
+    }
+    if (arg2->kind == E_VAR && arg2->sval) return arg2->sval;
+    if (arg2->kind == E_QLIT && arg2->sval) return arg2->sval;
+    return NULL;
+}
+
+/* ── Pre-scan program and register all DEFINE'd functions ── */
+void prescan_defines(CODE_t *prog)
+{
+    for (STMT_t *s = prog->head; s; s = s->next) {
+        if (!s->subject) continue;
+        const char *spec = define_spec_from_expr(s->subject);
+        if (spec && *spec) {
+            const char *entry = define_entry_from_expr(s->subject);
+            if (entry) DEFINE_fn_entry(spec, NULL, entry);
+            else       DEFINE_fn(spec, NULL);
+        }
+    }
+}
