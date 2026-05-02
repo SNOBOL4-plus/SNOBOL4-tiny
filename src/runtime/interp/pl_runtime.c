@@ -914,18 +914,37 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
                 for(int i=1;i<goal->nchildren;i++) if(!interp_exec_pl_builtin(goal->children[i],env)) return 0;
                 return 1;
             }
-            /* \+/not */
+            /* \+/not — PR-19b: var-goal arg dispatches via Term→EXPR bridge.
+             * Without this, child[0]->kind == E_VAR fell through to the
+             * `default: return 1;` arm of interp_exec_pl_builtin (silent
+             * success), so `\+ Var` always returned 0 (negation of fake
+             * success) and the inner goal never ran. Same defect as the
+             * catch/3 fix in PR-19a, applied here for \+/not. */
             if ((strcmp(fn,"\\+")==0||strcmp(fn,"not")==0)&&arity==1){
                 int mark=trail_mark(trail);
-                int ok=interp_exec_pl_builtin(goal->children[0],env);
+                int ok;
+                if (goal->children[0] && goal->children[0]->kind == E_VAR) {
+                    Term *gt = pl_unified_term_from_expr(goal->children[0], env);
+                    ok = pl_invoke_var_goal(gt, env);
+                } else {
+                    ok = interp_exec_pl_builtin(goal->children[0],env);
+                }
                 trail_unwind(trail,mark);return !ok;
             }
             /* once/1 — succeed/fail like the goal; tree-walker has no
              * choice points to discard, so semantically equivalent to
-             * a plain call here. Trail rolled back on failure. */
+             * a plain call here. Trail rolled back on failure.
+             * PR-19b: var-goal arg routed through Term→EXPR bridge —
+             * same silent-success defect as catch/3 / \+/not. */
             if (strcmp(fn,"once")==0&&arity==1){
                 int mark=trail_mark(trail);
-                int ok=interp_exec_pl_builtin(goal->children[0],env);
+                int ok;
+                if (goal->children[0] && goal->children[0]->kind == E_VAR) {
+                    Term *gt = pl_unified_term_from_expr(goal->children[0], env);
+                    ok = pl_invoke_var_goal(gt, env);
+                } else {
+                    ok = interp_exec_pl_builtin(goal->children[0],env);
+                }
                 if(!ok) trail_unwind(trail,mark);
                 return ok;
             }
