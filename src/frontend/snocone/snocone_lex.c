@@ -403,7 +403,9 @@ S_OP_MINUS:
 S_OP_STAR:
     if (PEEK(1) == '*' && is_rws_at(p, 2))                         {  ADV(2);                                              goto E_EXP;       }
     if (PEEK(1) == '=' )                                           {  ADV(2);                                              goto E_STAR_ASSIGN;  }
-    if (last_value)                                                {  ADV(1);                                              goto E_MUL;       }
+    if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_MUL;       }
+    if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
+    if (last_value && !is_rws_at(p, 1))                            {  ADV(1);                                              goto E_MUL;       }
     if (PEEK(1) == '*' )                                           {  ADV(2);                                              goto E_EXP;       }
                                                                    {  ADV(1);                                              goto E_UN_STAR;   }
 /*--------------------------------------------------------------------------------------------------------------------*/
