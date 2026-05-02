@@ -317,7 +317,7 @@ static int pl_is_builtin_goal(EXPR_t *g) {
         "var","nonvar","atom","integer","float","compound","atomic","callable","is_list",
         "functor","arg","=..","\\+","not","once","findall",
         "assert","assertz","asserta","retract","retractall","abolish",
-        "atom_length","atom_concat","atom_chars","atom_codes",
+        "atom_length","atom_concat","atom_chars","atom_codes","atom_number","atom_to_term","sub_atom",
         "sort","msort","compare","@<","@>","@=<","@>=",
         "succ","plus","format",
         "numbervars","char_type","term_singletons",
