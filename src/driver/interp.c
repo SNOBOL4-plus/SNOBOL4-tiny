@@ -3151,6 +3151,22 @@ DESCR_t interp_eval(EXPR_t *e)
             }
             return NULVCL;
         }
+        case E_SEQ: {
+            /* IC-9: Icon & conjunction inside a proc frame.  Evaluate children
+             * left-to-right; return FAILDESCR on the first failure; return last
+             * child's value on full success.  Must live in the icon-frame switch
+             * (not only in the shared switch) so that all children are evaluated
+             * with icn_frame_depth > 0, keeping E_VAR/E_ASSIGN routed to the
+             * frame-local env slots rather than to NV. */
+            if (e->nchildren == 0) return NULVCL;
+            DESCR_t _seq_last = NULVCL;
+            for (int _si = 0; _si < e->nchildren; _si++) {
+                _seq_last = interp_eval(e->children[_si]);
+                if (IS_FAIL_fn(_seq_last)) return FAILDESCR;
+                if (ICN_CUR.returning || ICN_CUR.loop_break || ICN_CUR.loop_next) break;
+            }
+            return _seq_last;
+        }
         case E_SEQ_EXPR: {
             DESCR_t v = NULVCL;
             for (int i = 0; i < e->nchildren && !ICN_CUR.returning && !ICN_CUR.loop_next; i++)

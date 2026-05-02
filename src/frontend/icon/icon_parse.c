@@ -20,12 +20,12 @@
  *              |  'local' IDENT (',' IDENT)* ';'
  *   do_clause  := 'do' expr
  *
- *   expr       := assign_expr
+ *   expr       := and_expr
+ *   and_expr   := assign_expr ('&' assign_expr)*
  *   assign_expr:= alt_expr (':=' | '<-' | ':=:' | augop) assign_expr
  *              |  alt_expr
  *   alt_expr   := to_expr ('|' to_expr)*
- *   to_expr    := and_expr ('to' and_expr ('by' and_expr)?)?
- *   and_expr   := rel_expr ('&' rel_expr)*
+ *   to_expr    := rel_expr ('to' rel_expr ('by' rel_expr)?)?
  *   rel_expr   := concat_expr (relop concat_expr)*
  *   concat_expr:= add_expr ('||' add_expr | '|||' add_expr)*
  *   add_expr   := mul_expr (('+' | '-') mul_expr)*
@@ -437,8 +437,10 @@ static EXPR_t *parse_rel(IcnParser *p) {
     return n;
 }
 
+static EXPR_t *parse_assign(IcnParser *p);  /* forward — parse_and calls parse_assign */
+
 static EXPR_t *parse_and(IcnParser *p) {
-    EXPR_t *n = parse_rel(p);
+    EXPR_t *n = parse_assign(p);
     if (!n) return NULL;
     if (!check(p, TK_AND)) return n;
     /* n-ary E_SEQ (conjunction, same Byrd-box semantics as & in Icon) */
@@ -446,20 +448,20 @@ static EXPR_t *parse_and(IcnParser *p) {
     push_child(seq, n);
     while (check(p, TK_AND)) {
         advance(p);
-        push_child(seq, parse_rel(p));
+        push_child(seq, parse_assign(p));
     }
     return seq;
 }
 
 static EXPR_t *parse_to(IcnParser *p) {
-    EXPR_t *n = parse_and(p);
+    EXPR_t *n = parse_rel(p);
     if (!n) return NULL;
     while (check(p, TK_TO)) {
         advance(p);
-        EXPR_t *limit = parse_and(p);
+        EXPR_t *limit = parse_rel(p);
         if (check(p, TK_BY)) {
             advance(p);
-            EXPR_t *step = parse_and(p);
+            EXPR_t *step = parse_rel(p);
             EXPR_t *tby = expr_new(E_TO_BY);
             push_child(tby, n); push_child(tby, limit); push_child(tby, step);
             n = tby;
@@ -625,7 +627,7 @@ static EXPR_t *parse_expr(IcnParser *p) {
         expect(p, TK_RBRACE, "case body end");
         return e;
     }
-    return parse_assign(p);
+    return parse_and(p);
 }
 
 /* =========================================================================
