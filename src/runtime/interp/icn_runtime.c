@@ -548,6 +548,10 @@ int icn_is_gen(EXPR_t *e) {
          * leave x[3] at its prior value after the every loop completes.       */
         case E_REVASSIGN:
             return 1;
+        /* E_REVSWAP is always generative — like E_REVASSIGN but exchanges two
+         * lvalues.  Byrd box atomically swaps at α, atomically reverts at β. */
+        case E_REVSWAP:
+            return 1;
         /* Arithmetic / relational binops and string concat are generative if any child is */
         case E_ADD: case E_SUB: case E_MUL: case E_DIV: case E_MOD:
         case E_LT:  case E_LE:  case E_GT:  case E_GE:
@@ -862,6 +866,113 @@ static DESCR_t icn_bb_revassign(void *zeta, int entry) {
             NV_SET_fn(z->var_name, z->saved);
         }
         z->have_saved = 0;
+    }
+    return FAILDESCR;
+}
+
+
+/*----------------------------------------------------------------------------------------------------------------------------
+ * icn_bb_revswap — E_REVSWAP  (lhs <-> rhs)  reversible value swap
+ *
+ * IC-9 (session #26): closes the `every &pos <-> x` cases in rung36_jcon_subjpos.
+ * Icon's `<->` exchanges two lvalues at α and reverts both at β; under `every`,
+ * the body sees the swapped values for one tick, then the every-loop's "ask
+ * for next" pump rolls both writes back, leaving the post-loop state equal
+ * to the pre-loop state for both sides — modulo keyword-OOB races where the
+ * body itself mutated &subject (e.g. `every &pos <-> x do &subject := "A"`).
+ *
+ * Semantics (deduced from rung36_jcon_subjpos.expected lines 57–62):
+ *   α: write rv → lhs, then lv → rhs.  Left-to-right; halt on first
+ *      keyword-OOB.  If lhs-write OOBs, no body runs, β has nothing to
+ *      revert.  If lhs-write succeeded but rhs-write OOBs, body still
+ *      doesn't run (α failed overall), but β must revert lhs.
+ *   β: revert in the same left-to-right order.  Try saved-lhs → lhs.
+ *      If that's a keyword and the saved value is now OOB (because body
+ *      mutated &subject changing the valid range), stop — do not revert
+ *      rhs either.  Otherwise revert rhs.  Return FAILDESCR (every exits).
+ *
+ * The asymmetric short-circuit on β is what produces the JCON-confirmed
+ * pattern in subjpos lines 61 / 62:
+ *    `every &pos <-> x do &subject := "A"`  → &pos=1 (body), x=3 (body)
+ *    `every x <-> &pos do &subject := "A"`  → &pos=1 (body), x=2 (reverted)
+ * In the first case lhs (&pos) revert OOBs first → neither side reverts;
+ * in the second case lhs (x) revert succeeds, rhs (&pos) revert OOBs →
+ * only lhs reverted.
+ *
+ * Currently supports E_VAR lvalues (slot or NV) and Icon keywords (&pos,
+ * &subject).  Other lvalue shapes (E_IDX, E_FIELD) on a `<->` are uncommon
+ * in Icon practice; if a future test exercises them, extend along the same
+ * pattern as icn_bb_revassign's E_IDX branch.
+ *--------------------------------------------------------------------------------------------------------------------------*/
+typedef struct {
+    EXPR_t  *lhs_expr;
+    EXPR_t  *rhs_expr;
+    DESCR_t  saved_lhs;        /* lhs's prior value (valid when lhs_written) */
+    DESCR_t  saved_rhs;        /* rhs's prior value (valid when rhs_written) */
+    int      lhs_written;      /* α successfully wrote rv → lhs              */
+    int      rhs_written;      /* α successfully wrote lv → rhs              */
+} icn_revswap_state_t;
+
+/* Helper: write `val` to the lvalue described by `lv_expr`.  Returns 1 on
+ * success, 0 on keyword-OOB-fail (no write performed in that case).        */
+static int icn_revswap_write(EXPR_t *lv_expr, DESCR_t val) {
+    if (!lv_expr || lv_expr->kind != E_VAR) return 0;
+    if (lv_expr->sval && lv_expr->sval[0] == '&') {
+        return icn_kw_assign(lv_expr->sval + 1, val);
+    }
+    int slot = (int)lv_expr->ival;
+    if (slot >= 0 && slot < ICN_CUR.env_n) { ICN_CUR.env[slot] = val; return 1; }
+    if (slot < 0 && lv_expr->sval) { NV_SET_fn(lv_expr->sval, val); return 1; }
+    return 0;
+}
+
+/* Helper: read the lvalue's current value (for snapshot).                  */
+static DESCR_t icn_revswap_read(EXPR_t *lv_expr) {
+    if (!lv_expr || lv_expr->kind != E_VAR) return FAILDESCR;
+    if (lv_expr->sval && lv_expr->sval[0] == '&') {
+        if (!strcmp(lv_expr->sval + 1, "pos")) return INTVAL(icn_scan_pos);
+        if (!strcmp(lv_expr->sval + 1, "subject")) return icn_scan_subj ? STRVAL(icn_scan_subj) : NULVCL;
+        return NULVCL;
+    }
+    int slot = (int)lv_expr->ival;
+    if (slot >= 0 && slot < ICN_CUR.env_n) return ICN_CUR.env[slot];
+    if (slot < 0 && lv_expr->sval) return NV_GET_fn(lv_expr->sval);
+    return NULVCL;
+}
+
+static DESCR_t icn_bb_revswap(void *zeta, int entry) {
+    icn_revswap_state_t *z = (icn_revswap_state_t *)zeta;
+    if (entry == α) {
+        EXPR_t *lhs = z->lhs_expr, *rhs = z->rhs_expr;
+        DESCR_t lv = interp_eval(lhs);
+        DESCR_t rv = interp_eval(rhs);
+        if (IS_FAIL_fn(lv) || IS_FAIL_fn(rv)) return FAILDESCR;
+        /* Snapshot both originals before any write so β can revert successful
+         * writes regardless of whether the second write succeeded.            */
+        z->saved_lhs = lv;
+        z->saved_rhs = rv;
+        /* Step 1: write rv → lhs.  Halt on keyword-OOB. */
+        if (!icn_revswap_write(lhs, rv)) return FAILDESCR;
+        z->lhs_written = 1;
+        /* Step 2: write lv → rhs.  Halt on keyword-OOB.  If this OOBs, α has
+         * failed overall — `every` will not run the body and will not call β.
+         * Per Icon's <-> contract (deduced from subjpos.expected line 60:
+         * `every x <-> &pos do write` with x=9, &pos=3 → x=3 lhs=committed,
+         * &pos=3 rhs-OOB-failed; and after every, x stays at 3), we leave
+         * the partial lhs write committed.                                    */
+        if (!icn_revswap_write(rhs, lv)) return FAILDESCR;
+        z->rhs_written = 1;
+        return rv;
+    }
+    /* β / ω — revert in left-to-right order with short-circuit on failure. */
+    if (z->lhs_written) {
+        if (icn_revswap_write(z->lhs_expr, z->saved_lhs)) {
+            if (z->rhs_written) {
+                icn_revswap_write(z->rhs_expr, z->saved_rhs);
+            }
+        }
+        z->lhs_written = 0;
+        z->rhs_written = 0;
     }
     return FAILDESCR;
 }
@@ -1373,6 +1484,19 @@ bb_node_t icn_eval_gen(EXPR_t *e) {
         z->rhs_expr = e->children[1];
         z->var_slot = -2;        /* sentinel for "unset" */
         return (bb_node_t){ icn_bb_revassign, z, 0 };
+    }
+
+    /* ── E_REVSWAP — IC-9 session #26: x <-> y reversible value swap ─────────
+     * α: snapshot both lvalues, atomically swap (probe keyword OOB first;
+     *    abort whole α if either keyword side would OOB), return rv.
+     * β: revert in left-to-right order, short-circuit on failure (so a
+     *    keyword whose valid range was mutated by the body — e.g. via
+     *    `&subject := "A"` — strands the rhs-revert).                      */
+    if (e->kind == E_REVSWAP && e->nchildren >= 2) {
+        icn_revswap_state_t *z = calloc(1, sizeof(*z));
+        z->lhs_expr = e->children[0];
+        z->rhs_expr = e->children[1];
+        return (bb_node_t){ icn_bb_revswap, z, 0 };
     }
 
     /* ── E_VAR / E_INTLIT / scalar literals — lazy box (re-evaluates each α pump)

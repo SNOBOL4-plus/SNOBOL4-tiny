@@ -1105,7 +1105,7 @@ DESCR_t icn_call_builtin(EXPR_t *call, DESCR_t *args, int nargs) {
  *
  * &subject := s semantics:
  *   set scan subject to string form of s; reset &pos to 1 (Icon spec). */
-static int icn_kw_assign(const char *kw, DESCR_t val) {
+int icn_kw_assign(const char *kw, DESCR_t val) {
     if (!strcmp(kw, "pos")) {
         long n = to_int(val);
         int slen = icn_scan_subj ? (int)strlen(icn_scan_subj) : 0;
@@ -1124,6 +1124,23 @@ static int icn_kw_assign(const char *kw, DESCR_t val) {
         return 1;
     }
     /* Other keywords: silently accept (no write contract here) */
+    return 1;
+}
+
+/* IC-9 (session #26): probe variant of icn_kw_assign — answers "would the
+ * write succeed?" without performing it.  Used by atomic E_SWAP / E_REVSWAP
+ * to detect OOB-on-keyword cases where neither side should be written. */
+int icn_kw_can_assign(const char *kw, DESCR_t val) {
+    if (!strcmp(kw, "pos")) {
+        long n = to_int(val);
+        int slen = icn_scan_subj ? (int)strlen(icn_scan_subj) : 0;
+        long norm;
+        if (n == 0)      norm = slen + 1;
+        else if (n < 0)  norm = slen + 1 + n;
+        else             norm = n;
+        return (norm >= 1 && norm <= slen + 1) ? 1 : 0;
+    }
+    /* &subject, others: always accept */
     return 1;
 }
 
@@ -4684,18 +4701,55 @@ DESCR_t interp_eval(EXPR_t *e)
         return val;
     }
 
-    /* ── IC-5: E_SWAP — x :=: y  (swap two lvalues) ───────────────────── */
+    /* ── IC-5: E_SWAP — x :=: y  (swap two lvalues) ─────────────────────
+     * IC-9 (session #26): left-to-right halt-on-keyword-OOB semantics.
+     * Swap writes rv → lhs first, then lv → rhs.  If a keyword side
+     * OOB-fails, stop immediately — don't perform later writes.
+     * Pre-fix: both writes always attempted, leaving state half-swapped
+     * in shapes the JCON corpus's subjpos test specifically exercises.
+     * (My first attempt at "atomic all-or-nothing" was wrong; tracing
+     * subjpos.expected lines 57/58 shows x :=: &pos with `x:=9, &pos:=3`
+     * → x=3 (lhs write committed) &pos=3 (rhs write OOB-aborted).)        */
     case E_SWAP: {
         if (e->nchildren < 2 || icn_frame_depth <= 0) return NULVCL;
         EXPR_t *lhs = e->children[0], *rhs = e->children[1];
         DESCR_t lv = interp_eval(lhs), rv = interp_eval(rhs);
-        /* write rv→lhs slot, lv→rhs slot
-         * IC-9 (2026-05-01): Icon-keyword lvalue (&pos / &subject) — left-to-right;
-         * if a keyword write fails OOB (e.g. &pos := 9 when subj len 6), let it fail
-         * silently and proceed with the other side, mirroring Icon's :=: spec. */
+        if (IS_FAIL_fn(lv) || IS_FAIL_fn(rv)) return FAILDESCR;
+        /* Step 1: write rv → lhs.  Halt on keyword-OOB. */
         if (lhs && lhs->kind == E_VAR) {
             if (lhs->sval && lhs->sval[0] == '&') {
-                icn_kw_assign(lhs->sval + 1, rv);  /* fail = no-op */
+                if (!icn_kw_assign(lhs->sval + 1, rv)) return FAILDESCR;
+            } else {
+                int sl=(int)lhs->ival;
+                if (sl>=0&&sl<ICN_CUR.env_n) ICN_CUR.env[sl]=rv;
+                else if (sl<0&&lhs->sval) NV_SET_fn(lhs->sval,rv);
+            }
+        }
+        /* Step 2: write lv → rhs. */
+        if (rhs && rhs->kind == E_VAR) {
+            if (rhs->sval && rhs->sval[0] == '&') {
+                if (!icn_kw_assign(rhs->sval + 1, lv)) return FAILDESCR;
+            } else {
+                int sl=(int)rhs->ival;
+                if (sl>=0&&sl<ICN_CUR.env_n) ICN_CUR.env[sl]=lv;
+                else if (sl<0&&rhs->sval) NV_SET_fn(rhs->sval,lv);
+            }
+        }
+        return rv;
+    }
+
+    /* ── IC-9 session #26: E_REVSWAP — x <-> y  reversible value swap ────
+     * Outside `every`, no driver backtracks; behaves identically to
+     * left-to-right halt-on-fail E_SWAP.  Inside `every`, icn_eval_gen
+     * routes to icn_bb_revswap for snapshot + revert on β.                */
+    case E_REVSWAP: {
+        if (e->nchildren < 2 || icn_frame_depth <= 0) return NULVCL;
+        EXPR_t *lhs = e->children[0], *rhs = e->children[1];
+        DESCR_t lv = interp_eval(lhs), rv = interp_eval(rhs);
+        if (IS_FAIL_fn(lv) || IS_FAIL_fn(rv)) return FAILDESCR;
+        if (lhs && lhs->kind == E_VAR) {
+            if (lhs->sval && lhs->sval[0] == '&') {
+                if (!icn_kw_assign(lhs->sval + 1, rv)) return FAILDESCR;
             } else {
                 int sl=(int)lhs->ival;
                 if (sl>=0&&sl<ICN_CUR.env_n) ICN_CUR.env[sl]=rv;
@@ -4704,7 +4758,7 @@ DESCR_t interp_eval(EXPR_t *e)
         }
         if (rhs && rhs->kind == E_VAR) {
             if (rhs->sval && rhs->sval[0] == '&') {
-                icn_kw_assign(rhs->sval + 1, lv);
+                if (!icn_kw_assign(rhs->sval + 1, lv)) return FAILDESCR;
             } else {
                 int sl=(int)rhs->ival;
                 if (sl>=0&&sl<ICN_CUR.env_n) ICN_CUR.env[sl]=lv;

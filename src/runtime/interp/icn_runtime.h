@@ -112,4 +112,11 @@ const char *icn_real_str(double r, char *buf, int bufsz);
 /* IC-8: deep-identity test for Icon `===` (defined in icn_runtime.c). */
 int icn_descr_identical(DESCR_t a, DESCR_t b);
 
+/* IC-9 (session #26): Icon-keyword assign / probe (defined in driver/interp.c).
+ * Used by icn_bb_revswap to perform atomic swap-with-revert on &pos / &subject.
+ * icn_kw_assign returns 1 on success, 0 on OOB-fail (and writes nothing on fail).
+ * icn_kw_can_assign answers the same question without writing. */
+int icn_kw_assign(const char *kw, DESCR_t val);
+int icn_kw_can_assign(const char *kw, DESCR_t val);
+
 #endif /* DRIVER_ICN_RUNTIME_H */

@@ -213,6 +213,7 @@ typedef enum EKind {
     E_GLOBAL,       /* global varname  declaration                          */
     E_INITIAL,      /* initial { body }  once-on-first-call block          */
     E_REVASSIGN,    /* E1 <- E2  reversible assignment (Icon)               */
+    E_REVSWAP,      /* E1 <-> E2 reversible value swap (Icon)               */
 
     /* --- Sentinel -------------------------------------------------------- */
 
@@ -377,6 +378,7 @@ static const char * const ekind_name[E_KIND_COUNT] = {
     [E_GLOBAL]       = "E_GLOBAL",
     [E_INITIAL]      = "E_INITIAL",
     [E_REVASSIGN]    = "E_REVASSIGN",
+    [E_REVSWAP]      = "E_REVSWAP",
 };
 
 #endif /* IR_DEFINE_NAMES */

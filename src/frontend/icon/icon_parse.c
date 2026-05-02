@@ -511,7 +511,7 @@ static EXPR_t *parse_assign(IcnParser *p) {
     }
     if (check(p, TK_VALSWAP)) {
         advance(p);
-        return e_binary(E_SWAP, n, parse_assign(p));
+        return e_binary(E_REVSWAP, n, parse_assign(p));
     }
     if (check(p, TK_IDENTICAL)) {
         advance(p);
