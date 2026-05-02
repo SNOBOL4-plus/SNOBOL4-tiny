@@ -1290,6 +1290,36 @@ bb_node_t icn_eval_gen(EXPR_t *e) {
         }
     }
 
+    /* ── E_FNC bal(c1,c2,c3,...) in scan context — icn_bb_bal generator ─── */
+    if (e->kind == E_FNC && e->nchildren >= 2 && e->children[0] && e->children[0]->sval
+        && strcmp(e->children[0]->sval, "bal") == 0) {
+        int nargs = e->nchildren - 1;
+        DESCR_t cd = interp_eval(e->children[1]);
+        const char *c1 = VARVAL_fn(cd); if (!c1) goto bal_skip;
+        const char *c2 = "(", *c3 = ")";
+        if (nargs >= 2) { DESCR_t t = interp_eval(e->children[2]); const char *v = VARVAL_fn(t); if (v && v[0]) c2 = v; }
+        if (nargs >= 3) { DESCR_t t = interp_eval(e->children[3]); const char *v = VARVAL_fn(t); if (v && v[0]) c3 = v; }
+        const char *s; int slen, p, end;
+        if (nargs >= 4) {
+            DESCR_t sv = interp_eval(e->children[4]); s = VARVAL_fn(sv); if (!s) s = "";
+            slen = (int)strlen(s);
+            int i1 = (nargs >= 5) ? (int)interp_eval(e->children[5]).i : 1;
+            int i2 = (nargs >= 6) ? (int)interp_eval(e->children[6]).i : slen + 1;
+            if (i1 <= 0) i1 = 1; if (i2 <= 0) i2 = slen + 1;
+            p = i1 - 1; end = i2 - 1;
+        } else {
+            s = icn_scan_subj; if (!s) goto bal_skip;
+            slen = (int)strlen(s); p = icn_scan_pos - 1; end = slen;
+        }
+        {
+            icn_bal_state_t *z = calloc(1, sizeof(*z));
+            z->s = s; z->c1 = c1; z->c2 = c2; z->c3 = c3;
+            z->slen = slen; z->pos = p; z->endp = end;
+            return (bb_node_t){ icn_bb_bal, z, 0 };
+        }
+        bal_skip:;
+    }
+
     /* ── E_FNC key(T) — generator yielding each key of table T ──────────── */
     if (e->kind == E_FNC && e->nchildren >= 2 && e->children[0] && e->children[0]->sval
         && strcmp(e->children[0]->sval, "key") == 0) {

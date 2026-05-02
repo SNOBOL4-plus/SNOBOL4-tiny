@@ -96,6 +96,8 @@ DESCR_t icn_bb_iterate(void *zeta, int entry);
 DESCR_t icn_bb_tbl_iterate(void *zeta, int entry);
 DESCR_t icn_bb_suspend(void *zeta, int entry);
 DESCR_t icn_bb_find(void *zeta, int entry);
+typedef struct { const char *s; const char *c1; const char *c2; const char *c3; int slen; int pos; int endp; } icn_bal_state_t;
+DESCR_t icn_bb_bal(void *zeta, int entry);
 DESCR_t icn_bb_binop_gen(void *zeta, int entry);
 DESCR_t icn_bb_alternate(void *zeta, int entry);
 

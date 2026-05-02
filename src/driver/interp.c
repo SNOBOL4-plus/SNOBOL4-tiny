@@ -1386,40 +1386,98 @@ DESCR_t interp_eval(EXPR_t *e)
                 return r;
             }
             if (!strcmp(fn,"stop"))  { exit(0); }
-            if (!strcmp(fn,"any") && nargs>=1 && icn_scan_pos>0) {
+            if (!strcmp(fn,"any") && nargs>=1 && (icn_scan_pos>0||nargs>=2)) {
                 DESCR_t cs=interp_eval(e->children[1]);
-                const char *s=icn_scan_subj,*cv=VARVAL_fn(cs); int p=icn_scan_pos-1;
-                if(!s||!cv||p>=(int)strlen(s)||!strchr(cv,s[p])) return FAILDESCR;
-                icn_scan_pos++; return INTVAL(icn_scan_pos);
+                const char *cv=VARVAL_fn(cs);
+                if(!cv) return FAILDESCR;
+                const char *s; int p, slen, end;
+                if(nargs>=2) {
+                    DESCR_t sv=interp_eval(e->children[2]); s=VARVAL_fn(sv); if(!s) s="";
+                    slen=(int)strlen(s);
+                    int i1=(nargs>=3)?(int)interp_eval(e->children[3]).i:icn_scan_pos;
+                    int i2=(nargs>=4)?(int)interp_eval(e->children[4]).i:slen+1;
+                    if(i1<=0||i1>slen) return FAILDESCR;
+                    if(i2<=0) i2=slen+1;
+                    p=i1-1; end=i2-1;
+                } else { s=icn_scan_subj; if(!s) return FAILDESCR; slen=(int)strlen(s); p=icn_scan_pos-1; end=slen; }
+                if(p<0||p>=slen||p>=end||!strchr(cv,s[p])) return FAILDESCR;
+                if(nargs<2) { icn_scan_pos++; return INTVAL(icn_scan_pos); }
+                return INTVAL(p+2);
             }
-            if (!strcmp(fn,"many") && nargs>=1 && icn_scan_pos>0) {
+            if (!strcmp(fn,"many") && nargs>=1 && (icn_scan_pos>0||nargs>=2)) {
                 DESCR_t cs=interp_eval(e->children[1]);
-                const char *s=icn_scan_subj,*cv=VARVAL_fn(cs); int p=icn_scan_pos-1;
-                if(!s||!cv||p>=(int)strlen(s)||!strchr(cv,s[p])) return FAILDESCR;
-                while(p<(int)strlen(s)&&strchr(cv,s[p])) p++;
-                icn_scan_pos=p+1; return INTVAL(icn_scan_pos);
+                const char *cv=VARVAL_fn(cs);
+                if(!cv) return FAILDESCR;
+                const char *s; int p, slen, end;
+                if(nargs>=2) {
+                    DESCR_t sv=interp_eval(e->children[2]); s=VARVAL_fn(sv); if(!s) s="";
+                    slen=(int)strlen(s);
+                    int i1=(nargs>=3)?(int)interp_eval(e->children[3]).i:icn_scan_pos;
+                    int i2=(nargs>=4)?(int)interp_eval(e->children[4]).i:slen+1;
+                    if(i1<=0||i1>slen) return FAILDESCR;
+                    if(i2<=0) i2=slen+1;
+                    p=i1-1; end=i2-1;
+                } else { s=icn_scan_subj; if(!s) return FAILDESCR; slen=(int)strlen(s); p=icn_scan_pos-1; end=slen; }
+                if(p<0||p>=slen||p>=end||!strchr(cv,s[p])) return FAILDESCR;
+                while(p<end&&p<slen&&strchr(cv,s[p])) p++;
+                if(nargs<2) { icn_scan_pos=p+1; return INTVAL(icn_scan_pos); }
+                return INTVAL(p+1);
             }
-            if (!strcmp(fn,"upto") && nargs>=1 && icn_scan_pos>0) {
+            if (!strcmp(fn,"upto") && nargs>=1 && (icn_scan_pos>0||nargs>=2)) {
                 DESCR_t cs=interp_eval(e->children[1]);
-                const char *s=icn_scan_subj,*cv=VARVAL_fn(cs); if(!s||!cv) return FAILDESCR;
-                int p=icn_scan_pos-1;
-                while(p<(int)strlen(s)&&!strchr(cv,s[p])) p++;
-                if(p>=(int)strlen(s)) return FAILDESCR; return INTVAL(p+1);
+                const char *cv=VARVAL_fn(cs);
+                if(!cv) return FAILDESCR;
+                const char *s; int p, slen, end;
+                if(nargs>=2) {
+                    DESCR_t sv=interp_eval(e->children[2]); s=VARVAL_fn(sv); if(!s) s="";
+                    slen=(int)strlen(s);
+                    int i1=(nargs>=3)?(int)interp_eval(e->children[3]).i:icn_scan_pos;
+                    int i2=(nargs>=4)?(int)interp_eval(e->children[4]).i:slen+1;
+                    if(i1<=0) i1=1; if(i2<=0) i2=slen+1;
+                    p=i1-1; end=i2-1;
+                } else { s=icn_scan_subj; if(!s) return FAILDESCR; slen=(int)strlen(s); p=icn_scan_pos-1; end=slen; }
+                while(p<end&&p<slen&&!strchr(cv,s[p])) p++;
+                if(p>=end||p>=slen) return FAILDESCR;
+                if(nargs<2) { /* scan context: upto does NOT advance pos, returns current matching pos */
+                    return INTVAL(p+1);
+                }
+                return INTVAL(p+1);
             }
             if (!strcmp(fn,"move") && nargs>=1 && icn_scan_pos>0) {
-                DESCR_t nv=interp_eval(e->children[1]); int newp=icn_scan_pos+(int)nv.i;
+                DESCR_t nv=interp_eval(e->children[1]); int n=(int)nv.i;
+                int newp=icn_scan_pos+n;
                 if(!icn_scan_subj||newp<1||newp>(int)strlen(icn_scan_subj)+1) return FAILDESCR;
-                int old=icn_scan_pos; icn_scan_pos=newp; size_t len=(size_t)nv.i;
-                char *buf=GC_malloc(len+1); memcpy(buf,icn_scan_subj+old-1,len); buf[len]='\0';
+                int old=icn_scan_pos; icn_scan_pos=newp;
+                size_t len=(size_t)(n>=0?n:-n); int start=(n>=0?old:newp);
+                char *buf=GC_malloc(len+1); memcpy(buf,icn_scan_subj+start-1,len); buf[len]='\0';
                 return STRVAL(buf);
             }
             if (!strcmp(fn,"tab") && nargs>=1 && icn_scan_pos>0) {
                 DESCR_t nv=interp_eval(e->children[1]); if(IS_FAIL_fn(nv)) return FAILDESCR;
+                int slen=icn_scan_subj?(int)strlen(icn_scan_subj):0;
                 int newp=(int)nv.i;
-                if(!icn_scan_subj||newp<icn_scan_pos||newp>(int)strlen(icn_scan_subj)+1) return FAILDESCR;
+                if(newp==0) newp=slen+1;
+                else if(newp<0) newp=slen+1+newp;
+                if(!icn_scan_subj||newp<icn_scan_pos||newp<1||newp>slen+1) return FAILDESCR;
                 int old=icn_scan_pos; icn_scan_pos=newp; size_t len=(size_t)(newp-old);
                 char *buf=GC_malloc(len+1); memcpy(buf,icn_scan_subj+old-1,len); buf[len]='\0';
                 return STRVAL(buf);
+            }
+            if (!strcmp(fn,"pos") && nargs>=1 && icn_scan_pos>0) {
+                DESCR_t nv=interp_eval(e->children[1]); if(IS_FAIL_fn(nv)) return FAILDESCR;
+                int slen=icn_scan_subj?(int)strlen(icn_scan_subj):0;
+                int p=(int)nv.i;
+                if(p==0) p=slen+1;
+                else if(p<0) p=slen+1+p;
+                if(p<1||p>slen+1) return FAILDESCR;
+                return (icn_scan_pos==p) ? INTVAL(icn_scan_pos) : FAILDESCR;
+            }
+            if (!strcmp(fn,"rpos") && nargs>=1 && icn_scan_pos>0) {
+                DESCR_t nv=interp_eval(e->children[1]); if(IS_FAIL_fn(nv)) return FAILDESCR;
+                int slen=icn_scan_subj?(int)strlen(icn_scan_subj):0;
+                int p=slen+1-(int)nv.i;
+                if(p<1||p>slen+1) return FAILDESCR;
+                return (icn_scan_pos==p) ? INTVAL(icn_scan_pos) : FAILDESCR;
             }
             if (!strcmp(fn,"match") && nargs>=1 && icn_scan_pos>0) {
                 DESCR_t sv=interp_eval(e->children[1]);
@@ -1428,6 +1486,37 @@ DESCR_t interp_eval(EXPR_t *e)
                 int p=icn_scan_pos-1,nl=(int)strlen(needle);
                 if(strncmp(hay+p,needle,nl)!=0) return FAILDESCR;
                 icn_scan_pos+=nl; return INTVAL(icn_scan_pos);
+            }
+            if (!strcmp(fn,"bal") && nargs>=1) {
+                /* bal(c1, c2, c3, s, i1, i2) — find first position where c1-chars appear
+                   at nesting depth 0 w.r.t. c2/c3 open/close delimiters.
+                   Scalar path; generator path is in icn_eval_gen via icn_bb_bal. */
+                DESCR_t cd=interp_eval(e->children[1]);
+                const char *c1=VARVAL_fn(cd); if(!c1) return FAILDESCR;
+                const char *c2="(", *c3=")";
+                if(nargs>=2){DESCR_t t=interp_eval(e->children[2]);const char*v=VARVAL_fn(t);if(v&&v[0])c2=v;}
+                if(nargs>=3){DESCR_t t=interp_eval(e->children[3]);const char*v=VARVAL_fn(t);if(v&&v[0])c3=v;}
+                const char *s; int slen, p, end;
+                if(nargs>=4){
+                    DESCR_t sv=interp_eval(e->children[4]);s=VARVAL_fn(sv);if(!s)s="";
+                    slen=(int)strlen(s);
+                    int i1=(nargs>=5)?(int)interp_eval(e->children[5]).i:1;
+                    int i2=(nargs>=6)?(int)interp_eval(e->children[6]).i:slen+1;
+                    if(i1<=0)i1=1; if(i2<=0)i2=slen+1;
+                    p=i1-1; end=i2-1;
+                } else {
+                    s=icn_scan_subj; if(!s) return FAILDESCR;
+                    slen=(int)strlen(s); p=icn_scan_pos-1; end=slen;
+                }
+                int depth=0;
+                while(p<end&&p<slen){
+                    char ch=s[p];
+                    if(strchr(c2,ch)) depth++;
+                    else if(strchr(c3,ch)&&depth>0) depth--;
+                    else if(depth==0&&strchr(c1,ch)) return INTVAL(p+1);
+                    p++;
+                }
+                return FAILDESCR;
             }
             if (!strcmp(fn,"find") && nargs>=2) {
                 long pos1; if(icn_gen_lookup(e,&pos1)) return INTVAL(pos1);

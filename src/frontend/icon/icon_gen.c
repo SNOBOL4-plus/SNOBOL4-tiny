@@ -239,6 +239,33 @@ DESCR_t icn_bb_suspend(void *zeta, int entry) {
 }
 
 /*============================================================================================================================
+ * B-8: icn_bb_bal — bal(c1,c2,c3) generator Byrd box
+ *
+ * Walks scan subject from current &pos, yields 1-based positions where chars in c1
+ * appear at nesting depth 0 w.r.t. c2/c3 open/close delimiters.
+ *   α: scan from start_pos to endp; yield first match.
+ *   β: resume from one past last match; yield next.
+ *   ω: no more matches.
+ *============================================================================================================================*/
+
+DESCR_t icn_bb_bal(void *zeta, int entry) {
+    icn_bal_state_t *z = (icn_bal_state_t *)zeta;
+    if (entry == α) z->pos = (z->pos > 0 ? z->pos : 0); /* already set at construction */
+    int p = z->pos, depth = 0;
+    while (p < z->endp && p < z->slen) {
+        char ch = z->s[p];
+        if (strchr(z->c2, ch)) depth++;
+        else if (strchr(z->c3, ch) && depth > 0) depth--;
+        else if (depth == 0 && strchr(z->c1, ch)) {
+            z->pos = p + 1;   /* β resumes from p+1 (next char after match) */
+            return INTVAL((long)(p + 1));
+        }
+        p++;
+    }
+    return FAILDESCR;
+}
+
+/*============================================================================================================================
  * B-7: icn_bb_find — find() generator Byrd box
  *
  * State: needle, haystack, pos (byte offset into haystack, 0-based).
