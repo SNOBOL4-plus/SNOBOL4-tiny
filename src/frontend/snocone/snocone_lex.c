@@ -392,12 +392,14 @@ S_OP_GT:
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_PLUS:
     if (PEEK(1) == '=' )                                           {  ADV(2);                                              goto E_PLUS_ASSIGN;  }
-    if (last_value)                                                {  ADV(1);                                              goto E_ADD;       }
+    if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_ADD;       }
+    if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
                                                                    {  ADV(1);                                              goto E_UN_PLUS;   }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_MINUS:
     if (PEEK(1) == '=' )                                           {  ADV(2);                                              goto E_MINUS_ASSIGN; }
-    if (last_value)                                                {  ADV(1);                                              goto E_SUB;       }
+    if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_SUB;       }
+    if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
                                                                    {  ADV(1);                                              goto E_UN_MINUS;  }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_STAR:
@@ -405,19 +407,19 @@ S_OP_STAR:
     if (PEEK(1) == '=' )                                           {  ADV(2);                                              goto E_STAR_ASSIGN;  }
     if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_MUL;       }
     if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
-    if (last_value && !is_rws_at(p, 1))                            {  ADV(1);                                              goto E_MUL;       }
-    if (PEEK(1) == '*' )                                           {  ADV(2);                                              goto E_EXP;       }
                                                                    {  ADV(1);                                              goto E_UN_STAR;   }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_SLASH:
     if (PEEK(1) == '=' )                                           {  ADV(2);                                              goto E_SLASH_ASSIGN; }
-    if (last_value)                                                {  ADV(1);                                              goto E_DIV;       }
+    if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_DIV;       }
+    if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
                                                                    {  ADV(1);                                              goto E_UN_SLASH;  }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_CARET:
     if (PEEK(1) == '=' )                                           {  ADV(2);                                              goto E_CARET_ASSIGN; }
-    if (last_value)                                                {  ADV(1);                                              goto E_EXP;       }
-                                                                   {  ADV(1);                                              goto E_EXP;       }
+    if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_EXP;       }
+    if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
+                                                                   {  tok_start = p; ADV(1);                               goto E_UNKNOWN;   }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_PIPE:
     if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_ALT;       }
