@@ -203,7 +203,7 @@ static EXPR_t *parse_primary(IcnParser *p) {
     }
     if (t.kind == TK_FAIL) {
         advance(p);
-        return expr_new(E_FAIL);
+        return expr_new(E_PROC_FAIL);
     }
     if (t.kind == TK_BREAK) {
         advance(p);
@@ -552,7 +552,7 @@ static EXPR_t *parse_expr(IcnParser *p) {
     }
     if (check(p, TK_FAIL)) {
         advance(p);
-        return expr_new(E_FAIL);
+        return expr_new(E_PROC_FAIL);
     }
     if (check(p, TK_SUSPEND)) {
         advance(p);
@@ -732,7 +732,7 @@ static EXPR_t *parse_stmt(IcnParser *p) {
     if (check(p, TK_FAIL)) {
         advance(p);
         expect(p, TK_SEMICOL, "fail statement");
-        return expr_new(E_FAIL);
+        return expr_new(E_PROC_FAIL);
     }
     if (check(p, TK_INITIAL)) {
         advance(p);

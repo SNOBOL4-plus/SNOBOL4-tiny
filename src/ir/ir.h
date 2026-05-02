@@ -198,6 +198,8 @@ typedef enum EXPR_e {
     E_IF,           /* if E then E2 [else E3]                               */
     E_CASE,         /* case E of { clauses }                                */
     E_RETURN,       /* return [E]         — return from procedure           */
+    E_PROC_FAIL,    /* fail               — fail-return from procedure (Icon/Raku)
+                     * NOTE: distinct from E_FAIL = SNOBOL4 FAIL pattern primitive */
     E_LOOP_BREAK,   /* break [E]          — exit innermost loop
                      * NOTE: distinct from E_BREAK = SNOBOL4 BREAK(S)      */
     E_LOOP_NEXT,    /* next               — restart innermost loop          */
@@ -366,6 +368,7 @@ static const char * const expr_e_name[E_KIND_COUNT] = {
     [E_IF]           = "E_IF",
     [E_CASE]         = "E_CASE",
     [E_RETURN]       = "E_RETURN",
+    [E_PROC_FAIL]    = "E_PROC_FAIL",
     [E_LOOP_BREAK]   = "E_LOOP_BREAK",
     [E_LOOP_NEXT]    = "E_LOOP_NEXT",
     [E_BANG_BINARY]  = "E_BANG_BINARY",

@@ -2395,10 +2395,6 @@ DESCR_t interp_eval(EXPR_t *e)
             else                  { if (e->nchildren > 2) return interp_eval(e->children[2]); }
             return NULVCL;
         }
-        case E_BREAK: {
-            ICN_CUR.loop_break = 1;
-            return (e->nchildren > 0) ? interp_eval(e->children[0]) : NULVCL;
-        }
         case E_LOOP_NEXT: {
             /* `next` — abort the rest of the current loop body, ask the
              * enclosing loop to advance to its next iteration.  Loop
@@ -2413,7 +2409,7 @@ DESCR_t interp_eval(EXPR_t *e)
             ICN_CUR.return_val = rv;
             return rv;
         }
-        case E_FAIL: {
+        case E_PROC_FAIL: {
             ICN_CUR.returning  = 1;
             ICN_CUR.return_val = FAILDESCR;
             return FAILDESCR;
@@ -2515,6 +2511,15 @@ DESCR_t interp_eval(EXPR_t *e)
             return ICN_CUR.return_val;
         }
         return (e->nchildren > 0) ? interp_eval(e->children[0]) : NULVCL;
+    }
+
+    /* Icon/Raku fail-return — distinct from E_FAIL (SNOBOL4 FAIL pattern). */
+    case E_PROC_FAIL: {
+        if (icn_frame_depth > 0) {
+            ICN_CUR.return_val = FAILDESCR;
+            ICN_CUR.returning  = 1;
+        }
+        return FAILDESCR;
     }
 
     case E_PLS: {

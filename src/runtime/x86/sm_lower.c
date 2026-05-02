@@ -915,6 +915,11 @@ static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
         sm_emit(p, SM_RETURN);
         return;
 
+    case E_PROC_FAIL:
+        sm_emit(p, SM_PUSH_NULL);
+        sm_emit(p, SM_FRETURN);
+        return;
+
     /* ── logical not: succeed if child fails, fail if child succeeds ────── */
     case E_NOT: {
         lower_expr(p, lt, e->nchildren > 0 ? e->children[0] : NULL);
