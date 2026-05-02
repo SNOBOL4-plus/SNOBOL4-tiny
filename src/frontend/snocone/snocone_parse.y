@@ -26,19 +26,18 @@
  * goto, alt-eval, struct — lands in LS-4.e through LS-4.i.
  *
  * Pipeline:
- *   snocone_lex.c  (threaded-code FSM lexer) -- sc_lex_next(ctx) -- single token per call
- *   snocone_parse.y      (this file)               -- yylex thunk pulls from sc_lex_next
+ *   snocone_lex.c  (threaded-code FSM lexer) -- sc_lex(yylval, st) -- IS yylex
+ *   snocone_parse.y      (this file)               -- Bison grammar
  *   CODE_t        (STMT_t list, EXPR_t IR — alias of Program)
  *
  * Token-kind ownership (cleaned up session 2026-05-01, SB-6.H):
  *   Bison owns the token enum.  `enum sc_tokentype` lives in
  *   snocone_parse.tab.h with values 258..N+.  The lexer
  *   (snocone_lex.{c,h}) uses the same names directly: snocone_lex.c
- *   includes snocone_parse.tab.h to resolve T_*; snocone_lex.h's
- *   public API returns kinds as plain `int` so callers don't need to
- *   drag the enum around.  There is no parallel `ScKind` enum, no
- *   #define alias dance, and no per-token translation table — the
- *   yylex thunk returns sc_lex_next's value directly.
+ *   includes snocone_parse.tab.h to resolve T_* and SC_STYPE.
+ *   There is no parallel `ScKind` enum, no #define alias dance, no
+ *   per-token translation table, and no yylex thunk — the FSM in
+ *   snocone_lex.c IS yylex (Bison's signature directly).
  *
  * IR construction follows snobol4.y line-for-line: leaf atoms are
  * E_VAR/E_KEYWORD/E_QLIT/E_ILIT/E_FLIT, arithmetic emits E_ADD/E_SUB/
@@ -1193,26 +1192,6 @@ expr17      : T_CALL exprlist T_RPAREN
             ;
 
 %%
-
-/* =========================================================================
- *  yylex thunk — single producer is the FSM (sc_lex_next).
- *
- *  The FSM emits one token kind per call (Bison's enum sc_tokentype value
- *  — the lexer and the parser share one enum, see snocone_lex.h).  For
- *  value tokens, the FSM stashes the textual payload in ctx->text; the
- *  thunk strdups it into yylval->str.  T_EOF is mapped to 0 (Bison's
- *  end-of-input sentinel); every other token is returned unchanged.
- * ========================================================================= */
-int sc_lex(SC_STYPE *yylval, ScParseState *st) {
-    int kind = sc_lex_next(st->ctx);
-    if (sc_kind_has_payload(kind)) {
-        yylval->str = strdup(st->ctx->text);
-    } else {
-        yylval->str = NULL;
-    }
-    if (kind == T_EOF) return 0;          /* Bison's end-of-input sentinel */
-    return kind;
-}
 
 void sc_error(ScParseState *st, const char *msg) {
     fprintf(stderr, "%s:%d: snocone parse error: %s\n",

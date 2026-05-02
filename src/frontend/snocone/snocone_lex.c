@@ -143,11 +143,11 @@ static void sc_value_table_build(void) {
 }
 int sc_kind_is_value(int kind) {
     if (!sc_value_table_built) sc_value_table_build();
-    return (kind >= 0 && kind < 256) ? sc_value_table[kind] : 0;
+    return (kind >= 0 && kind < 512) ? sc_value_table[kind] : 0;
 }
 int sc_kind_has_payload(int kind) {
     if (!sc_value_table_built) sc_value_table_build();
-    return (kind >= 0 && kind < 256) ? sc_payload_table[kind] : 0;
+    return (kind >= 0 && kind < 512) ? sc_payload_table[kind] : 0;
 }
 /* ---------------------------------------------------------------- */
 /* Keyword classifier -- tail-recursive table walk.                 */
@@ -159,7 +159,6 @@ static const KwEntry KW_TABLE[] = {
     { "else",     T_ELSE     },
     { "while",    T_WHILE    },
     { "do",       T_DO       },
-    { "until",    T_UNTIL    },
     { "for",      T_FOR      },
     { "switch",   T_SWITCH   },
     { "case",     T_CASE     },
@@ -206,23 +205,26 @@ static int classify_keyword_range(const char *start, const char *end) {
  */
 #define ADV(n)    (p += (n))
 #define PEEK(n)   ((unsigned char)p[n])
-static inline int emit_kind(LexCtx *ctx, const char *p, int kind) {
+static inline int emit_kind(LexCtx *ctx, SC_STYPE *yylval, const char *p, int kind) {
+    yylval->str = NULL;
     ctx->p = p;
     ctx->last_kind = kind;
     return kind;
 }
-static inline int emit_value(LexCtx *ctx, const char *p, const char *tok_start, int kind) {
+static inline int emit_value(LexCtx *ctx, SC_STYPE *yylval, const char *p, const char *tok_start, int kind) {
     int n = (int)(p - tok_start);
     if (n >= (int)sizeof(ctx->text)) n = (int)sizeof(ctx->text) - 1;
     memcpy(ctx->text, tok_start, n);
     ctx->text[n] = '\0';
+    yylval->str = strdup(ctx->text);
     ctx->p = p;
     ctx->last_kind = kind;
     return kind;
 }
-#define EMIT(k)    return emit_kind(ctx, p, (k))
-#define EMIT_V(k)  return emit_value(ctx, p, tok_start, (k))
-int sc_lex_next(LexCtx *ctx) {
+#define EMIT(k)    return emit_kind(ctx, yylval, p, (k))
+#define EMIT_V(k)  return emit_value(ctx, yylval, p, tok_start, (k))
+int sc_lex(SC_STYPE *yylval, ScParseState *st) {
+    LexCtx     *ctx        = st->ctx;
     const char *p          = ctx->p;
     const char *tok_start  = NULL;
     int         had_ws     = 0;
@@ -266,14 +268,14 @@ S_DISPATCH:
     /* CONCAT trigger: prev was a value, gap had whitespace, next
      * char unambiguously starts a fresh value-token.  '.DIGIT' is
      * also a value-starter (real number, e.g. .5 after `x`). */
-    if (had_ws && last_value && is_value_starter(PEEK(0)))         {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
-    if (had_ws && last_value && PEEK(0) == '.' && is_digit(PEEK(1))) { ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                }
+    if (had_ws && last_value && is_value_starter(PEEK(0)))         {  EMIT(T_CONCAT);                 }
+    if (had_ws && last_value && PEEK(0) == '.' && is_digit(PEEK(1))) { EMIT(T_CONCAT);                }
     /* CONCAT trigger for &IDENT keyword reference: `&` followed by an
      * alpha forms a keyword token (e.g. `&UCASE`), which is a value.
      * Without this, `KEYWORD KEYWORD` (e.g. inside ANY(&UCASE &LCASE))
      * has no T_CONCAT injected and the parser sees two adjacent value
      * tokens with no operator between, causing a syntax error. */
-    if (had_ws && last_value && PEEK(0) == '&' && is_alpha(PEEK(1))) { ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;               }
+    if (had_ws && last_value && PEEK(0) == '&' && is_alpha(PEEK(1))) { EMIT(T_CONCAT);               }
     if (PEEK(0) == '\0' )                                                                                                  goto E_EOF;
     if (PEEK(0) == '\'' )                                          {  ctx->strpos = 0; ADV(1);                             goto S_STR1;      }
     if (PEEK(0) == '"'  )                                          {  ctx->strpos = 0; ADV(1);                             goto S_STR2;      }
@@ -383,7 +385,7 @@ S_OP_EQ:
 S_OP_BANG:
     if (PEEK(1) == '=' )                                           {  ADV(2);                                              goto E_NE;        }
     if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_EXP;       }
-    if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
+    if (had_ws && last_value)                                      {  EMIT(T_CONCAT);                 }
                                                                    {  ADV(1);                                              goto E_UN_BANG;   }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_LT:
@@ -397,80 +399,80 @@ S_OP_GT:
 S_OP_PLUS:
     if (PEEK(1) == '=' )                                           {  ADV(2);                                              goto E_PLUS_ASSIGN;  }
     if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_ADD;       }
-    if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
+    if (had_ws && last_value)                                      {  EMIT(T_CONCAT);                 }
                                                                    {  ADV(1);                                              goto E_UN_PLUS;   }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_MINUS:
     if (PEEK(1) == '=' )                                           {  ADV(2);                                              goto E_MINUS_ASSIGN; }
     if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_SUB;       }
-    if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
+    if (had_ws && last_value)                                      {  EMIT(T_CONCAT);                 }
                                                                    {  ADV(1);                                              goto E_UN_MINUS;  }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_STAR:
     if (PEEK(1) == '*' && is_rws_at(p, 2))                         {  ADV(2);                                              goto E_EXP;       }
     if (PEEK(1) == '=' )                                           {  ADV(2);                                              goto E_STAR_ASSIGN;  }
     if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_MUL;       }
-    if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
+    if (had_ws && last_value)                                      {  EMIT(T_CONCAT);                 }
                                                                    {  ADV(1);                                              goto E_UN_STAR;   }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_SLASH:
     if (PEEK(1) == '=' )                                           {  ADV(2);                                              goto E_SLASH_ASSIGN; }
     if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_DIV;       }
-    if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
+    if (had_ws && last_value)                                      {  EMIT(T_CONCAT);                 }
                                                                    {  ADV(1);                                              goto E_UN_SLASH;  }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_CARET:
     if (PEEK(1) == '=' )                                           {  ADV(2);                                              goto E_CARET_ASSIGN; }
     if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_EXP;       }
-    if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
+    if (had_ws && last_value)                                      {  EMIT(T_CONCAT);                 }
                                                                    {  tok_start = p; ADV(1);                               goto E_UNKNOWN;   }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_PIPE:
     if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_ALT;       }
-    if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
+    if (had_ws && last_value)                                      {  EMIT(T_CONCAT);                 }
                                                                    {  ADV(1);                                              goto E_UN_PIPE;   }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_QUEST:
     if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_MATCH;     }
-    if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
+    if (had_ws && last_value)                                      {  EMIT(T_CONCAT);                 }
                                                                    {  ADV(1);                                              goto E_UN_QUEST;  }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_DOLLAR:
     if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_IMM_ASSIGN;}
-    if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
+    if (had_ws && last_value)                                      {  EMIT(T_CONCAT);                 }
                                                                    {  ADV(1);                                              goto E_UN_DOLLAR; }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_DOT:
     if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_COND_ASSIGN;  }
-    if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
+    if (had_ws && last_value)                                      {  EMIT(T_CONCAT);                 }
                                                                    {  ADV(1);                                              goto E_UN_DOT;    }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_AMP:
     if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_AMP;       }
-    if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
+    if (had_ws && last_value)                                      {  EMIT(T_CONCAT);                 }
                                                                    {  ADV(1);                                              goto E_UN_AMP;    }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_AT:
     if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_AT;        }
-    if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
+    if (had_ws && last_value)                                      {  EMIT(T_CONCAT);                 }
                                                                    {  ADV(1);                                              goto E_UN_AT;     }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_POUND:
     if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_POUND;     }
-    if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
+    if (had_ws && last_value)                                      {  EMIT(T_CONCAT);                 }
                                                                    {  ADV(1);                                              goto E_UN_POUND;  }
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_PERCENT:
     if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_PERCENT;   }
-    if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
+    if (had_ws && last_value)                                      {  EMIT(T_CONCAT);                 }
                                                                    {  ADV(1);                                              goto E_UN_PERCENT;}
 /*--------------------------------------------------------------------------------------------------------------------*/
 S_OP_TILDE:
     if (had_ws && last_value && is_rws_at(p, 1))                   {  ADV(1);                                              goto E_TILDE;     }
-    if (had_ws && last_value)                                      {  ctx->p = p; ctx->last_kind = T_CONCAT; return T_CONCAT;                 }
+    if (had_ws && last_value)                                      {  EMIT(T_CONCAT);                 }
                                                                    {  ADV(1);                                              goto E_UN_TILDE;  }
 /*--------------------------------------------------------------------------------------------------------------------*/
-E_EOF:           EMIT(T_EOF);
+E_EOF:           return 0;        /* Bison end-of-input sentinel */
 /*--------------------------------------------------------------------------------------------------------------------*/
 E_LPAREN:        EMIT(T_LPAREN);
 /*--------------------------------------------------------------------------------------------------------------------*/
@@ -614,6 +616,7 @@ E_CALL:
         if (n >= (int)sizeof(ctx->text)) n = (int)sizeof(ctx->text) - 1;
         memcpy(ctx->text, tok_start, n);
         ctx->text[n] = '\0';
+        yylval->str = strdup(ctx->text);
         ADV(1);  /* consume the `(` */
         ctx->p = p;
         ctx->last_kind = T_CALL;
@@ -627,6 +630,7 @@ E_IDENT:
         if (n >= (int)sizeof(ctx->text)) n = (int)sizeof(ctx->text) - 1;
         memcpy(ctx->text, tok_start, n);
         ctx->text[n] = '\0';
+        yylval->str = strdup(ctx->text);
         ctx->p = p; ctx->last_kind = kind; return kind;
     }
 /*--------------------------------------------------------------------------------------------------------------------*/
@@ -636,6 +640,7 @@ E_KEYWORD:
         if (n >= (int)sizeof(ctx->text)) n = (int)sizeof(ctx->text) - 1;
         memcpy(ctx->text, tok_start, n);
         ctx->text[n] = '\0';
+        yylval->str = strdup(ctx->text);
         ctx->p = p; ctx->last_kind = T_KEYWORD; return T_KEYWORD;
     }
 /*--------------------------------------------------------------------------------------------------------------------*/
@@ -646,6 +651,7 @@ E_STR:
         if (n >= (int)sizeof(ctx->text)) n = (int)sizeof(ctx->text) - 1;
         memcpy(ctx->text, ctx->strbuf, n);
         ctx->text[n] = '\0';
+        yylval->str = strdup(ctx->text);
         ctx->p = p; ctx->last_kind = T_STR; return T_STR;
     }
 /*--------------------------------------------------------------------------------------------------------------------*/
@@ -724,7 +730,6 @@ static void sc_name_table_build(void) {
     sc_name_table[T_ELSE]          = "T_ELSE";
     sc_name_table[T_WHILE]         = "T_WHILE";
     sc_name_table[T_DO]            = "T_DO";
-    sc_name_table[T_UNTIL]         = "T_UNTIL";
     sc_name_table[T_FOR]           = "T_FOR";
     sc_name_table[T_SWITCH]        = "T_SWITCH";
     sc_name_table[T_CASE]          = "T_CASE";
@@ -737,7 +742,6 @@ static void sc_name_table_build(void) {
     sc_name_table[T_FRETURN]       = "T_FRETURN";
     sc_name_table[T_NRETURN]       = "T_NRETURN";
     sc_name_table[T_STRUCT]        = "T_STRUCT";
-    sc_name_table[T_EOF]              = "T_EOF";
     sc_name_table[T_UNKNOWN]          = "T_UNKNOWN";
     sc_name_table_built               = 1;
 }

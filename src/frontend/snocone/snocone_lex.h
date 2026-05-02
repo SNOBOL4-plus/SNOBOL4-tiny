@@ -1,19 +1,11 @@
 /*
  * snocone_lex.h -- Snocone threaded-code FSM lexer public API
  *
- * One function: sc_lex_next(ctx) returns the next token kind.
- * Token text payload (for value tokens) lands in ctx->text.
- *
+ * One function: sc_lex(yylval, st) — Bison's yylex contract directly.
+ * For value tokens, payload is strdup'd into yylval->str by emit_value.
  * Token kinds (T_*) are owned by Bison and live in snocone_parse.tab.h.
- * The lexer's IMPLEMENTATION (snocone_lex.c) includes that header to
- * resolve the T_* names; this header (the lexer's API) deliberately
- * does NOT include it, so callers don't drag the parser's enum around.
- * Token-kind values are returned as plain `int`.  There is exactly one
- * set of names for tokens across the lexer/parser boundary, no aliases,
- * no translation table.  (Session 2026-05-01 cleanup.)
  *
- * No buffer types.  Callers either pull tokens one at a time
- * (Bison's yylex pattern) or accumulate locally if needed.
+ * No thunks.  The FSM IS yylex.
  */
 #ifndef SNOCONE_LEX_H
 #define SNOCONE_LEX_H
@@ -28,8 +20,7 @@ typedef struct LexCtx {
     int         strpos;
 } LexCtx;
 
-int         sc_lex_next     (LexCtx *ctx);
-int         sc_kind_is_value(int kind);
+int         sc_kind_is_value   (int kind);
 int         sc_kind_has_payload(int kind);
-const char *sc2_kind_name   (int kind);
+const char *sc2_kind_name      (int kind);
 #endif
