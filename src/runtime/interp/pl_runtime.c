@@ -1636,7 +1636,21 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
                 Trail fa_trail; trail_init(&fa_trail);
                 Trail saved_global_trail=g_pl_trail;  /* save by value — NOT pointer (self-alias bug) */
                 g_pl_trail=fa_trail;
-                /* Build a box for the goal and drive α/β to exhaustion */
+                /* Build a box for the goal and drive α/β to exhaustion.
+                 * PR-19d bridge: if goal_expr is E_VAR, deref to a Term and
+                 * build a synth EXPR so the goal can be retried across solutions.
+                 * outer_env is kept for tmpl_expr/list_expr which belong to the
+                 * static IR and must still resolve against the caller's env. */
+                EXPR_t *fa_synth = NULL; Term **fa_tenv = NULL;
+                Term **outer_env = env;
+                if (goal_expr && goal_expr->kind == E_VAR) {
+                    Term *gt = term_deref(pl_unified_term_from_expr(goal_expr, env));
+                    fa_tenv = (Term **)calloc(PL_SYNTH_TENV_MAX, sizeof(Term *));
+                    int fa_tn = 0;
+                    fa_synth = pl_term_to_synth_expr(gt, fa_tenv, &fa_tn);
+                    goal_expr = fa_synth;
+                    env = fa_tenv;
+                }
                 bb_node_t goal_box=pl_box_goal_from_ir(goal_expr,env);
                 DESCR_t fa_r=goal_box.fn(goal_box.ζ,α);
                 while(!IS_FAIL_fn(fa_r)){
@@ -1647,17 +1661,18 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
                      * plunit's pj_run_suite stores test bodies as findall
                      * snapshots; without this fix the goals would lose their
                      * var bindings even before reaching catch's bridge. */
-                    Term *snap=pl_copy_term(pl_unified_term_from_expr(tmpl_expr,env));
+                    Term *snap=pl_copy_term(pl_unified_term_from_expr(tmpl_expr,outer_env));
                     if(nsol>=sol_cap){sol_cap=sol_cap?sol_cap*2:8;solutions=realloc(solutions,sol_cap*sizeof(Term*));}
                     solutions[nsol++]=snap;
                     fa_r=goal_box.fn(goal_box.ζ,β);
                 }
                 g_pl_trail=saved_global_trail;  /* restore parent trail */
+                if (fa_synth) { pl_synth_free(fa_synth); free(fa_tenv); }
                 int nil_id=prolog_atom_intern("[]"),dot_id=prolog_atom_intern(".");
                 Term *lst=term_new_atom(nil_id);
                 for(int i=nsol-1;i>=0;i--){Term *a2[2];a2[0]=solutions[i];a2[1]=lst;lst=term_new_compound(dot_id,2,a2);}
                 free(solutions);
-                Term *list_term=pl_unified_term_from_expr(list_expr,env);
+                Term *list_term=pl_unified_term_from_expr(list_expr,outer_env);
                 int u_mark=trail_mark(trail);
                 if(!unify(list_term,lst,trail)){trail_unwind(trail,u_mark);return 0;}
                 return 1;
