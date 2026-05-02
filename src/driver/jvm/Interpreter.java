@@ -1331,14 +1331,14 @@ public class Interpreter {
 
                 // Goto dispatch — handle RETURN/FRETURN
                 int next = pc + 1;
-                if (s.gotoField != null) {
+                if (s.gotoU != null || s.gotoS != null || s.gotoF != null) {
                     String target = null;
-                    if (s.gotoField.uncond != null)
-                        target = s.gotoField.uncond;
-                    else if (succeeded && s.gotoField.onsuccess != null)
-                        target = s.gotoField.onsuccess;
-                    else if (!succeeded && s.gotoField.onfailure != null)
-                        target = s.gotoField.onfailure;
+                    if (s.gotoU != null)
+                        target = s.gotoU;
+                    else if (succeeded && s.gotoS != null)
+                        target = s.gotoS;
+                    else if (!succeeded && s.gotoF != null)
+                        target = s.gotoF;
 
                     if (target != null) {
                         if (target.equalsIgnoreCase("END")) break;
@@ -1538,14 +1538,14 @@ public class Interpreter {
 
             // ── Goto dispatch ─────────────────────────────────────────────────
             int next = pc + 1;
-            if (s.gotoField != null) {
+            if (s.gotoU != null || s.gotoS != null || s.gotoF != null) {
                 String target = null;
-                if (s.gotoField.uncond != null)
-                    target = s.gotoField.uncond;
-                else if (succeeded && s.gotoField.onsuccess != null)
-                    target = s.gotoField.onsuccess;
-                else if (!succeeded && s.gotoField.onfailure != null)
-                    target = s.gotoField.onfailure;
+                if (s.gotoU != null)
+                    target = s.gotoU;
+                else if (succeeded && s.gotoS != null)
+                    target = s.gotoS;
+                else if (!succeeded && s.gotoF != null)
+                    target = s.gotoF;
 
                 if (target != null) {
                     if (target.equalsIgnoreCase("END")) break;

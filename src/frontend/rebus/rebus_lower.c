@@ -13,7 +13,7 @@
  *
  * Control-flow lowering uses the same label/goto STMT_t pattern as
  * snocone_control.c.  Each structured construct becomes labeled SNOBOL4-style
- * STMT_t nodes with SnoGoto fields.
+ * STMT_t nodes with flat goto_s/goto_f/goto_u fields (RS-1).
  */
 
 #include "rebus.h"
@@ -70,8 +70,7 @@ static void emit_label(RebLow *L, const char *lab) {
 /* Emit an unconditional goto. */
 static void emit_goto(RebLow *L, const char *target) {
     STMT_t *s = blank_stmt();
-    s->go = sgoto_new();
-    s->go->uncond = strdup(target);
+    s->goto_u = strdup(target);
     emit(L, s);
 }
 
@@ -304,9 +303,8 @@ static void lower_stmt(RebLow *L, RStmt *s) {
         STMT_t *cst  = blank_stmt();
         cst->lineno  = s->lineno;
         cst->subject = lower_expr(L, s->expr);
-        cst->go      = sgoto_new();
-        cst->go->onsuccess = strdup(l_then);
-        cst->go->onfailure = strdup(l_else);
+        cst->goto_s = strdup(l_then);
+        cst->goto_f = strdup(l_else);
         emit(L, cst);
         emit_label(L, l_then);
         lower_stmt(L, s->body);
@@ -329,9 +327,8 @@ static void lower_stmt(RebLow *L, RStmt *s) {
         STMT_t *cst  = blank_stmt();
         cst->lineno  = s->lineno;
         cst->subject = lower_expr(L, s->expr);
-        cst->go      = sgoto_new();
-        cst->go->onsuccess = strdup(l_end);
-        cst->go->onfailure = strdup(l_body);
+        cst->goto_s = strdup(l_end);
+        cst->goto_f = strdup(l_body);
         emit(L, cst);
         emit_label(L, l_body);
         lower_stmt(L, s->body);
@@ -355,9 +352,8 @@ static void lower_stmt(RebLow *L, RStmt *s) {
         STMT_t *cst  = blank_stmt();
         cst->lineno  = s->lineno;
         cst->subject = lower_expr(L, s->expr);
-        cst->go      = sgoto_new();
-        cst->go->onsuccess = strdup(l_body);
-        cst->go->onfailure = strdup(l_end);
+        cst->goto_s = strdup(l_body);
+        cst->goto_f = strdup(l_end);
         emit(L, cst);
         emit_label(L, l_body);
         lower_stmt(L, s->body);
@@ -383,9 +379,8 @@ static void lower_stmt(RebLow *L, RStmt *s) {
         STMT_t *cst  = blank_stmt();
         cst->lineno  = s->lineno;
         cst->subject = lower_expr(L, s->expr);
-        cst->go      = sgoto_new();
-        cst->go->onsuccess = strdup(l_end);
-        cst->go->onfailure = strdup(l_body);
+        cst->goto_s = strdup(l_end);
+        cst->goto_f = strdup(l_body);
         emit(L, cst);
         emit_label(L, l_body);
         lower_stmt(L, s->body);
@@ -439,8 +434,7 @@ static void lower_stmt(RebLow *L, RStmt *s) {
         EXPR_t *var2 = expr_new(E_VAR); var2->sval = strdup(s->for_var);
         STMT_t *test = blank_stmt();
         test->subject = make_fnc("GT", 2, var2, lower_expr(L, s->for_to));
-        test->go      = sgoto_new();
-        test->go->onsuccess = strdup(l_end);
+        test->goto_s = strdup(l_end);
         emit(L, test);
 
         lower_stmt(L, s->body);
@@ -493,9 +487,8 @@ static void lower_stmt(RebLow *L, RStmt *s) {
                 EXPR_t *tv = expr_new(E_VAR); tv->sval = strdup(tmpbuf);
                 STMT_t *cst = blank_stmt();
                 cst->subject = make_fnc("IDENT", 2, tv, lower_expr(L, c->guard));
-                cst->go      = sgoto_new();
-                cst->go->onsuccess = strdup(l_match);
-                cst->go->onfailure = strdup(l_next);
+                cst->goto_s = strdup(l_match);
+                cst->goto_f = strdup(l_next);
                 emit(L, cst);
                 emit_label(L, l_match);
                 lower_stmt(L, c->body);
@@ -637,8 +630,7 @@ static void lower_decl(RebLow *L, RDecl *d) {
             char *l_done = newlab(L);
             STMT_t *chk = blank_stmt();
             chk->subject = flag;
-            chk->go      = sgoto_new();
-            chk->go->onsuccess = strdup(l_done);
+            chk->goto_s = strdup(l_done);
             emit(L, chk);
             lower_stmt(L, d->initial);
             /* set flag */

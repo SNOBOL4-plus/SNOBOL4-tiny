@@ -3070,8 +3070,7 @@ static void sc_append_return(ScParseState *st, EXPR_t *retval) {
          * still emit the RETURN goto so it's syntactically a return.   */
         s->subject = retval;
     }
-    s->go = sgoto_new();
-    s->go->uncond = strdup("RETURN");
+    s->goto_u = strdup("RETURN");
     if (!st->code->head) st->code->head = st->code->tail = s;
     else { st->code->tail->next = s; st->code->tail = s; }
 }
@@ -3081,8 +3080,7 @@ static void sc_append_freturn(ScParseState *st) {
     STMT_t *s = stmt_new();
     s->lineno = st->ctx ? st->ctx->line : 0;
     s->stno   = ++st->code->nstmts;
-    s->go     = sgoto_new();
-    s->go->uncond = strdup("FRETURN");
+    s->goto_u = strdup("FRETURN");
     if (!st->code->head) st->code->head = st->code->tail = s;
     else { st->code->tail->next = s; st->code->tail = s; }
 }
@@ -3092,8 +3090,7 @@ static void sc_append_nreturn(ScParseState *st) {
     STMT_t *s = stmt_new();
     s->lineno = st->ctx ? st->ctx->line : 0;
     s->stno   = ++st->code->nstmts;
-    s->go     = sgoto_new();
-    s->go->uncond = strdup("NRETURN");
+    s->goto_u = strdup("NRETURN");
     if (!st->code->head) st->code->head = st->code->tail = s;
     else { st->code->tail->next = s; st->code->tail = s; }
 }
@@ -3122,8 +3119,7 @@ static STMT_t *sc_make_cond_fail_stmt(ScParseState *st, EXPR_t *cond, char *fail
     s->stno   = ++st->code->nstmts;
     s->subject = cond;
     sc_split_subject_pattern(&s->subject, &s->pattern);
-    s->go      = sgoto_new();
-    s->go->onfailure = fail_target;
+    s->goto_f = fail_target;
     return s;
 }
 
@@ -3132,8 +3128,7 @@ static STMT_t *sc_make_goto_uncond_stmt(ScParseState *st, char *target) {
     STMT_t *s = stmt_new();
     s->lineno = st->ctx ? st->ctx->line : 0;
     s->stno   = ++st->code->nstmts;
-    s->go     = sgoto_new();
-    s->go->uncond = target;
+    s->goto_u = target;
     return s;
 }
 
@@ -3317,8 +3312,7 @@ static STMT_t *sc_make_cond_succ_stmt(ScParseState *st, EXPR_t *cond, char *succ
     s->stno    = ++st->code->nstmts;
     s->subject = cond;
     sc_split_subject_pattern(&s->subject, &s->pattern);
-    s->go      = sgoto_new();
-    s->go->onsuccess = succ_target;
+    s->goto_s = succ_target;
     return s;
 }
 

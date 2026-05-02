@@ -68,8 +68,8 @@ public sealed class Executor
             _env.IncrStcount();
 
             string? target = gotoOverride
-                ?? stmt.Go?.Uncond
-                ?? (succeeded  ? stmt.Go?.OnSuccess : stmt.Go?.OnFailure);
+                ?? stmt.GotoU
+                ?? (succeeded  ? stmt.GotoS : stmt.GotoF);
 
             if (target != null)
             {
@@ -524,8 +524,8 @@ public sealed class Executor
 
             bool ok = ExecStmt(stmt, out string? gt);
             string? target = gt
-                ?? stmt.Go?.Uncond
-                ?? (ok  ? stmt.Go?.OnSuccess : stmt.Go?.OnFailure);
+                ?? stmt.GotoU
+                ?? (ok  ? stmt.GotoS : stmt.GotoF);
 
             if (target != null)
             {

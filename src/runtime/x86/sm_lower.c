@@ -1050,7 +1050,8 @@ static void lower_stmt(SM_Program *p, LabelTable *lt, const STMT_t *s)
      * comm_stno on what is by definition a non-executing line. */
     if (!s->is_end
         && (!s->label || !s->label[0])
-        && !s->subject && !s->pattern && !s->replacement && !s->go) {
+        && !s->subject && !s->pattern && !s->replacement
+        && !s->goto_u && !s->goto_u_expr && !s->goto_s && !s->goto_s_expr && !s->goto_f && !s->goto_f_expr) {
         return;
     }
 
@@ -1200,31 +1201,25 @@ static void lower_stmt(SM_Program *p, LabelTable *lt, const STMT_t *s)
     }
 
 emit_gotos: {
-    const SnoGoto *g = s->go;
-    if (!g) return;
+    /* RS-1: goto fields now flat in STMT_t */
+    if (!s->goto_u && !s->goto_u_expr && !s->goto_s && !s->goto_s_expr && !s->goto_f && !s->goto_f_expr) return;
 
-    /*
-     * SNOBOL4 goto:  :(L)      unconditional
-     *                :S(L)     on success
-     *                :F(L)     on failure
-     *                :S(A)F(B) both
-     */
-    if (g->uncond && g->uncond[0]) {
-        emit_goto(p, lt, SM_JUMP, g->uncond);
+    if (s->goto_u && s->goto_u[0]) {
+        emit_goto(p, lt, SM_JUMP, s->goto_u);
         return;
     }
 
     /* Computed gotos → SM_JUMP_INDIR (not yet supported; fall back) */
-    if (g->computed_uncond_expr) {
+    if (s->goto_u_expr) {
         sm_emit_s(p, SM_PUSH_LIT_S, "(computed-goto)");
         sm_emit(p, SM_JUMP_INDIR);
         return;
     }
 
-    if (g->onsuccess && g->onsuccess[0])
-        emit_goto(p, lt, SM_JUMP_S, g->onsuccess);
-    if (g->onfailure && g->onfailure[0])
-        emit_goto(p, lt, SM_JUMP_F, g->onfailure);
+    if (s->goto_s && s->goto_s[0])
+        emit_goto(p, lt, SM_JUMP_S, s->goto_s);
+    if (s->goto_f && s->goto_f[0])
+        emit_goto(p, lt, SM_JUMP_F, s->goto_f);
     }
 }
 

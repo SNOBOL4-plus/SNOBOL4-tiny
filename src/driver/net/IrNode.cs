@@ -3,7 +3,7 @@
 // Mirrors:
 //   EKind     enum  → ir.h  (same names, same semantics)
 //   IrNode    class → EXPR_t struct in ir.h
-//   SnoGoto   class → SnoGoto struct in scrip_cc.h
+//   SnoGoto   class → removed RS-1; goto fields now flat in IrStmt / STMT_t
 //   IrStmt    class → STMT_t struct in scrip_cc.h
 //
 // This is the "one IR, three consumers" invariant:
@@ -183,24 +183,18 @@ public sealed class IrNode
         $"{Kind}[{Children.Length}]";
 }
 
-// ── SnoGoto — mirrors SnoGoto from scrip_cc.h ──────────────────────────────
-
-public sealed class SnoGoto
-{
-    public string? OnSuccess;           // ← onsuccess
-    public string? OnFailure;           // ← onfailure
-    public string? Uncond;              // ← uncond
-    // computed_* fields omitted for interpreter (resolved at parse time)
-}
-
 // ── IrStmt — mirrors STMT_t from scrip_cc.h ───────────────────────────────
+//
+// RS-1: SnoGoto class removed; goto fields flattened directly into IrStmt.
 //
 // Fields:
 //   Label       ← label
 //   Subject     ← subject   (EXPR_t*)
 //   Pattern     ← pattern   (EXPR_t*; null if no pattern)
 //   Replacement ← replacement (EXPR_t*; null if no replacement)
-//   Go          ← go        (SnoGoto*)
+//   GotoS       ← goto_s    (on success)
+//   GotoF       ← goto_f    (on failure)
+//   GotoU       ← goto_u    (unconditional)
 //   IsEnd       ← is_end
 //   HasEq       ← has_eq    (explicit = replacement present)
 //   LineNo      ← lineno
@@ -211,20 +205,21 @@ public sealed class IrStmt
     public IrNode?  Subject;
     public IrNode?  Pattern;
     public IrNode?  Replacement;
-    public SnoGoto? Go;
+    public string?  GotoS;          // ← goto_s  :S(label)
+    public string?  GotoF;          // ← goto_f  :F(label)
+    public string?  GotoU;          // ← goto_u  :(label)
     public bool     IsEnd;
     public bool     HasEq;
     public int      LineNo;
 
-    // Convenience: effective goto targets
-    public string? GotoOnSuccess => Go?.OnSuccess ?? Go?.Uncond;
-    public string? GotoOnFailure => Go?.OnFailure ?? Go?.Uncond;
-    public string? GotoUnconditional => Go?.Uncond;
+    // Convenience: effective goto targets (mirrors C interp logic)
+    public string? GotoOnSuccess => GotoS ?? GotoU;
+    public string? GotoOnFailure => GotoF ?? GotoU;
+    public string? GotoUnconditional => GotoU;
 
     public bool HasPattern     => Pattern != null;
     public bool HasReplacement => Replacement != null || HasEq;
-    public bool HasGoto        => Go != null &&
-                                  (Go.OnSuccess != null || Go.OnFailure != null || Go.Uncond != null);
+    public bool HasGoto        => GotoS != null || GotoF != null || GotoU != null;
 
     public override string ToString()
     {

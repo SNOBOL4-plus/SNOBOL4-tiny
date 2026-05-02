@@ -7,16 +7,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-typedef struct { Program *prog; EXPR_t **result; } PP;
+typedef struct { CODE_t *prog; EXPR_t **result; } PP;
+static void     sno4_stmt_commit_go(void*,Token,EXPR_t*,EXPR_t*,int,EXPR_t*,EXPR_t*,EXPR_t*,EXPR_t*);
 static Lex     *g_lx;
-static void     sno4_stmt_commit_go(void*,Token,EXPR_t*,EXPR_t*,int,EXPR_t*,SnoGoto*);
 static void     fixup_val(EXPR_t*);
 static int      is_pat(EXPR_t*);
 static EXPR_t  *parse_expr(Lex*);
 /* pat_prim_kind: map pattern primitive name → typed IR kind; E_VAR = not a prim */
-static EKind pat_prim_kind(const char *s) {
+static EXPR_e pat_prim_kind(const char *s) {
     if (!s) return E_VAR;
-    static const struct { const char *n; EKind k; } m[] = {
+    static const struct { const char *n; EXPR_e k; } m[] = {
         {"ANY",E_ANY},{"NOTANY",E_NOTANY},{"SPAN",E_SPAN},{"BREAK",E_BREAK},{"BREAKX",E_BREAKX},
         {"LEN",E_LEN},{"POS",E_POS},{"RPOS",E_RPOS},{"TAB",E_TAB},{"RTAB",E_RTAB},
         {"ARB",E_ARB},{"ARBNO",E_ARBNO},{"REM",E_REM},{"FAIL",E_FAIL},{"SUCCEED",E_SUCCEED},
@@ -29,7 +29,7 @@ static EKind pat_prim_kind(const char *s) {
 %define api.prefix {snobol4_}
 %define api.pure full
 %parse-param { void *yyparse_param }
-%union { EXPR_t *expr; Token tok; SnoGoto *go; }
+%union { EXPR_t *expr; Token tok; }
 
 /* Atoms */
 %token <tok> T_IDENT T_FUNCTION T_KEYWORD T_END T_INT T_REAL T_STR
@@ -51,7 +51,7 @@ static EKind pat_prim_kind(const char *s) {
 %type <expr> expr0 expr2 expr3 expr4 expr5 expr6 expr7 expr8
 %type <expr> expr9 expr10 expr11 expr12 expr13 expr14 expr15 expr17
 %type <expr> exprlist exprlist_ne opt_subject opt_pattern opt_repl
-%type <go>   opt_goto goto_label_expr
+%type <expr> goto_label_expr
 %type <expr> goto_expr goto_atom
 
 %%
@@ -59,13 +59,34 @@ top        : program                                                            
            | /* empty */                                                                            { }
            ;
 program    : program stmt | stmt                                                                    ;
-stmt       : T_LABEL opt_subject opt_repl opt_goto T_STMT_END                        { Token l=$1; sno4_stmt_commit_go(yyparse_param,l,$2,NULL,($3!=NULL),$3,$4); }
-           | T_LABEL expr2 T_2QUEST opt_pattern opt_repl opt_goto T_STMT_END          { Token l=$1; EXPR_t*sc=expr_binary(E_SCAN,$2,$4); sno4_stmt_commit_go(yyparse_param,l,sc,NULL,($5!=NULL),$5,$6); }
+stmt
+             : T_LABEL opt_subject opt_repl T_STMT_END                                     { sno4_stmt_commit_go(yyparse_param,$1,$2,NULL,($3!=NULL),$3,NULL,NULL,NULL); }
+             | T_LABEL opt_subject opt_repl goto_label_expr T_STMT_END                     { sno4_stmt_commit_go(yyparse_param,$1,$2,NULL,($3!=NULL),$3,$4,NULL,NULL); }
+             | T_LABEL opt_subject opt_repl T_GOTO_S goto_label_expr T_STMT_END            { sno4_stmt_commit_go(yyparse_param,$1,$2,NULL,($3!=NULL),$3,NULL,$5,NULL); }
+             | T_LABEL opt_subject opt_repl T_GOTO_F goto_label_expr T_STMT_END            { sno4_stmt_commit_go(yyparse_param,$1,$2,NULL,($3!=NULL),$3,NULL,NULL,$5); }
+             | T_LABEL opt_subject opt_repl T_GOTO_S goto_label_expr T_GOTO_F goto_label_expr T_STMT_END { sno4_stmt_commit_go(yyparse_param,$1,$2,NULL,($3!=NULL),$3,NULL,$5,$7); }
+             | T_LABEL opt_subject opt_repl T_GOTO_F goto_label_expr T_GOTO_S goto_label_expr T_STMT_END { sno4_stmt_commit_go(yyparse_param,$1,$2,NULL,($3!=NULL),$3,NULL,$7,$5); }
+           | T_LABEL expr2 T_2QUEST opt_pattern opt_repl T_STMT_END                      { sno4_stmt_commit_go(yyparse_param,$1,expr_binary(E_SCAN,$2,$4),NULL,($5!=NULL),$5,NULL,NULL,NULL); }
+           | T_LABEL expr2 T_2QUEST opt_pattern opt_repl goto_label_expr T_STMT_END      { sno4_stmt_commit_go(yyparse_param,$1,expr_binary(E_SCAN,$2,$4),NULL,($5!=NULL),$5,$6,NULL,NULL); }
+           | T_LABEL expr2 T_2QUEST opt_pattern opt_repl T_GOTO_S goto_label_expr T_STMT_END { sno4_stmt_commit_go(yyparse_param,$1,expr_binary(E_SCAN,$2,$4),NULL,($5!=NULL),$5,NULL,$7,NULL); }
+           | T_LABEL expr2 T_2QUEST opt_pattern opt_repl T_GOTO_F goto_label_expr T_STMT_END { sno4_stmt_commit_go(yyparse_param,$1,expr_binary(E_SCAN,$2,$4),NULL,($5!=NULL),$5,NULL,NULL,$7); }
+           | T_LABEL expr2 T_2QUEST opt_pattern opt_repl T_GOTO_S goto_label_expr T_GOTO_F goto_label_expr T_STMT_END { sno4_stmt_commit_go(yyparse_param,$1,expr_binary(E_SCAN,$2,$4),NULL,($5!=NULL),$5,NULL,$7,$9); }
+           | T_LABEL expr2 T_2QUEST opt_pattern opt_repl T_GOTO_F goto_label_expr T_GOTO_S goto_label_expr T_STMT_END { sno4_stmt_commit_go(yyparse_param,$1,expr_binary(E_SCAN,$2,$4),NULL,($5!=NULL),$5,NULL,$9,$7); }
            | unlabeled_stmt
            ;
 unlabeled_stmt
-           : opt_subject opt_repl opt_goto T_STMT_END                                { Token l; l.sval=NULL;l.ival=0;l.lineno=0;l.kind=0; sno4_stmt_commit_go(yyparse_param,l,$1,NULL,($2!=NULL),$2,$3); }
-           | expr2 T_2QUEST opt_pattern opt_repl opt_goto T_STMT_END                  { Token l; l.sval=NULL;l.ival=0;l.lineno=0;l.kind=0; EXPR_t*sc=expr_binary(E_SCAN,$1,$3); sno4_stmt_commit_go(yyparse_param,l,sc,NULL,($4!=NULL),$4,$5); }
+             : opt_subject opt_repl T_STMT_END                                             { sno4_stmt_commit_go(yyparse_param,((Token){NULL,0,0,0}),$1,NULL,($2!=NULL),$2,NULL,NULL,NULL); }
+             | opt_subject opt_repl goto_label_expr T_STMT_END                             { sno4_stmt_commit_go(yyparse_param,((Token){NULL,0,0,0}),$1,NULL,($2!=NULL),$2,$3,NULL,NULL); }
+             | opt_subject opt_repl T_GOTO_S goto_label_expr T_STMT_END                    { sno4_stmt_commit_go(yyparse_param,((Token){NULL,0,0,0}),$1,NULL,($2!=NULL),$2,NULL,$4,NULL); }
+             | opt_subject opt_repl T_GOTO_F goto_label_expr T_STMT_END                    { sno4_stmt_commit_go(yyparse_param,((Token){NULL,0,0,0}),$1,NULL,($2!=NULL),$2,NULL,NULL,$4); }
+             | opt_subject opt_repl T_GOTO_S goto_label_expr T_GOTO_F goto_label_expr T_STMT_END { sno4_stmt_commit_go(yyparse_param,((Token){NULL,0,0,0}),$1,NULL,($2!=NULL),$2,NULL,$4,$6); }
+             | opt_subject opt_repl T_GOTO_F goto_label_expr T_GOTO_S goto_label_expr T_STMT_END { sno4_stmt_commit_go(yyparse_param,((Token){NULL,0,0,0}),$1,NULL,($2!=NULL),$2,NULL,$6,$4); }
+           | expr2 T_2QUEST opt_pattern opt_repl T_STMT_END                              { sno4_stmt_commit_go(yyparse_param,((Token){NULL,0,0,0}),expr_binary(E_SCAN,$1,$3),NULL,($4!=NULL),$4,NULL,NULL,NULL); }
+           | expr2 T_2QUEST opt_pattern opt_repl goto_label_expr T_STMT_END              { sno4_stmt_commit_go(yyparse_param,((Token){NULL,0,0,0}),expr_binary(E_SCAN,$1,$3),NULL,($4!=NULL),$4,$5,NULL,NULL); }
+           | expr2 T_2QUEST opt_pattern opt_repl T_GOTO_S goto_label_expr T_STMT_END     { sno4_stmt_commit_go(yyparse_param,((Token){NULL,0,0,0}),expr_binary(E_SCAN,$1,$3),NULL,($4!=NULL),$4,NULL,$6,NULL); }
+           | expr2 T_2QUEST opt_pattern opt_repl T_GOTO_F goto_label_expr T_STMT_END     { sno4_stmt_commit_go(yyparse_param,((Token){NULL,0,0,0}),expr_binary(E_SCAN,$1,$3),NULL,($4!=NULL),$4,NULL,NULL,$6); }
+           | expr2 T_2QUEST opt_pattern opt_repl T_GOTO_S goto_label_expr T_GOTO_F goto_label_expr T_STMT_END { sno4_stmt_commit_go(yyparse_param,((Token){NULL,0,0,0}),expr_binary(E_SCAN,$1,$3),NULL,($4!=NULL),$4,NULL,$6,$8); }
+           | expr2 T_2QUEST opt_pattern opt_repl T_GOTO_F goto_label_expr T_GOTO_S goto_label_expr T_STMT_END { sno4_stmt_commit_go(yyparse_param,((Token){NULL,0,0,0}),expr_binary(E_SCAN,$1,$3),NULL,($4!=NULL),$4,NULL,$8,$6); }
            ;
 opt_subject: expr3                                                                                { $$=$1; }
            | /* empty */                                                                           { $$=NULL; }
@@ -90,34 +111,15 @@ goto_expr  : goto_atom                          { $$=$1; }
            | goto_expr T_CONCAT goto_atom       { if($1->kind==E_SEQ){expr_add_child($1,$3);$$=$1;}else{EXPR_t*s=expr_new(E_SEQ);expr_add_child(s,$1);expr_add_child(s,$3);$$=s;} }
            ;
 
-/* goto_label_expr: T_GOTO_LPAREN/RPAREN are exclusive to GT state — no S/R conflict */
+/* goto_label_expr: returns EXPR_t* — E_QLIT(sval=label) for a plain label,
+ * or the computed EXPR_t* directly for $(expr) targets. No struct. */
 goto_label_expr
-           : T_GOTO_LPAREN T_IDENT T_GOTO_RPAREN              { $$=sgoto_new(); $$->uncond=strdup($2.sval); }
-           | T_GOTO_LPAREN T_END T_GOTO_RPAREN                { $$=sgoto_new(); $$->uncond=strdup($2.sval); }
-           | T_GOTO_LPAREN T_FUNCTION T_GOTO_RPAREN           { $$=sgoto_new(); $$->uncond=strdup($2.sval); }
-           | T_GOTO_LPAREN T_1DOLLAR T_IDENT T_GOTO_RPAREN { $$=sgoto_new(); char buf[512]; snprintf(buf,sizeof buf,"$%s",$3.sval); $$->uncond=strdup(buf); }
-           | T_GOTO_LPAREN T_1DOLLAR T_GOTO_LPAREN goto_expr T_GOTO_RPAREN T_GOTO_RPAREN { $$=sgoto_new(); $$->computed_uncond_expr=($4); }
-           | T_GOTO_LPAREN T_1DOLLAR T_STR T_GOTO_RPAREN { $$=sgoto_new(); EXPR_t*e=expr_new(E_QLIT); e->sval=strdup($3.sval); $$->computed_uncond_expr=e; }
-           ;
-
-opt_goto   : goto_label_expr                                  { $$=$1; }
-           | T_GOTO_S goto_label_expr T_GOTO_F goto_label_expr {
-               $$=sgoto_new();
-               $$->onsuccess=$2->uncond; $$->computed_success_expr=$2->computed_uncond_expr; free($2);
-               $$->onfailure=$4->uncond; $$->computed_failure_expr=$4->computed_uncond_expr; free($4);
-             }
-           | T_GOTO_S goto_label_expr {
-               $$=sgoto_new(); $$->onsuccess=$2->uncond; $$->computed_success_expr=$2->computed_uncond_expr; free($2);
-             }
-           | T_GOTO_F goto_label_expr T_GOTO_S goto_label_expr {
-               $$=sgoto_new();
-               $$->onfailure=$2->uncond; $$->computed_failure_expr=$2->computed_uncond_expr; free($2);
-               $$->onsuccess=$4->uncond; $$->computed_success_expr=$4->computed_uncond_expr; free($4);
-             }
-           | T_GOTO_F goto_label_expr {
-               $$=sgoto_new(); $$->onfailure=$2->uncond; $$->computed_failure_expr=$2->computed_uncond_expr; free($2);
-             }
-           | /* empty */                                       { $$=NULL; }
+           : T_GOTO_LPAREN T_IDENT T_GOTO_RPAREN                                             { EXPR_t*e=expr_new(E_QLIT);e->sval=strdup($2.sval);$$=e; }
+           | T_GOTO_LPAREN T_END T_GOTO_RPAREN                                               { EXPR_t*e=expr_new(E_QLIT);e->sval=strdup($2.sval);$$=e; }
+           | T_GOTO_LPAREN T_FUNCTION T_GOTO_RPAREN                                          { EXPR_t*e=expr_new(E_QLIT);e->sval=strdup($2.sval);$$=e; }
+           | T_GOTO_LPAREN T_1DOLLAR T_IDENT T_GOTO_RPAREN                                   { EXPR_t*e=expr_new(E_QLIT);char buf[512];snprintf(buf,sizeof buf,"$%s",$3.sval);e->sval=strdup(buf);$$=e; }
+           | T_GOTO_LPAREN T_1DOLLAR T_GOTO_LPAREN goto_expr T_GOTO_RPAREN T_GOTO_RPAREN    { $$=$4; }
+           | T_GOTO_LPAREN T_1DOLLAR T_STR T_GOTO_RPAREN                                     { EXPR_t*e=expr_new(E_QLIT);e->sval=strdup($3.sval);$$=e; }
            ;
 
 /* Expression grammar — levels match beauty.sno Expr0–Expr17 and SPITBOL manual priorities */
@@ -194,7 +196,7 @@ exprlist_ne: exprlist_ne T_COMMA expr0                                          
 expr17     : T_LPAREN expr0 T_RPAREN                                                            { $$=$2; }
            | T_LPAREN expr0 T_COMMA exprlist_ne T_RPAREN                                       { EXPR_t*a=expr_new(E_VLIST);expr_add_child(a,$2);for(int i=0;i<$4->nchildren;i++)expr_add_child(a,$4->children[i]);free($4->children);free($4);$$=a; }
            | T_LPAREN T_RPAREN                                                                  { $$=expr_new(E_NUL); }
-           | T_FUNCTION T_LPAREN exprlist T_RPAREN                                             { EKind _k=pat_prim_kind($1.sval);EXPR_t*e=expr_new(_k==E_VAR?E_FNC:_k);if(_k==E_VAR)e->sval=(char*)$1.sval;for(int i=0;i<$3->nchildren;i++)expr_add_child(e,$3->children[i]);free($3->children);free($3);$$=e; }
+           | T_FUNCTION T_LPAREN exprlist T_RPAREN                                             { EXPR_e _k=pat_prim_kind($1.sval);EXPR_t*e=expr_new(_k==E_VAR?E_FNC:_k);if(_k==E_VAR)e->sval=(char*)$1.sval;for(int i=0;i<$3->nchildren;i++)expr_add_child(e,$3->children[i]);free($3->children);free($3);$$=e; }
            | T_IDENT                                                                              { EXPR_t*e=expr_new(E_VAR);e->sval=(char*)$1.sval;$$=e; }
            | T_END                                                                                { EXPR_t*e=expr_new(E_VAR);    e->sval=(char*)$1.sval;$$=e; }
            | T_KEYWORD                                                                            { EXPR_t*e=expr_new(E_KEYWORD);e->sval=(char*)$1.sval;$$=e; }
@@ -217,10 +219,10 @@ static int is_pat(EXPR_t *e){
     for(int i=0;i<e->nchildren;i++) if(is_pat(e->children[i])) return 1;
     return 0;
 }
-static void sno4_stmt_commit_go(void*,Token,EXPR_t*,EXPR_t*,int,EXPR_t*,SnoGoto*);
-/* DYN-59: sno4_stmt_commit_go — takes SnoGoto* directly from grammar.
- * Replaces sno4_stmt_commit + goto_field()/goto_label() re-lexing. */
-static void sno4_stmt_commit_go(void *param,Token lbl,EXPR_t *subj,EXPR_t *pat,int has_eq,EXPR_t *repl,SnoGoto *go){
+/* sno4_stmt_commit_go: go is EXPR_t* E_SEQ encoding S/F/U goto parts (RS-1) */
+/* sno4_stmt_commit_go: gu/gs/gf are EXPR_t* from goto_label_expr —
+ * E_QLIT(sval=label) for a plain label, any other kind for a computed target. */
+static void sno4_stmt_commit_go(void *param,Token lbl,EXPR_t *subj,EXPR_t *pat,int has_eq,EXPR_t *repl,EXPR_t *gu,EXPR_t *gs,EXPR_t *gf){
     PP *pp=(PP*)param;
     if(lbl.sval&&strcasecmp(lbl.sval,"EXPORT")==0){
         if(subj&&subj->kind==E_VAR&&subj->sval){
@@ -271,18 +273,21 @@ static void sno4_stmt_commit_go(void *param,Token lbl,EXPR_t *subj,EXPR_t *pat,i
     s->subject=subj; s->pattern=pat;
     if(s->subject) fixup_val(s->subject);
     if(has_eq){s->has_eq=1;s->replacement=repl;if(repl&&!is_pat(repl))fixup_val(repl);}
-    s->go=go;
+    /* goto fields: gu/gs/gf are E_QLIT(sval=label) for plain labels, else computed. */
+    if(gu){ if(gu->kind==E_QLIT) s->goto_u=gu->sval; else s->goto_u_expr=gu; }
+    if(gs){ if(gs->kind==E_QLIT) s->goto_s=gs->sval; else s->goto_s_expr=gs; }
+    if(gf){ if(gf->kind==E_QLIT) s->goto_f=gf->sval; else s->goto_f_expr=gf; }
     if(!pp->prog->head) pp->prog->head=pp->prog->tail=s; else{pp->prog->tail->next=s;pp->prog->tail=s;}
     /* nstmts already incremented above when assigning s->stno (SN-26-bridge-coverage-j) */
 }
 static EXPR_t *parse_expr(Lex *lx){
-    Program *prog=calloc(1,sizeof*prog);PP p={prog,NULL};g_lx=lx;snobol4_parse(&p);
+    CODE_t *prog=calloc(1,sizeof*prog);PP p={prog,NULL};g_lx=lx;snobol4_parse(&p);
     return prog->head?prog->head->subject:NULL;
 }
-Program *parse_program_tokens(Lex *stream){
-    Program *prog=calloc(1,sizeof*prog);PP p={prog,NULL};g_lx=stream;snobol4_parse(&p);return prog;
+CODE_t *parse_program_tokens(Lex *stream){
+    CODE_t *prog=calloc(1,sizeof*prog);PP p={prog,NULL};g_lx=stream;snobol4_parse(&p);return prog;
 }
-Program *parse_program(LineArray *lines){(void)lines;return calloc(1,sizeof(Program));}
+CODE_t *parse_program(LineArray *lines){(void)lines;return calloc(1,sizeof(CODE_t));}
 EXPR_t *parse_expr_from_str(const char *src){
     if(!src||!*src) return NULL;Lex lx={0};lex_open_str(&lx,src,(int)strlen(src),0);return parse_expr(&lx);
 }
@@ -299,7 +304,7 @@ EXPR_t *parse_expr_pat_from_str(const char *src) {
     buf[slen+1] = '\0';
     Lex lx = {0};
     lex_open_str(&lx, buf, slen + 1, 0);
-    Program *prog = calloc(1, sizeof *prog);
+    CODE_t *prog = calloc(1, sizeof(CODE_t));
     PP p = {prog, NULL};
     g_lx = &lx;
     snobol4_parse(&p);
@@ -313,17 +318,17 @@ EXPR_t *parse_expr_pat_from_str(const char *src) {
  * Uses lex_open_str_initial (INITIAL/col-1 start) so indented and labelled
  * statements are handled correctly.  lex_open_str pushes BODY — correct for
  * single-expression parsing only. */
-Program *sno_parse_string(const char *src) {
-    if (!src) return calloc(1, sizeof(Program));
+CODE_t *sno_parse_string(const char *src) {
+    if (!src) return calloc(1, sizeof(CODE_t));
     int slen = (int)strlen(src);
     char *buf = malloc(slen + 2);
-    if (!buf) return calloc(1, sizeof(Program));
+    if (!buf) return calloc(1, sizeof(CODE_t));
     memcpy(buf, src, slen);
     buf[slen]   = '\n';
     buf[slen+1] = '\0';
     Lex lx = {0};
     lex_open_str_initial(&lx, buf, slen + 1, 0);
-    Program *prog = calloc(1, sizeof *prog);
+    CODE_t *prog = calloc(1, sizeof(CODE_t));
     PP p = {prog, NULL};
     g_lx = &lx;
     snobol4_parse(&p);

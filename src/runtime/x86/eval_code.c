@@ -520,13 +520,13 @@ const char *exec_code(DESCR_t code_block)
         }
 
         /* Goto resolution */
-        if (s->go) {
-            if (s->go->uncond && *s->go->uncond)
-                return s->go->uncond;
-            if (succeeded && s->go->onsuccess && *s->go->onsuccess)
-                return s->go->onsuccess;
-            if (!succeeded && s->go->onfailure && *s->go->onfailure)
-                return s->go->onfailure;
+        if (s->goto_u || s->goto_s || s->goto_f) {
+            if (s->goto_u && *s->goto_u)
+                return s->goto_u;
+            if (succeeded && s->goto_s && *s->goto_s)
+                return s->goto_s;
+            if (!succeeded && s->goto_f && *s->goto_f)
+                return s->goto_f;
         }
         /* No goto match — fall through to next statement */
     }

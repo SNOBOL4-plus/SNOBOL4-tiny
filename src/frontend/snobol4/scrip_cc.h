@@ -65,16 +65,6 @@
 #define expr_arg(e, i)   ((e) && (i) >= 0 && (i) < (e)->nchildren ? (e)->children[(i)] : NULL)
 #define expr_nargs(e)    ((e) ? (e)->nchildren : 0)
 
-/* ---- goto ---- */
-typedef struct {
-    char   *onsuccess;
-    char   *onfailure;
-    char   *uncond;
-    EXPR_t *computed_success_expr;
-    EXPR_t *computed_failure_expr;
-    EXPR_t *computed_uncond_expr;
-} SnoGoto;
-
 /* ---- source language tags (U-12) ---- */
 #define LANG_SNO   0   /* SNOBOL4 */
 #define LANG_ICN   1   /* Icon    */
@@ -90,7 +80,13 @@ struct STMT_t {
     EXPR_t  *subject;
     EXPR_t  *pattern;
     EXPR_t  *replacement;
-    SnoGoto *go;
+    /* goto fields (RS-1): flattened; set from parser goto_label_expr results */
+    char    *goto_s;              /* :S(label) — on success */
+    char    *goto_f;              /* :F(label) — on failure */
+    char    *goto_u;              /* :(label)  — unconditional */
+    EXPR_t  *goto_s_expr;         /* :S(expr)  — computed success */
+    EXPR_t  *goto_f_expr;         /* :F(expr)  — computed failure */
+    EXPR_t  *goto_u_expr;         /* :(expr)   — computed unconditional */
     int      lineno;
     int      stno;    /* SN-26-bridge-coverage-j: source-statement number,
                          1-based, sequential, including blank statements.
@@ -136,7 +132,6 @@ typedef struct {
 static inline EXPR_t *expr_new(EXPR_e k) {
     EXPR_t *e = calloc(1, sizeof *e); e->kind = k; return e;
 }
-static inline SnoGoto *sgoto_new(void) { return calloc(1, sizeof(SnoGoto)); }
 static inline STMT_t  *stmt_new(void)  { return calloc(1, sizeof(STMT_t)); }
 
 /* Append one child — the only way to grow a node's children array. */

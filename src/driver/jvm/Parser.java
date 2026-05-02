@@ -68,22 +68,7 @@ public class Parser {
         }
     }
 
-    // ── SnoGoto ───────────────────────────────────────────────────────────────
-
-    public static class SnoGoto {
-        public String uncond;
-        public String onsuccess;
-        public String onfailure;
-
-        @Override public String toString() {
-            StringBuilder sb = new StringBuilder("GOTO{");
-            if (uncond    != null) sb.append("uncond=").append(uncond).append(" ");
-            if (onsuccess != null) sb.append("S=").append(onsuccess).append(" ");
-            if (onfailure != null) sb.append("F=").append(onfailure).append(" ");
-            sb.append("}");
-            return sb.toString();
-        }
-    }
+    // RS-1: SnoGoto inner class removed; goto fields now flat in StmtNode
 
     // ── StmtNode ──────────────────────────────────────────────────────────────
 
@@ -94,7 +79,9 @@ public class Parser {
         public ExprNode pattern;
         public ExprNode replacement;
         public boolean  hasEq;
-        public SnoGoto  gotoField;
+        public String   gotoU;  // RS-1: was SnoGoto.uncond
+        public String   gotoS;  // RS-1: was SnoGoto.onsuccess
+        public String   gotoF;  // RS-1: was SnoGoto.onfailure
         public int      lineno;
 
         @Override public String toString() {
@@ -105,7 +92,9 @@ public class Parser {
             if (pattern  != null)  sb.append("pat=").append(pattern.kind).append(" ");
             if (hasEq)             sb.append("hasEq ");
             if (replacement != null) sb.append("repl=").append(replacement.kind).append(" ");
-            if (gotoField != null) sb.append(gotoField);
+            if (gotoU != null) sb.append("U=").append(gotoU).append(" ");
+            if (gotoS != null) sb.append("S=").append(gotoS).append(" ");
+            if (gotoF != null) sb.append("F=").append(gotoF).append(" ");
             sb.append("}");
             return sb.toString();
         }
@@ -651,8 +640,8 @@ public class Parser {
         return label;
     }
 
-    private SnoGoto parseGotoField(String gotoStr, int lineno) {
-        if (gotoStr == null || gotoStr.isEmpty()) return null;
+    private void applyGotoField(StmtNode s, String gotoStr, int lineno) {
+        if (gotoStr == null || gotoStr.isEmpty()) return;
 
         Lexer gotoLex = new Lexer();
         gotoLex.openBodyString(gotoStr, lineno);
@@ -660,32 +649,29 @@ public class Parser {
         // Use a nested parser over the goto lexer
         Parser gp = new Parser(gotoLex);
         gp.skipWs();
-
-        SnoGoto g = new SnoGoto();
         while (gp.peek().kind != Lexer.TokKind.T_EOF) {
             Lexer.Token t = gp.peek();
             if (t.kind == Lexer.TokKind.T_IDENT && t.sval != null) {
                 if (t.sval.equalsIgnoreCase("S")) {
                     gp.next();
-                    g.onsuccess = gp.parseGotoLabel();
+                    s.gotoS = gp.parseGotoLabel();
                     gp.skipWs(); continue;
                 }
                 if (t.sval.equalsIgnoreCase("F")) {
                     gp.next();
-                    g.onfailure = gp.parseGotoLabel();
+                    s.gotoF = gp.parseGotoLabel();
                     gp.skipWs(); continue;
                 }
             }
             if (t.kind == Lexer.TokKind.T_LPAREN || t.kind == Lexer.TokKind.T_LANGLE) {
-                g.uncond = gp.parseGotoLabel();
+                s.gotoU = gp.parseGotoLabel();
                 gp.skipWs(); continue;
             }
             nerrors++;
             gp.next();
         }
 
-        if (g.uncond == null && g.onsuccess == null && g.onfailure == null) return null;
-        return g;
+
     }
 
     // ── E_SEQ / E_CAT fixup (mirrors fixup_val_tree) ─────────────────────────
@@ -860,7 +846,7 @@ public class Parser {
             s.label    = label;
             s.isEnd    = isEnd;
             s.lineno   = lineno;
-            s.gotoField = parseGotoField(gotoStr, lineno);
+            applyGotoField(s, gotoStr, lineno);
             stmts.add(s);
         }
 

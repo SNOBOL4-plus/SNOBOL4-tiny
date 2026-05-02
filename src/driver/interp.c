@@ -923,21 +923,21 @@ static DESCR_t call_user_function(const char *fname, DESCR_t *args, int nargs)
                 }
 
                 const char *target = NULL;
-                if (s->go) {
-                    if (s->go->uncond && *s->go->uncond)
-                        target = s->go->uncond;
-                    else if (s->go->computed_uncond_expr) {
-                        DESCR_t cv = interp_eval(s->go->computed_uncond_expr);
+                if (s->goto_u || s->goto_u_expr || s->goto_s || s->goto_s_expr || s->goto_f || s->goto_f_expr) {
+                    if (s->goto_u && *s->goto_u)
+                        target = s->goto_u;
+                    else if (s->goto_u_expr) {
+                        DESCR_t cv = interp_eval(s->goto_u_expr);
                         target = (cv.v == DT_S && cv.s) ? cv.s : NULL;
-                    } else if (succeeded && s->go->onsuccess && *s->go->onsuccess)
-                        target = s->go->onsuccess;
-                    else if (succeeded && s->go->computed_success_expr) {
-                        DESCR_t cv = interp_eval(s->go->computed_success_expr);
+                    } else if (succeeded && s->goto_s && *s->goto_s)
+                        target = s->goto_s;
+                    else if (succeeded && s->goto_s_expr) {
+                        DESCR_t cv = interp_eval(s->goto_s_expr);
                         target = (cv.v == DT_S && cv.s) ? cv.s : NULL;
-                    } else if (!succeeded && s->go->onfailure && *s->go->onfailure)
-                        target = s->go->onfailure;
-                    else if (!succeeded && s->go->computed_failure_expr) {
-                        DESCR_t cv = interp_eval(s->go->computed_failure_expr);
+                    } else if (!succeeded && s->goto_f && *s->goto_f)
+                        target = s->goto_f;
+                    else if (!succeeded && s->goto_f_expr) {
+                        DESCR_t cv = interp_eval(s->goto_f_expr);
                         target = (cv.v == DT_S && cv.s) ? cv.s : NULL;
                     }
                 }
@@ -5423,7 +5423,7 @@ void execute_program(CODE_t *prog)
          * label/subject/pattern/replacement/goto, fire the LABEL event
          * for sync-step parity, advance stno locally, but do NOT call
          * comm_stno (which would bump &STCOUNT). */
-        if (!s->label && !s->subject && !s->pattern && !s->replacement && !s->go) {
+        if (!s->label && !s->subject && !s->pattern && !s->replacement && !s->goto_u && !s->goto_u_expr && !s->goto_s && !s->goto_s_expr && !s->goto_f && !s->goto_f_expr) {
             /* SN-26-bridge-coverage-j: use s->stno (source stno from parse)
              * instead of a linear counter so backward gotos report the right
              * stno. */
@@ -5481,8 +5481,8 @@ void execute_program(CODE_t *prog)
             if (sno_err_is_terminal(_err)) break;   /* &STLIMIT, storage, etc. */
             succeeded = 0;
             target    = NULL;
-            if (s->go && s->go->onfailure && *s->go->onfailure)
-                target = s->go->onfailure;
+            if (s->goto_f && *s->goto_f)
+                target = s->goto_f;
             goto do_goto;
         }
 
@@ -5717,21 +5717,21 @@ void execute_program(CODE_t *prog)
         }
         /* ── goto resolution ───────────────────────────────────────── */
         target = NULL;
-        if (s->go) {
-            if (s->go->uncond && *s->go->uncond)
-                target = s->go->uncond;
-            else if (s->go->computed_uncond_expr) {
-                DESCR_t cv = interp_eval(s->go->computed_uncond_expr);
+        if (s->goto_u || s->goto_u_expr || s->goto_s || s->goto_s_expr || s->goto_f || s->goto_f_expr) {
+            if (s->goto_u && *s->goto_u)
+                target = s->goto_u;
+            else if (s->goto_u_expr) {
+                DESCR_t cv = interp_eval(s->goto_u_expr);
                 target = (cv.v == DT_S && cv.s) ? cv.s : NULL;
-            } else if (succeeded && s->go->onsuccess && *s->go->onsuccess)
-                target = s->go->onsuccess;
-            else if (succeeded && s->go->computed_success_expr) {
-                DESCR_t cv = interp_eval(s->go->computed_success_expr);
+            } else if (succeeded && s->goto_s && *s->goto_s)
+                target = s->goto_s;
+            else if (succeeded && s->goto_s_expr) {
+                DESCR_t cv = interp_eval(s->goto_s_expr);
                 target = (cv.v == DT_S && cv.s) ? cv.s : NULL;
-            } else if (!succeeded && s->go->onfailure && *s->go->onfailure)
-                target = s->go->onfailure;
-            else if (!succeeded && s->go->computed_failure_expr) {
-                DESCR_t cv = interp_eval(s->go->computed_failure_expr);
+            } else if (!succeeded && s->goto_f && *s->goto_f)
+                target = s->goto_f;
+            else if (!succeeded && s->goto_f_expr) {
+                DESCR_t cv = interp_eval(s->goto_f_expr);
                 target = (cv.v == DT_S && cv.s) ? cv.s : NULL;
             }
         }
@@ -5976,14 +5976,14 @@ static void ir_print_stmt(STMT_t *st, FILE *f) {
     if (st->subject)   { fprintf(f, " :subj ");  ir_print_node(st->subject,     f); }
     if (st->pattern)   { fprintf(f, " :pat ");   ir_print_node(st->pattern,     f); }
     if (st->replacement){fprintf(f, " :repl ");  ir_print_node(st->replacement, f); }
-    if (st->go) {
-        SnoGoto *g = st->go;
-        if (g->uncond)    fprintf(f, " :go %s",  g->uncond);
-        if (g->onsuccess) fprintf(f, " :goS %s", g->onsuccess);
-        if (g->onfailure) fprintf(f, " :goF %s", g->onfailure);
-        if (g->computed_uncond_expr)  { fprintf(f, " :go $(");  ir_print_node(g->computed_uncond_expr,  f); fprintf(f, ")"); }
-        if (g->computed_success_expr) { fprintf(f, " :goS $("); ir_print_node(g->computed_success_expr, f); fprintf(f, ")"); }
-        if (g->computed_failure_expr) { fprintf(f, " :goF $("); ir_print_node(g->computed_failure_expr, f); fprintf(f, ")"); }
+    if (st->goto_u || st->goto_u_expr || st->goto_s || st->goto_s_expr || st->goto_f || st->goto_f_expr) {
+        /* RS-1: goto fields now flat in STMT_t */
+        if (st->goto_u)     fprintf(f, " :go %s",  st->goto_u);
+        if (st->goto_s)     fprintf(f, " :goS %s", st->goto_s);
+        if (st->goto_f)     fprintf(f, " :goF %s", st->goto_f);
+        if (st->goto_u_expr){ fprintf(f, " :go $(");  ir_print_node(st->goto_u_expr, f); fprintf(f, ")"); }
+        if (st->goto_s_expr){ fprintf(f, " :goS $("); ir_print_node(st->goto_s_expr, f); fprintf(f, ")"); }
+        if (st->goto_f_expr){ fprintf(f, " :goF $("); ir_print_node(st->goto_f_expr, f); fprintf(f, ")"); }
     }
     fprintf(f, ")\n");
 }

@@ -58,7 +58,7 @@ static const char *strip_sigil(const char *s) {
     if (s && (s[0]=='$'||s[0]=='@'||s[0]=='%')) return s+1;
     return s;
 }
-static EXPR_t *leaf_sval(EKind k, const char *s) {
+static EXPR_t *leaf_sval(EXPR_e k, const char *s) {
     EXPR_t *e = expr_new(k); e->sval = intern(s); return e;
 }
 static EXPR_t *var_node(const char *name) {
@@ -119,13 +119,13 @@ static EXPR_t *make_for_range(EXPR_t *lo, EXPR_t *hi, const char *vname, EXPR_t 
 }
 
 /*--------------------------------------------------------------------
- * Program output
+ * CODE_t output
  *--------------------------------------------------------------------*/
-Program *raku_prog_result = NULL;
+CODE_t *raku_prog_result = NULL;
 
 static void add_proc(EXPR_t *e) {
     if (!e) return;
-    if (!raku_prog_result) raku_prog_result = calloc(1, sizeof(Program));
+    if (!raku_prog_result) raku_prog_result = calloc(1, sizeof(CODE_t));
     STMT_t *st = calloc(1, sizeof(STMT_t));
     st->subject = e; st->lineno = 0; st->lang = LANG_RAKU;
     if (!raku_prog_result->head) raku_prog_result->head = raku_prog_result->tail = st;
@@ -385,13 +385,13 @@ for_stmt
 given_stmt
     : KW_GIVEN expr '{' when_list '}'
         { /* RK-18d: E_CASE[ topic, cmpnode0, val0, body0, cmpnode1, val1, body1, ... ]
-           * cmp kind stored in separate E_ILIT node (ival=EKind) to avoid corrupting val->ival. */
+           * cmp kind stored in separate E_ILIT node (ival=EXPR_e) to avoid corrupting val->ival. */
           EXPR_t *ec=expr_new(E_CASE);
           expr_add_child(ec,$2);
           ExprList *whens=$4;
           for(int i=0;i<whens->count;i++){
               EXPR_t *pair=whens->items[i];
-              EKind cmp=(EKind)(pair->ival);
+              EXPR_e cmp=(EXPR_e)(pair->ival);
               EXPR_t *val=pair->children[0], *body=pair->children[1];
               EXPR_t *cn=expr_new(E_ILIT); cn->ival=(long)cmp;
               expr_add_child(ec,cn); expr_add_child(ec,val); expr_add_child(ec,body);
@@ -405,7 +405,7 @@ given_stmt
           ExprList *whens=$4;
           for(int i=0;i<whens->count;i++){
               EXPR_t *pair=whens->items[i];
-              EKind cmp=(EKind)(pair->ival);
+              EXPR_e cmp=(EXPR_e)(pair->ival);
               EXPR_t *val=pair->children[0], *body=pair->children[1];
               EXPR_t *cn=expr_new(E_ILIT); cn->ival=(long)cmp;
               expr_add_child(ec,cn); expr_add_child(ec,val); expr_add_child(ec,body);
@@ -418,7 +418,7 @@ given_stmt
 when_list
     : /* empty */  { $$=exprlist_new(); }
     | when_list KW_WHEN expr block
-        { EKind cmp=($3->kind==E_QLIT)?E_LEQ:E_EQ;
+        { EXPR_e cmp=($3->kind==E_QLIT)?E_LEQ:E_EQ;
           EXPR_t *pair=expr_new(E_SEQ_EXPR);
           pair->ival=(long)cmp;
           expr_add_child(pair,$3); expr_add_child(pair,$4);
@@ -727,7 +727,7 @@ atom
 extern void *raku_yy_scan_string(const char *);
 extern void  raku_yy_delete_buffer(void *);
 
-Program *raku_parse_string(const char *src) {
+CODE_t *raku_parse_string(const char *src) {
     raku_prog_result = NULL;
     void *buf = raku_yy_scan_string(src);
     raku_yyparse();

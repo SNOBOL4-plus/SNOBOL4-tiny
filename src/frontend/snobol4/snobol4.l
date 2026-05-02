@@ -529,12 +529,12 @@ Token lex_peek(Lex *lx) {
 int  lex_at_end(Lex *lx) { return lex_peek(lx).kind==T_EOF; }
 void lex_destroy(Lex *lx) { flex_lex_destroy(lx); }
 
-extern Program *parse_program_tokens(Lex *stream);
+extern CODE_t *parse_program_tokens(Lex *stream);
 
-Program *sno_parse(FILE *f, const char *fname) {
+CODE_t *sno_parse(FILE *f, const char *fname) {
     Lex lx; memset(&lx,0,sizeof lx);
     flex_lex_open(&lx,f,fname);
-    Program *prog = parse_program_tokens(&lx);
+    CODE_t *prog = parse_program_tokens(&lx);
     flex_lex_destroy(&lx);
     return prog;
 }

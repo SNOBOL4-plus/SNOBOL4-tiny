@@ -17,7 +17,7 @@
  *   * synthetic concat T_CONCAT      → E_SEQ (n-ary fold)
  *   * LS-4.cn (session-#7 cosmetic):
  *     - file rename snocone.y → snocone_parse.y (matches snocone_lex.{c,h})
- *     - public entry now returns CODE_t* (typedef alias of Program)
+ *     - public entry now returns CODE_t* (typedef alias of CODE_t)
  *       for symmetry with EXPR_t — the type EVAL operates on
  *   * LS-4.d (this rung): postfix subscript `a[i, j]` → E_IDX (n-ary,
  *     left-recursive so `a[i][j]` chains)
@@ -28,7 +28,7 @@
  * Pipeline:
  *   snocone_lex.c  (threaded-code FSM lexer) -- sc_lex(yylval, st) -- IS yylex
  *   snocone_parse.y      (this file)               -- Bison grammar
- *   CODE_t        (STMT_t list, EXPR_t IR — alias of Program)
+ *   CODE_t        (STMT_t list, EXPR_t IR — alias of CODE_t)
  *
  * Token-kind ownership (cleaned up session 2026-05-01, SB-6.H):
  *   Bison owns the token enum.  `enum sc_tokentype` lives in
@@ -49,7 +49,7 @@
  * Public entry:
  *   CODE_t *snocone_parse_program(const char *src, const char *filename);
  *
- *   CODE_t is a typedef alias of Program (added LS-4.cn for symmetry
+ *   CODE_t is a typedef alias of CODE_t (added LS-4.cn for symmetry
  *   with EXPR_t).  The two names refer to the same type.
  *
  * AUTHORS: Lon Jones Cherryholmes · Claude Sonnet
@@ -120,7 +120,7 @@ typedef struct LoopFrame {
 /* Parser state — passed to sc_parse() via %parse-param.  Carries the
  * FSM lexer context (the single producer of tokens), the code under
  * construction, and a small error counter.  Uses CODE_t (typedef alias
- * of Program) for symmetry with EXPR_t — Snocone's parser produces
+ * of CODE_t) for symmetry with EXPR_t — Snocone's parser produces
  * code, not just an expression. */
 typedef struct ScParseState {
     struct LexCtx *ctx;
@@ -485,7 +485,7 @@ static void     sc_emit_struct         (ScParseState *st, char *name, char *fiel
 
 %%
 
-/* ---- Program structure ---- */
+/* ---- CODE_t structure ---- */
 program     : stmt_list
             | /* empty */
             ;
@@ -1588,8 +1588,7 @@ static void sc_append_return(ScParseState *st, EXPR_t *retval) {
          * still emit the RETURN goto so it's syntactically a return.   */
         s->subject = retval;
     }
-    s->go = sgoto_new();
-    s->go->uncond = strdup("RETURN");
+    s->goto_u = strdup("RETURN");
     if (!st->code->head) st->code->head = st->code->tail = s;
     else { st->code->tail->next = s; st->code->tail = s; }
 }
@@ -1599,8 +1598,7 @@ static void sc_append_freturn(ScParseState *st) {
     STMT_t *s = stmt_new();
     s->lineno = st->ctx ? st->ctx->line : 0;
     s->stno   = ++st->code->nstmts;
-    s->go     = sgoto_new();
-    s->go->uncond = strdup("FRETURN");
+    s->goto_u = strdup("FRETURN");
     if (!st->code->head) st->code->head = st->code->tail = s;
     else { st->code->tail->next = s; st->code->tail = s; }
 }
@@ -1610,8 +1608,7 @@ static void sc_append_nreturn(ScParseState *st) {
     STMT_t *s = stmt_new();
     s->lineno = st->ctx ? st->ctx->line : 0;
     s->stno   = ++st->code->nstmts;
-    s->go     = sgoto_new();
-    s->go->uncond = strdup("NRETURN");
+    s->goto_u = strdup("NRETURN");
     if (!st->code->head) st->code->head = st->code->tail = s;
     else { st->code->tail->next = s; st->code->tail = s; }
 }
@@ -1640,8 +1637,7 @@ static STMT_t *sc_make_cond_fail_stmt(ScParseState *st, EXPR_t *cond, char *fail
     s->stno   = ++st->code->nstmts;
     s->subject = cond;
     sc_split_subject_pattern(&s->subject, &s->pattern);
-    s->go      = sgoto_new();
-    s->go->onfailure = fail_target;
+    s->goto_f = fail_target;
     return s;
 }
 
@@ -1650,8 +1646,7 @@ static STMT_t *sc_make_goto_uncond_stmt(ScParseState *st, char *target) {
     STMT_t *s = stmt_new();
     s->lineno = st->ctx ? st->ctx->line : 0;
     s->stno   = ++st->code->nstmts;
-    s->go     = sgoto_new();
-    s->go->uncond = target;
+    s->goto_u = target;
     return s;
 }
 
@@ -1835,8 +1830,7 @@ static STMT_t *sc_make_cond_succ_stmt(ScParseState *st, EXPR_t *cond, char *succ
     s->stno    = ++st->code->nstmts;
     s->subject = cond;
     sc_split_subject_pattern(&s->subject, &s->pattern);
-    s->go      = sgoto_new();
-    s->go->onsuccess = succ_target;
+    s->goto_s = succ_target;
     return s;
 }
 
@@ -2357,9 +2351,9 @@ static void sc_emit_struct(ScParseState *st, char *name, char *fields) {
  *  failure returns NULL (and st.nerrors > 0); on success returns a
  *  freshly-allocated CODE_t ready for the IR/SM pipeline.
  *
- *  CODE_t is the typedef alias of Program (added in LS-4.cn — session
+ *  CODE_t is the typedef alias of CODE_t (added in LS-4.cn — session
  *  2026-04-30 #7 — for symmetry with EXPR_t).  Existing callers that
- *  declared the result as `Program *` continue to work; the two names
+ *  declared the result as `CODE_t *` continue to work; the two names
  *  refer to the same type.
  *
  *  This is the LS-4.a entry point.  When LS-4.j wires it into scrip's

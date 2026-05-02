@@ -164,10 +164,6 @@ public static class Snobol4Parser
         var (bodyNoGoto, gU, gS, gF) = ExtractGotos(t);
         var (subjectStr, patternStr, replStr, hasEq) = SplitStatement(bodyNoGoto.Trim());
 
-        SnoGoto? go = null;
-        if (gU != null || gS != null || gF != null)
-            go = new SnoGoto { OnSuccess = gS, OnFailure = gF, Uncond = gU };
-
         return new IrStmt
         {
             Label       = label,
@@ -175,7 +171,9 @@ public static class Snobol4Parser
             Pattern     = string.IsNullOrEmpty(patternStr)  ? null : ParseExpr(patternStr),
             HasEq       = hasEq,
             Replacement = (hasEq && !string.IsNullOrEmpty(replStr)) ? ParseExpr(replStr) : null,
-            Go          = go,
+            GotoU       = gU,
+            GotoS       = gS,
+            GotoF       = gF,
         };
     }
 
