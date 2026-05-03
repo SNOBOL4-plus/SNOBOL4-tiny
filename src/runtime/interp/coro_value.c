@@ -45,8 +45,22 @@
  * Unsupported tokens (TK_AUGPOW, TK_AUGCSET_*, TK_AUGSCAN) fall through
  * to the integer-add default — same coverage as IR-mode.
  *
+ * RS-22e (2026-05-03): Fallthrough survey.  smoke_icon hits zero
+ * unhandled kinds — the rung's stated gate is met.  Full Icon corpus
+ * (271 programs) hits 16 distinct kinds totaling 62 fallthroughs, in
+ * five categories: generators (E_TO/E_ALTERNATE/E_ITERATE/E_LIMIT/
+ * E_SEQ), string relops (E_LEQ/E_LNE/E_LGE/E_LLT plus untriggered
+ * E_LGT/E_LLE peers), cset arithmetic (E_CSET/E_CSET_COMPL/_DIFF/
+ * _INTER), and three mid-size kinds (E_MAKELIST, E_SCAN, E_CASE).
+ * Hardening the fallthrough to FAILDESCR causes 4 unified_broker FAILs
+ * (notably palindrome.icn via E_LNE), so per the rung the abort is
+ * reverted; full inventory in docs/RS-22e-fallthrough-survey.md.
+ * RS-22f-or-RS-23 closes the remaining 16 kinds; only after that can
+ * the `interp_eval` extern be dropped (RS-23) and coro_value.c
+ * promoted into the isolation gate.
+ *
  * AUTHORS: Lon Jones Cherryholmes · Claude Sonnet
- * SPRINT:  RS-17a (2026-05-03), RS-22a (2026-05-03), RS-22b (2026-05-03), RS-22c (2026-05-03), RS-22d (2026-05-03)
+ * SPRINT:  RS-17a (2026-05-03), RS-22a (2026-05-03), RS-22b (2026-05-03), RS-22c (2026-05-03), RS-22d (2026-05-03), RS-22e (2026-05-03)
  *==========================================================================================================================*/
 
 #include "coro_value.h"
@@ -723,7 +737,45 @@ DESCR_t bb_eval_value(EXPR_t *e)
         break;
     }
 
-    /* Fallthrough: RS-17a-cont rungs migrate kinds from here into the switch
-     * above, replacing this call site by site. */
+    /* RS-22e (2026-05-03): fallthrough survey complete.
+     *
+     *   smoke_icon       : 0 unhandled kinds  ✅
+     *   merge gate (unified_broker) : 4 FAILs hardened — palindrome.icn
+     *                       (E_LNE), cross_lang.scrip and the Raku tests
+     *                       depend on kinds outside our switch.
+     *   full Icon corpus (271 programs)      : 16 distinct unhandled
+     *                       kinds, totaling 62 calls.
+     *
+     * Hardening forced merge-gate regression, so per the rung we revert
+     * to interp_eval fallthrough and capture the 16 kinds as the work
+     * boundary in docs/RS-22e-fallthrough-survey.md.  Five categories:
+     *
+     *   Generators (legitimate first-value-via-coro_eval semantics —
+     *   should be lifted to coro_eval dispatch, not direct evaluation):
+     *     E_TO E_TO_BY (only TO seen — TO_BY untriggered) E_ALTERNATE
+     *     E_ITERATE E_LIMIT E_SEQ E_EVERY (E_EVERY not in survey but
+     *     same shape).
+     *
+     *   Easy lifts (peers of kinds we already have — copy the pattern):
+     *     E_LEQ  E_LNE  E_LGE  E_LLT  E_LGT  E_LLE  (string relops —
+     *     mirror of RS-22b's NUMREL via STRREL macro at interp_eval.c
+     *     :3397).  E_LCONCAT was already done; these are six remaining
+     *     string-comparison peers.
+     *
+     *   Cset arithmetic (Icon-specific value ops):
+     *     E_CSET (literal — trivial: return e->sval ? STRVAL : NULVCL)
+     *     E_CSET_COMPL E_CSET_DIFF E_CSET_INTER E_CSET_UNION
+     *
+     *   Mid-size:
+     *     E_MAKELIST  (DT_DATA list constructor — uses DEFDAT_fn /
+     *                  DATCON_fn; ~12-line lift)
+     *     E_SCAN      (drives a generator chain via coro/exec_stmt;
+     *                  needs careful first-value contract definition)
+     *     E_CASE      (statement-shaped; reaches value context only via
+     *                  case-as-expression — small lift)
+     *
+     * RS-22f or RS-23 will close these; the rung-23 gate ("remove
+     * extern interp_eval, promote into isolation gate") cannot fire
+     * until then.  Until then, fallthrough preserves behavior. */
     return interp_eval(e);
 }
