@@ -71,6 +71,7 @@ extern void ir_print_node_nl(const EXPR_t *e, FILE *f);
 #include "../runtime/x86/sm_prog.h"
 #include "../runtime/x86/bb_build.h"    /* M-BB-LIVE-WIRE: bb_mode_t, g_bb_mode */
 #include "../runtime/x86/sm_codegen.h"  /* M-JIT-RUN: sm_codegen, sm_jit_run */
+#include "scrip_sm.h"                   /* RS-14: sm_preamble, sm_run_with_recovery */
 #include "sync_monitor.h"               /* IM-7: --monitor in-process comparator */
 #include "../runtime/x86/sm_image.h"    /* M-JIT-RUN: sm_image_init */
 
@@ -456,67 +457,23 @@ int main(int argc, char **argv)
         polyglot_execute(prog);   /* OE-7: polyglot takes priority */
     } else if (mode_sm_run) {
         /* --sm-run: SM-LOWER path — IR → SM_Program → sm_interp_run.
-         * Must mirror execute_program setup: build label table and register
-         * DEFINE'd functions so call_user_function can find bodies via
-         * g_user_call_hook → _usercall_hook → label_lookup. */
-        label_table_build(prog);
-        prescan_defines(prog);
-        g_sno_err_active = 1;   /* arm so sno_runtime_error longjmps safely */
-        SM_Program *sm = sm_lower(prog);
-        if (!sm) {
-            fprintf(stderr, "scrip: sm_lower failed\n");
-            return 1;
-        }
-        /* RS-9b: IR tree no longer needed — SM_Program is self-contained.
-         * SM_PUSH_EXPR pointers were cloned to GC memory by emit_push_expr.
-         * Clear label_table stmt pointers so any residual label_lookup
-         * calls return NULL (no dangling STMT_t* dereference). */
-        g_current_sm_prog = sm;
-        code_free(prog); prog = NULL;
-        label_table_clear_stmts();
-        /* ── --dump-sm: print SM_Program and exit ───────────────────── */
+         * RS-14: preamble + run loop extracted to scrip_sm.{c,h}. */
+        SM_Program *sm = sm_preamble(prog);
+        if (!sm) return 1;
+        prog = NULL;   /* sm_preamble freed it */
         if (dump_sm) {
             sm_prog_print(sm, stdout);
             sm_prog_free(sm);
             return 0;
         }
-        SM_State st;
-        sm_state_init(&st);
-        /* Arm g_sno_err_jmp: sno_runtime_error longjmps here on error.
-         * We treat each error as statement failure: mark last_ok=0, advance pc,
-         * and re-enter the interp loop.  This mirrors execute_program's per-stmt
-         * setjmp pattern and prevents longjmp into an uninitialized jmp_buf. */
-        int hybrid_err;
-        while (1) {
-            hybrid_err = setjmp(g_sno_err_jmp);
-            if (hybrid_err != 0) {
-                /* runtime error fired mid-statement: mark fail, advance past
-                 * the current instruction and continue */
-                st.last_ok = 0;
-                st.sp = 0;  /* reset value stack — state is undefined after error */
-                if (st.pc < sm->count) st.pc++;  /* skip offending instruction */
-                /* drain to next SM_STNO boundary so we resume cleanly */
-                while (st.pc < sm->count &&
-                       sm->instrs[st.pc].op != SM_STNO &&
-                       sm->instrs[st.pc].op != SM_HALT)
-                    st.pc++;
-            }
-            int rc = sm_interp_run(sm, &st);
-            if (rc == 0 || rc < -1) break;  /* halted or fatal */
-            if (st.pc >= sm->count) break;
-        }
+        sm_run_with_recovery(sm, sm_interp_run);
         sm_prog_free(sm);
     } else if (mode_jit_run) {
         /* --jit-run: SM-LOWER → sm_codegen → sm_jit_run.
-         * Same preamble as --sm-run; codegen replaces sm_interp_run. */
-        label_table_build(prog);
-        prescan_defines(prog);
-        g_sno_err_active = 1;
-        SM_Program *sm = sm_lower(prog);
-        if (!sm) { fprintf(stderr, "scrip: sm_lower failed\n"); return 1; }
-        /* RS-9b: IR tree no longer needed after lowering. */
-        code_free(prog); prog = NULL;
-        label_table_clear_stmts();
+         * RS-14: shares sm_preamble + sm_run_with_recovery with --sm-run. */
+        SM_Program *sm = sm_preamble(prog);
+        if (!sm) return 1;
+        prog = NULL;
         if (dump_sm) { sm_prog_print(sm, stdout); sm_prog_free(sm); return 0; }
         if (sm_image_init() != 0) {
             fprintf(stderr, "scrip: sm_image_init failed\n");
@@ -526,25 +483,7 @@ int main(int argc, char **argv)
             fprintf(stderr, "scrip: sm_codegen failed\n");
             sm_prog_free(sm); return 1;
         }
-        g_current_sm_prog = sm;  /* RS-9c: tell _usercall_hook SM bodies are live */
-        SM_State st;
-        sm_state_init(&st);
-        int hybrid_err;
-        while (1) {
-            hybrid_err = setjmp(g_sno_err_jmp);
-            if (hybrid_err != 0) {
-                st.last_ok = 0;
-                st.sp = 0;
-                if (st.pc < sm->count) st.pc++;
-                while (st.pc < sm->count &&
-                       sm->instrs[st.pc].op != SM_STNO &&
-                       sm->instrs[st.pc].op != SM_HALT)
-                    st.pc++;
-            }
-            int rc = sm_jit_run(sm, &st);
-            if (rc == 0 || rc < -1) break;
-            if (st.pc >= sm->count) break;
-        }
+        sm_run_with_recovery(sm, sm_jit_run);
         sm_prog_free(sm);
     } else if (has_non_sno) {
         polyglot_execute(prog);

@@ -14,7 +14,20 @@
 
 /* _eval_str_impl_fn — EVAL(string) hook for pattern-context strings.
  * Uses bison parse_expr_pat_from_str (snobol4.tab.c) which produces
- * EXPR_t with correct EXPR_e values directly — no CMPILE/CMPND_t bridge. */
+ * EXPR_t with correct EXPR_e values directly — no CMPILE/CMPND_t bridge.
+ *
+ * In SM mode, this path remains via interp_eval_pat. interp_eval_pat is
+ * SM-safe by construction: all user-function dispatch flows through APPLY_fn
+ * (label_table_clear_stmts() in scrip.c nulls the IR label table after
+ * sm_lower, so interp_eval's E_FNC label_lookup always returns NULL and
+ * falls through to APPLY_fn → _usercall_hook → RS-11 SM dispatch).
+ *
+ * eval_node was considered as an SM-mode shortcut but lacks coverage of the
+ * pattern-primitive node kinds (E_LEN, E_TAB, E_BREAK, E_SPAN, E_ANY,
+ * E_NOTANY, E_ARB, E_ARBNO, E_REM, E_FAIL, E_SUCCEED, E_FENCE, E_POS, ...)
+ * that EVAL('LEN(2)') etc. produce. interp_eval_pat handles these via
+ * pat_len()/pat_tab()/etc. helpers; eval_node would silently coerce them
+ * to STRING. RS-12 explored the route and reverted. */
 DESCR_t _eval_str_impl_fn(const char *s) {
     EXPR_t *tree = parse_expr_pat_from_str(s);
     if (!tree) return FAILDESCR;
@@ -31,8 +44,13 @@ DESCR_t _eval_pat_impl_fn(DESCR_t pat) {
 }
 
 
-/* label_exists — called by LABEL() builtin via sno_set_label_exists_hook */
+/* label_exists — called by LABEL() builtin via sno_set_label_exists_hook.
+ * RS-13: in SM mode, the IR label table is cleared by label_table_clear_stmts()
+ * after sm_lower, so label_lookup always returns NULL. Use sm_label_pc_lookup
+ * against the live SM_Program instead. In IR mode, fall back to label_lookup. */
 int _label_exists_fn(const char *name) {
+    if (g_current_sm_prog)
+        return sm_label_pc_lookup(g_current_sm_prog, name) >= 0;
     return label_lookup(name) != NULL;
 }
 
@@ -86,16 +104,22 @@ DESCR_t _usercall_hook(const char *name, DESCR_t *args, int nargs) {
             if (_cell) { *_cell = args[0]; return args[0]; }
         }
     }
-    /* Check for a body label (user-defined function) */
+    /* Check for a body label (user-defined function).
+     * RS-13: skip in SM mode — the IR label table is cleared after sm_lower,
+     * so label_lookup always returns NULL. SM-bodied functions are dispatched
+     * by the RS-11 block below via sm_label_pc_lookup. */
     const char *_entry = FUNC_ENTRY_fn(name);
-    STMT_t *_body = _entry ? label_lookup(_entry) : NULL;
-    if (!_body) _body = label_lookup(name);
-    if (!_body) {
-        char _uf[128]; size_t _fl = strlen(name);
-        if (_fl >= sizeof(_uf)) _fl = sizeof(_uf) - 1;
-        for (size_t _i = 0; _i <= _fl; _i++)
-            _uf[_i] = (char)toupper((unsigned char)name[_i]);
-        _body = label_lookup(_uf);
+    STMT_t *_body = NULL;
+    if (!g_current_sm_prog) {
+        _body = _entry ? label_lookup(_entry) : NULL;
+        if (!_body) _body = label_lookup(name);
+        if (!_body) {
+            char _uf[128]; size_t _fl = strlen(name);
+            if (_fl >= sizeof(_uf)) _fl = sizeof(_uf) - 1;
+            for (size_t _i = 0; _i <= _fl; _i++)
+                _uf[_i] = (char)toupper((unsigned char)name[_i]);
+            _body = label_lookup(_uf);
+        }
     }
     /* Pure builtin (no body) AND registered as builtin: use APPLY_fn for correct failure */
     if (!_body && FNCEX_fn(name)) {
