@@ -59,8 +59,17 @@
  * the `interp_eval` extern be dropped (RS-23) and coro_value.c
  * promoted into the isolation gate.
  *
+ * RS-22f-strrel (2026-05-03): Six string lexicographic relops lifted
+ * in.  E_LLT/E_LLE/E_LGT/E_LGE/E_LEQ/E_LNE share `bb_strrel` — direct
+ * mirror of `bb_numrel` using strcmp(VARVAL_fn(l), VARVAL_fn(r)).
+ * Right-operand-on-success (Icon goal-directed convention).  Closes
+ * 17 fallthroughs (E_LEQ ×9, E_LNE ×6, E_LGE ×1, E_LLT ×1) and the
+ * two untriggered peers in the survey.  Removes palindrome.icn
+ * unified_broker failure path and three peers — first sub-rung of
+ * RS-22f.
+ *
  * AUTHORS: Lon Jones Cherryholmes · Claude Sonnet
- * SPRINT:  RS-17a (2026-05-03), RS-22a (2026-05-03), RS-22b (2026-05-03), RS-22c (2026-05-03), RS-22d (2026-05-03), RS-22e (2026-05-03)
+ * SPRINT:  RS-17a (2026-05-03), RS-22a (2026-05-03), RS-22b (2026-05-03), RS-22c (2026-05-03), RS-22d (2026-05-03), RS-22e (2026-05-03), RS-22f-strrel (2026-05-03)
  *==========================================================================================================================*/
 
 #include "coro_value.h"
@@ -129,6 +138,38 @@ static DESCR_t bb_numrel(EXPR_t *e, bb_relop_t op)
     case BBR_EQ: ok = (lv == rv); break;
     case BBR_NE: ok = (lv != rv); break;
     default:     ok = 0;          break;
+    }
+    return ok ? r : FAILDESCR;
+}
+
+/*------------------------------------------------------------------------------------------------------------------------------
+ * bb_strrel — RS-22f-strrel string lexicographic relational dispatch helper.
+ *
+ * Mirrors STRREL macro in interp_eval.c (lines 3397-3407): both operands
+ * resolved via VARVAL_fn (NULL → empty string), strcmp, succeed → return
+ * RIGHT operand (Icon goal-directed convention; right operand survives so
+ * generators can filter), fail → FAILDESCR.
+ *----------------------------------------------------------------------------------------------------------------------------*/
+typedef enum { BBS_LLT, BBS_LLE, BBS_LGT, BBS_LGE, BBS_LEQ, BBS_LNE } bb_strrelop_t;
+
+static DESCR_t bb_strrel(EXPR_t *e, bb_strrelop_t op)
+{
+    if (e->nchildren < 2) return FAILDESCR;
+    DESCR_t l = bb_eval_value(e->children[0]);
+    DESCR_t r = bb_eval_value(e->children[1]);
+    if (IS_FAIL_fn(l) || IS_FAIL_fn(r)) return FAILDESCR;
+    const char *ls = VARVAL_fn(l); if (!ls) ls = "";
+    const char *rs = VARVAL_fn(r); if (!rs) rs = "";
+    int cmp = strcmp(ls, rs);
+    int ok;
+    switch (op) {
+    case BBS_LLT: ok = (cmp <  0); break;
+    case BBS_LLE: ok = (cmp <= 0); break;
+    case BBS_LGT: ok = (cmp >  0); break;
+    case BBS_LGE: ok = (cmp >= 0); break;
+    case BBS_LEQ: ok = (cmp == 0); break;
+    case BBS_LNE: ok = (cmp != 0); break;
+    default:      ok = 0;          break;
     }
     return ok ? r : FAILDESCR;
 }
@@ -483,6 +524,16 @@ DESCR_t bb_eval_value(EXPR_t *e)
         return icn_descr_identical(l, r) ? r : FAILDESCR;
     }
 
+    /* RS-22f-strrel: lexicographic (string) relational binops — succeed →
+     * return right operand, fail → FAILDESCR.  Mirror of bb_numrel for
+     * Icon string comparison operators (==, ~==, <<, <<=, >>, >>=). */
+    case E_LLT: return bb_strrel(e, BBS_LLT);
+    case E_LLE: return bb_strrel(e, BBS_LLE);
+    case E_LGT: return bb_strrel(e, BBS_LGT);
+    case E_LGE: return bb_strrel(e, BBS_LGE);
+    case E_LEQ: return bb_strrel(e, BBS_LEQ);
+    case E_LNE: return bb_strrel(e, BBS_LNE);
+
     /* RS-22c: string concat — Icon `||` (E_CAT) and `|||` (E_LCONCAT)
      * share bb_str_concat.  In Icon BB context neither produces patterns,
      * so the simple coerce-and-concat path is correct (mirrors IR-mode
@@ -756,11 +807,8 @@ DESCR_t bb_eval_value(EXPR_t *e)
      *     E_ITERATE E_LIMIT E_SEQ E_EVERY (E_EVERY not in survey but
      *     same shape).
      *
-     *   Easy lifts (peers of kinds we already have — copy the pattern):
-     *     E_LEQ  E_LNE  E_LGE  E_LLT  E_LGT  E_LLE  (string relops —
-     *     mirror of RS-22b's NUMREL via STRREL macro at interp_eval.c
-     *     :3397).  E_LCONCAT was already done; these are six remaining
-     *     string-comparison peers.
+     *   String relops:  closed by RS-22f-strrel — see case arms above
+     *   for E_LLT/E_LLE/E_LGT/E_LGE/E_LEQ/E_LNE (bb_strrel).
      *
      *   Cset arithmetic (Icon-specific value ops):
      *     E_CSET (literal — trivial: return e->sval ? STRVAL : NULVCL)
@@ -774,8 +822,8 @@ DESCR_t bb_eval_value(EXPR_t *e)
      *     E_CASE      (statement-shaped; reaches value context only via
      *                  case-as-expression — small lift)
      *
-     * RS-22f or RS-23 will close these; the rung-23 gate ("remove
-     * extern interp_eval, promote into isolation gate") cannot fire
-     * until then.  Until then, fallthrough preserves behavior. */
+     * Remaining sub-rungs of RS-22f close the rest; the rung-23 gate
+     * ("remove extern interp_eval, promote into isolation gate") cannot
+     * fire until then.  Until then, fallthrough preserves behavior. */
     return interp_eval(e);
 }
