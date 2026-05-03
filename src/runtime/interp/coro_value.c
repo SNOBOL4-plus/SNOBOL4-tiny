@@ -31,14 +31,29 @@
  * normalization (0 → slen+1, negative → slen+1+p) — three minor variants
  * of bound computation kept inline.
  *
+ * RS-22d (2026-05-03): Unary + augmented-assign kinds lifted in.
+ * E_MNS (unary `-` — Icon parser uses E_MNS, not the rung-text "E_NEG"),
+ * E_PLS (unary `+`), E_NOT (`not`), E_NULL (`/`), E_NONNULL (`\`),
+ * E_SIZE (`*`), E_RANDOM (`?`) all dispatched directly.  E_AUGOP (the
+ * actual IR kind name; rung-text "E_AUGASSIGN" was a label rather than
+ * the literal kind) handles all three IR-mode paths: bang-iterate lvalue
+ * (`!container OP:= rhs`), generator-RHS drive (`every sum +:= (1 to n)`
+ * via coro_eval + bb_node_t.fn ticks), and plain `lv OP rv` then
+ * writeback.  Two helpers — `bb_augop_compute` (pure compute given lv,
+ * rv, op token) and `bb_augop_writeback` (write to E_VAR slot / E_IDX /
+ * E_FIELD lhs) — replace IR-mode's AUGOP_APPLY / AUGOP_CELL macros.
+ * Unsupported tokens (TK_AUGPOW, TK_AUGCSET_*, TK_AUGSCAN) fall through
+ * to the integer-add default — same coverage as IR-mode.
+ *
  * AUTHORS: Lon Jones Cherryholmes · Claude Sonnet
- * SPRINT:  RS-17a (2026-05-03), RS-22a (2026-05-03), RS-22b (2026-05-03), RS-22c (2026-05-03)
+ * SPRINT:  RS-17a (2026-05-03), RS-22a (2026-05-03), RS-22b (2026-05-03), RS-22c (2026-05-03), RS-22d (2026-05-03)
  *==========================================================================================================================*/
 
 #include "coro_value.h"
-#include "coro_runtime.h"   /* FRAME, frame_depth, scan_pos, scan_subj, icn_descr_identical, g_lang */
-#include "../../driver/interp_private.h"  /* RS-22a: icn_call_builtin, icn_string_section_assign, set_and_trace, data_field_ptr, kw_assign */
+#include "coro_runtime.h"   /* FRAME, frame_depth, scan_pos, scan_subj, icn_descr_identical, g_lang, is_suspendable, coro_eval */
+#include "../../driver/interp_private.h"  /* RS-22a: icn_call_builtin, icn_string_section_assign, set_and_trace, data_field_ptr, kw_assign; RS-22d: IcnTkKind via icon_lex.h */
 #include "../common/coerce.h"             /* RS-22b: shared_arith */
+#include "../x86/bb_broker.h"             /* RS-22d: α, β, bb_node_t for E_AUGOP generator-RHS path */
 #include "snobol4.h"
 #include <string.h>
 #include <gc/gc.h>
@@ -185,6 +200,101 @@ static DESCR_t bb_section(EXPR_t *e, bb_section_t kind)
     memcpy(buf, s + lo - 1, len);
     buf[len] = '\0';
     return STRVAL(buf);
+}
+
+/*------------------------------------------------------------------------------------------------------------------------------
+ * bb_augop_compute — RS-22d pure compute step for E_AUGOP.
+ *
+ * Given (lv, rv, op_token), produce the augop result (FAILDESCR if
+ * the op fails — e.g. division by zero, or a comparison-augop whose
+ * predicate is false).  Mirrors the AUGOP_APPLY inner switch in
+ * interp_eval.c:3740.  No writeback here — separate helper.
+ *
+ * Coverage: TK_AUGPLUS/MINUS/STAR/SLASH/MOD, TK_AUGCONCAT, the numeric
+ * comparison-augops (=:=, ~=:=, <:=, <=:=, >:=, >=:=), the string
+ * comparison-augops (==:=, ~==:=, <<:=, <<=:=, >>:=, >>=:=).
+ * Unsupported tokens (TK_AUGPOW, TK_AUGCSET_*, TK_AUGSCAN) fall through
+ * to integer-add default — same coverage as IR-mode.
+ *----------------------------------------------------------------------------------------------------------------------------*/
+static DESCR_t bb_augop_compute(DESCR_t lv, DESCR_t rv, IcnTkKind op)
+{
+    if (IS_FAIL_fn(lv) || IS_FAIL_fn(rv)) return FAILDESCR;
+    long li = IS_INT_fn(lv) ? lv.i : (long)lv.r;
+    long ri = IS_INT_fn(rv) ? rv.i : (long)rv.r;
+    switch (op) {
+    case TK_AUGPLUS:   return INTVAL(li + ri);
+    case TK_AUGMINUS:  return INTVAL(li - ri);
+    case TK_AUGSTAR:   return INTVAL(li * ri);
+    case TK_AUGSLASH:  return ri ? INTVAL(li / ri) : FAILDESCR;
+    case TK_AUGMOD:    return ri ? INTVAL(li % ri) : FAILDESCR;
+    case TK_AUGCONCAT: {
+        const char *ls = VARVAL_fn(lv), *rs = VARVAL_fn(rv);
+        if (!ls) ls = ""; if (!rs) rs = "";
+        size_t ll = strlen(ls), rl = strlen(rs);
+        char *buf = GC_malloc(ll + rl + 1);
+        memcpy(buf, ls, ll); memcpy(buf + ll, rs, rl); buf[ll + rl] = '\0';
+        return STRVAL(buf);
+    }
+    /* Numeric comparison-augops — `lv OP rv` evaluates the relation;
+     * on success the augop result is rv (and writeback stores it),
+     * on failure the augop fails (alternation `| fallback` runs). */
+    case TK_AUGEQ: return (li == ri) ? rv : FAILDESCR;
+    case TK_AUGNE: return (li != ri) ? rv : FAILDESCR;
+    case TK_AUGLT: return (li <  ri) ? rv : FAILDESCR;
+    case TK_AUGLE: return (li <= ri) ? rv : FAILDESCR;
+    case TK_AUGGT: return (li >  ri) ? rv : FAILDESCR;
+    case TK_AUGGE: return (li >= ri) ? rv : FAILDESCR;
+    /* String comparison-augops — strcmp on string values. */
+    case TK_AUGSEQ: case TK_AUGSNE:
+    case TK_AUGSLT: case TK_AUGSLE: case TK_AUGSGT: case TK_AUGSGE: {
+        const char *ls = VARVAL_fn(lv), *rs = VARVAL_fn(rv);
+        if (!ls) ls = ""; if (!rs) rs = "";
+        int cmp = strcmp(ls, rs);
+        int ok = 0;
+        switch (op) {
+        case TK_AUGSEQ: ok = (cmp == 0); break;
+        case TK_AUGSNE: ok = (cmp != 0); break;
+        case TK_AUGSLT: ok = (cmp <  0); break;
+        case TK_AUGSLE: ok = (cmp <= 0); break;
+        case TK_AUGSGT: ok = (cmp >  0); break;
+        case TK_AUGSGE: ok = (cmp >= 0); break;
+        default:        break;
+        }
+        return ok ? rv : FAILDESCR;
+    }
+    default:           return INTVAL(li + ri);   /* same default as IR-mode */
+    }
+}
+
+/*------------------------------------------------------------------------------------------------------------------------------
+ * bb_augop_writeback — RS-22d write augop result back to lhs.
+ *
+ * lhs may be E_VAR (slot/global), E_IDX (subscript), or E_FIELD (record
+ * field).  E_VAR&-keyword left untouched for parity with IR-mode (the
+ * AUGOP_APPLY macro never wrote back to keyword lvalues).  Callers
+ * already checked !IS_FAIL_fn(res).
+ *----------------------------------------------------------------------------------------------------------------------------*/
+static void bb_augop_writeback(EXPR_t *lhs, DESCR_t res)
+{
+    if (!lhs) return;
+    if (lhs->kind == E_VAR) {
+        int slot = (int)lhs->ival;
+        if (frame_depth > 0 && slot >= 0 && slot < FRAME.env_n)
+            FRAME.env[slot] = res;
+        else if (slot < 0 && lhs->sval && lhs->sval[0] != '&')
+            set_and_trace(lhs->sval, res);
+    } else if (lhs->kind == E_IDX && lhs->nchildren >= 2) {
+        DESCR_t base = bb_eval_value(lhs->children[0]);
+        DESCR_t idx  = bb_eval_value(lhs->children[1]);
+        if (!IS_FAIL_fn(base) && !IS_FAIL_fn(idx))
+            subscript_set(base, idx, res);
+    } else if (lhs->kind == E_FIELD && lhs->sval && lhs->nchildren >= 1) {
+        DESCR_t obj = bb_eval_value(lhs->children[0]);
+        if (!IS_FAIL_fn(obj)) {
+            DESCR_t *cell = data_field_ptr(lhs->sval, obj);
+            if (cell) *cell = res;
+        }
+    }
 }
 
 /*------------------------------------------------------------------------------------------------------------------------------
@@ -402,6 +512,212 @@ DESCR_t bb_eval_value(EXPR_t *e)
     case E_SECTION:        return bb_section(e, BBS_RANGE);
     case E_SECTION_PLUS:   return bb_section(e, BBS_PLUS);
     case E_SECTION_MINUS:  return bb_section(e, BBS_MINUS);
+
+    /* RS-22d: unary minus / plus.  Mirrors interp_eval.c:2501-2540.
+     * E_PLS is more elaborate than `pos()` — try integer parse first,
+     * then real, fall back to INTVAL(0).  Match exactly. */
+    case E_MNS: {
+        if (e->nchildren < 1) return FAILDESCR;
+        return neg(bb_eval_value(e->children[0]));
+    }
+    case E_PLS: {
+        if (e->nchildren < 1) return FAILDESCR;
+        DESCR_t v = bb_eval_value(e->children[0]);
+        if (IS_FAIL_fn(v)) return FAILDESCR;
+        if (IS_INT_fn(v) || IS_REAL_fn(v)) return v;
+        const char *s = VARVAL_fn(v);
+        if (!s || !*s) return INTVAL(0);
+        char *end = NULL;
+        long long iv = strtoll(s, &end, 10);
+        if (end && *end == '\0') return INTVAL(iv);
+        double dv = strtod(s, &end);
+        if (end && *end == '\0') return REALVAL(dv);
+        return INTVAL(0);
+    }
+
+    /* RS-22d: boolean not.  `not E` succeeds with &null iff E fails;
+     * fails iff E succeeds.  Mirrors interp_eval.c:3124. */
+    case E_NOT: {
+        if (e->nchildren < 1) return FAILDESCR;
+        DESCR_t v = bb_eval_value(e->children[0]);
+        if (IS_FAIL_fn(v)) return NULVCL;
+        return FAILDESCR;
+    }
+
+    /* RS-22d: `/E` succeed-if-null. Mirrors interp_eval.c:3629. */
+    case E_NULL: {
+        if (e->nchildren < 1) return NULVCL;
+        DESCR_t v = bb_eval_value(e->children[0]);
+        if (IS_FAIL_fn(v)) return FAILDESCR;
+        if (v.v == DT_SNUL) return NULVCL;
+        if (v.v == DT_S && (!v.s || v.s[0] == '\0')) return NULVCL;
+        return FAILDESCR;
+    }
+
+    /* RS-22d: `\E` succeed-if-non-null. Mirrors interp_eval.c:3646. */
+    case E_NONNULL: {
+        if (e->nchildren < 1) return FAILDESCR;
+        DESCR_t v = bb_eval_value(e->children[0]);
+        if (IS_FAIL_fn(v)) return FAILDESCR;
+        if (v.v == DT_SNUL) return FAILDESCR;
+        if (v.v == DT_S && (!v.s || v.s[0] == '\0')) return FAILDESCR;
+        return v;
+    }
+
+    /* RS-22d: `*E` size — string/list/table.  Mirrors interp_eval.c:3133. */
+    case E_SIZE: {
+        if (e->nchildren < 1) return INTVAL(0);
+        DESCR_t v = bb_eval_value(e->children[0]);
+        if (IS_FAIL_fn(v)) return FAILDESCR;
+        if (v.v == DT_T) return INTVAL(v.tbl ? v.tbl->size : 0);
+        if (v.v == DT_DATA) {
+            DESCR_t tag = FIELD_GET_fn(v, "icn_type");
+            if (tag.v == DT_S && tag.s && strcmp(tag.s, "list") == 0)
+                return INTVAL((int)FIELD_GET_fn(v, "frame_size").i);
+        }
+        if (IS_INT_fn(v)) return INTVAL(0);
+        if (IS_REAL_fn(v)) return INTVAL(0);
+        const char *s = VARVAL_fn(v);
+        if (!s) return INTVAL(0);
+        if (strchr(s, '\x01')) {     /* SOH-delimited Raku/Icon array */
+            long n = 1;
+            for (const char *p = s; *p; p++) if (*p == '\x01') n++;
+            return INTVAL(n);
+        }
+        long len = v.slen > 0 ? v.slen : (long)strlen(s);
+        return INTVAL(len);
+    }
+
+    /* RS-22d: `?E` random selector. Mirrors interp_eval.c:3659.
+     * Uses local static LCG (Knuth MMIX constants).  NOTE: this RNG
+     * state is independent from interp_eval's — if a program runs
+     * partly through bb_eval_value and partly through interp_eval,
+     * the two RNGs interleave separately.  In pure BB (post-RS-22e)
+     * this becomes the single source. */
+    case E_RANDOM: {
+        if (e->nchildren < 1) return FAILDESCR;
+        DESCR_t v = bb_eval_value(e->children[0]);
+        if (IS_FAIL_fn(v)) return FAILDESCR;
+        static unsigned long _rnd_seed = 12345UL;
+        _rnd_seed = _rnd_seed * 6364136223846793005UL + 1442695040888963407UL;
+        unsigned long _rnd = _rnd_seed >> 33;
+        if (v.v == DT_T) {
+            if (!v.tbl || v.tbl->size <= 0) return FAILDESCR;
+            int target = (int)(_rnd % (unsigned long)v.tbl->size);
+            int seen = 0;
+            for (int b = 0; b < TABLE_BUCKETS; b++) {
+                for (TBPAIR_t *p = v.tbl->buckets[b]; p; p = p->next) {
+                    if (seen == target) return p->val;
+                    seen++;
+                }
+            }
+            return FAILDESCR;
+        }
+        if (v.v == DT_DATA) {
+            DESCR_t tag = FIELD_GET_fn(v, "icn_type");
+            if (tag.v == DT_S && tag.s && strcmp(tag.s, "list") == 0) {
+                int n = (int)FIELD_GET_fn(v, "frame_size").i;
+                if (n <= 0) return FAILDESCR;
+                DESCR_t ea = FIELD_GET_fn(v, "frame_elems");
+                if (ea.v != DT_DATA || !ea.ptr) return FAILDESCR;
+                DESCR_t *elems = (DESCR_t *)ea.ptr;
+                return elems[_rnd % (unsigned long)n];
+            }
+            if (v.u && v.u->type && v.u->type->nfields > 0 && v.u->fields) {
+                int n = v.u->type->nfields;
+                return v.u->fields[_rnd % (unsigned long)n];
+            }
+            return FAILDESCR;
+        }
+        if (IS_INT_fn(v)) {
+            long long n = v.i;
+            if (n <= 0) return FAILDESCR;
+            return INTVAL((long long)((_rnd % (unsigned long)n) + 1));
+        }
+        if (v.v == DT_SNUL) return FAILDESCR;
+        const char *s = VARVAL_fn(v);
+        if (!s || !*s) return FAILDESCR;
+        long slen = v.slen > 0 ? v.slen : (long)strlen(s);
+        if (slen <= 0) return FAILDESCR;
+        char *out = (char *)GC_malloc(2);
+        out[0] = s[_rnd % (unsigned long)slen];
+        out[1] = '\0';
+        return STRVAL(out);
+    }
+
+    /* RS-22d: augmented assignment.  Three execution paths mirroring
+     * interp_eval.c:3729-3870:
+     *   (1) `!container OP:= rhs`  (lhs is E_ITERATE) — bang-iterate,
+     *       apply OP to every cell of T/list/record in place.
+     *   (2) RHS suspendable          — drive via coro_eval+bb_node_t,
+     *       apply OP per tick, re-reading lhs each tick.  Implements
+     *       `every sum +:= (1 to n)`.
+     *   (3) Plain                     — single lv OP rv, then writeback.
+     * `bb_augop_compute` is the shared compute step; `bb_augop_writeback`
+     * is the shared writeback (E_VAR slot / E_IDX / E_FIELD). */
+    case E_AUGOP: {
+        if (e->nchildren < 2) return NULVCL;
+        EXPR_t *lhs = e->children[0];
+        EXPR_t *rhs = e->children[1];
+        IcnTkKind op = (IcnTkKind)e->ival;
+        DESCR_t result = NULVCL;
+
+        /* (1) `!container OP:= rhs` — bang-iterate lvalue. */
+        if (lhs && lhs->kind == E_ITERATE && lhs->nchildren >= 1) {
+            DESCR_t cv = bb_eval_value(lhs->children[0]);
+            DESCR_t rv = bb_eval_value(rhs);
+            if (IS_FAIL_fn(cv) || IS_FAIL_fn(rv)) return FAILDESCR;
+            #define BB_AUGOP_CELL(cell_) do { \
+                DESCR_t _r = bb_augop_compute((cell_), rv, op); \
+                if (!IS_FAIL_fn(_r)) { (cell_) = _r; result = _r; } \
+            } while (0)
+            if (cv.v == DT_T && cv.tbl) {
+                for (int b = 0; b < TABLE_BUCKETS; b++)
+                    for (TBPAIR_t *p = cv.tbl->buckets[b]; p; p = p->next)
+                        BB_AUGOP_CELL(p->val);
+            } else if (cv.v == DT_DATA) {
+                DESCR_t tag = FIELD_GET_fn(cv, "icn_type");
+                if (tag.v == DT_S && tag.s && strcmp(tag.s, "list") == 0) {
+                    DESCR_t ea = FIELD_GET_fn(cv, "frame_elems");
+                    int n = (int)FIELD_GET_fn(cv, "frame_size").i;
+                    DESCR_t *elems = (ea.v == DT_DATA) ? (DESCR_t *)ea.ptr : NULL;
+                    if (elems && n > 0)
+                        for (int i = 0; i < n; i++) BB_AUGOP_CELL(elems[i]);
+                } else if (cv.u && cv.u->type && cv.u->type->nfields > 0 && cv.u->fields) {
+                    for (int i = 0; i < cv.u->type->nfields; i++)
+                        BB_AUGOP_CELL(cv.u->fields[i]);
+                }
+            }
+            #undef BB_AUGOP_CELL
+            return result;
+        }
+
+        /* (2) RHS suspendable — drive generator, apply OP per tick. */
+        if (rhs && is_suspendable(rhs)) {
+            bb_node_t rbox = coro_eval(rhs);
+            DESCR_t tick = rbox.fn(rbox.ζ, α);
+            while (!IS_FAIL_fn(tick) && !FRAME.loop_break && !FRAME.returning) {
+                DESCR_t cur_lv = bb_eval_value(lhs);
+                DESCR_t res    = bb_augop_compute(cur_lv, tick, op);
+                if (!IS_FAIL_fn(res)) {
+                    bb_augop_writeback(lhs, res);
+                    result = res;
+                }
+                tick = rbox.fn(rbox.ζ, β);
+            }
+            return result;
+        }
+
+        /* (3) Plain — single compute + writeback. */
+        DESCR_t lv = bb_eval_value(lhs);
+        DESCR_t rv = bb_eval_value(rhs);
+        DESCR_t res = bb_augop_compute(lv, rv, op);
+        if (!IS_FAIL_fn(res)) {
+            bb_augop_writeback(lhs, res);
+            result = res;
+        }
+        return result;
+    }
 
     default:
         break;
