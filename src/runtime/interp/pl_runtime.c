@@ -6,7 +6,17 @@
  *           pl_box_choice, pl_ helpers, interp_exec_pl_builtin.
  *
  * g_pl_trail / g_pl_cut_flag remain non-static (used by pl_broker.c).
- * interp_eval / interp_eval_pat / execute_program stay in scrip.c.
+ *
+ * RS-18 (2026-05-03): the 3 user-predicate clause-body invocation sites
+ * route through bb_eval_value (coro_value.c), the shared Icon/Prolog
+ * value-context evaluator introduced by RS-17.  No direct interp_eval
+ * call site or extern declaration remains here.  bb_eval_value falls
+ * through to interp_eval for the IR shapes a Prolog clause body
+ * contains today (E_BLOCK / E_FNC / E_CHOICE / E_UNIFY / E_CUT / etc.) —
+ * each gets handled inside the existing interp_eval Prolog dispatch,
+ * which reads g_pl_env directly for variable resolution (clause-body
+ * E_VAR is never reached because Prolog uses pl_unified_term_from_expr
+ * for variable resolution at goal evaluation, not E_VAR-eval).
  *
  * AUTHORS: Lon Jones Cherryholmes · Claude Sonnet 4.6 (FI-5, 2026-04-14)
  */
@@ -26,14 +36,12 @@
 extern EXPR_t *pl_assert_term(Term *t, int *functor_out, int *arity_out);
 #include "../../frontend/prolog/pl_broker.h"
 #include "../../runtime/x86/bb_broker.h"
+#include "coro_value.h"   /* RS-18: bb_eval_value — shared Icon/Prolog value-context evaluator */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <setjmp.h>
-
-extern DESCR_t interp_eval(EXPR_t *e);
-extern DESCR_t interp_eval_pat(EXPR_t *e);
 
 /* Globals declared in pl_runtime.h */
 Pl_PredTable  g_pl_pred_table;
@@ -832,7 +840,7 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
                     for (int ui = 0; ui < ua; ui++)
                         uenv[ui] = pl_unified_term_from_expr(goal->children[ui], env);
                     Term **sv = g_pl_env; g_pl_env = uenv;
-                    DESCR_t rd = interp_eval(uch); g_pl_env = sv;
+                    DESCR_t rd = bb_eval_value(uch); g_pl_env = sv;
                     if (uenv) free(uenv);
                     return !IS_FAIL_fn(rd);
                 }
@@ -940,7 +948,7 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
                         if(ch){ int ca=g->nchildren; Term **cargs=ca?malloc(ca*sizeof(Term*)):NULL;
                                  for(int a=0;a<ca;a++) cargs[a]=pl_unified_term_from_expr(g->children[a],env);
                                  Term **sv=g_pl_env; g_pl_env=cargs;
-                                 DESCR_t rd=interp_eval(ch); g_pl_env=sv; if(cargs)free(cargs);
+                                 DESCR_t rd=bb_eval_value(ch); g_pl_env=sv; if(cargs)free(cargs);
                                  r=!IS_FAIL_fn(rd); }
                         r; }) : interp_exec_pl_builtin(g, env);
                     if(!ok) return 0;
@@ -2166,7 +2174,7 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
                             for(int ui=0;ui<ua;ui++)
                                 uenv[ui]=pl_unified_term_from_expr(goal_e->children[ui],env);
                             Term **sv=g_pl_env; g_pl_env=uenv;
-                            DESCR_t rd=interp_eval(uch); g_pl_env=sv;
+                            DESCR_t rd=bb_eval_value(uch); g_pl_env=sv;
                             if(uenv)free(uenv);
                             ok=!IS_FAIL_fn(rd);
                         } else {

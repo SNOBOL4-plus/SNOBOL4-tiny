@@ -31,11 +31,17 @@ SM_FILES=(
     "$ROOT/src/runtime/x86/snobol4_pattern.c"
     "$ROOT/src/runtime/x86/snobol4_argval.c"
     "$ROOT/src/runtime/x86/eval_code.c"
+    "$ROOT/src/runtime/interp/coro_runtime.c"
+    "$ROOT/src/runtime/interp/pl_runtime.c"
 )
-# coro_runtime.c and pl_runtime.c are intentionally EXCLUDED — they are
-# the Icon and Prolog drive engines, which evaluate IR subexpressions
-# during Byrd-box drive. See ARCH-SCRIP.md "Exception — Icon and Prolog
-# generators" for the architectural rationale.
+# RS-17 / RS-18 / RS-19: coro_runtime.c and pl_runtime.c are full members
+# of the SM-mode runtime gate.  Icon and Prolog Byrd-box drive go through
+# bb_eval_value (coro_value.c, RS-17a) and bb_exec_stmt (coro_stmt.c,
+# RS-17b) — those two adapter files retain a documented `interp_eval`
+# fallthrough as their migration scaffold and are therefore intentionally
+# NOT included in the gate.  When sub-rungs RS-17a-cont / RS-17b-cont
+# absorb the remaining kinds and the fallthrough goes away, those files
+# can be promoted into the gate too.
 
 IR_SYMS=(
     "execute_program"

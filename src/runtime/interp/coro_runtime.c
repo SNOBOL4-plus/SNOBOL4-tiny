@@ -5,12 +5,17 @@
  * IcnFrame stack, icn_gen_*, icn_scan_*, global_*, proc_table,
  * coro_call, coro_drive, coro_eval, coro_oneshot, icn_scope_*.
  *
- * interp_eval() stays in scrip.c — referenced via extern.
+ * RS-17a (2026-05-03): all 60 value-context interp_eval call sites in
+ * this file routed through bb_eval_value (coro_value.c).
+ * RS-17b (2026-05-03): all 13 statement-context interp_eval call sites in
+ * this file routed through bb_exec_stmt (coro_stmt.c).  No direct
+ * interp_eval reference remains here.
  *
  * AUTHORS: Lon Jones Cherryholmes · Claude Sonnet 4.6 (FI-4, 2026-04-14)
  */
 #include "coro_runtime.h"
 #include "coro_value.h"
+#include "coro_stmt.h"
 #include "../../ir/ir.h"
 #include "../../frontend/snobol4/scrip_cc.h"
 #include "../../runtime/x86/bb_broker.h"
@@ -21,8 +26,14 @@
 #include <stdio.h>
 #include <gc/gc.h>
 
-/* interp_eval lives in scrip.c */
-extern DESCR_t interp_eval(EXPR_t *e);
+/* RS-17b: with bb_exec_stmt now handling every statement-context site in this
+ * file (was 13 direct interp_eval calls before RS-17b), and bb_eval_value
+ * handling every value-context site (RS-17a), no `extern DESCR_t
+ * interp_eval(EXPR_t *e);` declaration is needed here anymore.  The IR-mode
+ * tree-walker reaches the work that arrives in coro_stmt.c's and
+ * coro_value.c's fallthroughs; from this file's perspective, interp_eval is
+ * gone.  This is the contract RS-19 locks in by promoting coro_runtime.c
+ * into the isolation grep gate (after RS-18 closes for pl_runtime.c). */
 
 /* NV_SET_fn lives in snobol4.c — needed by RK-16 loop-var binding */
 extern DESCR_t NV_SET_fn(const char *name, DESCR_t val);
@@ -163,7 +174,7 @@ int coro_drive(EXPR_t *e) {
             for (long i=lo; i<=hi && !FRAME.returning; i++) {
                 frame_push(e, i, NULL);
                 int inner = coro_drive(root);
-                if (!inner) interp_eval(FRAME.body_root);
+                if (!inner) bb_exec_stmt(FRAME.body_root);
                 frame_pop(); ticks++;
                 if (FRAME.returning) break;
             }
@@ -207,7 +218,7 @@ int coro_drive(EXPR_t *e) {
                     for (long i = lo; i <= hi && !FRAME.returning; i++) {
                         frame_push(e, i, NULL);
                         int inner = coro_drive(root);
-                        if (!inner) interp_eval(FRAME.body_root);
+                        if (!inner) bb_exec_stmt(FRAME.body_root);
                         frame_pop(); ticks++;
                         if (FRAME.returning) break;
                     }
@@ -222,8 +233,8 @@ int coro_drive(EXPR_t *e) {
         DESCR_t st_d=bb_eval_value(e->children[2]);
         if(IS_FAIL_fn(lo_d)||IS_FAIL_fn(hi_d)||IS_FAIL_fn(st_d)) return 0;
         long lo=lo_d.i,hi=hi_d.i,st=st_d.i?st_d.i:1; int ticks=0;
-        if(st>0){for(long i=lo;i<=hi&&!FRAME.returning;i+=st){frame_push(e,i,NULL);int inner=coro_drive(root);if(!inner)interp_eval(FRAME.body_root);frame_pop();ticks++;if(FRAME.returning)break;}}
-        else    {for(long i=lo;i>=hi&&!FRAME.returning;i+=st){frame_push(e,i,NULL);int inner=coro_drive(root);if(!inner)interp_eval(FRAME.body_root);frame_pop();ticks++;if(FRAME.returning)break;}}
+        if(st>0){for(long i=lo;i<=hi&&!FRAME.returning;i+=st){frame_push(e,i,NULL);int inner=coro_drive(root);if(!inner)bb_exec_stmt(FRAME.body_root);frame_pop();ticks++;if(FRAME.returning)break;}}
+        else    {for(long i=lo;i>=hi&&!FRAME.returning;i+=st){frame_push(e,i,NULL);int inner=coro_drive(root);if(!inner)bb_exec_stmt(FRAME.body_root);frame_pop();ticks++;if(FRAME.returning)break;}}
         return ticks;
     }
     /* S-6 / RK-16: E_ITERATE — iterate string chars OR Raku @array elements.
@@ -268,7 +279,7 @@ int coro_drive(EXPR_t *e) {
                 }
                 frame_push(e, ticks, p);
                 int inner = coro_drive(root);
-                if (!inner) interp_eval(FRAME.body_root);
+                if (!inner) bb_exec_stmt(FRAME.body_root);
                 frame_pop(); ticks++;
                 if (!sep || FRAME.returning) break;
                 p = sep + 1;
@@ -281,7 +292,7 @@ int coro_drive(EXPR_t *e) {
         for (long i = 0; i < len && !FRAME.returning; i++) {
             frame_push(e, i, str);
             int inner = coro_drive(root);
-            if (!inner) interp_eval(FRAME.body_root);
+            if (!inner) bb_exec_stmt(FRAME.body_root);
             frame_pop(); ticks++;
             if (FRAME.returning) break;
         }
@@ -304,7 +315,7 @@ int coro_drive(EXPR_t *e) {
             long pos1 = (long)(hit - hay) + 1;
             frame_push(e, pos1, NULL);
             int inner = coro_drive(root);
-            if (!inner) interp_eval(FRAME.body_root);
+            if (!inner) bb_exec_stmt(FRAME.body_root);
             frame_pop(); ticks++;
             if (FRAME.returning) break;
             p = hit + (nlen > 0 ? nlen : 1);
@@ -419,7 +430,7 @@ DESCR_t coro_call(EXPR_t *proc, DESCR_t *args, int nargs) {
         if (!st || st->kind == E_GLOBAL) { stmt++; continue; }
         FRAME.body_root = st;
         FRAME.suspending = 0;
-        result = interp_eval(st);
+        bb_exec_stmt(st);
         if (FRAME.suspending && active_coro) {
             /* Yield to caller; coroutine resumes here after each β pump. */
             while (FRAME.suspending && active_coro) {
@@ -429,9 +440,9 @@ DESCR_t coro_call(EXPR_t *proc, DESCR_t *args, int nargs) {
                 FRAME.suspending      = 0;
                 swapcontext(&ss->gen_ctx, &ss->caller_ctx);
                 /* Resumed by β: run do-clause (e.g. i := i + 1) before re-entry */
-                if (doclause) interp_eval(doclause);
-                /* For loop stmts: re-enter without calling interp_eval again here;
-                 * just break out so the outer while re-issues interp_eval(st).
+                if (doclause) bb_exec_stmt(doclause);
+                /* For loop stmts: re-enter without calling bb_exec_stmt again here;
+                 * just break out so the outer while re-issues bb_exec_stmt(st).
                  * For non-loop stmts (bare E_SUSPEND): advance past stmt. */
                 if (st->kind != E_WHILE && st->kind != E_REPEAT && st->kind != E_UNTIL)
                     stmt++;
@@ -1621,7 +1632,7 @@ int coro_drive_fnc(EXPR_t *e) {
         if (!st || st->kind == E_GLOBAL) { stmt++; continue; }
         f->body_root  = st;
         f->suspending = 0;
-        interp_eval(st);
+        bb_exec_stmt(st);
         if (f->suspending) {
             DESCR_t sv       = f->suspend_val;
             EXPR_t *doclause = f->suspend_do;
@@ -1641,13 +1652,13 @@ int coro_drive_fnc(EXPR_t *e) {
                  * is the caller (who owns the every/write expression), not
                  * the generator proc frame. */
                 frame_depth--;
-                interp_eval(every_body);
+                bb_exec_stmt(every_body);
                 frame_depth++;
                 /* Refresh f in case frame array was touched */
                 f = &frame_stack[frame_depth - 1];
             }
             coro_drive_node = NULL;
-            if (doclause) interp_eval(doclause);
+            if (doclause) bb_exec_stmt(doclause);
             ticks++;
             /* If the stmt that suspended was a loop (E_WHILE/E_REPEAT/E_UNTIL),
              * re-enter it so it can re-check its condition next tick.
@@ -1707,7 +1718,7 @@ DESCR_t coro_bb_every(void *zeta, int entry) {
         ? z->gen.fn(z->gen.ζ, α)
         : z->gen.fn(z->gen.ζ, β);
     if (IS_FAIL_fn(v)) return FAILDESCR;
-    if (z->body) interp_eval(z->body);
+    if (z->body) bb_exec_stmt(z->body);
     return v;
 }
 
