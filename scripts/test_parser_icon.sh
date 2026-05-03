@@ -74,11 +74,15 @@ for icn in "$SRC_TESTS"/*.icn; do
 
     # Parser driver: run parser_icon.sc with the shared SC runtime blob,
     # feeding the fixture on stdin.  --ir-run uses the IR interpreter.
+    # counter.sc + semantic.sc supply nPush/nInc/nTop/reduce — required
+    # by the canonical Compiland spine (PARSER-IC-INFRA-2).
     parser_raw=$(timeout 8 "$SCRIP" --ir-run \
         "$SRC_RUNTIME/global.sc" \
         "$SRC_RUNTIME/tree.sc" \
         "$SRC_RUNTIME/stack.sc" \
+        "$SRC_RUNTIME/counter.sc" \
         "$SRC_RUNTIME/ShiftReduce.sc" \
+        "$SRC_RUNTIME/semantic.sc" \
         "$SRC_RUNTIME/qize.sc" \
         "$SRC_RUNTIME/gen.sc" \
         "$SRC_RUNTIME/tdump.sc" \
