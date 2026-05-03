@@ -14,6 +14,7 @@
 #include "../runtime/x86/sm_lower.h"
 #include "../runtime/common/ir_clone.h"
 #include "interp_private.h"   /* label_table_build, prescan_defines, label_table_clear_stmts */
+#include "polyglot.h"         /* RS-26: polyglot_lang_mask, polyglot_init, LANG_SNO */
 
 extern int g_sno_err_active;
 extern jmp_buf g_sno_err_jmp;
@@ -25,20 +26,38 @@ SM_Program *sm_preamble(void *prog_void)
     prescan_defines(prog);
     g_sno_err_active = 1;   /* arm so sno_runtime_error longjmps safely */
 
+    /* RS-26: symmetric preamble — populate proc_table (Icon/Raku) and
+     * g_pl_pred_table (Prolog) from the live IR.  For pure-SNO programs the
+     * lang_mask is just (1<<LANG_SNO) and the per-language init branches
+     * inside polyglot_init are guarded — adds no observable behaviour for
+     * SNOBOL4.  For Icon/Prolog this is what makes coro_call /
+     * pl_pred_table_lookup find their targets when SM_BB_PUMP / SM_BB_ONCE
+     * fires inside sm_interp_run. */
+    uint32_t lang_mask = polyglot_lang_mask(prog);
+    polyglot_init(prog, lang_mask);
+
     SM_Program *sm = sm_lower(prog);
     if (!sm) {
         fprintf(stderr, "scrip: sm_lower failed\n");
         return NULL;
     }
 
-    /* RS-9b: IR tree no longer needed — SM_Program is self-contained.
-     * SM_PUSH_EXPR pointers were cloned to GC memory by emit_push_expr.
-     * RS-9c: g_current_sm_prog must be set so _usercall_hook detects SM bodies.
-     * Clear label_table stmt pointers so any residual label_lookup
-     * calls return NULL (no dangling STMT_t* dereference). */
+    /* RS-9b: SM_Program is self-contained for SNOBOL4 — emit_push_expr
+     * GC-clones the EXPR_t subtrees so SM owns them.  Free the IR.
+     *
+     * RS-26: but for non-SNO frontends, BB drives the live IR — the proc/
+     * pred tables populated above hold EXPR_t* into prog that survive only
+     * if the IR survives.  Gate code_free on lang_mask: pure-SNO programs
+     * still get the RS-9b behaviour; mixed or non-SNO programs keep the IR
+     * alive for the duration of execution.
+     *
+     * RS-9c: g_current_sm_prog must be set so _usercall_hook detects SM
+     * bodies, regardless of whether IR is freed. */
     g_current_sm_prog = sm;
-    code_free(prog);
-    label_table_clear_stmts();
+    if (lang_mask == (1u << LANG_SNO)) {
+        code_free(prog);
+        label_table_clear_stmts();
+    }
     return sm;
 }
 

@@ -454,13 +454,22 @@ int main(int argc, char **argv)
         }
         return 0;
     } else if (has_non_sno) {
-        polyglot_execute(prog);   /* OE-7: polyglot takes priority */
+        /* RS-26 (partial): single-language Icon/Prolog still routes through
+         * polyglot_execute for now.  Symmetric SM-mode routing requires the
+         * SM dispatch to invoke `main` rather than iterate stmts (Icon proc
+         * defs lower to SM_PUSH_EXPR + SM_BB_PUMP, but BB-pumping a proc
+         * def is not the same as calling it).  Tracked in next sub-rung;
+         * see docs/RS-26-session-2026-05-03-inventory-findings.md. */
+        polyglot_execute(prog);
     } else if (mode_sm_run) {
         /* --sm-run: SM-LOWER path — IR → SM_Program → sm_interp_run.
-         * RS-14: preamble + run loop extracted to scrip_sm.{c,h}. */
+         * RS-14: preamble + run loop extracted to scrip_sm.{c,h}.
+         * RS-26: sm_preamble keeps the IR alive when lang_mask contains
+         * any non-SNO bit; proc_table / pred-table pointers reference
+         * live IR for the BB engine. */
         SM_Program *sm = sm_preamble(prog);
         if (!sm) return 1;
-        prog = NULL;   /* sm_preamble freed it */
+        prog = NULL;   /* SM owns its EXPR_t clones; for non-SNO IR stays alive via globals */
         if (dump_sm) {
             sm_prog_print(sm, stdout);
             sm_prog_free(sm);
