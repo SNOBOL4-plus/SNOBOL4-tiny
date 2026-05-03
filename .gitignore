@@ -66,3 +66,4 @@ boxes.jar
 *.bin
 *.so
 scripts/monitor/*.so
+core
