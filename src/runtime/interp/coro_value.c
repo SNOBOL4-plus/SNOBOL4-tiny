@@ -76,7 +76,7 @@
  * sub-rung of RS-22f.
  *
  * AUTHORS: Lon Jones Cherryholmes · Claude Sonnet
- * SPRINT:  RS-17a (2026-05-03), RS-22a (2026-05-03), RS-22b (2026-05-03), RS-22c (2026-05-03), RS-22d (2026-05-03), RS-22e (2026-05-03), RS-22f-strrel (2026-05-03), RS-22f-makelist (2026-05-03)
+ * SPRINT:  RS-17a (2026-05-03), RS-22a (2026-05-03), RS-22b (2026-05-03), RS-22c (2026-05-03), RS-22d (2026-05-03), RS-22e (2026-05-03), RS-22f-strrel (2026-05-03), RS-22f-makelist (2026-05-03), RS-22f-cset (2026-05-03)
  *==========================================================================================================================*/
 
 #include "coro_value.h"
@@ -807,6 +807,50 @@ DESCR_t bb_eval_value(EXPR_t *e)
         return result;
     }
 
+    /* RS-22f-cset (2026-05-03): Cset literal + four set-arithmetic ops.
+     * Icon csets are represented as NUL-terminated strings of member chars.
+     * The four binary ops delegate to the icn_cset_* helpers in icon_runtime.c
+     * (now declared in coro_runtime.h).  E_CSET literal mirrors interp_eval.c:3466. */
+    case E_CSET:
+        return e->sval ? STRVAL(e->sval) : NULVCL;
+
+    case E_CSET_COMPL: {
+        DESCR_t operand = bb_eval_value(e->children[0]);
+        if (IS_FAIL_fn(operand)) return FAILDESCR;
+        const char *cs = IS_NULL_fn(operand) ? "" : VARVAL_fn(operand);
+        return STRVAL(icn_cset_complement(cs));
+    }
+
+    case E_CSET_UNION: {
+        DESCR_t lv = bb_eval_value(e->children[0]);
+        if (IS_FAIL_fn(lv)) return FAILDESCR;
+        DESCR_t rv = bb_eval_value(e->children[1]);
+        if (IS_FAIL_fn(rv)) return FAILDESCR;
+        const char *a = IS_NULL_fn(lv) ? "" : VARVAL_fn(lv);
+        const char *b = IS_NULL_fn(rv) ? "" : VARVAL_fn(rv);
+        return STRVAL(icn_cset_union(a, b));
+    }
+
+    case E_CSET_DIFF: {
+        DESCR_t lv = bb_eval_value(e->children[0]);
+        if (IS_FAIL_fn(lv)) return FAILDESCR;
+        DESCR_t rv = bb_eval_value(e->children[1]);
+        if (IS_FAIL_fn(rv)) return FAILDESCR;
+        const char *a = IS_NULL_fn(lv) ? "" : VARVAL_fn(lv);
+        const char *b = IS_NULL_fn(rv) ? "" : VARVAL_fn(rv);
+        return STRVAL(icn_cset_diff(a, b));
+    }
+
+    case E_CSET_INTER: {
+        DESCR_t lv = bb_eval_value(e->children[0]);
+        if (IS_FAIL_fn(lv)) return FAILDESCR;
+        DESCR_t rv = bb_eval_value(e->children[1]);
+        if (IS_FAIL_fn(rv)) return FAILDESCR;
+        const char *a = IS_NULL_fn(lv) ? "" : VARVAL_fn(lv);
+        const char *b = IS_NULL_fn(rv) ? "" : VARVAL_fn(rv);
+        return STRVAL(icn_cset_inter(a, b));
+    }
+
     default:
         break;
     }
@@ -833,9 +877,8 @@ DESCR_t bb_eval_value(EXPR_t *e)
      *   String relops:  closed by RS-22f-strrel — see case arms above
      *   for E_LLT/E_LLE/E_LGT/E_LGE/E_LEQ/E_LNE (bb_strrel).
      *
-     *   Cset arithmetic (Icon-specific value ops):
-     *     E_CSET (literal — trivial: return e->sval ? STRVAL : NULVCL)
-     *     E_CSET_COMPL E_CSET_DIFF E_CSET_INTER E_CSET_UNION
+     *   Cset arithmetic: closed by RS-22f-cset — see case arms above for
+     *   E_CSET/E_CSET_COMPL/E_CSET_DIFF/E_CSET_INTER/E_CSET_UNION.
      *
      *   Mid-size:
      *     E_MAKELIST  closed by RS-22f-makelist (case arm above).

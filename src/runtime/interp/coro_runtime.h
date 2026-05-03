@@ -112,6 +112,14 @@ const char *real_str(double r, char *buf, int bufsz);
 /* IC-8: deep-identity test for Icon `===` (defined in coro_runtime.c). */
 int icn_descr_identical(DESCR_t a, DESCR_t b);
 
+/* RS-22f-cset: cset arithmetic helpers (defined in frontend/icon/icon_runtime.c).
+ * Each takes NUL-terminated char strings representing the cset and returns a
+ * pointer into a static arena (thread-unsafe but consistent with Icon single-thread). */
+const char *icn_cset_complement(const char *cs);
+const char *icn_cset_union(const char *a, const char *b);
+const char *icn_cset_diff(const char *a, const char *b);
+const char *icn_cset_inter(const char *a, const char *b);
+
 /* IC-9 (session #26): Icon-keyword assign / probe (defined in driver/interp.c).
  * Used by coro_bb_revswap to perform atomic swap-with-revert on &pos / &subject.
  * kw_assign returns 1 on success, 0 on OOB-fail (and writes nothing on fail).
