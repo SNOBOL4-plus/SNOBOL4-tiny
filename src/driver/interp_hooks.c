@@ -98,7 +98,19 @@ DESCR_t _usercall_hook(const char *name, DESCR_t *args, int nargs) {
         _body = label_lookup(_uf);
     }
     /* Pure builtin (no body) AND registered as builtin: use APPLY_fn for correct failure */
-    if (!_body && FNCEX_fn(name)) return APPLY_fn(name, args, nargs);
+    if (!_body && FNCEX_fn(name)) {
+        /* RS-9b: if this function has an SM body, do NOT call APPLY_fn —
+         * that would recurse via g_user_call_hook → _usercall_hook → APPLY_fn again.
+         * SM_CALL in sm_interp already handles SM-bodied functions directly.
+         * _usercall_hook is only reached from pattern-match time (bb_usercall /
+         * name_commit_value) or from --ir-run; in --sm-run the SM_CALL handler
+         * fires first. If we land here with an SM body, it means the call came
+         * from a pattern context where SM frames can't be pushed — fail cleanly. */
+        if (g_current_sm_prog &&
+            sm_label_pc_lookup(g_current_sm_prog, name) >= 0)
+            return FAILDESCR;
+        return APPLY_fn(name, args, nargs);
+    }
 
     /* ── U-22: cross-language fallback ────────────────────────────────
      * Name not found in SNO label/builtin tables.  Try Icon, then Prolog.

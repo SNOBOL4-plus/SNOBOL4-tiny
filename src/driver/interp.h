@@ -50,6 +50,7 @@ void icn_record_register(const char *spec);  /* IC-5: register record type at in
 
 /* ── Label table ───────────────────────────────────────────────────────── */
 extern int label_count;     /* needed by polyglot_init for sno_label_start */
+void label_table_clear_stmts(void);  /* RS-9b: null stmt ptrs after code_free */
 void    label_table_build(CODE_t *prog);
 STMT_t *label_lookup(const char *name);
 void    prescan_defines(CODE_t *prog);

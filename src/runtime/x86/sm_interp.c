@@ -841,8 +841,82 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
                                strcasecmp(name + strlen(name) - 4, "_SET") == 0);
             if (_data_first || _data_set)
                 result = sc_dat_field_call(name, args, nargs);
-            if (result.v == DT_FAIL || (!_data_first && !_data_set))
-                result = INVOKE_fn(name, args, nargs);
+
+            /* RS-9a: if DATA dispatch failed/skipped, try SM-native user function.
+             * Look up a named SM_LABEL for this function. If found: push a call
+             * frame, bind params into NV, and jump to the body PC.
+             * The body executes SM opcodes; SM_RETURN pops the frame and resumes. */
+            if (result.v == DT_FAIL || (!_data_first && !_data_set)) {
+                int body_pc = -1;
+                if (!_data_first && !_data_set && name && !FNCEX_fn(name)) {
+                    /* Try canonical name, then uppercase */
+                    body_pc = sm_label_pc_lookup(prog, name);
+                    if (body_pc < 0) {
+                        char uname[128]; size_t nl = strlen(name);
+                        if (nl >= sizeof(uname)) nl = sizeof(uname)-1;
+                        for (size_t _i = 0; _i <= nl; _i++)
+                            uname[_i] = (char)toupper((unsigned char)name[_i]);
+                        body_pc = sm_label_pc_lookup(prog, uname);
+                    }
+                    /* Also try FUNC_ENTRY_fn alias (OPSYN) */
+                    if (body_pc < 0) {
+                        const char *entry = FUNC_ENTRY_fn(name);
+                        if (entry) body_pc = sm_label_pc_lookup(prog, entry);
+                    }
+                }
+                if (body_pc >= 0 && st->call_depth < SM_CALL_STACK_MAX) {
+                    /* ── Push SM call frame ── */
+                    SmCallFrame *fr = &st->call_stack[st->call_depth++];
+                    fr->ret_pc = st->pc;  /* resume after the SM_CALL instr */
+                    fr->ret_ok = 1;
+
+                    /* Determine retval NV slot (body writes result into this name) */
+                    const char *entry2 = FUNC_ENTRY_fn(name);
+                    const char *retname = (entry2 && strcmp(entry2, name) != 0
+                                           && FNCEX_fn(entry2)) ? entry2 : name;
+                    fr->retval_name = GC_strdup(retname);
+
+                    /* Save + bind params and locals */
+                    int np = FUNC_NPARAMS_fn(name);
+                    int nl2 = FUNC_NLOCALS_fn(name);
+                    if (np > 64) np = 64;
+                    if (nl2 > 64) nl2 = 64;
+                    int ns = 0;
+                    /* Save retval slot */
+                    if (ns < SM_SAVED_NV_MAX) {
+                        fr->saved_names[ns] = GC_strdup(retname);
+                        fr->saved_vals [ns] = NV_GET_fn(retname);
+                        ns++;
+                    }
+                    NV_SET_fn(retname, STRVAL(""));
+                    /* Save + bind params */
+                    for (int k = 0; k < np && ns < SM_SAVED_NV_MAX; k++) {
+                        const char *pname = FUNC_PARAM_fn(name, k);
+                        if (!pname) pname = "";
+                        fr->saved_names[ns] = GC_strdup(pname);
+                        fr->saved_vals [ns] = NV_GET_fn(pname);
+                        ns++;
+                        NV_SET_fn(pname, k < nargs ? args[k] : NULVCL);
+                    }
+                    /* Save + clear locals */
+                    for (int k = 0; k < nl2 && ns < SM_SAVED_NV_MAX; k++) {
+                        const char *lname = FUNC_LOCAL_fn(name, k);
+                        if (!lname) lname = "";
+                        fr->saved_names[ns] = GC_strdup(lname);
+                        fr->saved_vals [ns] = NV_GET_fn(lname);
+                        ns++;
+                        NV_SET_fn(lname, NULVCL);
+                    }
+                    fr->nsaved = ns;
+                    comm_call(retname);
+                    /* Jump into body */
+                    st->pc = body_pc;
+                    break;  /* do NOT fall through to INVOKE_fn */
+                }
+                /* No SM body found — fall through to INVOKE_fn (builtins + hook) */
+                if (result.v == DT_FAIL || (!_data_first && !_data_set))
+                    result = INVOKE_fn(name, args, nargs);
+            }
             /* NRETURN: user fn returned DT_N — dereference like tree-walk E_FNC */
             if (IS_NAMEPTR(result))      result = NAME_DEREF_PTR(result);
             else if (IS_NAMEVAL(result)) result = NV_GET_fn(result.s);
@@ -855,8 +929,35 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
 
         case SM_RETURN:
         case SM_FRETURN:
-            /* stub: return from top-level program = halt */
-            return 0;
+        case SM_NRETURN: {
+            /* RS-9a: if we have a live SM call frame, pop it and resume caller.
+             * Otherwise (top-level): halt. */
+            if (st->call_depth > 0) {
+                SmCallFrame *fr = &st->call_stack[--st->call_depth];
+                int is_fret  = (ins->op == SM_FRETURN);
+                int is_nret  = (ins->op == SM_NRETURN);
+                /* Read return value from the NV retval slot the body wrote */
+                DESCR_t retval = NV_GET_fn(fr->retval_name);
+                /* Restore saved NV vars (reverse order so retval slot last) */
+                for (int k = fr->nsaved - 1; k >= 0; k--)
+                    NV_SET_fn(fr->saved_names[k], fr->saved_vals[k]);
+                /* Push result onto caller's value stack */
+                if (is_fret) {
+                    sm_push(st, FAILDESCR);
+                    st->last_ok = 0;
+                } else if (is_nret) {
+                    sm_push(st, NAMEVAL(GC_strdup(fr->retval_name)));
+                    st->last_ok = 1;
+                } else {
+                    sm_push(st, retval);
+                    st->last_ok = (retval.v != DT_FAIL);
+                }
+                st->pc = fr->ret_pc;
+            } else {
+                return 0;  /* top-level: halt */
+            }
+            break;
+        }
 
         case SM_DEFINE:
             /* stub: function definition handled by preprocessor */

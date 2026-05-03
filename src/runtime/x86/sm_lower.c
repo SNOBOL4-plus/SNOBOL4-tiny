@@ -23,6 +23,7 @@
 
 #include "../../frontend/snobol4/scrip_cc.h"
 #include "../../ir/ir.h"
+#include "../../runtime/common/ir_clone.h"   /* RS-9b: expr_gc_clone */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,6 +32,14 @@
 #include <ctype.h>
 #include <gc/gc.h>
 #include "snobol4.h"   /* FNCEX_fn, FUNC_NPARAMS_fn */
+
+/* RS-9b: emit SM_PUSH_EXPR with a GC-cloned EXPR_t* so the SM_Program
+ * owns its EXPR_t* values independently of the calloc-based IR tree.
+ * All SM_PUSH_EXPR emissions go through this helper. */
+static void emit_push_expr(SM_Program *p, const EXPR_t *e)
+{
+    sm_emit_ptr(p, SM_PUSH_EXPR, (void *)expr_gc_clone(e));
+}
 
 /* ── Label resolution table ─────────────────────────────────────────────── */
 
@@ -326,7 +335,7 @@ static void lower_pat_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
                         if (arg && arg->kind == E_QLIT)
                             lower_expr(p, lt, arg);   /* string lit — eager OK */
                         else if (arg)
-                            sm_emit_ptr(p, SM_PUSH_EXPR, (void *)arg);
+                            emit_push_expr(p, arg);
                         else
                             lower_expr(p, lt, arg);
                     }
@@ -367,7 +376,7 @@ static void lower_pat_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
                         if (arg && arg->kind == E_QLIT)
                             lower_expr(p, lt, arg);
                         else if (arg)
-                            sm_emit_ptr(p, SM_PUSH_EXPR, (void *)arg);
+                            emit_push_expr(p, arg);
                         else
                             lower_expr(p, lt, arg);
                     }
@@ -451,7 +460,7 @@ static void lower_pat_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
                     if (arg && arg->kind == E_QLIT)
                         lower_expr(p, lt, arg);
                     else if (arg)
-                        sm_emit_ptr(p, SM_PUSH_EXPR, (void *)arg);
+                        emit_push_expr(p, arg);
                     else
                         lower_expr(p, lt, arg);
                 }
@@ -554,7 +563,7 @@ static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
     case E_DEFER:
         /* *expr in value context — freeze as DT_E for EVAL() to thaw.
          * SM_PUSH_EXPR bakes the EXPR_t* pointer into the instruction. */
-        sm_emit_ptr(p, SM_PUSH_EXPR, (void *)(e->nchildren > 0 ? e->children[0] : NULL));
+        emit_push_expr(p, e->nchildren > 0 ? e->children[0] : NULL);
         return;
 
     /* ── Arithmetic ── */
@@ -956,7 +965,7 @@ static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
     case E_SECTION:
     case E_SECTION_MINUS:
     case E_SECTION_PLUS:
-        sm_emit_ptr(p, SM_PUSH_EXPR, (void *)e);
+        emit_push_expr(p, e);
         sm_emit(p, SM_BB_PUMP);
         return;
 
@@ -967,14 +976,14 @@ static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
     case E_UNIFY:
     case E_TRAIL_MARK:
     case E_TRAIL_UNWIND:
-        sm_emit_ptr(p, SM_PUSH_EXPR, (void *)e);
+        emit_push_expr(p, e);
         sm_emit(p, SM_BB_ONCE);
         return;
 
     /* ── Raku: typed variable declaration — no runtime action ───────────── */
     case E_CASE:
         /* case expression: lower cond, then each arm via BB */
-        sm_emit_ptr(p, SM_PUSH_EXPR, (void *)e);
+        emit_push_expr(p, e);
         sm_emit(p, SM_BB_PUMP);
         return;
 
@@ -1010,7 +1019,7 @@ static void lower_stmt(SM_Program *p, LabelTable *lt, const STMT_t *s)
      * would skip the STNO on re-entry — causing sm_steps_done to under-count
      * loop iterations and diverge from the IR step counter. (SN-26c-stmt153) */
     if (s->label && s->label[0]) {
-        int lbl_idx = sm_label(p);
+        int lbl_idx = sm_label_named(p, s->label);
         lt_define(lt, s->label, lbl_idx);
     }
 
@@ -1032,7 +1041,7 @@ static void lower_stmt(SM_Program *p, LabelTable *lt, const STMT_t *s)
     if (s->lang == LANG_ICN) {
         /* Icon statement: push the raw EXPR_t* so SM_BB_PUMP handler can call
          * coro_eval(expr) to build a bb_node_t, then drive via bb_broker(BB_PUMP). */
-        sm_emit_ptr(p, SM_PUSH_EXPR, (void *)s->subject);
+        emit_push_expr(p, s->subject);
         sm_emit(p, SM_BB_PUMP);
         goto emit_gotos;
     }

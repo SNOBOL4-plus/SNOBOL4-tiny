@@ -192,6 +192,18 @@ int sm_emit_ii(SM_Program *p, sm_opcode_t op, int64_t i0, int64_t i1);
 /* Label: emit SM_LABEL with index=next_instr; return the label index */
 int sm_label(SM_Program *p);
 
+/* Label with name: emit SM_LABEL and store label name in a[0].s for runtime lookup.
+ * Returns the label index (same as sm_label). RS-9a: needed for SM call frames. */
+int sm_label_named(SM_Program *p, const char *name);
+
+/* RS-9b: global pointer to the active SM_Program, set by scrip.c after sm_lower().
+ * Allows _usercall_hook to detect SM-bodied functions without the IR tree. */
+extern SM_Program *g_current_sm_prog;
+
+/* Look up the PC (SM_LABEL instr index) for a named label. Returns -1 if not found.
+ * RS-9a: used by SM_CALL to jump to user-defined function bodies. */
+int sm_label_pc_lookup(const SM_Program *p, const char *name);
+
 /* Patch a jump target: set a[0].i of instr at `jump_idx` to `target_label` */
 void sm_patch_jump(SM_Program *p, int jump_idx, int target_label);
 

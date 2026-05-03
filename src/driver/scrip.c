@@ -99,6 +99,7 @@ extern int         Δ;
 #include "../runtime/interp/coro_runtime.h"
 #include "../runtime/interp/pl_runtime.h"
 #include "interp.h"   /* FI-6: interp loop extracted to interp.c */
+#include "../runtime/common/ir_clone.h"  /* RS-9b: code_free */
 
 #include "driver/polyglot.h"   /* FI-7: polyglot layer extracted to polyglot.c */
 
@@ -466,6 +467,13 @@ int main(int argc, char **argv)
             fprintf(stderr, "scrip: sm_lower failed\n");
             return 1;
         }
+        /* RS-9b: IR tree no longer needed — SM_Program is self-contained.
+         * SM_PUSH_EXPR pointers were cloned to GC memory by emit_push_expr.
+         * Clear label_table stmt pointers so any residual label_lookup
+         * calls return NULL (no dangling STMT_t* dereference). */
+        g_current_sm_prog = sm;
+        code_free(prog); prog = NULL;
+        label_table_clear_stmts();
         /* ── --dump-sm: print SM_Program and exit ───────────────────── */
         if (dump_sm) {
             sm_prog_print(sm, stdout);
@@ -506,6 +514,9 @@ int main(int argc, char **argv)
         g_sno_err_active = 1;
         SM_Program *sm = sm_lower(prog);
         if (!sm) { fprintf(stderr, "scrip: sm_lower failed\n"); return 1; }
+        /* RS-9b: IR tree no longer needed after lowering. */
+        code_free(prog); prog = NULL;
+        label_table_clear_stmts();
         if (dump_sm) { sm_prog_print(sm, stdout); sm_prog_free(sm); return 0; }
         if (sm_image_init() != 0) {
             fprintf(stderr, "scrip: sm_image_init failed\n");

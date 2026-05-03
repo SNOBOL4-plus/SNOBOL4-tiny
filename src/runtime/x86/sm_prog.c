@@ -3,6 +3,11 @@
  */
 
 #include "sm_prog.h"
+#include <string.h>
+#include <stdlib.h>
+
+/* RS-9b: set by scrip.c after sm_lower; allows _usercall_hook to detect SM bodies */
+SM_Program *g_current_sm_prog = NULL;
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -104,6 +109,29 @@ int sm_label(SM_Program *p)
     p->instrs[idx].op      = SM_LABEL;
     p->instrs[idx].a[0].i  = (int64_t)target;
     return target;
+}
+
+/* RS-9a: named label — same as sm_label but also stores name in a[0].s */
+int sm_label_named(SM_Program *p, const char *name)
+{
+    int target = p->count;
+    int idx = _grow(p);
+    p->instrs[idx].op     = SM_LABEL;
+    p->instrs[idx].a[0].i = (int64_t)target;
+    p->instrs[idx].a[0].s = name ? strdup(name) : NULL;
+    return target;
+}
+
+/* RS-9a: scan SM_Program for SM_LABEL with matching a[0].s; return PC or -1 */
+int sm_label_pc_lookup(const SM_Program *p, const char *name)
+{
+    if (!p || !name) return -1;
+    for (int i = 0; i < p->count; i++) {
+        if (p->instrs[i].op == SM_LABEL && p->instrs[i].a[0].s &&
+            strcmp(p->instrs[i].a[0].s, name) == 0)
+            return (int)p->instrs[i].a[0].i;
+    }
+    return -1;
 }
 
 void sm_patch_jump(SM_Program *p, int jump_idx, int target_label)

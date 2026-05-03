@@ -22,7 +22,9 @@ void label_table_build(CODE_t *prog)
     label_count = 0;
     for (STMT_t *s = prog->head; s; s = s->next) {
         if (s->label && *s->label && label_count < LABEL_MAX) {
-            label_table[label_count].name = s->label;
+            /* RS-9b: strdup so label_table survives code_free(prog).
+             * s->stmt is kept for --ir-run only; --sm-run uses sm_label_pc_lookup. */
+            label_table[label_count].name = strdup(s->label);
             label_table[label_count].stmt = s;
             label_count++;
         }
@@ -93,9 +95,21 @@ void prescan_defines(CODE_t *prog)
         if (!s->subject) continue;
         const char *spec = define_spec_from_expr(s->subject);
         if (spec && *spec) {
+            /* RS-9b: strdup so the func registry survives code_free(prog).
+             * define_spec_from_expr may return arg->sval (direct IR pointer)
+             * or flatbuf (static buffer) — strdup is correct in both cases. */
+            char *spec_copy = strdup(spec);
             const char *entry = define_entry_from_expr(s->subject);
-            if (entry) DEFINE_fn_entry(spec, NULL, entry);
-            else       DEFINE_fn(spec, NULL);
+            if (entry) DEFINE_fn_entry(spec_copy, NULL, strdup(entry));
+            else       DEFINE_fn(spec_copy, NULL);
         }
     }
+}
+
+/* RS-9b: null out STMT_t* pointers in label_table after code_free so
+ * any residual label_lookup calls return NULL rather than a dangling ptr. */
+void label_table_clear_stmts(void)
+{
+    for (int i = 0; i < label_count; i++)
+        label_table[i].stmt = NULL;
 }

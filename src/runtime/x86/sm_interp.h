@@ -17,6 +17,23 @@
 #include "sm_prog.h"
 #include "snobol4.h"
 
+/* ── RS-9a: SM call frame ────────────────────────────────────────────────
+ * One frame per active user-defined function call in --sm-run mode.
+ * Mirrors CallFrame in interp_call.c but references SM PCs not IR nodes. */
+#define SM_CALL_STACK_MAX 256
+#define SM_SAVED_NV_MAX    64
+
+typedef struct {
+    int         ret_pc;               /* PC to resume after RETURN */
+    int         ret_ok;               /* 1=S branch on return, 0=F branch (FRETURN) */
+    char       *retval_name;          /* NV slot the body writes its return value into */
+    int         nsaved;               /* number of NV vars saved */
+    char       *saved_names[SM_SAVED_NV_MAX];
+    DESCR_t     saved_vals [SM_SAVED_NV_MAX];
+    int         ret_jump_s_pc;        /* caller's :S label PC (-1 = fall through) */
+    int         ret_jump_f_pc;        /* caller's :F label PC (-1 = fall through) */
+} SmCallFrame;
+
 /* Interpreter state */
 typedef struct {
     DESCR_t  *stack;       /* dynamic value stack (realloc-grown) */
@@ -27,6 +44,9 @@ typedef struct {
     jmp_buf   err_jmp;     /* per-statement error recovery (SM_STNO arms it) */
     int       err_fail_pc; /* pc to jump to on runtime error (-1 = halt) */
     int       err_armed;   /* 1 if err_jmp is live */
+    /* RS-9a: SM-native call stack */
+    SmCallFrame call_stack[SM_CALL_STACK_MAX];
+    int         call_depth;
 } SM_State;
 
 /*
