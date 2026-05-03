@@ -13,13 +13,23 @@
  * switch.  All interp_eval(child) recurses replaced with bb_eval_value(child).
  * E_FNC builtins route through icn_call_builtin (already IR-free).
  *
+ * RS-22b (2026-05-03): Arithmetic + numeric-comparison binops lifted in.
+ * E_ADD/E_SUB/E_MUL/E_DIV/E_MOD/E_POW dispatch through `shared_arith` in
+ * runtime/common/coerce.c (mirrors sm_interp's SM_ADD..SM_EXP path —
+ * FAIL propagation, DT_S → INT, DT_SNUL → INT 0, then shared_arith).
+ * E_LT/E_LE/E_GT/E_GE/E_EQ/E_NE return the right operand on success,
+ * FAILDESCR on fail (Icon goal-directed convention).  E_IDENTICAL routes
+ * through `icn_descr_identical` (declared in coro_runtime.h).  Note: there
+ * is no E_NOT_IDENTICAL kind — `~===` lowers as E_NOT(E_IDENTICAL(...)).
+ *
  * AUTHORS: Lon Jones Cherryholmes · Claude Sonnet
- * SPRINT:  RS-17a (2026-05-03), RS-22a (2026-05-03)
+ * SPRINT:  RS-17a (2026-05-03), RS-22a (2026-05-03), RS-22b (2026-05-03)
  *==========================================================================================================================*/
 
 #include "coro_value.h"
-#include "coro_runtime.h"   /* FRAME, frame_depth, scan_pos, scan_subj */
+#include "coro_runtime.h"   /* FRAME, frame_depth, scan_pos, scan_subj, icn_descr_identical, g_lang */
 #include "../../driver/interp_private.h"  /* RS-22a: icn_call_builtin, icn_string_section_assign, set_and_trace, data_field_ptr, kw_assign */
+#include "../common/coerce.h"             /* RS-22b: shared_arith */
 #include "snobol4.h"
 #include <string.h>
 #include <gc/gc.h>
@@ -32,6 +42,58 @@ extern DESCR_t eval_node(EXPR_t *e);
  * fallthrough with an in-this-file branch until this declaration goes away
  * (and the isolation gate can promote coro_runtime.c). */
 extern DESCR_t interp_eval(EXPR_t *e);
+
+/*------------------------------------------------------------------------------------------------------------------------------
+ * bb_arith — RS-22b arithmetic dispatch helper.
+ *
+ * Mirrors the SM_ADD..SM_EXP path in sm_interp.c (lines 327-353): propagate
+ * DT_FAIL operands, coerce DT_S → DT_I via to_int, coerce DT_SNUL → INT(0),
+ * then delegate to `shared_arith` in runtime/common/coerce.c.  One helper
+ * instead of six near-identical cases — and the same code path SM mode uses.
+ *----------------------------------------------------------------------------------------------------------------------------*/
+static DESCR_t bb_arith(EXPR_t *e, sm_opcode_t op)
+{
+    if (e->nchildren < 2) return FAILDESCR;
+    DESCR_t l = bb_eval_value(e->children[0]);
+    DESCR_t r = bb_eval_value(e->children[1]);
+    if (l.v == DT_FAIL || r.v == DT_FAIL) return FAILDESCR;
+    if (l.v == DT_S)    l = INTVAL(to_int(l));
+    if (r.v == DT_S)    r = INTVAL(to_int(r));
+    if (l.v == DT_SNUL) l = INTVAL(0);
+    if (r.v == DT_SNUL) r = INTVAL(0);
+    return shared_arith(l, r, op);
+}
+
+/*------------------------------------------------------------------------------------------------------------------------------
+ * bb_numrel — RS-22b numeric relational dispatch helper.
+ *
+ * Mirrors NUMREL macro in interp_eval.c (lines 3375-3384): both operands
+ * coerce to double (DT_R direct, DT_I cast, anything else → 0); compare;
+ * succeed → return RIGHT operand (Icon goal-directed convention; right
+ * operand survives so `2 < (1 to 4)` filters generators); fail → FAILDESCR.
+ *----------------------------------------------------------------------------------------------------------------------------*/
+typedef enum { BBR_LT, BBR_LE, BBR_GT, BBR_GE, BBR_EQ, BBR_NE } bb_relop_t;
+
+static DESCR_t bb_numrel(EXPR_t *e, bb_relop_t op)
+{
+    if (e->nchildren < 2) return FAILDESCR;
+    DESCR_t l = bb_eval_value(e->children[0]);
+    DESCR_t r = bb_eval_value(e->children[1]);
+    if (IS_FAIL_fn(l) || IS_FAIL_fn(r)) return FAILDESCR;
+    double lv = (l.v == DT_R) ? l.r : (double)(l.v == DT_I ? l.i : 0);
+    double rv = (r.v == DT_R) ? r.r : (double)(r.v == DT_I ? r.i : 0);
+    int ok;
+    switch (op) {
+    case BBR_LT: ok = (lv <  rv); break;
+    case BBR_LE: ok = (lv <= rv); break;
+    case BBR_GT: ok = (lv >  rv); break;
+    case BBR_GE: ok = (lv >= rv); break;
+    case BBR_EQ: ok = (lv == rv); break;
+    case BBR_NE: ok = (lv != rv); break;
+    default:     ok = 0;          break;
+    }
+    return ok ? r : FAILDESCR;
+}
 
 /*------------------------------------------------------------------------------------------------------------------------------
  * bb_eval_value — evaluate e in value context.
@@ -168,6 +230,41 @@ DESCR_t bb_eval_value(EXPR_t *e)
             if (IS_FAIL_fn(args[j])) return FAILDESCR;
         }
         return icn_call_builtin(e, args, nargs);
+    }
+
+    /* RS-22b: arithmetic binops — bb_arith handles FAIL prop, string→int,
+     * SNUL→0, then dispatches via shared_arith (the same path SM mode uses).
+     * E_POW: shared_arith maps SM_EXP → integer for non-negative int^int,
+     * else REALVAL(pow(...)).  This matches Icon `^` (always real if any
+     * operand is real) and SNOBOL4 `**` (int when both ints, exp >= 0). */
+    case E_ADD: return bb_arith(e, SM_ADD);
+    case E_SUB: return bb_arith(e, SM_SUB);
+    case E_MUL: return bb_arith(e, SM_MUL);
+    case E_DIV: return bb_arith(e, SM_DIV);
+    case E_MOD: return bb_arith(e, SM_MOD);
+    case E_POW: return bb_arith(e, SM_EXP);
+
+    /* RS-22b: numeric relational binops — succeed → return right operand,
+     * fail → FAILDESCR.  Right-operand-on-success is Icon goal-directed
+     * convention (lets `2 < (1 to 4)` filter a generator chain). */
+    case E_LT: return bb_numrel(e, BBR_LT);
+    case E_LE: return bb_numrel(e, BBR_LE);
+    case E_GT: return bb_numrel(e, BBR_GT);
+    case E_GE: return bb_numrel(e, BBR_GE);
+    case E_EQ: return bb_numrel(e, BBR_EQ);
+    case E_NE: return bb_numrel(e, BBR_NE);
+
+    /* RS-22b: deep identity (Icon `===`).  Right-operand-on-success again.
+     * Note: `~===` does NOT lower to a distinct EXPR kind — Icon's parser
+     * emits E_NOT(E_IDENTICAL(a, b)).  When E_NOT is lifted (RS-22d), the
+     * full `~===` path becomes IR-free; until then E_NOT still falls through
+     * to interp_eval and walks back here for its E_IDENTICAL child. */
+    case E_IDENTICAL: {
+        if (e->nchildren < 2) return FAILDESCR;
+        DESCR_t l = bb_eval_value(e->children[0]);
+        DESCR_t r = bb_eval_value(e->children[1]);
+        if (IS_FAIL_fn(l) || IS_FAIL_fn(r)) return FAILDESCR;
+        return icn_descr_identical(l, r) ? r : FAILDESCR;
     }
 
     default:
