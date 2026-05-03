@@ -68,8 +68,15 @@
  * unified_broker failure path and three peers — first sub-rung of
  * RS-22f.
  *
+ * RS-22f-makelist (2026-05-03): E_MAKELIST lifted in.  Mirrors
+ * interp_eval.c:4051-4062 verbatim — first-sighting DEFDAT_fn
+ * registration of `icnlist`, GC_malloc'd elem array, bb_eval_value
+ * over each child (was interp_eval in IR mode), DATCON_fn returns
+ * the DT_DATA descriptor.  Single fallthrough closed.  Second
+ * sub-rung of RS-22f.
+ *
  * AUTHORS: Lon Jones Cherryholmes · Claude Sonnet
- * SPRINT:  RS-17a (2026-05-03), RS-22a (2026-05-03), RS-22b (2026-05-03), RS-22c (2026-05-03), RS-22d (2026-05-03), RS-22e (2026-05-03), RS-22f-strrel (2026-05-03)
+ * SPRINT:  RS-17a (2026-05-03), RS-22a (2026-05-03), RS-22b (2026-05-03), RS-22c (2026-05-03), RS-22d (2026-05-03), RS-22e (2026-05-03), RS-22f-strrel (2026-05-03), RS-22f-makelist (2026-05-03)
  *==========================================================================================================================*/
 
 #include "coro_value.h"
@@ -578,6 +585,22 @@ DESCR_t bb_eval_value(EXPR_t *e)
     case E_SECTION_PLUS:   return bb_section(e, BBS_PLUS);
     case E_SECTION_MINUS:  return bb_section(e, BBS_MINUS);
 
+    /* RS-22f-makelist: Icon `[e1, e2, ...]` list constructor.  Mirrors
+     * interp_eval.c:4051-4062 — register `icnlist` DATA type once on
+     * first sighting, GC_malloc the elem array, evaluate each child via
+     * bb_eval_value (was interp_eval in IR mode), then DATCON_fn to
+     * build the DT_DATA descriptor.  The static-flag idiom matches IR
+     * mode exactly: DEFDAT_fn is called at most once per process. */
+    case E_MAKELIST: {
+        int n = e->nchildren;
+        static int icnlist_registered = 0;
+        if (!icnlist_registered) { DEFDAT_fn("icnlist(frame_elems,frame_size,icn_type)"); icnlist_registered = 1; }
+        DESCR_t *elems = GC_malloc((n > 0 ? n : 1) * sizeof(DESCR_t));
+        for (int i = 0; i < n; i++) elems[i] = bb_eval_value(e->children[i]);
+        DESCR_t eptr; eptr.v = DT_DATA; eptr.slen = 0; eptr.ptr = (void*)elems;
+        return DATCON_fn("icnlist", eptr, INTVAL(n), STRVAL("list"));
+    }
+
     /* RS-22d: unary minus / plus.  Mirrors interp_eval.c:2501-2540.
      * E_PLS is more elaborate than `pos()` — try integer parse first,
      * then real, fall back to INTVAL(0).  Match exactly. */
@@ -815,8 +838,7 @@ DESCR_t bb_eval_value(EXPR_t *e)
      *     E_CSET_COMPL E_CSET_DIFF E_CSET_INTER E_CSET_UNION
      *
      *   Mid-size:
-     *     E_MAKELIST  (DT_DATA list constructor — uses DEFDAT_fn /
-     *                  DATCON_fn; ~12-line lift)
+     *     E_MAKELIST  closed by RS-22f-makelist (case arm above).
      *     E_SCAN      (drives a generator chain via coro/exec_stmt;
      *                  needs careful first-value contract definition)
      *     E_CASE      (statement-shaped; reaches value context only via
