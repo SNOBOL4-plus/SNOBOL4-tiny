@@ -185,6 +185,87 @@ DESCR_t interp_eval_pat(EXPR_t *e)
             return r;
         }
 
+    /* PARSER-SN-INFRA-7a: E_CAPT_COND_ASGN / E_CAPT_IMMED_ASGN evaluated in
+     * pattern context.  When the capture target is a deferred function call
+     * — E_DEFER(E_FNC) for `pat . *func(args)` or E_INDIRECT(E_FNC) for the
+     * Snocone `pat . *func(args)` lowering — we MUST route through
+     * pat_assign_callcap / pat_assign_callcap_named (XCALLCAP nodes) so the
+     * function fires at flush time with deferred args.  Mirrors the
+     * driver-side routing in interp_eval.c (E_CAPT_COND_ASGN, lines ~3219).
+     *
+     * Without this case, E_CAPT_COND_ASGN inside a pattern subexpression
+     * (e.g.  `(str ? (POS(0) LEN(1) . *assign(.var, val)))`  built inline,
+     * not pre-assigned) fell through to default → eval_node → eval_code.c's
+     * E_CAPT_COND_ASGN, which builds a plain XNME node via pat_assign_cond
+     * and silently drops the deferred call.  Resulting symptom: the call
+     * never fires, the variable is never written, and the only visible
+     * effect was a successful match with no side effect.
+     *
+     * Non-deferred targets (E_VAR, E_INDIRECT, E_NAME) are still routed
+     * through eval_node so eval_code.c's existing logic handles them. */
+    case E_CAPT_COND_ASGN:
+    case E_CAPT_IMMED_ASGN: {
+        if (e->nchildren < 2) return FAILDESCR;
+        EXPR_t *tgt = e->children[1];
+        EXPR_t *fnc = NULL;
+        int is_imm = (e->kind == E_CAPT_IMMED_ASGN);
+        /* Detect E_DEFER(E_FNC) and E_INDIRECT(E_FNC) deferred-call targets. */
+        if (tgt && tgt->kind == E_DEFER && tgt->nchildren == 1
+                && tgt->children[0] && tgt->children[0]->kind == E_FNC
+                && tgt->children[0]->sval) {
+            fnc = tgt->children[0];
+        } else if (tgt && tgt->kind == E_INDIRECT && tgt->nchildren == 1
+                && tgt->children[0] && tgt->children[0]->kind == E_FNC
+                && tgt->children[0]->sval) {
+            fnc = tgt->children[0];
+        }
+        if (fnc) {
+            /* Build pattern child in pattern context (so any nested E_DEFER /
+             * captures in it get the right treatment), then dispatch to the
+             * appropriate XCALLCAP builder. */
+            DESCR_t pat = interp_eval_pat(e->children[0]);
+            if (IS_FAIL_fn(pat)) return FAILDESCR;
+            int na = fnc->nchildren;
+            /* TL-2 fast path: when every arg is a plain E_VAR, store names
+             * for flush-time NV_GET_fn lookup so earlier in-pattern captures
+             * are seen.  Mirrors interp_eval.c lines 3228-3237. */
+            int all_vars = (na > 0);
+            for (int i = 0; i < na; i++) {
+                EXPR_t *c = fnc->children[i];
+                if (!c || c->kind != E_VAR || !c->sval) { all_vars = 0; break; }
+            }
+            if (all_vars) {
+                char **names = (char **)GC_malloc(na * sizeof(char *));
+                for (int i = 0; i < na; i++) names[i] = (char *)fnc->children[i]->sval;
+                if (is_imm)
+                    return pat_assign_callcap_named_imm(pat, fnc->sval, NULL, 0, names, na);
+                return pat_assign_callcap_named(pat, fnc->sval, NULL, 0, names, na);
+            }
+            /* Mixed args: defer everything except E_QLIT via DT_E wrap.
+             * Mirrors interp_eval.c lines 3251-3267. */
+            DESCR_t *av = na > 0 ? GC_malloc(na * sizeof(DESCR_t)) : NULL;
+            for (int i = 0; i < na; i++) {
+                EXPR_t *arg = fnc->children[i];
+                if (arg && arg->kind == E_QLIT) {
+                    av[i] = eval_node(arg);
+                } else if (arg) {
+                    av[i].v = DT_E;
+                    av[i].ptr = arg;
+                    av[i].slen = 0;
+                } else {
+                    av[i] = NULVCL;
+                }
+            }
+            if (is_imm)
+                return pat_assign_callcap_named_imm(pat, fnc->sval, av, na, NULL, 0);
+            return pat_assign_callcap(pat, fnc->sval, av, na);
+        }
+        /* Non-deferred target — fall through to value-context eval_node,
+         * whose E_CAPT_COND_ASGN / E_CAPT_IMMED_ASGN handlers already do
+         * the right thing for E_VAR, E_INDIRECT(E_QLIT), etc. */
+        return eval_node(e);
+    }
+
     /* Zero-argument pattern primitives.
      * Typed E_* nodes produced by the SNOBOL4 parser via pat_prim_kind().
      * Belong here in interp_eval_pat, not in interp_eval

@@ -34,7 +34,7 @@ if [ ! -d "$SRC" ]; then
     exit 0
 fi
 
-EXPECTED=$'bar\nglobal-OK\ntdump-OK\nassign-OK\nmatch-OK\nnotmatch-OK\nlwr-OK\nupr-OK\ncap-OK\nicase-OK\nqize-empty-OK\nqize-plain-OK\nsqize-OK\ndqize-OK\nsqlsqize-OK\ntdump-quote-OK'
+EXPECTED=$'bar\nglobal-OK\ntdump-OK\nassign-OK\nmatch-OK\nnotmatch-OK\nlwr-OK\nupr-OK\ncap-OK\nicase-OK\nqize-empty-OK\nqize-plain-OK\nsqize-OK\ndqize-OK\nsqlsqize-OK\ntdump-quote-OK\ninfra7a-inline-assign-OK\ninfra7a-qize-tab-OK'
 ACTUAL=$(timeout 8 "$SCRIP" --ir-run \
     "$SRC/global.sc" \
     "$SRC/tree.sc" \
@@ -51,7 +51,7 @@ ACTUAL=$(timeout 8 "$SCRIP" --ir-run \
     < /dev/null 2>&1)
 
 if [ "$ACTUAL" = "$EXPECTED" ]; then
-    echo "PASS scrip(.sc) smoke: ... + qize-empty-OK + qize-plain-OK + sqize-OK + dqize-OK + sqlsqize-OK + tdump-quote-OK"
+    echo "PASS scrip(.sc) smoke: ... + qize-empty-OK + qize-plain-OK + sqize-OK + dqize-OK + sqlsqize-OK + tdump-quote-OK + infra7a-inline-assign-OK + infra7a-qize-tab-OK"
     exit 0
 fi
 
