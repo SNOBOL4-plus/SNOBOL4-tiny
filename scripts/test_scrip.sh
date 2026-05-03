@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
-# test_scrip.sh — Smoke test for corpus/programs/scrip/
-# Loads the five Snocone-hosted runtime files plus smoke.sc; expects 'bar'.
-# Distinguishes three outcomes:
-#   PASS    — smoke output matches 'bar'
-#   BLOCKED — output is the documented "Error 3" trace from the known
-#             scrip Snocone bug PARSER-SN-INFRA-5a (one-arg IDENT(var)
-#             inside Pop() returns wrong branch when tree.sc::Insert is
-#             loaded). Exit 0 — the bug is tracked, not a regression.
+# test_scrip.sh — Smoke test for corpus/programs/scrip/.
+#
+# Loads the Snocone-hosted runtime files (now six, with global.sc added
+# under PARSER-SN-INFRA-2) plus smoke.sc.  Expected output:
+#   bar
+#   global-OK
+#
+# The PARSER-SN-INFRA-5a "Error 3" recognizer is retained as a defensive
+# probe: if synthetic-label collision ever resurfaces (e.g. someone
+# undoes the g_sc_label_seq fix in snocone_parse.y), the script reports
+# BLOCKED with a pointer to the goal file rather than a vague FAIL.
+#
+#   PASS    — output matches the expected two lines
+#   BLOCKED — INFRA-5a footprint detected (Error 3 / array reference)
 #   FAIL    — anything else; exit 1.
 set -u
 
@@ -24,8 +30,9 @@ if [ ! -d "$SRC" ]; then
     exit 0
 fi
 
-EXPECTED="bar"
+EXPECTED=$'bar\nglobal-OK'
 ACTUAL=$(timeout 8 "$SCRIP" --ir-run \
+    "$SRC/global.sc" \
     "$SRC/tree.sc" \
     "$SRC/stack.sc" \
     "$SRC/counter.sc" \
@@ -35,20 +42,22 @@ ACTUAL=$(timeout 8 "$SCRIP" --ir-run \
     < /dev/null 2>&1)
 
 if [ "$ACTUAL" = "$EXPECTED" ]; then
-    echo "PASS scrip(.sc) smoke: Shift/Pop round-trip = '$ACTUAL'"
+    echo "PASS scrip(.sc) smoke: Shift/Pop round-trip + global-OK"
     exit 0
 fi
 
-# Recognize the documented INFRA-5a failure mode.
+# Defensive recognizer for the documented INFRA-5a regression footprint.
 if echo "$ACTUAL" | grep -q "Error 3" && echo "$ACTUAL" | grep -q "Erroneous array or table reference"; then
-    echo "BLOCKED scrip(.sc) smoke: PARSER-SN-INFRA-5a (one-arg IDENT bug)"
-    echo "  smoke uses faithful Pop() no-arg form per beauty.sno line 617;"
-    echo "  bug surfaces when tree.sc::Insert is co-loaded."
-    echo "  See GOAL-PARSER-SNOBOL4.md INFRA-5a for fix plan."
+    echo "BLOCKED scrip(.sc) smoke: PARSER-SN-INFRA-5a footprint detected"
+    echo "  Synthetic-label collision across .sc files is back."
+    echo "  Check that snocone_parse.y still has g_sc_label_seq monotonic."
+    echo "  See GOAL-PARSER-SNOBOL4.md INFRA-5a."
     exit 0
 fi
 
 echo "FAIL scrip(.sc) smoke"
-echo "  expected: '$EXPECTED'"
-echo "  actual:   '$ACTUAL'"
+echo "  expected:"
+echo "$EXPECTED" | sed 's/^/    /'
+echo "  actual:"
+echo "$ACTUAL" | sed 's/^/    /'
 exit 1
