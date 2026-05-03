@@ -76,7 +76,7 @@
  * sub-rung of RS-22f.
  *
  * AUTHORS: Lon Jones Cherryholmes · Claude Sonnet
- * SPRINT:  RS-17a (2026-05-03), RS-22a (2026-05-03), RS-22b (2026-05-03), RS-22c (2026-05-03), RS-22d (2026-05-03), RS-22e (2026-05-03), RS-22f-strrel (2026-05-03), RS-22f-makelist (2026-05-03), RS-22f-cset (2026-05-03)
+ * SPRINT:  RS-17a (2026-05-03), RS-22a (2026-05-03), RS-22b (2026-05-03), RS-22c (2026-05-03), RS-22d (2026-05-03), RS-22e (2026-05-03), RS-22f-strrel (2026-05-03), RS-22f-makelist (2026-05-03), RS-22f-cset (2026-05-03), RS-22f-generators (2026-05-03)
  *==========================================================================================================================*/
 
 #include "coro_value.h"
@@ -807,6 +807,96 @@ DESCR_t bb_eval_value(EXPR_t *e)
         return result;
     }
 
+    /* RS-22f-generators (2026-05-03): Generator kinds in value context.
+     *
+     * E_TO / E_TO_BY / E_ITERATE / E_LIMIT / E_ALTERNATE / E_SEQ_EXPR are
+     * generators.  The contract has THREE cases that must be distinguished:
+     *
+     * (1) The node is currently being driven by an outer pump.  An every-loop
+     *     above us pushed the E_TO onto FRAME's gen stack; the body re-reads
+     *     the node to fetch the current tick value.  E.g.:
+     *         every write("ICN: " || (1 to 3))
+     *     drives E_FNC(write) which drives E_CAT which evaluates E_TO.  The
+     *     E_TO is on FRAME's gen stack with cur = 1, 2, 3 successively.
+     *     Mirrors interp_eval.c:3470 — return INTVAL(cur) from the frame.
+     *
+     * (2) coro_drive_node injection: an outer driver staged a value for this
+     *     exact node (find_leaf_suspendable + coro_drive_val).  Return the
+     *     staged value directly.  Mirrors interp_eval.c:348.
+     *
+     * (3) Fresh evaluation in value context: build a bb_node_t via coro_eval
+     *     and call fn(ζ, α) once.  This is **first-value semantics**: if the
+     *     generator is empty, FAILDESCR; otherwise the first value it yields.
+     *     Used for stand-alone first-value contexts like `if (1 to n) > k`
+     *     where the test is generative but no outer every is pumping.
+     *     Mirrors RS-22d's E_AUGOP generator-RHS path (lines 784-794) and
+     *     interp_eval.c's E_IF goal-directed test (line 2386-2392).
+     *
+     * E_SEQ is `&` conjunction in value context: evaluate children
+     * left-to-right; FAILDESCR on first failure; return last child on full
+     * success.  Mirrors interp_eval.c:2348 icn-frame switch case. */
+    case E_TO:
+    case E_TO_BY: {
+        /* (2) injection check — outer driver staged a value */
+        if (coro_drive_node && e == coro_drive_node) return coro_drive_val;
+        /* (1) frame check — outer pump is iterating this node */
+        long cur;
+        if (icn_frame_lookup(e, &cur)) return INTVAL(cur);
+        /* (3) fresh first-value via coro_eval+α */
+        bb_node_t box = coro_eval(e);
+        return box.fn(box.ζ, α);
+    }
+
+    case E_ITERATE: {
+        /* (2) injection check */
+        if (coro_drive_node && e == coro_drive_node) return coro_drive_val;
+        /* (1) frame check — !L pump pushes E_ITERATE onto frame as the
+         * generator node; current cur is the index, sval is the string for
+         * char-iter or the list bucket.  Mirrors interp_eval.c E_ITERATE in
+         * the icn-frame switch. */
+        long cur; const char *sv;
+        if (icn_frame_lookup_sv(e, &cur, &sv)) {
+            if (sv) {
+                /* char-iteration: return single-char string at cur */
+                static char buf[2];
+                buf[0] = sv[cur];
+                buf[1] = '\0';
+                return STRVAL(buf);
+            }
+            /* numeric iteration */
+            return INTVAL(cur);
+        }
+        /* (3) fresh first-value */
+        bb_node_t box = coro_eval(e);
+        return box.fn(box.ζ, α);
+    }
+
+    case E_LIMIT:
+    case E_ALTERNATE:
+    case E_SEQ_EXPR: {
+        /* (2) injection check */
+        if (coro_drive_node && e == coro_drive_node) return coro_drive_val;
+        /* These three don't carry per-tick scalar state on FRAME.gen the way
+         * E_TO/E_ITERATE do; they are pure generator combinators whose
+         * internal state lives in the bb_node_t.  Outer-pump retries reach
+         * them through the bb_node_t's β path, not through re-entry of
+         * bb_eval_value.  So fresh α-once is correct here.
+         * (3) fresh first-value via coro_eval+α */
+        bb_node_t box = coro_eval(e);
+        return box.fn(box.ζ, α);
+    }
+
+    case E_SEQ: {
+        if (e->nchildren == 0) return NULVCL;
+        DESCR_t last = NULVCL;
+        for (int i = 0; i < e->nchildren; i++) {
+            last = bb_eval_value(e->children[i]);
+            if (IS_FAIL_fn(last)) return FAILDESCR;
+            if (FRAME.returning || FRAME.loop_break || FRAME.loop_next) break;
+        }
+        return last;
+    }
+
     /* RS-22f-cset (2026-05-03): Cset literal + four set-arithmetic ops.
      * Icon csets are represented as NUL-terminated strings of member chars.
      * The four binary ops delegate to the icn_cset_* helpers in icon_runtime.c
@@ -868,11 +958,9 @@ DESCR_t bb_eval_value(EXPR_t *e)
      * to interp_eval fallthrough and capture the 16 kinds as the work
      * boundary in docs/RS-22e-fallthrough-survey.md.  Five categories:
      *
-     *   Generators (legitimate first-value-via-coro_eval semantics —
-     *   should be lifted to coro_eval dispatch, not direct evaluation):
-     *     E_TO E_TO_BY (only TO seen — TO_BY untriggered) E_ALTERNATE
-     *     E_ITERATE E_LIMIT E_SEQ E_EVERY (E_EVERY not in survey but
-     *     same shape).
+     *   Generators: closed by RS-22f-generators — see case arms above for
+     *   E_TO/E_TO_BY/E_ITERATE/E_LIMIT/E_ALTERNATE/E_SEQ_EXPR (first-value
+     *   via coro_eval+α) and E_SEQ (left-to-right & in value context).
      *
      *   String relops:  closed by RS-22f-strrel — see case arms above
      *   for E_LLT/E_LLE/E_LGT/E_LGE/E_LEQ/E_LNE (bb_strrel).
