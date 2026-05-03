@@ -2361,6 +2361,19 @@ static void sc_emit_struct(ScParseState *st, char *name, char *fields) {
  *  this function (~5 lines), mirroring sno_parse_string() at
  *  snobol4.y:316.
  * ========================================================================= */
+/* PARSER-SN-INFRA-5a: synthetic label counter must be monotonic across
+ * ALL .sc files compiled in one scrip invocation.  Each file's parser
+ * state used to start label_seq=0, producing colliding _Lend_NNNN /
+ * _Ltop_NNNN names across files.  The merged CODE_t is then handed to
+ * label_table_build, whose label_lookup returns the FIRST match — so
+ * a goto in file B can resolve to a label in file A.  Concretely:
+ * tree.sc::Insert has `:goF _Lend_0002` (end of its while loop) and
+ * stack.sc::Pop has `:goF _Lend_0002` (IDENT branch); after the merge,
+ * Pop's goto silently resolves into Insert's body → Error 3.
+ *
+ * Fix: keep label_seq monotonic across files via this static counter. */
+static int g_sc_label_seq = 0;
+
 CODE_t *snocone_parse_program(const char *src, const char *filename) {
     LexCtx          ctx = {0};
     ctx.p           = src ? src : "";
@@ -2370,8 +2383,11 @@ CODE_t *snocone_parse_program(const char *src, const char *filename) {
     state.code      = calloc(1, sizeof *state.code);
     state.filename  = filename;
     state.nerrors   = 0;
+    state.label_seq = g_sc_label_seq;   /* INFRA-5a: continue, do not reset */
 
     int rc = sc_parse(&state);
+
+    g_sc_label_seq  = state.label_seq;  /* INFRA-5a: save for next file */
 
     /* LS-4.i.2 — clean up any pending label state.  Should be empty at
      * end of a well-formed parse, but errors can leave residue. */
