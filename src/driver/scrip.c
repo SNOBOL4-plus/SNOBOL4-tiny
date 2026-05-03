@@ -306,7 +306,7 @@ int main(int argc, char **argv)
             free(src);
             /* SC-26 investigation: allow --dump-ir on Snocone .sc files so
              * we can diff Snocone IR vs SNOBOL4 IR for the same program. */
-            if ((lang_snocone || lang_icon) && dump_ir && sub) {
+            if ((lang_snocone || lang_icon || lang_prolog) && dump_ir && sub) {
                 ir_dump_program(sub, stdout);
                 return 0;
             }
