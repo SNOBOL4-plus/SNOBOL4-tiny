@@ -49,6 +49,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <ctype.h>
 
 /* ── runtime ─────────────────────────────────────────────────────────── */
 #include "snobol4.h"
@@ -116,11 +117,19 @@ DESCR_t eval_node(EXPR_t *e)
         return NULVCL;
 
     case E_KEYWORD: {
-        /* &KEYWORD — prepend '&' for the NV table key */
+        /* INFRA-5c fix: Keywords (UCASE, LCASE, ALPHABET, ...) are stored in NV
+         * under their bare uppercase name — no '&' prefix.  The previous code
+         * prepended '&' before NV_GET_fn, which silently returned NULVCL for
+         * non-fast-path keywords (e.g. UCASE, LCASE), causing &UCASE to vanish
+         * when concatenated inside a function-arg E_SEQ such as
+         * ANY(&UCASE 'xyz').  This is the same approach interp_eval.c::E_KEYWORD
+         * uses (uppercase, no '&' prefix); the two evaluators must agree. */
         if (!e->sval || !*e->sval) return NULVCL;
-        char kbuf[128];
-        snprintf(kbuf, sizeof kbuf, "&%s", e->sval);
-        return NV_GET_fn(kbuf);
+        char uc[128]; int ki;
+        for (ki = 0; e->sval[ki] && ki < 127; ki++)
+            uc[ki] = (char)toupper((unsigned char)e->sval[ki]);
+        uc[ki] = '\0';
+        return NV_GET_fn(uc);
     }
 
     /* ── unary minus ─────────────────────────────────────────────────── */
