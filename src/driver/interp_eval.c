@@ -2716,6 +2716,27 @@ DESCR_t interp_eval(EXPR_t *e)
         DESCR_t val = interp_eval(e->children[1]);
         if (IS_FAIL_fn(val)) return FAILDESCR;
         EXPR_t *lv = e->children[0];
+        /* INFRA-5b: E_SCAN as lvalue — `if (str ? PAT = repl)` form.
+         * The Snocone frontend emits E_ASSIGN(E_SCAN(subj, pat), repl) when a
+         * pattern-match-with-replacement is used in expression (if/while head)
+         * position.  The old path fell through every lvalue branch silently,
+         * so the replacement was never applied and the capture side-effects were
+         * lost (exec_stmt inside E_SCAN's own handler was called with repl=NULL).
+         * Fix: detect E_SCAN as lv, extract subject name and pattern child,
+         * then call exec_stmt with the already-evaluated replacement value. */
+        if (lv && lv->kind == E_SCAN && !frame_depth && !g_pl_active) {
+            if (lv->nchildren < 1) return FAILDESCR;
+            EXPR_t *scan_subj_expr = lv->children[0];
+            const char *sname = (scan_subj_expr->kind == E_VAR) ? scan_subj_expr->sval : NULL;
+            DESCR_t subj_d = interp_eval(scan_subj_expr);
+            if (IS_FAIL_fn(subj_d)) return FAILDESCR;
+            DESCR_t pat_d = (lv->nchildren >= 2) ? interp_eval_pat(lv->children[1]) : pat_epsilon();
+            if (IS_FAIL_fn(pat_d)) return FAILDESCR;
+            /* val is the replacement (already evaluated above as e->children[1]) */
+            extern int exec_stmt(const char *, DESCR_t *, DESCR_t, DESCR_t *, int);
+            int ok = exec_stmt(sname, sname ? NULL : &subj_d, pat_d, &val, 1);
+            return ok ? val : FAILDESCR;
+        }
         /* IC-9: string-section / string-index lvalue. */
         if (lv && (lv->kind == E_SECTION || lv->kind == E_SECTION_PLUS ||
                    lv->kind == E_SECTION_MINUS)) {

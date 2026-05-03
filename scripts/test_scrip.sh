@@ -34,7 +34,7 @@ if [ ! -d "$SRC" ]; then
     exit 0
 fi
 
-EXPECTED=$'bar\nglobal-OK\ntdump-OK\nassign-OK\nmatch-OK\nnotmatch-OK'
+EXPECTED=$'bar\nglobal-OK\ntdump-OK\nassign-OK\nmatch-OK\nnotmatch-OK\nlwr-OK\nupr-OK\ncap-OK\nicase-OK'
 ACTUAL=$(timeout 8 "$SCRIP" --ir-run \
     "$SRC/global.sc" \
     "$SRC/tree.sc" \
@@ -45,11 +45,12 @@ ACTUAL=$(timeout 8 "$SCRIP" --ir-run \
     "$SRC/tdump.sc" \
     "$SRC/assign.sc" \
     "$SRC/match.sc" \
+    "$SRC/case.sc" \
     "$SRC/smoke.sc" \
     < /dev/null 2>&1)
 
 if [ "$ACTUAL" = "$EXPECTED" ]; then
-    echo "PASS scrip(.sc) smoke: Shift/Pop + global-OK + tdump-OK + assign-OK + match-OK + notmatch-OK"
+    echo "PASS scrip(.sc) smoke: Shift/Pop + global-OK + tdump-OK + assign-OK + match-OK + notmatch-OK + lwr-OK + upr-OK + cap-OK + icase-OK"
     exit 0
 fi
 
