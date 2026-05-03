@@ -10,6 +10,7 @@
  * AUTHORS: Lon Jones Cherryholmes · Claude Sonnet 4.6 (FI-4, 2026-04-14)
  */
 #include "coro_runtime.h"
+#include "coro_value.h"
 #include "../../ir/ir.h"
 #include "../../frontend/snobol4/scrip_cc.h"
 #include "../../runtime/x86/bb_broker.h"
@@ -155,8 +156,8 @@ int coro_drive(EXPR_t *e) {
 
         if (!is_lo_gen && !is_hi_gen) {
             /* Fast path: both scalars */
-            DESCR_t lo_d = interp_eval(lo_expr);
-            DESCR_t hi_d = interp_eval(hi_expr);
+            DESCR_t lo_d = bb_eval_value(lo_expr);
+            DESCR_t hi_d = bb_eval_value(hi_expr);
             if (IS_FAIL_fn(lo_d)||IS_FAIL_fn(hi_d)) return 0;
             long lo=lo_d.i, hi=hi_d.i;
             for (long i=lo; i<=hi && !FRAME.returning; i++) {
@@ -171,7 +172,7 @@ int coro_drive(EXPR_t *e) {
             /* Collect lo values */
             long lo_vals[256]; int nlo = 0;
             if (!is_lo_gen) {
-                DESCR_t d = interp_eval(lo_expr);
+                DESCR_t d = bb_eval_value(lo_expr);
                 if (!IS_FAIL_fn(d)) lo_vals[nlo++] = d.i;
             } else {
                 /* Drive lo_expr collecting all values */
@@ -179,8 +180,8 @@ int coro_drive(EXPR_t *e) {
                 /* Use frame_push/pop trick: temporarily drive lo_expr inline */
                 /* Simple approach: evaluate lo as E_TO sequence manually */
                 if (lo_expr->kind == E_TO && lo_expr->nchildren >= 2) {
-                    DESCR_t a = interp_eval(lo_expr->children[0]);
-                    DESCR_t b = interp_eval(lo_expr->children[1]);
+                    DESCR_t a = bb_eval_value(lo_expr->children[0]);
+                    DESCR_t b = bb_eval_value(lo_expr->children[1]);
                     if (!IS_FAIL_fn(a) && !IS_FAIL_fn(b))
                         for (long v = a.i; v <= b.i && nlo < 256; v++) lo_vals[nlo++] = v;
                 }
@@ -189,12 +190,12 @@ int coro_drive(EXPR_t *e) {
             /* Collect hi values */
             long hi_vals[256]; int nhi = 0;
             if (!is_hi_gen) {
-                DESCR_t d = interp_eval(hi_expr);
+                DESCR_t d = bb_eval_value(hi_expr);
                 if (!IS_FAIL_fn(d)) hi_vals[nhi++] = d.i;
             } else {
                 if (hi_expr->kind == E_TO && hi_expr->nchildren >= 2) {
-                    DESCR_t a = interp_eval(hi_expr->children[0]);
-                    DESCR_t b = interp_eval(hi_expr->children[1]);
+                    DESCR_t a = bb_eval_value(hi_expr->children[0]);
+                    DESCR_t b = bb_eval_value(hi_expr->children[1]);
                     if (!IS_FAIL_fn(a) && !IS_FAIL_fn(b))
                         for (long v = a.i; v <= b.i && nhi < 256; v++) hi_vals[nhi++] = v;
                 }
@@ -216,9 +217,9 @@ int coro_drive(EXPR_t *e) {
         return ticks;
     }
     if (e->kind == E_TO_BY && e->nchildren >= 3) {
-        DESCR_t lo_d=interp_eval(e->children[0]);
-        DESCR_t hi_d=interp_eval(e->children[1]);
-        DESCR_t st_d=interp_eval(e->children[2]);
+        DESCR_t lo_d=bb_eval_value(e->children[0]);
+        DESCR_t hi_d=bb_eval_value(e->children[1]);
+        DESCR_t st_d=bb_eval_value(e->children[2]);
         if(IS_FAIL_fn(lo_d)||IS_FAIL_fn(hi_d)||IS_FAIL_fn(st_d)) return 0;
         long lo=lo_d.i,hi=hi_d.i,st=st_d.i?st_d.i:1; int ticks=0;
         if(st>0){for(long i=lo;i<=hi&&!FRAME.returning;i+=st){frame_push(e,i,NULL);int inner=coro_drive(root);if(!inner)interp_eval(FRAME.body_root);frame_pop();ticks++;if(FRAME.returning)break;}}
@@ -232,7 +233,7 @@ int coro_drive(EXPR_t *e) {
      * IC-8: !N (integer) and !R (real) coerce to their image-string and iterate
      * each character — `!-514` → `-`,`5`,`1`,`4`; `!12.5` → `1`,`2`,`.`,`5`. */
     if (e->kind == E_ITERATE && e->nchildren >= 1) {
-        DESCR_t sv_d = interp_eval(e->children[0]);
+        DESCR_t sv_d = bb_eval_value(e->children[0]);
         if (IS_FAIL_fn(sv_d)) return 0;
         /* IC-8: coerce numeric scalars to image-string before string-iterate path (D-1) */
         sv_d = descr_to_str_icn(sv_d);
@@ -290,8 +291,8 @@ int coro_drive(EXPR_t *e) {
     if (e->kind == E_FNC && e->nchildren>=3
         && e->children[0] && e->children[0]->sval
         && strcmp(e->children[0]->sval,"find")==0) {
-        DESCR_t s1 = interp_eval(e->children[1]);
-        DESCR_t s2 = interp_eval(e->children[2]);
+        DESCR_t s1 = bb_eval_value(e->children[1]);
+        DESCR_t s2 = bb_eval_value(e->children[2]);
         if (IS_FAIL_fn(s1)||IS_FAIL_fn(s2)) return 0;
         const char *needle = VARVAL_fn(s1), *hay = VARVAL_fn(s2);
         if (!needle||!hay) return 0;
@@ -581,7 +582,7 @@ typedef struct { EXPR_t *expr; } icn_lazy_state_t;
 static DESCR_t icn_lazy_box(void *zeta, int entry) {
     if (entry != α) return FAILDESCR;
     icn_lazy_state_t *z = (icn_lazy_state_t *)zeta;
-    DESCR_t v = interp_eval(z->expr);
+    DESCR_t v = bb_eval_value(z->expr);
     return IS_FAIL_fn(v) ? FAILDESCR : v;
 }
 
@@ -746,7 +747,7 @@ static DESCR_t coro_bb_cat(void *zeta, int entry) {
         if (IS_FAIL_fn(tick)) return FAILDESCR;
         coro_drive_node = z->leaf;
         coro_drive_val  = tick;
-        DESCR_t result = interp_eval(z->cat_expr);
+        DESCR_t result = bb_eval_value(z->cat_expr);
         coro_drive_node = NULL;
         if (!IS_FAIL_fn(result)) return result;
         e2 = β;  /* try next leaf value */
@@ -811,7 +812,7 @@ typedef struct {
 static DESCR_t coro_bb_revassign(void *zeta, int entry) {
     icn_revassign_state_t *z = (icn_revassign_state_t *)zeta;
     if (entry == α) {
-        DESCR_t rv = interp_eval(z->rhs_expr);
+        DESCR_t rv = bb_eval_value(z->rhs_expr);
         if (IS_FAIL_fn(rv)) return FAILDESCR;
         EXPR_t *lhs = z->lhs_expr;
         if (lhs && lhs->kind == E_VAR) {
@@ -829,8 +830,8 @@ static DESCR_t coro_bb_revassign(void *zeta, int entry) {
                 NV_SET_fn(lhs->sval, rv);
             }
         } else if (lhs && lhs->kind == E_IDX && lhs->nchildren >= 2) {
-            DESCR_t base = interp_eval(lhs->children[0]);
-            DESCR_t idx  = interp_eval(lhs->children[1]);
+            DESCR_t base = bb_eval_value(lhs->children[0]);
+            DESCR_t idx  = bb_eval_value(lhs->children[1]);
             if (!IS_FAIL_fn(base) && !IS_FAIL_fn(idx)) {
                 /* Snapshot the *effective* prior value via subscript_get so we
                  * pick up the table-default for missing keys (rather than the
@@ -946,8 +947,8 @@ static DESCR_t coro_bb_revswap(void *zeta, int entry) {
     icn_revswap_state_t *z = (icn_revswap_state_t *)zeta;
     if (entry == α) {
         EXPR_t *lhs = z->lhs_expr, *rhs = z->rhs_expr;
-        DESCR_t lv = interp_eval(lhs);
-        DESCR_t rv = interp_eval(rhs);
+        DESCR_t lv = bb_eval_value(lhs);
+        DESCR_t rv = bb_eval_value(rhs);
         if (IS_FAIL_fn(lv) || IS_FAIL_fn(rv)) return FAILDESCR;
         /* Snapshot both originals before any write so β can revert successful
          * writes regardless of whether the second write succeeded.            */
@@ -995,7 +996,7 @@ static DESCR_t coro_bb_revswap(void *zeta, int entry) {
 typedef struct { bb_node_t r_gen; EXPR_t *lhs_expr; } icn_identical_gen_state_t;
 static DESCR_t icn_bb_identical_gen(void *zeta, int entry) {
     icn_identical_gen_state_t *z = (icn_identical_gen_state_t *)zeta;
-    DESCR_t lv = interp_eval(z->lhs_expr);     /* re-eval lhs each tick (cheap, no side effects) */
+    DESCR_t lv = bb_eval_value(z->lhs_expr);     /* re-eval lhs each tick (cheap, no side effects) */
     if (IS_FAIL_fn(lv)) return FAILDESCR;
     int e2 = entry;
     while (1) {
@@ -1023,7 +1024,7 @@ bb_node_t coro_eval(EXPR_t *e) {
             /* Nested-to: collect all lo/hi values then cross-product iterate. */
             icn_to_nested_state_t *z = calloc(1, sizeof(*z));
             if (!lo_gen) {
-                DESCR_t d = interp_eval(lo_expr);
+                DESCR_t d = bb_eval_value(lo_expr);
                 if (!IS_FAIL_fn(d)) z->lo_vals[z->nlo++] = d.i;
             } else {
                 bb_node_t lb = coro_eval(lo_expr);
@@ -1031,7 +1032,7 @@ bb_node_t coro_eval(EXPR_t *e) {
                 while (!IS_FAIL_fn(v) && z->nlo < ICN_TO_NESTED_MAX) { z->lo_vals[z->nlo++] = v.i; v = lb.fn(lb.ζ, β); }
             }
             if (!hi_gen) {
-                DESCR_t d = interp_eval(hi_expr);
+                DESCR_t d = bb_eval_value(hi_expr);
                 if (!IS_FAIL_fn(d)) z->hi_vals[z->nhi++] = d.i;
             } else {
                 bb_node_t hb = coro_eval(hi_expr);
@@ -1040,8 +1041,8 @@ bb_node_t coro_eval(EXPR_t *e) {
             }
             return (bb_node_t){ coro_bb_to_nested, z, 0 };
         }
-        DESCR_t lo_d = interp_eval(lo_expr);
-        DESCR_t hi_d = interp_eval(hi_expr);
+        DESCR_t lo_d = bb_eval_value(lo_expr);
+        DESCR_t hi_d = bb_eval_value(hi_expr);
         icn_to_state_t *z = calloc(1, sizeof(*z));
         z->lo = IS_FAIL_fn(lo_d) ? 0 : lo_d.i;
         z->hi = IS_FAIL_fn(hi_d) ? 0 : hi_d.i;
@@ -1050,9 +1051,9 @@ bb_node_t coro_eval(EXPR_t *e) {
 
     /* ── E_TO_BY: (lo to hi by step) ─────────────────────────────────────── */
     if (e->kind == E_TO_BY && e->nchildren >= 3) {
-        DESCR_t lo_d   = interp_eval(e->children[0]);
-        DESCR_t hi_d   = interp_eval(e->children[1]);
-        DESCR_t step_d = interp_eval(e->children[2]);
+        DESCR_t lo_d   = bb_eval_value(e->children[0]);
+        DESCR_t hi_d   = bb_eval_value(e->children[1]);
+        DESCR_t step_d = bb_eval_value(e->children[2]);
         int any_real = IS_REAL_fn(lo_d) || IS_REAL_fn(hi_d) || IS_REAL_fn(step_d);
         if (any_real) {
             icn_to_by_real_state_t *z = calloc(1, sizeof(*z));
@@ -1089,7 +1090,7 @@ bb_node_t coro_eval(EXPR_t *e) {
                 }
             }
         }
-        DESCR_t sv = interp_eval(e->children[0]);
+        DESCR_t sv = bb_eval_value(e->children[0]);
         const char *loopvar = e->sval;
         /* IC-8: coerce numeric scalars to image-string before string-iterate path (D-1) */
         sv = descr_to_str_icn(sv);
@@ -1269,7 +1270,7 @@ bb_node_t coro_eval(EXPR_t *e) {
     /* ── E_FNC find(needle,str) with scalar or generative subject ── */
     if (e->kind == E_FNC && e->nchildren >= 3 && e->children[0] && e->children[0]->sval
         && strcmp(e->children[0]->sval, "find") == 0) {
-        DESCR_t s1 = interp_eval(e->children[1]);
+        DESCR_t s1 = bb_eval_value(e->children[1]);
         if (!IS_FAIL_fn(s1)) {
             if (is_suspendable(e->children[2])) {
                 /* Generative subject: drive subject gen, exhaust find positions per subject */
@@ -1281,7 +1282,7 @@ bb_node_t coro_eval(EXPR_t *e) {
                 z->hay        = NULL;
                 return (bb_node_t){ coro_bb_find_subj, z, 0 };
             }
-            DESCR_t s2 = interp_eval(e->children[2]);
+            DESCR_t s2 = bb_eval_value(e->children[2]);
             if (!IS_FAIL_fn(s2)) {
                 icn_find_state_t *z = calloc(1, sizeof(*z));
                 z->needle = s1.s ? s1.s : "";
@@ -1297,17 +1298,17 @@ bb_node_t coro_eval(EXPR_t *e) {
     if (e->kind == E_FNC && e->nchildren >= 2 && e->children[0] && e->children[0]->sval
         && strcmp(e->children[0]->sval, "bal") == 0) {
         int nargs = e->nchildren - 1;
-        DESCR_t cd = interp_eval(e->children[1]);
+        DESCR_t cd = bb_eval_value(e->children[1]);
         const char *c1 = VARVAL_fn(cd); if (!c1) goto bal_skip;
         const char *c2 = "(", *c3 = ")";
-        if (nargs >= 2) { DESCR_t t = interp_eval(e->children[2]); const char *v = VARVAL_fn(t); if (v && v[0]) c2 = v; }
-        if (nargs >= 3) { DESCR_t t = interp_eval(e->children[3]); const char *v = VARVAL_fn(t); if (v && v[0]) c3 = v; }
+        if (nargs >= 2) { DESCR_t t = bb_eval_value(e->children[2]); const char *v = VARVAL_fn(t); if (v && v[0]) c2 = v; }
+        if (nargs >= 3) { DESCR_t t = bb_eval_value(e->children[3]); const char *v = VARVAL_fn(t); if (v && v[0]) c3 = v; }
         const char *s; int slen, p, end;
         if (nargs >= 4) {
-            DESCR_t sv = interp_eval(e->children[4]); s = VARVAL_fn(sv); if (!s) s = "";
+            DESCR_t sv = bb_eval_value(e->children[4]); s = VARVAL_fn(sv); if (!s) s = "";
             slen = (int)strlen(s);
-            int i1 = (nargs >= 5) ? (int)interp_eval(e->children[5]).i : 1;
-            int i2 = (nargs >= 6) ? (int)interp_eval(e->children[6]).i : slen + 1;
+            int i1 = (nargs >= 5) ? (int)bb_eval_value(e->children[5]).i : 1;
+            int i2 = (nargs >= 6) ? (int)bb_eval_value(e->children[6]).i : slen + 1;
             if (i1 <= 0) i1 = 1; if (i2 <= 0) i2 = slen + 1;
             p = i1 - 1; end = i2 - 1;
         } else {
@@ -1326,7 +1327,7 @@ bb_node_t coro_eval(EXPR_t *e) {
     /* ── E_FNC key(T) — generator yielding each key of table T ──────────── */
     if (e->kind == E_FNC && e->nchildren >= 2 && e->children[0] && e->children[0]->sval
         && strcmp(e->children[0]->sval, "key") == 0) {
-        DESCR_t td = interp_eval(e->children[1]);
+        DESCR_t td = bb_eval_value(e->children[1]);
         if (td.v == DT_T && td.tbl) {
             icn_tbl_key_iterate_state_t *z = calloc(1, sizeof(*z));
             z->tbl    = td.tbl;
@@ -1359,14 +1360,14 @@ bb_node_t coro_eval(EXPR_t *e) {
                 /* Pre-evaluate all other args (non-generative) */
                 for (int k2 = 0; k2 < nargs && k2 < ICN_FNC_GEN_ARGS; k2++) {
                     if (k2 == j) continue;
-                    fg->args[k2] = interp_eval(e->children[1+k2]);
+                    fg->args[k2] = bb_eval_value(e->children[1+k2]);
                 }
                 return (bb_node_t){ coro_bb_fnc, fg, 0 };
             }
             /* Build args array */
             DESCR_t *args = nargs > 0 ? calloc(nargs, sizeof(DESCR_t)) : NULL;
             for (int j = 0; j < nargs; j++)
-                args[j] = interp_eval(e->children[1+j]);
+                args[j] = bb_eval_value(e->children[1+j]);
             /* Allocate suspend state + stack */
             coro_t *ss = coro_alloc(proc_trampoline);
             ss->trampoline_arg = NULL;   /* unused — trampoline reads coro_stage */
@@ -1379,7 +1380,7 @@ bb_node_t coro_eval(EXPR_t *e) {
         }
         /* ── E_FNC upto(cset, scan_subject) — drive subject gen per subject ── */
         if (fn && strcmp(fn, "upto") == 0 && nargs >= 2 && is_suspendable(e->children[2])) {
-            DESCR_t cd = interp_eval(e->children[1]);
+            DESCR_t cd = bb_eval_value(e->children[1]);
             const char *cset = VARVAL_fn(cd);
             if (cset) {
                 icn_upto_gen_subj_t *z = calloc(1, sizeof(*z));
@@ -1407,7 +1408,7 @@ bb_node_t coro_eval(EXPR_t *e) {
                 /* Pre-evaluate all other args */
                 for (int k2 = 0; k2 < nargs && k2 < ICN_FNC_GEN_ARGS; k2++) {
                     if (k2 == j) continue;
-                    fg->args[k2] = interp_eval(e->children[1+k2]);
+                    fg->args[k2] = bb_eval_value(e->children[1+k2]);
                 }
                 return (bb_node_t){ coro_bb_fnc, fg, 0 };
             }
@@ -1418,7 +1419,7 @@ bb_node_t coro_eval(EXPR_t *e) {
     if (e->kind == E_LIMIT && e->nchildren >= 2) {
         icn_limit_state_t *z = calloc(1, sizeof(*z));
         z->gen = coro_eval(e->children[0]);
-        DESCR_t nd = interp_eval(e->children[1]);
+        DESCR_t nd = bb_eval_value(e->children[1]);
         z->max = IS_INT_fn(nd) ? nd.i : 0;
         return (bb_node_t){ coro_bb_limit, z, 0 };
     }
@@ -1469,10 +1470,10 @@ bb_node_t coro_eval(EXPR_t *e) {
     if (e->kind == E_FNC && e->nchildren >= 2 && e->children[0] && e->children[0]->sval
         && strcmp(e->children[0]->sval, "seq") == 0) {
         icn_to_by_state_t *z = calloc(1, sizeof(*z));
-        DESCR_t start = interp_eval(e->children[1]);
+        DESCR_t start = bb_eval_value(e->children[1]);
         z->lo   = IS_INT_fn(start) ? start.i : 1;
         z->hi   = (long long)9e18;   /* effectively infinite */
-        z->step = (e->nchildren >= 3) ? (long long)to_int(interp_eval(e->children[2])) : 1;
+        z->step = (e->nchildren >= 3) ? (long long)to_int(bb_eval_value(e->children[2])) : 1;
         z->cur  = z->lo;
         return (bb_node_t){ coro_bb_to_by, z, 0 };
     }
@@ -1501,7 +1502,7 @@ bb_node_t coro_eval(EXPR_t *e) {
                 fg->nargs   = nargs2;
                 for (int k2 = 0; k2 < nargs2 && k2 < ICN_FNC_GEN_ARGS; k2++) {
                     if (k2 == j) continue;
-                    fg->args[k2] = interp_eval(e->children[1+k2]);
+                    fg->args[k2] = bb_eval_value(e->children[1+k2]);
                 }
                 return (bb_node_t){ coro_bb_fnc, fg, 0 };
             }
@@ -1554,9 +1555,9 @@ bb_node_t coro_eval(EXPR_t *e) {
         return (bb_node_t){ icn_lazy_box, z, 0 };
     }
 
-    /* ── Fallback: one-shot box wrapping interp_eval ─────────────────────── */
+    /* ── Fallback: one-shot box wrapping value-context evaluation ───────── */
     icn_oneshot_state_t *z = calloc(1, sizeof(*z));
-    z->val = interp_eval(e);
+    z->val = bb_eval_value(e);
     return (bb_node_t){ coro_oneshot, z, 0 };
 }
 
@@ -1610,7 +1611,7 @@ int coro_drive_fnc(EXPR_t *e) {
     f->sc    = sc;
     int nargs = e->nchildren - 1;
     for (int i = 0; i < nparams && i < nargs && i < FRAME_SLOT_MAX; i++)
-        f->env[i] = interp_eval(e->children[1+i]);
+        f->env[i] = bb_eval_value(e->children[1+i]);
 
     /* Suspend-aware body loop */
     int ticks = 0;
@@ -1730,7 +1731,7 @@ DESCR_t coro_bb_bang_binary(void *zeta, int entry) {
             coro_drive_node = z->proc_expr->children[1];
             coro_drive_val  = arg;
         }
-        DESCR_t result = interp_eval(z->proc_expr);
+        DESCR_t result = bb_eval_value(z->proc_expr);
         coro_drive_node = NULL;
         if (!IS_FAIL_fn(result)) return result;
         /* E1 failed — try next E2 value */
@@ -1746,7 +1747,7 @@ DESCR_t coro_bb_seq_expr(void *zeta, int entry) {
     icn_seq_state_t *z = (icn_seq_state_t *)zeta;
     if (entry == α) {
         for (int i = 0; i < z->n - 1; i++)
-            if (z->children[i]) interp_eval(z->children[i]);
+            if (z->children[i]) bb_eval_value(z->children[i]);
         if (z->n <= 0 || !z->children[z->n - 1]) return FAILDESCR;
         z->last_box = coro_eval(z->children[z->n - 1]);
         z->started  = 1;
