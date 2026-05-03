@@ -72,7 +72,9 @@ for sno in "$SRC_TESTS"/*.sno; do
         "$SRC_RUNTIME/global.sc" \
         "$SRC_RUNTIME/tree.sc" \
         "$SRC_RUNTIME/stack.sc" \
+        "$SRC_RUNTIME/counter.sc" \
         "$SRC_RUNTIME/ShiftReduce.sc" \
+        "$SRC_RUNTIME/semantic.sc" \
         "$SRC_RUNTIME/qize.sc" \
         "$SRC_RUNTIME/tdump.sc" \
         "$SRC_RUNTIME/assign.sc" \
