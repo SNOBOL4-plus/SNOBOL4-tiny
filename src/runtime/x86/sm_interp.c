@@ -973,16 +973,26 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
                 if (is_fret) {
                     sm_push(st, FAILDESCR);
                     st->last_ok = 0;
+                    strncpy(kw_rtntype, "FRETURN", sizeof(kw_rtntype)-1); /* RS-11 */
                 } else if (is_nret) {
                     sm_push(st, NAMEVAL(GC_strdup(fr->retval_name)));
                     st->last_ok = 1;
+                    strncpy(kw_rtntype, "NRETURN", sizeof(kw_rtntype)-1); /* RS-11 */
                 } else {
                     sm_push(st, retval);
                     st->last_ok = (retval.v != DT_FAIL);
+                    strncpy(kw_rtntype, "RETURN",  sizeof(kw_rtntype)-1); /* RS-11 */
                 }
                 st->pc = fr->ret_pc;
             } else {
-                return 0;  /* top-level: halt */
+                /* Top-level return (nested sm_interp_run call from _usercall_hook).
+                 * Set kw_rtntype so the caller can detect NRETURN/FRETURN. RS-11 */
+                int is_fret = (ins->op == SM_FRETURN  || ins->op == SM_FRETURN_S || ins->op == SM_FRETURN_F);
+                int is_nret = (ins->op == SM_NRETURN  || ins->op == SM_NRETURN_S || ins->op == SM_NRETURN_F);
+                if (is_fret)      strncpy(kw_rtntype, "FRETURN", sizeof(kw_rtntype)-1);
+                else if (is_nret) strncpy(kw_rtntype, "NRETURN", sizeof(kw_rtntype)-1);
+                else              strncpy(kw_rtntype, "RETURN",  sizeof(kw_rtntype)-1);
+                return 0;  /* halt */
             }
             break;
         }

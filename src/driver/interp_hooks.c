@@ -99,17 +99,11 @@ DESCR_t _usercall_hook(const char *name, DESCR_t *args, int nargs) {
     }
     /* Pure builtin (no body) AND registered as builtin: use APPLY_fn for correct failure */
     if (!_body && FNCEX_fn(name)) {
-        /* RS-9b: if this function has an SM body, do NOT call APPLY_fn —
-         * that would recurse via g_user_call_hook → _usercall_hook → APPLY_fn again.
-         * SM_CALL in sm_interp already handles SM-bodied functions directly.
-         * _usercall_hook is only reached from pattern-match time (bb_usercall /
-         * name_commit_value) or from --ir-run; in --sm-run the SM_CALL handler
-         * fires first. If we land here with an SM body, it means the call came
-         * from a pattern context where SM frames can't be pushed — fail cleanly. */
-        if (g_current_sm_prog &&
-            sm_label_pc_lookup(g_current_sm_prog, name) >= 0)
-            return FAILDESCR;
-        return APPLY_fn(name, args, nargs);
+        /* RS-11: SM-bodied user functions (DEFINE'd, FNCEX_fn=true, no IR body)
+         * must fall through to the RS-11 block below for SM dispatch.
+         * Only use APPLY_fn for pure C builtins (those with no SM body PC). */
+        if (!g_current_sm_prog || sm_label_pc_lookup(g_current_sm_prog, name) < 0)
+            return APPLY_fn(name, args, nargs);
     }
 
     /* ── U-22: cross-language fallback ────────────────────────────────
@@ -150,12 +144,94 @@ DESCR_t _usercall_hook(const char *name, DESCR_t *args, int nargs) {
         }
     }
 
-    /* RS-10: in SM execution mode, never fall through to call_user_function
-     * (IR tree-walk).  SM_CALL already dispatched SM-bodied functions before
-     * reaching _usercall_hook; any name that reaches here has no SM body and
-     * no builtin — return FAILDESCR cleanly rather than walking freed IR.
-     * In --ir-run (g_current_sm_prog == NULL), fall through as before. */
-    if (g_current_sm_prog) return FAILDESCR;
+    /* RS-11: in SM execution mode, dispatch SM-bodied functions synchronously
+     * rather than falling through to call_user_function (IR tree-walk).
+     * RS-10's guard was correct in blocking call_user_function, but too broad:
+     * it also blocked pattern-context .*func() calls (bb_usercall / NM_CALL)
+     * to SM-bodied user functions that have no C builtin entry.
+     *
+     * For SM-bodied functions: push a call frame onto a fresh SM_State that
+     * shares the live NV table, run to completion, read the result and set
+     * kw_rtntype so bb_usercall's NRETURN detection works correctly.
+     *
+     * For functions with no SM body (and no builtin, DATA, Icon, Prolog match
+     * above): return FAILDESCR — never enter call_user_function / interp_eval. */
+    if (g_current_sm_prog) {
+        int body_pc = sm_label_pc_lookup(g_current_sm_prog, name);
+        if (body_pc < 0) {
+            /* try uppercase */
+            char uname[128]; size_t nl = strlen(name);
+            if (nl < sizeof(uname)) {
+                for (size_t i = 0; i <= nl; i++)
+                    uname[i] = (char)toupper((unsigned char)name[i]);
+                body_pc = sm_label_pc_lookup(g_current_sm_prog, uname);
+            }
+        }
+        if (body_pc < 0) {
+            const char *_entry = FUNC_ENTRY_fn(name);
+            if (_entry) body_pc = sm_label_pc_lookup(g_current_sm_prog, _entry);
+        }
+        if (body_pc < 0) return FAILDESCR; /* no SM body, no builtin → fail cleanly */
+
+        /* Run the SM body synchronously in a nested SM_State.
+         * The nested state shares the live NV table (global) but has its own
+         * value stack and call stack so it does not corrupt the outer SM run. */
+        SM_State nested;
+        sm_state_init(&nested);
+        nested.pc = body_pc;
+
+        /* Bind params and locals, save originals */
+        int np  = FUNC_NPARAMS_fn(name);
+        int nl2 = FUNC_NLOCALS_fn(name);
+        if (np  > 64) np  = 64;
+        if (nl2 > 64) nl2 = 64;
+        char  *saved_names[128];
+        DESCR_t saved_vals[128];
+        int ns = 0;
+
+        const char *_entry2 = FUNC_ENTRY_fn(name);
+        const char *retname = (_entry2 && strcmp(_entry2, name) != 0
+                               && FNCEX_fn(_entry2)) ? _entry2 : name;
+        saved_names[ns] = GC_strdup(retname);
+        saved_vals [ns] = NV_GET_fn(retname); ns++;
+        NV_SET_fn(retname, STRVAL(""));
+
+        for (int k = 0; k < np && ns < 128; k++) {
+            const char *pname = FUNC_PARAM_fn(name, k);
+            if (!pname) pname = "";
+            saved_names[ns] = GC_strdup(pname);
+            saved_vals [ns] = NV_GET_fn(pname); ns++;
+            NV_SET_fn(pname, k < nargs ? args[k] : NULVCL);
+        }
+        for (int k = 0; k < nl2 && ns < 128; k++) {
+            const char *lname = FUNC_LOCAL_fn(name, k);
+            if (!lname) lname = "";
+            saved_names[ns] = GC_strdup(lname);
+            saved_vals [ns] = NV_GET_fn(lname); ns++;
+            NV_SET_fn(lname, NULVCL);
+        }
+
+        sm_interp_run(g_current_sm_prog, &nested);
+
+        /* Read result and detect return type from kw_rtntype (set by SM_RETURN) */
+        DESCR_t result;
+        int via_fret  = (strcmp(kw_rtntype, "FRETURN") == 0);
+        int via_nret  = (strcmp(kw_rtntype, "NRETURN") == 0);
+        if (via_fret) {
+            result = FAILDESCR;
+        } else if (via_nret) {
+            result = NV_GET_fn(retname); /* DT_N cell */
+        } else {
+            result = NV_GET_fn(retname);
+        }
+
+        /* Restore NV */
+        for (int k = ns - 1; k >= 0; k--)
+            NV_SET_fn(saved_names[k], saved_vals[k]);
+
+        sm_state_free(&nested);
+        return result;
+    }
 
     /* User-defined (has body) OR unknown: call_user_function handles both */
     return call_user_function(name, args, nargs);

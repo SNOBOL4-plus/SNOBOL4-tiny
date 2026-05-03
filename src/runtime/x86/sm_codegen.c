@@ -169,10 +169,13 @@ static void h_return_impl(int is_fret, int is_nret)
         STATE->sp = fr->caller_sp;
         if (is_fret) {
             PUSH(FAILDESCR); STATE->last_ok = 0;
+            strncpy(kw_rtntype, "FRETURN", sizeof(kw_rtntype)-1); /* RS-11 */
         } else if (is_nret) {
             PUSH(NAMEVAL(GC_strdup(fr->retval_name))); STATE->last_ok = 1;
+            strncpy(kw_rtntype, "NRETURN", sizeof(kw_rtntype)-1); /* RS-11 */
         } else {
             PUSH(retval); STATE->last_ok = (retval.v != DT_FAIL);
+            strncpy(kw_rtntype, "RETURN",  sizeof(kw_rtntype)-1); /* RS-11 */
         }
         STATE->pc = fr->ret_pc;
     } else {
