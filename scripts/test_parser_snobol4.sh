@@ -70,6 +70,11 @@ for sno in "$SRC_TESTS"/*.sno; do
     # is the existing SNOBOL4 frontend's tree-dump mode (per scrip.c).
     parser_out=$(timeout 8 "$SCRIP" --ir-run \
         "$SRC_RUNTIME/global.sc" \
+        "$SRC_RUNTIME/tree.sc" \
+        "$SRC_RUNTIME/stack.sc" \
+        "$SRC_RUNTIME/ShiftReduce.sc" \
+        "$SRC_RUNTIME/qize.sc" \
+        "$SRC_RUNTIME/tdump.sc" \
         "$SRC_RUNTIME/assign.sc" \
         "$SRC_RUNTIME/parser_snobol4.sc" \
         < "$sno" 2>&1)
