@@ -150,9 +150,44 @@ extern DESCR_t pat_at_cursor(const char *varname);
 static void h_label(void)    { /* no-op */ }
 static void h_halt(void)     { g_jit_halted = 1; }
 static void h_define(void)   { /* handled by prescan */ }
-static void h_return(void)   { g_jit_halted = 1; }
-static void h_freturn(void)  { g_jit_halted = 1; }
-static void h_nreturn(void)  { g_jit_halted = 1; }
+/* RS-9c: SM-frame-aware return handlers — mirror sm_interp.c SM_RETURN/SM_FRETURN/SM_NRETURN */
+static void h_return_impl(int is_fret, int is_nret)
+{
+    if (STATE->call_depth > 0) {
+        SmCallFrame *fr = &STATE->call_stack[--STATE->call_depth];
+        DESCR_t retval  = NV_GET_fn(fr->retval_name);
+        for (int k = fr->nsaved - 1; k >= 0; k--)
+            NV_SET_fn(fr->saved_names[k], fr->saved_vals[k]);
+        /* RS-9c: restore caller's value stack, then push return value on top */
+        if (fr->caller_sp > 0 && fr->caller_stack) {
+            if (fr->caller_sp > STATE->stack_cap) {
+                STATE->stack = GC_realloc(STATE->stack, fr->caller_sp * sizeof(DESCR_t));
+                STATE->stack_cap = fr->caller_sp;
+            }
+            memcpy(STATE->stack, fr->caller_stack, fr->caller_sp * sizeof(DESCR_t));
+        }
+        STATE->sp = fr->caller_sp;
+        if (is_fret) {
+            PUSH(FAILDESCR); STATE->last_ok = 0;
+        } else if (is_nret) {
+            PUSH(NAMEVAL(GC_strdup(fr->retval_name))); STATE->last_ok = 1;
+        } else {
+            PUSH(retval); STATE->last_ok = (retval.v != DT_FAIL);
+        }
+        STATE->pc = fr->ret_pc;
+    } else {
+        g_jit_halted = 1;
+    }
+}
+static void h_return(void)    { h_return_impl(0, 0); }
+static void h_freturn(void)   { h_return_impl(1, 0); }
+static void h_nreturn(void)   { h_return_impl(0, 1); }
+static void h_return_s(void)  { if ( STATE->last_ok) h_return_impl(0, 0); }
+static void h_return_f(void)  { if (!STATE->last_ok) h_return_impl(0, 0); }
+static void h_freturn_s(void) { if ( STATE->last_ok) h_return_impl(1, 0); }
+static void h_freturn_f(void) { if (!STATE->last_ok) h_return_impl(1, 0); }
+static void h_nreturn_s(void) { if ( STATE->last_ok) h_return_impl(0, 1); }
+static void h_nreturn_f(void) { if (!STATE->last_ok) h_return_impl(0, 1); }
 
 static void h_stno(void) {
     /* SN-32a-stno: source stno carried as operand by sm_lower (mirror of
@@ -689,8 +724,84 @@ static void h_call(void)
                        strcasecmp(name + strlen(name) - 4, "_SET") == 0);
     if (_data_first || _data_set)
         result = sc_dat_field_call(name, args, nargs);
-    if (result.v == DT_FAIL || (!_data_first && !_data_set))
-        result = INVOKE_fn(name, args, nargs);
+
+    /* RS-9c: SM-native user-function dispatch (mirrors sm_interp.c RS-9a path).
+     * If DATA dispatch failed/skipped, look for an SM body before INVOKE_fn. */
+    if (result.v == DT_FAIL || (!_data_first && !_data_set)) {
+        int body_pc = -1;
+        if (!_data_first && !_data_set && name) {
+            body_pc = sm_label_pc_lookup(g_jit_prog, name);
+            if (body_pc < 0) {
+                char uname[128]; size_t nl = strlen(name);
+                if (nl >= sizeof(uname)) nl = sizeof(uname) - 1;
+                for (size_t _i = 0; _i <= nl; _i++)
+                    uname[_i] = (char)toupper((unsigned char)name[_i]);
+                body_pc = sm_label_pc_lookup(g_jit_prog, uname);
+            }
+            if (body_pc < 0) {
+                const char *entry = FUNC_ENTRY_fn(name);
+                if (entry) body_pc = sm_label_pc_lookup(g_jit_prog, entry);
+            }
+        }
+        if (body_pc >= 0 && STATE->call_depth < SM_CALL_STACK_MAX) {
+            /* Push JIT call frame — same layout as sm_interp RS-9a */
+            SmCallFrame *fr = &STATE->call_stack[STATE->call_depth++];
+            fr->ret_pc = STATE->pc;   /* resume after this SM_CALL */
+            fr->ret_ok = 1;
+            /* RS-9c: save caller's value stack so SM_STNO resets inside callee don't wipe it */
+            fr->caller_sp = STATE->sp;
+            if (STATE->sp > 0) {
+                fr->caller_stack = GC_malloc(STATE->sp * sizeof(DESCR_t));
+                memcpy(fr->caller_stack, STATE->stack, STATE->sp * sizeof(DESCR_t));
+            } else {
+                fr->caller_stack = NULL;
+            }
+            STATE->sp = 0;  /* callee starts with empty stack */
+            /* Retval NV slot */
+            const char *entry2  = FUNC_ENTRY_fn(name);
+            const char *retname = (entry2 && strcmp(entry2, name) != 0
+                                   && FNCEX_fn(entry2)) ? entry2 : name;
+            fr->retval_name = GC_strdup(retname);
+            /* Save + bind params and locals */
+            int np  = FUNC_NPARAMS_fn(name);
+            int nl2 = FUNC_NLOCALS_fn(name);
+            if (np  > 64) np  = 64;
+            if (nl2 > 64) nl2 = 64;
+            int ns = 0;
+            /* Save retval slot */
+            if (ns < SM_SAVED_NV_MAX) {
+                fr->saved_names[ns] = GC_strdup(retname);
+                fr->saved_vals [ns] = NV_GET_fn(retname);
+                ns++;
+            }
+            NV_SET_fn(retname, STRVAL(""));
+            /* Save + bind params */
+            for (int k = 0; k < np && ns < SM_SAVED_NV_MAX; k++) {
+                const char *pname = FUNC_PARAM_fn(name, k);
+                if (!pname) pname = "";
+                fr->saved_names[ns] = GC_strdup(pname);
+                fr->saved_vals [ns] = NV_GET_fn(pname);
+                ns++;
+                NV_SET_fn(pname, k < nargs ? args[k] : NULVCL);
+            }
+            /* Save + clear locals */
+            for (int k = 0; k < nl2 && ns < SM_SAVED_NV_MAX; k++) {
+                const char *lname = FUNC_LOCAL_fn(name, k);
+                if (!lname) lname = "";
+                fr->saved_names[ns] = GC_strdup(lname);
+                fr->saved_vals [ns] = NV_GET_fn(lname);
+                ns++;
+                NV_SET_fn(lname, NULVCL);
+            }
+            fr->nsaved = ns;
+            comm_call(retname);
+            STATE->pc = body_pc;  /* jump into body; dispatch loop continues */
+            return;               /* do NOT fall through to INVOKE_fn */
+        }
+        /* No SM body — fall through to INVOKE_fn (builtins + IR hook) */
+        if (result.v == DT_FAIL || (!_data_first && !_data_set))
+            result = INVOKE_fn(name, args, nargs);
+    }
     if (IS_NAMEPTR(result))      result = NAME_DEREF_PTR(result);
     else if (IS_NAMEVAL(result)) result = NV_GET_fn(result.s);
     PUSH(result);
@@ -780,6 +891,12 @@ static void init_handler_table(void)
     g_handlers[SM_RETURN]      = h_return;
     g_handlers[SM_FRETURN]     = h_freturn;
     g_handlers[SM_NRETURN]     = h_nreturn;
+    g_handlers[SM_RETURN_S]    = h_return_s;
+    g_handlers[SM_RETURN_F]    = h_return_f;
+    g_handlers[SM_FRETURN_S]   = h_freturn_s;
+    g_handlers[SM_FRETURN_F]   = h_freturn_f;
+    g_handlers[SM_NRETURN_S]   = h_nreturn_s;
+    g_handlers[SM_NRETURN_F]   = h_nreturn_f;
     g_handlers[SM_DEFINE]      = h_define;
     g_handlers[SM_INCR]        = h_incr;
     g_handlers[SM_DECR]        = h_decr;

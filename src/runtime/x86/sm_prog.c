@@ -117,8 +117,8 @@ int sm_label_named(SM_Program *p, const char *name)
     int target = p->count;
     int idx = _grow(p);
     p->instrs[idx].op     = SM_LABEL;
-    p->instrs[idx].a[0].i = (int64_t)target;
     p->instrs[idx].a[0].s = name ? strdup(name) : NULL;
+    p->instrs[idx].a[1].i = (int64_t)target;  /* PC stored in a[1] — a[0] holds name */
     return target;
 }
 
@@ -129,7 +129,7 @@ int sm_label_pc_lookup(const SM_Program *p, const char *name)
     for (int i = 0; i < p->count; i++) {
         if (p->instrs[i].op == SM_LABEL && p->instrs[i].a[0].s &&
             strcmp(p->instrs[i].a[0].s, name) == 0)
-            return (int)p->instrs[i].a[0].i;
+            return (int)p->instrs[i].a[1].i;  /* PC stored in a[1] */
     }
     return -1;
 }
@@ -161,7 +161,7 @@ static const char *opnames[SM_OPCODE_COUNT] = {
     "SM_STNO",
     "SM_PUSH_LIT_S","SM_PUSH_LIT_I","SM_PUSH_LIT_F","SM_PUSH_NULL","SM_PUSH_NULL_NOFLIP",
     "SM_PUSH_VAR","SM_PUSH_EXPR","SM_STORE_VAR","SM_POP",
-    "SM_ADD","SM_SUB","SM_MUL","SM_DIV","SM_EXP","SM_CONCAT","SM_COERCE_NUM","SM_NEG",
+    "SM_ADD","SM_SUB","SM_MUL","SM_DIV","SM_EXP","SM_MOD","SM_CONCAT","SM_COERCE_NUM","SM_NEG",
     "SM_PAT_LIT","SM_PAT_ANY","SM_PAT_NOTANY","SM_PAT_SPAN","SM_PAT_BREAK",
     "SM_PAT_LEN","SM_PAT_POS","SM_PAT_RPOS","SM_PAT_TAB","SM_PAT_RTAB",
     "SM_PAT_ARB","SM_PAT_ARBNO","SM_PAT_REM","SM_PAT_BAL","SM_PAT_FENCE","SM_PAT_FENCE1","SM_PAT_ABORT",
@@ -173,7 +173,9 @@ static const char *opnames[SM_OPCODE_COUNT] = {
     "SM_PAT_USERCALL_ARGS",
     "SM_EXEC_STMT",
     "SM_BB_PUMP","SM_BB_ONCE",
-    "SM_CALL","SM_RETURN","SM_FRETURN","SM_NRETURN","SM_DEFINE",
+    "SM_CALL","SM_RETURN","SM_FRETURN","SM_NRETURN",
+    "SM_RETURN_S","SM_RETURN_F","SM_FRETURN_S","SM_FRETURN_F","SM_NRETURN_S","SM_NRETURN_F",
+    "SM_DEFINE",
     "SM_JUMP_INDIR","SM_SELBRA",
     "SM_STATE_PUSH","SM_STATE_POP",
     "SM_INCR","SM_DECR","SM_LCOMP","SM_RCOMP","SM_TRIM","SM_ACOMP",

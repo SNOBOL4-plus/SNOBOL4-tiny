@@ -158,15 +158,22 @@ static int emit_goto(SM_Program *p, LabelTable *lt,
 {
     if (!target) return -1;
 
-    /* Special names (case-insensitive per SNOBOL4 spec) */
+    /* Special names (case-insensitive per SNOBOL4 spec).
+     * The conditionality (SM_JUMP vs SM_JUMP_S vs SM_JUMP_F) is preserved
+     * by mapping to the appropriate conditional return opcode. */
     if (strcasecmp(target, "RETURN") == 0) {
+        if (op == SM_JUMP_S) return sm_emit(p, SM_RETURN_S);
+        if (op == SM_JUMP_F) return sm_emit(p, SM_RETURN_F);
         return sm_emit(p, SM_RETURN);
     }
     if (strcasecmp(target, "FRETURN") == 0) {
+        if (op == SM_JUMP_S) return sm_emit(p, SM_FRETURN_S);
+        if (op == SM_JUMP_F) return sm_emit(p, SM_FRETURN_F);
         return sm_emit(p, SM_FRETURN);
     }
     if (strcasecmp(target, "NRETURN") == 0) {
-        /* NRETURN: return DT_N from fn return var; ret_kind=2 in call_user_function */
+        if (op == SM_JUMP_S) return sm_emit(p, SM_NRETURN_S);
+        if (op == SM_JUMP_F) return sm_emit(p, SM_NRETURN_F);
         return sm_emit(p, SM_NRETURN);
     }
 

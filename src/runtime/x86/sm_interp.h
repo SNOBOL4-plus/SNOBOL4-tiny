@@ -32,6 +32,9 @@ typedef struct {
     DESCR_t     saved_vals [SM_SAVED_NV_MAX];
     int         ret_jump_s_pc;        /* caller's :S label PC (-1 = fall through) */
     int         ret_jump_f_pc;        /* caller's :F label PC (-1 = fall through) */
+    /* RS-9c: caller value-stack snapshot (survives SM_STNO resets inside callee) */
+    int         caller_sp;            /* sp before nargs were popped */
+    DESCR_t    *caller_stack;         /* GC'd copy of caller's stack[0..caller_sp-1] */
 } SmCallFrame;
 
 /* Interpreter state */

@@ -848,8 +848,10 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
              * The body executes SM opcodes; SM_RETURN pops the frame and resumes. */
             if (result.v == DT_FAIL || (!_data_first && !_data_set)) {
                 int body_pc = -1;
-                if (!_data_first && !_data_set && name && !FNCEX_fn(name)) {
-                    /* Try canonical name, then uppercase */
+                if (!_data_first && !_data_set && name) {
+                    /* Try canonical name, then uppercase.
+                     * Note: DEFINE'd user functions have FNCEX_fn=true (registered)
+                     * but no C body — we must try SM label lookup for them too. */
                     body_pc = sm_label_pc_lookup(prog, name);
                     if (body_pc < 0) {
                         char uname[128]; size_t nl = strlen(name);
@@ -869,6 +871,16 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
                     SmCallFrame *fr = &st->call_stack[st->call_depth++];
                     fr->ret_pc = st->pc;  /* resume after the SM_CALL instr */
                     fr->ret_ok = 1;
+                    /* RS-9c: save caller's value stack so SM_STNO resets inside
+                     * the callee don't wipe expression operands from the caller. */
+                    fr->caller_sp = st->sp;
+                    if (st->sp > 0) {
+                        fr->caller_stack = GC_malloc(st->sp * sizeof(DESCR_t));
+                        memcpy(fr->caller_stack, st->stack, st->sp * sizeof(DESCR_t));
+                    } else {
+                        fr->caller_stack = NULL;
+                    }
+                    st->sp = 0;  /* callee starts with an empty stack */
 
                     /* Determine retval NV slot (body writes result into this name) */
                     const char *entry2 = FUNC_ENTRY_fn(name);
@@ -911,7 +923,7 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
                     comm_call(retname);
                     /* Jump into body */
                     st->pc = body_pc;
-                    break;  /* do NOT fall through to INVOKE_fn */
+                    goto sm_call_done;  /* skip push/last_ok — body runs next */
                 }
                 /* No SM body found — fall through to INVOKE_fn (builtins + hook) */
                 if (result.v == DT_FAIL || (!_data_first && !_data_set))
@@ -929,19 +941,35 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
 
         case SM_RETURN:
         case SM_FRETURN:
-        case SM_NRETURN: {
+        case SM_NRETURN:
+        case SM_RETURN_S:  case SM_RETURN_F:
+        case SM_FRETURN_S: case SM_FRETURN_F:
+        case SM_NRETURN_S: case SM_NRETURN_F: {
+            /* Conditional variants: _S fires only if last_ok; _F only if !last_ok. */
+            int cond_s = (ins->op == SM_RETURN_S || ins->op == SM_FRETURN_S || ins->op == SM_NRETURN_S);
+            int cond_f = (ins->op == SM_RETURN_F || ins->op == SM_FRETURN_F || ins->op == SM_NRETURN_F);
+            if ((cond_s && !st->last_ok) || (cond_f && st->last_ok)) break; /* condition not met */
             /* RS-9a: if we have a live SM call frame, pop it and resume caller.
              * Otherwise (top-level): halt. */
             if (st->call_depth > 0) {
                 SmCallFrame *fr = &st->call_stack[--st->call_depth];
-                int is_fret  = (ins->op == SM_FRETURN);
-                int is_nret  = (ins->op == SM_NRETURN);
+                int is_fret  = (ins->op == SM_FRETURN  || ins->op == SM_FRETURN_S || ins->op == SM_FRETURN_F);
+                int is_nret  = (ins->op == SM_NRETURN  || ins->op == SM_NRETURN_S || ins->op == SM_NRETURN_F);
                 /* Read return value from the NV retval slot the body wrote */
                 DESCR_t retval = NV_GET_fn(fr->retval_name);
                 /* Restore saved NV vars (reverse order so retval slot last) */
                 for (int k = fr->nsaved - 1; k >= 0; k--)
                     NV_SET_fn(fr->saved_names[k], fr->saved_vals[k]);
-                /* Push result onto caller's value stack */
+                /* RS-9c: restore caller's value stack, then push return value on top */
+                if (fr->caller_sp > 0 && fr->caller_stack) {
+                    if (fr->caller_sp > st->stack_cap) {
+                        st->stack = GC_realloc(st->stack, fr->caller_sp * sizeof(DESCR_t));
+                        st->stack_cap = fr->caller_sp;
+                    }
+                    memcpy(st->stack, fr->caller_stack, fr->caller_sp * sizeof(DESCR_t));
+                }
+                st->sp = fr->caller_sp;
+                /* Push result onto caller's restored value stack */
                 if (is_fret) {
                     sm_push(st, FAILDESCR);
                     st->last_ok = 0;

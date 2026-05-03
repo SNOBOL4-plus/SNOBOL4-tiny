@@ -117,6 +117,12 @@ typedef enum {
     SM_RETURN,
     SM_FRETURN,
     SM_NRETURN,
+    SM_RETURN_S,    /* :S(RETURN)  — return normal value only if last_ok */
+    SM_RETURN_F,    /* :F(RETURN)  — return normal value only if !last_ok */
+    SM_FRETURN_S,   /* :S(FRETURN) — return FAIL only if last_ok */
+    SM_FRETURN_F,   /* :F(FRETURN) — return FAIL only if !last_ok */
+    SM_NRETURN_S,   /* :S(NRETURN) — return NAME only if last_ok */
+    SM_NRETURN_F,   /* :F(NRETURN) — return NAME only if !last_ok */
     SM_DEFINE,
 
     /* Type dispatch / indirect */

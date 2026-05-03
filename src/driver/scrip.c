@@ -526,6 +526,7 @@ int main(int argc, char **argv)
             fprintf(stderr, "scrip: sm_codegen failed\n");
             sm_prog_free(sm); return 1;
         }
+        g_current_sm_prog = sm;  /* RS-9c: tell _usercall_hook SM bodies are live */
         SM_State st;
         sm_state_init(&st);
         int hybrid_err;
