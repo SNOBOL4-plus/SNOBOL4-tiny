@@ -150,6 +150,13 @@ DESCR_t _usercall_hook(const char *name, DESCR_t *args, int nargs) {
         }
     }
 
+    /* RS-10: in SM execution mode, never fall through to call_user_function
+     * (IR tree-walk).  SM_CALL already dispatched SM-bodied functions before
+     * reaching _usercall_hook; any name that reaches here has no SM body and
+     * no builtin — return FAILDESCR cleanly rather than walking freed IR.
+     * In --ir-run (g_current_sm_prog == NULL), fall through as before. */
+    if (g_current_sm_prog) return FAILDESCR;
+
     /* User-defined (has body) OR unknown: call_user_function handles both */
     return call_user_function(name, args, nargs);
 }
