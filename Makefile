@@ -119,7 +119,7 @@ scrip:
 	$(CC) $(CRT)   -c $(SRC)/driver/interp_call.c    -o $(OBJ)/interp_call.o
 	$(CC) $(CRT)   -c $(SRC)/driver/interp_eval.c    -o $(OBJ)/interp_eval.o
 	$(CC) $(CRT)   -c $(SRC)/driver/interp_ref.c     -o $(OBJ)/interp_ref.o
-	$(CC) $(CRT)   -c $(SRC)/driver/interp_pat.c     -o $(OBJ)/interp_pat.o
+	$(CC) $(CRT)   -c $(SRC)/runtime/x86/eval_pat.c  -o $(OBJ)/eval_pat.o
 	$(CC) $(CRT)   -c $(SRC)/driver/interp_exec.c    -o $(OBJ)/interp_exec.o
 	$(CC) $(CRT)   -c $(SRC)/driver/interp_hooks.c   -o $(OBJ)/interp_hooks.o
 	$(CC) $(CRT)   -c $(SRC)/driver/interp_data.c    -o $(OBJ)/interp_data.o

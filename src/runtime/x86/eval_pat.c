@@ -1,16 +1,39 @@
 /*
- * interp_pat.c — pattern-context evaluator (interp_eval_pat)
+ * eval_pat.c — pattern-context expression evaluator (RS-16).
  *
  * Evaluates an EXPR_t in PATTERN context, producing a DT_P descriptor.
- * Distinct from interp_eval (value context) and interp_eval_ref (lvalue context).
- * Pattern evaluation drives SNOBOL4 match: alternation, concatenation, captures.
+ * Pattern evaluation drives SNOBOL4 match: alternation, concatenation,
+ * captures, primitive patterns (LEN, TAB, ANY, BREAK, ARBNO, ...).
  *
- * Split from interp.c by RS-3 (GOAL-REWRITE-SCRIP).
- * AUTHORS: Lon Jones Cherryholmes · Claude Sonnet 4.6
- * DATE:    2026-05-02
+ * SHARED across all four execution modes. Value-context subexpressions
+ * route through eval_node (eval_code.c) — never through interp_eval, so
+ * this file has no dependency on src/driver/ (mode 1's home).
+ *
+ * History: lifted from src/driver/interp_pat.c by RS-16. The original was
+ * split off from interp.c by RS-3.
+ *
+ * Authors: Lon Jones Cherryholmes · Claude Sonnet 4.7
+ * Date: 2026-05-03
  */
 
-#include "interp_private.h"
+#include "snobol4.h"
+#include "sil_macros.h"
+#include "../../ir/ir.h"
+
+/* eval_node is in eval_code.c (sibling). pat_* helpers, NV_GET_fn, APPLY_fn,
+ * PATVAL_fn, NULVCL, FAILDESCR, IS_FAIL_fn — all in snobol4.h. */
+extern DESCR_t eval_node(EXPR_t *e);
+
+/* RS-16: local copy of NAME_DEREF (originally inline in interp_private.h —
+ * mode-1 only). This helper is needed for value-context arg eval inside
+ * pattern primitives that take name-bearing arguments. */
+static inline DESCR_t NAME_DEREF(DESCR_t d) {
+    if (IS_NAME(d)) {
+        if (IS_NAMEPTR(d)) return NAME_DEREF_PTR(d);
+        if (IS_NAMEVAL(d)) return NV_GET_fn(d.s);
+    }
+    return d;
+}
 
 DESCR_t interp_eval_pat(EXPR_t *e)
 {
@@ -51,7 +74,7 @@ DESCR_t interp_eval_pat(EXPR_t *e)
          * non-failing value; fail if all fail. */
         if (e->nchildren == 0) return FAILDESCR;
         for (int i = 0; i < e->nchildren; i++) {
-            DESCR_t v = interp_eval(e->children[i]);
+            DESCR_t v = eval_node(e->children[i]);
             if (!IS_FAIL_fn(v)) return v;
         }
         return FAILDESCR;
@@ -62,7 +85,7 @@ DESCR_t interp_eval_pat(EXPR_t *e)
                 DESCR_t _fr = APPLY_fn(e->sval, NULL, 0);
                 if (!IS_FAIL_fn(_fr)) return _fr;
             }
-            DESCR_t _v = interp_eval(e);
+            DESCR_t _v = eval_node(e);
             /* PATVAL coerce: DT_N → deref; DT_E(null) → epsilon; DT_I/DT_R → literal; DT_E → thaw; DT_P/DT_S → pass. */
             if (_v.v == DT_N) {
                 if (_v.slen == 1 && _v.ptr) _v = *(DESCR_t *)_v.ptr;
@@ -110,7 +133,7 @@ DESCR_t interp_eval_pat(EXPR_t *e)
                  * "Plain E_VAR args don't need this" reasoning was wrong:
                  * in  p . thx . *Shift_t('idtag', thx)  the cursor capture
                  * `. thx` writes the matched substring into thx ONLY at
-                 * match time.  If we eagerly interp_eval(thx) here at
+                 * match time.  If we eagerly eval_node(thx) here at
                  * pattern-build time, we capture the stale value (typically
                  * empty), and the match-time call to Shift_t receives that
                  * stale value instead of the captured cursor substring.
@@ -129,7 +152,7 @@ DESCR_t interp_eval_pat(EXPR_t *e)
                             av[i].ptr = arg;
                             av[i].slen = 0;
                         } else {
-                            av[i] = interp_eval(arg);
+                            av[i] = eval_node(arg);
                         }
                     }
                 }
@@ -185,57 +208,57 @@ DESCR_t interp_eval_pat(EXPR_t *e)
      * ANY(s), NOTANY(s), SPAN(s), BREAK(s), BREAKX(s) take string args. */
     case E_POS: {
         if (e->nchildren < 1) return pat_pos(0);
-        DESCR_t a = interp_eval(e->children[0]);
+        DESCR_t a = eval_node(e->children[0]);
         return pat_pos((int64_t)(a.v==DT_I ? a.i : (int64_t)(a.v==DT_R ? (int64_t)a.r : 0)));
     }
     case E_RPOS: {
         if (e->nchildren < 1) return pat_rpos(0);
-        DESCR_t a = interp_eval(e->children[0]);
+        DESCR_t a = eval_node(e->children[0]);
         return pat_rpos((int64_t)(a.v==DT_I ? a.i : (int64_t)(a.v==DT_R ? (int64_t)a.r : 0)));
     }
     case E_TAB: {
         if (e->nchildren < 1) return pat_tab(0);
-        DESCR_t a = interp_eval(e->children[0]);
+        DESCR_t a = eval_node(e->children[0]);
         return pat_tab((int64_t)(a.v==DT_I ? a.i : (int64_t)(a.v==DT_R ? (int64_t)a.r : 0)));
     }
     case E_RTAB: {
         if (e->nchildren < 1) return pat_rtab(0);
-        DESCR_t a = interp_eval(e->children[0]);
+        DESCR_t a = eval_node(e->children[0]);
         return pat_rtab((int64_t)(a.v==DT_I ? a.i : (int64_t)(a.v==DT_R ? (int64_t)a.r : 0)));
     }
     case E_LEN: {
         if (e->nchildren < 1) return pat_len(0);
-        DESCR_t a = interp_eval(e->children[0]);
+        DESCR_t a = eval_node(e->children[0]);
         return pat_len((int64_t)(a.v==DT_I ? a.i : (int64_t)(a.v==DT_R ? (int64_t)a.r : 0)));
     }
     case E_ANY: {
         if (e->nchildren < 1) return pat_any_cs("");
-        DESCR_t a = NAME_DEREF(interp_eval(e->children[0]));
+        DESCR_t a = NAME_DEREF(eval_node(e->children[0]));
         const char *s = (a.v==DT_S||a.v==DT_SNUL) && a.s ? a.s : "";
         return pat_any_cs(s);
     }
     case E_NOTANY: {
         if (e->nchildren < 1) return pat_notany("");
-        DESCR_t a = NAME_DEREF(interp_eval(e->children[0]));
+        DESCR_t a = NAME_DEREF(eval_node(e->children[0]));
         const char *s = (a.v==DT_S||a.v==DT_SNUL) && a.s ? a.s : "";
         return pat_notany(s);
     }
     case E_SPAN: {
         if (e->nchildren < 1) return pat_span("");
-        DESCR_t a = NAME_DEREF(interp_eval(e->children[0]));
+        DESCR_t a = NAME_DEREF(eval_node(e->children[0]));
         const char *s = (a.v==DT_S||a.v==DT_SNUL) && a.s ? a.s : "";
         return pat_span(s);
     }
     case E_BREAK: {
         if (e->nchildren < 1) return pat_break_("");
-        DESCR_t a = NAME_DEREF(interp_eval(e->children[0]));
+        DESCR_t a = NAME_DEREF(eval_node(e->children[0]));
         const char *s = (a.v==DT_S||a.v==DT_SNUL) && a.s ? a.s : "";
         return pat_break_(s);
     }
     case E_BREAKX: {
         extern DESCR_t pat_breakx(const char *);
         if (e->nchildren < 1) return pat_breakx("");
-        DESCR_t a = NAME_DEREF(interp_eval(e->children[0]));
+        DESCR_t a = NAME_DEREF(eval_node(e->children[0]));
         const char *s = (a.v==DT_S||a.v==DT_SNUL) && a.s ? a.s : "";
         return pat_breakx(s);
     }
@@ -251,9 +274,9 @@ DESCR_t interp_eval_pat(EXPR_t *e)
          * E_FNC("ARBNO")/E_FNC("FENCE") are removed: no frontend produces
          * those; the SNOBOL4 parser uses pat_prim_kind() to emit E_ARBNO /
          * E_FENCE directly (RS-5). */
-        return interp_eval(e);
+        return eval_node(e);
 
     default:
-        return interp_eval(e);
+        return eval_node(e);
     }
 }
