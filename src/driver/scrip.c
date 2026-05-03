@@ -453,13 +453,10 @@ int main(int argc, char **argv)
             return 1;
         }
         return 0;
-    } else if (has_non_sno) {
-        /* RS-26 (partial): single-language Icon/Prolog still routes through
-         * polyglot_execute for now.  Symmetric SM-mode routing requires the
-         * SM dispatch to invoke `main` rather than iterate stmts (Icon proc
-         * defs lower to SM_PUSH_EXPR + SM_BB_PUMP, but BB-pumping a proc
-         * def is not the same as calling it).  Tracked in next sub-rung;
-         * see docs/RS-26-session-2026-05-03-inventory-findings.md. */
+    } else if (has_non_sno && g_polyglot) {
+        /* Multi-fence .scrip/.md polyglot file: always use polyglot_execute.
+         * RS-26b: single-language Icon/Prolog with --sm-run falls through to
+         * the sm_preamble path below. */
         polyglot_execute(prog);
     } else if (mode_sm_run) {
         /* --sm-run: SM-LOWER path — IR → SM_Program → sm_interp_run.

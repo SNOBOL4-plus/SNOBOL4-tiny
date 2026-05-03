@@ -1046,11 +1046,13 @@ static void lower_stmt(SM_Program *p, LabelTable *lt, const STMT_t *s)
     /* OE-9: language-aware dispatch — ICN and PL stmts use BB opcodes.
      * LANG_SNO (0) falls through to the existing SNOBOL4 lowering path. */
     if (s->lang == LANG_ICN) {
-        /* Icon statement: push the raw EXPR_t* so SM_BB_PUMP handler can call
-         * coro_eval(expr) to build a bb_node_t, then drive via bb_broker(BB_PUMP). */
-        emit_push_expr(p, s->subject);
-        sm_emit(p, SM_BB_PUMP);
-        goto emit_gotos;
+        /* RS-26b: Icon proc/global/record defs are registered in proc_table by
+         * polyglot_init() inside sm_preamble() before sm_lower() runs.  There is
+         * nothing to emit per-def: the BB engine reaches procs via coro_call, not
+         * by SM_BB_PUMPing the raw proc E_FNC node.  sm_lower() synthesises a
+         * single SM_PUSH_EXPR + SM_BB_PUMP for the main() call after the stmt loop.
+         * This branch should now be unreachable; kept as a safety fallback. */
+        return;
     }
     if (s->lang == LANG_PL) {
         /* Prolog statement: lower subject (E_CHOICE/E_CLAUSE tree),
@@ -1201,10 +1203,37 @@ SM_Program *sm_lower(const CODE_t *prog)
 
     /* First pass: lower all statements */
     int stno = 0;
+    int has_icn = 0;   /* RS-26b: set when any LANG_ICN stmt is seen */
     for (const STMT_t *s = prog->head; s; s = s->next) {
+        if (s->lang == LANG_ICN) {
+            /* RS-26b: Icon proc/global/record defs are registered by polyglot_init.
+             * Skip emitting per-def instructions; synthesise a single main() call below. */
+            has_icn = 1;
+            sm_stno_label_record(p, ++stno, NULL);
+            continue;
+        }
         lower_stmt(p, &lt, s);
         /* IM-9: record source label for this statement (1-based, matches IR stno) */
         sm_stno_label_record(p, ++stno, (s->label && s->label[0]) ? s->label : NULL);
+    }
+
+    /* RS-26b: synthesise single top-level main() call for Icon programs.
+     * Shape: SM_PUSH_EXPR(<call-main E_FNC>) + SM_BB_PUMP + SM_HALT.
+     * polyglot_init already populated proc_table[main]; coro_eval finds it by name. */
+    if (has_icn) {
+        /* Build minimal E_FNC call node: kind=E_FNC, sval="main", ival=0,
+         * nchildren=1, children[0]=E_VAR("main"). */
+        EXPR_t *name_var = expr_new(E_VAR);
+        name_var->sval   = intern("main");
+        EXPR_t *call     = expr_new(E_FNC);
+        call->sval       = intern("main");
+        call->ival       = 0;   /* nparams = 0 */
+        expr_add_child(call, name_var);
+        emit_push_expr(p, call);
+        sm_emit(p, SM_BB_PUMP);
+        /* Free the temporary local nodes (emit_push_expr GC-cloned them) */
+        free(name_var->sval); free(name_var);
+        free(call->children); free(call->sval); free(call);
     }
 
     /* Implicit HALT at end if not already there */
