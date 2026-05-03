@@ -22,8 +22,17 @@
  * through `icn_descr_identical` (declared in coro_runtime.h).  Note: there
  * is no E_NOT_IDENTICAL kind — `~===` lowers as E_NOT(E_IDENTICAL(...)).
  *
+ * RS-22c (2026-05-03): String concat + subscript read + section read +
+ * field read lifted in.  E_CAT and E_LCONCAT share `bb_str_concat`
+ * (numeric operands → string via `descr_to_str_icn`, then GC_malloc'd
+ * concat).  E_IDX dispatches via `subscript_get`/`subscript_get2` (already
+ * exposed in snobol4.h).  E_FIELD via `data_field_ptr`.  E_SECTION/
+ * E_SECTION_PLUS/E_SECTION_MINUS share `bb_section` with Icon position
+ * normalization (0 → slen+1, negative → slen+1+p) — three minor variants
+ * of bound computation kept inline.
+ *
  * AUTHORS: Lon Jones Cherryholmes · Claude Sonnet
- * SPRINT:  RS-17a (2026-05-03), RS-22a (2026-05-03), RS-22b (2026-05-03)
+ * SPRINT:  RS-17a (2026-05-03), RS-22a (2026-05-03), RS-22b (2026-05-03), RS-22c (2026-05-03)
  *==========================================================================================================================*/
 
 #include "coro_value.h"
@@ -93,6 +102,89 @@ static DESCR_t bb_numrel(EXPR_t *e, bb_relop_t op)
     default:     ok = 0;          break;
     }
     return ok ? r : FAILDESCR;
+}
+
+/*------------------------------------------------------------------------------------------------------------------------------
+ * bb_str_concat — RS-22c string-concat helper (E_CAT + E_LCONCAT).
+ *
+ * Icon `||` (E_CAT) and `|||` (E_LCONCAT) both reach here via the BB
+ * adapter.  Mirrors the IR-mode E_LCONCAT case at interp_eval.c:4037 —
+ * coerce numeric operands via descr_to_str_icn (round-trip-correct real
+ * formatting), VARVAL_fn for everything else, GC_malloc'd concat.
+ *
+ * Pattern operands: do not occur in BB-engine call sites today (Icon
+ * never produces them; SNOBOL4's pattern-context paths never reach
+ * bb_eval_value).  If one ever did, descr_to_str_icn would fail-through
+ * to FAILDESCR rather than producing garbage.
+ *----------------------------------------------------------------------------------------------------------------------------*/
+static DESCR_t bb_str_concat(EXPR_t *e)
+{
+    if (e->nchildren < 2) return NULVCL;
+    DESCR_t a = bb_eval_value(e->children[0]);
+    DESCR_t b = bb_eval_value(e->children[1]);
+    if (IS_FAIL_fn(a) || IS_FAIL_fn(b)) return FAILDESCR;
+    DESCR_t as = descr_to_str_icn(a);
+    DESCR_t bs = descr_to_str_icn(b);
+    const char *asp = (as.v == DT_S || as.v == DT_SNUL) ? VARVAL_fn(as) : NULL;
+    const char *bsp = (bs.v == DT_S || bs.v == DT_SNUL) ? VARVAL_fn(bs) : NULL;
+    if (!asp) asp = "";
+    if (!bsp) bsp = "";
+    size_t al = strlen(asp), bl = strlen(bsp);
+    char *buf = GC_malloc(al + bl + 1);
+    memcpy(buf, asp, al);
+    memcpy(buf + al, bsp, bl);
+    buf[al + bl] = '\0';
+    return STRVAL(buf);
+}
+
+/*------------------------------------------------------------------------------------------------------------------------------
+ * bb_section — RS-22c string section helper.
+ *
+ * Mirrors interp_eval.c:4070-4125 for E_SECTION (s[i:j]), E_SECTION_PLUS
+ * (s[i+:n]), E_SECTION_MINUS (s[i-:n]).  Icon position rules:
+ *   p ≥ 1     → 1-based position (1 is before first char)
+ *   p == 0    → position past last char (= slen+1)
+ *   p < 0     → slen+1+p   (-1 → slen, -2 → slen-1, ...)
+ * Out-of-bounds after normalization → FAILDESCR.
+ *----------------------------------------------------------------------------------------------------------------------------*/
+typedef enum { BBS_RANGE, BBS_PLUS, BBS_MINUS } bb_section_t;
+
+static DESCR_t bb_section(EXPR_t *e, bb_section_t kind)
+{
+    if (e->nchildren < 3) return NULVCL;
+    DESCR_t sd = bb_eval_value(e->children[0]);
+    if (IS_FAIL_fn(sd)) return FAILDESCR;
+    const char *s = VARVAL_fn(sd);
+    if (!s) s = "";
+    int slen = (int)strlen(s);
+    DESCR_t a1 = bb_eval_value(e->children[1]);
+    DESCR_t a2 = bb_eval_value(e->children[2]);
+    if (IS_FAIL_fn(a1) || IS_FAIL_fn(a2)) return FAILDESCR;
+    int i = (int)to_int(a1);
+    int x = (int)to_int(a2);   /* j for RANGE, n for PLUS/MINUS */
+    if (i == 0) i = slen + 1; else if (i < 0) i = slen + 1 + i;
+    int lo, hi;
+    if (kind == BBS_RANGE) {
+        if (x == 0) x = slen + 1; else if (x < 0) x = slen + 1 + x;
+        if (i < 1 || i > slen+1 || x < 1 || x > slen+1) return FAILDESCR;
+        lo = i < x ? i : x;
+        hi = i < x ? x : i;
+    } else if (kind == BBS_PLUS) {
+        if (i < 1 || i > slen+1) return FAILDESCR;
+        if (x >= 0) { lo = i;     hi = i + x; }
+        else        { lo = i + x; hi = i;     }
+        if (lo < 1 || hi > slen+1) return FAILDESCR;
+    } else /* BBS_MINUS */ {
+        if (i < 1 || i > slen+1) return FAILDESCR;
+        if (x >= 0) { lo = i - x; hi = i;     }
+        else        { lo = i;     hi = i - x; }
+        if (lo < 1 || hi > slen+1) return FAILDESCR;
+    }
+    int len = hi - lo;
+    char *buf = GC_malloc(len + 1);
+    memcpy(buf, s + lo - 1, len);
+    buf[len] = '\0';
+    return STRVAL(buf);
 }
 
 /*------------------------------------------------------------------------------------------------------------------------------
@@ -266,6 +358,50 @@ DESCR_t bb_eval_value(EXPR_t *e)
         if (IS_FAIL_fn(l) || IS_FAIL_fn(r)) return FAILDESCR;
         return icn_descr_identical(l, r) ? r : FAILDESCR;
     }
+
+    /* RS-22c: string concat — Icon `||` (E_CAT) and `|||` (E_LCONCAT)
+     * share bb_str_concat.  In Icon BB context neither produces patterns,
+     * so the simple coerce-and-concat path is correct (mirrors IR-mode
+     * E_LCONCAT at interp_eval.c:4037).  SNOBOL4 E_CAT in pattern context
+     * does not arrive here — that path is interp_eval_pat-only. */
+    case E_CAT:
+    case E_LCONCAT:
+        return bb_str_concat(e);
+
+    /* RS-22c: subscript read — table/list/record/string index.
+     * Two-arg form → subscript_get; three-arg form (s[i:j] lowered as
+     * E_IDX with two index children) → subscript_get2.  Mirrors
+     * interp_eval.c:3084. */
+    case E_IDX: {
+        if (e->nchildren < 2) return FAILDESCR;
+        DESCR_t base = bb_eval_value(e->children[0]);
+        if (IS_FAIL_fn(base)) return FAILDESCR;
+        if (e->nchildren == 2) {
+            DESCR_t idx = bb_eval_value(e->children[1]);
+            if (IS_FAIL_fn(idx)) return FAILDESCR;
+            return subscript_get(base, idx);
+        }
+        DESCR_t i1 = bb_eval_value(e->children[1]);
+        DESCR_t i2 = bb_eval_value(e->children[2]);
+        if (IS_FAIL_fn(i1) || IS_FAIL_fn(i2)) return FAILDESCR;
+        return subscript_get2(base, i1, i2);
+    }
+
+    /* RS-22c: record field read.  e->sval = field name, child[0] = object. */
+    case E_FIELD: {
+        if (!e->sval || e->nchildren < 1) return NULVCL;
+        DESCR_t obj = bb_eval_value(e->children[0]);
+        if (IS_FAIL_fn(obj)) return FAILDESCR;
+        DESCR_t *cell = data_field_ptr(e->sval, obj);
+        if (!cell) return FAILDESCR;
+        return *cell;
+    }
+
+    /* RS-22c: string section (Icon s[i:j], s[i+:n], s[i-:n]) — bb_section.
+     * Three minor variants of bound computation share one helper. */
+    case E_SECTION:        return bb_section(e, BBS_RANGE);
+    case E_SECTION_PLUS:   return bb_section(e, BBS_PLUS);
+    case E_SECTION_MINUS:  return bb_section(e, BBS_MINUS);
 
     default:
         break;
