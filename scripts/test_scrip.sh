@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 # test_scrip.sh — Smoke test for corpus/programs/scrip/.
 #
-# Loads the Snocone-hosted runtime files (now six, with global.sc added
-# under PARSER-SN-INFRA-2) plus smoke.sc.  Expected output:
+# Loads the Snocone-hosted runtime files (seven now, with tdump.sc added
+# under PARSER-SN-INFRA-3) plus smoke.sc.  Expected output:
 #   bar
 #   global-OK
+#   tdump-OK
 #
 # The PARSER-SN-INFRA-5a "Error 3" recognizer is retained as a defensive
 # probe: if synthetic-label collision ever resurfaces (e.g. someone
 # undoes the g_sc_label_seq fix in snocone_parse.y), the script reports
 # BLOCKED with a pointer to the goal file rather than a vague FAIL.
 #
-#   PASS    — output matches the expected two lines
+#   PASS    — output matches the expected three lines
 #   BLOCKED — INFRA-5a footprint detected (Error 3 / array reference)
 #   FAIL    — anything else; exit 1.
 set -u
@@ -30,7 +31,7 @@ if [ ! -d "$SRC" ]; then
     exit 0
 fi
 
-EXPECTED=$'bar\nglobal-OK'
+EXPECTED=$'bar\nglobal-OK\ntdump-OK'
 ACTUAL=$(timeout 8 "$SCRIP" --ir-run \
     "$SRC/global.sc" \
     "$SRC/tree.sc" \
@@ -38,11 +39,12 @@ ACTUAL=$(timeout 8 "$SCRIP" --ir-run \
     "$SRC/counter.sc" \
     "$SRC/ShiftReduce.sc" \
     "$SRC/semantic.sc" \
+    "$SRC/tdump.sc" \
     "$SRC/smoke.sc" \
     < /dev/null 2>&1)
 
 if [ "$ACTUAL" = "$EXPECTED" ]; then
-    echo "PASS scrip(.sc) smoke: Shift/Pop round-trip + global-OK"
+    echo "PASS scrip(.sc) smoke: Shift/Pop + global-OK + tdump-OK"
     exit 0
 fi
 
