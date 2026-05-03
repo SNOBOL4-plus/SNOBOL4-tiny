@@ -42,6 +42,7 @@ ACTUAL=$(timeout 8 "$SCRIP" --ir-run \
     "$SRC/counter.sc" \
     "$SRC/ShiftReduce.sc" \
     "$SRC/semantic.sc" \
+    "$SRC/gen.sc" \
     "$SRC/tdump.sc" \
     "$SRC/assign.sc" \
     "$SRC/match.sc" \

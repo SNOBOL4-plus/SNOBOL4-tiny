@@ -65,6 +65,7 @@ for sc in "$SRC_TESTS"/*.sc; do
         "$SRC_RUNTIME/stack.sc" \
         "$SRC_RUNTIME/ShiftReduce.sc" \
         "$SRC_RUNTIME/qize.sc" \
+        "$SRC_RUNTIME/gen.sc" \
         "$SRC_RUNTIME/tdump.sc" \
         "$SRC_RUNTIME/assign.sc" \
         "$SRC_RUNTIME/parser_snocone.sc" \

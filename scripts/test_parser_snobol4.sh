@@ -76,6 +76,7 @@ for sno in "$SRC_TESTS"/*.sno; do
         "$SRC_RUNTIME/ShiftReduce.sc" \
         "$SRC_RUNTIME/semantic.sc" \
         "$SRC_RUNTIME/qize.sc" \
+        "$SRC_RUNTIME/gen.sc" \
         "$SRC_RUNTIME/tdump.sc" \
         "$SRC_RUNTIME/assign.sc" \
         "$SRC_RUNTIME/parser_snobol4.sc" \
