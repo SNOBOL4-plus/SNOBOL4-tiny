@@ -33,7 +33,9 @@
 /* RS-21 transitional: a small handful of kinds that were not lifted in this
  * rung still fall through to the IR tree-walker.  RS-22 / RS-23 absorb the
  * remainder; once empty, this declaration is removed and coro_stmt.c joins
- * the isolation gate. */
+ * the isolation gate.  RS-23 attempted to remove this extern (session
+ * 2026-05-03) but the same probe-vs-reality gap that affected coro_value.c
+ * applies here — reverted along with that. */
 extern DESCR_t interp_eval(EXPR_t *e);
 
 /*------------------------------------------------------------------------------------------------------------------------------

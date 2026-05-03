@@ -76,7 +76,7 @@
  * sub-rung of RS-22f.
  *
  * AUTHORS: Lon Jones Cherryholmes · Claude Sonnet
- * SPRINT:  RS-17a (2026-05-03), RS-22a (2026-05-03), RS-22b (2026-05-03), RS-22c (2026-05-03), RS-22d (2026-05-03), RS-22e (2026-05-03), RS-22f-strrel (2026-05-03), RS-22f-makelist (2026-05-03), RS-22f-cset (2026-05-03), RS-22f-generators (2026-05-03)
+ * SPRINT:  RS-17a (2026-05-03), RS-22a (2026-05-03), RS-22b (2026-05-03), RS-22c (2026-05-03), RS-22d (2026-05-03), RS-22e (2026-05-03), RS-22f-strrel (2026-05-03), RS-22f-makelist (2026-05-03), RS-22f-cset (2026-05-03), RS-22f-generators (2026-05-03), RS-22f-stmt (2026-05-03)
  *==========================================================================================================================*/
 
 #include "coro_value.h"
@@ -92,9 +92,12 @@
 extern DESCR_t eval_node(EXPR_t *e);
 
 /* interp_eval is the IR-mode tree-walker; bb_eval_value falls through here for
- * kinds it does not yet handle directly.  RS-17a-cont rungs replace each
- * fallthrough with an in-this-file branch until this declaration goes away
- * (and the isolation gate can promote coro_runtime.c). */
+ * kinds it does not yet handle directly.  RS-23 attempted (session 2026-05-03)
+ * to remove this extern after the empirical probe gate showed zero direct
+ * fallthroughs across smoke gates + unified_broker + full Icon corpus.  But
+ * the probe missed indirect call paths — removing the extern caused
+ * smoke_icon 5/5 → 0/5, smoke_raku 5/5 → 0/5, unified_broker 49/0 → 8/41.
+ * Reverted; deeper analysis needed before RS-23 can land. */
 extern DESCR_t interp_eval(EXPR_t *e);
 
 /*------------------------------------------------------------------------------------------------------------------------------
@@ -897,6 +900,93 @@ DESCR_t bb_eval_value(EXPR_t *e)
         return last;
     }
 
+    /* RS-22f-stmt (2026-05-03): E_SCAN and E_CASE in value context.
+     *
+     * E_SCAN: `subj ? body` in Icon/Prolog mode.  bb_eval_value is only
+     * reached from BB-engine call sites (Icon every-bodies, Prolog
+     * clause-bodies), so the SNOBOL4-mode exec_stmt branch in
+     * interp_eval.c:3887 is unreachable here — the Icon/Prolog branch
+     * (line 3899) is what we mirror.  Push current scan state, evaluate
+     * subject as string, install as new scan target with pos=1, evaluate
+     * body, restore prior scan state.
+     *
+     * E_CASE: case-expression in value context.  Evaluate topic; walk
+     * pairs (Icon) or triples (Raku) comparing topic to each value;
+     * return the matching body's value, or the default body's value, or
+     * NULVCL.  Mirrors interp_eval.c:3569 verbatim — only `interp_eval`
+     * recursive calls are replaced with `bb_eval_value`. */
+    case E_SCAN: {
+        if (e->nchildren < 1) return FAILDESCR;
+        DESCR_t subj_d = bb_eval_value(e->children[0]);
+        if (IS_FAIL_fn(subj_d)) return FAILDESCR;
+        const char *subj_s = VARVAL_fn(subj_d); if (!subj_s) subj_s = "";
+        if (scan_depth < SCAN_STACK_MAX) {
+            scan_stack[scan_depth].subj = scan_subj;
+            scan_stack[scan_depth].pos  = scan_pos;
+            scan_depth++;
+        }
+        scan_subj = subj_s; scan_pos = 1;
+        DESCR_t r = (e->nchildren >= 2) ? bb_eval_value(e->children[1]) : NULVCL;
+        if (scan_depth > 0) {
+            scan_depth--;
+            scan_subj = scan_stack[scan_depth].subj;
+            scan_pos  = scan_stack[scan_depth].pos;
+        }
+        return r;
+    }
+
+    case E_CASE: {
+        if (e->nchildren < 1) return NULVCL;
+        DESCR_t topic = bb_eval_value(e->children[0]);
+        /* Detect Raku triple layout: (nchildren-1)%3==0 AND child[1] is
+         * E_ILIT or E_NUL (the comparison-kind marker). */
+        int is_raku_layout = (e->nchildren >= 4 && (e->nchildren - 1) % 3 == 0 &&
+            e->children[1] && (e->children[1]->kind == E_ILIT || e->children[1]->kind == E_NUL));
+        if (is_raku_layout) {
+            int i = 1;
+            while (i + 2 < e->nchildren) {
+                EXPR_t *cmpnode = e->children[i];
+                EXPR_t *val     = e->children[i+1];
+                EXPR_t *body    = e->children[i+2];
+                i += 3;
+                if (cmpnode->kind == E_NUL) return bb_eval_value(body);
+                EXPR_e cmp = (EXPR_e)(cmpnode->ival);
+                DESCR_t wval = bb_eval_value(val);
+                int match = 0;
+                if (cmp == E_LEQ) {
+                    const char *ts = IS_STR_fn(topic)?topic.s:VARVAL_fn(topic);
+                    const char *ws = IS_STR_fn(wval) ?wval.s :VARVAL_fn(wval);
+                    match = (ts && ws && strcmp(ts, ws) == 0);
+                } else {
+                    if (IS_INT_fn(topic) && IS_INT_fn(wval)) match = (topic.i == wval.i);
+                    else { const char *ts=VARVAL_fn(topic), *ws=VARVAL_fn(wval); match=(ts && ws && strcmp(ts,ws)==0); }
+                }
+                if (match) return bb_eval_value(body);
+            }
+            if (i+1 < e->nchildren && e->children[i]->kind == E_NUL)
+                return bb_eval_value(e->children[i+1]);
+            return NULVCL;
+        }
+        /* Icon: pairs [val, body] then optional trailing default body */
+        int nc = e->nchildren;
+        int i = 1;
+        while (i + 1 < nc) {
+            DESCR_t wval = bb_eval_value(e->children[i]);
+            EXPR_t *body = e->children[i+1];
+            i += 2;
+            int match;
+            if (IS_INT_fn(topic) && IS_INT_fn(wval)) match = (topic.i == wval.i);
+            else {
+                const char *ts = VARVAL_fn(topic), *ws = VARVAL_fn(wval);
+                match = (ts && ws && strcmp(ts, ws) == 0);
+            }
+            if (match) return bb_eval_value(body);
+        }
+        /* trailing default body (odd remaining child count) */
+        if (i < nc) return bb_eval_value(e->children[i]);
+        return NULVCL;
+    }
+
     /* RS-22f-cset (2026-05-03): Cset literal + four set-arithmetic ops.
      * Icon csets are represented as NUL-terminated strings of member chars.
      * The four binary ops delegate to the icn_cset_* helpers in icon_runtime.c
@@ -970,13 +1060,17 @@ DESCR_t bb_eval_value(EXPR_t *e)
      *
      *   Mid-size:
      *     E_MAKELIST  closed by RS-22f-makelist (case arm above).
-     *     E_SCAN      (drives a generator chain via coro/exec_stmt;
-     *                  needs careful first-value contract definition)
-     *     E_CASE      (statement-shaped; reaches value context only via
-     *                  case-as-expression — small lift)
+     *     E_SCAN      closed by RS-22f-stmt — case arm above mirrors
+     *                  interp_eval.c:3899 Icon-mode scan branch.
+     *     E_CASE      closed by RS-22f-stmt — case arm above mirrors
+     *                  interp_eval.c:3569 (Icon pairs + Raku triples).
      *
-     * Remaining sub-rungs of RS-22f close the rest; the rung-23 gate
-     * ("remove extern interp_eval, promote into isolation gate") cannot
-     * fire until then.  Until then, fallthrough preserves behavior. */
+     * RS-22f closure: all 16 surveyed kinds have native handling in
+     * bb_eval_value.  RS-23 (2026-05-03) attempted to remove the
+     * interp_eval extern after a probe gate showed zero direct
+     * fallthroughs across smoke + unified_broker + full Icon corpus.
+     * The attempt regressed smoke_icon 5/5→0/5, smoke_raku 5/5→0/5,
+     * unified_broker 49/0→8/41 — indirect call paths were missed.
+     * Reverted; the fallthrough to interp_eval stays in place. */
     return interp_eval(e);
 }

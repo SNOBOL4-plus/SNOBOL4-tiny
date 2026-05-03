@@ -41,7 +41,11 @@ SM_FILES=(
 # fallthrough as their migration scaffold and are therefore intentionally
 # NOT included in the gate.  When sub-rungs RS-17a-cont / RS-17b-cont
 # absorb the remaining kinds and the fallthrough goes away, those files
-# can be promoted into the gate too.
+# can be promoted into the gate too.  RS-23 (session 2026-05-03) attempted
+# this promotion after RS-22f-stmt closed all surveyed direct-fallthrough
+# kinds; the empirical probe gate showed zero hits but indirect call paths
+# were missed and the attempt regressed smoke_icon/raku/unified_broker.
+# Reverted; deeper analysis required.
 
 IR_SYMS=(
     "execute_program"
