@@ -63,6 +63,8 @@ for sc in "$SRC_TESTS"/*.sc; do
         "$SRC_RUNTIME/global.sc" \
         "$SRC_RUNTIME/tree.sc" \
         "$SRC_RUNTIME/stack.sc" \
+        "$SRC_RUNTIME/counter.sc" \
+        "$SRC_RUNTIME/semantic.sc" \
         "$SRC_RUNTIME/ShiftReduce.sc" \
         "$SRC_RUNTIME/qize.sc" \
         "$SRC_RUNTIME/gen.sc" \
