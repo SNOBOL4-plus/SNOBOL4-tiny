@@ -333,6 +333,13 @@ DESCR_t eval_node(EXPR_t *e)
             if (!nm) return FAILDESCR;
             char *fn = GC_strdup(nm); sno_fold_name(fn);  /* SN-19 */
             name = NAME_fn(fn);
+        } else if (tgt && tgt->kind == E_VAR && tgt->sval) {
+            /* Plain variable target (e.g. `. word`): return a NAME descriptor
+             * so pat_assign_cond gets the lvalue, not the current value.
+             * PAT-SN-INFRA-0 fix: eval_node(E_VAR) returns NV_GET_fn() which
+             * is the VALUE (empty string for unset var) — wrong here. */
+            char *fn = GC_strdup(tgt->sval); sno_fold_name(fn);
+            name = NAME_fn(fn);
         } else {
             name = eval_node(tgt);
         }
@@ -358,6 +365,11 @@ DESCR_t eval_node(EXPR_t *e)
             else                                      { DESCR_t nd = eval_node(ic);        nm = VARVAL_fn(nd); }
             if (!nm) return FAILDESCR;
             char *fn = GC_strdup(nm); sno_fold_name(fn);  /* SN-19 */
+            name = NAME_fn(fn);
+        } else if (tgt && tgt->kind == E_VAR && tgt->sval) {
+            /* Plain variable target (e.g. `$ word`): return NAME descriptor.
+             * PAT-SN-INFRA-0 fix: mirrors E_CAPT_COND_ASGN fix above. */
+            char *fn = GC_strdup(tgt->sval); sno_fold_name(fn);
             name = NAME_fn(fn);
         } else {
             name = eval_node(tgt);
