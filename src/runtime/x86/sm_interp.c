@@ -629,6 +629,27 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
             break;
         }
 
+        case SM_PUSH_LAST_MATCH: {
+            /* PARSER-SN-INFRA-11a: push the matched substring captured by
+             * exec_stmt onto the value stack.  On success: a fresh DT_S
+             * (or DT_SNUL for empty match).  On failure (last_ok==0):
+             * NULSTR — preserves the SCAN-fail-as-NULSTR convention used
+             * inside boolean tests like ~(s ? p) and IDENT(s ? p, ...). */
+            extern const char *g_last_match_subj;
+            extern int         g_last_match_start;
+            extern int         g_last_match_end;
+            if (!st->last_ok) { sm_push(st, NULVCL); break; }
+            int span_len = g_last_match_end - g_last_match_start;
+            if (span_len <= 0) { sm_push(st, NULVCL); break; }
+            char *buf = (char *)GC_malloc((size_t)span_len + 1);
+            if (g_last_match_subj) {
+                memcpy(buf, g_last_match_subj + g_last_match_start, (size_t)span_len);
+            }
+            buf[span_len] = '\0';
+            sm_push(st, BSTRVAL(buf, span_len));
+            break;
+        }
+
         /* ── OE-10/11: Byrd box broker opcodes — Icon/Prolog SM-run support ── */
         case SM_BB_PUMP: {
             /* Pop DT_E descriptor whose .ptr is the EXPR_t* of the Icon statement subject.

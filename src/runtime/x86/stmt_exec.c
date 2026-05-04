@@ -1207,6 +1207,18 @@ extern int64_t kw_anchor;
 int kw_anchor = 0;
 #endif
 
+/* PARSER-SN-INFRA-11a fix (2026-05-03): expose matched substring after a
+ * successful exec_stmt so that callers using `subj ? pat` in value context
+ * (the SNOBOL4 spec — return value is the matched substring) can recover it.
+ * Set at Phase4 entry on successful match; left at last value otherwise.
+ * interp_eval E_SCAN reads these in value context after exec_stmt returns 1.
+ * Storage: subj_str is the heap-stable subject pointer the matcher used,
+ * which exec_stmt has via subj_str local.  start/end are byte offsets into
+ * that subject. */
+const char *g_last_match_subj  = "";
+int         g_last_match_start = 0;
+int         g_last_match_end   = 0;
+
 /*
  * Capture registry — moved to bb_boxes.c (SN-20 session 17 unification).
  * External API: reset_capture_registry(), clear_pending_flags(),
@@ -1389,6 +1401,10 @@ int exec_stmt(const char  *subj_name,
     if (ticks > 0) {
         match_start = scan_res.start;
         match_end   = scan_res.end;
+        /* PARSER-SN-INFRA-11a: expose for value-context `subj ? pat`. */
+        g_last_match_subj  = subj_str;
+        g_last_match_start = match_start;
+        g_last_match_end   = match_end;
                                                               goto Phase4;
     }
 

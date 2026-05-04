@@ -3914,7 +3914,24 @@ DESCR_t interp_eval(EXPR_t *e)
             DESCR_t pat_d = (e->nchildren >= 2) ? interp_eval_pat(e->children[1]) : pat_epsilon();
             if (IS_FAIL_fn(pat_d)) return FAILDESCR;
             int ok = exec_stmt(sname, sname ? NULL : &subj_d, pat_d, NULL, 0);
-            return ok ? NULVCL : FAILDESCR;
+            if (!ok) return FAILDESCR;
+            /* PARSER-SN-INFRA-11a: SNOBOL4 spec says value of `subj ? pat`
+             * in expression context is the matched substring.  Read the
+             * span exec_stmt recorded; build a fresh DT_S descriptor.
+             * subj_str/match_{start,end} are stable for the duration of
+             * this evaluation (subject is captured by NV). */
+            extern const char *g_last_match_subj;
+            extern int         g_last_match_start;
+            extern int         g_last_match_end;
+            int span_len = g_last_match_end - g_last_match_start;
+            if (span_len < 0) span_len = 0;
+            if (span_len == 0) return NULVCL;
+            char *buf = (char *)GC_malloc((size_t)span_len + 1);
+            if (g_last_match_subj) {
+                memcpy(buf, g_last_match_subj + g_last_match_start, (size_t)span_len);
+            }
+            buf[span_len] = '\0';
+            return BSTRVAL(buf, span_len);
         }
         /* ── Icon / Prolog context: generator scan ── */
         DESCR_t subj_d = interp_eval(e->children[0]);

@@ -103,6 +103,13 @@ typedef enum {
     /* Statement execution */
     SM_EXEC_STMT,
 
+    /* PARSER-SN-INFRA-11a: push the matched substring from the last
+     * exec_stmt onto the value stack — used after SM_EXEC_STMT for
+     * E_SCAN in value context (`r = subj ? pat`) where SNOBOL4 spec
+     * says the value is the matched substring on success / NULL on
+     * fail.  Reads g_last_match_subj/start/end (stmt_exec.c). */
+    SM_PUSH_LAST_MATCH,
+
     /* Byrd box broker modes — U-16
      * SM_BB_PUMP: pops bb_node_t* from value stack; calls bb_broker(root,BB_PUMP,body_fn,arg);
      *             pushes tick count as DT_I.  For Icon 'every' / generator loops.

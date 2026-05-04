@@ -573,6 +573,23 @@ static void h_exec_stmt(void)
     g_jit_pat_sp   = 0;
 }
 
+static void h_push_last_match(void)
+{
+    /* PARSER-SN-INFRA-11a: JIT mirror of sm_interp SM_PUSH_LAST_MATCH. */
+    extern const char *g_last_match_subj;
+    extern int         g_last_match_start;
+    extern int         g_last_match_end;
+    if (!STATE->last_ok) { PUSH(NULVCL); return; }
+    int span_len = g_last_match_end - g_last_match_start;
+    if (span_len <= 0) { PUSH(NULVCL); return; }
+    char *buf = (char *)GC_malloc((size_t)span_len + 1);
+    if (g_last_match_subj) {
+        memcpy(buf, g_last_match_subj + g_last_match_start, (size_t)span_len);
+    }
+    buf[span_len] = '\0';
+    PUSH(BSTRVAL(buf, span_len));
+}
+
 static void h_call(void)
 {
     const char *name  = CUR_INS->a[0].s;
@@ -890,6 +907,7 @@ static void init_handler_table(void)
     g_handlers[SM_PAT_BOXVAL]  = h_pat_boxval;
 
     g_handlers[SM_EXEC_STMT]   = h_exec_stmt;
+    g_handlers[SM_PUSH_LAST_MATCH] = h_push_last_match;
     g_handlers[SM_CALL]        = h_call;
     g_handlers[SM_RETURN]      = h_return;
     g_handlers[SM_FRETURN]     = h_freturn;
