@@ -464,7 +464,7 @@ static void     sc_emit_struct         (ScParseState *st, char *name, char *fiel
 %token T_LBRACE T_RBRACE
 %token T_IF T_ELSE T_WHILE
 
-%type <expr> expr0 expr1 expr3 expr4 expr5 expr6 expr9 expr11 expr12 expr15 expr17 exprlist exprlist_ne
+%type <expr> expr0 expr1 expr3 expr4 expr5 expr5a expr6 expr9 expr11 expr12 expr15 expr17 exprlist exprlist_ne
 
 /* LS-4.f — control-flow non-terminal types */
 %type <ifhead>    if_head
@@ -970,6 +970,49 @@ expr5       : expr5 T_EQ        expr6
                                   expr_add_child(e, $1); expr_add_child(e, $3); $$ = e; }
             | expr5 T_DIFFER    expr6
                                 { EXPR_t *e = expr_new(E_FNC); e->sval = strdup("DIFFER");
+                                  expr_add_child(e, $1); expr_add_child(e, $3); $$ = e; }
+            | expr5a
+                                { $$ = $1; }
+            ;
+
+/* ---- OPSYN-binop tier (PARSER-IC-8a) ------------------------------------
+ *
+ * SPITBOL/Snocone reserves four binary operator slots — `~` `&` `#` `%`
+ * — for user-redefinable operators via `OPSYN(op, fname, 2)`.  Following
+ * the same lowering convention as the comparison tier (T_EQ / T_NE /
+ * etc. → E_FNC with sval = function name), each slot lowers to an E_FNC
+ * call whose name is the operator literal.  At runtime, scrip's E_FNC
+ * lookup consults the OPSYN table first, so `'a' ~ 'b'` after
+ * `OPSYN('~', 'shift', 2)` invokes `shift('a', 'b')` exactly as a
+ * regular function call would.
+ *
+ * Lexer already emits the binary tokens (snocone_lex.c:543/551 etc.)
+ * via the W{OP}W envelope rule; tokens are declared at line 452.  This
+ * production simply binds them to an IR shape — no lexer or runtime
+ * change required.
+ *
+ * Tier choice: between comparison (expr5) and additive (expr6).
+ * Tighter than `=` `?` `|` ` ` `==`-family, looser than `+` `-` `*` `/`.
+ * This matches the canonical PARSER spine usage `Integer ~ 'E_ILIT'`
+ * and `r_MUL & 2` — the operator binds the entire pattern atom on its
+ * left to the type tag on its right, but does not break apart
+ * arithmetic on either side.
+ *
+ * Left-associative — `a ~ b ~ c` parses as `(a ~ b) ~ c`.  Snocone has
+ * no documented expectation either way for these slots; left-assoc
+ * matches the comparison tier above.
+ */
+expr5a      : expr5a T_2TILDE  expr6
+                                { EXPR_t *e = expr_new(E_FNC); e->sval = strdup("~");
+                                  expr_add_child(e, $1); expr_add_child(e, $3); $$ = e; }
+            | expr5a T_2AMP    expr6
+                                { EXPR_t *e = expr_new(E_FNC); e->sval = strdup("&");
+                                  expr_add_child(e, $1); expr_add_child(e, $3); $$ = e; }
+            | expr5a T_2POUND  expr6
+                                { EXPR_t *e = expr_new(E_FNC); e->sval = strdup("#");
+                                  expr_add_child(e, $1); expr_add_child(e, $3); $$ = e; }
+            | expr5a T_2PERCENT expr6
+                                { EXPR_t *e = expr_new(E_FNC); e->sval = strdup("%");
                                   expr_add_child(e, $1); expr_add_child(e, $3); $$ = e; }
             | expr6
                                 { $$ = $1; }
