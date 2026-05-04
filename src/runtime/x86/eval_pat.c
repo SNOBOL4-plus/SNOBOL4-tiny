@@ -350,11 +350,33 @@ DESCR_t interp_eval_pat(EXPR_t *e)
     }
 
     case E_FNC:
+        /* Snocone-mode pattern context: ARBNO(P) / FENCE(P) are E_FNC
+         * (Snocone has no keyword form — `ARBNO(p)` is just a function
+         * call).  When E_SCAN reaches us via interp_eval_pat, the inner
+         * pattern argument MUST be evaluated in pattern context so that
+         * E_DEFER(E_VAR) / E_DEFER(E_FNC) children become proper deferred
+         * ref nodes (XDSAR / pat-deferred T_FUNC) rather than frozen
+         * value-form DT_E.  Without this, deferred calls inside
+         * ARBNO(...) fire zero times because the pattern is baked at
+         * build time.  Mirrors the value-context fix at interp_eval
+         * E_FNC ARBNO/FENCE (interp_eval.c ~line 2951).  The SNOBOL4
+         * frontend's `ARBNO`/`FENCE` keywords still take the E_ARBNO /
+         * E_FENCE direct paths above; this guard only catches Snocone's
+         * E_FNC encoding. */
+        if (e->nchildren > 0 && e->sval) {
+            if (strcmp(e->sval, "ARBNO") == 0) {
+                DESCR_t _inner = interp_eval_pat(e->children[0]);
+                if (IS_FAIL_fn(_inner)) return FAILDESCR;
+                return pat_arbno(_inner);
+            }
+            if (strcmp(e->sval, "FENCE") == 0) {
+                DESCR_t _inner = interp_eval_pat(e->children[0]);
+                if (IS_FAIL_fn(_inner)) return FAILDESCR;
+                return pat_fence_p(_inner);
+            }
+        }
         /* Generic function call in pattern context -- evaluate as value,
-         * let the caller coerce via PATVAL.  The SB-5c.1 guards for
-         * E_FNC("ARBNO")/E_FNC("FENCE") are removed: no frontend produces
-         * those; the SNOBOL4 parser uses pat_prim_kind() to emit E_ARBNO /
-         * E_FENCE directly (RS-5). */
+         * let the caller coerce via PATVAL. */
         return eval_node(e);
 
     default:
