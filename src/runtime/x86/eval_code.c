@@ -59,6 +59,9 @@
 #include "../../frontend/snobol4/scrip_cc.h"
 /* parse_expr_pat_from_str, sno_parse_string declared in scrip_cc.h */
 
+/* ── interpreter: interp_eval_pat for pattern-context EVAL ───────────── */
+#include "../../driver/interp.h"
+
 /* exec_stmt — the five-phase executor */
 extern int exec_stmt(const char  *subj_name,
                           DESCR_t     *subj_var,
@@ -438,7 +441,13 @@ DESCR_t eval_expr(const char *src)
     EXPR_t *tree = parse_expr_pat_from_str(src);
     if (!tree) return FAILDESCR;
 
-    return eval_node(tree);
+    /* Use interp_eval_pat so that *func(args) inside EVAL'd pattern strings
+     * defers args as DT_E to be thawed at match time.  This matches SNOBOL4
+     * semantics where EVAL("epsilon . *Reduce('Parse', nTop())") produces a
+     * pattern whose Reduce call sees the live nTop() value at match time,
+     * not the value at build time.  interp_eval_pat falls back to eval_node
+     * for non-pattern nodes, so value expressions are unaffected. */
+    return interp_eval_pat(tree);
 }
 
 
