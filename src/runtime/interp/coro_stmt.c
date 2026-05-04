@@ -192,13 +192,25 @@ void bb_exec_stmt(EXPR_t *e)
         return;
     }
 
+    /*========================================================================
+     * RS-23a-route: high-volume expression kinds in statement context.
+     * Contract: evaluate for side effects, discard the result.
+     * bb_eval_value already handles E_FNC (including raku_try_call_builtin
+     * at the top, via RS-23a-raku), E_ASSIGN, and E_AUGOP natively.
+     *======================================================================*/
+    case E_FNC:
+    case E_ASSIGN:
+    case E_AUGOP: {
+        (void)bb_eval_value(e);
+        return;
+    }
+
     default: break;
     }
 
-    /* RS-21 transitional fallthrough: kinds not yet absorbed (E_FNC builtin
-     * statements, E_ASSIGN slot stores, expression-kinds that arrive in
-     * statement context from a small number of construct shapes).  RS-22
-     * lifts these.  In the meantime the discarded DESCR_t result is still
-     * correct for the contract. */
+    /* RS-21/RS-23a transitional fallthrough: remaining kinds not yet absorbed.
+     * RS-23b/c/d will lift E_SCAN, E_CASE, E_NOT, E_ALTERNATE, E_ILIT, E_NUL,
+     * E_EVERY, E_INITIAL, E_SWAP, and E_WHILE (value context).
+     * In the meantime the discarded DESCR_t result is still correct. */
     (void)interp_eval(e);
 }
