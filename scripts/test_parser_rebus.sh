@@ -48,6 +48,17 @@ if [ ! -f "$SRC_RUNTIME/parser_rebus.sc" ]; then
     exit 0
 fi
 
+# Normalize a tree dump for comparison: collapse runs of whitespace to a
+# single space, strip any space immediately preceding a `)`, and trim
+# leading/trailing whitespace.  Both ir_dump_program (multi-line, used by
+# the oracle for nodes with >=2 children, e.g. E_ALT) and TLump
+# (single-line) collapse to the same canonical form.  Same convention as
+# test_parser_icon.sh / test_parser_prolog.sh / test_parser_raku.sh /
+# test_parser_snobol4.sh.
+normalize() {
+    tr -s '[:space:]' ' ' | sed 's/ )/)/g' | sed 's/^ *//; s/ *$//'
+}
+
 echo "=== PARSER-RB smoke ==="
 PASS=0
 FAIL=0
@@ -92,15 +103,18 @@ for reb in "$SRC_TESTS"/*.reb; do
         continue
     fi
 
-    if [ "$parser_out" = "$oracle_out" ]; then
+    parser_norm=$(printf '%s' "$parser_out" | normalize)
+    oracle_norm=$(printf '%s' "$oracle_out" | normalize)
+
+    if [ "$parser_norm" = "$oracle_norm" ]; then
         echo "  PASS $name"
         PASS=$((PASS + 1))
     else
         echo "  FAIL $name — tree divergence"
-        echo "    oracle (--dump-ir):"
-        echo "$oracle_out" | sed 's/^/      /'
-        echo "    parser (parser_rebus.sc):"
-        echo "$parser_out" | sed 's/^/      /'
+        echo "    oracle (--dump-ir, normalized):"
+        echo "      $oracle_norm"
+        echo "    parser (parser_rebus.sc, normalized):"
+        echo "      $parser_norm"
         FAIL=$((FAIL + 1))
         FAILED_NAMES="$FAILED_NAMES $name"
     fi
