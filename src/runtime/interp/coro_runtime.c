@@ -1566,6 +1566,19 @@ bb_node_t coro_eval(EXPR_t *e) {
         return (bb_node_t){ icn_lazy_box, z, 0 };
     }
 
+    /* ── E_PROC_FAIL — must be lazy (RS-23b alternation fix).
+     * `expr | fail` is the canonical Icon idiom for procedure-level fail.
+     * The oneshot fallback below would eagerly call bb_eval_value(E_PROC_FAIL)
+     * which sets FRAME.returning=1; FRAME.return_val=FAILDESCR at *box build*
+     * time — corrupting the procedure even when arm 0 succeeds.  By deferring
+     * via icn_lazy_box, the frame state is only touched if/when arm 1 is
+     * actually pumped. */
+    if (e->kind == E_PROC_FAIL) {
+        icn_lazy_state_t *z = calloc(1, sizeof(*z));
+        z->expr = e;
+        return (bb_node_t){ icn_lazy_box, z, 0 };
+    }
+
     /* ── Fallback: one-shot box wrapping value-context evaluation ───────── */
     icn_oneshot_state_t *z = calloc(1, sizeof(*z));
     z->val = bb_eval_value(e);

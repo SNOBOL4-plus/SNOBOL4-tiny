@@ -205,12 +205,42 @@ void bb_exec_stmt(EXPR_t *e)
         return;
     }
 
+    /*========================================================================
+     * RS-23b: expression kinds that arrive in statement context from
+     * Icon/Prolog procedure bodies (caller=coro_call) and recursive
+     * statement-context evaluation (caller=bb_exec_stmt).
+     *
+     *   E_ILIT, E_NUL — pure literals, zero side effects → no-op.
+     *   E_NOT         — evaluates child for side effects, discards boolean.
+     *   E_ALTERNATE   — generator combinator; first-success branch runs its
+     *                   side effects via bb_eval_value, result discarded.
+     *   E_SCAN        — `subj ? body`; bb_eval_value handles scan-stack
+     *                   push/pop and body evaluation.
+     *   E_CASE        — bb_eval_value evaluates topic, dispatches, runs
+     *                   matching body for side effects.
+     *
+     * bb_eval_value already handles all five non-trivial kinds (E_NOT,
+     * E_ALTERNATE, E_SCAN, E_CASE, plus E_ILIT/E_NUL via eval_node).
+     *======================================================================*/
+    case E_ILIT:
+    case E_NUL:
+        return;
+
+    case E_NOT:
+    case E_ALTERNATE:
+    case E_SCAN:
+    case E_CASE: {
+        (void)bb_eval_value(e);
+        return;
+    }
+
     default: break;
     }
 
-    /* RS-21/RS-23a transitional fallthrough: remaining kinds not yet absorbed.
-     * RS-23b/c/d will lift E_SCAN, E_CASE, E_NOT, E_ALTERNATE, E_ILIT, E_NUL,
-     * E_EVERY, E_INITIAL, E_SWAP, and E_WHILE (value context).
+    /* RS-21/RS-23 transitional fallthrough: remaining kinds not yet absorbed.
+     * RS-23c will lift E_EVERY, E_INITIAL, E_SWAP (in both adapters).
+     * RS-23d will lift E_WHILE in value context.
+     * E_BANG_BINARY arrives via bb_eval_value, not bb_exec_stmt.
      * In the meantime the discarded DESCR_t result is still correct. */
     (void)interp_eval(e);
 }
