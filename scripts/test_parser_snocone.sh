@@ -48,6 +48,19 @@ if [ ! -f "$SRC_RUNTIME/parser_snocone.sc" ]; then
     exit 0
 fi
 
+# normalize(text) — collapse runs of whitespace to a single space and
+# strip the ' )' artefact that Gen-based TDump can emit.  Applied to
+# both parser output and oracle output before byte-comparison.  This
+# is the canonical whitespace-normalization pattern adopted by sibling
+# sessions (test_parser_snobol4.sh, test_parser_icon.sh, test_parser_prolog.sh)
+# per the FW-6 variant-B decision: Gen-based TDump produces inline-or-multiline
+# output depending on width budget; --dump-ir always emits multi-line for
+# n>=2 children.  Structural divergence (wrong IR kind, wrong tree shape) is
+# not masked — only whitespace layout differences are elided.
+normalize() {
+    echo "$1" | tr -s '[:space:]' ' ' | sed 's/ )/)/g' | sed 's/^ //;s/ $//'
+}
+
 echo "=== PARSER-SC smoke ==="
 PASS=0
 FAIL=0
@@ -95,7 +108,7 @@ for sc in "$SRC_TESTS"/*.sc; do
         continue
     fi
 
-    if [ "$parser_out" = "$oracle_out" ]; then
+    if [ "$(normalize "$parser_out")" = "$(normalize "$oracle_out")" ]; then
         echo "  PASS $name"
         PASS=$((PASS + 1))
     else
