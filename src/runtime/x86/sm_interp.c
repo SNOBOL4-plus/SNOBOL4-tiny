@@ -476,6 +476,30 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
                 pat_push(v);                        /* already a pattern */
             } else if (v.v == DT_S && v.s) {
                 pat_push(pat_lit(v.s));             /* string → literal */
+            } else if (v.v == DT_E) {
+                /* PARSER-SC-INFRA-3 Step 3d-bug fix (session #66, 2026-05-04):
+                 * frozen-expr descriptor → thaw to pattern via PATVAL_fn.
+                 *
+                 * Symptom before fix: `$' ' = *Gray` followed by
+                 * `X = ... ($' ' *X | epsilon)` (recursive rule with the
+                 * indirect-variable alias) failed to chain past the first
+                 * iteration.  Root cause: $-indirect lookup returned a DT_E
+                 * descriptor (the frozen *Gray expression stored at assignment
+                 * time); SM_PAT_DEREF lacked a DT_E branch and fell through
+                 * to VARVAL_fn → pat_ref("") — a degenerate empty-name
+                 * deferred reference that matched epsilon at first invocation
+                 * and bound the recursive expansion to a dead pattern node.
+                 *
+                 * Fix: route DT_E through PATVAL_fn (the SIL PATVAL coercion),
+                 * which calls EVAL_fn to thaw the EXPR_t into a real value,
+                 * then coerces to DT_P (pattern) — the same path the IR-side
+                 * E_VAR handler in eval_pat.c uses for DT_E values. */
+                DESCR_t p = PATVAL_fn(v);
+                if (IS_FAIL_fn(p)) {
+                    st->last_ok = 0;
+                } else {
+                    pat_push(p);
+                }
             } else {
                 /* variable name or other — deferred ref */
                 const char *name = VARVAL_fn(v);
