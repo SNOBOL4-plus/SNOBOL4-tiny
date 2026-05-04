@@ -482,6 +482,16 @@ DESCR_t bb_eval_value(EXPR_t *e)
         const char *fn = e->children[0] ? e->children[0]->sval : NULL;
         if (!fn) return NULVCL;
         int nargs = e->nchildren - 1;
+        /* RS-23a-raku: Raku block-receiving builtins (raku_try / raku_map /
+         * raku_grep / raku_sort) need raw EXPR_t access and must NOT be subject
+         * to FAIL-prop on the body argument — dispatch them here, before the
+         * generic user-proc / builtin pre-eval loops below.  raku_try_call_builtin
+         * returns 1 if `fn` matched a Raku builtin (and *out is set); 0 means
+         * not a Raku builtin and we fall through to the existing dispatch. */
+        {
+            DESCR_t __rk_d;
+            if (raku_try_call_builtin(e, &__rk_d)) return __rk_d;
+        }
         /* User-proc path: look up in proc_table and call via coro_call. */
         for (int i = 0; i < proc_count; i++) {
             if (strcmp(proc_table[i].name, fn) != 0) continue;

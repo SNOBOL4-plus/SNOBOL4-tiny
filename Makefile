@@ -108,6 +108,7 @@ scrip:
 	$(CC) $(CRT)   -c $(SRC)/runtime/interp/coro_runtime.c -o $(OBJ)/coro_runtime.o
 	$(CC) $(CRT)   -c $(SRC)/runtime/interp/coro_value.c   -o $(OBJ)/coro_value.o
 	$(CC) $(CRT)   -c $(SRC)/runtime/interp/coro_stmt.c    -o $(OBJ)/coro_stmt.o
+	$(CC) $(CRT)   -c $(SRC)/runtime/interp/raku_builtins.c -o $(OBJ)/raku_builtins.o
 	$(CC) $(CRT)   -c $(SRC)/runtime/interp/pl_runtime.c  -o $(OBJ)/pl_runtime.o
 	$(CC) $(CRT)   -c $(SRC)/runtime/common/coerce.c      -o $(OBJ)/coerce.o
 	$(CC) $(CRT)   -c $(SRC)/runtime/common/ir_clone.c    -o $(OBJ)/ir_clone.o
