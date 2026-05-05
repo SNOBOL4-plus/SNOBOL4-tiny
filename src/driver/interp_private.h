@@ -179,6 +179,9 @@ const char *real_str(double r, char *buf, int bufsz);
 /* ── RS-23a-raku: Raku-builtin dispatch (defined in runtime/interp/raku_builtins.c) ── */
 int raku_try_call_builtin(EXPR_t *call, DESCR_t *out);
 
+/* ── RS-23-extra-prep: SCAN-context builtin dispatch (defined in runtime/interp/scan_builtins.c) ── */
+int scan_try_call_builtin(EXPR_t *call, DESCR_t *args, int nargs, DESCR_t *out);
+
 /* ── Prolog pred table size (used by execute_program) ───────────────── */
 #define PL_PRED_TABLE_SIZE PL_PRED_TABLE_SIZE_FWD
 

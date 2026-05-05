@@ -245,6 +245,15 @@ DESCR_t icn_call_builtin(EXPR_t *call, DESCR_t *args, int nargs) {
         DESCR_t __rk_d;
         if (raku_try_call_builtin(call, &__rk_d)) return __rk_d;
     }
+    /* RS-23-extra-prep: SCAN-context builtin dispatch.  scan_try_call_builtin
+     * uses pre-evaluated args[] (matching the icn_call_builtin convention),
+     * so unlike Raku it must come AFTER the caller has populated args.  Both
+     * BB-adapter and interp_eval-resident callers pre-evaluate, so this is
+     * safe in every entry path. */
+    {
+        DESCR_t __sc_d;
+        if (scan_try_call_builtin(call, args, nargs, &__sc_d)) return __sc_d;
+    }
     DESCR_t a0 = nargs > 0 ? args[0] : NULVCL;
     DESCR_t a1 = nargs > 1 ? args[1] : NULVCL;
     /* write(x1,...,xN) — concatenate all args, append newline.
