@@ -379,6 +379,19 @@ DESCR_t interp_eval_pat(EXPR_t *e)
          * let the caller coerce via PATVAL. */
         return eval_node(e);
 
+    case E_INDIRECT:
+        /* $expr in pattern context — eval value, then PATVAL coerce.
+         * Mirrors case E_VAR's DT_E thaw at line 95-96.  Fixes recursive-rule
+         * binding regression from $'  ' = *White alias (Step 3d-bug):
+         * INDIR_GET retrieves a DT_E (frozen EXPR_t*); without this branch
+         * the default: path returned DT_E as-is, never coercing to DT_P. */
+        {
+            DESCR_t _v = eval_node(e);   /* INDIR_GET equivalent */
+            if (_v.v == DT_E && !_v.ptr) return NULVCL;
+            if (_v.v == DT_E || _v.v == DT_I || _v.v == DT_R) return PATVAL_fn(_v);
+            return _v;
+        }
+
     default:
         return eval_node(e);
     }
