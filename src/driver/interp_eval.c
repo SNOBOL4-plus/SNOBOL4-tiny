@@ -287,7 +287,126 @@ DESCR_t icn_call_builtin(EXPR_t *call, DESCR_t *args, int nargs) {
         if (!strcmp(proc_table[i].name, fn))
             return coro_call(proc_table[i].proc, args, nargs);
     }
-    /* Fallback: re-evaluate whole call (args ignored — last resort) */
+    /* RS-23-extra-prep2 (Option B′): smart fallback for the residual
+     * builtins still living in interp_eval's E_FNC switch (~40 names:
+     * integer, string, real, char, type, copy, list, table, read, repl,
+     * etc.).  The naive fallback `interp_eval(call)` re-walks
+     * `call->children[1..]` from scratch, and if any arg has side effects
+     * (e.g. `tab(0)` advances scan_pos) it fires twice: once when the
+     * BB-adapter caller pre-evaluated into args[], once here.  Meander.icn's
+     * `n := integer(tab(0))` is the canonical regression.
+     *
+     * Fix: synthesize a shallow clone of `call` whose children[1..nargs]
+     * are literal leaves (E_QLIT/E_ILIT/E_FLIT/E_NUL) carrying the
+     * already-evaluated descriptors.  When interp_eval recursively
+     * evaluates those leaf nodes (interp_eval.c:1850-1853), it does so
+     * idempotently — no scan_pos advance, no read() consumption.
+     *
+     * Mutator-aware denylist: five builtins (`push`, `pop`, `arr_set`,
+     * `hash_set`, `hash_delete`) write back through `e->children[1]` via
+     * a `FRAME.env[children[1]->ival] = ...` assignment, and rely on
+     * `children[1]->kind == E_VAR` to identify the lvalue slot.
+     * Substituting an E_QLIT literal there destroys the lvalue identity
+     * and silently drops the writeback (Raku rk_arrays / rk_hashes
+     * regression in the original Option-B prototype, session 2026-05-05).
+     * For these names we keep the original `interp_eval(call)` fallback,
+     * which preserves the E_VAR child.  The Icon-list cluster
+     * (push/put/get/pull at line 1180) and Icon-table mutators
+     * (insert/delete) operate on heap objects via DT_DATA / DT_T and
+     * mutate through the descriptor — not via children[]-writeback —
+     * so they are safe to synthesize, but their first arg is non-scalar
+     * (DT_DATA / DT_T) and falls through this filter anyway.
+     *
+     * Scope: handle the four scalar descriptor types (DT_S/DT_SNUL/
+     * DT_I/DT_R) that round-trip through the existing literal kinds.
+     * For DT_FAIL we propagate without calling.  For other heap types
+     * (DT_A/DT_T/DT_P/DT_DATA/DT_K/DT_E/DT_C/DT_N) we keep the original
+     * re-eval — those args are heap references and rarely produced by
+     * generator children.
+     *
+     * Residual gap: a mutator on the denylist called with a side-effectful
+     * value-arg (e.g. `push(@arr, tab(0))`) will still double-eval that
+     * value-arg.  None observed in the corpus.  Lift to Option A for
+     * those names if a real bug appears.
+     */
+    {
+        /* Denylist: builtins whose first-arg lvalue identity would be
+         * destroyed by literal substitution.  Keep this list in sync
+         * with FRAME.env[children[1]->ival] writeback sites in this
+         * file's E_FNC switch. */
+        int is_mutator =
+            !strcmp(fn, "push")        ||
+            !strcmp(fn, "pop")         ||
+            !strcmp(fn, "arr_set")     ||
+            !strcmp(fn, "hash_set")    ||
+            !strcmp(fn, "hash_delete");
+        int all_scalar = !is_mutator;
+        for (int _i = 0; all_scalar && _i < nargs; _i++) {
+            if (IS_FAIL_fn(args[_i])) return FAILDESCR;
+            DTYPE_t v = args[_i].v;
+            if (v != DT_S && v != DT_SNUL && v != DT_I && v != DT_R) {
+                all_scalar = 0;
+                break;
+            }
+        }
+        if (all_scalar) {
+            /* Stack-allocate the shallow clone and the literal-leaf children.
+             * `interp_eval`'s E_FNC case reads call->nchildren and indexes
+             * children[0]..children[nargs] (children[0] is the function-name
+             * node, retained as-is).  Nothing in the current builtin
+             * implementations stores call->children[i] beyond the call. */
+            EXPR_t   leafbufs[16];               /* covers all observed arities */
+            EXPR_t  *kidsbuf[16 + 1];            /* +1 for the name node */
+            EXPR_t **kids = kidsbuf;
+            EXPR_t  *leaves = leafbufs;
+            if (nargs > 16) {
+                kids   = (EXPR_t **)GC_malloc(sizeof(EXPR_t *) * (size_t)(nargs + 1));
+                leaves = (EXPR_t  *)GC_malloc(sizeof(EXPR_t  ) * (size_t)nargs);
+            }
+            kids[0] = call->children[0];        /* keep the function-name node */
+            for (int _i = 0; _i < nargs; _i++) {
+                EXPR_t *L = &leaves[_i];
+                memset(L, 0, sizeof *L);
+                switch (args[_i].v) {
+                    case DT_S:
+                        L->kind = E_QLIT;
+                        L->sval = args[_i].s;
+                        break;
+                    case DT_SNUL:
+                        L->kind = E_NUL;
+                        break;
+                    case DT_I:
+                        L->kind = E_ILIT;
+                        L->ival = args[_i].i;
+                        break;
+                    case DT_R:
+                        L->kind = E_FLIT;
+                        L->dval = args[_i].r;
+                        break;
+                    default:
+                        /* Unreachable: all_scalar guard above. */
+                        break;
+                }
+                kids[_i + 1] = L;
+            }
+            EXPR_t clone;
+            memset(&clone, 0, sizeof clone);
+            clone.kind      = call->kind;
+            clone.sval      = call->sval;
+            clone.ival      = call->ival;
+            clone.dval      = call->dval;
+            clone.id        = call->id;
+            clone.children  = kids;
+            clone.nchildren = nargs + 1;
+            clone.nalloc    = nargs + 1;
+            return interp_eval(&clone);
+        }
+    }
+    /* Fallback (mutator names + non-scalar args): re-evaluate whole call
+     * from the original tree.  Risks double-eval of side-effectful arg
+     * expressions, but preserves lvalue identity for the five denylist
+     * mutators and round-trips heap-typed args (DT_A/DT_T/DT_P/DT_DATA)
+     * that have no scalar literal kind to carry them. */
     return interp_eval(call);
 }
 
