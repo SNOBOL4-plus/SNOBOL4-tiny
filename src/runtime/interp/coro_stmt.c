@@ -234,6 +234,19 @@ void bb_exec_stmt(EXPR_t *e)
         return;
     }
 
+    /*========================================================================
+     * RS-23c: E_EVERY, E_INITIAL, E_SWAP — missing from both adapters.
+     * Statement context: evaluate for side effects, discard result.
+     * bb_eval_value carries the full native implementation for all three
+     * kinds (added in this rung to coro_value.c).
+     *======================================================================*/
+    case E_EVERY:
+    case E_INITIAL:
+    case E_SWAP: {
+        (void)bb_eval_value(e);
+        return;
+    }
+
     default: break;
     }
 

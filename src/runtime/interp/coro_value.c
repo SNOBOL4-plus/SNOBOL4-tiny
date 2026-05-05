@@ -80,6 +80,7 @@
  *==========================================================================================================================*/
 
 #include "coro_value.h"
+#include "coro_stmt.h"         /* RS-23c: bb_exec_stmt used in E_EVERY body dispatch */
 #include "coro_runtime.h"   /* FRAME, frame_depth, scan_pos, scan_subj, icn_descr_identical, g_lang, is_suspendable, coro_eval */
 #include "../../driver/interp_private.h"  /* RS-22a: icn_call_builtin, icn_string_section_assign, set_and_trace, data_field_ptr, kw_assign; RS-22d: IcnTkKind via icon_lex.h */
 #include "../common/coerce.h"             /* RS-22b: shared_arith */
@@ -1039,6 +1040,177 @@ DESCR_t bb_eval_value(EXPR_t *e)
         const char *a = IS_NULL_fn(lv) ? "" : VARVAL_fn(lv);
         const char *b = IS_NULL_fn(rv) ? "" : VARVAL_fn(rv);
         return STRVAL(icn_cset_inter(a, b));
+    }
+
+    /* RS-23d: E_WHILE — Icon while loop in value context.
+     * Returns NULVCL after normal exit; mirrors interp_eval.c:1719-1730 with
+     * interp_eval(child) replaced by bb_eval_value (cond) and bb_exec_stmt (body). */
+    case E_WHILE: {
+        int saved_brk = FRAME.loop_break; FRAME.loop_break = 0;
+        int saved_nxt = FRAME.loop_next;  FRAME.loop_next  = 0;
+        while (!FRAME.returning && !FRAME.loop_break && !FRAME.suspending) {
+            DESCR_t cv = (e->nchildren > 0) ? bb_eval_value(e->children[0]) : FAILDESCR;
+            if (IS_FAIL_fn(cv)) break;
+            FRAME.loop_next = 0;
+            if (e->nchildren > 1) bb_exec_stmt(e->children[1]);
+            if (FRAME.suspending) break;
+        }
+        FRAME.loop_break = saved_brk;
+        FRAME.loop_next  = saved_nxt;
+        return NULVCL;
+    }
+
+    /*========================================================================
+     * RS-23c: E_EVERY, E_INITIAL, E_SWAP — missing from both adapters.
+     * Value-context implementations mirror interp_eval.c's icon-frame switch,
+     * with interp_eval(child) replaced by bb_eval_value(child) / bb_exec_stmt.
+     *======================================================================*/
+
+    /* E_EVERY — drive a generator, run optional body per tick.  Returns NULVCL.
+     * Three sub-cases mirror interp_eval.c:1639-1750:
+     *   1. E_ASSIGN with generative RHS — re-evaluate assignment per tick.
+     *   2. E_SEQ conjunction — drive filter, execute seq body per tick.
+     *   3. Generic — drive gen via coro_eval box, run body per tick. */
+    case E_EVERY: {
+        if (e->nchildren < 1) return NULVCL;
+        EXPR_t *gen  = e->children[0];
+        EXPR_t *body = (e->nchildren > 1) ? e->children[1] : NULL;
+        if (gen->kind == E_ASSIGN &&
+            gen->nchildren >= 2 && is_suspendable(gen->children[1])) {
+            EXPR_t *leaf = find_leaf_suspendable(gen->children[1]);
+            if (!leaf) leaf = gen->children[1];
+            bb_node_t rbox = coro_eval(leaf);
+            DESCR_t tick = rbox.fn(rbox.ζ, α);
+            while (!IS_FAIL_fn(tick) && !FRAME.returning && !FRAME.loop_break) {
+                FRAME.loop_next = 0;
+                coro_drive_node = leaf;
+                coro_drive_val  = tick;
+                (void)bb_eval_value(gen);
+                coro_drive_node = NULL;
+                if (body) bb_exec_stmt(body);
+                if (FRAME.returning || FRAME.loop_break) break;
+                tick = rbox.fn(rbox.ζ, β);
+            }
+            FRAME.loop_break = 0;
+            FRAME.loop_next  = 0;
+            return NULVCL;
+        }
+        if (gen->kind == E_SEQ && gen->nchildren >= 2 && is_suspendable(gen->children[0])) {
+            EXPR_t *filter = gen->children[0];
+            bb_node_t fbox = coro_eval(filter);
+            DESCR_t tick = fbox.fn(fbox.ζ, α);
+            while (!IS_FAIL_fn(tick) && !FRAME.returning && !FRAME.loop_break) {
+                FRAME.loop_next = 0;
+                for (int _si = 1; _si < gen->nchildren; _si++) bb_exec_stmt(gen->children[_si]);
+                if (body) bb_exec_stmt(body);
+                if (FRAME.returning || FRAME.loop_break) break;
+                tick = fbox.fn(fbox.ζ, β);
+            }
+            FRAME.loop_break = 0;
+            FRAME.loop_next  = 0;
+            return NULVCL;
+        }
+        bb_node_t box = coro_eval(gen);
+        int caller_depth = frame_depth;
+        DESCR_t val = box.fn(box.ζ, α);
+        while (!IS_FAIL_fn(val) && !FRAME.returning && !FRAME.loop_break) {
+            FRAME.loop_next = 0;
+            if (gen->sval && *gen->sval && caller_depth >= 1) {
+                IcnFrame *cf = &frame_stack[caller_depth - 1];
+                int slot = scope_get(&cf->sc, gen->sval);
+                if (slot >= 0 && slot < cf->env_n) cf->env[slot] = val;
+                else NV_SET_fn(gen->sval, val);
+            }
+            if (body) {
+                frame_push(gen, val.v == DT_I ? val.i : 0, val.v == DT_I ? NULL : val.s);
+                int saved_depth = frame_depth;
+                frame_depth = caller_depth;
+                bb_exec_stmt(body);
+                frame_depth = saved_depth;
+                frame_pop();
+            }
+            if (FRAME.returning || FRAME.loop_break) break;
+            val = box.fn(box.ζ, β);
+        }
+        FRAME.loop_break = 0;
+        FRAME.loop_next  = 0;
+        return NULVCL;
+    }
+
+    /* E_INITIAL — once-only block; side-effects only, returns NULVCL.
+     * Mirrors interp_eval.c:3558-3601; interp_eval(child) → bb_eval_value(child). */
+    case E_INITIAL: {
+        IcnInitEnt *ent = NULL;
+        for (int _i = 0; _i < icn_init_n; _i++)
+            if (init_tab[_i].id == e->id) { ent = &init_tab[_i]; break; }
+        if (!ent) {
+            for (int i = 0; i < e->nchildren; i++) (void)bb_eval_value(e->children[i]);
+            if (icn_init_n < ICN_INIT_MAX) {
+                ent = &init_tab[icn_init_n++];
+                ent->id = e->id; ent->ns = 0;
+                for (int i = 0; i < e->nchildren && ent->ns < ICN_INIT_SLOTS; i++) {
+                    EXPR_t *ch = e->children[i];
+                    if (!ch || ch->kind != E_ASSIGN || ch->nchildren < 1) continue;
+                    EXPR_t *lhs = ch->children[0];
+                    if (!lhs || lhs->kind != E_VAR || !lhs->sval) continue;
+                    IcnInitSlot *sl = &ent->s[ent->ns++];
+                    strncpy(sl->nm, lhs->sval, 63); sl->nm[63] = '\0';
+                    if (frame_depth > 0 && lhs->ival >= 0 && lhs->ival < FRAME.env_n)
+                        sl->val = FRAME.env[lhs->ival];
+                    else
+                        sl->val = NV_GET_fn(lhs->sval);
+                }
+            }
+            e->ival = 1;
+        } else {
+            for (int si = 0; si < ent->ns; si++) {
+                int restored = 0;
+                if (frame_depth > 0) {
+                    for (int i = 0; i < e->nchildren && !restored; i++) {
+                        EXPR_t *ch = e->children[i];
+                        if (!ch || ch->kind != E_ASSIGN || ch->nchildren < 1) continue;
+                        EXPR_t *lhs = ch->children[0];
+                        if (!lhs || lhs->kind != E_VAR || !lhs->sval) continue;
+                        if (strcasecmp(lhs->sval, ent->s[si].nm) == 0
+                            && lhs->ival >= 0 && lhs->ival < FRAME.env_n) {
+                            FRAME.env[lhs->ival] = ent->s[si].val;
+                            restored = 1;
+                        }
+                    }
+                }
+                if (!restored) NV_SET_fn(ent->s[si].nm, ent->s[si].val);
+            }
+        }
+        return NULVCL;
+    }
+
+    /* E_SWAP — Icon :=: swap operator.  Evaluates both sides, writes cross.
+     * Returns rv (the new value of lhs), or FAILDESCR if either side fails.
+     * Mirrors interp_eval.c:3408-3437; interp_eval(child) → bb_eval_value(child). */
+    case E_SWAP: {
+        if (e->nchildren < 2 || frame_depth <= 0) return NULVCL;
+        EXPR_t *lhs = e->children[0], *rhs = e->children[1];
+        DESCR_t lv = bb_eval_value(lhs), rv = bb_eval_value(rhs);
+        if (IS_FAIL_fn(lv) || IS_FAIL_fn(rv)) return FAILDESCR;
+        if (lhs && lhs->kind == E_VAR) {
+            if (lhs->sval && lhs->sval[0] == '&') {
+                if (!kw_assign(lhs->sval + 1, rv)) return FAILDESCR;
+            } else {
+                int sl=(int)lhs->ival;
+                if (sl>=0&&sl<FRAME.env_n) FRAME.env[sl]=rv;
+                else if (sl<0&&lhs->sval) NV_SET_fn(lhs->sval,rv);
+            }
+        }
+        if (rhs && rhs->kind == E_VAR) {
+            if (rhs->sval && rhs->sval[0] == '&') {
+                if (!kw_assign(rhs->sval + 1, lv)) return FAILDESCR;
+            } else {
+                int sl=(int)rhs->ival;
+                if (sl>=0&&sl<FRAME.env_n) FRAME.env[sl]=lv;
+                else if (sl<0&&rhs->sval) NV_SET_fn(rhs->sval,lv);
+            }
+        }
+        return rv;
     }
 
     default:

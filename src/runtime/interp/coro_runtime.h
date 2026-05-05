@@ -127,4 +127,7 @@ const char *icn_cset_inter(const char *a, const char *b);
 int kw_assign(const char *kw, DESCR_t val);
 int icn_kw_can_assign(const char *kw, DESCR_t val);
 
+/* RS-23c: exported so coro_value.c / coro_stmt.c can use it in E_EVERY handling. */
+EXPR_t *find_leaf_suspendable(EXPR_t *e);
+
 #endif /* CORO_RUNTIME_H */

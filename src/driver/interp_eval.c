@@ -210,22 +210,11 @@ int icn_string_section_assign(EXPR_t *lhs, DESCR_t val) {
  * Used by E_EVERY special-case to find the raw E_TO (or similar) inside
  * compound exprs like E_ADD(E_VAR(total), E_TO(1,n)), so we can drive only
  * the generator and inject via coro_drive_node, letting interp_eval re-read
- * mutable variables (e.g. frame locals) fresh each tick. */
-static EXPR_t *find_leaf_suspendable(EXPR_t *e) {
-    if (!e) return NULL;
-    switch (e->kind) {
-        case E_TO: case E_TO_BY: case E_ITERATE: case E_ALTERNATE:
-        case E_SUSPEND: case E_LIMIT: case E_EVERY: case E_BANG_BINARY: case E_SEQ_EXPR:
-            return e;
-        case E_FNC: return e;   /* user proc or builtin — treat as leaf generator */
-        default: break;
-    }
-    for (int i = 0; i < e->nchildren; i++) {
-        EXPR_t *found = find_leaf_suspendable(e->children[i]);
-        if (found) return found;
-    }
-    return NULL;
-}
+ * mutable variables (e.g. frame locals) fresh each tick.
+ *
+ * RS-23c: definition lifted to coro_runtime.c (declared in coro_runtime.h)
+ * so coro_value.c / coro_stmt.c can share the single copy. */
+#include "../runtime/interp/coro_runtime.h"
 
 /* real_str — format a real for Icon output using shortest round-trip representation.
  * Tries precisions 15..17 and picks the shortest that parses back to the same double. */

@@ -720,7 +720,7 @@ static DESCR_t coro_bb_raku_array(void *zeta, int entry) {
  * find_leaf_suspendable — walk expr tree, return first generator-kind node.
  * Defined here (and in interp.c as static) so coro_bb_cat can use it.
  *--------------------------------------------------------------------------------------------------------------------------*/
-static EXPR_t *find_leaf_suspendable(EXPR_t *e) {
+EXPR_t *find_leaf_suspendable(EXPR_t *e) {
     if (!e) return NULL;
     switch (e->kind) {
         case E_TO: case E_TO_BY: case E_ITERATE: case E_ALTERNATE:
