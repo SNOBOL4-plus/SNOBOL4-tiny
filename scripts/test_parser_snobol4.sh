@@ -133,6 +133,35 @@ for sno in "$SRC_TESTS"/*.sno; do
     fi
 done
 
+echo "=== PARSER-SN beauty crosscheck ==="
+BEAUTY="$CORPUS/programs/snobol4/demo/beauty/beauty.sno"
+BEAUTY_NOINC=/tmp/beauty_noinc_gate.sno
+grep -v "^-INCLUDE" "$BEAUTY" > "$BEAUTY_NOINC"
+
+parser_beauty=$(timeout 30 "$SCRIP" --ir-run \
+    "$SRC_RUNTIME/global.sc" "$SRC_RUNTIME/tree.sc" "$SRC_RUNTIME/stack.sc" \
+    "$SRC_RUNTIME/counter.sc" "$SRC_RUNTIME/ShiftReduce.sc" "$SRC_RUNTIME/semantic.sc" \
+    "$SRC_RUNTIME/qize.sc" "$SRC_RUNTIME/gen.sc" "$SRC_RUNTIME/tdump.sc" \
+    "$SRC_RUNTIME/assign.sc" "$SRC_RUNTIME/parser_snobol4.sc" \
+    < "$BEAUTY_NOINC" 2>/dev/null)
+oracle_beauty=$(timeout 30 "$SCRIP" --dump-parse "$BEAUTY_NOINC" 2>/dev/null)
+
+beauty_p_norm=$(normalize "$parser_beauty")
+beauty_o_norm=$(normalize "$oracle_beauty")
+
+if [ "$beauty_p_norm" = "$beauty_o_norm" ]; then
+    echo "  PASS beauty_crosscheck"
+    PASS=$((PASS + 1))
+else
+    echo "  FAIL beauty_crosscheck — tree divergence"
+    p_count=$(echo "$parser_beauty" | grep -c "(STMT" || true)
+    o_count=$(echo "$oracle_beauty" | grep -c "(STMT" || true)
+    echo "    parser STMTs: $p_count  oracle STMTs: $o_count"
+    FAIL=$((FAIL + 1))
+    FAILED_NAMES="$FAILED_NAMES beauty_crosscheck"
+fi
+
+
 echo ""
 echo "PASS=$PASS FAIL=$FAIL"
 
