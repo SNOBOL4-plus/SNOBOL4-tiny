@@ -107,13 +107,14 @@ static EXPR_t *lower_expr(RebLow *L, RExpr *e) {
     case RE_KEYWORD: { EXPR_t *x = expr_new(E_KEYWORD);  x->sval = strdup(e->sval); return x; }
 
     /* --- Unary arithmetic --- */
-    case RE_NEG:   return expr_unary(E_MNS, lower_expr(L, e->left));
-    case RE_POS:   return lower_expr(L, e->left); /* identity — drop */
-    case RE_NOT:   return make_fnc("DIFFER", 1, lower_expr(L, e->left));
-    case RE_VALUE: return make_fnc("IDENT",  1, lower_expr(L, e->left));
+    /* rebus.y stores unary operand in e->right (rbinop(kind, NULL, operand, ...)) */
+    case RE_NEG:   return expr_unary(E_MNS, lower_expr(L, e->right));
+    case RE_POS:   return lower_expr(L, e->right); /* identity — drop */
+    case RE_NOT:   return make_fnc("DIFFER", 1, lower_expr(L, e->right));
+    case RE_VALUE: return make_fnc("IDENT",  1, lower_expr(L, e->right));
 
     /* --- Icon generator bang --- */
-    case RE_BANG:   return expr_unary(E_ITERATE,  lower_expr(L, e->left));
+    case RE_BANG:   return expr_unary(E_ITERATE,  lower_expr(L, e->right));
 
     /* --- Binary arithmetic — flatten same-kind chains to n-ary --- */
     case RE_ADD: return expr_binary_flatten(E_ADD,    lower_expr(L,e->left), lower_expr(L,e->right));
@@ -179,8 +180,8 @@ static EXPR_t *lower_expr(RebLow *L, RExpr *e) {
     case RE_COND:   return expr_binary(E_CAPT_COND_ASGN, lower_expr(L,e->left), lower_expr(L,e->right));
     case RE_IMM:    return expr_binary(E_CAPT_IMMED_ASGN,  lower_expr(L,e->left), lower_expr(L,e->right));
     case RE_CURSOR: { EXPR_t *x = expr_new(E_CAPT_CURSOR); x->sval = strdup(e->sval); return x; }
-    case RE_DEREF:  return expr_unary(E_INDIRECT, lower_expr(L, e->left));
-    case RE_PATOPT: return expr_unary(E_ARBNO, lower_expr(L, e->left)); /* ~pat → E_ARBNO */
+    case RE_DEREF:  return expr_unary(E_INDIRECT, lower_expr(L, e->right));
+    case RE_PATOPT: return expr_unary(E_ARBNO, lower_expr(L, e->right)); /* ~pat → E_ARBNO */
 
     /* --- Augmented (generic) --- */
     case RE_AUG:
