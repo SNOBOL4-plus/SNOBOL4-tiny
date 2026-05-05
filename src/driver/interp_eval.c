@@ -7,6 +7,54 @@
  */
 
 #include "interp_private.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>     /* getpid */
+#include "../ir/ir.h"   /* E_KIND_COUNT */
+
+/* RS-24 diag: per-kind hit counter for the Icon-frame switch in
+ * interp_eval().  See the env-gated init block inside that function for
+ * the recording side.  This pointer is set on first call and dumped at
+ * exit when RS24_DIAG=1. */
+unsigned long *rs24_diag_hits_ptr = NULL;
+static const char *rs24_diag_kind_name(int k);
+void rs24_diag_dump(void) {
+    if (!rs24_diag_hits_ptr) return;
+    FILE *fp = fopen("/tmp/rs24_diag_hits.log", "a");
+    if (!fp) return;
+    fprintf(fp, "=== RS-24 Icon-frame switch hits (pid=%d) ===\n", (int)getpid());
+    for (int k = 0; k < (int)E_KIND_COUNT; k++) {
+        if (rs24_diag_hits_ptr[k]) {
+            fprintf(fp, "  kind=%-3d %-20s hits=%lu\n",
+                    k, rs24_diag_kind_name(k), rs24_diag_hits_ptr[k]);
+        }
+    }
+    fclose(fp);
+}
+/* Stringify the kinds we care about — only the labels in the Icon-frame switch.
+ * For others we emit "?".  Keeps the diag focused. */
+static const char *rs24_diag_kind_name(int k) {
+    switch (k) {
+    case E_VAR:        return "E_VAR";
+    case E_ASSIGN:     return "E_ASSIGN";
+    case E_FNC:        return "E_FNC";
+    case E_IF:         return "E_IF";
+    case E_WHILE:      return "E_WHILE";
+    case E_UNTIL:      return "E_UNTIL";
+    case E_REPEAT:     return "E_REPEAT";
+    case E_EVERY:      return "E_EVERY";
+    case E_SEQ:        return "E_SEQ";
+    case E_SEQ_EXPR:   return "E_SEQ_EXPR";
+    case E_ALT:        return "E_ALT";
+    case E_ALTERNATE:  return "E_ALTERNATE";
+    case E_REVASSIGN:  return "E_REVASSIGN";
+    case E_LOOP_NEXT:  return "E_LOOP_NEXT";
+    case E_SUSPEND:    return "E_SUSPEND";
+    case E_RETURN:     return "E_RETURN";
+    case E_PROC_FAIL:  return "E_PROC_FAIL";
+    default:           return "?";
+    }
+}
 
 
 
@@ -476,6 +524,30 @@ DESCR_t interp_eval(EXPR_t *e)
      * All other EKinds fall through to the shared switch (already has Icon cases
      * from OE-3/OE-4). Guard: only active inside an Icon call frame. */
     if (frame_depth > 0) {
+        /* RS-24 diag: env-gated per-kind hit counter for the Icon-frame switch.
+         * Set RS24_DIAG=1 in the environment to enable.  At process exit,
+         * /tmp/rs24_diag_hits.log is written with one line per fired case
+         * label.  Used to enumerate which Icon-frame switch cases are actually
+         * reachable in mode 1; dead cases can then be deleted. */
+        {
+            static int rs24_diag_init = 0;
+            static int rs24_diag_on = 0;
+            static unsigned long rs24_diag_hits[E_KIND_COUNT];
+            if (!rs24_diag_init) {
+                rs24_diag_init = 1;
+                rs24_diag_on = (getenv("RS24_DIAG") != NULL);
+                if (rs24_diag_on) {
+                    extern void rs24_diag_dump(void);  /* defined below */
+                    atexit(rs24_diag_dump);
+                }
+            }
+            if (rs24_diag_on && (unsigned)e->kind < (unsigned)E_KIND_COUNT) {
+                rs24_diag_hits[e->kind]++;
+            }
+            /* Expose pointer for the dumper. */
+            extern unsigned long *rs24_diag_hits_ptr;
+            rs24_diag_hits_ptr = rs24_diag_hits;
+        }
         switch (e->kind) {
         case E_VAR: {
             if (e->sval && e->sval[0] == '&') {
@@ -496,6 +568,7 @@ DESCR_t interp_eval(EXPR_t *e)
             return NULVCL;
         }
         case E_ASSIGN: {
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_ASSIGN unreachable in mode 1 (RS-24a)\n"); abort();
             if (e->nchildren < 2) return NULVCL;
             DESCR_t val = interp_eval(e->children[1]);
             if (IS_FAIL_fn(val)) return FAILDESCR;
@@ -604,6 +677,7 @@ DESCR_t interp_eval(EXPR_t *e)
             return val;
         }
         case E_REVASSIGN: {
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_REVASSIGN unreachable in mode 1 (RS-24a)\n"); abort();
             /* IC-9: x <- v  — reversible assign, standalone path.
              * Outside `every`, no driver backtracks the operation, so we just
              * perform the assign and succeed.  The revert semantics live in
@@ -1745,6 +1819,7 @@ DESCR_t interp_eval(EXPR_t *e)
         }
         case E_ALT:
         case E_ALTERNATE: {
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_ALTERNATE unreachable in mode 1 (RS-24a)\n"); abort();
             /* Icon value alternation: expr1 | expr2 | ... — return leftmost non-fail */
             if (e->nchildren < 1) return FAILDESCR;
             for (int i = 0; i < e->nchildren; i++) {
@@ -1754,6 +1829,7 @@ DESCR_t interp_eval(EXPR_t *e)
             return FAILDESCR;
         }
         case E_EVERY: {
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_EVERY unreachable in mode 1 (RS-24a)\n"); abort();
             if (e->nchildren < 1) return NULVCL;
             EXPR_t *gen  = e->children[0];
             EXPR_t *body = (e->nchildren > 1) ? e->children[1] : NULL;
@@ -1845,6 +1921,7 @@ DESCR_t interp_eval(EXPR_t *e)
             return NULVCL;
         }
         case E_WHILE: {
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_WHILE unreachable in mode 1 (RS-24a)\n"); abort();
             int saved_brk = FRAME.loop_break; FRAME.loop_break = 0;
             int saved_nxt = FRAME.loop_next;  FRAME.loop_next  = 0;
             while (!FRAME.returning && !FRAME.loop_break && !FRAME.suspending &&
@@ -1858,6 +1935,7 @@ DESCR_t interp_eval(EXPR_t *e)
             return NULVCL;
         }
         case E_UNTIL: {
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_UNTIL unreachable in mode 1 (RS-24a)\n"); abort();
             int saved_brk = FRAME.loop_break; FRAME.loop_break = 0;
             int saved_nxt = FRAME.loop_next;  FRAME.loop_next  = 0;
             while (!FRAME.returning && !FRAME.loop_break && !FRAME.suspending) {
@@ -1872,6 +1950,7 @@ DESCR_t interp_eval(EXPR_t *e)
             return NULVCL;
         }
         case E_REPEAT: {
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_REPEAT unreachable in mode 1 (RS-24a)\n"); abort();
             int saved_brk = FRAME.loop_break; FRAME.loop_break = 0;
             int saved_nxt = FRAME.loop_next;  FRAME.loop_next  = 0;
             while (!FRAME.returning && !FRAME.loop_break && !FRAME.suspending) {
@@ -1883,6 +1962,7 @@ DESCR_t interp_eval(EXPR_t *e)
             return NULVCL;
         }
         case E_SUSPEND: {
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_SUSPEND unreachable in mode 1 (RS-24a)\n"); abort();
             /* Icon suspend: yield a value to coro_drive_fnc loop. */
             DESCR_t val = (e->nchildren > 0) ? interp_eval(e->children[0]) : NULVCL;
             if (!IS_FAIL_fn(val)) {
@@ -1893,6 +1973,7 @@ DESCR_t interp_eval(EXPR_t *e)
             return NULVCL;
         }
         case E_SEQ: {
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_SEQ unreachable in mode 1 (RS-24a)\n"); abort();
             /* IC-9: Icon & conjunction inside a proc frame.  Evaluate children
              * left-to-right; return FAILDESCR on the first failure; return last
              * child's value on full success.  Must live in the icon-frame switch
@@ -1909,12 +1990,14 @@ DESCR_t interp_eval(EXPR_t *e)
             return _seq_last;
         }
         case E_SEQ_EXPR: {
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_SEQ_EXPR unreachable in mode 1 (RS-24a)\n"); abort();
             DESCR_t v = NULVCL;
             for (int i = 0; i < e->nchildren && !FRAME.returning && !FRAME.loop_next; i++)
                 v = interp_eval(e->children[i]);
             return v;
         }
         case E_IF: {
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_IF unreachable in mode 1 (RS-24a)\n"); abort();
             if (e->nchildren < 1) return NULVCL;
             EXPR_t *test = e->children[0];
             /* IC-8: goal-directed test.  Icon if-conditions consult their
@@ -1943,6 +2026,7 @@ DESCR_t interp_eval(EXPR_t *e)
             return NULVCL;
         }
         case E_LOOP_NEXT: {
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_LOOP_NEXT unreachable in mode 1 (RS-24a)\n"); abort();
             /* `next` — abort the rest of the current loop body, ask the
              * enclosing loop to advance to its next iteration.  Loop
              * handlers (E_EVERY, E_WHILE, E_UNTIL, E_REPEAT) inspect and
@@ -1951,12 +2035,14 @@ DESCR_t interp_eval(EXPR_t *e)
             return NULVCL;
         }
         case E_RETURN: {
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_RETURN unreachable in mode 1 (RS-24a)\n"); abort();
             DESCR_t rv = (e->nchildren > 0) ? interp_eval(e->children[0]) : NULVCL;
             FRAME.returning  = 1;
             FRAME.return_val = rv;
             return rv;
         }
         case E_PROC_FAIL: {
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_PROC_FAIL unreachable in mode 1 (RS-24a)\n"); abort();
             FRAME.returning  = 1;
             FRAME.return_val = FAILDESCR;
             return FAILDESCR;
