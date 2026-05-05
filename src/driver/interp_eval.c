@@ -567,148 +567,10 @@ DESCR_t interp_eval(EXPR_t *e)
             if (slot < 0 && e->sval && e->sval[0] != '&') return NV_GET_fn(e->sval);
             return NULVCL;
         }
-        case E_ASSIGN: {
-            fprintf(stderr, "FATAL interp_eval icon-frame: E_ASSIGN unreachable in mode 1 (RS-24a)\n"); abort();
-            if (e->nchildren < 2) return NULVCL;
-            DESCR_t val = interp_eval(e->children[1]);
-            if (IS_FAIL_fn(val)) return FAILDESCR;
-            EXPR_t *lhs = e->children[0];
-            /* IC-9: string-section / string-index lvalue.  Try this first;
-             * if it returns 1 the assign happened.  Returns 0 for FAIL (OOB)
-             * or for E_IDX with non-string base (falls through to subscript_set). */
-            if (lhs && (lhs->kind == E_SECTION || lhs->kind == E_SECTION_PLUS ||
-                        lhs->kind == E_SECTION_MINUS)) {
-                if (icn_string_section_assign(lhs, val)) return val;
-                return FAILDESCR;
-            }
-            if (lhs && lhs->kind == E_IDX && lhs->nchildren >= 2) {
-                /* Try string-index first; if base is non-string, fall through. */
-                if (icn_string_section_assign(lhs, val)) return val;
-                /* If base IS a string but assign returned 0, that's an OOB → FAIL. */
-                {
-                    DESCR_t _b = interp_eval(lhs->children[0]);
-                    if (_b.v == DT_S || _b.v == DT_SNUL) return FAILDESCR;
-                }
-            }
-            if (lhs && lhs->kind == E_VAR) {
-                /* IC-9 (2026-05-01): Icon keyword lvalue — &pos := N, &subject := s */
-                if (lhs->sval && lhs->sval[0] == '&') {
-                    if (!kw_assign(lhs->sval + 1, val)) return FAILDESCR;
-                    return val;
-                }
-                int slot = (int)lhs->ival;
-                if (slot >= 0 && slot < FRAME.env_n) { FRAME.env[slot] = val; return val; }
-                /* SS-MON: route through set_and_trace so VALUE traces fire on
-                 * plain `var = expr` (previously they fired only on pattern-
-                 * match replacement).  set_and_trace internally calls NV_SET_fn
-                 * AND comm_var.  &-keywords skipped here for parity with the
-                 * pattern-match path. */
-                if (slot < 0 && lhs->sval && lhs->sval[0] != '&') set_and_trace(lhs->sval, val);
-            } else if (lhs && lhs->kind == E_IDX && lhs->nchildren >= 2) {
-                /* t["key"] := val  — subscript assignment in Icon frame.
-                 * IC-9: if the index child is generative (e.g. t[key(t)] := 99),
-                 * drive the gen and write val into every generated cell.  Single
-                 * `interp_eval` pass — under `every` this fires once and assigns
-                 * all cells, mirroring the E_ITERATE LHS branch below. */
-                DESCR_t base = interp_eval(lhs->children[0]);
-                if (!IS_FAIL_fn(base)) {
-                    if (is_suspendable(lhs->children[1])) {
-                        bb_node_t ig = coro_eval(lhs->children[1]);
-                        DESCR_t k = ig.fn(ig.ζ, α);
-                        while (!IS_FAIL_fn(k)) {
-                            subscript_set(base, k, val);
-                            k = ig.fn(ig.ζ, β);
-                        }
-                    } else {
-                        DESCR_t idx = interp_eval(lhs->children[1]);
-                        if (!IS_FAIL_fn(idx)) subscript_set(base, idx, val);
-                    }
-                }
-            } else if (lhs && lhs->kind == E_FIELD && lhs->sval && lhs->nchildren >= 1) {
-                /* p.x := val  — record field assignment in Icon frame */
-                DESCR_t obj = interp_eval(lhs->children[0]);
-                if (!IS_FAIL_fn(obj)) {
-                    DESCR_t *cell = data_field_ptr(lhs->sval, obj);
-                    if (cell) *cell = val;
-                }
-            } else if (lhs && lhs->kind == E_ITERATE && lhs->nchildren >= 1) {
-                /* IC-9: !container := val — bang-iterate as lvalue.
-                 * Walks every element/entry of the container and writes val into each cell.
-                 * Single pass — under `every` this fires once and assigns all cells.
-                 *   !T := v  (table) — write v into every TBPAIR_t::val
-                 *   !L := v  (list)  — write v into every frame_elems[i]
-                 *   !s := v  (string)— not supported (immutable), silently no-op
-                 */
-                DESCR_t cv = interp_eval(lhs->children[0]);
-                if (!IS_FAIL_fn(cv)) {
-                    if (cv.v == DT_T && cv.tbl) {
-                        for (int b = 0; b < TABLE_BUCKETS; b++)
-                            for (TBPAIR_t *p = cv.tbl->buckets[b]; p; p = p->next)
-                                p->val = val;
-                    } else if (cv.v == DT_DATA) {
-                        DESCR_t tag = FIELD_GET_fn(cv, "icn_type");
-                        if (tag.v == DT_S && tag.s && strcmp(tag.s, "list") == 0) {
-                            DESCR_t ea = FIELD_GET_fn(cv, "frame_elems");
-                            int n = (int)FIELD_GET_fn(cv, "frame_size").i;
-                            DESCR_t *elems = (ea.v == DT_DATA) ? (DESCR_t *)ea.ptr : NULL;
-                            if (elems && n > 0) for (int i = 0; i < n; i++) elems[i] = val;
-                        } else if (cv.u && cv.u->type && cv.u->type->nfields > 0 && cv.u->fields) {
-                            /* IC-9 (2026-05-01): every !record := V — write val into every field cell */
-                            for (int i = 0; i < cv.u->type->nfields; i++) cv.u->fields[i] = val;
-                        }
-                    }
-                }
-            } else if (lhs && lhs->kind == E_RANDOM && lhs->nchildren >= 1) {
-                /* IC-9 (2026-05-01): ?container := V — write val into a random cell.
-                 * Mirrors E_RANDOM read: deterministic LCG (Knuth MMIX) so output
-                 * is reproducible. Currently only DT_DATA records — table/list random
-                 * write would need its own RNG state to match read-side picks (the
-                 * E_RANDOM read at line ~4313 has its own static seed; sharing it
-                 * here would be incorrect since reads and writes interleave). */
-                DESCR_t cv = interp_eval(lhs->children[0]);
-                if (!IS_FAIL_fn(cv) && cv.v == DT_DATA && cv.u && cv.u->type
-                    && cv.u->type->nfields > 0 && cv.u->fields) {
-                    static unsigned long _rnd_w_seed = 67890UL;
-                    _rnd_w_seed = _rnd_w_seed * 6364136223846793005UL + 1442695040888963407UL;
-                    int n = cv.u->type->nfields;
-                    cv.u->fields[(_rnd_w_seed >> 33) % (unsigned long)n] = val;
-                }
-            }
-            return val;
-        }
-        case E_REVASSIGN: {
-            fprintf(stderr, "FATAL interp_eval icon-frame: E_REVASSIGN unreachable in mode 1 (RS-24a)\n"); abort();
-            /* IC-9: x <- v  — reversible assign, standalone path.
-             * Outside `every`, no driver backtracks the operation, so we just
-             * perform the assign and succeed.  The revert semantics live in
-             * coro_bb_revassign (icn_runtime.c), reached only when coro_eval
-             * is asked for a box (every / alt-driven contexts).
-             * Mirrors E_ASSIGN's E_VAR / E_IDX / E_FIELD branches; the rare
-             * E_ITERATE LHS isn't meaningful with `<-` (you'd be saving and
-             * reverting an immediately-discarded sequence). */
-            if (e->nchildren < 2) return NULVCL;
-            DESCR_t val = interp_eval(e->children[1]);
-            if (IS_FAIL_fn(val)) return FAILDESCR;
-            EXPR_t *lhs = e->children[0];
-            if (lhs && lhs->kind == E_VAR) {
-                int slot = (int)lhs->ival;
-                if (slot >= 0 && slot < FRAME.env_n) FRAME.env[slot] = val;
-                else if (slot < 0 && lhs->sval && lhs->sval[0] != '&') set_and_trace(lhs->sval, val);
-            } else if (lhs && lhs->kind == E_IDX && lhs->nchildren >= 2) {
-                DESCR_t base = interp_eval(lhs->children[0]);
-                if (!IS_FAIL_fn(base)) {
-                    DESCR_t idx = interp_eval(lhs->children[1]);
-                    if (!IS_FAIL_fn(idx)) subscript_set(base, idx, val);
-                }
-            } else if (lhs && lhs->kind == E_FIELD && lhs->sval && lhs->nchildren >= 1) {
-                DESCR_t obj = interp_eval(lhs->children[0]);
-                if (!IS_FAIL_fn(obj)) {
-                    DESCR_t *cell = data_field_ptr(lhs->sval, obj);
-                    if (cell) *cell = val;
-                }
-            }
-            return val;
-        }
+        case E_ASSIGN:
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_ASSIGN unreachable in mode 1 (RS-24b)\n"); abort();
+        case E_REVASSIGN:
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_REVASSIGN unreachable in mode 1 (RS-24b)\n"); abort();
         case E_FNC: {
             /* Icon call nodes: sval=NULL, name in children[0]->sval */
             if (e->nchildren < 1) return NULVCL;
@@ -1818,235 +1680,30 @@ DESCR_t interp_eval(EXPR_t *e)
             return NULVCL;
         }
         case E_ALT:
-        case E_ALTERNATE: {
-            fprintf(stderr, "FATAL interp_eval icon-frame: E_ALTERNATE unreachable in mode 1 (RS-24a)\n"); abort();
-            /* Icon value alternation: expr1 | expr2 | ... — return leftmost non-fail */
-            if (e->nchildren < 1) return FAILDESCR;
-            for (int i = 0; i < e->nchildren; i++) {
-                DESCR_t v = interp_eval(e->children[i]);
-                if (!IS_FAIL_fn(v)) return v;
-            }
-            return FAILDESCR;
-        }
-        case E_EVERY: {
-            fprintf(stderr, "FATAL interp_eval icon-frame: E_EVERY unreachable in mode 1 (RS-24a)\n"); abort();
-            if (e->nchildren < 1) return NULVCL;
-            EXPR_t *gen  = e->children[0];
-            EXPR_t *body = (e->nchildren > 1) ? e->children[1] : NULL;
-            /* IC-2a: coro_eval + BB_PUMP — all goal-directed ops through Byrd boxes.
-             * Special case: E_ASSIGN with generative RHS — drive the leaf generator
-             * and re-evaluate the full assignment each tick so frame locals are read fresh.
-             * e.g.: every total := total + (1 to n) inside a proc body.
-             * NOTE: E_AUGOP is NOT special-cased here — it has its own is_suspendable path
-             * in the E_AUGOP handler that correctly drives the generator per-tick. */
-            if (gen->kind == E_ASSIGN &&
-                gen->nchildren >= 2 && is_suspendable(gen->children[1])) {
-                EXPR_t *leaf = find_leaf_suspendable(gen->children[1]);
-                if (!leaf) leaf = gen->children[1];
-                bb_node_t rbox = coro_eval(leaf);
-                DESCR_t tick = rbox.fn(rbox.ζ, α);
-                while (!IS_FAIL_fn(tick) && !FRAME.returning && !FRAME.loop_break) {
-                    FRAME.loop_next = 0;
-                    coro_drive_node = leaf;
-                    coro_drive_val  = tick;
-                    interp_eval(gen);
-                    coro_drive_node = NULL;
-                    if (body) interp_eval(body);
-                    if (FRAME.returning || FRAME.loop_break) break;
-                    tick = rbox.fn(rbox.ζ, β);
-                }
-                FRAME.loop_break = 0;
-                FRAME.loop_next = 0;
-                return NULVCL;
-            }
-            /* IC-6: E_SEQ conjunction — every (gen_expr & body_expr).
-             * E_SEQ is Icon's & operator. Drive gen (children[0]) as generator;
-             * evaluate remaining children as body per successful tick.
-             * e.g.: every (x := (1|2|3|4|5)) > 2 & write(x)
-             *   gen  = E_SEQ(E_GT(E_ASSIGN(x,alt), 2), E_FNC(write,x))
-             * We split: filter_gen = children[0], seq_body = children[1..n-1]. */
-            if (gen->kind == E_SEQ && gen->nchildren >= 2 && is_suspendable(gen->children[0])) {
-                EXPR_t *filter = gen->children[0];
-                bb_node_t fbox = coro_eval(filter);
-                DESCR_t tick = fbox.fn(fbox.ζ, α);
-                while (!IS_FAIL_fn(tick) && !FRAME.returning && !FRAME.loop_break) {
-                    FRAME.loop_next = 0;
-                    /* Execute remaining seq children as body */
-                    for (int _si = 1; _si < gen->nchildren; _si++)
-                        interp_eval(gen->children[_si]);
-                    if (body) interp_eval(body);
-                    if (FRAME.returning || FRAME.loop_break) break;
-                    tick = fbox.fn(fbox.ζ, β);
-                }
-                FRAME.loop_break = 0;
-                FRAME.loop_next = 0;
-                return NULVCL;
-            }
-            /* When body==NULL, the box's own side-effects ARE the work (e.g. every write(1 to 5)).
-             * When body!=NULL, box produces a value; body runs separately each tick. */
-            bb_node_t box = coro_eval(gen);
-            /* RK-21: save caller frame depth before pumping — coro_bb_suspend (gather coroutine)
-             * leaves its frame on the stack during suspend, so frame_depth increases by 1
-             * after box.fn(α). Binding must target the CALLER's frame, not FRAME. */
-            int caller_depth = frame_depth;
-            DESCR_t val = box.fn(box.ζ, α);
-            while (!IS_FAIL_fn(val) && !FRAME.returning && !FRAME.loop_break) {
-                FRAME.loop_next = 0;
-                /* RK-21: bind loop variable into the CALLER's frame (depth saved before pump). */
-                if (gen->sval && *gen->sval && caller_depth >= 1) {
-                    IcnFrame *cf = &frame_stack[caller_depth - 1];
-                    int slot = scope_get(&cf->sc, gen->sval);
-                    if (slot >= 0 && slot < cf->env_n)
-                        cf->env[slot] = val;
-                    else
-                        NV_SET_fn(gen->sval, val);
-                }
-                if (body) {
-                    frame_push(gen, val.v == DT_I ? val.i : 0, val.v == DT_I ? NULL : val.s);
-                    /* RK-21: if a coroutine (gather) frame is suspended on the stack,
-                     * step frame_depth back to caller_depth so FRAME is the caller's
-                     * frame during body execution. The coroutine frame is preserved at
-                     * frame_stack[caller_depth] and restored after body runs. */
-                    int saved_depth = frame_depth;
-                    frame_depth = caller_depth;
-                    interp_eval(body);
-                    frame_depth = saved_depth;
-                    frame_pop();
-                }
-                if (FRAME.returning || FRAME.loop_break) break;
-                val = box.fn(box.ζ, β);
-            }
-            FRAME.loop_break = 0;
-            FRAME.loop_next = 0;
-            return NULVCL;
-        }
-        case E_WHILE: {
-            fprintf(stderr, "FATAL interp_eval icon-frame: E_WHILE unreachable in mode 1 (RS-24a)\n"); abort();
-            int saved_brk = FRAME.loop_break; FRAME.loop_break = 0;
-            int saved_nxt = FRAME.loop_next;  FRAME.loop_next  = 0;
-            while (!FRAME.returning && !FRAME.loop_break && !FRAME.suspending &&
-                   !IS_FAIL_fn(interp_eval(e->children[0]))) {
-                FRAME.loop_next = 0;
-                if (e->nchildren > 1) interp_eval(e->children[1]);
-                if (FRAME.suspending) break;   /* suspend yield — exit loop, return to coro_call */
-            }
-            FRAME.loop_break = saved_brk;
-            FRAME.loop_next  = saved_nxt;
-            return NULVCL;
-        }
-        case E_UNTIL: {
-            fprintf(stderr, "FATAL interp_eval icon-frame: E_UNTIL unreachable in mode 1 (RS-24a)\n"); abort();
-            int saved_brk = FRAME.loop_break; FRAME.loop_break = 0;
-            int saved_nxt = FRAME.loop_next;  FRAME.loop_next  = 0;
-            while (!FRAME.returning && !FRAME.loop_break && !FRAME.suspending) {
-                DESCR_t cv = (e->nchildren > 0) ? interp_eval(e->children[0]) : FAILDESCR;
-                if (!IS_FAIL_fn(cv)) break;
-                FRAME.loop_next = 0;
-                if (e->nchildren > 1) interp_eval(e->children[1]);
-                if (FRAME.suspending) break;
-            }
-            FRAME.loop_break = saved_brk;
-            FRAME.loop_next  = saved_nxt;
-            return NULVCL;
-        }
-        case E_REPEAT: {
-            fprintf(stderr, "FATAL interp_eval icon-frame: E_REPEAT unreachable in mode 1 (RS-24a)\n"); abort();
-            int saved_brk = FRAME.loop_break; FRAME.loop_break = 0;
-            int saved_nxt = FRAME.loop_next;  FRAME.loop_next  = 0;
-            while (!FRAME.returning && !FRAME.loop_break && !FRAME.suspending) {
-                FRAME.loop_next = 0;
-                if (e->nchildren > 0) { interp_eval(e->children[0]); if (FRAME.suspending) break; }
-            }
-            FRAME.loop_break = saved_brk;
-            FRAME.loop_next  = saved_nxt;
-            return NULVCL;
-        }
-        case E_SUSPEND: {
-            fprintf(stderr, "FATAL interp_eval icon-frame: E_SUSPEND unreachable in mode 1 (RS-24a)\n"); abort();
-            /* Icon suspend: yield a value to coro_drive_fnc loop. */
-            DESCR_t val = (e->nchildren > 0) ? interp_eval(e->children[0]) : NULVCL;
-            if (!IS_FAIL_fn(val)) {
-                FRAME.suspending  = 1;
-                FRAME.suspend_val = val;
-                FRAME.suspend_do  = (e->nchildren > 1) ? e->children[1] : NULL;
-            }
-            return NULVCL;
-        }
-        case E_SEQ: {
-            fprintf(stderr, "FATAL interp_eval icon-frame: E_SEQ unreachable in mode 1 (RS-24a)\n"); abort();
-            /* IC-9: Icon & conjunction inside a proc frame.  Evaluate children
-             * left-to-right; return FAILDESCR on the first failure; return last
-             * child's value on full success.  Must live in the icon-frame switch
-             * (not only in the shared switch) so that all children are evaluated
-             * with frame_depth > 0, keeping E_VAR/E_ASSIGN routed to the
-             * frame-local env slots rather than to NV. */
-            if (e->nchildren == 0) return NULVCL;
-            DESCR_t _seq_last = NULVCL;
-            for (int _si = 0; _si < e->nchildren; _si++) {
-                _seq_last = interp_eval(e->children[_si]);
-                if (IS_FAIL_fn(_seq_last)) return FAILDESCR;
-                if (FRAME.returning || FRAME.loop_break || FRAME.loop_next) break;
-            }
-            return _seq_last;
-        }
-        case E_SEQ_EXPR: {
-            fprintf(stderr, "FATAL interp_eval icon-frame: E_SEQ_EXPR unreachable in mode 1 (RS-24a)\n"); abort();
-            DESCR_t v = NULVCL;
-            for (int i = 0; i < e->nchildren && !FRAME.returning && !FRAME.loop_next; i++)
-                v = interp_eval(e->children[i]);
-            return v;
-        }
-        case E_IF: {
-            fprintf(stderr, "FATAL interp_eval icon-frame: E_IF unreachable in mode 1 (RS-24a)\n"); abort();
-            if (e->nchildren < 1) return NULVCL;
-            EXPR_t *test = e->children[0];
-            /* IC-8: goal-directed test.  Icon if-conditions consult their
-             * test expression as a generator: if the generator yields ANY
-             * non-fail value, the then-branch fires; only if the generator
-             * is exhausted without producing a non-fail value does the
-             * else-branch fire.  Example (rung36_jcon_primes):
-             *     if i % (2 to i-1) = 0 then next
-             * succeeds for any divisor `d` in `2..i-1` for which
-             * `i % d = 0`.  Pre-IC-8 the test was called via interp_eval
-             * once and saw only the first generated value, so the then-
-             * branch never fired for composite i.  Now we pump test via
-             * coro_eval α/β, stopping on the first success (then-branch)
-             * or on exhaustion (else-branch).  Mirrors the E_EVERY pump
-             * pattern below. */
-            if (is_suspendable(test)) {
-                bb_node_t box = coro_eval(test);
-                DESCR_t v = box.fn(box.ζ, α);
-                if (!IS_FAIL_fn(v) && !FRAME.returning && !FRAME.loop_break)
-                    return (e->nchildren > 1) ? interp_eval(e->children[1]) : v;
-                return (e->nchildren > 2) ? interp_eval(e->children[2]) : FAILDESCR;
-            }
-            DESCR_t cv = interp_eval(test);
-            if (!IS_FAIL_fn(cv)) { if (e->nchildren > 1) return interp_eval(e->children[1]); }
-            else                  { if (e->nchildren > 2) return interp_eval(e->children[2]); }
-            return NULVCL;
-        }
-        case E_LOOP_NEXT: {
-            fprintf(stderr, "FATAL interp_eval icon-frame: E_LOOP_NEXT unreachable in mode 1 (RS-24a)\n"); abort();
-            /* `next` — abort the rest of the current loop body, ask the
-             * enclosing loop to advance to its next iteration.  Loop
-             * handlers (E_EVERY, E_WHILE, E_UNTIL, E_REPEAT) inspect and
-             * clear loop_next at iteration boundaries. */
-            FRAME.loop_next = 1;
-            return NULVCL;
-        }
-        case E_RETURN: {
-            fprintf(stderr, "FATAL interp_eval icon-frame: E_RETURN unreachable in mode 1 (RS-24a)\n"); abort();
-            DESCR_t rv = (e->nchildren > 0) ? interp_eval(e->children[0]) : NULVCL;
-            FRAME.returning  = 1;
-            FRAME.return_val = rv;
-            return rv;
-        }
-        case E_PROC_FAIL: {
-            fprintf(stderr, "FATAL interp_eval icon-frame: E_PROC_FAIL unreachable in mode 1 (RS-24a)\n"); abort();
-            FRAME.returning  = 1;
-            FRAME.return_val = FAILDESCR;
-            return FAILDESCR;
-        }
+        case E_ALTERNATE:
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_ALTERNATE unreachable in mode 1 (RS-24b)\n"); abort();
+        case E_EVERY:
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_EVERY unreachable in mode 1 (RS-24b)\n"); abort();
+        case E_WHILE:
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_WHILE unreachable in mode 1 (RS-24b)\n"); abort();
+        case E_UNTIL:
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_UNTIL unreachable in mode 1 (RS-24b)\n"); abort();
+        case E_REPEAT:
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_REPEAT unreachable in mode 1 (RS-24b)\n"); abort();
+        case E_SUSPEND:
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_SUSPEND unreachable in mode 1 (RS-24b)\n"); abort();
+        case E_SEQ:
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_SEQ unreachable in mode 1 (RS-24b)\n"); abort();
+        case E_SEQ_EXPR:
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_SEQ_EXPR unreachable in mode 1 (RS-24b)\n"); abort();
+        case E_IF:
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_IF unreachable in mode 1 (RS-24b)\n"); abort();
+        case E_LOOP_NEXT:
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_LOOP_NEXT unreachable in mode 1 (RS-24b)\n"); abort();
+        case E_RETURN:
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_RETURN unreachable in mode 1 (RS-24b)\n"); abort();
+        case E_PROC_FAIL:
+            fprintf(stderr, "FATAL interp_eval icon-frame: E_PROC_FAIL unreachable in mode 1 (RS-24b)\n"); abort();
         default: break;
         }
     }
