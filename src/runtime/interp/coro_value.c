@@ -92,14 +92,12 @@
 /* eval_node lives in src/runtime/x86/eval_code.c — IR-free expression evaluator. */
 extern DESCR_t eval_node(EXPR_t *e);
 
-/* interp_eval is the IR-mode tree-walker; bb_eval_value falls through here for
- * kinds it does not yet handle directly.  RS-23 attempted (session 2026-05-03)
- * to remove this extern after the empirical probe gate showed zero direct
- * fallthroughs across smoke gates + unified_broker + full Icon corpus.  But
- * the probe missed indirect call paths — removing the extern caused
- * smoke_icon 5/5 → 0/5, smoke_raku 5/5 → 0/5, unified_broker 49/0 → 8/41.
- * Reverted; deeper analysis needed before RS-23 can land. */
-extern DESCR_t interp_eval(EXPR_t *e);
+/* RS-23e (closes RS-23 arc): the `interp_eval` extern is gone.  Diag
+ * (`scrip-rs23-diag` with `-Wl,--wrap=interp_eval`) verified zero IR
+ * fallthrough from any BB-adapter ancestor across smoke +
+ * unified_broker + full Icon corpus 263.  Any kind not handled by an
+ * explicit case below is a four-mode isolation violation and aborts
+ * with a diagnostic at the end of the function. */
 
 /*------------------------------------------------------------------------------------------------------------------------------
  * bb_arith — RS-22b arithmetic dispatch helper.
@@ -1344,42 +1342,16 @@ DESCR_t bb_eval_value(EXPR_t *e)
         break;
     }
 
-    /* RS-22e (2026-05-03): fallthrough survey complete.
-     *
-     *   smoke_icon       : 0 unhandled kinds  ✅
-     *   merge gate (unified_broker) : 4 FAILs hardened — palindrome.icn
-     *                       (E_LNE), cross_lang.scrip and the Raku tests
-     *                       depend on kinds outside our switch.
-     *   full Icon corpus (271 programs)      : 16 distinct unhandled
-     *                       kinds, totaling 62 calls.
-     *
-     * Hardening forced merge-gate regression, so per the rung we revert
-     * to interp_eval fallthrough and capture the 16 kinds as the work
-     * boundary in docs/RS-22e-fallthrough-survey.md.  Five categories:
-     *
-     *   Generators: closed by RS-22f-generators — see case arms above for
-     *   E_TO/E_TO_BY/E_ITERATE/E_LIMIT/E_ALTERNATE/E_SEQ_EXPR (first-value
-     *   via coro_eval+α) and E_SEQ (left-to-right & in value context).
-     *
-     *   String relops:  closed by RS-22f-strrel — see case arms above
-     *   for E_LLT/E_LLE/E_LGT/E_LGE/E_LEQ/E_LNE (bb_strrel).
-     *
-     *   Cset arithmetic: closed by RS-22f-cset — see case arms above for
-     *   E_CSET/E_CSET_COMPL/E_CSET_DIFF/E_CSET_INTER/E_CSET_UNION.
-     *
-     *   Mid-size:
-     *     E_MAKELIST  closed by RS-22f-makelist (case arm above).
-     *     E_SCAN      closed by RS-22f-stmt — case arm above mirrors
-     *                  interp_eval.c:3899 Icon-mode scan branch.
-     *     E_CASE      closed by RS-22f-stmt — case arm above mirrors
-     *                  interp_eval.c:3569 (Icon pairs + Raku triples).
-     *
-     * RS-22f closure: all 16 surveyed kinds have native handling in
-     * bb_eval_value.  RS-23 (2026-05-03) attempted to remove the
-     * interp_eval extern after a probe gate showed zero direct
-     * fallthroughs across smoke + unified_broker + full Icon corpus.
-     * The attempt regressed smoke_icon 5/5→0/5, smoke_raku 5/5→0/5,
-     * unified_broker 49/0→8/41 — indirect call paths were missed.
-     * Reverted; the fallthrough to interp_eval stays in place. */
-    return interp_eval(e);
+    /* RS-23e (closes the RS-23 arc, session 2026-05-05).  Diag verified
+     * zero `interp_eval` calls reach this fallthrough from any BB-adapter
+     * ancestor across smoke + unified_broker + full Icon corpus 263.
+     * Every kind that exercises the test surface is now handled by an
+     * explicit case above.  Anything reaching this point is a four-mode
+     * isolation violation: a kind that arrived in BB-adapter context
+     * without a native value-context handler.  Abort with a diagnostic
+     * naming the kind so the gap can be lifted into bb_eval_value. */
+    fprintf(stderr,
+            "FATAL bb_eval_value: unhandled kind %d (RS-23e isolation breach)\n",
+            (int)e->kind);
+    abort();
 }

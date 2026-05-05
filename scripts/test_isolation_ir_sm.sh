@@ -33,19 +33,24 @@ SM_FILES=(
     "$ROOT/src/runtime/x86/eval_code.c"
     "$ROOT/src/runtime/interp/coro_runtime.c"
     "$ROOT/src/runtime/interp/pl_runtime.c"
+    "$ROOT/src/runtime/interp/coro_value.c"
+    "$ROOT/src/runtime/interp/coro_stmt.c"
 )
 # RS-17 / RS-18 / RS-19: coro_runtime.c and pl_runtime.c are full members
 # of the SM-mode runtime gate.  Icon and Prolog Byrd-box drive go through
-# bb_eval_value (coro_value.c, RS-17a) and bb_exec_stmt (coro_stmt.c,
-# RS-17b) — those two adapter files retain a documented `interp_eval`
-# fallthrough as their migration scaffold and are therefore intentionally
-# NOT included in the gate.  When sub-rungs RS-17a-cont / RS-17b-cont
-# absorb the remaining kinds and the fallthrough goes away, those files
-# can be promoted into the gate too.  RS-23 (session 2026-05-03) attempted
-# this promotion after RS-22f-stmt closed all surveyed direct-fallthrough
-# kinds; the empirical probe gate showed zero hits but indirect call paths
-# were missed and the attempt regressed smoke_icon/raku/unified_broker.
-# Reverted; deeper analysis required.
+# bb_eval_value (coro_value.c) and bb_exec_stmt (coro_stmt.c).
+# RS-23e (session 2026-05-05) promoted both BB adapters into this gate
+# after the RS-23a/b/c/d/extra rungs and the diag binary
+# (`scrip-rs23-diag` with `-Wl,--wrap=interp_eval`) verified zero
+# `interp_eval` calls reach from any BB-adapter ancestor across smoke +
+# unified_broker + full Icon corpus 263.  The two physical fallthroughs
+# at coro_value.c:1382 and coro_stmt.c:269 were hardened to abort with a
+# diagnostic; the `extern DESCR_t interp_eval(...)` declarations were
+# removed from both files.  RS-23 (2026-05-03) had attempted this
+# promotion prematurely after RS-22f-stmt; that attempt regressed
+# smoke_icon/raku/unified_broker because indirect call paths went
+# unenumerated.  The diag tooling enumerates them empirically — that is
+# what closed RS-23 properly this time.
 
 IR_SYMS=(
     "execute_program"

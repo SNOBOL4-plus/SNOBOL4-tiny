@@ -30,13 +30,11 @@
 #include "coro_runtime.h"   /* FRAME, frame_depth, IcnFrame */
 #include "snobol4.h"        /* DESCR_t, IS_FAIL_fn, FAILDESCR, NULVCL */
 
-/* RS-21 transitional: a small handful of kinds that were not lifted in this
- * rung still fall through to the IR tree-walker.  RS-22 / RS-23 absorb the
- * remainder; once empty, this declaration is removed and coro_stmt.c joins
- * the isolation gate.  RS-23 attempted to remove this extern (session
- * 2026-05-03) but the same probe-vs-reality gap that affected coro_value.c
- * applies here — reverted along with that. */
-extern DESCR_t interp_eval(EXPR_t *e);
+/* RS-23e (closes RS-23 arc): the `interp_eval` extern is gone.  Diag
+ * verified zero IR fallthrough from any BB-adapter ancestor across smoke
+ * + unified_broker + full Icon corpus 263.  Any kind not handled by an
+ * explicit case below is a four-mode isolation violation and aborts via
+ * `bb_exec_stmt`'s diagnostic at the end of the function. */
 
 /*------------------------------------------------------------------------------------------------------------------------------
  * bb_exec_stmt — execute e in statement context.
@@ -263,10 +261,16 @@ void bb_exec_stmt(EXPR_t *e)
     default: break;
     }
 
-    /* RS-21/RS-23 transitional fallthrough: remaining kinds not yet absorbed.
-     * RS-23c will lift E_EVERY, E_INITIAL, E_SWAP (in both adapters).
-     * RS-23d will lift E_WHILE in value context.
-     * E_BANG_BINARY arrives via bb_eval_value, not bb_exec_stmt.
-     * In the meantime the discarded DESCR_t result is still correct. */
-    (void)interp_eval(e);
+    /* RS-23e (closes the RS-23 arc, session 2026-05-05).  Diag verified
+     * zero `interp_eval` calls reach this fallthrough from any BB-adapter
+     * ancestor across smoke + unified_broker + full Icon corpus 263.
+     * Every kind that exercises the test surface is now handled by an
+     * explicit case above (or delegates to bb_eval_value).  Anything
+     * reaching this point is a four-mode isolation violation: a kind
+     * arrived in BB-adapter stmt context without a native handler.
+     * Abort with a diagnostic naming the kind. */
+    fprintf(stderr,
+            "FATAL bb_exec_stmt: unhandled kind %d (RS-23e isolation breach)\n",
+            (int)e->kind);
+    abort();
 }
