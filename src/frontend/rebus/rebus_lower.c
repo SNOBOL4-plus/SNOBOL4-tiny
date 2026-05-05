@@ -115,18 +115,18 @@ static EXPR_t *lower_expr(RebLow *L, RExpr *e) {
     /* --- Icon generator bang --- */
     case RE_BANG:   return expr_unary(E_ITERATE,  lower_expr(L, e->left));
 
-    /* --- Binary arithmetic --- */
-    case RE_ADD: return expr_binary(E_ADD,    lower_expr(L,e->left), lower_expr(L,e->right));
-    case RE_SUB: return expr_binary(E_SUB,    lower_expr(L,e->left), lower_expr(L,e->right));
-    case RE_MUL: return expr_binary(E_MUL,    lower_expr(L,e->left), lower_expr(L,e->right));
-    case RE_DIV: return expr_binary(E_DIV,    lower_expr(L,e->left), lower_expr(L,e->right));
-    case RE_POW: return expr_binary(E_POW,    lower_expr(L,e->left), lower_expr(L,e->right));
+    /* --- Binary arithmetic — flatten same-kind chains to n-ary --- */
+    case RE_ADD: return expr_binary_flatten(E_ADD,    lower_expr(L,e->left), lower_expr(L,e->right));
+    case RE_SUB: return expr_binary_flatten(E_SUB,    lower_expr(L,e->left), lower_expr(L,e->right));
+    case RE_MUL: return expr_binary_flatten(E_MUL,    lower_expr(L,e->left), lower_expr(L,e->right));
+    case RE_DIV: return expr_binary_flatten(E_DIV,    lower_expr(L,e->left), lower_expr(L,e->right));
+    case RE_POW: return expr_binary_flatten_right(E_POW,    lower_expr(L,e->left), lower_expr(L,e->right));
     case RE_MOD: return make_fnc("REMDR", 2,  lower_expr(L,e->left), lower_expr(L,e->right));
 
-    /* --- String/pattern --- */
-    case RE_STRCAT: return expr_binary(E_CAT, lower_expr(L,e->left), lower_expr(L,e->right));
-    case RE_PATCAT: return expr_binary(E_CAT, lower_expr(L,e->left), lower_expr(L,e->right));
-    case RE_ALT:    return expr_binary(E_ALT,    lower_expr(L,e->left), lower_expr(L,e->right));
+    /* --- String/pattern — E_CAT and E_ALT are already n-ary in interp_eval --- */
+    case RE_STRCAT: return expr_binary_flatten(E_CAT, lower_expr(L,e->left), lower_expr(L,e->right));
+    case RE_PATCAT: return expr_binary_flatten(E_CAT, lower_expr(L,e->left), lower_expr(L,e->right));
+    case RE_ALT:    return expr_binary_flatten(E_ALT,    lower_expr(L,e->left), lower_expr(L,e->right));
 
     /* --- Comparison (SNOBOL4 pool) --- */
     case RE_EQ:  return make_fnc("EQ",     2, lower_expr(L,e->left), lower_expr(L,e->right));

@@ -294,11 +294,23 @@ Term *pl_unified_term_from_expr(EXPR_t *e, Term **env) {
         case E_FLIT: return term_new_float(e->dval);
         case E_VAR:  return (env && e->ival >= 0) ? env[e->ival] : term_new_var(e->ival);
         case E_ADD: case E_SUB: case E_MUL: case E_DIV: case E_MOD: {
-            /* arithmetic ops used as terms (e.g. K-V): wrap as compound */
+            /* arithmetic ops used as terms (e.g. K-V): wrap as compound.
+             * C frontends now flatten same-kind chains to n-ary; fold back
+             * to nested binary compounds (right-recursive) so Prolog code
+             * sees the conventional `+(a,+(b,c))` shape. */
             const char *op = e->kind==E_ADD?"+":e->kind==E_SUB?"-":e->kind==E_MUL?"*":e->kind==E_DIV?"/":"%";
             int atom = prolog_atom_intern(op);
-            Term *args2[2]; args2[0]=pl_unified_term_from_expr(e->children[0],env); args2[1]=pl_unified_term_from_expr(e->children[1],env);
-            return term_new_compound(atom, 2, args2);
+            int nc = e->nchildren;
+            if (nc < 2) return term_new_atom(atom);
+            /* Build right-recursive binary chain: child[0] OP (child[1] OP (... child[n-1])) */
+            Term *acc = pl_unified_term_from_expr(e->children[nc - 1], env);
+            for (int i = nc - 2; i >= 0; i--) {
+                Term *args2[2];
+                args2[0] = pl_unified_term_from_expr(e->children[i], env);
+                args2[1] = acc;
+                acc = term_new_compound(atom, 2, args2);
+            }
+            return acc;
         }
         case E_UNIFY: {
             /* =/2 used as a term (e.g. G = (X = 5), assertz(p(X = 5))): wrap as

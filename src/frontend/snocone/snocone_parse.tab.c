@@ -2240,13 +2240,13 @@ yyreduce:
 
   case 99: /* expr6: expr6 T_2PLUS expr9  */
 #line 1022 "snocone_parse.y"
-                                { (yyval.expr) = expr_binary(E_ADD, (yyvsp[-2].expr), (yyvsp[0].expr)); }
+                                { (yyval.expr) = expr_binary_flatten(E_ADD, (yyvsp[-2].expr), (yyvsp[0].expr)); }
 #line 2245 "snocone_parse.tab.c"
     break;
 
   case 100: /* expr6: expr6 T_2MINUS expr9  */
 #line 1024 "snocone_parse.y"
-                                { (yyval.expr) = expr_binary(E_SUB, (yyvsp[-2].expr), (yyvsp[0].expr)); }
+                                { (yyval.expr) = expr_binary_flatten(E_SUB, (yyvsp[-2].expr), (yyvsp[0].expr)); }
 #line 2251 "snocone_parse.tab.c"
     break;
 
@@ -2258,13 +2258,13 @@ yyreduce:
 
   case 102: /* expr9: expr9 T_2STAR expr11  */
 #line 1030 "snocone_parse.y"
-                                { (yyval.expr) = expr_binary(E_MUL, (yyvsp[-2].expr), (yyvsp[0].expr)); }
+                                { (yyval.expr) = expr_binary_flatten(E_MUL, (yyvsp[-2].expr), (yyvsp[0].expr)); }
 #line 2263 "snocone_parse.tab.c"
     break;
 
   case 103: /* expr9: expr9 T_2SLASH expr11  */
 #line 1032 "snocone_parse.y"
-                                { (yyval.expr) = expr_binary(E_DIV, (yyvsp[-2].expr), (yyvsp[0].expr)); }
+                                { (yyval.expr) = expr_binary_flatten(E_DIV, (yyvsp[-2].expr), (yyvsp[0].expr)); }
 #line 2269 "snocone_parse.tab.c"
     break;
 
@@ -2276,7 +2276,7 @@ yyreduce:
 
   case 105: /* expr11: expr12 T_2CARET expr11  */
 #line 1042 "snocone_parse.y"
-                                { (yyval.expr) = expr_binary(E_POW, (yyvsp[-2].expr), (yyvsp[0].expr)); }
+                                { (yyval.expr) = expr_binary_flatten_right(E_POW, (yyvsp[-2].expr), (yyvsp[0].expr)); }
 #line 2281 "snocone_parse.tab.c"
     break;
 

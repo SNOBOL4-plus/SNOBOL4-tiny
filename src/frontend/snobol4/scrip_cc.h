@@ -156,6 +156,35 @@ static inline EXPR_t *expr_binary(EXPR_e k, EXPR_t *left, EXPR_t *right) {
     return e;
 }
 
+/* Build / extend a left-flatten n-ary node for left-associative same-kind chains.
+ * If left's kind already equals k, append right to left and return left (n grows
+ * by 1 each invocation).  Otherwise build a fresh binary node.  This produces
+ * (k a b c d) for `a OP b OP c OP d` instead of right- or left-leaning binary
+ * chains.  Used for E_ADD/E_SUB/E_MUL/E_DIV and any other left-associative
+ * arith operator whose semantics survive flattening.  Same shape as the
+ * inline E_SEQ / E_ALT pattern at expr3 / expr4 in snobol4.y. */
+static inline EXPR_t *expr_binary_flatten(EXPR_e k, EXPR_t *left, EXPR_t *right) {
+    if (left && left->kind == k) { expr_add_child(left, right); return left; }
+    return expr_binary(k, left, right);
+}
+
+/* Right-flatten variant for right-associative same-kind chains (E_POW).
+ * Bison reduces bottom-up so on `a ^ b ^ c` the rule sees (a, (E_POW b c))
+ * — i.e. right child already grew.  Prepend left into right's children to
+ * produce flat (E_POW a b c).  Source-order children at c[0..n-1].  */
+static inline EXPR_t *expr_binary_flatten_right(EXPR_e k, EXPR_t *left, EXPR_t *right) {
+    if (right && right->kind == k) {
+        right->children = realloc(right->children,
+                                  (size_t)(right->nchildren + 1) * sizeof(EXPR_t *));
+        memmove(&right->children[1], &right->children[0],
+                (size_t)right->nchildren * sizeof(EXPR_t *));
+        right->children[0] = left;
+        right->nchildren++;
+        return right;
+    }
+    return expr_binary(k, left, right);
+}
+
 /* ---- string helpers ---- */
 static inline char *intern(const char *s) { return s ? strdup(s) : NULL; }
 static inline char *intern_n(const char *s, int n) {

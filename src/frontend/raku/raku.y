@@ -600,17 +600,17 @@ range_expr
     ;
 
 add_expr
-    : add_expr '+' mul_expr  { $$=expr_binary(E_ADD,$1,$3); }
-    | add_expr '-' mul_expr  { $$=expr_binary(E_SUB,$1,$3); }
-    | add_expr '~' mul_expr  { $$=expr_binary(E_CAT,$1,$3); }
+    : add_expr '+' mul_expr  { $$=expr_binary_flatten(E_ADD,$1,$3); }
+    | add_expr '-' mul_expr  { $$=expr_binary_flatten(E_SUB,$1,$3); }
+    | add_expr '~' mul_expr  { $$=expr_binary_flatten(E_CAT,$1,$3); }
     | mul_expr               { $$=$1; }
     ;
 
 mul_expr
-    : mul_expr '*'    unary_expr  { $$=expr_binary(E_MUL,$1,$3); }
-    | mul_expr '/'    unary_expr  { $$=expr_binary(E_DIV,$1,$3); }
+    : mul_expr '*'    unary_expr  { $$=expr_binary_flatten(E_MUL,$1,$3); }
+    | mul_expr '/'    unary_expr  { $$=expr_binary_flatten(E_DIV,$1,$3); }
     | mul_expr '%'    unary_expr  { $$=expr_binary(E_MOD,$1,$3); }
-    | mul_expr OP_DIV unary_expr  { $$=expr_binary(E_DIV,$1,$3); }
+    | mul_expr OP_DIV unary_expr  { $$=expr_binary_flatten(E_DIV,$1,$3); }
     | unary_expr                  { $$=$1; }
     ;
 

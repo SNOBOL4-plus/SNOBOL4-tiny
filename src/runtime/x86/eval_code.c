@@ -143,38 +143,64 @@ DESCR_t eval_node(EXPR_t *e)
     /* ── arithmetic ──────────────────────────────────────────────────── */
     case E_ADD: {
         if (e->nchildren < 2) return FAILDESCR;
-        DESCR_t l = eval_node(e->children[0]);
-        DESCR_t r = eval_node(e->children[1]);
-        if (IS_FAIL_fn(l) || IS_FAIL_fn(r)) return FAILDESCR;
-        return add(l, r);
+        DESCR_t acc = eval_node(e->children[0]);
+        if (IS_FAIL_fn(acc)) return FAILDESCR;
+        for (int i = 1; i < e->nchildren; i++) {
+            DESCR_t r = eval_node(e->children[i]);
+            if (IS_FAIL_fn(r)) return FAILDESCR;
+            acc = add(acc, r);
+            if (IS_FAIL_fn(acc)) return FAILDESCR;
+        }
+        return acc;
     }
     case E_SUB: {
         if (e->nchildren < 2) return FAILDESCR;
-        DESCR_t l = eval_node(e->children[0]);
-        DESCR_t r = eval_node(e->children[1]);
-        if (IS_FAIL_fn(l) || IS_FAIL_fn(r)) return FAILDESCR;
-        return sub(l, r);
+        DESCR_t acc = eval_node(e->children[0]);
+        if (IS_FAIL_fn(acc)) return FAILDESCR;
+        for (int i = 1; i < e->nchildren; i++) {
+            DESCR_t r = eval_node(e->children[i]);
+            if (IS_FAIL_fn(r)) return FAILDESCR;
+            acc = sub(acc, r);
+            if (IS_FAIL_fn(acc)) return FAILDESCR;
+        }
+        return acc;
     }
     case E_MUL: {
         if (e->nchildren < 2) return FAILDESCR;
-        DESCR_t l = eval_node(e->children[0]);
-        DESCR_t r = eval_node(e->children[1]);
-        if (IS_FAIL_fn(l) || IS_FAIL_fn(r)) return FAILDESCR;
-        return mul(l, r);
+        DESCR_t acc = eval_node(e->children[0]);
+        if (IS_FAIL_fn(acc)) return FAILDESCR;
+        for (int i = 1; i < e->nchildren; i++) {
+            DESCR_t r = eval_node(e->children[i]);
+            if (IS_FAIL_fn(r)) return FAILDESCR;
+            acc = mul(acc, r);
+            if (IS_FAIL_fn(acc)) return FAILDESCR;
+        }
+        return acc;
     }
     case E_DIV: {
         if (e->nchildren < 2) return FAILDESCR;
-        DESCR_t l = eval_node(e->children[0]);
-        DESCR_t r = eval_node(e->children[1]);
-        if (IS_FAIL_fn(l) || IS_FAIL_fn(r)) return FAILDESCR;
-        return DIVIDE_fn(l, r);
+        DESCR_t acc = eval_node(e->children[0]);
+        if (IS_FAIL_fn(acc)) return FAILDESCR;
+        for (int i = 1; i < e->nchildren; i++) {
+            DESCR_t r = eval_node(e->children[i]);
+            if (IS_FAIL_fn(r)) return FAILDESCR;
+            acc = DIVIDE_fn(acc, r);
+            if (IS_FAIL_fn(acc)) return FAILDESCR;
+        }
+        return acc;
     }
     case E_POW: {
         if (e->nchildren < 2) return FAILDESCR;
-        DESCR_t l = eval_node(e->children[0]);
-        DESCR_t r = eval_node(e->children[1]);
-        if (IS_FAIL_fn(l) || IS_FAIL_fn(r)) return FAILDESCR;
-        return POWER_fn(l, r);
+        /* Right-fold: a ** b ** c == a ** (b ** c). */
+        DESCR_t acc = eval_node(e->children[e->nchildren - 1]);
+        if (IS_FAIL_fn(acc)) return FAILDESCR;
+        for (int i = e->nchildren - 2; i >= 0; i--) {
+            DESCR_t l = eval_node(e->children[i]);
+            if (IS_FAIL_fn(l)) return FAILDESCR;
+            acc = POWER_fn(l, acc);
+            if (IS_FAIL_fn(acc)) return FAILDESCR;
+        }
+        return acc;
     }
 
     /* ── string concatenation ────────────────────────────────────────── */

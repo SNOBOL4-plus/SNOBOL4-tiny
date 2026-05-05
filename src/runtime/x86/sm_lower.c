@@ -203,6 +203,35 @@ static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e);
 #define LOWER1_VAL(op) do { lower_expr(p,lt,CH0(e)); sm_emit(p,(op)); return; } while(0)
 #define LOWER1_PAT(op) do { lower_pat_expr(p,lt,CH0(e)); sm_emit(p,(op)); return; } while(0)
 
+/* N-ary fold lowerings.  C frontends now flatten same-kind associative chains:
+ * `a + b + c + d` -> (E_ADD a b c d).  These macros lower n-ary trees via the
+ * stack machine.  For nchildren==2 both reduce to LOWER2.
+ *
+ * LFOLD: left-fold for left-associative ops (E_ADD, E_SUB, E_MUL, E_DIV).
+ *   Stack: [a]   lower b -> [a,b]  emit -> [a OP b]
+ *          lower c -> [a OP b, c]  emit -> [(a OP b) OP c]   ...
+ *
+ * RFOLD: right-fold for right-associative ops (E_POW).  Push all then fold
+ *   from the top: each emit pops top two and pushes one, naturally producing
+ *   right-associative semantics because the rightmost two combine first. */
+#define LOWER_NARY_LFOLD(op) do {                                              \
+    if ((e)->nchildren == 0) return;                                           \
+    lower_expr(p,lt,(e)->children[0]);                                         \
+    for (int _i = 1; _i < (e)->nchildren; _i++) {                              \
+        lower_expr(p,lt,(e)->children[_i]);                                    \
+        sm_emit(p,(op));                                                       \
+    }                                                                          \
+    return;                                                                    \
+} while(0)
+#define LOWER_NARY_RFOLD(op) do {                                              \
+    if ((e)->nchildren == 0) return;                                           \
+    for (int _i = 0; _i < (e)->nchildren; _i++)                                \
+        lower_expr(p,lt,(e)->children[_i]);                                    \
+    for (int _i = 1; _i < (e)->nchildren; _i++)                                \
+        sm_emit(p,(op));                                                       \
+    return;                                                                    \
+} while(0)
+
 /* TL-2: extract arg *names* from a *fn(var,var,...) E_FNC subtree so
  * SM_PAT_CAPTURE_FN can carry them in a[2].s for flush-time resolution.
  *
@@ -574,11 +603,11 @@ static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
         return;
 
     /* ── Arithmetic ── */
-    case E_ADD: LOWER2(SM_ADD);
-    case E_SUB: LOWER2(SM_SUB);
-    case E_MUL: LOWER2(SM_MUL);
-    case E_DIV: LOWER2(SM_DIV);
-    case E_POW: LOWER2(SM_EXP);
+    case E_ADD: LOWER_NARY_LFOLD(SM_ADD);
+    case E_SUB: LOWER_NARY_LFOLD(SM_SUB);
+    case E_MUL: LOWER_NARY_LFOLD(SM_MUL);
+    case E_DIV: LOWER_NARY_LFOLD(SM_DIV);
+    case E_POW: LOWER_NARY_RFOLD(SM_EXP);
     case E_MOD: LOWER2(SM_MOD);
     case E_MNS: LOWER1_VAL(SM_NEG);
     case E_PLS: LOWER1_VAL(SM_COERCE_NUM);

@@ -338,7 +338,7 @@ static EXPR_t *parse_pow(IcnParser *p) {
     if (check(p, TK_CARET)) {
         advance(p);
         EXPR_t *rhs = parse_pow(p);   /* right-associative */
-        n = e_binary(E_POW, n, rhs);
+        n = expr_binary_flatten_right(E_POW, n, rhs);
     }
     return n;
 }
@@ -348,12 +348,14 @@ static EXPR_t *parse_mul(IcnParser *p) {
     if (!n) return NULL;
     for (;;) {
         EXPR_e k;
-        if      (check(p, TK_STAR))  k = E_MUL;
-        else if (check(p, TK_SLASH)) k = E_DIV;
-        else if (check(p, TK_MOD))   k = E_MOD;
+        int flat = 0;
+        if      (check(p, TK_STAR))  { k = E_MUL; flat = 1; }
+        else if (check(p, TK_SLASH)) { k = E_DIV; flat = 1; }
+        else if (check(p, TK_MOD))   { k = E_MOD; }
         else break;
         advance(p);
-        n = e_binary(k, n, parse_pow(p));
+        n = flat ? expr_binary_flatten(k, n, parse_pow(p))
+                 : e_binary(k, n, parse_pow(p));
     }
     return n;
 }
@@ -367,7 +369,7 @@ static EXPR_t *parse_add(IcnParser *p) {
         else if (check(p, TK_MINUS)) k = E_SUB;
         else break;
         advance(p);
-        n = e_binary(k, n, parse_mul(p));
+        n = expr_binary_flatten(k, n, parse_mul(p));
     }
     return n;
 }

@@ -1019,17 +1019,17 @@ expr5a      : expr5a T_2TILDE  expr6
             ;
 
 expr6       : expr6 T_2PLUS    expr9
-                                { $$ = expr_binary(E_ADD, $1, $3); }
+                                { $$ = expr_binary_flatten(E_ADD, $1, $3); }
             | expr6 T_2MINUS expr9
-                                { $$ = expr_binary(E_SUB, $1, $3); }
+                                { $$ = expr_binary_flatten(E_SUB, $1, $3); }
             | expr9
                                 { $$ = $1; }
             ;
 
 expr9       : expr9 T_2STAR expr11
-                                { $$ = expr_binary(E_MUL, $1, $3); }
+                                { $$ = expr_binary_flatten(E_MUL, $1, $3); }
             | expr9 T_2SLASH       expr11
-                                { $$ = expr_binary(E_DIV, $1, $3); }
+                                { $$ = expr_binary_flatten(E_DIV, $1, $3); }
             | expr11
                                 { $$ = $1; }
             ;
@@ -1039,7 +1039,7 @@ expr9       : expr9 T_2STAR expr11
  * so binary `.` and `$` pattern-binding ops sit between exponent and
  * subscript — matching snobol4.y:156-162.) */
 expr11      : expr12 T_2CARET expr11
-                                { $$ = expr_binary(E_POW, $1, $3); }
+                                { $$ = expr_binary_flatten_right(E_POW, $1, $3); }
             | expr12
                                 { $$ = $1; }
             ;

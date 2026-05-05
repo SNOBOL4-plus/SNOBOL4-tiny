@@ -139,23 +139,23 @@ expr4      : expr4 T_CONCAT expr5                                               
 expr5      : expr5 T_2AT    expr6                                                             { EXPR_t*_e=expr_binary(E_OPSYN,$1,$3); _e->sval=strdup("@"); $$=_e; }
            | expr6                                                                                 { $$=$1; }
            ;
-expr6      : expr6 T_2PLUS   expr7                                                             { $$=expr_binary(E_ADD,             $1,$3); }
-           | expr6 T_2MINUS expr7                                                            { $$=expr_binary(E_SUB,             $1,$3); }
+expr6      : expr6 T_2PLUS   expr7                                                             { $$=expr_binary_flatten(E_ADD,             $1,$3); }
+           | expr6 T_2MINUS expr7                                                            { $$=expr_binary_flatten(E_SUB,             $1,$3); }
            | expr7                                                                                 { $$=$1; }
            ;
-expr7      : expr7 T_2POUND      expr8                                                             { $$=expr_binary(E_MUL,             $1,$3); }
+expr7      : expr7 T_2POUND      expr8                                                             { $$=expr_binary_flatten(E_MUL,             $1,$3); }
            | expr8                                                                                 { $$=$1; }
            ;
-expr8      : expr8 T_2SLASH   expr9                                                             { $$=expr_binary(E_DIV,             $1,$3); }
+expr8      : expr8 T_2SLASH   expr9                                                             { $$=expr_binary_flatten(E_DIV,             $1,$3); }
            | expr9                                                                                 { $$=$1; }
            ;
-expr9      : expr9 T_2STAR expr10                                                        { $$=expr_binary(E_MUL,             $1,$3); }
+expr9      : expr9 T_2STAR expr10                                                        { $$=expr_binary_flatten(E_MUL,             $1,$3); }
            | expr10                                                                                { $$=$1; }
            ;
-expr10     : expr10 T_2PERCENT   expr11                                                            { $$=expr_binary(E_DIV,             $1,$3); }
+expr10     : expr10 T_2PERCENT   expr11                                                            { $$=expr_binary_flatten(E_DIV,             $1,$3); }
            | expr11                                                                                { $$=$1; }
            ;
-expr11     : expr12 T_2CARET expr11                                                       { $$=expr_binary(E_POW,             $1,$3); }
+expr11     : expr12 T_2CARET expr11                                                       { $$=expr_binary_flatten_right(E_POW,             $1,$3); }
            | expr12                                                                                { $$=$1; }
            ;
 expr12     : expr12 T_2DOLLAR expr13                                                     { $$=expr_binary(E_CAPT_IMMED_ASGN,$1,$3); }

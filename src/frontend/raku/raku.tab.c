@@ -2285,19 +2285,19 @@ yyreduce:
 
   case 88: /* add_expr: add_expr '+' mul_expr  */
 #line 603 "raku.y"
-                             { (yyval.node)=expr_binary(E_ADD,(yyvsp[-2].node),(yyvsp[0].node)); }
+                             { (yyval.node)=expr_binary_flatten(E_ADD,(yyvsp[-2].node),(yyvsp[0].node)); }
 #line 2290 "raku.tab.c"
     break;
 
   case 89: /* add_expr: add_expr '-' mul_expr  */
 #line 604 "raku.y"
-                             { (yyval.node)=expr_binary(E_SUB,(yyvsp[-2].node),(yyvsp[0].node)); }
+                             { (yyval.node)=expr_binary_flatten(E_SUB,(yyvsp[-2].node),(yyvsp[0].node)); }
 #line 2296 "raku.tab.c"
     break;
 
   case 90: /* add_expr: add_expr '~' mul_expr  */
 #line 605 "raku.y"
-                             { (yyval.node)=expr_binary(E_CAT,(yyvsp[-2].node),(yyvsp[0].node)); }
+                             { (yyval.node)=expr_binary_flatten(E_CAT,(yyvsp[-2].node),(yyvsp[0].node)); }
 #line 2302 "raku.tab.c"
     break;
 
@@ -2309,13 +2309,13 @@ yyreduce:
 
   case 92: /* mul_expr: mul_expr '*' unary_expr  */
 #line 610 "raku.y"
-                                  { (yyval.node)=expr_binary(E_MUL,(yyvsp[-2].node),(yyvsp[0].node)); }
+                                  { (yyval.node)=expr_binary_flatten(E_MUL,(yyvsp[-2].node),(yyvsp[0].node)); }
 #line 2314 "raku.tab.c"
     break;
 
   case 93: /* mul_expr: mul_expr '/' unary_expr  */
 #line 611 "raku.y"
-                                  { (yyval.node)=expr_binary(E_DIV,(yyvsp[-2].node),(yyvsp[0].node)); }
+                                  { (yyval.node)=expr_binary_flatten(E_DIV,(yyvsp[-2].node),(yyvsp[0].node)); }
 #line 2320 "raku.tab.c"
     break;
 
@@ -2327,7 +2327,7 @@ yyreduce:
 
   case 95: /* mul_expr: mul_expr OP_DIV unary_expr  */
 #line 613 "raku.y"
-                                  { (yyval.node)=expr_binary(E_DIV,(yyvsp[-2].node),(yyvsp[0].node)); }
+                                  { (yyval.node)=expr_binary_flatten(E_DIV,(yyvsp[-2].node),(yyvsp[0].node)); }
 #line 2332 "raku.tab.c"
     break;
 

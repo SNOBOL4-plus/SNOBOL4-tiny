@@ -1666,13 +1666,13 @@ yyreduce:
 
   case 61: /* expr6: expr6 T_2PLUS expr7  */
 #line 142 "snobol4.y"
-                                                                                               { (yyval.expr)=expr_binary(E_ADD,             (yyvsp[-2].expr),(yyvsp[0].expr)); }
+                                                                                               { (yyval.expr)=expr_binary_flatten(E_ADD,             (yyvsp[-2].expr),(yyvsp[0].expr)); }
 #line 1671 "snobol4.tab.c"
     break;
 
   case 62: /* expr6: expr6 T_2MINUS expr7  */
 #line 143 "snobol4.y"
-                                                                                             { (yyval.expr)=expr_binary(E_SUB,             (yyvsp[-2].expr),(yyvsp[0].expr)); }
+                                                                                             { (yyval.expr)=expr_binary_flatten(E_SUB,             (yyvsp[-2].expr),(yyvsp[0].expr)); }
 #line 1677 "snobol4.tab.c"
     break;
 
@@ -1684,7 +1684,7 @@ yyreduce:
 
   case 64: /* expr7: expr7 T_2POUND expr8  */
 #line 146 "snobol4.y"
-                                                                                                   { (yyval.expr)=expr_binary(E_MUL,             (yyvsp[-2].expr),(yyvsp[0].expr)); }
+                                                                                                   { (yyval.expr)=expr_binary_flatten(E_MUL,             (yyvsp[-2].expr),(yyvsp[0].expr)); }
 #line 1689 "snobol4.tab.c"
     break;
 
@@ -1696,7 +1696,7 @@ yyreduce:
 
   case 66: /* expr8: expr8 T_2SLASH expr9  */
 #line 149 "snobol4.y"
-                                                                                                { (yyval.expr)=expr_binary(E_DIV,             (yyvsp[-2].expr),(yyvsp[0].expr)); }
+                                                                                                { (yyval.expr)=expr_binary_flatten(E_DIV,             (yyvsp[-2].expr),(yyvsp[0].expr)); }
 #line 1701 "snobol4.tab.c"
     break;
 
@@ -1708,7 +1708,7 @@ yyreduce:
 
   case 68: /* expr9: expr9 T_2STAR expr10  */
 #line 152 "snobol4.y"
-                                                                                         { (yyval.expr)=expr_binary(E_MUL,             (yyvsp[-2].expr),(yyvsp[0].expr)); }
+                                                                                         { (yyval.expr)=expr_binary_flatten(E_MUL,             (yyvsp[-2].expr),(yyvsp[0].expr)); }
 #line 1713 "snobol4.tab.c"
     break;
 
@@ -1720,7 +1720,7 @@ yyreduce:
 
   case 70: /* expr10: expr10 T_2PERCENT expr11  */
 #line 155 "snobol4.y"
-                                                                                                   { (yyval.expr)=expr_binary(E_DIV,             (yyvsp[-2].expr),(yyvsp[0].expr)); }
+                                                                                                   { (yyval.expr)=expr_binary_flatten(E_DIV,             (yyvsp[-2].expr),(yyvsp[0].expr)); }
 #line 1725 "snobol4.tab.c"
     break;
 
@@ -1732,7 +1732,7 @@ yyreduce:
 
   case 72: /* expr11: expr12 T_2CARET expr11  */
 #line 158 "snobol4.y"
-                                                                                          { (yyval.expr)=expr_binary(E_POW,             (yyvsp[-2].expr),(yyvsp[0].expr)); }
+                                                                                          { (yyval.expr)=expr_binary_flatten_right(E_POW,             (yyvsp[-2].expr),(yyvsp[0].expr)); }
 #line 1737 "snobol4.tab.c"
     break;
 

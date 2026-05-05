@@ -2561,31 +2561,51 @@ DESCR_t interp_eval(EXPR_t *e)
 
     case E_ADD: {
         if (e->nchildren < 2) return FAILDESCR;
-        DESCR_t l = interp_eval(e->children[0]);
-        DESCR_t r = interp_eval(e->children[1]);
-        if (IS_FAIL_fn(l) || IS_FAIL_fn(r)) return FAILDESCR;
-        return add(l, r);
+        DESCR_t acc = interp_eval(e->children[0]);
+        if (IS_FAIL_fn(acc)) return FAILDESCR;
+        for (int i = 1; i < e->nchildren; i++) {
+            DESCR_t r = interp_eval(e->children[i]);
+            if (IS_FAIL_fn(r)) return FAILDESCR;
+            acc = add(acc, r);
+            if (IS_FAIL_fn(acc)) return FAILDESCR;
+        }
+        return acc;
     }
     case E_SUB: {
         if (e->nchildren < 2) return FAILDESCR;
-        DESCR_t l = interp_eval(e->children[0]);
-        DESCR_t r = interp_eval(e->children[1]);
-        if (IS_FAIL_fn(l) || IS_FAIL_fn(r)) return FAILDESCR;
-        return sub(l, r);
+        DESCR_t acc = interp_eval(e->children[0]);
+        if (IS_FAIL_fn(acc)) return FAILDESCR;
+        for (int i = 1; i < e->nchildren; i++) {
+            DESCR_t r = interp_eval(e->children[i]);
+            if (IS_FAIL_fn(r)) return FAILDESCR;
+            acc = sub(acc, r);
+            if (IS_FAIL_fn(acc)) return FAILDESCR;
+        }
+        return acc;
     }
     case E_MUL: {
         if (e->nchildren < 2) return FAILDESCR;
-        DESCR_t l = interp_eval(e->children[0]);
-        DESCR_t r = interp_eval(e->children[1]);
-        if (IS_FAIL_fn(l) || IS_FAIL_fn(r)) return FAILDESCR;
-        return mul(l, r);
+        DESCR_t acc = interp_eval(e->children[0]);
+        if (IS_FAIL_fn(acc)) return FAILDESCR;
+        for (int i = 1; i < e->nchildren; i++) {
+            DESCR_t r = interp_eval(e->children[i]);
+            if (IS_FAIL_fn(r)) return FAILDESCR;
+            acc = mul(acc, r);
+            if (IS_FAIL_fn(acc)) return FAILDESCR;
+        }
+        return acc;
     }
     case E_DIV: {
         if (e->nchildren < 2) return FAILDESCR;
-        DESCR_t l = interp_eval(e->children[0]);
-        DESCR_t r = interp_eval(e->children[1]);
-        if (IS_FAIL_fn(l) || IS_FAIL_fn(r)) return FAILDESCR;
-        return DIVIDE_fn(l, r);
+        DESCR_t acc = interp_eval(e->children[0]);
+        if (IS_FAIL_fn(acc)) return FAILDESCR;
+        for (int i = 1; i < e->nchildren; i++) {
+            DESCR_t r = interp_eval(e->children[i]);
+            if (IS_FAIL_fn(r)) return FAILDESCR;
+            acc = DIVIDE_fn(acc, r);
+            if (IS_FAIL_fn(acc)) return FAILDESCR;
+        }
+        return acc;
     }
     case E_MOD: {
         if (e->nchildren < 2) return FAILDESCR;
@@ -2598,19 +2618,26 @@ DESCR_t interp_eval(EXPR_t *e)
     }
     case E_POW: {
         if (e->nchildren < 2) return FAILDESCR;
-        DESCR_t l = interp_eval(e->children[0]);
-        DESCR_t r = interp_eval(e->children[1]);
-        if (IS_FAIL_fn(l) || IS_FAIL_fn(r)) return FAILDESCR;
-        /* SNOBOL4: int**int with non-negative exponent → integer; any real operand → real.
-         * Icon (g_lang==1): `^` always produces real, even with integer operands.    */
-        if (g_lang != 1 && IS_INT_fn(l) && IS_INT_fn(r) && r.i >= 0) {
-            long base = l.i, result = 1; int exp = (int)r.i;
-            for (int k = 0; k < exp; k++) result *= base;
-            return INTVAL(result);
+        /* Right-fold: a ** b ** c == a ** (b ** c).  Evaluate from right to left,
+         * combining last two first.  acc starts as rightmost child. */
+        DESCR_t acc = interp_eval(e->children[e->nchildren - 1]);
+        if (IS_FAIL_fn(acc)) return FAILDESCR;
+        for (int i = e->nchildren - 2; i >= 0; i--) {
+            DESCR_t l = interp_eval(e->children[i]);
+            if (IS_FAIL_fn(l)) return FAILDESCR;
+            /* SNOBOL4: int**int with non-negative exponent → integer; any real operand → real.
+             * Icon (g_lang==1): `^` always produces real, even with integer operands. */
+            if (g_lang != 1 && IS_INT_fn(l) && IS_INT_fn(acc) && acc.i >= 0) {
+                long base = l.i, result = 1; int exp = (int)acc.i;
+                for (int k = 0; k < exp; k++) result *= base;
+                acc = INTVAL(result);
+            } else {
+                double base = IS_REAL_fn(l)   ? l.r   : (double)l.i;
+                double exp  = IS_REAL_fn(acc) ? acc.r : (double)acc.i;
+                acc = (DESCR_t){ .v = DT_R, .r = pow(base, exp) };
+            }
         }
-        double base = IS_REAL_fn(l) ? l.r : (double)l.i;
-        double exp  = IS_REAL_fn(r) ? r.r : (double)r.i;
-        return (DESCR_t){ .v = DT_R, .r = pow(base, exp) };
+        return acc;
     }
 
     case E_CAT:
