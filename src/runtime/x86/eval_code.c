@@ -53,6 +53,7 @@
 /* ── runtime ─────────────────────────────────────────────────────────── */
 #include "snobol4.h"
 #include "sil_macros.h"   /* SIL macro translations — RT + SM axes */
+#include "sm_interp.h"    /* CHUNKS-step02: sm_call_chunk for DT_E chunk dispatch */
 
 /* ── frontend: bison/flex parse entry points (CMPILE removed) */
 #include "../../frontend/snobol4/scrip_cc.h"
@@ -547,7 +548,18 @@ const char *exec_code(DESCR_t code_block)
 DESCR_t EXPVAL_fn(DESCR_t expr_d)
 {
     if (expr_d.v == DT_E) {
-        /* Frozen EXPR_t* — thaw and evaluate with NAM frame isolation */
+        /* CHUNKS-step02 NOTE: chunk DT_E (slen==1) cannot be thawed from C-land
+         * via a nested sm_interp_run — the outer dispatch loop's longjmp guards
+         * (g_sno_err_jmp, SM_STNO) make nested runs unsafe.  The inline
+         * EVAL(*expr) case is handled at lower time via SM_CALL_CHUNK opcode.
+         * The stored-chunk case (E=*expr; EVAL(E)) is deferred to a later rung
+         * when DT_E chunk descriptors travel as integers through NV. */
+        if (expr_d.slen == 1) {
+            fprintf(stderr, "EXPVAL_fn: chunk DT_E not yet supported in stored form\n");
+            return FAILDESCR;
+        }
+
+        /* Legacy: Frozen EXPR_t* — thaw and evaluate with NAM frame isolation */
         if (!expr_d.ptr) return FAILDESCR;
 
         /* Save subject globals (SIL: WPTR/XCL/YCL/TCL) */

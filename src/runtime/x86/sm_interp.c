@@ -284,15 +284,48 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
             break;
         }
 
-        case SM_PUSH_CHUNK:
-            /* CHUNKS-step01: stub — no producer has been migrated yet */
-            fprintf(stderr, "SM_PUSH_CHUNK reached but no producer migrated yet\n"); abort();
+        case SM_PUSH_CHUNK: {
+            /* CHUNKS-step02: push DT_E chunk descriptor.
+             * slen=1 distinguishes chunk from legacy EXPR_t* (slen=0).
+             * entry_pc stored in the .i union field. */
+            DESCR_t d;
+            d.v    = DT_E;
+            d.slen = 1;                  /* chunk flag */
+            d.i    = ins->a[0].i;        /* entry_pc */
+            sm_push(st, d);
+            st->last_ok = 1;
             break;
+        }
 
-        case SM_CALL_CHUNK:
-            /* CHUNKS-step01: stub — no producer has been migrated yet */
-            fprintf(stderr, "SM_CALL_CHUNK reached but no producer migrated yet\n"); abort();
-            break;
+        case SM_CALL_CHUNK: {
+            /* CHUNKS-step02: call a compiled chunk thunk on the same SM stack.
+             * entry_pc = a[0].i.  No params, no locals, no retval NV slot.
+             * Push a minimal SmCallFrame (caller stack saved, ret_pc set),
+             * jump to entry_pc; SM_RETURN pops the frame and pushes result. */
+            int entry_pc = (int)ins->a[0].i;
+            if (entry_pc < 0 || entry_pc >= prog->count
+                    || st->call_depth >= SM_CALL_STACK_MAX) {
+                sm_push(st, FAILDESCR);
+                st->last_ok = 0;
+                break;
+            }
+            SmCallFrame *fr = &st->call_stack[st->call_depth++];
+            fr->ret_pc = st->pc;
+            fr->ret_ok = 1;
+            fr->retval_name = NULL;   /* no NV retval slot for a thunk */
+            fr->nsaved = 0;
+            /* Save caller's value stack */
+            fr->caller_sp = st->sp;
+            if (st->sp > 0) {
+                fr->caller_stack = GC_malloc(st->sp * sizeof(DESCR_t));
+                memcpy(fr->caller_stack, st->stack, st->sp * sizeof(DESCR_t));
+            } else {
+                fr->caller_stack = NULL;
+            }
+            st->sp = 0;  /* chunk body runs on empty stack */
+            st->pc = entry_pc;
+            goto sm_call_done;
+        }
 
         case SM_STORE_VAR: {
             const char *name = ins->a[0].s;
@@ -965,8 +998,11 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
                 SmCallFrame *fr = &st->call_stack[--st->call_depth];
                 int is_fret  = (ins->op == SM_FRETURN  || ins->op == SM_FRETURN_S || ins->op == SM_FRETURN_F);
                 int is_nret  = (ins->op == SM_NRETURN  || ins->op == SM_NRETURN_S || ins->op == SM_NRETURN_F);
-                /* Read return value from the NV retval slot the body wrote */
-                DESCR_t retval = NV_GET_fn(fr->retval_name);
+                /* Read return value: for chunk thunks (retval_name==NULL) use stack top;
+                 * for user functions use the NV retval slot the body wrote. */
+                DESCR_t retval = (fr->retval_name)
+                    ? NV_GET_fn(fr->retval_name)
+                    : ((st->sp > 0) ? st->stack[st->sp - 1] : FAILDESCR);
                 /* Restore saved NV vars (reverse order so retval slot last) */
                 for (int k = fr->nsaved - 1; k >= 0; k--)
                     NV_SET_fn(fr->saved_names[k], fr->saved_vals[k]);
@@ -985,7 +1021,7 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
                     st->last_ok = 0;
                     strncpy(kw_rtntype, "FRETURN", sizeof(kw_rtntype)-1); /* RS-11 */
                 } else if (is_nret) {
-                    sm_push(st, NAMEVAL(GC_strdup(fr->retval_name)));
+                    sm_push(st, fr->retval_name ? NAMEVAL(GC_strdup(fr->retval_name)) : retval);
                     st->last_ok = 1;
                     strncpy(kw_rtntype, "NRETURN", sizeof(kw_rtntype)-1); /* RS-11 */
                 } else {
@@ -1042,4 +1078,45 @@ int sm_interp_run_steps(SM_Program *prog, SM_State *st, int n) {
     g_sm_step_limit = 0;
     g_sm_steps_done = 0;
     return rc;
+}
+
+/* CHUNKS-step02: sm_call_chunk — run a compiled chunk as a thunk.
+ * Runs chunk body in a fresh nested SM_State (own stack, shared NV table).
+ * Same pattern as the RS-11 SM-bodied function dispatch in interp_hooks.c.
+ * Returns the top-of-stack value left by the chunk body. */
+
+/* Subject globals (defined in stmt_exec.c) */
+extern const char *Σ;
+extern int         Ω;
+extern int         Δ;
+
+DESCR_t sm_call_chunk(int entry_pc)
+{
+    SM_Program *prog = g_current_sm_prog;
+    if (!prog || entry_pc < 0 || entry_pc >= prog->count) {
+        fprintf(stderr, "sm_call_chunk: invalid entry_pc %d\n", entry_pc);
+        return FAILDESCR;
+    }
+
+    /* Save NAM frame and subject globals — mirrors EXPVAL_fn's save/restore */
+    NAME_ctx_t chunk_ctx;
+    NAME_ctx_enter(&chunk_ctx);
+    const char *save_sigma = Σ;
+    int         save_omega = Ω;
+    int         save_delta = Δ;
+
+    /* Fresh nested state on the heap (SM_State is ~512KB due to embedded call frames
+     * — too large for the C stack): own value stack, own call stack, shared NV table */
+    SM_State *nested = GC_malloc(sizeof(SM_State));
+    sm_state_init(nested);
+    nested->pc = entry_pc;
+    sm_interp_run(prog, nested);
+
+    /* Top-of-stack is the chunk result */
+    DESCR_t result = (nested->sp > 0) ? nested->stack[nested->sp - 1] : FAILDESCR;
+
+    Σ = save_sigma; Ω = save_omega; Δ = save_delta;
+    NAME_ctx_leave();
+
+    return result;
 }

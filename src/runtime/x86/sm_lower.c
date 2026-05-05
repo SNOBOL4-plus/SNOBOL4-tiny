@@ -567,11 +567,31 @@ static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
         sm_emit_si(p, SM_CALL, "INDIR_GET", 1);
         return;
     }
-    case E_DEFER:
-        /* *expr in value context — freeze as DT_E for EVAL() to thaw.
-         * SM_PUSH_EXPR bakes the EXPR_t* pointer into the instruction. */
-        emit_push_expr(p, e->nchildren > 0 ? e->children[0] : NULL);
+    case E_DEFER: {
+        /* CHUNKS-step02: *expr in value context — lower child as a compiled
+         * SM chunk so DT_E carries an entry_pc, not an EXPR_t*.
+         *
+         * Emission shape:
+         *   SM_JUMP  skip_chunk          ; jump around the chunk body
+         *   chunk_start: (entry_pc)
+         *   <lower_expr(child)>          ; body: leaves result on stack
+         *   SM_RETURN                    ; return to caller
+         *   skip_chunk: (label)
+         *   SM_PUSH_CHUNK entry_pc, 0   ; push DT_E{slen=1, i=entry_pc}
+         */
+        const EXPR_t *child = e->nchildren > 0 ? e->children[0] : NULL;
+        int skip_jump = sm_emit_i(p, SM_JUMP, 0);   /* forward jump, patched below */
+        int entry_pc  = sm_label(p);                 /* chunk entry point */
+        if (child)
+            lower_expr(p, lt, child);
+        else
+            sm_emit(p, SM_PUSH_NULL);
+        sm_emit(p, SM_RETURN);
+        int skip_lbl = sm_label(p);
+        sm_patch_jump(p, skip_jump, skip_lbl);
+        sm_emit_ii(p, SM_PUSH_CHUNK, (int64_t)entry_pc, 0);
         return;
+    }
 
     /* ── Arithmetic ── */
     case E_ADD: LOWER2(SM_ADD);
@@ -677,6 +697,26 @@ static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
     /* ── Function / builtin call ── */
     case E_FNC: {
         int nargs = e->nchildren;
+        /* CHUNKS-step02: EVAL(*expr) special case — when EVAL is called with a
+         * single E_DEFER argument, emit the chunk inline + SM_CALL_CHUNK instead
+         * of SM_PUSH_CHUNK + SM_CALL "EVAL".  This avoids routing through
+         * EXPVAL_fn from C mid-dispatch, keeping everything on the same SM stack. */
+        if (nargs == 1 && e->sval && strcmp(e->sval, "EVAL") == 0
+                && e->children[0] && e->children[0]->kind == E_DEFER) {
+            const EXPR_t *defer = e->children[0];
+            const EXPR_t *child = defer->nchildren > 0 ? defer->children[0] : NULL;
+            int skip_jump = sm_emit_i(p, SM_JUMP, 0);
+            int entry_pc  = sm_label(p);
+            if (child)
+                lower_expr(p, lt, child);
+            else
+                sm_emit(p, SM_PUSH_NULL);
+            sm_emit(p, SM_RETURN);
+            int skip_lbl = sm_label(p);
+            sm_patch_jump(p, skip_jump, skip_lbl);
+            sm_emit_ii(p, SM_CALL_CHUNK, (int64_t)entry_pc, 0);
+            return;
+        }
         for (int i = 0; i < nargs; i++)
             lower_expr(p, lt, e->children[i]);
         sm_emit_si(p, SM_CALL, e->sval ? e->sval : "", (int64_t)nargs);

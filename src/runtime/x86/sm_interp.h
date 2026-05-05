@@ -74,4 +74,7 @@ void sm_push(SM_State *st, DESCR_t d);
 DESCR_t sm_pop(SM_State *st);
 DESCR_t sm_peek(SM_State *st);
 
+/* CHUNKS-step02: run a compiled chunk thunk, return its result */
+DESCR_t sm_call_chunk(int entry_pc);
+
 #endif /* SM_INTERP_H */

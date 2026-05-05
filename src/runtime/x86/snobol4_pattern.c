@@ -219,6 +219,13 @@ extern DESCR_t eval_node(EXPR_t *e);
  */
 static PATND_t *pat_to_patnd(DESCR_t v) {
     if (v.v == DT_E) {
+        /* CHUNKS-step02: chunk DT_E (slen==1) — dispatch via EXPVAL_fn which
+         * routes to sm_call_chunk.  Legacy EXPR_t* path (slen==0) follows below. */
+        if (v.slen == 1) {
+            v = EXPVAL_fn(v);
+            /* Fall through to coerce result as pattern value */
+            goto coerce;
+        }
         EXPR_t *frozen = (EXPR_t *)v.ptr;
         if (!frozen) return NULL;   /* null DT_E — propagate failure (do not epsilon) */
         if (frozen->kind == E_FNC) {
@@ -251,6 +258,7 @@ static PATND_t *pat_to_patnd(DESCR_t v) {
         v = PATVAL_fn(v);
         if (v.v == DT_FAIL) return NULL;
     }
+    coerce:  /* CHUNKS-step02: chunk result lands here for coercion */
     /* DT_N (NAME) — deref to actual value, then fall through to coercion */
     if (v.v == DT_N) {
         if (v.slen == 1 && v.ptr) v = *(DESCR_t *)v.ptr;          /* NAMEPTR */

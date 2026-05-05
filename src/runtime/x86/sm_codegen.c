@@ -155,7 +155,10 @@ static void h_return_impl(int is_fret, int is_nret)
 {
     if (STATE->call_depth > 0) {
         SmCallFrame *fr = &STATE->call_stack[--STATE->call_depth];
-        DESCR_t retval  = NV_GET_fn(fr->retval_name);
+        /* CHUNKS-step02: chunk thunks have retval_name==NULL — use stack top */
+        DESCR_t retval  = fr->retval_name
+            ? NV_GET_fn(fr->retval_name)
+            : ((STATE->sp > 0) ? STATE->stack[STATE->sp - 1] : FAILDESCR);
         for (int k = fr->nsaved - 1; k >= 0; k--)
             NV_SET_fn(fr->saved_names[k], fr->saved_vals[k]);
         /* RS-9c: restore caller's value stack, then push return value on top */
@@ -171,7 +174,8 @@ static void h_return_impl(int is_fret, int is_nret)
             PUSH(FAILDESCR); STATE->last_ok = 0;
             strncpy(kw_rtntype, "FRETURN", sizeof(kw_rtntype)-1); /* RS-11 */
         } else if (is_nret) {
-            PUSH(NAMEVAL(GC_strdup(fr->retval_name))); STATE->last_ok = 1;
+            PUSH(fr->retval_name ? NAMEVAL(GC_strdup(fr->retval_name)) : retval);
+            STATE->last_ok = 1;
             strncpy(kw_rtntype, "NRETURN", sizeof(kw_rtntype)-1); /* RS-11 */
         } else {
             PUSH(retval); STATE->last_ok = (retval.v != DT_FAIL);
@@ -250,14 +254,39 @@ static void h_push_expr(void)
     STATE->last_ok = 1;
 }
 
-/* CHUNKS-step01: stubs — abort until a producer site is migrated. */
+/* CHUNKS-step02: SM_PUSH_CHUNK — push DT_E chunk descriptor (slen=1, i=entry_pc). */
 static void h_push_chunk(void)
 {
-    fprintf(stderr, "SM_PUSH_CHUNK reached but no producer migrated yet\n"); abort();
+    DESCR_t d;
+    d.v    = DT_E;
+    d.slen = 1;
+    d.i    = (int64_t)CUR_INS->a[0].i;
+    PUSH(d);
+    STATE->last_ok = 1;
 }
+/* CHUNKS-step02: SM_CALL_CHUNK — push minimal SmCallFrame, jump to entry_pc.
+ * Mirrors SM_CALL_CHUNK handler in sm_interp.c. */
 static void h_call_chunk(void)
 {
-    fprintf(stderr, "SM_CALL_CHUNK reached but no producer migrated yet\n"); abort();
+    int entry_pc = (int)CUR_INS->a[0].i;
+    if (entry_pc < 0 || STATE->call_depth >= SM_CALL_STACK_MAX) {
+        PUSH(FAILDESCR); STATE->last_ok = 0;
+        return;
+    }
+    SmCallFrame *fr = &STATE->call_stack[STATE->call_depth++];
+    fr->ret_pc = STATE->pc;
+    fr->ret_ok = 1;
+    fr->retval_name = NULL;
+    fr->nsaved = 0;
+    fr->caller_sp = STATE->sp;
+    if (STATE->sp > 0) {
+        fr->caller_stack = GC_malloc(STATE->sp * sizeof(DESCR_t));
+        memcpy(fr->caller_stack, STATE->stack, STATE->sp * sizeof(DESCR_t));
+    } else {
+        fr->caller_stack = NULL;
+    }
+    STATE->sp = 0;
+    STATE->pc = entry_pc;
 }
 
 /* SN-9b: Byrd-box broker opcodes — Icon (SM_BB_PUMP) / Prolog (SM_BB_ONCE).
