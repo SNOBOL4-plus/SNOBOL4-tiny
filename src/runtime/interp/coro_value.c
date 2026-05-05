@@ -1213,6 +1213,133 @@ DESCR_t bb_eval_value(EXPR_t *e)
         return rv;
     }
 
+    /*========================================================================
+     * RS-23-extra (session 2026-05-05): value-context handlers for the
+     * remaining 5-of-6 unique tuples (`E_RETURN via coro_eval` excluded —
+     * separate oneshot path).  Diag prior to this rung showed:
+     *   E_BANG_BINARY  caller=bb_eval_value     via=bb_eval_value
+     *   E_IF           caller=bb_eval_value     via=bb_eval_value
+     *   E_IF           caller=coro_bb_seq_expr  via=bb_eval_value
+     *   E_PROC_FAIL    caller=(direct)          via=bb_eval_value
+     *   E_REVASSIGN    caller=bb_exec_stmt      via=bb_exec_stmt   (in coro_stmt.c)
+     * Precondition: RS-23-extra-prep2 (smart fallback in icn_call_builtin)
+     * unblocks the route by killing the meander double-eval regression.
+     *======================================================================*/
+
+    /* E_IF in value context — mirrors interp_eval.c:3108-3114.
+     * Eval cond; if it doesn't fail, evaluate then-branch (or return cond
+     * value if there is no then); if cond fails, evaluate else-branch
+     * (or return FAILDESCR if there is no else).  is_suspendable check
+     * mirrors the stmt-context handler at coro_stmt.c:106 — for a
+     * suspendable cond, drive its first value via coro_eval+α so generator
+     * semantics are preserved. */
+    case E_IF: {
+        if (e->nchildren < 1) return NULVCL;
+        EXPR_t *test = e->children[0];
+        DESCR_t cv;
+        if (is_suspendable(test)) {
+            bb_node_t box = coro_eval(test);
+            cv = box.fn(box.ζ, α);
+        } else {
+            cv = bb_eval_value(test);
+        }
+        if (!IS_FAIL_fn(cv))
+            return (e->nchildren > 1) ? bb_eval_value(e->children[1]) : cv;
+        return (e->nchildren > 2) ? bb_eval_value(e->children[2]) : FAILDESCR;
+    }
+
+    /* E_PROC_FAIL in value context — mirrors interp_eval.c:2064-2070.
+     * Procedure-level fail: set the frame's returning sentinel and return
+     * FAILDESCR.  Note: this is the *eager* form, reached when something
+     * directly calls bb_eval_value(E_PROC_FAIL).  The lazy form for
+     * `expr | fail` alternation lives in coro_eval (RS-23b's icn_lazy_box
+     * wrapping at coro_runtime.c:1576) and is unaffected — the lazy box
+     * triggers this same case only when the alternation arm is actually
+     * pumped, preserving the semantics RS-23b established. */
+    case E_PROC_FAIL: {
+        if (frame_depth > 0) {
+            FRAME.return_val = FAILDESCR;
+            FRAME.returning  = 1;
+        }
+        return FAILDESCR;
+    }
+
+    /* E_REVASSIGN in value context — `x <- v`, reversible assign.
+     * Mirrors interp_eval.c:606-637 (the standalone path).  Outside `every`
+     * no driver backtracks the operation, so we just perform the assign and
+     * succeed.  The revert semantics live in coro_bb_revassign and are
+     * reached only when coro_eval is asked for a box (every / alt-driven
+     * contexts) — that path is unaffected.  Three lvalue shapes: E_VAR
+     * (slot or NV name), E_IDX (subscript_set), E_FIELD (data_field_ptr). */
+    case E_REVASSIGN: {
+        if (e->nchildren < 2) return NULVCL;
+        DESCR_t val = bb_eval_value(e->children[1]);
+        if (IS_FAIL_fn(val)) return FAILDESCR;
+        EXPR_t *lhs = e->children[0];
+        if (lhs && lhs->kind == E_VAR) {
+            int slot = (int)lhs->ival;
+            if (slot >= 0 && slot < FRAME.env_n) FRAME.env[slot] = val;
+            else if (slot < 0 && lhs->sval && lhs->sval[0] != '&') set_and_trace(lhs->sval, val);
+        } else if (lhs && lhs->kind == E_IDX && lhs->nchildren >= 2) {
+            DESCR_t base = bb_eval_value(lhs->children[0]);
+            if (!IS_FAIL_fn(base)) {
+                DESCR_t idx = bb_eval_value(lhs->children[1]);
+                if (!IS_FAIL_fn(idx)) subscript_set(base, idx, val);
+            }
+        } else if (lhs && lhs->kind == E_FIELD && lhs->sval && lhs->nchildren >= 1) {
+            DESCR_t obj = bb_eval_value(lhs->children[0]);
+            if (!IS_FAIL_fn(obj)) {
+                DESCR_t *cell = data_field_ptr(lhs->sval, obj);
+                if (cell) *cell = val;
+            }
+        }
+        return val;
+    }
+
+    /* E_BANG_BINARY in value context — `E1 ! E2`, Icon's apply-as-generator.
+     * This is a generator combinator with no per-tick scalar state on
+     * FRAME.gen — its state lives entirely in the bb_node_t built by
+     * coro_eval.  Outer-pump retries reach it through the box's β path,
+     * not through re-entry of bb_eval_value.  Mirrors the existing
+     * E_LIMIT/E_ALTERNATE/E_SEQ_EXPR pattern at coro_value.c:888-901. */
+    case E_BANG_BINARY: {
+        /* (2) injection check — outer pump might have already produced
+         * a tick we should return verbatim. */
+        if (coro_drive_node && e == coro_drive_node) return coro_drive_val;
+        /* (3) fresh first-value via coro_eval+α */
+        bb_node_t box = coro_eval(e);
+        return box.fn(box.ζ, α);
+    }
+
+    /* E_LOOP_BREAK in value context — surfaced by the diag after RS-23-extra
+     * absorbed E_IF/E_PROC_FAIL/E_BANG_BINARY/E_REVASSIGN.  Pattern: `break`
+     * appears as a body whose value is harvested by an enclosing expression
+     * (e.g. `expr & break` in a value-context).  Mirrors interp_eval.c:3419-
+     * 3422: set the frame's loop_break sentinel and return the optional
+     * value child if present, else NULVCL.  The stmt-context handler in
+     * coro_stmt.c:69 is the more common path. */
+    case E_LOOP_BREAK: {
+        FRAME.loop_break = 1;
+        return (e->nchildren > 0) ? bb_eval_value(e->children[0]) : NULVCL;
+    }
+
+    /* E_RETURN in value context — surfaced by the same diag rerun.  Pattern:
+     * `return expr` appears as a body whose value is harvested.  Mirrors
+     * interp_eval.c:2053-2061: evaluate the optional value child, set
+     * FRAME.return_val and FRAME.returning, and return the value.  At
+     * frame_depth 0 we just evaluate the child (no procedure to return
+     * from).  The stmt-context handler in coro_stmt.c:80 is the common
+     * path; this addition handles the rare value-context arrival. */
+    case E_RETURN: {
+        if (frame_depth > 0) {
+            FRAME.return_val = (e->nchildren > 0)
+                ? bb_eval_value(e->children[0]) : NULVCL;
+            FRAME.returning = 1;
+            return FRAME.return_val;
+        }
+        return (e->nchildren > 0) ? bb_eval_value(e->children[0]) : NULVCL;
+    }
+
     default:
         break;
     }

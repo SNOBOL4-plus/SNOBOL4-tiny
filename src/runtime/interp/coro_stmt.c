@@ -247,6 +247,19 @@ void bb_exec_stmt(EXPR_t *e)
         return;
     }
 
+    /*========================================================================
+     * RS-23-extra (session 2026-05-05): E_REVASSIGN stmt-context.
+     * Statement context: perform the reversible assign and discard the
+     * returned value.  bb_eval_value carries the full native implementation
+     * (added in this rung to coro_value.c).  The revert semantics for
+     * every/alt-driven contexts are unaffected — those reach coro_bb_revassign
+     * via coro_eval, not via this path.
+     *======================================================================*/
+    case E_REVASSIGN: {
+        (void)bb_eval_value(e);
+        return;
+    }
+
     default: break;
     }
 
