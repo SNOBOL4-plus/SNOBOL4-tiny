@@ -35,6 +35,8 @@ typedef enum {
     SM_PUSH_NULL_NOFLIP, /* push null but do NOT clobber last_ok — for E_SCAN value-balance */
     SM_PUSH_VAR,
     SM_PUSH_EXPR,    /* push DT_E frozen expression; a[0].ptr = EXPR_t* */
+    SM_PUSH_CHUNK,   /* push DT_E chunk descriptor; a[0].i=entry_pc, a[1].i=arity */
+    SM_CALL_CHUNK,   /* pop chunk descriptor, push return frame, jump to entry_pc */
     SM_STORE_VAR,
     SM_POP,
 
@@ -158,7 +160,17 @@ typedef union {
     void       *ptr;        /* frozen pointer (EXPR_t* for SM_PUSH_EXPR, etc.) */
 } sm_operand_t;
 
-/* ── Single instruction ─────────────────────────────────────────────── */
+/* ── Compiled chunk descriptor ──────────────────────────────────────── */
+/* Replaces raw EXPR_t* in DT_E descriptors once a site is migrated away
+ * from SM_PUSH_EXPR.  entry_pc indexes SM_Program::instrs[]; arity is the
+ * number of args expected on the SM value stack at entry (0 for a thunk).
+ * SM_PUSH_CHUNK encodes these as a[0].i and a[1].i respectively. */
+typedef struct {
+    int entry_pc;   /* index into SM_Program::instrs[] where chunk starts */
+    int arity;      /* args on SM value stack at entry; 0 = thunk */
+} SmChunk_t;
+
+
 
 #define SM_MAX_OPERANDS 3
 

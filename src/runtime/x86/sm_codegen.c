@@ -250,6 +250,16 @@ static void h_push_expr(void)
     STATE->last_ok = 1;
 }
 
+/* CHUNKS-step01: stubs — abort until a producer site is migrated. */
+static void h_push_chunk(void)
+{
+    fprintf(stderr, "SM_PUSH_CHUNK reached but no producer migrated yet\n"); abort();
+}
+static void h_call_chunk(void)
+{
+    fprintf(stderr, "SM_CALL_CHUNK reached but no producer migrated yet\n"); abort();
+}
+
 /* SN-9b: Byrd-box broker opcodes — Icon (SM_BB_PUMP) / Prolog (SM_BB_ONCE).
  * Direct ports of sm_interp.c:612-635.  Polyglot programs emit these for
  * LANG_ICN and LANG_PL statements; codegen previously left both as
@@ -845,6 +855,8 @@ static void init_handler_table(void)
     g_handlers[SM_PUSH_NULL]  = h_push_null;
     g_handlers[SM_PUSH_VAR]   = h_push_var;
     g_handlers[SM_PUSH_EXPR]  = h_push_expr;
+    g_handlers[SM_PUSH_CHUNK] = h_push_chunk;  /* CHUNKS-step01 stub */
+    g_handlers[SM_CALL_CHUNK] = h_call_chunk;  /* CHUNKS-step01 stub */
     g_handlers[SM_STORE_VAR]  = h_store_var;
     g_handlers[SM_POP]        = h_pop;
 

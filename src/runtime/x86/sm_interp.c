@@ -284,6 +284,16 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
             break;
         }
 
+        case SM_PUSH_CHUNK:
+            /* CHUNKS-step01: stub — no producer has been migrated yet */
+            fprintf(stderr, "SM_PUSH_CHUNK reached but no producer migrated yet\n"); abort();
+            break;
+
+        case SM_CALL_CHUNK:
+            /* CHUNKS-step01: stub — no producer has been migrated yet */
+            fprintf(stderr, "SM_CALL_CHUNK reached but no producer migrated yet\n"); abort();
+            break;
+
         case SM_STORE_VAR: {
             const char *name = ins->a[0].s;
             DESCR_t val = sm_pop(st);
