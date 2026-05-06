@@ -552,9 +552,15 @@ static void lower_stmt(RebLow *L, RStmt *s) {
 
     /* --- compound { s1; s2; ... } */
     case RS_COMPOUND: {
-        for (int i = 0; i < s->nstmts; i++)
+        /* Suppress ->next walk on each stmts[i]: lower_stmt always follows
+         * ->next at its tail, but stmts[] already holds the complete
+         * ordered set.  Temporarily null each ->next before lowering. */
+        for (int i = 0; i < s->nstmts; i++) {
+            RStmt *saved_next = s->stmts[i]->next;
+            s->stmts[i]->next = NULL;
             lower_stmt(L, s->stmts[i]);
-        /* Also walk ->next chain if present */
+            s->stmts[i]->next = saved_next;
+        }
         break;
     }
 
