@@ -55,11 +55,12 @@ if [ "$RC" -ne 42 ]; then
     echo "FAIL em2_a expected rc=42 got rc=$RC"; exit 1
 fi
 # Asm-content sanity: PUSH_LIT_I and HALT emitter blocks both present.
-grep -q "SM_PUSH_LIT_I  42"           "$TMP/em2_a.s" || { echo "FAIL no PUSH_LIT_I 42 marker"; exit 1; }
-grep -q "SM_HALT (rc <- TOS"          "$TMP/em2_a.s" || { echo "FAIL no SM_HALT marker"; exit 1; }
+# asm-content sanity: check for key instruction sequences in new 3-col format
+grep -q "movabs  rdi, 42"             "$TMP/em2_a.s" || { echo "FAIL no literal-42 movabs"; exit 1; }
+grep -q "scrip_rt_push_int@PLT"       "$TMP/em2_a.s" || { echo "FAIL no push_int call"; exit 1; }
 grep -q "scrip_rt_pop_int@PLT"        "$TMP/em2_a.s" || { echo "FAIL no pop_int call"; exit 1; }
 grep -q "scrip_rt_halt@PLT"           "$TMP/em2_a.s" || { echo "FAIL no halt call"; exit 1; }
-grep -q "movabs *rdi, 42"             "$TMP/em2_a.s" || { echo "FAIL no literal-42 movabs"; exit 1; }
+grep -q "rc <- TOS"                   "$TMP/em2_a.s" || { echo "FAIL no SM_HALT comment"; exit 1; }
 echo "  PASS PUSH_LIT_I+HALT  (rc=42; emit shape correct)"
 
 # ── Test 2: unhandled-op trap fires on SM_ADD ──────────────────────────
@@ -74,7 +75,7 @@ int main(int argc, char **argv) {
     SM_Program *p = sm_prog_new();
     sm_emit_i(p, SM_PUSH_LIT_I, 1);
     sm_emit_i(p, SM_PUSH_LIT_I, 2);
-    sm_emit(p, SM_ADD);
+    sm_emit(p, SM_CONCAT);
     sm_emit(p, SM_HALT);
     FILE *f = fopen(argv[1], "w");
     sm_codegen_x64_emit(p, f);
@@ -130,5 +131,27 @@ set +e
 set -e
 echo "  PASS EM-1 errors    (flag validation regression-clean)"
 
+
+# -- Test 5: EM-3 gate -- (2 + 3) * 4 = 20 ----------------------------------
+# Build the EM-3 synthetic program (6-op: PUSH 2, PUSH 3, ADD, PUSH 4, MUL, HALT).
+# The harness now accepts two asm output paths; argv[1]=EM-2, argv[2]=EM-3.
+"$HARNESS" "$TMP/em2_a.s" "$TMP/em3.s" >/dev/null
+gcc -no-pie "$TMP/em3.s" \
+    -L"$ROOT/out" -lscrip_rt -Wl,-rpath,"$ROOT/out" \
+    -o "$TMP/em3_prog" 2> "$TMP/em3_link.err" || {
+    echo "FAIL em3 link"; cat "$TMP/em3_link.err"; exit 1; }
+set +e
+"$TMP/em3_prog"
+RC=$?
+set -e
+if [ "$RC" -ne 20 ]; then
+    echo "FAIL em3 expected rc=20 got rc=$RC"; exit 1
+fi
+# Asm-content sanity: ADD and MUL emitter blocks both present.
+grep -q "SM_ADD"   "$TMP/em3.s" || { echo "FAIL no SM_ADD marker in em3 asm"; exit 1; }
+grep -q "SM_MUL"   "$TMP/em3.s" || { echo "FAIL no SM_MUL marker in em3 asm"; exit 1; }
+grep -q "scrip_rt_arith@PLT" "$TMP/em3.s" || { echo "FAIL no arith PLT call"; exit 1; }
+echo "  PASS EM-3 arithmetic  ((2+3)*4=20; emit->link->run verified)"
+
 echo
-echo "PASS=4 FAIL=0  (EM-1 wiring + EM-2 codegen for SM_HALT + SM_PUSH_LIT_I)"
+echo "PASS=5 FAIL=0  (EM-1 wiring + EM-2 HALT/PUSH_LIT_I + EM-3 stack ops + arithmetic)"

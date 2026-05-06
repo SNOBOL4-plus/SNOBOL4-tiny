@@ -1,5 +1,5 @@
 /*
- * scrip_rt.h — public ABI for libscrip_rt.so (M-JITEM-X64 / EM-1+EM-2)
+ * scrip_rt.h — public ABI for libscrip_rt.so (M-JITEM-X64 / EM-1..EM-3)
  *
  * Authors: Lon Jones Cherryholmes · Claude Sonnet
  * Date: 2026-05-06
@@ -15,24 +15,38 @@
  *   scrip_rt_init      — process startup; receives argc/argv
  *   scrip_rt_finalize  — process shutdown; returns the program rc
  *
- * EM-2 surface (this commit):
+ * EM-2 surface:
  *   scrip_rt_push_int  — push a 64-bit int onto the SM value stack
  *   scrip_rt_pop_int   — pop the top of the SM value stack as int
- *   scrip_rt_halt      — record the program's exit code; falls through
- *                        to scrip_rt_finalize via the emitted epilogue
- *   scrip_rt_unhandled_op — runtime trap for opcodes the emitter
- *                           does not yet bake; aborts loudly
+ *   scrip_rt_halt      — record the program's exit code
+ *   scrip_rt_unhandled_op — runtime trap for unimplemented opcodes
+ *
+ * EM-3 surface (this commit):
+ *   scrip_rt_push_str  — push a string (DT_S) value onto the SM stack
+ *   scrip_rt_pop_descr — pop a ScripRtVal (typed descriptor) from the stack
+ *   scrip_rt_arith     — binary integer arithmetic (ADD/SUB/MUL/DIV/MOD)
+ *   scrip_rt_nv_get    — load a named variable onto the stack  [stub]
+ *   scrip_rt_nv_set    — store TOS into a named variable       [stub]
+ *   scrip_rt_pop_void  — pop and discard TOS (SM_POP)
+ *
+ * SM_DUP / SM_SWAP — not in the sm_opcode_t enum (the rung text was
+ * aspirational).  EM-3 covers the opcodes that actually exist.
  *
  * Stability: every symbol exported here is part of the mode-4 ABI.
  * Once an emitted binary references a symbol, the signature must not
  * change. Additions are backward-compatible by definition.
  *
  * EM-2 deviation note: scrip_rt_pop_int was originally planned for
- * EM-3 (full SM stack-ops set: PUSH/POP/DUP/SWAP).  It is pulled
- * forward by one rung because SM_HALT's codegen needs it — without
- * it the EM-2 gate cannot distinguish a program that successfully
- * runs PUSH_LIT_I+HALT from one that no-ops.  See sm_codegen_x64_emit.c
- * emit_op_halt() for the full justification.
+ * EM-3.  It was pulled forward because SM_HALT's codegen needs it.
+ * See closed-rung entry in GOAL-MODE4-EMIT.md.
+ *
+ * EM-3 deviation note: scrip_rt_nv_get / scrip_rt_nv_set are stubs
+ * that abort at runtime.  Full NV table integration requires the
+ * snobol4 runtime (GC, name folding, keyword dispatch) which cannot
+ * be linked into libscrip_rt.so without significant layering work.
+ * The EM-3 gate (integer arithmetic only) does not exercise these
+ * symbols.  They are declared here to make the ABI stable; the stubs
+ * will be replaced in a later rung without changing the signature.
  */
 
 #ifndef SCRIP_RT_H
@@ -44,70 +58,114 @@
 extern "C" {
 #endif
 
+/* ── ScripRtVal — typed value descriptor ─────────────────────────────
+ *
+ * Mirrors the layout of DESCR_t (descr.h) so that the SM value stack
+ * inside libscrip_rt.so carries typed values.  The tag values are kept
+ * identical to DTYPE_t so the two types are bit-compatible.
+ *
+ * Only the types used through EM-3 are named here.  The full DTYPE_t
+ * enumeration (DT_DATA, DT_NAME, etc.) is in snobol4.h / descr.h; the
+ * correspondence is maintained by construction.
+ */
+typedef enum {
+    SCRIP_RT_SNUL = 0,   /* null / unset              */
+    SCRIP_RT_STR  = 1,   /* string — char* in .s      */
+    SCRIP_RT_INT  = 6,   /* integer — int64_t in .i   */
+    SCRIP_RT_FAIL = 99   /* failure sentinel           */
+} ScripRtTag;
+
+typedef struct {
+    int32_t  tag;    /* ScripRtTag (int32 to match DESCR_t padding)  */
+    uint32_t slen;   /* string byte length (0 for non-string)         */
+    union {
+        char    *s;  /* SCRIP_RT_STR  */
+        int64_t  i;  /* SCRIP_RT_INT  */
+        double   f;  /* future float  */
+    };
+} ScripRtVal;
+
 /* ── EM-1 surface ────────────────────────────────────────────────────── */
 
-/*
- * scrip_rt_init — runtime startup. Called from emitted main() before
- * any other scrip_rt_* call. Receives the program's argv for &INPUT /
- * &OUTPUT wiring (in later rungs). EM-1: no-op.
- */
 void scrip_rt_init(int argc, char **argv);
-
-/*
- * scrip_rt_finalize — runtime shutdown. Called from emitted main() as
- * the last step. Returns the int the emitted main() should return —
- * the program's exit code.
- *
- * EM-1: returns 0.
- * EM-2: returns whatever scrip_rt_halt last recorded; 0 if halt never
- * called.
- */
-int scrip_rt_finalize(void);
+int  scrip_rt_finalize(void);
 
 /* ── EM-2 surface ────────────────────────────────────────────────────── */
 
 /*
- * scrip_rt_push_int — push a signed 64-bit int onto the SM value stack.
- * The value stack lives entirely inside libscrip_rt.so — emitted code
- * sees it only through the push/pop ABI in this rung.  Future rungs
- * (EM-3+) may bake direct stack manipulation; until then every stack
- * touch is a function call.
- *
- * Capacity is fixed in EM-2 (small static buffer; see scrip_rt.c).
- * Overflow aborts via abort(3).  EM-3 may grow / heap-allocate.
+ * scrip_rt_push_int — push a DT_I integer onto the SM value stack.
+ * Backward-compatible with EM-2; the stack now holds ScripRtVal entries
+ * but the int ABI is unchanged.
  */
-void scrip_rt_push_int(int64_t v);
+void    scrip_rt_push_int(int64_t v);
 
 /*
- * scrip_rt_pop_int — pop the SM value-stack top as a signed 64-bit int.
- * Underflow aborts via abort(3).
+ * scrip_rt_pop_int — pop TOS as a signed 64-bit integer.
+ * Backward-compatible with EM-2.  If TOS is not DT_I, aborts.
  */
 int64_t scrip_rt_pop_int(void);
 
-/*
- * scrip_rt_halt — record the program's exit rc.  The emitted epilogue
- * always falls through to scrip_rt_finalize, which returns the
- * recorded rc.  Calling scrip_rt_halt(rc) does NOT exit immediately;
- * it only sets state.  The corresponding SM-mode 2 semantics is
- * "stop running"; the codegen achieves that by emitting halt as the
- * last block before the epilogue.
- *
- * Note for future rungs: when control flow lands (EM-4), SM_HALT may
- * need to short-circuit out of arbitrary nesting.  At that point this
- * function will likely be replaced with a longjmp-based escape to the
- * epilogue, or the emitter will route halt through an unconditional
- * jump to .Lend.  For EM-2 the synthetic test programs are linear so
- * a simple state record suffices.
- */
 void scrip_rt_halt(int rc);
+void scrip_rt_unhandled_op(int op);
+
+/* ── EM-3 surface ────────────────────────────────────────────────────── */
 
 /*
- * scrip_rt_unhandled_op — runtime trap for any SM opcode the emitter
- * has not yet baked.  Prints a diagnostic and aborts via abort(3).
- * `op` is the integer opcode value (sm_opcode_t cast to int) for
- * cross-reference against sm_opcode_name() in scrip dumps.
+ * scrip_rt_push_str — push a DT_S string onto the SM value stack.
+ * `s` is a C string pointer (lifetime managed by the caller / GC in
+ * later rungs).  `slen` is the byte length; pass 0 to use strlen.
  */
-void scrip_rt_unhandled_op(int op);
+void scrip_rt_push_str(const char *s, uint32_t slen);
+
+/*
+ * scrip_rt_pop_descr — pop TOS into the caller-supplied ScripRtVal.
+ * Used by SM_STORE_VAR codegen to inspect the type before storing.
+ */
+void scrip_rt_pop_descr(ScripRtVal *out);
+
+/*
+ * scrip_rt_arith — binary arithmetic: pops two ScripRtVals (r then l),
+ * computes l <op> r, pushes the result.
+ *
+ * `op` is the sm_opcode_t integer value:
+ *   SM_ADD=17, SM_SUB=18, SM_MUL=19, SM_DIV=20, SM_MOD=22
+ * (values from sm_prog.h — kept as ints to avoid the header dependency).
+ *
+ * EM-3 scope: integer operands only.  Both operands must be
+ * SCRIP_RT_INT; any other type combination aborts with a diagnostic
+ * (the gate program uses only literals).  Full string→number coercion
+ * is deferred to the rung that lands SM_PUSH_VAR/SM_STORE_VAR with a
+ * live NV table.
+ *
+ * Divide-by-zero aborts via abort(3).
+ */
+void scrip_rt_arith(int op);
+
+/*
+ * scrip_rt_nv_get — push the value of the named variable onto the
+ * SM value stack.  STUB in EM-3: aborts with a clear message.
+ * Signature is stable; the stub will be replaced when the NV table
+ * is linked into libscrip_rt.so.
+ */
+void scrip_rt_nv_get(const char *name);
+
+/*
+ * scrip_rt_nv_set — pop TOS and store it in the named variable.
+ * STUB in EM-3: aborts with a clear message.
+ */
+void scrip_rt_nv_set(const char *name);
+
+/*
+ * scrip_rt_pop_void — pop and discard TOS (SM_POP codegen).
+ */
+void scrip_rt_pop_void(void);
+
+/*
+ * scrip_rt_last_ok -- return 1 if the most recent SM operation succeeded,
+ * 0 if it failed. Used by SM_JUMP_S and SM_JUMP_F codegen (EM-4).
+ * Declared here for ABI stability; exercised starting EM-4.
+ */
+int scrip_rt_last_ok(void);
 
 #ifdef __cplusplus
 }
