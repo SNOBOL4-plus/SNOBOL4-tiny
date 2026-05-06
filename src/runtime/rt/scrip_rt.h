@@ -1,58 +1,78 @@
 /*
- * scrip_rt.h — public ABI for libscrip_rt.so (M-JITEM-X64 / EM-1..EM-3)
+ * scrip_rt.h — public ABI for libscrip_rt.so (M-JITEM-X64 / EM-1..EM-6)
  *
  * Authors: Lon Jones Cherryholmes · Claude Sonnet
  * Date: 2026-05-06
  *
  * libscrip_rt.so is the runtime support library that mode-4-emitted
- * binaries link against. It carries language-level semantics — pattern
- * matcher, NV table, builtins, GC, generator BB pump (post-Step 19),
- * Prolog backtracking machinery (post-Step 19) — so that emitted
- * executables contain only compiled SM chunks plus calls into a stable
- * C ABI defined here.
+ * binaries link against.  It carries language-level semantics — pattern
+ * matcher, NV table, builtins, GC, generator BB pump (post-EM-10),
+ * Prolog backtracking machinery (post-EM-14) — so that emitted
+ * executables contain only compiled SM chunks plus calls into this ABI.
+ *
+ * Value type: DESCR_t (from descr.h / snobol4.h).  The separate
+ * ScripRtVal/ScripRtTag types that existed through EM-5 are gone.
+ * DESCR_t is the one true descriptor; every stack slot is a DESCR_t.
+ * DT_* tag constants (DT_SNUL=0, DT_S=1, DT_I=6, DT_E=11, DT_FAIL=99)
+ * come from descr.h which emitted binaries include via snobol4.h.
  *
  * EM-1 surface:
  *   scrip_rt_init      — process startup; receives argc/argv
  *   scrip_rt_finalize  — process shutdown; returns the program rc
  *
  * EM-2 surface:
- *   scrip_rt_push_int  — push a 64-bit int onto the SM value stack
- *   scrip_rt_pop_int   — pop the top of the SM value stack as int
+ *   scrip_rt_push_int  — push a DT_I integer onto the SM value stack
+ *   scrip_rt_pop_int   — pop TOS as int64_t
  *   scrip_rt_halt      — record the program's exit code
  *   scrip_rt_unhandled_op — runtime trap for unimplemented opcodes
  *
- * EM-3 surface (this commit):
- *   scrip_rt_push_str  — push a string (DT_S) value onto the SM stack
- *   scrip_rt_pop_descr — pop a ScripRtVal (typed descriptor) from the stack
- *   scrip_rt_arith     — binary integer arithmetic (ADD/SUB/MUL/DIV/MOD)
- *   scrip_rt_nv_get    — load a named variable onto the stack  [stub]
- *   scrip_rt_nv_set    — store TOS into a named variable       [stub]
+ * EM-3 surface:
+ *   scrip_rt_push_str  — push a DT_S string onto the SM stack
+ *   scrip_rt_pop_descr — pop TOS into a DESCR_t (SM_STORE_VAR codegen)
+ *   scrip_rt_arith     — binary arithmetic (ADD/SUB/MUL/DIV/MOD)
+ *   scrip_rt_nv_get    — load named variable onto stack (real in EM-6)
+ *   scrip_rt_nv_set    — store TOS into named variable  (real in EM-6)
  *   scrip_rt_pop_void  — pop and discard TOS (SM_POP)
  *
- * EM-5 surface:
- *   scrip_rt_push_chunk_descr — push a DT_E chunk descriptor (entry_pc,
- *                               arity).  SM_CALL_CHUNK and SM_RETURN
- *                               are baked direct in the emitter (call
- *                               .LpcN / ret) and do not need ABI symbols.
+ * EM-4 surface:
+ *   scrip_rt_last_ok     — read success flag (SM_JUMP_S / SM_JUMP_F)
+ *   scrip_rt_set_last_ok — write success flag
  *
- * SM_DUP / SM_SWAP — not in the sm_opcode_t enum (the rung text was
- * aspirational).  EM-3 covers the opcodes that actually exist.
+ * EM-5 surface:
+ *   scrip_rt_push_chunk_descr — push DT_E chunk descriptor (SM_PUSH_CHUNK)
+ *   SM_CALL_CHUNK / SM_RETURN are baked direct (call .LpcN / ret).
+ *
+ * EM-6 surface:
+ *   scrip_rt_pat_lit        — SM_PAT_LIT    (a[0].s = literal)
+ *   scrip_rt_pat_span       — SM_PAT_SPAN   (pops charset from vstack)
+ *   scrip_rt_pat_break      — SM_PAT_BREAK  (pops charset from vstack)
+ *   scrip_rt_pat_any        — SM_PAT_ANY    (pops charset from vstack)
+ *   scrip_rt_pat_notany     — SM_PAT_NOTANY (pops charset from vstack)
+ *   scrip_rt_pat_len        — SM_PAT_LEN    (pops int from vstack)
+ *   scrip_rt_pat_pos        — SM_PAT_POS    (pops int from vstack)
+ *   scrip_rt_pat_rpos       — SM_PAT_RPOS   (pops int from vstack)
+ *   scrip_rt_pat_tab        — SM_PAT_TAB    (pops int from vstack)
+ *   scrip_rt_pat_rtab       — SM_PAT_RTAB   (pops int from vstack)
+ *   scrip_rt_pat_arb        — SM_PAT_ARB    (no arg)
+ *   scrip_rt_pat_arbno      — SM_PAT_ARBNO  (pops inner from patstack)
+ *   scrip_rt_pat_rem        — SM_PAT_REM
+ *   scrip_rt_pat_fence      — SM_PAT_FENCE
+ *   scrip_rt_pat_fence1     — SM_PAT_FENCE1 (pops child from patstack)
+ *   scrip_rt_pat_fail       — SM_PAT_FAIL
+ *   scrip_rt_pat_abort      — SM_PAT_ABORT
+ *   scrip_rt_pat_succeed    — SM_PAT_SUCCEED
+ *   scrip_rt_pat_bal        — SM_PAT_BAL
+ *   scrip_rt_pat_eps        — SM_PAT_EPS
+ *   scrip_rt_pat_cat        — SM_PAT_CAT    (pops right then left)
+ *   scrip_rt_pat_alt        — SM_PAT_ALT    (pops right then left)
+ *   scrip_rt_pat_deref      — SM_PAT_DEREF  (pops DESCR_t from vstack)
+ *   scrip_rt_pat_refname    — SM_PAT_REFNAME (a[0].s = var name)
+ *   scrip_rt_pat_capture    — SM_PAT_CAPTURE (a[0].s=var, a[1].i=kind)
+ *   scrip_rt_pat_boxval     — SM_PAT_BOXVAL (pat-stack top -> vstack)
+ *   scrip_rt_exec_stmt      — SM_EXEC_STMT  (a[0].s=subj, a[1].i=has_repl)
  *
  * Stability: every symbol exported here is part of the mode-4 ABI.
- * Once an emitted binary references a symbol, the signature must not
- * change. Additions are backward-compatible by definition.
- *
- * EM-2 deviation note: scrip_rt_pop_int was originally planned for
- * EM-3.  It was pulled forward because SM_HALT's codegen needs it.
- * See closed-rung entry in GOAL-MODE4-EMIT.md.
- *
- * EM-3 deviation note: scrip_rt_nv_get / scrip_rt_nv_set are stubs
- * that abort at runtime.  Full NV table integration requires the
- * snobol4 runtime (GC, name folding, keyword dispatch) which cannot
- * be linked into libscrip_rt.so without significant layering work.
- * The EM-3 gate (integer arithmetic only) does not exercise these
- * symbols.  They are declared here to make the ABI stable; the stubs
- * will be replaced in a later rung without changing the signature.
+ * Additions are backward-compatible; signatures must not change.
  */
 
 #ifndef SCRIP_RT_H
@@ -60,37 +80,17 @@
 
 #include <stdint.h>
 
+/* DESCR_t is the value type for all stack operations.  Emitted binaries
+ * that include snobol4.h / descr.h get the full struct definition; this
+ * forward declaration lets the ABI prototypes compile without snobol4.h. */
+#ifndef DESCR_T_DEFINED
+#define DESCR_T_DEFINED
+typedef struct DESCR_t DESCR_t;
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/* ── ScripRtVal — typed value descriptor ─────────────────────────────
- *
- * Mirrors the layout of DESCR_t (descr.h) so that the SM value stack
- * inside libscrip_rt.so carries typed values.  The tag values are kept
- * identical to DTYPE_t so the two types are bit-compatible.
- *
- * Only the types used through EM-3 are named here.  The full DTYPE_t
- * enumeration (DT_DATA, DT_NAME, etc.) is in snobol4.h / descr.h; the
- * correspondence is maintained by construction.
- */
-typedef enum {
-    SCRIP_RT_SNUL = 0,   /* null / unset              */
-    SCRIP_RT_STR  = 1,   /* string — char* in .s      */
-    SCRIP_RT_INT  = 6,   /* integer — int64_t in .i   */
-    SCRIP_RT_CHUNK = 11, /* chunk descriptor (DT_E)   */
-    SCRIP_RT_FAIL = 99   /* failure sentinel           */
-} ScripRtTag;
-
-typedef struct {
-    int32_t  tag;    /* ScripRtTag (int32 to match DESCR_t padding)  */
-    uint32_t slen;   /* string byte length (0 for non-string)         */
-    union {
-        char    *s;  /* SCRIP_RT_STR  */
-        int64_t  i;  /* SCRIP_RT_INT  */
-        double   f;  /* future float  */
-    };
-} ScripRtVal;
 
 /* ── EM-1 surface ────────────────────────────────────────────────────── */
 
@@ -99,102 +99,82 @@ int  scrip_rt_finalize(void);
 
 /* ── EM-2 surface ────────────────────────────────────────────────────── */
 
-/*
- * scrip_rt_push_int — push a DT_I integer onto the SM value stack.
- * Backward-compatible with EM-2; the stack now holds ScripRtVal entries
- * but the int ABI is unchanged.
- */
-void    scrip_rt_push_int(int64_t v);
-
-/*
- * scrip_rt_pop_int — pop TOS as a signed 64-bit integer.
- * Backward-compatible with EM-2.  If TOS is not DT_I, aborts.
- */
-int64_t scrip_rt_pop_int(void);
-
-void scrip_rt_halt(int rc);
-void scrip_rt_unhandled_op(int op);
+void    scrip_rt_push_int(int64_t v);        /* push DT_I integer */
+int64_t scrip_rt_pop_int(void);              /* pop TOS as int64_t (aborts if not DT_I) */
+void    scrip_rt_halt(int rc);
+void    scrip_rt_halt_tos(void);  /* safe-pop TOS as rc (DT_I) else 0 */
+void    scrip_rt_unhandled_op(int op);
 
 /* ── EM-3 surface ────────────────────────────────────────────────────── */
 
-/*
- * scrip_rt_push_str — push a DT_S string onto the SM value stack.
- * `s` is a C string pointer (lifetime managed by the caller / GC in
- * later rungs).  `slen` is the byte length; pass 0 to use strlen.
- */
-void scrip_rt_push_str(const char *s, uint32_t slen);
+void scrip_rt_push_str(const char *s, uint32_t slen); /* push DT_S; slen=0 -> strlen */
+void scrip_rt_pop_descr(DESCR_t *out);       /* pop TOS into *out (SM_STORE_VAR) */
+void scrip_rt_arith(int op);                 /* SM_ADD=17 SUB=18 MUL=19 DIV=20 MOD=22 */
+void scrip_rt_nv_get(const char *name);      /* push value of named variable */
+void scrip_rt_nv_set(const char *name);      /* pop TOS -> named variable */
+void scrip_rt_pop_void(void);                /* pop and discard TOS (SM_POP) */
 
-/*
- * scrip_rt_pop_descr — pop TOS into the caller-supplied ScripRtVal.
- * Used by SM_STORE_VAR codegen to inspect the type before storing.
- */
-void scrip_rt_pop_descr(ScripRtVal *out);
+/* ── EM-4 surface ────────────────────────────────────────────────────── */
 
-/*
- * scrip_rt_arith — binary arithmetic: pops two ScripRtVals (r then l),
- * computes l <op> r, pushes the result.
- *
- * `op` is the sm_opcode_t integer value:
- *   SM_ADD=17, SM_SUB=18, SM_MUL=19, SM_DIV=20, SM_MOD=22
- * (values from sm_prog.h — kept as ints to avoid the header dependency).
- *
- * EM-3 scope: integer operands only.  Both operands must be
- * SCRIP_RT_INT; any other type combination aborts with a diagnostic
- * (the gate program uses only literals).  Full string→number coercion
- * is deferred to the rung that lands SM_PUSH_VAR/SM_STORE_VAR with a
- * live NV table.
- *
- * Divide-by-zero aborts via abort(3).
- */
-void scrip_rt_arith(int op);
-
-/*
- * scrip_rt_nv_get — push the value of the named variable onto the
- * SM value stack.  STUB in EM-3: aborts with a clear message.
- * Signature is stable; the stub will be replaced when the NV table
- * is linked into libscrip_rt.so.
- */
-void scrip_rt_nv_get(const char *name);
-
-/*
- * scrip_rt_nv_set — pop TOS and store it in the named variable.
- * STUB in EM-3: aborts with a clear message.
- */
-void scrip_rt_nv_set(const char *name);
-
-/*
- * scrip_rt_pop_void — pop and discard TOS (SM_POP codegen).
- */
-void scrip_rt_pop_void(void);
-
-/*
- * scrip_rt_last_ok -- return 1 if the most recent SM operation succeeded,
- * 0 if it failed. Used by SM_JUMP_S and SM_JUMP_F codegen (EM-4).
- * Declared here for ABI stability; exercised starting EM-4.
- */
-int scrip_rt_last_ok(void);
-
-/*
- * scrip_rt_set_last_ok -- set the last_ok flag (1 = success, 0 = failure).
- * Used by emitted code and by future runtime ops (pattern matcher, etc.)
- * that have a notion of success/failure.  EM-4 ABI addition.
- */
+int  scrip_rt_last_ok(void);
 void scrip_rt_set_last_ok(int ok);
 
 /* ── EM-5 surface ────────────────────────────────────────────────────── */
 
-/*
- * scrip_rt_push_chunk_descr -- push a DT_E chunk descriptor onto the
- * SM value stack.  Used by SM_PUSH_CHUNK codegen.  The descriptor
- * carries entry_pc (in .i) and arity (in slen) so that downstream
- * code (sm_call_chunk via dispatch, EVAL builtins) can resolve it.
- *
- * For SM_CALL_CHUNK with a compile-time-known entry_pc, the emitter
- * generates a baked direct `call .LpcN` and does NOT push a descriptor
- * first -- the descriptor path is for cases where the chunk identity
- * is computed at runtime (e.g., a pattern's *expr cursor stored in NV).
- */
+/* Push DT_E chunk descriptor {entry_pc, arity} (SM_PUSH_CHUNK).
+ * SM_CALL_CHUNK with known entry_pc bakes direct `call .LpcN`. */
 void scrip_rt_push_chunk_descr(int64_t entry_pc, int64_t arity);
+
+/* ── EM-6 surface — pattern builder ─────────────────────────────────── */
+
+/* Baked-literal primitives. */
+void scrip_rt_pat_lit(const char *s);        /* SM_PAT_LIT   */
+void scrip_rt_pat_refname(const char *name); /* SM_PAT_REFNAME */
+
+/* Primitives that pop a charset or integer from the SM value stack. */
+void scrip_rt_pat_span(void);                /* SM_PAT_SPAN    */
+void scrip_rt_pat_break(void);               /* SM_PAT_BREAK   */
+void scrip_rt_pat_any(void);                 /* SM_PAT_ANY     */
+void scrip_rt_pat_notany(void);              /* SM_PAT_NOTANY  */
+void scrip_rt_pat_len(void);                 /* SM_PAT_LEN     */
+void scrip_rt_pat_pos(void);                 /* SM_PAT_POS     */
+void scrip_rt_pat_rpos(void);                /* SM_PAT_RPOS    */
+void scrip_rt_pat_tab(void);                 /* SM_PAT_TAB     */
+void scrip_rt_pat_rtab(void);                /* SM_PAT_RTAB    */
+
+/* Nullary pattern constructors. */
+void scrip_rt_pat_arb(void);
+void scrip_rt_pat_rem(void);
+void scrip_rt_pat_fence(void);
+void scrip_rt_pat_fail(void);
+void scrip_rt_pat_abort(void);
+void scrip_rt_pat_succeed(void);
+void scrip_rt_pat_bal(void);
+void scrip_rt_pat_eps(void);
+
+/* Combinators (pop from pat-stack). */
+void scrip_rt_pat_arbno(void);               /* SM_PAT_ARBNO  (pops inner)  */
+void scrip_rt_pat_fence1(void);              /* SM_PAT_FENCE1 (pops child)  */
+void scrip_rt_pat_cat(void);                 /* SM_PAT_CAT    (pops r, l)   */
+void scrip_rt_pat_alt(void);                 /* SM_PAT_ALT    (pops r, l)   */
+
+/* Deref: pop DESCR_t from vstack, interpret as pattern, push to patstack. */
+void scrip_rt_pat_deref(void);               /* SM_PAT_DEREF  */
+
+/* Capture: pops child from patstack.
+ * kind: 0=conditional(.), 1=immediate($), 2=cursor(@). */
+void scrip_rt_pat_capture(const char *varname, int kind); /* SM_PAT_CAPTURE */
+
+/* Boxval: pop patstack top, push as DT_P onto vstack. */
+void scrip_rt_pat_boxval(void);              /* SM_PAT_BOXVAL */
+
+/* Execute one SNOBOL4 statement.
+ * subj_name: variable name for write-back (NULL = anonymous).
+ * has_repl:  1 if a replacement DESCR_t was pushed onto the SM vstack.
+ * Stack on entry (TOS last): [subject_descr] [replacement_or_zero].
+ * Pat-stack holds the assembled pattern.
+ * Sets last_ok (1=:S, 0=:F); resets pat-stack to empty. */
+void scrip_rt_exec_stmt(const char *subj_name, int has_repl);
 
 #ifdef __cplusplus
 }

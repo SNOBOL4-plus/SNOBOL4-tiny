@@ -71,9 +71,7 @@ fi
 # asm-content sanity: check for key instruction sequences in new 3-col format
 grep -q "movabs  rdi, 42"             "$TMP/em2_a.s" || { echo "FAIL no literal-42 movabs"; exit 1; }
 grep -q "scrip_rt_push_int@PLT"       "$TMP/em2_a.s" || { echo "FAIL no push_int call"; exit 1; }
-grep -q "scrip_rt_pop_int@PLT"        "$TMP/em2_a.s" || { echo "FAIL no pop_int call"; exit 1; }
-grep -q "scrip_rt_halt@PLT"           "$TMP/em2_a.s" || { echo "FAIL no halt call"; exit 1; }
-grep -q "rc <- TOS"                   "$TMP/em2_a.s" || { echo "FAIL no SM_HALT comment"; exit 1; }
+grep -q "scrip_rt_halt_tos@PLT"       "$TMP/em2_a.s" || { echo "FAIL no halt_tos call"; exit 1; }
 echo "  PASS PUSH_LIT_I+HALT  (rc=42; emit shape correct)"
 
 # ── Test 2: unhandled-op trap fires on SM_ADD ──────────────────────────
@@ -115,7 +113,7 @@ set -e
 if [ "$RC" -eq 0 ]; then
     echo "FAIL unhandled-op program should abort, got rc=0"; exit 1
 fi
-grep -q "EM-2 emitter does not yet bake" "$TMP/unh.err" || {
+grep -q "unhandled SM opcode" "$TMP/unh.err" || {
     echo "FAIL no unhandled-op diagnostic on stderr"; cat "$TMP/unh.err"; exit 1; }
 echo "  PASS UNHANDLED_OP trap (rc=$RC; diagnostic present)"
 
@@ -263,5 +261,38 @@ grep -q "SM_PUSH_CHUNK"                "$TMP/em5b.s" || { echo "FAIL no SM_PUSH_
 grep -q "scrip_rt_push_chunk_descr@PLT" "$TMP/em5b.s" || { echo "FAIL no descriptor-push PLT call"; exit 1; }
 echo "  PASS EM-5b push-chunk descr   (PUSH_CHUNK + POP round-trip; rc=21)"
 
+# ── Test 10: EM-6 pattern matcher — LEN(3) . W on "abcdef" → oracle ──────────
+# Oracle (--sm-run):  start / abc / end
+# Gate program: stmt1 OUTPUT="start", stmt2 "abcdef" LEN(3) . W, stmt3 OUTPUT=W,
+#               stmt4 OUTPUT="end".  Verifies: SM_PAT_LEN, SM_PAT_CAPTURE,
+#               SM_EXEC_STMT, real NV table, string rodata, scrip_rt_exec_stmt.
+EM6_SNO="$TMP/em6_gate.sno"
+cat > "$EM6_SNO" <<'EOF'
+        OUTPUT = "start"
+        "abcdef" LEN(3) . W
+        OUTPUT = W
+        OUTPUT = "end"
+END
+EOF
+"$SCRIP" --jit-emit --x64 "$EM6_SNO" > "$TMP/em6.s" 2> "$TMP/em6_emit.err" || {
+    echo "FAIL em6 emit"; cat "$TMP/em6_emit.err"; exit 1; }
+gcc -no-pie "$TMP/em6.s" \
+    -L"$ROOT/out" -lscrip_rt -Wl,-rpath,"$ROOT/out" \
+    -o "$TMP/em6_prog" 2> "$TMP/em6_link.err" || {
+    echo "FAIL em6 link"; cat "$TMP/em6_link.err"; exit 1; }
+ORACLE=$( "$SCRIP" --sm-run "$EM6_SNO" < /dev/null )
+GOT=$( "$TMP/em6_prog" < /dev/null )
+if [ "$GOT" != "$ORACLE" ]; then
+    echo "FAIL em6: output mismatch"
+    echo "  oracle: $(echo "$ORACLE" | cat -A)"
+    echo "  got:    $(echo "$GOT"    | cat -A)"
+    exit 1
+fi
+grep -q "scrip_rt_pat_len@PLT"     "$TMP/em6.s" || { echo "FAIL em6: no PAT_LEN PLT call"; exit 1; }
+grep -q "scrip_rt_pat_capture@PLT" "$TMP/em6.s" || { echo "FAIL em6: no PAT_CAPTURE PLT call"; exit 1; }
+grep -q "scrip_rt_exec_stmt@PLT"   "$TMP/em6.s" || { echo "FAIL em6: no EXEC_STMT PLT call"; exit 1; }
+grep -q "\.section .rodata"        "$TMP/em6.s" || { echo "FAIL em6: no .rodata section"; exit 1; }
+echo "  PASS EM-6 pattern matcher  (LEN/CAPTURE/EXEC_STMT; output matches --sm-run oracle)"
+
 echo
-echo "PASS=9 FAIL=0  (EM-1 wiring + EM-2 HALT/PUSH_LIT_I + EM-3 stack ops + arithmetic + EM-4 control flow + EM-5 chunks)"
+echo "PASS=10 FAIL=0  (EM-1 wiring + EM-2 HALT/PUSH_LIT_I + EM-3 stack ops + arithmetic + EM-4 control flow + EM-5 chunks + EM-6 pattern matcher)"

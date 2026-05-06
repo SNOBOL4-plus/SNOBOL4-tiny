@@ -56,17 +56,39 @@ SCRIP_CC_BIN := $(ROOT)/scrip
 all: scrip
 
 # ── libscrip_rt.so — runtime support library for --jit-emit --x64 ────────────
-# M-JITEM-X64 / EM-1: skeleton with scrip_rt_init / scrip_rt_finalize as
-# no-ops. Subsequent EM-N rungs flesh out the ABI (push, call_chunk,
-# pat_match, builtin shims, etc.). Emitted x86-64 binaries link against
-# this .so for all language-level semantics.
+# EM-6: full SNOBOL4 runtime compiled -fPIC and linked into the .so.
+# Emitted x86-64 binaries link against this .so for all language-level
+# semantics (pattern matcher, NV table, exec_stmt, builtins, GC).
 libscrip_rt: out/libscrip_rt.so
 
-out/libscrip_rt.so: $(SRC)/runtime/rt/scrip_rt.c $(SRC)/runtime/rt/scrip_rt.h
+# EM-6 runtime objects (all compiled -fPIC so they can go into the .so)
+RT_PIC_SRCS := \
+    $(RT)/rt/scrip_rt.c \
+    $(RT)/x86/snobol4.c \
+    $(RT)/x86/snobol4_pattern.c \
+    $(RT)/x86/snobol4_invoke.c \
+    $(RT)/x86/snobol4_argval.c \
+    $(RT)/x86/snobol4_nmd.c \
+    $(RT)/x86/name_t.c \
+    $(RT)/x86/stmt_exec.c \
+    $(RT)/x86/eval_code.c \
+    $(RT)/x86/eval_pat.c \
+    $(RT)/x86/bb_pool.c \
+    $(RT)/x86/bb_emit.c \
+    $(RT)/x86/bb_build.c \
+    $(RT)/x86/bb_flat.c \
+    $(RT)/x86/bb_boxes.c \
+    $(RT)/x86/bb_broker.c \
+    $(SRC)/frontend/snobol4/snobol4.tab.c \
+    $(SRC)/frontend/snobol4/snobol4.lex.c
+
+out/libscrip_rt.so: $(RT_PIC_SRCS) $(RT)/rt/scrip_rt.h
 	@mkdir -p out
 	$(CC) -O0 -g $(WARN) -fPIC -shared \
-	    -I$(SRC)/runtime/rt \
-	    $(SRC)/runtime/rt/scrip_rt.c \
+	    -I$(SRC) -I$(RT)/x86 -I$(RT) -I$(RT)/rt \
+	    -DDYN_ENGINE_LINKED \
+	    $(RT_PIC_SRCS) \
+	    -lgc -lm \
 	    -o out/libscrip_rt.so
 	@echo "Built: out/libscrip_rt.so"
 

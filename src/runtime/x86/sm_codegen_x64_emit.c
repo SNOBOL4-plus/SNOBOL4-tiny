@@ -40,7 +40,12 @@
  *         direct call to .Lpc<entry_pc>), SM_RETURN (native ret).
  *         Conditional return variants (SM_RETURN_S/F, SM_FRETURN[_S/_F],
  *         SM_NRETURN[_S/_F]) still trap via emit_sm_unhandled.
- *   EM-6+: BB box coverage.
+ *   EM-6: SM_PAT_* opcodes emit PLT calls to scrip_rt_pat_*().
+ *         SM_EXEC_STMT emits PLT call to scrip_rt_exec_stmt().
+ *         SM_PAT_REFNAME, SM_PAT_BOXVAL, SM_PAT_CAPTURE,
+ *         SM_PAT_DEREF, SM_PAT_FENCE1 baked.
+ *         emit_bb_box() upgraded: now emits real PLT calls for all
+ *         EM-6 covered opcodes; falls through to unhandled for rest.
  */
 
 #include "sm_codegen_x64_emit.h"
@@ -144,14 +149,150 @@ static void srcline_strip_cr(char *s)
 }
 
 /* -----------------------------------------------------------------------
- * File header emitter
+ * String table — EM-6
+ *
+ * The emitter cannot use raw in-process pointers for string literals —
+ * the emitted binary runs in a different process.  Instead, we collect
+ * all unique C strings referenced by the SM_Program into a string table,
+ * emit them in .section .rodata as .Lstr_N labels, and reference those
+ * labels by name in the instruction emitters.
+ *
+ * Two-pass protocol:
+ *   1. strtab_collect(prog) — walk the SM_Program, intern all a[].s strings.
+ *   2. strtab_emit(out)     — write .section .rodata with all .string data.
+ *   3. Instruction emitters call strtab_label(s) to get the label name.
  * ----------------------------------------------------------------------- */
+
+#define STRTAB_CAP 512
+
+typedef struct {
+    const char *s;       /* original pointer from SM_Instr.a[].s */
+    int         idx;     /* assigned label index (.Lstr_<idx>) */
+} StrEntry;
+
+static StrEntry g_strtab[STRTAB_CAP];
+static int      g_strtab_n = 0;
+
+static void strtab_reset(void)
+{
+    g_strtab_n = 0;
+}
+
+/* Intern a string; return its label index (0-based). */
+static int strtab_intern(const char *s)
+{
+    if (!s) s = "";
+    /* Linear scan — small tables; fast enough for realistic programs. */
+    for (int i = 0; i < g_strtab_n; i++)
+        if (g_strtab[i].s == s || strcmp(g_strtab[i].s, s) == 0)
+            return g_strtab[i].idx;
+    if (g_strtab_n >= STRTAB_CAP) {
+        fprintf(stderr, "sm_codegen_x64_emit: string table overflow\n");
+        abort();
+    }
+    int idx = g_strtab_n;
+    g_strtab[g_strtab_n].s   = s;
+    g_strtab[g_strtab_n].idx = idx;
+    g_strtab_n++;
+    return idx;
+}
+
+/* Return the .Lstr_N label name for string s (must be interned first). */
+static void strtab_label(char *buf, size_t bufsz, const char *s)
+{
+    if (!s) s = "";
+    for (int i = 0; i < g_strtab_n; i++)
+        if (g_strtab[i].s == s || strcmp(g_strtab[i].s, s) == 0) {
+            snprintf(buf, bufsz, ".Lstr_%d", g_strtab[i].idx);
+            return;
+        }
+    /* Should not happen if caller always interns first. */
+    snprintf(buf, bufsz, ".Lstr_ERR");
+}
+
+/* Escape a C string for GNU-as .string directive.
+ * Only escapes \, ", and control chars that matter. */
+static void strtab_escape(char *out, size_t outsz, const char *s)
+{
+    size_t j = 0;
+    out[j++] = '"';
+    for (const char *p = s; *p && j + 6 < outsz; p++) {
+        unsigned char c = (unsigned char)*p;
+        if      (c == '\\') { out[j++] = '\\'; out[j++] = '\\'; }
+        else if (c == '"')  { out[j++] = '\\'; out[j++] = '"';  }
+        else if (c == '\n') { out[j++] = '\\'; out[j++] = 'n';  }
+        else if (c == '\t') { out[j++] = '\\'; out[j++] = 't';  }
+        else if (c < 0x20 || c == 0x7f) {
+            j += (size_t)snprintf(out + j, outsz - j, "\\%03o", c);
+        } else {
+            out[j++] = (char)c;
+        }
+    }
+    out[j++] = '"';
+    if (j < outsz) out[j] = '\0';
+}
+
+/* Collect all strings from the SM_Program into the table.
+ * Only opcodes that actually carry string payloads in a[0].s / a[2].s
+ * are interned — never blindly walk all instructions (other opcodes
+ * carry integer / pointer payloads in the same union fields). */
+static void strtab_collect(const SM_Program *prog)
+{
+    strtab_reset();
+    for (int i = 0; i < prog->count; i++) {
+        const SM_Instr *ins = &prog->instrs[i];
+        switch (ins->op) {
+        /* Opcodes that carry string data in a[0].s */
+        case SM_PUSH_LIT_S:
+        case SM_PUSH_VAR:
+        case SM_STORE_VAR:
+        case SM_PAT_LIT:
+        case SM_PAT_REFNAME:
+        case SM_PAT_CAPTURE:
+        case SM_PAT_CAPTURE_FN:
+        case SM_PAT_USERCALL:
+        case SM_EXEC_STMT:
+        case SM_CALL:
+            if (ins->a[0].s) strtab_intern(ins->a[0].s);
+            break;
+        default:
+            break;
+        }
+        /* a[2].s: only SM_PAT_CAPTURE_FN / SM_PAT_USERCALL carry name lists */
+        switch (ins->op) {
+        case SM_PAT_CAPTURE_FN:
+        case SM_PAT_USERCALL:
+            if (ins->a[2].s) strtab_intern(ins->a[2].s);
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+/* Emit .section .rodata with all interned strings as .Lstr_N: .string "..." */
+static int strtab_emit_rodata(FILE *out)
+{
+    if (g_strtab_n == 0) return 0;
+    if (fputs("\t.section .rodata\n", out) == EOF) return -1;
+    char esc[1024];
+    for (int i = 0; i < g_strtab_n; i++) {
+        strtab_escape(esc, sizeof(esc), g_strtab[i].s);
+        if (fprintf(out, ".Lstr_%d:\n\t.string %s\n", i, esc) < 0) return -1;
+    }
+    if (fputs("\t.text\n", out) == EOF) return -1;
+    return 0;
+}
+
+
 
 static int emit_file_header(FILE *out, int count)
 {
+    /* The .rodata section (string literals) was already emitted by strtab_emit_rodata
+     * before this call.  We resume with .text + main prologue. */
     return fprintf(out,
         "# -----------------------------------------------------------------------\n"
-        "# scrip --jit-emit --x64  (M-JITEM-X64 / EM-1..EM-4)\n"
+        "# scrip --jit-emit --x64  (M-JITEM-X64 / EM-1..EM-6)\n"
         "# %d SM instructions. Links against libscrip_rt.so.\n"
         "# Architecture: two emitters -- SM straight-line via sm_macros.s\n"
         "#   macros (inline x86); BB boxes via emit_bb_box() one-proc-per-box.\n"
@@ -160,7 +301,6 @@ static int emit_file_header(FILE *out, int count)
         "\t.intel_syntax noprefix\n"
         "# Include SM opcode macro library (one macro per opcode group)\n"
         "# .include \"sm_macros.s\"  # assembled separately; macros used by name below\n"
-        "\t.text\n"
         "\t.globl  main\n"
         "\t.type   main, @function\n"
         "main:\n"
@@ -318,11 +458,11 @@ static int emit_pc_label(FILE *out, int pc)
 static int emit_sm_halt(FILE *out, int pc)
 {
     (void)pc;
-    /* SM_HALT macro: pop TOS as rc, call scrip_rt_halt, fall to epilogue */
-    if (sm_line(out, "", "call    scrip_rt_pop_int@PLT",
-                "; rc <- TOS") < 0) return -1;
-    if (sm_line(out, "", "mov     edi, eax", "") < 0) return -1;
-    return sm_line(out, "", "call    scrip_rt_halt@PLT", "");
+    /* SM_HALT: call scrip_rt_halt_tos() which safe-pops TOS as rc
+     * if it's DT_I, else uses 0.  This serves both the synthetic
+     * EM-2 test (PUSH_LIT_I 42 + HALT → rc=42) and real programs
+     * (HALT with non-int TOS → rc=0, matching the interpreter). */
+    return sm_line(out, "", "call    scrip_rt_halt_tos@PLT", "# SM_HALT");
 }
 
 static int emit_sm_push_lit_i(FILE *out, const SM_Instr *ins, int pc)
@@ -340,51 +480,42 @@ static int emit_sm_push_lit_i(FILE *out, const SM_Instr *ins, int pc)
 static int emit_sm_push_lit_s(FILE *out, const SM_Instr *ins, int pc)
 {
     (void)pc;
-    /* SM_PUSH_STR macro: movabs rdi,ptr / mov esi,slen / call push_str */
     const char *s    = ins->a[0].s ? ins->a[0].s : "";
     int64_t     slen = ins->a[1].i;
-    char act[80];
-    /* Annotate the opaque ptr-as-immediate with the actual literal. */
-    char preview[STR_PREVIEW_MAX + 8];
+    char lbl[32], act[80], preview[STR_PREVIEW_MAX + 8], goto_col[STR_PREVIEW_MAX + 16];
+    strtab_label(lbl, sizeof(lbl), s);
     render_str_preview(preview, sizeof(preview), s, (int)slen);
-    char goto_col[STR_PREVIEW_MAX + 16];
-    snprintf(goto_col, sizeof(goto_col), "; str=%s", preview);
-    snprintf(act, sizeof(act), "movabs  rdi, %" PRIu64,
-             (uint64_t)(uintptr_t)s);
+    snprintf(goto_col, sizeof(goto_col), "# str=%s", preview);
+    /* RIP-relative LEA: PIC-correct, works in -no-pie and PIC binaries. */
+    snprintf(act, sizeof(act), "lea     rdi, [rip + %s]", lbl);
     if (sm_line(out, "", act, goto_col) < 0) return -1;
     snprintf(act, sizeof(act), "mov     esi, %d", (int)slen);
-    if (sm_line(out, "", act, "; slen") < 0) return -1;
+    if (sm_line(out, "", act, "# slen") < 0) return -1;
     return sm_line(out, "", "call    scrip_rt_push_str@PLT", "");
 }
 
 static int emit_sm_push_var(FILE *out, const SM_Instr *ins, int pc)
 {
     (void)pc;
-    /* SM_PUSH_VAR macro -- scrip_rt_nv_get stub in EM-3 */
     const char *name = ins->a[0].s ? ins->a[0].s : "";
-    char act[80];
-    char goto_col[80];
-    snprintf(act, sizeof(act), "movabs  rdi, %" PRIu64,
-             (uint64_t)(uintptr_t)name);
-    snprintf(goto_col, sizeof(goto_col), "; var=%s", name);
+    char lbl[32], act[80], goto_col[80];
+    strtab_label(lbl, sizeof(lbl), name);
+    snprintf(act, sizeof(act), "lea     rdi, [rip + %s]", lbl);
+    snprintf(goto_col, sizeof(goto_col), "# var=%s", name);
     if (sm_line(out, "", act, goto_col) < 0) return -1;
-    return sm_line(out, "", "call    scrip_rt_nv_get@PLT",
-                   "; SM_PUSH_VAR -> TOS");
+    return sm_line(out, "", "call    scrip_rt_nv_get@PLT", "# SM_PUSH_VAR -> TOS");
 }
 
 static int emit_sm_store_var(FILE *out, const SM_Instr *ins, int pc)
 {
     (void)pc;
-    /* SM_STORE_VAR macro -- scrip_rt_nv_set stub in EM-3 */
     const char *name = ins->a[0].s ? ins->a[0].s : "";
-    char act[80];
-    char goto_col[80];
-    snprintf(act, sizeof(act), "movabs  rdi, %" PRIu64,
-             (uint64_t)(uintptr_t)name);
-    snprintf(goto_col, sizeof(goto_col), "; store -> %s", name);
+    char lbl[32], act[80], goto_col[80];
+    strtab_label(lbl, sizeof(lbl), name);
+    snprintf(act, sizeof(act), "lea     rdi, [rip + %s]", lbl);
+    snprintf(goto_col, sizeof(goto_col), "# store -> %s", name);
     if (sm_line(out, "", act, goto_col) < 0) return -1;
-    return sm_line(out, "", "call    scrip_rt_nv_set@PLT",
-                   "; SM_STORE_VAR pop TOS");
+    return sm_line(out, "", "call    scrip_rt_nv_set@PLT", "# SM_STORE_VAR pop TOS");
 }
 
 static int emit_sm_pop(FILE *out, int pc)
@@ -472,7 +603,7 @@ static int emit_sm_jump_f(FILE *out, const SM_Instr *ins, int pc)
  * SM_PUSH_CHUNK pushes a DT_E chunk descriptor onto the SM value stack.
  *   a[0].i = entry_pc   a[1].i = arity
  * Codegen: scrip_rt_push_chunk_descr(entry_pc, arity).  The runtime
- * stores it as a ScripRtVal { tag=SCRIP_RT_CHUNK, slen=arity, i=entry_pc }
+ * stores it as a DESCR_t { v=DT_E, slen=arity, i=entry_pc }
  * so a downstream SM_CALL "EVAL" / sm_call_chunk path can find it.
  *
  * SM_CALL_CHUNK is a baked direct call.  a[0].i = entry_pc resolves at
@@ -603,52 +734,131 @@ static int emit_sm_stno(FILE *out, const SM_Instr *ins, int pc,
 
     if (emit_major_break(out, stno, banner_lineno, src) != 0) return -1;
 
-    /* Per-PC label still emitted (already done by caller before us). */
-    /* Runtime tick: scrip_rt_stno_tick(stno) in a future rung; for EM-4
-     * we keep the SM_STNO call as a no-op stub annotated for clarity.
-     * Currently the EM-3+ runtime does not yet implement &STNO/&STCOUNT
-     * in libscrip_rt.so; the emitter falls through to unhandled trap if
-     * the program actually references those keywords.  Marker comment
-     * documents the intent. */
-    char act[80];
-    char goto_col[80];
-    snprintf(act,      sizeof(act),      "mov     edi, %d", stno);
-    snprintf(goto_col, sizeof(goto_col), "; SM_STNO stno=%d (no-op stub)",
-             stno);
-    if (sm_line(out, "", act, goto_col) < 0) return -1;
-    return sm_line(out, "", "call    scrip_rt_unhandled_op@PLT",
-                   "; runtime &STNO support: future rung");
+    /* SM_STNO is a source-statement boundary marker only.
+     * No runtime call needed — &STNO / &STCOUNT support deferred to a
+     * later rung.  The major banner above is the complete emission. */
+    return 0;
 }
 
 /* -----------------------------------------------------------------------
- * BB box emitter (emit_bb_box)
+ * EM-6 helper: lea rdi, [rip + .Lstr_N] + PLT call (const char* arg).
+ * String must have been interned in the global StrTable by strtab_collect.
+ * ----------------------------------------------------------------------- */
+static int emit_pat_call_str(FILE *out, const char *fn_plt,
+                             const char *ptr_str, const char *annotation)
+{
+    char lbl[32], act[80], call[64];
+    strtab_label(lbl, sizeof(lbl), ptr_str ? ptr_str : "");
+    snprintf(act, sizeof(act), "lea     rdi, [rip + %s]", lbl);
+    if (sm_line(out, "", act, annotation) < 0) return -1;
+    snprintf(call, sizeof(call), "call    %s@PLT", fn_plt);
+    return sm_line(out, "", call, "");
+}
+
+/* EM-6 helper: lea rdi + mov esi + PLT call (const char*, int). */
+static int emit_pat_call_str_int(FILE *out, const char *fn_plt,
+                                 const char *ptr_str, int ival,
+                                 const char *annotation)
+{
+    char lbl[32], act[80], call[64];
+    strtab_label(lbl, sizeof(lbl), ptr_str ? ptr_str : "");
+    snprintf(act, sizeof(act), "lea     rdi, [rip + %s]", lbl);
+    if (sm_line(out, "", act, annotation) < 0) return -1;
+    snprintf(act, sizeof(act), "mov     esi, %d", ival);
+    if (sm_line(out, "", act, "") < 0) return -1;
+    snprintf(call, sizeof(call), "call    %s@PLT", fn_plt);
+    return sm_line(out, "", call, "");
+}
+
+/* EM-6 helper: bare PLT call (nullary pat constructors / vstack-arg ops). */
+static int emit_pat_call_0(FILE *out, const char *fn_plt, const char *annot)
+{
+    char call[64];
+    snprintf(call, sizeof(call), "call    %s@PLT", fn_plt);
+    return sm_line(out, "", call, annot);
+}
+
+/* -----------------------------------------------------------------------
+ * BB box emitter (emit_bb_box) -- EM-6
  *
- * Called once per SM_PAT_* instruction. Emits one labeled proc with
- * four local labels: .box_N_alpha, .box_N_beta, .box_N_gamma, .box_N_omega.
- * Three-column law inside each port body.
+ * Each SM_PAT_* opcode emits a PLT call into libscrip_rt.so that builds
+ * the runtime pat-stack (mirrors sm_interp.c SM_PAT_* dispatch).
+ * SM_EXEC_STMT is in the main dispatch switch (not here).
  *
- * EM-3: scaffold only -- all SM_PAT_* still go to unhandled trap.
- * EM-6+: full pattern box coverage.
+ * Architecture note (settled session #67): the four-port alpha/beta/
+ * gamma/omega proc layout is for the JIT-run path.  Mode-4 emit builds
+ * the pat-stack via sequential scrip_rt_pat_* calls then fires
+ * scrip_rt_exec_stmt -- no per-box proc needed for EM-6.
  * ----------------------------------------------------------------------- */
 
 static int emit_bb_box(FILE *out, const SM_Instr *ins, int pc)
 {
-    /* Scaffold: emit a commented-out box proc skeleton for documentation.
-     * The unhandled trap fires at runtime. Full implementation in EM-6. */
-    fprintf(out,
-        "# -- BB box scaffold pc=%d op=%s --\n"
-        "# proc .bb_box_%d\n"
-        "#   .alpha:   (not yet baked)\n"
-        "#   .beta:    (not yet baked)\n"
-        "#   .gamma:   (connected to next box alpha)\n"
-        "#   .omega:   (connected to enclosing beta)\n"
-        "# endp\n",
-        pc, sm_opcode_name(ins->op), pc);
-    /* Fall through to unhandled trap (runtime will abort) */
-    char act[80];
-    snprintf(act, sizeof(act), "mov     edi, %d", (int)ins->op);
-    if (sm_line(out, "", act, "; UNHANDLED BB box") < 0) return -1;
-    return sm_line(out, "", "call    scrip_rt_unhandled_op@PLT", "");
+    (void)pc;
+    char annot[64];
+
+    switch (ins->op) {
+
+    /* ── Literal-arg primitives ──────────────────────────────────── */
+    case SM_PAT_LIT: {
+        const char *s = ins->a[0].s ? ins->a[0].s : "";
+        snprintf(annot, sizeof(annot), "# PAT_LIT str=\"%.30s\"", s);
+        return emit_pat_call_str(out, "scrip_rt_pat_lit", s, annot);
+    }
+    case SM_PAT_REFNAME: {
+        const char *s = ins->a[0].s ? ins->a[0].s : "";
+        snprintf(annot, sizeof(annot), "# PAT_REFNAME var=%s", s);
+        return emit_pat_call_str(out, "scrip_rt_pat_refname", s, annot);
+    }
+
+    /* ── Charset / integer-from-vstack primitives ───────────────── */
+    case SM_PAT_SPAN:    return emit_pat_call_0(out, "scrip_rt_pat_span",    "# PAT_SPAN");
+    case SM_PAT_BREAK:   return emit_pat_call_0(out, "scrip_rt_pat_break",   "# PAT_BREAK");
+    case SM_PAT_ANY:     return emit_pat_call_0(out, "scrip_rt_pat_any",     "# PAT_ANY");
+    case SM_PAT_NOTANY:  return emit_pat_call_0(out, "scrip_rt_pat_notany",  "# PAT_NOTANY");
+    case SM_PAT_LEN:     return emit_pat_call_0(out, "scrip_rt_pat_len",     "# PAT_LEN");
+    case SM_PAT_POS:     return emit_pat_call_0(out, "scrip_rt_pat_pos",     "# PAT_POS");
+    case SM_PAT_RPOS:    return emit_pat_call_0(out, "scrip_rt_pat_rpos",    "# PAT_RPOS");
+    case SM_PAT_TAB:     return emit_pat_call_0(out, "scrip_rt_pat_tab",     "# PAT_TAB");
+    case SM_PAT_RTAB:    return emit_pat_call_0(out, "scrip_rt_pat_rtab",    "# PAT_RTAB");
+
+    /* ── Nullary constructors ────────────────────────────────────── */
+    case SM_PAT_ARB:     return emit_pat_call_0(out, "scrip_rt_pat_arb",     "# PAT_ARB");
+    case SM_PAT_REM:     return emit_pat_call_0(out, "scrip_rt_pat_rem",     "# PAT_REM");
+    case SM_PAT_FENCE:   return emit_pat_call_0(out, "scrip_rt_pat_fence",   "# PAT_FENCE");
+    case SM_PAT_FAIL:    return emit_pat_call_0(out, "scrip_rt_pat_fail",    "# PAT_FAIL");
+    case SM_PAT_ABORT:   return emit_pat_call_0(out, "scrip_rt_pat_abort",   "# PAT_ABORT");
+    case SM_PAT_SUCCEED: return emit_pat_call_0(out, "scrip_rt_pat_succeed", "# PAT_SUCCEED");
+    case SM_PAT_BAL:     return emit_pat_call_0(out, "scrip_rt_pat_bal",     "# PAT_BAL");
+    case SM_PAT_EPS:     return emit_pat_call_0(out, "scrip_rt_pat_eps",     "# PAT_EPS");
+
+    /* ── Pat-stack combinators ───────────────────────────────────── */
+    case SM_PAT_ARBNO:   return emit_pat_call_0(out, "scrip_rt_pat_arbno",   "# PAT_ARBNO");
+    case SM_PAT_FENCE1:  return emit_pat_call_0(out, "scrip_rt_pat_fence1",  "# PAT_FENCE1");
+    case SM_PAT_CAT:     return emit_pat_call_0(out, "scrip_rt_pat_cat",     "# PAT_CAT");
+    case SM_PAT_ALT:     return emit_pat_call_0(out, "scrip_rt_pat_alt",     "# PAT_ALT");
+
+    /* ── Deref / boxval ─────────────────────────────────────────── */
+    case SM_PAT_DEREF:   return emit_pat_call_0(out, "scrip_rt_pat_deref",   "# PAT_DEREF");
+    case SM_PAT_BOXVAL:  return emit_pat_call_0(out, "scrip_rt_pat_boxval",  "# PAT_BOXVAL");
+
+    /* ── Capture ─────────────────────────────────────────────────── */
+    case SM_PAT_CAPTURE: {
+        const char *vname = ins->a[0].s ? ins->a[0].s : "";
+        int kind = (int)ins->a[1].i;
+        snprintf(annot, sizeof(annot), "# PAT_CAPTURE %s kind=%d", vname, kind);
+        return emit_pat_call_str_int(out, "scrip_rt_pat_capture",
+                                     vname, kind, annot);
+    }
+
+    default: {
+        /* SM_PAT_CAPTURE_FN, SM_PAT_USERCALL, etc. -- unhandled in EM-6. */
+        char act[80];
+        snprintf(act, sizeof(act), "mov     edi, %d", (int)ins->op);
+        if (sm_line(out, "", act, "# UNHANDLED SM_PAT_* (not baked EM-6)") < 0)
+            return -1;
+        return sm_line(out, "", "call    scrip_rt_unhandled_op@PLT", "");
+    }
+    }
 }
 
 /* -----------------------------------------------------------------------
@@ -673,6 +883,13 @@ int sm_codegen_x64_emit(SM_Program *prog, FILE *out, const char *src_path)
 {
     assert(prog != NULL);
     assert(out  != NULL);
+
+    /* EM-6: collect all string literals and variable names into the string
+     * table, then emit them in .section .rodata before .text.  This makes
+     * every string pointer in the emitted binary a RIP-relative reference
+     * to a .Lstr_N label rather than an in-process pointer from the emitter. */
+    strtab_collect(prog);
+    if (strtab_emit_rodata(out) != 0) return -1;
 
     /* EM-4-readability: load the source file once if a path was given. */
     SrcLines sl;
@@ -737,13 +954,19 @@ int sm_codegen_x64_emit(SM_Program *prog, FILE *out, const char *src_path)
             case SM_STNO:         rc = emit_sm_stno(out, ins, pc,
                                                     sl_loaded ? &sl : NULL); break;
 
-            /* BB box opcodes: one-proc-per-box (scaffold EM-3, full EM-6) */
+            /* EM-6: SM_PAT_* opcodes — all route through emit_bb_box()
+             * which dispatches per-opcode to scrip_rt_pat_*@PLT.
+             * SM_EXEC_STMT fires scrip_rt_exec_stmt with subj_name + has_repl. */
             case SM_PAT_LIT:
             case SM_PAT_ANY:
             case SM_PAT_NOTANY:
             case SM_PAT_SPAN:
             case SM_PAT_BREAK:
             case SM_PAT_LEN:
+            case SM_PAT_POS:
+            case SM_PAT_RPOS:
+            case SM_PAT_TAB:
+            case SM_PAT_RTAB:
             case SM_PAT_ARB:
             case SM_PAT_ARBNO:
             case SM_PAT_ALT:
@@ -752,12 +975,37 @@ int sm_codegen_x64_emit(SM_Program *prog, FILE *out, const char *src_path)
             case SM_PAT_REM:
             case SM_PAT_BAL:
             case SM_PAT_FENCE:
+            case SM_PAT_FENCE1:
             case SM_PAT_ABORT:
             case SM_PAT_FAIL:
             case SM_PAT_SUCCEED:
             case SM_PAT_CAPTURE:
             case SM_PAT_DEREF:
+            case SM_PAT_REFNAME:
+            case SM_PAT_BOXVAL:
                                   rc = emit_bb_box(out, ins, pc);         break;
+
+            case SM_EXEC_STMT: {
+                /* scrip_rt_exec_stmt(const char *subj_name, int has_repl)
+                 * a[0].s = subject variable name for write-back (NULL = anonymous)
+                 * a[1].i = has_repl flag */
+                const char *sname    = ins->a[0].s;
+                int         has_repl = (int)ins->a[1].i;
+                char lbl[32], act[80], annot[64];
+                if (sname) {
+                    strtab_label(lbl, sizeof(lbl), sname);
+                    snprintf(act, sizeof(act), "lea     rdi, [rip + %s]", lbl);
+                    snprintf(annot, sizeof(annot), "# subj=%s", sname);
+                } else {
+                    snprintf(act, sizeof(act), "xor     edi, edi");
+                    snprintf(annot, sizeof(annot), "# subj=NULL (anonymous)");
+                }
+                if (sm_line(out, "", act, annot) < 0) { rc = -1; break; }
+                snprintf(act, sizeof(act), "mov     esi, %d", has_repl);
+                if (sm_line(out, "", act, has_repl ? "# has_repl=1" : "# has_repl=0") < 0) { rc = -1; break; }
+                rc = sm_line(out, "", "call    scrip_rt_exec_stmt@PLT", "# SM_EXEC_STMT");
+                break;
+            }
 
             default:              rc = emit_sm_unhandled(out, ins, pc);  break;
         }
