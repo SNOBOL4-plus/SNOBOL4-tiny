@@ -150,7 +150,7 @@ echo "  PASS EM-1 errors    (flag validation regression-clean)"
 # The harness now accepts up to four asm output paths;
 #   argv[1]=EM-2, argv[2]=EM-3, argv[3]=EM-4a (forward+conditional shapes),
 #   argv[4]=EM-4b (backward-loop body, driven by override below).
-"$HARNESS" "$TMP/em2_a.s" "$TMP/em3.s" "$TMP/em4a.s" "$TMP/em4b.s" >/dev/null
+"$HARNESS" "$TMP/em2_a.s" "$TMP/em3.s" "$TMP/em4a.s" "$TMP/em4b.s" "$TMP/em5.s" "$TMP/em5b.s" >/dev/null
 gcc -no-pie "$TMP/em3.s" \
     -L"$ROOT/out" -lscrip_rt -Wl,-rpath,"$ROOT/out" \
     -o "$TMP/em3_prog" 2> "$TMP/em3_link.err" || {
@@ -221,5 +221,47 @@ fi
 grep -qE 'jz +\.Lpc1\b' "$TMP/em4b.s" || { echo "FAIL no backward jz to .Lpc1"; exit 1; }
 echo "  PASS EM-4b backward loop (JUMP_F backward x2, fallthrough; rc=0)"
 
+# -- Test 7a: EM-5 chunk call/return -- two chunks calling each other -------
+# Outer chunk_A calls inner chunk_B (returns 7), adds 6, returns 13.
+# main calls chunk_A and HALTs with the returned value.  Proves the
+# baked-direct call/ret discipline composes across nested chunks.
+gcc -no-pie "$TMP/em5.s" \
+    -L"$ROOT/out" -lscrip_rt -Wl,-rpath,"$ROOT/out" \
+    -o "$TMP/em5_prog" 2> "$TMP/em5_link.err" || {
+    echo "FAIL em5 link"; cat "$TMP/em5_link.err"; exit 1; }
+set +e
+"$TMP/em5_prog"
+RC=$?
+set -e
+if [ "$RC" -ne 13 ]; then
+    echo "FAIL em5 expected rc=13 got rc=$RC"; exit 1
+fi
+# Asm-shape sanity: SM_RETURN bakes direct ret; SM_CALL_CHUNK bakes
+# direct call to a .LpcN target -- no PLT call for either opcode.
+grep -q "SM_RETURN"          "$TMP/em5.s" || { echo "FAIL no SM_RETURN marker in em5"; exit 1; }
+grep -q "SM_CALL_CHUNK"      "$TMP/em5.s" || { echo "FAIL no SM_CALL_CHUNK marker in em5"; exit 1; }
+grep -qE 'call +\.Lpc[0-9]+' "$TMP/em5.s" || { echo "FAIL no baked-direct call .LpcN in em5"; exit 1; }
+grep -qE '^[[:space:]]+ret\b' "$TMP/em5.s" || { echo "FAIL no native ret in em5"; exit 1; }
+echo "  PASS EM-5a chunk call/return  (chunk_A -> chunk_B; nested rc=13)"
+
+# -- Test 7b: EM-5 SM_PUSH_CHUNK descriptor round-trip ----------------------
+# PUSH_CHUNK (entry_pc=99, arity=2) then POP it; then PUSH_LIT_I 21 + HALT.
+# Proves scrip_rt_push_chunk_descr@PLT round-trips without corrupting
+# the SM stack.
+gcc -no-pie "$TMP/em5b.s" \
+    -L"$ROOT/out" -lscrip_rt -Wl,-rpath,"$ROOT/out" \
+    -o "$TMP/em5b_prog" 2> "$TMP/em5b_link.err" || {
+    echo "FAIL em5b link"; cat "$TMP/em5b_link.err"; exit 1; }
+set +e
+"$TMP/em5b_prog"
+RC=$?
+set -e
+if [ "$RC" -ne 21 ]; then
+    echo "FAIL em5b expected rc=21 got rc=$RC"; exit 1
+fi
+grep -q "SM_PUSH_CHUNK"                "$TMP/em5b.s" || { echo "FAIL no SM_PUSH_CHUNK marker"; exit 1; }
+grep -q "scrip_rt_push_chunk_descr@PLT" "$TMP/em5b.s" || { echo "FAIL no descriptor-push PLT call"; exit 1; }
+echo "  PASS EM-5b push-chunk descr   (PUSH_CHUNK + POP round-trip; rc=21)"
+
 echo
-echo "PASS=7 FAIL=0  (EM-1 wiring + EM-2 HALT/PUSH_LIT_I + EM-3 stack ops + arithmetic + EM-4 control flow)"
+echo "PASS=9 FAIL=0  (EM-1 wiring + EM-2 HALT/PUSH_LIT_I + EM-3 stack ops + arithmetic + EM-4 control flow + EM-5 chunks)"

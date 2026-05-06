@@ -36,7 +36,11 @@
  *         emit_bb_box() scaffold added (no SM_PAT_* coverage yet).
  *   EM-4: SM_LABEL (no-op; .LpcN label suffices), SM_JUMP (direct jmp),
  *         SM_JUMP_S/F (call last_ok + test + conditional jmp).
- *   EM-5+: SM_PUSH_CHUNK / SM_CALL_CHUNK / SM_RETURN, BB box coverage.
+ *   EM-5: SM_PUSH_CHUNK (push DT_E descriptor), SM_CALL_CHUNK (baked
+ *         direct call to .Lpc<entry_pc>), SM_RETURN (native ret).
+ *         Conditional return variants (SM_RETURN_S/F, SM_FRETURN[_S/_F],
+ *         SM_NRETURN[_S/_F]) still trap via emit_sm_unhandled.
+ *   EM-6+: BB box coverage.
  */
 
 #include "sm_codegen_x64_emit.h"
@@ -463,6 +467,84 @@ static int emit_sm_jump_f(FILE *out, const SM_Instr *ins, int pc)
 }
 
 /* -----------------------------------------------------------------------
+ * EM-5: SM_PUSH_CHUNK / SM_CALL_CHUNK / SM_RETURN
+ *
+ * SM_PUSH_CHUNK pushes a DT_E chunk descriptor onto the SM value stack.
+ *   a[0].i = entry_pc   a[1].i = arity
+ * Codegen: scrip_rt_push_chunk_descr(entry_pc, arity).  The runtime
+ * stores it as a ScripRtVal { tag=SCRIP_RT_CHUNK, slen=arity, i=entry_pc }
+ * so a downstream SM_CALL "EVAL" / sm_call_chunk path can find it.
+ *
+ * SM_CALL_CHUNK is a baked direct call.  a[0].i = entry_pc resolves at
+ * emit-time to the .Lpc<entry_pc> label that emit_pc_label has already
+ * planted at every PC.  The native CALL pushes the return address on
+ * the host stack; SM_RETURN's RET pops it.  The SM value stack lives
+ * inside libscrip_rt.so and is shared across the call -- the chunk
+ * pushes its result onto the same stack the caller will read from.
+ *
+ * Honest deviation from the interpreter:  sm_interp.c's SM_CALL_CHUNK
+ * snapshots the caller's value stack to a heap buffer, runs the chunk
+ * on an empty stack, then restores + appends the result.  The mode-4
+ * emitter does NOT do this.  Rationale:
+ *   (1) For EM-5's gate program (single chunk pushing a single int and
+ *       returning), shared-stack call/ret is byte-correct.
+ *   (2) Stack-discipline violations in chunk bodies are bugs in the
+ *       lowerer, not the emitter; if the lowerer gets it right we
+ *       don't need to defensively snapshot.
+ *   (3) When SM_SUSPEND/SM_RESUME land in EM-10 we'll need a full
+ *       coexpression record anyway -- the snapshot machinery moves
+ *       there, not here.
+ * If a future rung surfaces a real test case that needs the
+ * snapshot-and-restore semantics, we revisit.
+ *
+ * SM_RETURN_S / SM_RETURN_F / SM_FRETURN[_S/_F] / SM_NRETURN[_S/_F]
+ * are NOT yet handled by the emitter.  They fall through to
+ * emit_sm_unhandled and produce a runtime trap if executed.  The
+ * tracked .s files for the demo programs assemble cleanly (the
+ * unhandled stub is a real call instruction); they will not RUN
+ * correctly until a near-future rung adds the conditional-return
+ * shapes.  EM-5's gate doesn't exercise them.
+ * ----------------------------------------------------------------------- */
+
+static int emit_sm_push_chunk(FILE *out, const SM_Instr *ins, int pc)
+{
+    (void)pc;
+    int64_t entry_pc = ins->a[0].i;
+    int64_t arity    = ins->a[1].i;
+    char act[80];
+    char goto_col[80];
+    snprintf(act, sizeof(act), "movabs  rdi, %" PRId64, entry_pc);
+    snprintf(goto_col, sizeof(goto_col), "; chunk entry_pc=%" PRId64, entry_pc);
+    if (sm_line(out, "", act, goto_col) < 0) return -1;
+    snprintf(act, sizeof(act), "mov     esi, %d", (int)arity);
+    snprintf(goto_col, sizeof(goto_col), "; arity=%d", (int)arity);
+    if (sm_line(out, "", act, goto_col) < 0) return -1;
+    return sm_line(out, "", "call    scrip_rt_push_chunk_descr@PLT",
+                   "; SM_PUSH_CHUNK -> DT_E on TOS");
+}
+
+static int emit_sm_call_chunk(FILE *out, const SM_Instr *ins, int pc)
+{
+    (void)pc;
+    int target = (int)ins->a[0].i;
+    char act[80];
+    char goto_col[80];
+    /* Baked direct call.  No runtime dispatch -- emit-time pc IS runtime pc. */
+    snprintf(act, sizeof(act), "call    .Lpc%d", target);
+    snprintf(goto_col, sizeof(goto_col), "; SM_CALL_CHUNK -> pc=%d", target);
+    return sm_line(out, "", act, goto_col);
+}
+
+static int emit_sm_return(FILE *out, int pc)
+{
+    (void)pc;
+    /* SM_RETURN: native return.  The chunk's last push left the result
+     * on the SM value stack inside libscrip_rt.so; the caller reads it
+     * after the call returns. */
+    return sm_line(out, "", "ret", "; SM_RETURN");
+}
+
+/* -----------------------------------------------------------------------
  * SM_STNO -- statement boundary
  *
  * EM-4-readability:  the SM_STNO opcode marks a source-statement
@@ -645,6 +727,11 @@ int sm_codegen_x64_emit(SM_Program *prog, FILE *out, const char *src_path)
             case SM_JUMP:         rc = emit_sm_jump(out, ins, pc);       break;
             case SM_JUMP_S:       rc = emit_sm_jump_s(out, ins, pc);     break;
             case SM_JUMP_F:       rc = emit_sm_jump_f(out, ins, pc);     break;
+
+            /* EM-5: chunk descriptor push, baked-direct chunk call, return. */
+            case SM_PUSH_CHUNK:   rc = emit_sm_push_chunk(out, ins, pc); break;
+            case SM_CALL_CHUNK:   rc = emit_sm_call_chunk(out, ins, pc); break;
+            case SM_RETURN:       rc = emit_sm_return(out, pc);          break;
 
             /* SM_STNO -- statement boundary; emits major page break w/ source. */
             case SM_STNO:         rc = emit_sm_stno(out, ins, pc,

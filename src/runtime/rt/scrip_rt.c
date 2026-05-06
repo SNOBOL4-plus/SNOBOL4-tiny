@@ -226,3 +226,21 @@ void scrip_rt_set_last_ok(int ok)
      * (or, in pattern contexts, the runtime sets it directly). */
     g_last_ok = ok ? 1 : 0;
 }
+
+/* ── EM-5 surface ────────────────────────────────────────────────────── */
+
+void scrip_rt_push_chunk_descr(int64_t entry_pc, int64_t arity)
+{
+    /* SM_PUSH_CHUNK pushes a DT_E chunk descriptor.  Mirrors the
+     * descriptor shape sm_interp.c uses:
+     *   d.v    = DT_E         (== SCRIP_RT_CHUNK == 11)
+     *   d.slen = arity
+     *   d.i    = entry_pc
+     * For SM_CALL_CHUNK with a compile-time-known entry_pc, the emitter
+     * skips this push entirely and bakes a direct `call .LpcN`. */
+    ScripRtVal sv;
+    sv.tag  = SCRIP_RT_CHUNK;
+    sv.slen = (uint32_t)arity;
+    sv.i    = entry_pc;
+    vstack_push(sv);
+}

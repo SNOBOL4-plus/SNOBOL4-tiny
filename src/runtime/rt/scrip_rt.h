@@ -29,6 +29,12 @@
  *   scrip_rt_nv_set    — store TOS into a named variable       [stub]
  *   scrip_rt_pop_void  — pop and discard TOS (SM_POP)
  *
+ * EM-5 surface:
+ *   scrip_rt_push_chunk_descr — push a DT_E chunk descriptor (entry_pc,
+ *                               arity).  SM_CALL_CHUNK and SM_RETURN
+ *                               are baked direct in the emitter (call
+ *                               .LpcN / ret) and do not need ABI symbols.
+ *
  * SM_DUP / SM_SWAP — not in the sm_opcode_t enum (the rung text was
  * aspirational).  EM-3 covers the opcodes that actually exist.
  *
@@ -72,6 +78,7 @@ typedef enum {
     SCRIP_RT_SNUL = 0,   /* null / unset              */
     SCRIP_RT_STR  = 1,   /* string — char* in .s      */
     SCRIP_RT_INT  = 6,   /* integer — int64_t in .i   */
+    SCRIP_RT_CHUNK = 11, /* chunk descriptor (DT_E)   */
     SCRIP_RT_FAIL = 99   /* failure sentinel           */
 } ScripRtTag;
 
@@ -173,6 +180,21 @@ int scrip_rt_last_ok(void);
  * that have a notion of success/failure.  EM-4 ABI addition.
  */
 void scrip_rt_set_last_ok(int ok);
+
+/* ── EM-5 surface ────────────────────────────────────────────────────── */
+
+/*
+ * scrip_rt_push_chunk_descr -- push a DT_E chunk descriptor onto the
+ * SM value stack.  Used by SM_PUSH_CHUNK codegen.  The descriptor
+ * carries entry_pc (in .i) and arity (in slen) so that downstream
+ * code (sm_call_chunk via dispatch, EVAL builtins) can resolve it.
+ *
+ * For SM_CALL_CHUNK with a compile-time-known entry_pc, the emitter
+ * generates a baked direct `call .LpcN` and does NOT push a descriptor
+ * first -- the descriptor path is for cases where the chunk identity
+ * is computed at runtime (e.g., a pattern's *expr cursor stored in NV).
+ */
+void scrip_rt_push_chunk_descr(int64_t entry_pc, int64_t arity);
 
 #ifdef __cplusplus
 }
