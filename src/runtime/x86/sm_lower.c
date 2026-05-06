@@ -323,7 +323,7 @@ static void lower_pat_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
                 } else {
                     /* SN-8a: args-on-stack path — eager-eval each arg, then
                      * SM_PAT_CAPTURE_FN_ARGS pops them and calls pat_assign_callcap.
-                     * SN-26c-parseerr-c: defer E_FNC sub-args via SM_PUSH_EXPR.
+                     * SN-26c-parseerr-c: defer E_FNC sub-args as compiled SM chunks.
                      * SN-26c-parseerr-d: also defer E_VAR — when args are mixed
                      * (e.g. literal+var) the all_vars name-stash fast path
                      * doesn't fire, and an E_VAR set by an earlier capture in
@@ -336,14 +336,25 @@ static void lower_pat_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
                      * not at match time — same shape as SN-26-bridge-coverage-t
                      * but on the SM lowering side.  Thaw at match time via
                      * EVAL_fn → EXPVAL_fn (name_t.c:97) handles all EXPR_t
-                     * shapes including compound. */
+                     * shapes including compound.
+                     * CHUNKS-step04: non-E_QLIT args are now lowered as compiled
+                     * SM chunks (SM_JUMP skip + body + SM_RETURN + SM_PUSH_CHUNK)
+                     * so DT_E carries entry_pc, not EXPR_t*.  At match time
+                     * EVAL_fn → EXPVAL_fn dispatches the chunk via sm_call_chunk
+                     * (slen==1 path).  Same emission shape as Steps 2/3. */
                     for (int i = 0; i < fnc->nchildren; i++) {
                         EXPR_t *arg = fnc->children[i];
                         if (arg && arg->kind == E_QLIT)
                             lower_expr(p, lt, arg);   /* string lit — eager OK */
-                        else if (arg)
-                            emit_push_expr(p, arg);
-                        else
+                        else if (arg) {
+                            int skip_jump = sm_emit_i(p, SM_JUMP, 0);
+                            int entry_pc  = sm_label(p);
+                            lower_expr(p, lt, arg);
+                            sm_emit(p, SM_RETURN);
+                            int skip_lbl  = sm_label(p);
+                            sm_patch_jump(p, skip_jump, skip_lbl);
+                            sm_emit_ii(p, SM_PUSH_CHUNK, (int64_t)entry_pc, 0);
+                        } else
                             lower_expr(p, lt, arg);
                     }
                     int idx = sm_emit_s(p, SM_PAT_CAPTURE_FN_ARGS, fnc->sval);
@@ -375,16 +386,24 @@ static void lower_pat_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
                     p->instrs[idx].a[2].s = namelist;
                 } else {
                     /* SN-8a: args-on-stack path for $ *fn(args).
-                     * SN-26c-parseerr-c: defer E_FNC sub-args via SM_PUSH_EXPR.
+                     * SN-26c-parseerr-c: defer E_FNC sub-args as compiled SM chunks.
                      * SN-26c-parseerr-d: also defer E_VAR (see twin site).
-                     * SN-32b: defer all non-E_QLIT args (mirrors -t fix on IR side). */
+                     * SN-32b: defer all non-E_QLIT args (mirrors -t fix on IR side).
+                     * CHUNKS-step04: same chunk emission pattern as the . *fn site above
+                     * and Steps 2/3.  DT_E now carries entry_pc, not EXPR_t*. */
                     for (int i = 0; i < fnc->nchildren; i++) {
                         EXPR_t *arg = fnc->children[i];
                         if (arg && arg->kind == E_QLIT)
                             lower_expr(p, lt, arg);
-                        else if (arg)
-                            emit_push_expr(p, arg);
-                        else
+                        else if (arg) {
+                            int skip_jump = sm_emit_i(p, SM_JUMP, 0);
+                            int entry_pc  = sm_label(p);
+                            lower_expr(p, lt, arg);
+                            sm_emit(p, SM_RETURN);
+                            int skip_lbl  = sm_label(p);
+                            sm_patch_jump(p, skip_jump, skip_lbl);
+                            sm_emit_ii(p, SM_PUSH_CHUNK, (int64_t)entry_pc, 0);
+                        } else
                             lower_expr(p, lt, arg);
                     }
                     int idx = sm_emit_s(p, SM_PAT_CAPTURE_FN_ARGS, fnc->sval);
