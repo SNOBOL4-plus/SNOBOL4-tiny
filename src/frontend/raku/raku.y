@@ -335,6 +335,16 @@ if_stmt
         { EXPR_t *e=expr_new(E_IF); expr_add_child(e,$3); expr_add_child(e,$5); expr_add_child(e,$7); $$=e; }
     | KW_IF '(' expr ')' block KW_ELSE if_stmt
         { EXPR_t *e=expr_new(E_IF); expr_add_child(e,$3); expr_add_child(e,$5); expr_add_child(e,$7); $$=e; }
+    /* BUG-FIX: KW_ELSIF was declared but had no grammar rule */
+    | KW_IF '(' expr ')' block KW_ELSIF '(' expr ')' block
+        { EXPR_t *inner=expr_new(E_IF); expr_add_child(inner,$8); expr_add_child(inner,$10);
+          EXPR_t *e=expr_new(E_IF); expr_add_child(e,$3); expr_add_child(e,$5); expr_add_child(e,inner); $$=e; }
+    | KW_IF '(' expr ')' block KW_ELSIF '(' expr ')' block KW_ELSE block
+        { EXPR_t *inner=expr_new(E_IF); expr_add_child(inner,$8); expr_add_child(inner,$10); expr_add_child(inner,$12);
+          EXPR_t *e=expr_new(E_IF); expr_add_child(e,$3); expr_add_child(e,$5); expr_add_child(e,inner); $$=e; }
+    | KW_IF '(' expr ')' block KW_ELSIF '(' expr ')' block KW_ELSE if_stmt
+        { EXPR_t *inner=expr_new(E_IF); expr_add_child(inner,$8); expr_add_child(inner,$10); expr_add_child(inner,$12);
+          EXPR_t *e=expr_new(E_IF); expr_add_child(e,$3); expr_add_child(e,$5); expr_add_child(e,inner); $$=e; }
     ;
 
 while_stmt
