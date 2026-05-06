@@ -47,12 +47,29 @@ SCRIP_CC_BIN := $(ROOT)/scrip
 .PHONY: all scrip scrip-interp scrip setup \
         test test-ir test-all \
         monitor-ipc \
+        libscrip_rt \
         run run-ir run-jvm run-net \
         clean distclean
 
 # ── Primary target ────────────────────────────────────────────────────────────
 
 all: scrip
+
+# ── libscrip_rt.so — runtime support library for --jit-emit --x64 ────────────
+# M-JITEM-X64 / EM-1: skeleton with scrip_rt_init / scrip_rt_finalize as
+# no-ops. Subsequent EM-N rungs flesh out the ABI (push, call_chunk,
+# pat_match, builtin shims, etc.). Emitted x86-64 binaries link against
+# this .so for all language-level semantics.
+libscrip_rt: out/libscrip_rt.so
+
+out/libscrip_rt.so: $(SRC)/runtime/rt/scrip_rt.c $(SRC)/runtime/rt/scrip_rt.h
+	@mkdir -p out
+	$(CC) -O0 -g $(WARN) -fPIC -shared \
+	    -I$(SRC)/runtime/rt \
+	    $(SRC)/runtime/rt/scrip_rt.c \
+	    -o out/libscrip_rt.so
+	@echo "Built: out/libscrip_rt.so"
+
 
 # ── scrip — unified driver (all modes, all frontends) ────────────────────────
 # WASM removed from scrip build (2026-04-08): --jit-emit --wasm / emit_wasm.c
@@ -118,6 +135,7 @@ scrip:
 	$(CC) $(CRT)   -c $(RT)/x86/sm_lower.c   -o $(OBJ)/sm_lower.o
 	$(CC) $(CRT)   -c $(RT)/x86/sm_image.c   -o $(OBJ)/sm_image.o
 	$(CC) $(CRT)   -c $(RT)/x86/sm_codegen.c -o $(OBJ)/sm_codegen.o
+	$(CC) $(CRT)   -c $(RT)/x86/sm_codegen_x64_emit.c -o $(OBJ)/sm_codegen_x64_emit.o
 	$(CC) $(CRT)   -c $(SRC)/driver/interp_globals.c -o $(OBJ)/interp_globals.o
 	$(CC) $(CRT)   -c $(SRC)/driver/interp_label.c   -o $(OBJ)/interp_label.o
 	$(CC) $(CRT)   -c $(SRC)/driver/interp_call.c    -o $(OBJ)/interp_call.o

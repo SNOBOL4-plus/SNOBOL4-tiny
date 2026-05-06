@@ -71,6 +71,7 @@ extern void ir_print_node_nl(const EXPR_t *e, FILE *f);
 #include "../runtime/x86/sm_prog.h"
 #include "../runtime/x86/bb_build.h"    /* M-BB-LIVE-WIRE: bb_mode_t, g_bb_mode */
 #include "../runtime/x86/sm_codegen.h"  /* M-JIT-RUN: sm_codegen, sm_jit_run */
+#include "../runtime/x86/sm_codegen_x64_emit.h" /* M-JITEM-X64 / EM-1: standalone asm emitter */
 #include "scrip_sm.h"                   /* RS-14: sm_preamble, sm_run_with_recovery */
 #include "sync_monitor.h"               /* IM-7: --monitor in-process comparator */
 #include "../runtime/x86/sm_image.h"    /* M-JIT-RUN: sm_image_init */
@@ -114,6 +115,13 @@ int main(int argc, char **argv)
     int mode_jit_run       = 0;  /* --jit-run  : SM_Program -> x86 bytes -> mmap slab -> jump in */
     int mode_monitor       = 0;  /* --monitor  : in-process sync comparator (IR vs SM vs JIT) */
 
+    /* M-JITEM-X64 / EM-1 — `--jit-emit --x64` is two flags combined.
+     * The driver requires both before selecting standalone-asm emission;
+     * later rungs (M6) introduce `--jvm`, `--net`, `--wasm`, `--js` as
+     * sibling sub-flags of `--jit-emit`. */
+    int opt_jit_emit       = 0;  /* --jit-emit : enables standalone backend emission */
+    int opt_emit_x64       = 0;  /* --x64      : x86-64 backend selector */
+
     /* Byrd Box pattern mode — independent switch (default: --bb-driver) */
     int bb_driver          = 0;  /* --bb-driver : pattern matching via driver/broker */
     int bb_live            = 0;  /* --bb-live   : live-wired in exec memory */
@@ -146,6 +154,9 @@ int main(int argc, char **argv)
         else if (strcmp(argv[argi], "--sm-run")        == 0) { mode_sm_run        = 1; argi++; }
         else if (strcmp(argv[argi], "--jit-run")       == 0) { mode_jit_run       = 1; argi++; }
         else if (strcmp(argv[argi], "--monitor")       == 0) { mode_monitor       = 1; argi++; }
+        /* M-JITEM-X64 / EM-1 — standalone-asm emission */
+        else if (strcmp(argv[argi], "--jit-emit")      == 0) { opt_jit_emit       = 1; argi++; }
+        else if (strcmp(argv[argi], "--x64")           == 0) { opt_emit_x64       = 1; argi++; }
         /* BB pattern mode */
         else if (strcmp(argv[argi], "--bb-driver")     == 0) { bb_driver          = 1; argi++; }
         else if (strcmp(argv[argi], "--bb-live")       == 0) { bb_live            = 1; argi++; }
@@ -166,8 +177,33 @@ int main(int argc, char **argv)
     /* SN-19: wire case sensitivity into the SNOBOL4 lexer before sno_parse(). */
     sno_set_case_sensitive(opt_case_sensitive);
 
-    /* Default execution mode: --sm-run (not when --monitor) */
-    if (!mode_ir_run && !mode_sm_run && !mode_jit_run && !mode_monitor)
+    /* M-JITEM-X64 / EM-1 — compose the new mode from its two parts.
+     * Both flags must be present together; otherwise emit a clear error.
+     * Once selected, treat as mutually exclusive with --ir-run / --sm-run /
+     * --jit-run / --monitor. */
+    int mode_jit_emit_x64 = (opt_jit_emit && opt_emit_x64);
+    if (opt_jit_emit && !opt_emit_x64) {
+        fprintf(stderr,
+            "scrip: --jit-emit requires a backend selector "
+            "(--x64 is the only one wired in EM-1)\n");
+        return 1;
+    }
+    if (opt_emit_x64 && !opt_jit_emit) {
+        fprintf(stderr,
+            "scrip: --x64 is meaningful only with --jit-emit\n");
+        return 1;
+    }
+    if (mode_jit_emit_x64 &&
+        (mode_ir_run || mode_sm_run || mode_jit_run || mode_monitor)) {
+        fprintf(stderr,
+            "scrip: --jit-emit --x64 is mutually exclusive with "
+            "--ir-run / --sm-run / --jit-run / --monitor\n");
+        return 1;
+    }
+
+    /* Default execution mode: --sm-run (not when --monitor or --jit-emit) */
+    if (!mode_ir_run && !mode_sm_run && !mode_jit_run && !mode_monitor &&
+        !mode_jit_emit_x64)
         mode_sm_run = 1;
 
     /* Default BB mode: --bb-driver unless --bb-live explicitly set */
@@ -187,6 +223,7 @@ int main(int argc, char **argv)
             "  --ir-run         interpret via IR tree-walk (correctness reference)\n"
             "  --sm-run         interpret SM_Program via dispatch loop  [DEFAULT]\n"
             "  --jit-run        SM_Program -> x86 bytes -> mmap slab -> jump in\n"
+            "  --jit-emit --x64 emit standalone x86-64 asm to stdout (links libscrip_rt.so)\n"
             "  --monitor        in-process sync comparator (IR vs SM vs JIT)\n"
             "\n"
             "Byrd Box pattern mode (default: --bb-driver):\n"
@@ -436,6 +473,24 @@ int main(int argc, char **argv)
         if (!sm0) { fprintf(stderr, "scrip: sm_lower failed\n"); return 1; }
         sm_prog_print(sm0, stdout);
         sm_prog_free(sm0);
+        return 0;
+    }
+
+    if (mode_jit_emit_x64) {
+        /* M-JITEM-X64 / EM-1 — standalone-asm emission.
+         * Lower IR -> SM_Program (same path as --sm-run / --jit-run);
+         * hand the program to sm_codegen_x64_emit, which writes an asm
+         * source to stdout. The emitted asm is then assembled+linked
+         * outside scrip (see scripts/test_smoke_jit_emit_x64.sh). */
+        SM_Program *sm = sm_preamble(prog);
+        if (!sm) return 1;
+        prog = NULL;
+        if (sm_codegen_x64_emit(sm, stdout) != 0) {
+            fprintf(stderr, "scrip: sm_codegen_x64_emit failed\n");
+            sm_prog_free(sm);
+            return 1;
+        }
+        sm_prog_free(sm);
         return 0;
     }
 
