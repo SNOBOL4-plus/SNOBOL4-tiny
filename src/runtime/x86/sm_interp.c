@@ -73,6 +73,27 @@ int      g_sm_step_limit = 0;
 int      g_sm_steps_done = 0;
 jmp_buf  g_sm_step_jmp;
 
+/* CHUNKS-step05: audit counters.  When SCRIP_CHUNKS_AUDIT=1, every push of
+ * a DT_E-shaped value through the SM dispatch loop is tallied; on process
+ * exit (registered atexit) a summary line is printed.  For pure
+ * SNOBOL4/Snocone programs after Step 4, push_expr should be 0 and oor 0. */
+int      g_chunks_audit_push_expr  = 0;
+int      g_chunks_audit_push_chunk = 0;
+int      g_chunks_audit_chunk_oor  = 0;
+static void chunks_audit_summary(void) {
+    if (getenv("SCRIP_CHUNKS_AUDIT")) {
+        fprintf(stderr,
+                "[CHUNKS-AUDIT] summary: SM_PUSH_CHUNK=%d  SM_PUSH_EXPR=%d  out_of_range=%d\n",
+                g_chunks_audit_push_chunk,
+                g_chunks_audit_push_expr,
+                g_chunks_audit_chunk_oor);
+    }
+}
+__attribute__((constructor))
+static void chunks_audit_register(void) {
+    atexit(chunks_audit_summary);
+}
+
 /* OE-10: body_fn for BB_PUMP — print each generated Icon value to stdout */
 static void pump_print(DESCR_t val, void *arg) {
     (void)arg;
@@ -275,6 +296,15 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
 
         case SM_PUSH_EXPR: {
             /* Push a frozen DT_E expression descriptor (for *expr / EVAL()) */
+            /* CHUNKS-step05 instrumentation: tally legacy EXPR_t* DT_E pushes.
+             * When SCRIP_CHUNKS_AUDIT=1 and the program is pure SNOBOL4/Snocone,
+             * any SM_PUSH_EXPR fire is a violation of M1's "chunk-only" invariant.
+             * Icon/Raku/Prolog generators legitimately still hit this until M4. */
+            if (getenv("SCRIP_CHUNKS_AUDIT")) {
+                g_chunks_audit_push_expr++;
+                fprintf(stderr, "[CHUNKS-AUDIT] SM_PUSH_EXPR fired at pc=%d (legacy EXPR_t* path)\n",
+                        st->pc);
+            }
             DESCR_t d;
             d.v    = DT_E;
             d.slen = 0;
@@ -288,6 +318,17 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
             /* CHUNKS-step02: push DT_E chunk descriptor.
              * slen=1 distinguishes chunk from legacy EXPR_t* (slen=0).
              * entry_pc stored in the .i union field. */
+            /* CHUNKS-step05 instrumentation: validate entry_pc within prog bounds.
+             * Guarded by SCRIP_CHUNKS_AUDIT to keep production builds free of overhead. */
+            if (getenv("SCRIP_CHUNKS_AUDIT")) {
+                g_chunks_audit_push_chunk++;
+                int entry_pc = (int)ins->a[0].i;
+                if (entry_pc < 0 || entry_pc >= prog->count) {
+                    g_chunks_audit_chunk_oor++;
+                    fprintf(stderr, "[CHUNKS-AUDIT] SM_PUSH_CHUNK at pc=%d: entry_pc=%d out of range [0,%d)\n",
+                            st->pc, entry_pc, prog->count);
+                }
+            }
             DESCR_t d;
             d.v    = DT_E;
             d.slen = 1;                  /* chunk flag */
