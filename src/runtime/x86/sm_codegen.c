@@ -347,6 +347,72 @@ static void h_bb_pump_proc(void)
     STATE->last_ok = (ticks > 0);
 }
 
+/* CHUNKS-step13: Raku CASE dispatch — JIT mirror of SM_BB_PUMP_CASE
+ * handler in sm_interp.c. Stack discipline and comparison semantics
+ * are identical; see sm_interp.c for the exhaustive comment. The two
+ * handlers must stay in lockstep — any change to one needs the same
+ * change to the other. */
+static void h_bb_pump_case(void)
+{
+    int ncases      = (int)CUR_INS->a[0].i;
+    int has_default = (int)CUR_INS->a[1].i;
+
+    int default_pc = -1;
+    if (has_default) {
+        DESCR_t d = POP();
+        default_pc = (d.v == DT_E && d.slen == 1) ? (int)d.i : -1;
+    }
+
+    int *cmp_kinds = (int*)GC_malloc(sizeof(int) * (ncases > 0 ? ncases : 1));
+    int *val_pcs   = (int*)GC_malloc(sizeof(int) * (ncases > 0 ? ncases : 1));
+    int *body_pcs  = (int*)GC_malloc(sizeof(int) * (ncases > 0 ? ncases : 1));
+    for (int k = ncases - 1; k >= 0; k--) {
+        DESCR_t b = POP();
+        DESCR_t v = POP();
+        DESCR_t c = POP();
+        body_pcs[k]  = (b.v == DT_E && b.slen == 1) ? (int)b.i : -1;
+        val_pcs[k]   = (v.v == DT_E && v.slen == 1) ? (int)v.i : -1;
+        cmp_kinds[k] = (c.v == DT_I) ? (int)c.i : (int)E_EQ;
+    }
+
+    DESCR_t topic_d = POP();
+    int topic_pc = (topic_d.v == DT_E && topic_d.slen == 1) ? (int)topic_d.i : -1;
+    DESCR_t topic = (topic_pc >= 0) ? sm_call_chunk(topic_pc) : NULVCL;
+
+    DESCR_t result = NULVCL;
+    int matched = 0;
+    for (int k = 0; k < ncases; k++) {
+        if (val_pcs[k] < 0 || body_pcs[k] < 0) continue;
+        DESCR_t wval = sm_call_chunk(val_pcs[k]);
+        int match = 0;
+        if ((EXPR_e)cmp_kinds[k] == E_LEQ) {
+            const char *ts = IS_STR_fn(topic) ? topic.s : VARVAL_fn(topic);
+            const char *ws = IS_STR_fn(wval)  ? wval.s  : VARVAL_fn(wval);
+            match = (ts && ws && strcmp(ts, ws) == 0);
+        } else {
+            if (IS_INT_fn(topic) && IS_INT_fn(wval)) {
+                match = (topic.i == wval.i);
+            } else {
+                const char *ts = VARVAL_fn(topic);
+                const char *ws = VARVAL_fn(wval);
+                match = (ts && ws && strcmp(ts, ws) == 0);
+            }
+        }
+        if (match) {
+            result = sm_call_chunk(body_pcs[k]);
+            matched = 1;
+            break;
+        }
+    }
+    if (!matched && default_pc >= 0) {
+        result = sm_call_chunk(default_pc);
+        matched = 1;
+    }
+
+    PUSH(result);
+    STATE->last_ok = matched;
+}
+
 static void h_store_var(void)
 {
     DESCR_t val = POP();
@@ -974,6 +1040,7 @@ static void init_handler_table(void)
     /* CHUNKS-step12: name-driven Icon proc BB pump — replaces the synthesised
      * E_FNC + SM_PUSH_EXPR + SM_BB_PUMP wrapper for top-level call_main. */
     g_handlers[SM_BB_PUMP_PROC] = h_bb_pump_proc;
+    g_handlers[SM_BB_PUMP_CASE] = h_bb_pump_case;
     /* Opcodes still stubbed as h_unimpl — by design, not by omission:
      *   SM_ACOMP, SM_LCOMP  — emitted by sm_lower for E_EQ/E_NE/E_LT/etc.
      *     (SNOBOL4 numeric/string comparison EKinds) but NEVER actually

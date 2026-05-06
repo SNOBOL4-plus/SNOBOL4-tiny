@@ -768,6 +768,95 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
             break;
         }
 
+        /* CHUNKS-step13: Raku CASE dispatch — replaces emit_push_expr +
+         * SM_BB_PUMP for E_CASE. a[0].i = ncases, a[1].i = has_default.
+         * Stack layout (bottom→top, i.e. earliest pushed first):
+         *   topic_chunk          (DT_E)
+         *   cmp_kind_0           (DT_I, EXPR_e: E_LEQ for ==, E_EQ otherwise)
+         *   val_chunk_0          (DT_E)
+         *   body_chunk_0         (DT_E)
+         *   ... ncases triples ...
+         *   default_body_chunk   (DT_E, only if has_default)
+         * Reverse-pop, evaluate topic, walk arms, run matching body.
+         * The matched body's value (or NULVCL) is left on the stack —
+         * even though E_CASE is currently used in stmt-context (raku
+         * given_stmt), keeping the value-context discipline consistent
+         * with the underlying coro_value.c E_CASE evaluator means
+         * future value-context use is symmetric. The trailing SM_POP
+         * the lower_stmt expression-stmt path emits for E_CASE balances
+         * the stack. Mirrors the comparison logic in
+         * coro_value.c:947 — string compare on E_LEQ, integer-or-string
+         * compare on E_EQ — but operates entirely on chunk-call results,
+         * never on EXPR_t. */
+        case SM_BB_PUMP_CASE: {
+            int ncases      = (int)ins->a[0].i;
+            int has_default = (int)ins->a[1].i;
+
+            /* Pop default body first (top of stack) if present */
+            int default_pc = -1;
+            if (has_default) {
+                DESCR_t d = sm_pop(st);
+                default_pc = (d.v == DT_E && d.slen == 1) ? (int)d.i : -1;
+            }
+
+            /* Pop ncases triples in reverse: (body, val, kind) per arm,
+             * but each arm was pushed in (kind, val, body) order, so
+             * top-of-stack is body of last arm. We collect into arrays
+             * indexed in source-order. */
+            int *cmp_kinds = (int*)GC_malloc(sizeof(int) * (ncases > 0 ? ncases : 1));
+            int *val_pcs   = (int*)GC_malloc(sizeof(int) * (ncases > 0 ? ncases : 1));
+            int *body_pcs  = (int*)GC_malloc(sizeof(int) * (ncases > 0 ? ncases : 1));
+            for (int k = ncases - 1; k >= 0; k--) {
+                DESCR_t b = sm_pop(st);
+                DESCR_t v = sm_pop(st);
+                DESCR_t c = sm_pop(st);
+                body_pcs[k]  = (b.v == DT_E && b.slen == 1) ? (int)b.i : -1;
+                val_pcs[k]   = (v.v == DT_E && v.slen == 1) ? (int)v.i : -1;
+                cmp_kinds[k] = (c.v == DT_I) ? (int)c.i : (int)E_EQ;
+            }
+
+            /* Pop topic chunk and evaluate it */
+            DESCR_t topic_d = sm_pop(st);
+            int topic_pc = (topic_d.v == DT_E && topic_d.slen == 1) ? (int)topic_d.i : -1;
+            DESCR_t topic = (topic_pc >= 0) ? sm_call_chunk(topic_pc) : NULVCL;
+
+            /* Walk arms: for each, eval val_chunk, compare, run body on match */
+            DESCR_t result = NULVCL;
+            int matched   = 0;
+            for (int k = 0; k < ncases; k++) {
+                if (val_pcs[k] < 0 || body_pcs[k] < 0) continue;
+                DESCR_t wval = sm_call_chunk(val_pcs[k]);
+                int match = 0;
+                if ((EXPR_e)cmp_kinds[k] == E_LEQ) {
+                    /* String equality (Raku ==): coerce to string both sides */
+                    const char *ts = IS_STR_fn(topic) ? topic.s : VARVAL_fn(topic);
+                    const char *ws = IS_STR_fn(wval)  ? wval.s  : VARVAL_fn(wval);
+                    match = (ts && ws && strcmp(ts, ws) == 0);
+                } else {
+                    if (IS_INT_fn(topic) && IS_INT_fn(wval)) {
+                        match = (topic.i == wval.i);
+                    } else {
+                        const char *ts = VARVAL_fn(topic);
+                        const char *ws = VARVAL_fn(wval);
+                        match = (ts && ws && strcmp(ts, ws) == 0);
+                    }
+                }
+                if (match) {
+                    result = sm_call_chunk(body_pcs[k]);
+                    matched = 1;
+                    break;
+                }
+            }
+            if (!matched && default_pc >= 0) {
+                result = sm_call_chunk(default_pc);
+                matched = 1;
+            }
+
+            sm_push(st, result);
+            st->last_ok = matched;
+            break;
+        }
+
         /* ── Functions (stubs — wired in U3) ───────────────────────── */
 
         case SM_CALL: {

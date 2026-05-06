@@ -1059,11 +1059,118 @@ static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
         return;
 
     /* ── Raku: typed variable declaration — no runtime action ───────────── */
-    case E_CASE:
-        /* case expression: lower cond, then each arm via BB */
-        emit_push_expr(p, e);
-        sm_emit(p, SM_BB_PUMP);
+    case E_CASE: {
+        /* CHUNKS-step13: Raku CASE dispatch — replaces the legacy
+         * emit_push_expr + SM_BB_PUMP wrapper.  Lower each piece (topic,
+         * per-arm value and body, optional default body) as its own
+         * chunk and emit the canonical CASE wrapper.  Stack layout
+         * pushed for SM_BB_PUMP_CASE:
+         *
+         *   topic_chunk
+         *   cmp_kind_0  val_chunk_0  body_chunk_0
+         *   cmp_kind_1  val_chunk_1  body_chunk_1
+         *   ...
+         *   default_body_chunk        (only if has_default)
+         *
+         * IR layout produced by raku.y (RK-18d):
+         *   E_CASE[ topic, cmpnode_0, val_0, body_0, ..., (E_NUL, E_NUL, default_body)? ]
+         * cmpnode_i is an E_ILIT carrying the EXPR_e cmp kind in .ival,
+         * or E_NUL marking the trailing default triple.
+         *
+         * Wrapper-level synthesis is now EXPR_t-free.  Per-arm body
+         * content is recursively lowered by the existing lower_expr
+         * machinery — any deferred IR walking inside arm bodies for
+         * not-yet-migrated kinds is M4-cleanup territory, mirroring
+         * how CHUNKS-step12 deferred the proc_table IR walk to Step 17. */
+
+        if (e->nchildren < 1) {
+            /* Defensive: empty CASE — nothing to dispatch. */
+            sm_emit(p, SM_PUSH_NULL);
+            return;
+        }
+
+        /* Detect Raku triple layout: child count after topic is a
+         * multiple of 3, AND child[1] is E_ILIT or E_NUL.  Mirrors the
+         * detection in coro_value.c:947. */
+        int is_raku_layout = (e->nchildren >= 4 && (e->nchildren - 1) % 3 == 0 &&
+            e->children[1] && (e->children[1]->kind == E_ILIT || e->children[1]->kind == E_NUL));
+        if (!is_raku_layout) {
+            /* Icon-style pair layout: not exercised by the Raku frontend
+             * today (Icon uses E_IF chains for case-of), but the legacy
+             * fall-through preserves behaviour for any future producer.
+             * Keep going with a deferred-body wrap as one chunk. */
+            int skip_jump = sm_emit_i(p, SM_JUMP, 0);
+            int entry_pc  = sm_label(p);
+            /* Lower whole CASE body as a single thunk that delegates to
+             * coro_eval via the SM stack — but coro_eval(EXPR_t*) is the
+             * very thing we're eliminating, so for now emit a NULVCL
+             * placeholder + diagnostic.  No Raku/Icon program reaches this
+             * branch under current frontends.  When Icon E_CASE is added,
+             * a separate rung will lower the pair layout. */
+            sm_emit(p, SM_PUSH_NULL);
+            sm_emit(p, SM_RETURN);
+            int skip_lbl  = sm_label(p);
+            sm_patch_jump(p, skip_jump, skip_lbl);
+            sm_emit_ii(p, SM_PUSH_CHUNK, (int64_t)entry_pc, 0);
+            sm_emit_ii(p, SM_BB_PUMP_CASE, 0, 0);  /* zero arms, no default */
+            return;
+        }
+
+        /* Helper macro: emit (jump-around + entry + lower(child) + RETURN) →
+         * SM_PUSH_CHUNK entry_pc, 0.  Same shape used in Steps 2/3/4. */
+        #define EMIT_CHUNK_OF(child_expr) do {                                  \
+            int _skip = sm_emit_i(p, SM_JUMP, 0);                                \
+            int _entry = sm_label(p);                                            \
+            lower_expr(p, lt, (child_expr));                                     \
+            sm_emit(p, SM_RETURN);                                               \
+            int _after = sm_label(p);                                            \
+            sm_patch_jump(p, _skip, _after);                                     \
+            sm_emit_ii(p, SM_PUSH_CHUNK, (int64_t)_entry, 0);                    \
+        } while (0)
+
+        /* Walk triples, count arms, detect trailing default. */
+        int total_triples = (e->nchildren - 1) / 3;
+        int has_default   = 0;
+        int default_idx   = -1;  /* triple index of the default, if any */
+        if (total_triples > 0) {
+            int last_i = 1 + (total_triples - 1) * 3;
+            EXPR_t *last_cmp = e->children[last_i];
+            if (last_cmp && last_cmp->kind == E_NUL) {
+                has_default = 1;
+                default_idx = total_triples - 1;
+            }
+        }
+        int ncases = total_triples - (has_default ? 1 : 0);
+
+        /* 1. Push topic as chunk. */
+        EMIT_CHUNK_OF(e->children[0]);
+
+        /* 2. Push each arm: cmp_kind (literal int), val chunk, body chunk. */
+        for (int t = 0; t < total_triples; t++) {
+            if (t == default_idx) continue;  /* default handled last */
+            int base = 1 + t * 3;
+            EXPR_t *cmpnode = e->children[base];
+            EXPR_t *val     = e->children[base + 1];
+            EXPR_t *body    = e->children[base + 2];
+            int cmp_kind = (cmpnode && cmpnode->kind == E_ILIT) ? (int)cmpnode->ival : (int)E_EQ;
+            sm_emit_i(p, SM_PUSH_LIT_I, (int64_t)cmp_kind);
+            EMIT_CHUNK_OF(val);
+            EMIT_CHUNK_OF(body);
+        }
+
+        /* 3. Push default body chunk if present. */
+        if (has_default) {
+            int base = 1 + default_idx * 3;
+            EXPR_t *body = e->children[base + 2];
+            EMIT_CHUNK_OF(body);
+        }
+
+        /* 4. Dispatch. */
+        sm_emit_ii(p, SM_BB_PUMP_CASE, (int64_t)ncases, (int64_t)has_default);
+
+        #undef EMIT_CHUNK_OF
         return;
+    }
 
     default:
         fprintf(stderr, "sm_lower: unhandled expr kind %d\n", (int)e->kind);

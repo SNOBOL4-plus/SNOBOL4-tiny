@@ -122,6 +122,21 @@ typedef enum {
      * walked by this opcode. The IR walk that remains lives entirely inside
      * coro_call(proc_table[i].proc, ...) and is Step 17's territory. */
     SM_BB_PUMP_PROC,
+    /* CHUNKS-step13: Raku CASE dispatch — replaces the synthesised
+     * emit_push_expr + SM_BB_PUMP wrapper that sm_lower used to emit for
+     * E_CASE.  a[0].i = ncases (number of when-arms), a[1].i = has_default
+     * (0 or 1).  Stack layout at entry (deepest first):
+     *   topic_chunk           (DT_E, evaluates the case topic)
+     *   cmp_kind_0   (DT_I, EXPR_e value: E_LEQ for string ==, else E_EQ)
+     *   val_chunk_0           (DT_E, evaluates arm 0's "when" value)
+     *   body_chunk_0          (DT_E, evaluates arm 0's body)
+     *   ... ncases triples ...
+     *   default_body_chunk    (DT_E, only if has_default)
+     * Handler pops in reverse, evaluates topic, walks arms doing string
+     * or integer compare per cmp_kind, runs the matching body's chunk,
+     * or the default if present, or pushes NULVCL.  No EXPR_t is
+     * constructed at lowering time and none is walked by this opcode. */
+    SM_BB_PUMP_CASE,
 
     /* Functions */
     SM_CALL,
