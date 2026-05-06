@@ -84,5 +84,45 @@ if [ $leaks -gt 0 ]; then
     echo "FAIL  $leaks IR-only symbol leak(s) in SM runtime files"
     exit 1
 fi
+
+# CHUNKS-step06: structural rule — forbid EXPR_t* casts and EXPR_t field
+# accesses in files that should now read pure SM/chunk, not raw IR.
+#
+# Initial scope: snobol4_invoke.c and snobol4_argval.c.  Both are zero-hit
+# today (verified manually session #65) so the gate enforces the post-Step-4
+# reality.
+#
+# Deferred to a later step (recorded in GOAL-CHUNKS Step 6 deferral note):
+#   - snobol4_pattern.c — still contains the legacy DT_E thaw block reachable
+#     via CONVERT(s,"EXPRESSION"), plus compile_to_expression itself.  Closing
+#     this requires migrating CONVERT EXPRESSION to emit a chunk, not an
+#     EXPR_t*.
+#   - eval_code.c — contains eval_node, the IR walker itself.
+#
+# Match the five field accesses called out in GOAL-CHUNKS Step 6
+# (->kind, ->children, ->nchildren, ->sval, ->ival) plus EXPR_t* casts.
+SM_STRUCTURAL_FILES=(
+    "$ROOT/src/runtime/x86/snobol4_invoke.c"
+    "$ROOT/src/runtime/x86/snobol4_argval.c"
+)
+IR_FIELDS_RE='(\(EXPR_t[[:space:]]*\*\)|->kind\b|->children\b|->nchildren\b|->sval\b|->ival\b)'
+struct_leaks=0
+for f in "${SM_STRUCTURAL_FILES[@]}"; do
+    [ -f "$f" ] || continue
+    hits=$(grep -nE "$IR_FIELDS_RE" "$f" 2>/dev/null \
+           | grep -vE '^[0-9]+:[[:space:]]*(/\*|\*|//)' \
+           || true)
+    if [ -n "$hits" ]; then
+        echo "FAIL  $f contains EXPR_t cast or IR field access (CHUNKS-step06 structural rule):"
+        echo "$hits" | sed 's/^/    /'
+        struct_leaks=$((struct_leaks+1))
+    fi
+done
+if [ $struct_leaks -gt 0 ]; then
+    echo
+    echo "FAIL  $struct_leaks structural leak(s) in SM runtime files"
+    exit 1
+fi
+
 echo "PASS  no IR-only symbol leaks in SM runtime files"
 exit 0
