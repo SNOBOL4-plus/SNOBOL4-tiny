@@ -485,7 +485,7 @@ int main(int argc, char **argv)
         SM_Program *sm = sm_preamble(prog);
         if (!sm) return 1;
         prog = NULL;
-        if (sm_codegen_x64_emit(sm, stdout) != 0) {
+        if (sm_codegen_x64_emit(sm, stdout, input_path) != 0) {
             fprintf(stderr, "scrip: sm_codegen_x64_emit failed\n");
             sm_prog_free(sm);
             return 1;

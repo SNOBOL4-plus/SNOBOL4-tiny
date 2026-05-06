@@ -1105,8 +1105,12 @@ static void lower_stmt(SM_Program *p, LabelTable *lt, const STMT_t *s)
      * SN-32a-stno: pass source stno as operand so sm_interp / sm_codegen
      * can report `&STNO` correctly after backward gotos and label-skips.
      * Mirrors the IR-side fix in SN-26-bridge-coverage-j (interp.c reads
-     * s->stno instead of incrementing a linear counter). */
-    sm_emit_i(p, SM_STNO, (int64_t)s->stno);
+     * s->stno instead of incrementing a linear counter).
+     * EM-4-readability: also carry s->lineno in a[1].i so the mode-4
+     * emitter can map each statement boundary back to its source line and
+     * print verbatim source text in a banner.  sm_interp.c reads only
+     * a[0].i (stno); a[1].i is purely informational and ignored there. */
+    sm_emit_ii(p, SM_STNO, (int64_t)s->stno, (int64_t)s->lineno);
 
     /* END statement → SM_HALT */
     if (s->is_end) {

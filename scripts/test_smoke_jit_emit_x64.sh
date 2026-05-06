@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test_smoke_jit_emit_x64.sh — gate for GOAL-MODE4-EMIT EM-1 + EM-2
+# test_smoke_jit_emit_x64.sh — gate for GOAL-MODE4-EMIT EM-1..EM-4
 #
 # Single growing gate.  Each EM-N rung extends the test set; previous
 # rungs' invariants still hold.
@@ -16,7 +16,7 @@
 #     SM stack push/pop in libscrip_rt.so, halt-rc surfacing
 #     through finalize.
 #   - Synthetic program containing an opcode the emitter does not yet
-#     bake (SM_ADD) emits, links, runs, and aborts loudly with the
+#     bake (SM_CONCAT) emits, links, runs, and aborts loudly with the
 #     unhandled-op trap diagnostic on stderr.
 #   - Real-frontend program (`OUTPUT = "hi"`) emits successfully (the
 #     emit itself returns 0); the resulting asm assembles cleanly.
@@ -24,7 +24,20 @@
 #     here — most ops are still unhandled in EM-2; that's expected
 #     and verified by the synthetic unhandled-op test above.
 #
-# EM-3+ rungs add tests in this file; the runtime test for the real
+# EM-3 contract (typed stack + arithmetic):
+#   - Synthetic (2+3)*4 program emits, links, runs, exits rc=20.
+#
+# EM-4 contract (control flow):
+#   - 6a: synthetic 15-op program exercises SM_JUMP forward (skip dead
+#     code), SM_JUMP_F not-taken (last_ok=1 default), SM_JUMP_S taken
+#     (last_ok=1 default).  Expected rc=42; asm shape verified
+#     (jmp/jz/jnz forms all present).
+#   - 6b: synthetic 6-op countdown body uses SM_JUMP_F backward.  A
+#     thin C driver overrides scrip_rt_last_ok to return 0 twice then
+#     1, proving the backward branch lands on its .Lpc<top> label.
+#     Expected rc=0.
+#
+# EM-5+ rungs add tests in this file; the runtime test for the real
 # frontend grows as more opcodes leave the unhandled set.
 #
 # Idempotent.  Safe to run multiple times.
@@ -78,7 +91,7 @@ int main(int argc, char **argv) {
     sm_emit(p, SM_CONCAT);
     sm_emit(p, SM_HALT);
     FILE *f = fopen(argv[1], "w");
-    sm_codegen_x64_emit(p, f);
+    sm_codegen_x64_emit(p, f, NULL);
     fclose(f);
     sm_prog_free(p);
     return 0;
@@ -134,8 +147,10 @@ echo "  PASS EM-1 errors    (flag validation regression-clean)"
 
 # -- Test 5: EM-3 gate -- (2 + 3) * 4 = 20 ----------------------------------
 # Build the EM-3 synthetic program (6-op: PUSH 2, PUSH 3, ADD, PUSH 4, MUL, HALT).
-# The harness now accepts two asm output paths; argv[1]=EM-2, argv[2]=EM-3.
-"$HARNESS" "$TMP/em2_a.s" "$TMP/em3.s" >/dev/null
+# The harness now accepts up to four asm output paths;
+#   argv[1]=EM-2, argv[2]=EM-3, argv[3]=EM-4a (forward+conditional shapes),
+#   argv[4]=EM-4b (backward-loop body, driven by override below).
+"$HARNESS" "$TMP/em2_a.s" "$TMP/em3.s" "$TMP/em4a.s" "$TMP/em4b.s" >/dev/null
 gcc -no-pie "$TMP/em3.s" \
     -L"$ROOT/out" -lscrip_rt -Wl,-rpath,"$ROOT/out" \
     -o "$TMP/em3_prog" 2> "$TMP/em3_link.err" || {
@@ -153,5 +168,58 @@ grep -q "SM_MUL"   "$TMP/em3.s" || { echo "FAIL no SM_MUL marker in em3 asm"; ex
 grep -q "scrip_rt_arith@PLT" "$TMP/em3.s" || { echo "FAIL no arith PLT call"; exit 1; }
 echo "  PASS EM-3 arithmetic  ((2+3)*4=20; emit->link->run verified)"
 
+# -- Test 6a: EM-4 forward jump + conditional shapes -----------------------
+# Synthetic 15-op program: SM_JUMP forward over dead code, then
+# SM_JUMP_F (not taken since last_ok=1) and SM_JUMP_S (taken since last_ok=1)
+# steer execution to the final HALT.  Expected rc=42.
+gcc -no-pie "$TMP/em4a.s" \
+    -L"$ROOT/out" -lscrip_rt -Wl,-rpath,"$ROOT/out" \
+    -o "$TMP/em4a_prog" 2> "$TMP/em4a_link.err" || {
+    echo "FAIL em4a link"; cat "$TMP/em4a_link.err"; exit 1; }
+set +e
+"$TMP/em4a_prog"
+RC=$?
+set -e
+if [ "$RC" -ne 42 ]; then
+    echo "FAIL em4a expected rc=42 got rc=$RC"; exit 1
+fi
+# Asm-shape sanity: forward jmp, JUMP_F (jz) and JUMP_S (jnz) all present.
+grep -q "jmp     .Lpc"   "$TMP/em4a.s" || { echo "FAIL no SM_JUMP jmp in em4a asm"; exit 1; }
+grep -q "SM_JUMP_F"      "$TMP/em4a.s" || { echo "FAIL no SM_JUMP_F marker"; exit 1; }
+grep -q "SM_JUMP_S"      "$TMP/em4a.s" || { echo "FAIL no SM_JUMP_S marker"; exit 1; }
+grep -q "scrip_rt_last_ok@PLT" "$TMP/em4a.s" || { echo "FAIL no last_ok call"; exit 1; }
+grep -qE 'jz +\.Lpc'     "$TMP/em4a.s" || { echo "FAIL no jz target in em4a"; exit 1; }
+grep -qE 'jnz +\.Lpc'    "$TMP/em4a.s" || { echo "FAIL no jnz target in em4a"; exit 1; }
+echo "  PASS EM-4a control flow (forward JUMP + JUMP_F not-taken + JUMP_S taken; rc=42)"
+
+# -- Test 6b: EM-4 conditional backward loop ------------------------------
+# 6-op SM body: counter=3, decrement, JUMP_F backward.  The driver below
+# overrides scrip_rt_last_ok to return 0 twice (loop iterates 2x: 3->2, 2->1)
+# then 1 (exit; counter -=1 -> 0; HALT rc=0).  Proves the JUMP_F backward
+# branch lands on the .Lpc<top> label correctly.
+cat > "$TMP/em4b_driver.c" <<'CEOF'
+/* EM-4b loop driver: scrip_rt_last_ok override drives the backward loop.
+ * Defined here so the linker resolves it before falling back to libscrip_rt.so. */
+static int call_count = 0;
+int scrip_rt_last_ok(void) {
+    call_count++;
+    return (call_count >= 3) ? 1 : 0;
+}
+CEOF
+gcc -no-pie "$TMP/em4b.s" "$TMP/em4b_driver.c" \
+    -L"$ROOT/out" -lscrip_rt -Wl,-rpath,"$ROOT/out" \
+    -o "$TMP/em4b_prog" 2> "$TMP/em4b_link.err" || {
+    echo "FAIL em4b link"; cat "$TMP/em4b_link.err"; exit 1; }
+set +e
+"$TMP/em4b_prog"
+RC=$?
+set -e
+if [ "$RC" -ne 0 ]; then
+    echo "FAIL em4b expected rc=0 got rc=$RC"; exit 1
+fi
+# Asm-shape sanity: the backward jz must target the loop-top label (.Lpc1).
+grep -qE 'jz +\.Lpc1\b' "$TMP/em4b.s" || { echo "FAIL no backward jz to .Lpc1"; exit 1; }
+echo "  PASS EM-4b backward loop (JUMP_F backward x2, fallthrough; rc=0)"
+
 echo
-echo "PASS=5 FAIL=0  (EM-1 wiring + EM-2 HALT/PUSH_LIT_I + EM-3 stack ops + arithmetic)"
+echo "PASS=7 FAIL=0  (EM-1 wiring + EM-2 HALT/PUSH_LIT_I + EM-3 stack ops + arithmetic + EM-4 control flow)"

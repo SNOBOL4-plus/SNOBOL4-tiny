@@ -167,6 +167,13 @@ void scrip_rt_pop_void(void);
  */
 int scrip_rt_last_ok(void);
 
+/*
+ * scrip_rt_set_last_ok -- set the last_ok flag (1 = success, 0 = failure).
+ * Used by emitted code and by future runtime ops (pattern matcher, etc.)
+ * that have a notion of success/failure.  EM-4 ABI addition.
+ */
+void scrip_rt_set_last_ok(int ok);
+
 #ifdef __cplusplus
 }
 #endif

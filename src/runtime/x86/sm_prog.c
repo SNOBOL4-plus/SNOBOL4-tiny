@@ -277,6 +277,8 @@ void sm_prog_print(const SM_Program *p, FILE *out)
                 break;
             case SM_STNO:
                 fprintf(out, " stmt=%lld", (long long)in->a[0].i);
+                if (in->a[1].i > 0)
+                    fprintf(out, " line=%lld", (long long)in->a[1].i);
                 break;
             default:
                 break;

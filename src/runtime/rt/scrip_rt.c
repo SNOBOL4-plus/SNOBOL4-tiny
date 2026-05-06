@@ -37,6 +37,13 @@ static int        g_vtop   = 0;
 static int        g_halt_rc  = 0;
 static int        g_halt_set = 0;
 
+/* EM-4: last_ok flag.  Reset to 1 (success) at process start.  Set by ops
+ * that have a notion of success/failure (pattern match, conditional builtins).
+ * Read by SM_JUMP_S / SM_JUMP_F codegen to decide whether to take the jump.
+ * EM-4 scope: the flag exists and can be toggled via scrip_rt_set_last_ok.
+ * Future rungs (EM-6 pattern matcher) will set it implicitly. */
+static int        g_last_ok  = 1;
+
 /* ── Internal stack helpers ─────────────────────────────────────────── */
 
 static void vstack_push(ScripRtVal v)
@@ -203,10 +210,19 @@ void scrip_rt_pop_void(void)
 
 int scrip_rt_last_ok(void)
 {
-    /* EM-4 stub: the SM interpreter tracks last_ok in SM_State.
-     * In mode-4 emitted code, last_ok is maintained by scrip_rt_arith
-     * and other ops that set it. For now returns 1 (success) as a safe
-     * default for the EM-3 gate which does not exercise conditional jumps.
-     * Will be wired to real SM last_ok state when SM_JUMP_S/F land (EM-4). */
-    return 1;
+    /* EM-4: real backing flag.  Defaults to 1 (success) at process start
+     * (initialized at file scope).  scrip_rt_set_last_ok flips it; future
+     * rungs (pattern matcher in EM-6) will set it implicitly when match
+     * primitives report failure. */
+    return g_last_ok;
+}
+
+void scrip_rt_set_last_ok(int ok)
+{
+    /* EM-4: emitted code uses this to update the success flag.  Idiom:
+     *   call scrip_rt_pop_int@PLT
+     *   mov  edi, eax
+     *   call scrip_rt_set_last_ok@PLT
+     * (or, in pattern contexts, the runtime sets it directly). */
+    g_last_ok = ok ? 1 : 0;
 }

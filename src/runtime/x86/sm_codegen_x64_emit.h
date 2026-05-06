@@ -28,8 +28,15 @@
  * EM-1: writes a literal-zero program (System V AMD64 main returning 0)
  * regardless of prog contents. Returns 0 on success, -1 on I/O error.
  *
+ * EM-4-readability: optional `src_path` is the path of the source file
+ * being compiled (.sno, .sc, etc.).  When non-NULL, the emitter reads
+ * the file once and emits each statement's verbatim source text as a
+ * page-break banner above its asm block, plus inline annotations on
+ * variable / string-literal references where the asm alone is opaque.
+ * Pass NULL to suppress source preservation (synthetic-program tests).
+ *
  * Subsequent EM-N rungs extend coverage; the function signature is stable.
  */
-int sm_codegen_x64_emit(SM_Program *prog, FILE *out);
+int sm_codegen_x64_emit(SM_Program *prog, FILE *out, const char *src_path);
 
 #endif /* SM_CODEGEN_X64_EMIT_H */
