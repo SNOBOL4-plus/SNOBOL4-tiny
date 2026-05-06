@@ -67,6 +67,8 @@ extern DESCR_t  NV_GET_fn(const char *name);
 #include "bb_broker.h"
 #include <setjmp.h>
 extern bb_node_t coro_eval(EXPR_t *e);   /* scrip.c — builds a drivable bb_node_t */
+extern bb_node_t coro_pump_proc_by_name(const char *name, DESCR_t *args, int nargs);
+                                          /* CHUNKS-step12: name-driven Icon proc pump */
 
 /* IM-4: SM step-limit for in-process sync monitor */
 int      g_sm_step_limit = 0;
@@ -735,6 +737,33 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
             if (!expr) { st->last_ok = 0; break; }
             bb_node_t node = coro_eval(expr);
             int ticks = bb_broker(node, BB_ONCE, NULL, NULL);
+            st->last_ok = (ticks > 0);
+            break;
+        }
+
+        /* CHUNKS-step12: name-driven Icon proc BB pump — replaces the
+         * synthesised E_FNC + emit_push_expr + SM_BB_PUMP wrapper that
+         * sm_lower used to emit for the top-level call_main(). a[0].s = proc
+         * name, a[1].i = nargs. nargs values, if any, are popped from the
+         * value stack in caller-pushed order (reverse-pop). No EXPR_t is
+         * constructed or walked at this layer. The IR walk inside
+         * coro_call(proc_table[i].proc, ...) is unchanged — Step 17 territory. */
+        case SM_BB_PUMP_PROC: {
+            const char *name  = ins->a[0].s;
+            int         nargs = (int)ins->a[1].i;
+            DESCR_t *args = NULL;
+            if (nargs > 0) {
+                args = calloc(nargs, sizeof(DESCR_t));
+                for (int k = nargs - 1; k >= 0; k--) args[k] = sm_pop(st);
+            }
+            bb_node_t node = coro_pump_proc_by_name(name, args, nargs);
+            if (!node.fn) {
+                /* proc not found in proc_table — treat as failed pump */
+                if (args) free(args);
+                st->last_ok = 0;
+                break;
+            }
+            int ticks = bb_broker(node, BB_PUMP, pump_print, NULL);
             st->last_ok = (ticks > 0);
             break;
         }

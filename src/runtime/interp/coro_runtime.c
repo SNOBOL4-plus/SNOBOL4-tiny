@@ -1018,6 +1018,34 @@ static DESCR_t icn_bb_identical_gen(void *zeta, int entry) {
     }
 }
 
+/* CHUNKS-step12: name-driven entry point used by SM_BB_PUMP_PROC. Does the
+ * proc_table lookup + coroutine staging that the E_FNC user-proc branch of
+ * coro_eval used to do for the synthesised call_main wrapper, but without
+ * routing through an EXPR_t. The IR walk inside coro_call(proc_table[i].proc,
+ * args, nargs) is unchanged — that work belongs to Step 17 (proc_table →
+ * entry_pcs).
+ *
+ * Note on scope: callers today pass nargs=0 (top-level main()). The args path
+ * is provided so the helper can be reused if a future rung wants name-driven
+ * dispatch with already-evaluated args; the no-generative-args fast path of
+ * the E_FNC branch is what's lifted here. Generative-arg routing
+ * (coro_bb_fnc) is intentionally not lifted — it requires per-arg EXPR_t* to
+ * pump, which the SM_BB_PUMP_PROC caller does not have. */
+bb_node_t coro_pump_proc_by_name(const char *name, DESCR_t *args, int nargs) {
+    if (!name) return (bb_node_t){ NULL, NULL, 0 };
+    for (int i = 0; i < proc_count; i++) {
+        if (strcmp(proc_table[i].name, name) != 0) continue;
+        coro_t *ss = coro_alloc(proc_trampoline);
+        ss->trampoline_arg = NULL;
+        coro_stage.ss    = ss;
+        coro_stage.proc  = proc_table[i].proc;
+        coro_stage.args  = args;
+        coro_stage.nargs = nargs;
+        return (bb_node_t){ coro_bb_suspend, ss, 0 };
+    }
+    return (bb_node_t){ NULL, NULL, 0 };
+}
+
 bb_node_t coro_eval(EXPR_t *e) {
     if (!e) {
         icn_oneshot_state_t *z = calloc(1, sizeof(*z));

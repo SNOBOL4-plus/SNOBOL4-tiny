@@ -113,6 +113,15 @@ typedef enum {
      * Note: BB_SCAN is already wired via SM_EXEC_STMT → exec_stmt → bb_broker(BB_SCAN). */
     SM_BB_PUMP,
     SM_BB_ONCE,
+    /* CHUNKS-step12: BB pump for an Icon user-proc identified by name + nargs.
+     * Replaces the synthesised E_FNC + emit_push_expr + SM_BB_PUMP wrapper
+     * that sm_lower used to emit for the top-level call_main(). a[0].s = proc
+     * name, a[1].i = nargs. Args (when nargs>0) are popped from the value
+     * stack in caller order and passed straight to the coroutine staging
+     * machinery — no EXPR_t* is constructed at lowering time and none is
+     * walked by this opcode. The IR walk that remains lives entirely inside
+     * coro_call(proc_table[i].proc, ...) and is Step 17's territory. */
+    SM_BB_PUMP_PROC,
 
     /* Functions */
     SM_CALL,

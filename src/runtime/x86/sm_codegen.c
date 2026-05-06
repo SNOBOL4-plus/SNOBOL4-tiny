@@ -324,6 +324,29 @@ static void h_bb_once(void)
     STATE->last_ok = (ticks > 0);
 }
 
+/* CHUNKS-step12: name-driven Icon proc BB pump — mirror of SM_BB_PUMP_PROC
+ * handler in sm_interp.c. The synthesised E_FNC + emit_push_expr path is
+ * gone; the lowerer emits SM_BB_PUMP_PROC "main", 0 directly. */
+extern bb_node_t coro_pump_proc_by_name(const char *name, DESCR_t *args, int nargs);
+static void h_bb_pump_proc(void)
+{
+    const char *name  = CUR_INS->a[0].s;
+    int         nargs = (int)CUR_INS->a[1].i;
+    DESCR_t *args = NULL;
+    if (nargs > 0) {
+        args = calloc(nargs, sizeof(DESCR_t));
+        for (int k = nargs - 1; k >= 0; k--) args[k] = POP();
+    }
+    bb_node_t node = coro_pump_proc_by_name(name, args, nargs);
+    if (!node.fn) {
+        if (args) free(args);
+        STATE->last_ok = 0;
+        return;
+    }
+    int ticks = bb_broker(node, BB_PUMP, jit_pump_print, NULL);
+    STATE->last_ok = (ticks > 0);
+}
+
 static void h_store_var(void)
 {
     DESCR_t val = POP();
@@ -946,8 +969,11 @@ static void init_handler_table(void)
     g_handlers[SM_DECR]        = h_decr;
 
     /* SN-9b: BB broker — Icon (PUMP) and Prolog (ONCE) generator dispatch. */
-    g_handlers[SM_BB_PUMP]     = h_bb_pump;
-    g_handlers[SM_BB_ONCE]     = h_bb_once;
+    g_handlers[SM_BB_PUMP]      = h_bb_pump;
+    g_handlers[SM_BB_ONCE]      = h_bb_once;
+    /* CHUNKS-step12: name-driven Icon proc BB pump — replaces the synthesised
+     * E_FNC + SM_PUSH_EXPR + SM_BB_PUMP wrapper for top-level call_main. */
+    g_handlers[SM_BB_PUMP_PROC] = h_bb_pump_proc;
     /* Opcodes still stubbed as h_unimpl — by design, not by omission:
      *   SM_ACOMP, SM_LCOMP  — emitted by sm_lower for E_EQ/E_NE/E_LT/etc.
      *     (SNOBOL4 numeric/string comparison EKinds) but NEVER actually

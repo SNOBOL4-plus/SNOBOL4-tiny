@@ -103,6 +103,13 @@ void    icn_scope_patch(IcnScope *sc, EXPR_t *e);
 
 DESCR_t coro_call(EXPR_t *proc, DESCR_t *args, int nargs);
 bb_node_t coro_eval(EXPR_t *e);
+/* CHUNKS-step12: build a bb_node_t for a user proc identified by name + args,
+ * skipping the synthesised E_FNC + coro_eval routing. The proc's IR body is
+ * still walked inside coro_call (Step 17 territory); this entry point eliminates
+ * the wrapper-level EXPR_t synthesis and the coro_eval(E_FNC) traversal that
+ * surrounded it. Returns a (NULL, NULL, 0) bb_node_t if the named proc is not
+ * found in proc_table — caller should treat that as last_ok=0. */
+bb_node_t coro_pump_proc_by_name(const char *name, DESCR_t *args, int nargs);
 int       is_suspendable(EXPR_t *e);
 void      icn_init_save_frame(void);  /* IC-5: save initial-block statics before frame pop */
 

@@ -1288,23 +1288,21 @@ SM_Program *sm_lower(const CODE_t *prog)
         sm_stno_label_record(p, ++stno, (s->label && s->label[0]) ? s->label : NULL);
     }
 
-    /* RS-26b: synthesise single top-level main() call for Icon programs.
-     * Shape: SM_PUSH_EXPR(<call-main E_FNC>) + SM_BB_PUMP + SM_HALT.
-     * polyglot_init already populated proc_table[main]; coro_eval finds it by name. */
+    /* CHUNKS-step12: synthesise top-level main() pump for Icon programs.
+     * Was: build a synthetic E_FNC("main") node, emit_push_expr it, follow
+     *      with SM_BB_PUMP — which read DT_E.ptr as EXPR_t* at runtime and
+     *      handed it to coro_eval, an IR walker.
+     * Now: emit SM_BB_PUMP_PROC "main", 0 directly. The handler does the
+     *      proc_table lookup and stages the coroutine without constructing
+     *      or walking any EXPR_t at this layer. The IR walk that remains
+     *      lives entirely inside coro_call(proc_table[main].proc, ...) and
+     *      is Step 17's territory (proc_table → entry_pcs).
+     *
+     * Generator-orthogonal: works whether or not main's body uses
+     *   generators, because main's body execution path (coro_call → IR
+     *   walk) is unchanged — only the wrapper-level synthesis is migrated. */
     if (has_icn) {
-        /* Build minimal E_FNC call node: kind=E_FNC, sval="main", ival=0,
-         * nchildren=1, children[0]=E_VAR("main"). */
-        EXPR_t *name_var = expr_new(E_VAR);
-        name_var->sval   = intern("main");
-        EXPR_t *call     = expr_new(E_FNC);
-        call->sval       = intern("main");
-        call->ival       = 0;   /* nparams = 0 */
-        expr_add_child(call, name_var);
-        emit_push_expr(p, call);
-        sm_emit(p, SM_BB_PUMP);
-        /* Free the temporary local nodes (emit_push_expr GC-cloned them) */
-        free(name_var->sval); free(name_var);
-        free(call->children); free(call->sval); free(call);
+        sm_emit_si(p, SM_BB_PUMP_PROC, "main", 0);
     }
 
     /* Implicit HALT at end if not already there */
