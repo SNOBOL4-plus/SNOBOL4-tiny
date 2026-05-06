@@ -70,6 +70,23 @@ out/libscrip_rt.so: $(SRC)/runtime/rt/scrip_rt.c $(SRC)/runtime/rt/scrip_rt.h
 	    -o out/libscrip_rt.so
 	@echo "Built: out/libscrip_rt.so"
 
+# ── EM-2 synthetic-program harness ───────────────────────────────────────────
+# Standalone helper: builds a 3-op SM_Program in memory and emits asm
+# via sm_codegen_x64_emit().  The shell gate then assembles/links/runs.
+out/sm_codegen_x64_emit_test: $(RT)/x86/sm_codegen_x64_emit_test.c \
+                               $(RT)/x86/sm_codegen_x64_emit.c \
+                               $(RT)/x86/sm_codegen_x64_emit.h \
+                               $(RT)/x86/sm_prog.c \
+                               $(RT)/x86/sm_prog.h
+	@mkdir -p out
+	$(CC) -O0 -g $(WARN) \
+	    -I$(SRC) -I$(RT)/x86 -I$(RT) \
+	    $(RT)/x86/sm_codegen_x64_emit_test.c \
+	    $(RT)/x86/sm_codegen_x64_emit.c \
+	    $(RT)/x86/sm_prog.c \
+	    -o out/sm_codegen_x64_emit_test
+	@echo "Built: out/sm_codegen_x64_emit_test"
+
 
 # ── scrip — unified driver (all modes, all frontends) ────────────────────────
 # WASM removed from scrip build (2026-04-08): --jit-emit --wasm / emit_wasm.c
