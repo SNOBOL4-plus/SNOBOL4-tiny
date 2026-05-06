@@ -37,6 +37,23 @@ typedef struct {
     DESCR_t    *caller_stack;         /* GC'd copy of caller's stack[0..caller_sp-1] */
 } SmCallFrame;
 
+/* CHUNKS-step14: SmGenState — persistent state for a suspended generator chunk.
+ * bb_broker_drive_sm allocates one of these per generator invocation.
+ * sm_interp_run fills it in when SM_SUSPEND fires; bb_broker_drive_sm
+ * restores it on each resume call.
+ * (Forward-declared as typedef struct SmGenState in sm_prog.h.) */
+struct SmGenState {
+    int      entry_pc;   /* initial entry pc (for first call) */
+    int      resume_pc;  /* pc to resume from (instruction after last SM_SUSPEND) */
+    int      started;    /* 0 = not yet entered, 1 = first call done, 2 = exhausted */
+    DESCR_t  yielded;    /* value produced by last SM_SUSPEND */
+    /* value stack snapshot at suspension point */
+    DESCR_t *stack;      /* GC-owned copy of stack[0..sp-1] at suspend time */
+    int      sp;         /* saved sp */
+    int      stack_cap;  /* allocated capacity of stack[] */
+    int      last_ok;    /* saved last_ok at suspend time */
+};
+
 /* Interpreter state */
 typedef struct {
     DESCR_t  *stack;       /* dynamic value stack (realloc-grown) */
@@ -76,5 +93,21 @@ DESCR_t sm_peek(SM_State *st);
 
 /* CHUNKS-step02: run a compiled chunk thunk, return its result */
 DESCR_t sm_call_chunk(int entry_pc);
+
+/* CHUNKS-step14: generator infrastructure.
+ *
+ * sm_gen_state_new — allocate and initialise a SmGenState for entry_pc.
+ *   Must be called before the first bb_broker_drive_sm tick.
+ *
+ * bb_broker_drive_sm — drive an SM generator chunk across all its ticks.
+ *   Analogous to bb_broker(root, BB_PUMP, body_fn, arg) but for SM chunks
+ *   rather than EXPR_t-based bb_node_t generators.
+ *
+ *   On each tick the interpreter runs until SM_SUSPEND (yield a value) or
+ *   SM_RETURN / SM_HALT (generator exhausted).  body_fn is called once per
+ *   yielded value.  Returns total tick count (0 = generator produced nothing).
+ */
+SmGenState *sm_gen_state_new(int entry_pc);
+int bb_broker_drive_sm(SmGenState *gs, void (*body_fn)(DESCR_t val, void *arg), void *arg);
 
 #endif /* SM_INTERP_H */

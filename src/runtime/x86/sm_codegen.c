@@ -942,6 +942,21 @@ static void h_call(void)
 static void h_incr(void) { DESCR_t v = POP(); PUSH(INTVAL(v.i + CUR_INS->a[0].i)); }
 static void h_decr(void) { DESCR_t v = POP(); PUSH(INTVAL(v.i - CUR_INS->a[0].i)); }
 
+/* CHUNKS-step14: SM_SUSPEND / SM_RESUME codegen stubs.
+ * Full JIT support for generators is M5 territory (Step 19 / EM-10+).
+ * For now, abort with a named FATAL so that any attempt to JIT-compile a
+ * generator chunk is caught loudly rather than silently miscompiling. */
+static void h_suspend(void) {
+    fprintf(stderr, "sm_codegen FATAL: SM_SUSPEND reached in jit-run — "
+            "generator JIT not yet implemented (CHUNKS M5/EM-10)\n");
+    STATE->last_ok = 0;
+}
+static void h_resume(void) {
+    fprintf(stderr, "sm_codegen FATAL: SM_RESUME reached in jit-run — "
+            "generator JIT not yet implemented (CHUNKS M5/EM-10)\n");
+    STATE->last_ok = 0;
+}
+
 /* Unimplemented stubs — emit warning, set last_ok=0 */
 static void h_unimpl(void)
 {
@@ -1041,6 +1056,8 @@ static void init_handler_table(void)
      * E_FNC + SM_PUSH_EXPR + SM_BB_PUMP wrapper for top-level call_main. */
     g_handlers[SM_BB_PUMP_PROC] = h_bb_pump_proc;
     g_handlers[SM_BB_PUMP_CASE] = h_bb_pump_case;
+    g_handlers[SM_SUSPEND]      = h_suspend;   /* CHUNKS-step14: named FATAL — JIT gen is M5 */
+    g_handlers[SM_RESUME]       = h_resume;    /* CHUNKS-step14: named FATAL — JIT gen is M5 */
     /* Opcodes still stubbed as h_unimpl — by design, not by omission:
      *   SM_ACOMP, SM_LCOMP  — emitted by sm_lower for E_EQ/E_NE/E_LT/etc.
      *     (SNOBOL4 numeric/string comparison EKinds) but NEVER actually

@@ -96,6 +96,12 @@ static void chunks_audit_register(void) {
     atexit(chunks_audit_summary);
 }
 
+/* CHUNKS-step14: pointer to the SmGenState currently being driven by
+ * bb_broker_drive_sm.  NULL when not inside a generator drive.  SM_SUSPEND
+ * writes the suspended state here and sm_interp_run returns
+ * SM_INTERP_SUSPENDED. */
+static SmGenState *g_current_gen_state = NULL;
+
 /* OE-10: body_fn for BB_PUMP — print each generated Icon value to stdout */
 static void pump_print(DESCR_t val, void *arg) {
     (void)arg;
@@ -1219,6 +1225,43 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
             break;
         }
 
+        /* CHUNKS-step14: SM_SUSPEND — yield a value from a generator chunk.
+         * Pops TOS as the yielded value.  If g_current_gen_state is live
+         * (we are inside bb_broker_drive_sm), saves pc+stack into the
+         * SmGenState and returns SM_INTERP_SUSPENDED so the broker can
+         * deliver the value and later resume.  If not in a generator context
+         * (bare sm_call_chunk or top-level), yields FAILDESCR / no-op. */
+        case SM_SUSPEND: {
+            DESCR_t yielded = (st->sp > 0) ? sm_pop(st) : FAILDESCR;
+            if (g_current_gen_state) {
+                SmGenState *gs = g_current_gen_state;
+                gs->yielded    = yielded;
+                gs->resume_pc  = st->pc;   /* pc already advanced past SM_SUSPEND */
+                gs->last_ok    = st->last_ok;
+                /* snapshot value stack */
+                if (st->sp > 0) {
+                    if (st->sp > gs->stack_cap) {
+                        gs->stack     = GC_realloc(gs->stack, st->sp * sizeof(DESCR_t));
+                        gs->stack_cap = st->sp;
+                    }
+                    memcpy(gs->stack, st->stack, st->sp * sizeof(DESCR_t));
+                }
+                gs->sp = st->sp;
+                return SM_INTERP_SUSPENDED;
+            }
+            /* Outside generator context: SM_SUSPEND in a bare call — push FAILDESCR */
+            sm_push(st, FAILDESCR);
+            break;
+        }
+
+        /* CHUNKS-step14: SM_RESUME — no-op in the dispatch loop.
+         * Emitted as documentation at the top of a generator body so that
+         * JIT codegen has a stable hook point.  bb_broker_drive_sm restores
+         * the SmGenState and re-enters sm_interp_run at resume_pc; by the
+         * time SM_RESUME would execute on re-entry, pc is already past it. */
+        case SM_RESUME:
+            break;
+
         default:
             fprintf(stderr, "sm_interp: unhandled opcode %d (%s) at pc=%d\n",
                     (int)ins->op, sm_opcode_name(ins->op), st->pc - 1);
@@ -1288,4 +1331,85 @@ DESCR_t sm_call_chunk(int entry_pc)
     NAME_ctx_leave();
 
     return result;
+}
+
+/*============================================================================================================================
+ * CHUNKS-step14: sm_gen_state_new / bb_broker_drive_sm — SM generator infrastructure
+ *
+ * A generator chunk is a compiled SM sub-program that uses SM_SUSPEND to yield successive
+ * values.  bb_broker_drive_sm drives such a chunk in BB_PUMP style: call body_fn for each
+ * yielded value, stop when the chunk reaches SM_RETURN or SM_HALT.
+ *
+ * Design:
+ *   - SmGenState holds the full SM_State snapshot at the last suspension point.
+ *   - g_current_gen_state is set around each sm_interp_run call so SM_SUSPEND
+ *     can write into it and signal SM_INTERP_SUSPENDED.
+ *   - On each tick we reconstruct an SM_State from the snapshot and run until
+ *     the next suspension or termination.
+ *============================================================================================================================*/
+
+/* Allocate a fresh SmGenState for a generator at entry_pc. */
+SmGenState *sm_gen_state_new(int entry_pc)
+{
+    SmGenState *gs = GC_malloc(sizeof(SmGenState));
+    memset(gs, 0, sizeof *gs);
+    gs->entry_pc  = entry_pc;
+    gs->resume_pc = entry_pc;   /* first call starts at entry */
+    gs->started   = 0;
+    gs->yielded   = FAILDESCR;
+    gs->stack     = NULL;
+    gs->sp        = 0;
+    gs->stack_cap = 0;
+    gs->last_ok   = 1;
+    return gs;
+}
+
+/* Drive an SM generator chunk through all its ticks.
+ * body_fn is called once per yielded value.  Returns tick count. */
+int bb_broker_drive_sm(SmGenState *gs, void (*body_fn)(DESCR_t val, void *arg), void *arg)
+{
+    SM_Program *prog = g_current_sm_prog;
+    if (!prog || !gs || gs->started == 2) return 0;
+
+    int ticks = 0;
+
+    for (;;) {
+        /* Build (or restore) SM_State for this tick */
+        SM_State *st = GC_malloc(sizeof(SM_State));
+        sm_state_init(st);
+        st->pc      = gs->resume_pc;
+        st->last_ok = gs->last_ok;
+
+        /* Restore value stack snapshot from previous suspension */
+        if (gs->sp > 0 && gs->stack) {
+            if (gs->sp > st->stack_cap) {
+                st->stack     = GC_realloc(st->stack, gs->sp * sizeof(DESCR_t));
+                st->stack_cap = gs->sp;
+            }
+            memcpy(st->stack, gs->stack, gs->sp * sizeof(DESCR_t));
+            st->sp = gs->sp;
+        }
+
+        /* Arm the gen-state pointer so SM_SUSPEND can write into gs */
+        SmGenState *outer_gs = g_current_gen_state;
+        g_current_gen_state  = gs;
+        gs->started = 1;
+
+        int rc = sm_interp_run(prog, st);
+
+        g_current_gen_state = outer_gs;   /* always restore */
+
+        if (rc == SM_INTERP_SUSPENDED) {
+            /* Generator yielded gs->yielded */
+            ticks++;
+            if (body_fn) body_fn(gs->yielded, arg);
+            /* Loop: resume on next tick */
+        } else {
+            /* SM_RETURN, SM_HALT, or error — generator exhausted */
+            gs->started = 2;
+            break;
+        }
+    }
+
+    return ticks;
 }

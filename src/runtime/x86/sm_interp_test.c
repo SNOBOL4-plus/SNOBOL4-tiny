@@ -19,6 +19,9 @@
 #include <assert.h>
 
 /* ── Minimal runtime stubs (no full snobol4.c needed) ─────────────── */
+/* When compiled with -DFULL_RUNTIME_LINKED these stubs are omitted and
+ * the linker uses the real snobol4.c implementations instead. */
+#ifndef FULL_RUNTIME_LINKED
 
 /* Simple NV store: 16 slots */
 #define NV_MAX 16
@@ -40,7 +43,7 @@ DESCR_t NV_SET_fn(const char *name, DESCR_t val) {  /* RT-5 */
     }
     return val;  /* RT-5 */
 }
-static void nv_reset(void) { nv_count = 0; }
+void nv_reset(void) { nv_count = 0; }
 
 int64_t to_int(DESCR_t v) {
     if (v.v == DT_I) return v.i;
@@ -67,6 +70,8 @@ DESCR_t INVOKE_fn(const char *name, DESCR_t *args, int nargs) {
     (void)name; (void)args; (void)nargs;
     return NULVCL;
 }
+
+#endif /* FULL_RUNTIME_LINKED */
 
 /* ── Test harness ───────────────────────────────────────────────────── */
 
@@ -235,6 +240,71 @@ static void test_incr_decr(void)
     sm_prog_free(p);
 }
 
+/* ── CHUNKS-step14: generator test ──────────────────────────────────── */
+/* Hand-built SM program:
+ *   SM_RESUME            ; documentation marker at top of generator body
+ *   SM_PUSH_LIT_I 10     ; yield value 10
+ *   SM_SUSPEND
+ *   SM_PUSH_LIT_I 20     ; yield value 20
+ *   SM_SUSPEND
+ *   SM_PUSH_LIT_I 30     ; yield value 30
+ *   SM_SUSPEND
+ *   SM_RETURN             ; generator exhausted — no more values
+ *
+ * bb_broker_drive_sm should call body_fn 3 times with 10, 20, 30.
+ */
+
+static int64_t gen_collected[8];
+static int     gen_count = 0;
+
+static void collect_gen_val(DESCR_t val, void *arg)
+{
+    (void)arg;
+    if (gen_count < 8) gen_collected[gen_count++] = (val.v == DT_I) ? val.i : -999;
+}
+
+static void test_generator_suspend_resume(void)
+{
+    printf("--- test_generator_suspend_resume ---\n");
+    nv_reset();
+    gen_count = 0;
+
+    /* Build the generator SM program */
+    SM_Program *p = sm_prog_new();
+    sm_emit(p, SM_RESUME);           /* documentation marker */
+    sm_emit_i(p, SM_PUSH_LIT_I, 10);
+    sm_emit(p, SM_SUSPEND);
+    sm_emit_i(p, SM_PUSH_LIT_I, 20);
+    sm_emit(p, SM_SUSPEND);
+    sm_emit_i(p, SM_PUSH_LIT_I, 30);
+    sm_emit(p, SM_SUSPEND);
+    sm_emit(p, SM_RETURN);
+
+    /* Point the global current prog at this test program */
+    SM_Program *saved_prog = g_current_sm_prog;
+    g_current_sm_prog = p;
+
+    /* Drive it */
+    SmGenState *gs   = sm_gen_state_new(0);
+    int         ticks = bb_broker_drive_sm(gs, collect_gen_val, NULL);
+
+    g_current_sm_prog = saved_prog;
+
+    CHECK(ticks == 3, "generator: tick count == 3");
+    CHECK(gen_count == 3, "generator: body_fn called 3 times");
+    CHECK(gen_collected[0] == 10, "generator: first yield == 10");
+    CHECK(gen_collected[1] == 20, "generator: second yield == 20");
+    CHECK(gen_collected[2] == 30, "generator: third yield == 30");
+
+    /* Re-drive an exhausted generator: must return 0 */
+    gen_count = 0;
+    int ticks2 = bb_broker_drive_sm(gs, collect_gen_val, NULL);
+    CHECK(ticks2 == 0, "generator: re-drive exhausted gen returns 0");
+    CHECK(gen_count == 0, "generator: body_fn not called after exhaustion");
+
+    sm_prog_free(p);
+}
+
 /* ── main ────────────────────────────────────────────────────────────── */
 
 int main(void)
@@ -247,6 +317,7 @@ int main(void)
     test_conditional_jump();
     test_concat();
     test_incr_decr();
+    test_generator_suspend_resume();
 
     if (failures == 0)
         printf("\nAll tests PASSED.\n");

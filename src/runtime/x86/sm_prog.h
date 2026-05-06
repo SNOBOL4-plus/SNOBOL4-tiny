@@ -171,6 +171,20 @@ typedef enum {
 
     SM_PAT_BOXVAL,  /* pop pat-stack top → push as DT_P onto value-stack */
 
+    /* CHUNKS-step14: generator opcodes — SM_SUSPEND / SM_RESUME.
+     * SM_SUSPEND: pop TOS as the yielded value; save pc+stack to the current
+     *   SmGenState; return SM_INTERP_SUSPENDED (1) from sm_interp_run so that
+     *   bb_broker_drive_sm can deliver the value to body_fn and later resume.
+     *   Only meaningful when the chunk is driven via bb_broker_drive_sm; a
+     *   bare sm_call_chunk call that reaches SM_SUSPEND yields FAILDESCR.
+     * SM_RESUME: no-op in the main dispatch loop — the resume happens implicitly
+     *   when bb_broker_drive_sm restores the SmGenState and re-enters sm_interp_run
+     *   at the saved pc (which is the instruction AFTER the SM_SUSPEND that was
+     *   reached last).  SM_RESUME is emitted at the top of a generator body as a
+     *   documentation marker / future hook point for JIT codegen. */
+    SM_SUSPEND,
+    SM_RESUME,
+
     SM_OPCODE_COUNT
 } sm_opcode_t;
 
@@ -194,7 +208,13 @@ typedef struct {
     int arity;      /* args on SM value stack at entry; 0 = thunk */
 } SmChunk_t;
 
+/* CHUNKS-step14: return code from sm_interp_run when SM_SUSPEND fires.
+ * Normal halt = 0; error = -1; suspended = SM_INTERP_SUSPENDED. */
+#define SM_INTERP_SUSPENDED  1
 
+/* CHUNKS-step14: SmGenState is defined in sm_interp.h (requires DESCR_t from snobol4.h).
+ * Forward-declare here so sm_prog.h users can hold SmGenState* pointers. */
+typedef struct SmGenState SmGenState;
 
 #define SM_MAX_OPERANDS 3
 

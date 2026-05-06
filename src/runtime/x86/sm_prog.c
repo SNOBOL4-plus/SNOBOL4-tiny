@@ -185,6 +185,7 @@ static const char *opnames[SM_OPCODE_COUNT] = {
     "SM_INCR","SM_DECR","SM_LCOMP","SM_RCOMP","SM_TRIM","SM_ACOMP",
     "SM_SPCINT","SM_SPREAL",
     "SM_PAT_BOXVAL",
+    "SM_SUSPEND","SM_RESUME",
 };
 
 const char *sm_opcode_name(sm_opcode_t op)
