@@ -466,9 +466,21 @@ static void lower_pat_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
                     EXPR_t *arg = ch->children[i];
                     if (arg && arg->kind == E_QLIT)
                         lower_expr(p, lt, arg);
-                    else if (arg)
-                        emit_push_expr(p, arg);
-                    else
+                    else if (arg) {
+                        /* CHUNKS-step03: defer non-E_QLIT pattern arg as a
+                         * compiled SM chunk so DT_E carries an entry_pc, not
+                         * an EXPR_t*.  At match time bb_usercall thaws each
+                         * DT_E via EVAL_fn → EXPVAL_fn, which dispatches the
+                         * chunk via sm_call_chunk (slen==1 path).  Same
+                         * emission shape as the E_DEFER chunk lowering. */
+                        int skip_jump = sm_emit_i(p, SM_JUMP, 0);
+                        int entry_pc  = sm_label(p);
+                        lower_expr(p, lt, arg);
+                        sm_emit(p, SM_RETURN);
+                        int skip_lbl  = sm_label(p);
+                        sm_patch_jump(p, skip_jump, skip_lbl);
+                        sm_emit_ii(p, SM_PUSH_CHUNK, (int64_t)entry_pc, 0);
+                    } else
                         lower_expr(p, lt, arg);
                 }
                 int idx = sm_emit_s(p, SM_PAT_USERCALL_ARGS, ch->sval);
