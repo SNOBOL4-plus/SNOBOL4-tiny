@@ -548,15 +548,12 @@ const char *exec_code(DESCR_t code_block)
 DESCR_t EXPVAL_fn(DESCR_t expr_d)
 {
     if (expr_d.v == DT_E) {
-        /* CHUNKS-step02 NOTE: chunk DT_E (slen==1) cannot be thawed from C-land
-         * via a nested sm_interp_run — the outer dispatch loop's longjmp guards
-         * (g_sno_err_jmp, SM_STNO) make nested runs unsafe.  The inline
-         * EVAL(*expr) case is handled at lower time via SM_CALL_CHUNK opcode.
-         * The stored-chunk case (E=*expr; EVAL(E)) is deferred to a later rung
-         * when DT_E chunk descriptors travel as integers through NV. */
+        /* CHUNKS-step03: chunk DT_E (slen==1) — dispatch via sm_call_chunk
+         * which runs a fresh nested SM_State with local err_jmp save/restore.
+         * Used for the stored-chunk thaw path (bb_usercall, pat_to_patnd). */
         if (expr_d.slen == 1) {
-            fprintf(stderr, "EXPVAL_fn: chunk DT_E not yet supported in stored form\n");
-            return FAILDESCR;
+            int entry_pc = (int)expr_d.i;
+            return sm_call_chunk(entry_pc);
         }
 
         /* Legacy: Frozen EXPR_t* — thaw and evaluate with NAM frame isolation */

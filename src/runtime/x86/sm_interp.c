@@ -969,8 +969,9 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
                     goto sm_call_done;  /* skip push/last_ok — body runs next */
                 }
                 /* No SM body found — fall through to INVOKE_fn (builtins + hook) */
-                if (result.v == DT_FAIL || (!_data_first && !_data_set))
+                if (result.v == DT_FAIL || (!_data_first && !_data_set)) {
                     result = INVOKE_fn(name, args, nargs);
+                }
             }
             /* NRETURN: user fn returned DT_N — dereference like tree-walk E_FNC */
             if (IS_NAMEPTR(result))      result = NAME_DEREF_PTR(result);
@@ -1081,14 +1082,17 @@ int sm_interp_run_steps(SM_Program *prog, SM_State *st, int n) {
 }
 
 /* CHUNKS-step02: sm_call_chunk — run a compiled chunk as a thunk.
- * Runs chunk body in a fresh nested SM_State (own stack, shared NV table).
- * Same pattern as the RS-11 SM-bodied function dispatch in interp_hooks.c.
- * Returns the top-of-stack value left by the chunk body. */
+ * Used by EXPVAL_fn when called from C-land (via EVAL_fn or bb_usercall thaw).
+ * Runs chunk body in a fresh nested SM_State (own stack, shared NV table) with
+ * a local g_sno_err_jmp save/restore so a runtime error inside the chunk does
+ * not longjmp into the outer dispatch's jmp_buf.  Returns the top-of-stack
+ * value left by the chunk body, or FAILDESCR if the chunk errored. */
 
 /* Subject globals (defined in stmt_exec.c) */
 extern const char *Σ;
 extern int         Ω;
 extern int         Δ;
+extern jmp_buf     g_sno_err_jmp;
 
 DESCR_t sm_call_chunk(int entry_pc)
 {
@@ -1098,22 +1102,28 @@ DESCR_t sm_call_chunk(int entry_pc)
         return FAILDESCR;
     }
 
-    /* Save NAM frame and subject globals — mirrors EXPVAL_fn's save/restore */
+    /* Save NAM frame and subject globals */
     NAME_ctx_t chunk_ctx;
     NAME_ctx_enter(&chunk_ctx);
     const char *save_sigma = Σ;
     int         save_omega = Ω;
     int         save_delta = Δ;
 
-    /* Fresh nested state on the heap (SM_State is ~512KB due to embedded call frames
-     * — too large for the C stack): own value stack, own call stack, shared NV table */
-    SM_State *nested = GC_malloc(sizeof(SM_State));
-    sm_state_init(nested);
-    nested->pc = entry_pc;
-    sm_interp_run(prog, nested);
+    /* Save outer err_jmp; install a local one so chunk errors don't escape */
+    jmp_buf saved_err_jmp;
+    memcpy(&saved_err_jmp, &g_sno_err_jmp, sizeof(jmp_buf));
 
-    /* Top-of-stack is the chunk result */
-    DESCR_t result = (nested->sp > 0) ? nested->stack[nested->sp - 1] : FAILDESCR;
+    DESCR_t result = FAILDESCR;
+    if (setjmp(g_sno_err_jmp) == 0) {
+        SM_State *nested = GC_malloc(sizeof(SM_State));
+        sm_state_init(nested);
+        nested->pc = entry_pc;
+        sm_interp_run(prog, nested);
+        if (nested->sp > 0) result = nested->stack[nested->sp - 1];
+    } /* else: chunk errored — result stays FAILDESCR */
+
+    /* Restore outer err_jmp */
+    memcpy(&g_sno_err_jmp, &saved_err_jmp, sizeof(jmp_buf));
 
     Σ = save_sigma; Ω = save_omega; Δ = save_delta;
     NAME_ctx_leave();
