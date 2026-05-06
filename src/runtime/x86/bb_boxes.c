@@ -134,9 +134,8 @@ arb_t *bb_arb_new(void)
 /* _XARBN    ARBNO       zero-or-more greedy; zero-advance guard; β unwinds stack */
 
 #pragma GCC diagnostic ignored "-Wmisleading-indentation"
-#define ARBNO_INIT 8
-typedef struct { spec_t matched; int start; } arbno_frame_t;
-typedef struct { bb_box_fn fn; void *state; int depth; int cap; arbno_frame_t *stack; } arbno_t;
+#define ARBNO_INIT ARBNO_INIT_CAP
+typedef bb_arbno_t arbno_t;
 
 DESCR_t bb_arbno(void *zeta, int entry)
 {

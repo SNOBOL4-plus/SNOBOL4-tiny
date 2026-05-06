@@ -210,15 +210,9 @@ typedef struct {
     spec_t    matched;
 } seq_t;
 
-#define ARBNO_INIT 8
-typedef struct { spec_t matched; int start; void *nam_mark; } aframe_t;  /* TL-2: nam_mark must mirror bb_boxes.c arbno_frame_t */
-typedef struct {
-    bb_box_fn  fn;
-    void      *state;
-    int        depth;
-    int        cap;
-    aframe_t  *stack;
-} arbno_t;
+#define ARBNO_INIT ARBNO_INIT_CAP
+typedef bb_arbno_t arbno_t;
+typedef arbno_frame_t aframe_t;  /* local alias kept for existing bb_arbno_new site below */
 
 /* ══════════════════════════════════════════════════════════════════════════
  * M-DYN-OPT — Invariance detection and node cache
@@ -304,7 +298,20 @@ static void cache_insert(PATND_t *key, bb_node_t node)
 }
 
 /* On cache hit, return bb_node_t with a FRESH ζ copy so match state
- * is clean each time.  fn is shared (stateless); ζ is per-match. */
+ * is clean each time.  fn is shared (stateless); ζ is per-match.
+ *
+ * BUG-ARBNO-CACHE (SC-6b-bug-segfault fix): arbno_t contains a heap-
+ * allocated `stack` pointer that bb_arbno may realloc() as depth grows.
+ * A shallow memcpy shares that pointer between the cache template and
+ * the fresh copy — when the fresh copy reallocs, the template's stack
+ * pointer becomes a dangling reference.  The next cache_get_fresh then
+ * copies the dangling pointer into another fresh copy → invalid write →
+ * heap corruption → SIGSEGV/SIGABRT.
+ *
+ * Fix: after the shallow copy, detect arbno_t nodes (fn == bb_arbno)
+ * and deep-copy their stack array so each fresh copy owns its allocation.
+ * The template's stack is never realloc'd (depth resets to 0 on α), but
+ * separating the allocations makes the invariant explicit and safe. */
 static bb_node_t cache_get_fresh(cache_slot_t *slot)
 {
     bb_node_t n = slot->template;
@@ -312,6 +319,15 @@ static bb_node_t cache_get_fresh(cache_slot_t *slot)
         void *fresh = calloc(1, n.ζ_size);
         memcpy(fresh, n.ζ, n.ζ_size);
         n.ζ = fresh;
+        /* Deep-copy arbno_t stack so each fresh copy owns its allocation. */
+        if (n.fn == bb_arbno) {
+            bb_arbno_t *az = (bb_arbno_t *)fresh;
+            arbno_frame_t *new_stack = malloc((size_t)az->cap * sizeof(arbno_frame_t));
+            if (new_stack) {
+                memcpy(new_stack, az->stack, (size_t)az->cap * sizeof(arbno_frame_t));
+                az->stack = new_stack;
+            }
+        }
     }
     return n;
 }

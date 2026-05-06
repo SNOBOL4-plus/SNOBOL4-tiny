@@ -137,6 +137,22 @@ typedef struct { int n; int advance; }                rtab_t;
 typedef struct { int fired; }                          fence_t;
 typedef struct { int dummy; }                          abort_t;
 typedef struct { int δ; }                              bal_t;
+/* arbno_t — canonical definition shared by bb_boxes.c and stmt_exec.c.
+ * BUG-ARBNO-CACHE: both files must agree on arbno_frame_t size so that
+ * cache_get_fresh can deep-copy the stack array with the correct element
+ * size.  Previously bb_boxes.c had arbno_frame_t without nam_mark and
+ * stmt_exec.c had aframe_t with nam_mark — mismatched sizeof caused the
+ * deep-copy to under-/over-allocate.  Canonical definition here: no
+ * nam_mark (stack frames carry only matched spec and start cursor). */
+#define ARBNO_INIT_CAP 8
+typedef struct { spec_t matched; int start; }          arbno_frame_t;
+typedef struct {
+    bb_box_fn       fn;
+    void           *state;
+    int             depth;
+    int             cap;
+    arbno_frame_t  *stack;
+} bb_arbno_t;
 typedef struct { int done; const char *varname; }     atp_t;
 /* deferred_var_t needs bb_node_t — defined above */
 
