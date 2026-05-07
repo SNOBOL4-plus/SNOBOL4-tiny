@@ -32,7 +32,10 @@
  * -1 means no chunk emitted yet (CH-17b will start emitting Icon/Raku proc
  * chunks; until then every entry remains -1 and consumers fall back to the
  * legacy proc-pointer path).  Once CH-17g lands, the proc field is deleted. */
-typedef struct { const char *name; EXPR_t *proc; int entry_pc; } IcnProcEntry;
+/* CH-17a: entry_pc is the SM_Program pc of the proc body's named chunk.
+ * CH-17c: nparams cached from proc->ival so sm_call_proc can bind args
+ *         without reading the EXPR_t. */
+typedef struct { const char *name; EXPR_t *proc; int entry_pc; int nparams; } IcnProcEntry;
 
 typedef struct { EXPR_t *node; long cur; const char *sval; } IcnGenEntry_d;
 
@@ -107,6 +110,8 @@ int     scope_get(IcnScope *sc, const char *name);
 void    icn_scope_patch(IcnScope *sc, EXPR_t *e);
 
 DESCR_t coro_call(EXPR_t *proc, DESCR_t *args, int nargs);
+/* CH-17c: SM-dispatch entry for proc bodies lowered into named chunks. */
+DESCR_t sm_call_proc(int entry_pc, int nparams, DESCR_t *args, int nargs);
 bb_node_t coro_eval(EXPR_t *e);
 /* CHUNKS-step12: build a bb_node_t for a user proc identified by name + args,
  * skipping the synthesised E_FNC + coro_eval routing. The proc's IR body is

@@ -167,9 +167,10 @@ void polyglot_init(CODE_t *prog, uint32_t lang_mask)
                 const char *name = proc->sval;
 
                 if (proc_count < PROC_TABLE_MAX) {
-                    proc_table[proc_count].name = name;
-                    proc_table[proc_count].proc = proc;
+                    proc_table[proc_count].name     = name;
+                    proc_table[proc_count].proc     = proc;
                     proc_table[proc_count].entry_pc = -1;  /* CH-17a: resolved post-sm_lower */
+                    proc_table[proc_count].nparams  = (int)proc->ival;  /* CH-17c */
                     proc_count++;
                     if (mod_idx >= 0) g_registry.mods[mod_idx].proc_count++;
                     /* Detect main module  (U-21) */

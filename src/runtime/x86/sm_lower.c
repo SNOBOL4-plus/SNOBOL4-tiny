@@ -829,6 +829,19 @@ static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
             sm_emit_ii(p, SM_CALL_CHUNK, (int64_t)entry_pc, 0);
             return;
         }
+        /* CH-17c: Icon-style E_FNC — name in sval is NULL; children[0] is the
+         * callee name node (E_VAR with sval = function name), children[1..] are args.
+         * Emit only the arg children; use children[0]->sval as the SM_CALL name.
+         * This fixes the stack-leak / empty-name bug in proc-body chunks that
+         * contain user proc calls (noted in CH-17b'' handoff). */
+        if (!e->sval && nargs >= 1 && e->children[0] && e->children[0]->sval) {
+            const char *fn = e->children[0]->sval;
+            int real_nargs = nargs - 1;   /* children[1..nargs-1] are args */
+            for (int i = 1; i <= real_nargs; i++)
+                lower_expr(p, lt, e->children[i]);
+            sm_emit_si(p, SM_CALL, fn, (int64_t)real_nargs);
+            return;
+        }
         for (int i = 0; i < nargs; i++)
             lower_expr(p, lt, e->children[i]);
         sm_emit_si(p, SM_CALL, e->sval ? e->sval : "", (int64_t)nargs);

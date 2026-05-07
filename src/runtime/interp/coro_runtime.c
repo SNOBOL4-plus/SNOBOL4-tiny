@@ -508,6 +508,48 @@ DESCR_t coro_call(EXPR_t *proc, DESCR_t *args, int nargs) {
 }
 
 /*============================================================================================================================
+ * CH-17c: sm_call_proc — run an Icon/Raku proc body via SM dispatch.
+ *
+ * Called when proc_table[i].entry_pc != -1 (chunk lowered by CH-17b/b'/b'').
+ * Frame setup mirrors coro_call: push IcnFrame, bind args into param slots.
+ * Chunk body uses SM_LOAD_FRAME / SM_STORE_FRAME (baked by CH-17b'') for
+ * param and local access — no icn_scope_patch needed.
+ *
+ * Execution: delegates to sm_call_chunk(entry_pc), which runs the chunk in a
+ * nested SM_State.  The IcnFrame pushed here is visible to SM_LOAD_FRAME /
+ * SM_STORE_FRAME (via icn_frame_env_load/store) throughout the chunk body.
+ *
+ * Static-variable persistence deferred to CH-17g (statics keyed on EXPR_t*;
+ * procs with statics continue via legacy coro_call until that key changes).
+ */
+DESCR_t sm_call_proc(int entry_pc, int nparams, DESCR_t *args, int nargs)
+{
+    extern DESCR_t sm_call_chunk(int epc);
+
+    if (entry_pc < 0) return FAILDESCR;
+    if (frame_depth >= FRAME_STACK_MAX) return FAILDESCR;
+
+    /* Push a fresh IcnFrame — mirrors coro_call's frame push */
+    IcnFrame *f = &frame_stack[frame_depth++];
+    memset(f, 0, sizeof *f);
+    int nslots = (nparams > 0) ? nparams : 1;
+    if (nslots > FRAME_SLOT_MAX) nslots = FRAME_SLOT_MAX;
+    f->env_n = nslots;
+
+    /* Bind positional args into param slots */
+    for (int i = 0; i < nparams && i < nargs && i < FRAME_SLOT_MAX; i++)
+        f->env[i] = args[i];
+
+    /* Run chunk body — frame is live for SM_LOAD_FRAME / SM_STORE_FRAME */
+    DESCR_t result = sm_call_chunk(entry_pc);
+
+    /* Pop frame */
+    icn_init_save_frame();
+    frame_depth--;
+    return result;
+}
+
+/*============================================================================================================================
  * coro_eval — U-17 (B-8): walk Icon IR node, return a drivable bb_node_t.
  *
  * Dispatch:
@@ -666,13 +708,20 @@ typedef struct {
     EXPR_t              *proc;
     DESCR_t             *args;
     int                  nargs;
+    int                  entry_pc;  /* CH-17c: -1 = legacy coro_call path */
+    int                  nparams;   /* CH-17c: param count for sm_call_proc */
 } Icn_coro_stage_t;
 static Icn_coro_stage_t coro_stage;   /* staging area — set before makecontext */
 
 static void proc_trampoline(void) {
     Icn_coro_stage_t st = coro_stage;        /* copy before first yield */
-    active_coro = st.ss;                        /* expose to coro_call */
-    DESCR_t result = coro_call(st.proc, st.args, st.nargs);
+    active_coro = st.ss;
+    DESCR_t result;
+    /* CH-17c: dispatch via SM chunk when entry_pc is resolved */
+    if (st.entry_pc >= 0)
+        result = sm_call_proc(st.entry_pc, st.nparams, st.args, st.nargs);
+    else
+        result = coro_call(st.proc, st.args, st.nargs);
     active_coro = NULL;
     /* proc finished — store final value if not fail, mark exhausted, yield back */
     st.ss->yielded   = IS_FAIL_fn(result) ? FAILDESCR : result;
@@ -698,7 +747,12 @@ coro_t *gather_trampoline_ss = NULL;
 void gather_trampoline(void) {
     coro_t *ss = gather_trampoline_ss;
     active_coro = ss;
-    DESCR_t result = coro_call(ss->gather_proc, NULL, 0);
+    DESCR_t result;
+    /* CH-17c: use SM chunk when entry_pc is resolved */
+    if (ss->gather_entry_pc >= 0)
+        result = sm_call_proc(ss->gather_entry_pc, ss->gather_nparams, NULL, 0);
+    else
+        result = coro_call(ss->gather_proc, NULL, 0);
     active_coro = NULL;
     ss->yielded   = IS_FAIL_fn(result) ? FAILDESCR : result;
     ss->exhausted = 1;
@@ -1068,9 +1122,11 @@ bb_node_t coro_pump_proc_by_name(const char *name, DESCR_t *args, int nargs) {
         coro_t *ss = coro_alloc(proc_trampoline);
         ss->trampoline_arg = NULL;
         coro_stage.ss    = ss;
-        coro_stage.proc  = proc_table[i].proc;
-        coro_stage.args  = args;
-        coro_stage.nargs = nargs;
+        coro_stage.proc     = proc_table[i].proc;
+        coro_stage.args     = args;
+        coro_stage.nargs    = nargs;
+        coro_stage.entry_pc = proc_table[i].entry_pc;  /* CH-17c */
+        coro_stage.nparams  = proc_table[i].nparams;   /* CH-17c */
         return (bb_node_t){ coro_bb_suspend, ss, 0 };
     }
     return (bb_node_t){ NULL, NULL, 0 };
@@ -1154,7 +1210,9 @@ bb_node_t coro_eval(EXPR_t *e) {
                      * gather_trampoline can read it at makecontext time, bypassing
                      * the coro_stage global which may be overwritten before first α. */
                     coro_t *ss = coro_alloc(gather_trampoline);
-                    ss->gather_proc = proc_table[pi].proc;
+                    ss->gather_proc     = proc_table[pi].proc;
+                    ss->gather_entry_pc = proc_table[pi].entry_pc;  /* CH-17c */
+                    ss->gather_nparams  = proc_table[pi].nparams;   /* CH-17c */
                     return (bb_node_t){ coro_bb_suspend, ss, 0 };
                 }
             }
@@ -1441,10 +1499,12 @@ bb_node_t coro_eval(EXPR_t *e) {
             coro_t *ss = coro_alloc(proc_trampoline);
             ss->trampoline_arg = NULL;   /* unused — trampoline reads coro_stage */
             /* Stage the call parameters before makecontext */
-            coro_stage.ss    = ss;
-            coro_stage.proc  = proc_table[i].proc;
-            coro_stage.args  = args;
-            coro_stage.nargs = nargs;
+            coro_stage.ss       = ss;
+            coro_stage.proc     = proc_table[i].proc;
+            coro_stage.args     = args;
+            coro_stage.nargs    = nargs;
+            coro_stage.entry_pc = proc_table[i].entry_pc;  /* CH-17c */
+            coro_stage.nparams  = proc_table[i].nparams;   /* CH-17c */
             return (bb_node_t){ coro_bb_suspend, ss, 0 };
         }
         /* ── E_FNC upto(cset, scan_subject) — drive subject gen per subject ── */
