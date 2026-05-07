@@ -206,6 +206,16 @@ static int strtab_intern(const char *s)
     return idx;
 }
 
+/* Look up a string; return its label index or -1 if not interned. */
+static int strtab_lookup(const char *s)
+{
+    if (!s) s = "";
+    for (int i = 0; i < g_strtab_n; i++)
+        if (g_strtab[i].s == s || strcmp(g_strtab[i].s, s) == 0)
+            return g_strtab[i].idx;
+    return -1;
+}
+
 /* Return the .Lstr_N label name for string s (must be interned first). */
 static void strtab_label(char *buf, size_t bufsz, const char *s)
 {
@@ -277,6 +287,7 @@ static void strtab_collect(const SM_Program *prog)
         case SM_PAT_USERCALL_ARGS:    /* EM-7: a[0].s = fname */
         case SM_EXEC_STMT:
         case SM_CALL:
+        case SM_LABEL:       /* EM-7d: named labels (SNOBOL4 func entries) */
             if (ins->a[0].s) strtab_intern(ins->a[0].s);
             break;
         default:
@@ -310,13 +321,72 @@ static int strtab_emit_rodata(FILE *out)
 
 
 
-static int emit_file_header(FILE *out, int count)
+/* EM-7d-usercall-reentrant: emit .data chunk registry table.
+ *
+ * Walk prog for SM_LABEL instructions with a[0].s set (SNOBOL4 named function
+ * entries).  Emit a .section .data table of {name_ptr, fn_ptr} pairs (using
+ * the already-interned .Lstr_N for names and the existing .LpcN for fn ptrs),
+ * terminated by {0, 0}.  In-file .L references across sections are resolved
+ * by the assembler/linker from the same TU.
+ *
+ * Returns the number of entries emitted, or -1 on I/O error.
+ * If no named labels exist, emits nothing (returns 0). */
+static int emit_chunk_registry(FILE *out, const SM_Program *prog)
 {
-    /* The .rodata section (string literals) was already emitted by strtab_emit_rodata
-     * before this call.  We resume with .text + main prologue. */
-    return fprintf(out,
+    /* Count named labels first so we can skip the section if none. */
+    int n = 0;
+    for (int i = 0; i < prog->count; i++) {
+        const SM_Instr *ins = &prog->instrs[i];
+        if (ins->op == SM_LABEL && ins->a[0].s && *ins->a[0].s)
+            n++;
+    }
+    if (n == 0) return 0;
+
+    if (fputs("\t.section .data\n"
+              "\t.align  8\n"
+              ".Lchunk_registry:\n", out) == EOF) return -1;
+
+    for (int i = 0; i < prog->count; i++) {
+        const SM_Instr *ins = &prog->instrs[i];
+        if (ins->op != SM_LABEL || !ins->a[0].s || !*ins->a[0].s) continue;
+
+        int str_idx = strtab_lookup(ins->a[0].s);
+        if (str_idx < 0) continue;  /* should not happen after strtab_collect */
+
+        /* The function body starts at the NEXT instruction after SM_LABEL
+         * (SM_LABEL itself is a no-op; .LpcI is the label's own pc, but the
+         * first real op is at pc i+1 which is where .Lpc{i+1}: sits).
+         * Verify: in test_define.s, ROMAN's SM_LABEL is at some pc M and
+         * the first op is at M+1.  We emit .Lpc{i+1} as the fn entry. */
+        int entry_pc = i + 1;
+
+        if (fprintf(out,
+                    "\t# chunk: %s -> .Lpc%d\n"
+                    "\t.quad   .Lstr_%d\n"    /* name ptr */
+                    "\t.quad   .Lpc%d\n",     /* fn ptr   */
+                    ins->a[0].s, entry_pc,
+                    str_idx,
+                    entry_pc) < 0) return -1;
+    }
+
+    /* Sentinel: {NULL, NULL} */
+    if (fputs("\t.quad   0\n"
+              "\t.quad   0\n"
+              "\t.text\n", out) == EOF) return -1;
+
+    return n;
+}
+
+static int emit_file_header(FILE *out, int count, int has_chunk_registry)
+{
+    /* The .rodata section (string literals) and .data chunk registry (if any)
+     * were already emitted before this call.  We resume with .text + main
+     * prologue.  If has_chunk_registry is non-zero, main calls
+     * scrip_rt_register_chunks before scrip_rt_init so that user-defined
+     * SNOBOL4 functions are dispatchable from the start. */
+    int rc = fprintf(out,
         "# -----------------------------------------------------------------------\n"
-        "# scrip --jit-emit --x64  (M-JITEM-X64 / EM-1..EM-6)\n"
+        "# scrip --jit-emit --x64  (M-JITEM-X64 / EM-1..EM-7d)\n"
         "# %d SM instructions. Links against libscrip_rt.so.\n"
         "# Architecture: two emitters -- SM straight-line via sm_macros.s\n"
         "#   macros (inline x86); BB boxes via emit_bb_box() one-proc-per-box.\n"
@@ -329,10 +399,28 @@ static int emit_file_header(FILE *out, int count)
         "\t.type   main, @function\n"
         "main:\n"
         "\tpush    rbp\n"
-        "\tmov     rbp, rsp\n"
-        "\t# scrip_rt_init(argc, argv) -- argc in edi, argv in rsi\n"
-        "\tcall    scrip_rt_init@PLT\n",
-        count) < 0 ? -1 : 0;
+        "\tmov     rbp, rsp\n",
+        count);
+    if (rc < 0) return -1;
+
+    if (has_chunk_registry) {
+        /* EM-7d-usercall-reentrant: register user-defined SNOBOL4 function
+         * chunks before scrip_rt_init so _rt_usercall can dispatch them. */
+        if (fputs("\t# EM-7d: register user-defined function chunks\n"
+                  "\tlea     rdi, [rip + .Lchunk_registry]\n"
+                  "\tcall    scrip_rt_register_chunks@PLT\n",
+                  out) == EOF) return -1;
+    } else {
+        if (fputs("\t# no user-defined functions -- scrip_rt_register_chunks skipped\n"
+                  "\txor     edi, edi\n"
+                  "\tcall    scrip_rt_register_chunks@PLT\n",
+                  out) == EOF) return -1;
+    }
+
+    if (fputs("\t# scrip_rt_init(argc, argv) -- argc in edi, argv in rsi\n"
+              "\tcall    scrip_rt_init@PLT\n",
+              out) == EOF) return -1;
+    return 0;
 }
 
 static int emit_file_footer(FILE *out)
@@ -1807,6 +1895,13 @@ int sm_codegen_x64_emit(SM_Program *prog, FILE *out, const char *src_path)
     strtab_collect(prog);
     if (strtab_emit_rodata(out) != 0) return -1;
 
+    /* EM-7d-usercall-reentrant: emit .data chunk registry table for
+     * user-defined SNOBOL4 functions (SM_LABEL instructions with a[0].s set).
+     * This must come after strtab_emit_rodata (so .Lstr_N labels are defined)
+     * and before .text (so .LpcN forward references resolve in the same TU). */
+    int chunk_reg_count = emit_chunk_registry(out, prog);
+    if (chunk_reg_count < 0) return -1;
+
     /* EM-7c: collect Phase-2 windows (one per SM_EXEC_STMT) and run the
      * Phase-2 simulator to reconstruct each pattern's PATND_t tree.
      * Fully-invariant patterns are emitted as flat .text chunks below;
@@ -1819,7 +1914,7 @@ int sm_codegen_x64_emit(SM_Program *prog, FILE *out, const char *src_path)
     SrcLines sl;
     int sl_loaded = (srclines_load(&sl, src_path) == 0);
 
-    if (emit_file_header(out, prog->count) != 0) {
+    if (emit_file_header(out, prog->count, chunk_reg_count > 0) != 0) {
         if (sl_loaded) srclines_free(&sl);
         return -1;
     }

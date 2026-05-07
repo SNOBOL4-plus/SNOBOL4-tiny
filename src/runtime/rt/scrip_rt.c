@@ -217,30 +217,114 @@ static DESCR_t _rt_DIFFER(DESCR_t *a, int n)
     return (strcmp(s1, s2) != 0) ? a[0] : FAILDESCR;
 }
 
+/*==============================================================================
+ * EM-7d-usercall-reentrant: native chunk function pointer registry
+ *
+ * The emitter walks SM_Program for SM_LABEL instructions with a[0].s set
+ * (SNOBOL4 named function entries) and emits a .data table in the .s file.
+ * scrip_rt_register_chunks() is called from the emitted main() before
+ * scrip_rt_init; it populates g_chunk_reg[] so _rt_usercall can dispatch
+ * user-defined SNOBOL4 functions by direct fn(args,nargs) without touching
+ * the interpreter call stack.
+ *============================================================================*/
+
+#define CHUNK_REG_MAX 256
+
+typedef struct { const char *name; void *fn; } ChunkRegEntry;
+static ChunkRegEntry g_chunk_reg[CHUNK_REG_MAX];
+static int           g_chunk_reg_count = 0;
+
+void scrip_rt_register_chunks(const rt_chunk_entry *tbl)
+{
+    if (!tbl) return;
+    for (; tbl->name && g_chunk_reg_count < CHUNK_REG_MAX; tbl++) {
+        g_chunk_reg[g_chunk_reg_count].name = tbl->name;
+        g_chunk_reg[g_chunk_reg_count].fn   = tbl->fn;
+        g_chunk_reg_count++;
+    }
+}
+
+/* Look up a user function by name in the chunk registry.
+ * Returns fn pointer or NULL if not found. */
+static void *chunk_reg_lookup(const char *name)
+{
+    if (!name || !*name) return NULL;
+    for (int i = 0; i < g_chunk_reg_count; i++) {
+        if (strcmp(g_chunk_reg[i].name, name) == 0)
+            return g_chunk_reg[i].fn;
+    }
+    return NULL;
+}
+
+/* Call a native chunk (a SNOBOL4 user-defined function body emitted as a
+ * sequence of SM ops ending in `ret`) with the given arguments.
+ *
+ * SNOBOL4 calling convention: formal parameters are bound into the NV table
+ * by name before the body executes (body does `SM_PUSH_VAR "N"`, not vstack
+ * pop).  We use FUNC_PARAM_fn(name, i) to get the i-th param name, save
+ * the old NV value, bind the arg, call the chunk, then restore.
+ *
+ * The chunk pushes its return value onto the vstack before `ret`; we pop it.
+ *
+ * NOTE: no call-stack depth tracking, no local-variable isolation — this is
+ * a direct-call model.  Recursive SNOBOL4 functions will reuse the same NV
+ * slots; the last binding wins.  For beauty.sno's patterns (non-recursive)
+ * this is correct.  Full isolation is a follow-up rung. */
+static DESCR_t call_native_chunk(const char *fname, void *fn,
+                                  DESCR_t *args, int nargs)
+{
+    /* Bind formal parameters into the NV table, saving old values. */
+    DESCR_t saved[32];
+    const char *pnames[32];
+    int nbound = 0;
+    for (int k = 0; k < nargs && k < 32; k++) {
+        const char *pname = FUNC_PARAM_fn(fname, k);
+        if (!pname || !*pname) break;
+        pnames[nbound] = pname;
+        saved[nbound]  = NV_GET_fn(pname);
+        NV_SET_fn(pname, args[k]);
+        nbound++;
+    }
+
+    /* Call the native chunk.  It runs its SM body, pushes its retval via
+     * vstack, and executes `ret`.  Calling convention: void(void) at the
+     * ABI level — the chunk reads/writes the global vstack directly. */
+    typedef void (*chunk_fn_t)(void);
+    chunk_fn_t cfn = (chunk_fn_t)fn;
+    cfn();
+
+    /* Pop the return value the chunk pushed. */
+    DESCR_t result = (g_vtop > 0) ? vstack_pop() : FAILDESCR;
+
+    /* Restore saved parameter values. */
+    for (int k = nbound - 1; k >= 0; k--)
+        NV_SET_fn(pnames[k], saved[k]);
+
+    return result;
+}
+
 static DESCR_t _rt_usercall(const char *name, DESCR_t *args, int nargs)
 {
-    /* Dispatch *func() in pattern position.
-     * EM-7d honest deviation: calling user-defined SNOBOL4 functions from
-     * inside a BB pattern match in mode-4 causes re-entrancy that corrupts
-     * the SNOBOL4 interpreter call stack (which is not initialised in the
-     * native execution context).  INVOKE_fn / APPLY_fn both segfault.
-     * Returning FAILDESCR is safe and correct for C builtins that fail;
-     * user-defined functions silently fail the pattern match.
-     * Fix tracked as EM-7d-usercall-reentrant: wire a native-chunk
-     * function pointer table (emitted in .s at startup) so the emitted
-     * binary can call user functions directly via call/ret without
-     * touching the SNOBOL4 interpreter call stack. */
-    (void)args; (void)nargs;
+    /* Dispatch *func() in pattern position (Phase-3 BB match context).
+     * EM-7d-usercall-reentrant: look up in the native chunk registry first.
+     * If found, call via direct fn pointer — no interpreter call stack needed.
+     * Falls back to C-builtin dispatch (register_fn entries) then FAILDESCR. */
     if (!name || !*name) return FAILDESCR;
-    DESCR_t fn = NV_GET_fn(name);
-    if (!IS_FAIL_fn(fn)) {
-        /* C builtin registered via register_fn — dispatch directly. */
-        if (fn.v == DT_E && fn.ptr) {
-            typedef DESCR_t (*cfn_t)(DESCR_t *, int);
-            cfn_t cfn = (cfn_t)fn.ptr;
-            return cfn(args, nargs);
-        }
+
+    /* 1. Native chunk registry (user-defined SNOBOL4 functions emitted as
+     *    .LpcN chunks in the .s file). */
+    void *fn = chunk_reg_lookup(name);
+    if (fn) return call_native_chunk(name, fn, args, nargs);
+
+    /* 2. C builtin registered via register_fn (DT_E fn pointer in NV table). */
+    DESCR_t nv = NV_GET_fn(name);
+    if (!IS_FAIL_fn(nv) && nv.v == DT_E && nv.ptr) {
+        typedef DESCR_t (*cfn_t)(DESCR_t *, int);
+        cfn_t cfn = (cfn_t)nv.ptr;
+        return cfn(args, nargs);
     }
+
+    /* 3. Not found — pattern match fails (safe: no interpreter re-entry). */
     return FAILDESCR;
 }
 
@@ -863,10 +947,18 @@ void scrip_rt_call(const char *name, int nargs)
         }
     }
 
-    /* Default dispatch: INVOKE_fn handles builtins and (via g_user_call_hook)
-     * user-defined chunks.  In mode-4 today, user-defined SNOBOL4 functions
-     * cannot be dispatched yet (no name→native-PC table emitted) — those will
-     * fall through to FAILDESCR.  Tracked as honest deviation for EM-7. */
+    /* Default dispatch: try native chunk registry first (user-defined SNOBOL4
+     * functions emitted as .LpcN chunks in the .s file), then INVOKE_fn for
+     * builtins.  In mode-4, INVOKE_fn → g_user_call_hook → _rt_usercall
+     * would also hit the registry, but short-circuiting here avoids the
+     * extra indirection and the risk of interpreter call-stack corruption. */
+    void *cfn = chunk_reg_lookup(name ? name : "");
+    if (cfn) {
+        DESCR_t result = call_native_chunk(name, cfn, args, nargs);
+        vstack_push(result);
+        g_last_ok = (result.v != DT_FAIL);
+        return;
+    }
     DESCR_t result = INVOKE_fn(name ? name : "", args, nargs);
     vstack_push(result);
     g_last_ok = (result.v != DT_FAIL);

@@ -235,6 +235,30 @@ void scrip_rt_call(const char *name, int nargs);
  * through to next instruction). */
 int scrip_rt_do_return(int kind, int cond);
 
+/* EM-7d-usercall-reentrant: native chunk function pointer registry.
+ *
+ * The emitter walks the SM_Program for SM_LABEL instructions with a[0].s
+ * set (SNOBOL4 function entry labels) and emits a .data table of
+ * rt_chunk_entry records in the .s file, terminated by {NULL, NULL}.
+ * scrip_rt_register_chunks() is called from main() (before scrip_rt_init)
+ * with a pointer to that table; it populates g_chunk_registry so that
+ * _rt_usercall can dispatch user-defined SNOBOL4 functions by direct
+ * call/ret without touching the interpreter call stack.
+ *
+ * typedef matches the layout emitted in the .s:
+ *   .quad <name_ptr>   (const char* in .rodata)
+ *   .quad <fn_ptr>     (void* pointing at .LpcN in .text)
+ */
+typedef struct {
+    const char *name;   /* SNOBOL4 function name (upper-cased) */
+    void       *fn;     /* native entry point: .LpcN label in .text */
+} rt_chunk_entry;
+
+/* Register a NULL-terminated array of rt_chunk_entry records.
+ * Called from the emitted main() before scrip_rt_init.
+ * Safe to call with NULL (no-op) for programs with no user functions. */
+void scrip_rt_register_chunks(const rt_chunk_entry *tbl);
+
 /* SM_PAT_CAPTURE_FN_ARGS / SM_PAT_USERCALL_ARGS runtime helpers were
  * REMOVED in EM-7-revert (session #72) along with the rest of the
  * brokered Phase-3 path. */
