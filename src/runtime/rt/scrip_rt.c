@@ -367,7 +367,17 @@ void scrip_rt_nv_get(const char *name)
 void scrip_rt_nv_set(const char *name)
 {
     DESCR_t val = vstack_pop();
+    /* Mirror sm_interp.c SM_STORE_VAR: if RHS is DT_FAIL, the statement fails;
+     * no assignment occurs and last_ok=0.  This is how LINE = INPUT :F(DONE)
+     * detects EOF in mode-4 — scrip_rt_nv_get("INPUT") pushes DT_FAIL, then
+     * scrip_rt_nv_set("LINE") propagates the failure to last_ok. */
+    if (val.v == DT_FAIL) {
+        vstack_push(val);   /* balanced push so subsequent pops don't underflow */
+        g_last_ok = 0;
+        return;
+    }
     NV_SET_fn(name ? name : "", val);
+    g_last_ok = 1;
 }
 
 void scrip_rt_pop_void(void)
