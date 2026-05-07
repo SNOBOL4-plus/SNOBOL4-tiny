@@ -274,5 +274,29 @@ SIM_OUT=$("$SIM_TEST" 2>&1)
 echo "$SIM_OUT" | grep -q "^PASS=25 FAIL=0" || { echo "FAIL EM-7a sim test"; echo "$SIM_OUT"; exit 1; }
 echo "  PASS EM-7a Phase-2 sim       (PASS=25: PATND_t reconstruction + flat_is_eligible_node)"
 
+# ── Test 12: EM-7b bb_build_flat_text — TEXT-mode flat emit + external labels ──
+FLAT_TEXT_TEST="$ROOT/out/bb_flat_text_test"
+if [ ! -x "$FLAT_TEXT_TEST" ]; then
+    echo "FAIL bb_flat_text_test not built — run: make out/bb_flat_text_test"; exit 1
+fi
+# Run the unit test (writes .s, verifies labels, checks 15 internal asserts)
+"$FLAT_TEXT_TEST" "$TMP/em7b.s" 2> "$TMP/em7b.err" || {
+    echo "FAIL EM-7b unit test"; cat "$TMP/em7b.err"; exit 1; }
+grep -q "^PASS=15 FAIL=0" "$TMP/em7b.err" || {
+    echo "FAIL EM-7b internal pass count"; cat "$TMP/em7b.err"; exit 1; }
+# Independently verify the .s assembles cleanly and produces the four
+# externally-visible α/β/γ/ω globals.
+gcc -c "$TMP/em7b.s" -o "$TMP/em7b.o" 2> "$TMP/em7b.as_err" || {
+    echo "FAIL EM-7b .s does not assemble"; cat "$TMP/em7b.as_err"; exit 1; }
+SYMS=$(objdump -t "$TMP/em7b.o" 2>/dev/null | awk '/_pat_inv_42_0_/{print $NF}' | sort)
+EXPECT=$(printf "_pat_inv_42_0_alpha\n_pat_inv_42_0_beta\n_pat_inv_42_0_gamma\n_pat_inv_42_0_omega")
+[ "$SYMS" = "$EXPECT" ] || {
+    echo "FAIL EM-7b external labels missing or extra"; echo "got: $SYMS"; echo "expect: $EXPECT"; exit 1; }
+# Verify all four are GLOBAL (not local) — `g` flag in objdump column 2
+GLOBAL_COUNT=$(objdump -t "$TMP/em7b.o" 2>/dev/null | awk '/_pat_inv_42_0_/ && $2 ~ /g/ {n++} END{print n+0}')
+[ "$GLOBAL_COUNT" = "4" ] || {
+    echo "FAIL EM-7b only $GLOBAL_COUNT/4 entry labels are global"; exit 1; }
+echo "  PASS EM-7b bb_flat TEXT mode (PASS=15 unit + .s assembles + 4/4 external α/β/γ/ω)"
+
 echo
-echo "PASS=10 FAIL=0  (EM-1 wiring + EM-2 HALT/PUSH_LIT_I + EM-3 stack ops + arithmetic + EM-4 control flow + EM-5 chunks; EM-6 retired; EM-7a Phase-2 sim)"
+echo "PASS=11 FAIL=0  (EM-1 wiring + EM-2 HALT/PUSH_LIT_I + EM-3 stack ops + arithmetic + EM-4 control flow + EM-5 chunks; EM-6 retired; EM-7a Phase-2 sim; EM-7b bb_flat TEXT mode)"

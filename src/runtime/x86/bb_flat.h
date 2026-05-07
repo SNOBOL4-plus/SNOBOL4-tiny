@@ -28,6 +28,7 @@
 #ifndef BB_FLAT_H
 #define BB_FLAT_H
 
+#include <stdio.h>      /* FILE — bb_build_flat_text */
 #include "bb_pool.h"
 #include "snobol4.h"
 #include "bb_box.h"
@@ -38,5 +39,36 @@
  * bb_build_binary_node() trampoline fallback.
  */
 bb_box_fn bb_build_flat(PATND_t *p);
+
+/*
+ * EM-7b: TEXT-mode counterpart to bb_build_flat.
+ *
+ * Emits the same flat-globbed code as GAS text directives into `out`,
+ * with externally-visible top-level labels:
+ *
+ *   <prefix>_alpha   (entry — forward attempt)
+ *   <prefix>_beta    (re-entry — backtrack)
+ *   <prefix>_gamma   (success exit)
+ *   <prefix>_omega   (failure exit)
+ *
+ * `.global` directives are emitted for all four so the `.s` exposes
+ * them to the assembler/linker.  The EM-7c emitter (variant-node
+ * runtime emitter) wires its γ/ω jmps to these symbols.
+ *
+ * Typical prefix: `_pat_inv_<pid>_<sid>`.
+ *
+ * Caller is responsible for emitting any `.text` section header /
+ * surrounding scaffolding before/after this call.
+ *
+ * Returns 0 on success, -1 if `p` is variant (caller falls through
+ * to the runtime emitter for variant nodes).
+ *
+ * NOTE (EM-7c followup): internal node labels (xcatN_mid_g, litN_b,
+ * etc.) currently do NOT include the prefix — they collide if more
+ * than one flat pattern is emitted into the same `.s` namespace.
+ * For EM-7b's gate, one pattern per emission is fine; EM-7c will
+ * extend this to namespace internals.
+ */
+int bb_build_flat_text(PATND_t *p, FILE *out, const char *prefix);
 
 #endif /* BB_FLAT_H */

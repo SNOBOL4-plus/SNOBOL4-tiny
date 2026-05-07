@@ -114,6 +114,16 @@ int bb_emit_end(void)
 
 void bb_emit_patch_rel8(bb_label_t *lbl)
 {
+    if (bb_emit_mode == EMIT_TEXT) {
+        /* TEXT mode: callers should route through bb_insn_*_rel8 helpers
+         * which emit symbolic jumps.  Direct patch_rel8 from TEXT is a
+         * code-path bug — emit a placeholder + diagnostic comment. */
+        FILE *f = bb_emit_out ? bb_emit_out : stdout;
+        fprintf(f, "    .byte 0x00  /* EM-7b: rel8 placeholder for %s — patch site reached in TEXT mode */\n",
+                lbl->name);
+        bb_emit_pos++;
+        return;
+    }
     if (bb_label_defined(lbl)) {
         /* Already resolved — emit directly */
         int disp = lbl->offset - (bb_emit_pos + 1);
@@ -140,6 +150,19 @@ void bb_emit_patch_rel8(bb_label_t *lbl)
 
 void bb_emit_patch_rel32(bb_label_t *lbl)
 {
+    if (bb_emit_mode == EMIT_TEXT) {
+        /* TEXT mode: callers should route through bb_insn_*_rel32 helpers.
+         * Direct patch_rel32 from TEXT means the preceding raw opcode
+         * bytes were emitted as .byte directives — emit four .byte
+         * placeholders + diagnostic comment.  Won't jump correctly when
+         * assembled; the call site should be converted to use a
+         * dual-mode helper. */
+        FILE *f = bb_emit_out ? bb_emit_out : stdout;
+        fprintf(f, "    .byte 0x00, 0x00, 0x00, 0x00  /* EM-7b: rel32 placeholder for %s — patch site reached in TEXT mode */\n",
+                lbl->name);
+        bb_emit_pos += 4;
+        return;
+    }
     if (bb_label_defined(lbl)) {
         int disp = lbl->offset - (bb_emit_pos + 4);
         bb_emit_i32(disp);
@@ -158,8 +181,32 @@ void bb_emit_patch_rel32(bb_label_t *lbl)
 
 /* ── byte primitives ────────────────────────────────────────────────────── */
 
+/*
+ * EM-7b: byte primitives are dual-mode.
+ *
+ * BINARY: write to bb_emit_buf, advance bb_emit_pos, bounds-check.
+ * TEXT:   emit ".byte 0xNN" line to bb_emit_out.  No buffer, no
+ *         bounds check.  bb_emit_pos still advances so that any code
+ *         interested in "how far have I emitted" sees a consistent
+ *         counter — but TEXT-mode label patching does not need it
+ *         (jumps go through symbolic helpers like bb_insn_jmp_rel32
+ *         which emit "jmp <name>" and let the assembler resolve).
+ *
+ * Path 1 from the EM-7b scoping audit (sess #74): preserves bb_flat.c
+ * call sites unchanged.  The resulting .s contains walls of .byte
+ * directives — acceptable for now per the readability standard
+ * (mode-4 readability lives in the SM-side emitter; BB-box bytes
+ * may be raw .byte sequences linked via external α/β/γ/ω labels).
+ */
+
 void bb_emit_byte(uint8_t b)
 {
+    if (bb_emit_mode == EMIT_TEXT) {
+        FILE *f = bb_emit_out ? bb_emit_out : stdout;
+        fprintf(f, "    .byte 0x%02x\n", (unsigned)b);
+        bb_emit_pos++;   /* informational; not used for TEXT label resolution */
+        return;
+    }
     if (bb_emit_pos >= bb_emit_size) {
         fprintf(stderr, "bb_emit_byte: buffer overflow at pos=%d size=%d\n",
                 bb_emit_pos, bb_emit_size);
@@ -327,6 +374,16 @@ void bb_insn_jne_rel32(bb_label_t *target)
         bb_text("    jne     %s\n", target->name); return;
     }
     bb_emit_byte(0x0F); bb_emit_byte(0x85);
+    bb_emit_patch_rel32(target);
+}
+
+/* jg rel32 — jump if greater (signed), near, forward ref (EM-7b) */
+void bb_insn_jg_rel32(bb_label_t *target)
+{
+    if (bb_emit_mode == EMIT_TEXT) {
+        bb_text("    jg      %s\n", target->name); return;
+    }
+    bb_emit_byte(0x0F); bb_emit_byte(0x8F);
     bb_emit_patch_rel32(target);
 }
 

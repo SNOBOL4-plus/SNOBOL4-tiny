@@ -183,6 +183,9 @@ void bb_insn_jne_rel8(bb_label_t *target);
 /* jne rel32 — jump if not equal, near, forward ref */
 void bb_insn_jne_rel32(bb_label_t *target);
 
+/* jg  rel32 — jump if greater (signed), near, forward ref (EM-7b) */
+void bb_insn_jg_rel32 (bb_label_t *target);
+
 /* cmp esi, imm8  — compare subject length against literal */
 void bb_insn_cmp_esi_imm8(uint8_t imm);
 

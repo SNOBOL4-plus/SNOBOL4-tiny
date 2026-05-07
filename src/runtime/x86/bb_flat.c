@@ -310,8 +310,8 @@ static void flat_emit_lit(const char *lit, int len,
     bb_emit_byte(0x48); bb_emit_byte(0xB9);
     bb_emit_u64((uint64_t)(uintptr_t)&Σlen);
     bb_emit_byte(0x3B); bb_emit_byte(0x01);               /* cmp eax, [rcx] */
-    /* jg fail */
-    bb_emit_byte(0x0F); bb_emit_byte(0x8F); bb_emit_patch_rel32(lbl_fail);
+    /* jg fail — EM-7b: dual-mode helper (was raw 0x0F 0x8F + patch_rel32) */
+    bb_insn_jg_rel32(lbl_fail);
 
     /* memcmp(Σ+Δ, lit, len) */
     emit_sigma_plus_delta();       /* rax = Σ+Δ */
@@ -527,36 +527,51 @@ static int flat_is_eligible(PATND_t *p)
     return 1;
 }
 
-/* ── bb_build_flat — public entry point ─────────────────────────────────── */
-bb_box_fn bb_build_flat(PATND_t *p)
+/* ── shared emission body ────────────────────────────────────────────────── */
+/*
+ * Emits the entry/dispatch + tree + γ/ω epilogue into the current
+ * bb_emit session.  Used by both BINARY (bb_build_flat) and TEXT
+ * (bb_build_flat_text) entry points.
+ *
+ * `prefix`:    label-prefix string used for all four top-level entry
+ *              labels (α/β/γ/ω).  Internal node labels (xcat42_mid_g
+ *              etc.) keep their short forms — caller is responsible
+ *              for ensuring only one flat pattern per emission scope
+ *              for now.  EM-7c will widen this to multi-pattern-per-
+ *              .s by namespacing internal labels too.
+ *
+ * `text_externalise`: if non-zero (TEXT mode), emit `.global <name>`
+ *              directives for the four top-level entry labels so the
+ *              resulting .s exposes them to the linker.
+ *
+ * Returns 0 on success, -1 on out-of-bound emission.
+ */
+static int flat_emit_body(PATND_t *p, const char *prefix, int text_externalise)
 {
-    if (!flat_is_eligible(p)) return NULL;
+    /* ── label naming ───────────────────────────────────────────────── */
+    bb_label_t lbl_pat_alpha, lbl_succ, lbl_fail, lbl_root_beta;
+    bb_label_initf(&lbl_pat_alpha,  "%s_alpha", prefix);
+    bb_label_initf(&lbl_succ,       "%s_gamma", prefix);
+    bb_label_initf(&lbl_fail,       "%s_omega", prefix);
+    bb_label_initf(&lbl_root_beta,  "%s_beta",  prefix);
 
-    bb_buf_t buf = bb_alloc(FLAT_BUF_MAX);
-    if (!buf) return NULL;
+    /* ── TEXT mode: declare external entry points ──────────────────── */
+    if (text_externalise) {
+        bb_text(".global %s\n", lbl_pat_alpha.name);
+        bb_text(".global %s\n", lbl_root_beta.name);
+        bb_text(".global %s\n", lbl_succ.name);
+        bb_text(".global %s\n", lbl_fail.name);
+    }
 
-    bb_emit_mode = EMIT_BINARY;
-    bb_emit_begin(buf, FLAT_BUF_MAX);
-    g_flat_slot_count = 0;
-    g_flat_node_id    = 0;  /* reset per pattern */
-
-    /* ── entry: set r10 = &Δ; dispatch α/β ──────────────────────────── */
+    /* ── entry: set r10 = &Δ; dispatch α/β ─────────────────────────── */
     /*   mov r10, imm64(&Δ)   — 49 BA <8 bytes>  */
     bb_emit_byte(0x49); bb_emit_byte(0xBA);
     bb_emit_u64((uint64_t)(uintptr_t)&Δ);
     /*   cmp esi, 0           — 83 FE 00          */
     bb_emit_byte(0x83); bb_emit_byte(0xFE); bb_emit_byte(0x00);
     /*   je  PAT_α            — 74 dd (rel8 forward) */
-    bb_label_t lbl_pat_alpha;
-    bb_label_initf(&lbl_pat_alpha, "pat_flat_alpha");
     bb_insn_je_rel8(&lbl_pat_alpha);
-    /* β path: fall through to β label defined by root node */
-
-    /* Labels for overall pattern success and failure */
-    bb_label_t lbl_succ, lbl_fail, lbl_root_beta;
-    bb_label_initf(&lbl_succ,      "pat_flat_gamma");
-    bb_label_initf(&lbl_fail,      "pat_flat_omega");
-    bb_label_initf(&lbl_root_beta, "pat_flat_beta");
+    /* β path: fall through to β trampoline */
 
     /* β entry point must come before α in the buffer so the je above
      * jumps forward to α.  Emit β trampoline: jmp lbl_root_beta */
@@ -591,6 +606,24 @@ bb_box_fn bb_build_flat(PATND_t *p)
     bb_emit_byte(0x31); bb_emit_byte(0xD2);       /* xor edx, edx */
     bb_insn_ret();
 
+    return 0;
+}
+
+/* ── bb_build_flat — public entry point (BINARY: bb_pool RX) ────────────── */
+bb_box_fn bb_build_flat(PATND_t *p)
+{
+    if (!flat_is_eligible(p)) return NULL;
+
+    bb_buf_t buf = bb_alloc(FLAT_BUF_MAX);
+    if (!buf) return NULL;
+
+    bb_emit_mode = EMIT_BINARY;
+    bb_emit_begin(buf, FLAT_BUF_MAX);
+    g_flat_slot_count = 0;
+    g_flat_node_id    = 0;  /* reset per pattern */
+
+    flat_emit_body(p, "pat_flat", /*text_externalise=*/0);
+
     int nbytes = bb_emit_end();
     if (nbytes <= 0 || nbytes > FLAT_BUF_MAX) {
         bb_free(buf, FLAT_BUF_MAX);
@@ -598,4 +631,53 @@ bb_box_fn bb_build_flat(PATND_t *p)
     }
     bb_seal(buf, (size_t)nbytes);
     return (bb_box_fn)buf;
+}
+
+/* ── bb_build_flat_text — EM-7b: TEXT-mode entry with external labels ──── */
+/*
+ * Emit the same flat-globbed code, but as GAS text directives, into
+ * `out`.  The four top-level entry labels become externally-visible
+ * symbols (`<prefix>_alpha`, `_beta`, `_gamma`, `_omega`) usable by
+ * the EM-7c emitter to wire variant nodes' γ/ω jmps into invariant
+ * sub-tree chunks.
+ *
+ * Caller is expected to have written the `.text` section header and
+ * any surrounding scaffolding; this function emits only the labelled
+ * body of the chunk plus its `.global` directives.
+ *
+ * `prefix` typical form: `_pat_inv_<pid>_<sid>`  (per the design
+ *           discoveries in GOAL-MODE4-EMIT.md).
+ *
+ * Returns 0 on success, -1 if the pattern is not eligible
+ * (i.e. variant — caller should fall through to runtime emit).
+ */
+int bb_build_flat_text(PATND_t *p, FILE *out, const char *prefix)
+{
+    if (!flat_is_eligible(p)) return -1;
+
+    bb_emit_mode_t saved_mode = bb_emit_mode;
+    FILE          *saved_out  = bb_emit_out;
+    bb_buf_t       saved_buf  = bb_emit_buf;
+    int            saved_pos  = bb_emit_pos;
+    int            saved_size = bb_emit_size;
+
+    bb_emit_mode = EMIT_TEXT;
+    bb_emit_out  = out ? out : stdout;
+    bb_emit_buf  = NULL;
+    bb_emit_pos  = 0;
+    bb_emit_size = 0;
+    g_flat_slot_count = 0;
+    g_flat_node_id    = 0;
+
+    int rc = flat_emit_body(p, prefix, /*text_externalise=*/1);
+
+    /* Restore prior emit state — TEXT mode does no patching, so no
+     * bb_emit_end() is required. */
+    bb_emit_mode = saved_mode;
+    bb_emit_out  = saved_out;
+    bb_emit_buf  = saved_buf;
+    bb_emit_pos  = saved_pos;
+    bb_emit_size = saved_size;
+
+    return rc;
 }

@@ -99,13 +99,17 @@ out/sm_codegen_x64_emit_test: $(RT)/x86/sm_codegen_x64_emit_test.c \
                                $(RT)/x86/sm_codegen_x64_emit.c \
                                $(RT)/x86/sm_codegen_x64_emit.h \
                                $(RT)/x86/sm_prog.c \
-                               $(RT)/x86/sm_prog.h
+                               $(RT)/x86/sm_prog.h \
+                               out/libscrip_rt.so
 	@mkdir -p out
 	$(CC) -O0 -g $(WARN) \
-	    -I$(SRC) -I$(RT)/x86 -I$(RT) \
+	    -I$(SRC) -I$(RT)/x86 -I$(RT) -I$(RT)/rt \
+	    -DDYN_ENGINE_LINKED \
 	    $(RT)/x86/sm_codegen_x64_emit_test.c \
 	    $(RT)/x86/sm_codegen_x64_emit.c \
 	    $(RT)/x86/sm_prog.c \
+	    -Lout -lscrip_rt -lgc -lm \
+	    -Wl,-rpath,$(shell pwd)/out \
 	    -o out/sm_codegen_x64_emit_test
 	@echo "Built: out/sm_codegen_x64_emit_test"
 
@@ -128,6 +132,32 @@ out/sm_phase2_sim_test: $(RT)/x86/sm_phase2_sim_test.c \
 	    -Lout -lscrip_rt -lgc -lm \
 	    -Wl,-rpath,$(shell pwd)/out \
 	    -o out/sm_phase2_sim_test
+
+# ── EM-7b bb_build_flat_text unit test ───────────────────────────────────────
+# Verifies dual-mode bb_flat.c: TEXT-mode emission produces a .s with
+# the four externally-visible α/β/γ/ω labels and assembles cleanly.
+# Links against libscrip_rt.so (which already includes bb_flat.c +
+# bb_emit.c + pat_* constructors).
+out/bb_flat_text_test: $(RT)/x86/bb_flat_text_test.c \
+                       $(RT)/x86/sm_codegen_x64_emit.c \
+                       $(RT)/x86/sm_codegen_x64_emit.h \
+                       $(RT)/x86/sm_prog.c \
+                       $(RT)/x86/sm_prog.h \
+                       out/libscrip_rt.so \
+                       $(RT)/x86/bb_flat.h \
+                       $(RT)/x86/bb_emit.h \
+                       $(RT)/x86/bb_pool.h
+	@mkdir -p out
+	$(CC) -O0 -g $(WARN) \
+	    -I$(SRC) -I$(RT)/x86 -I$(RT) -I$(RT)/rt \
+	    -DDYN_ENGINE_LINKED \
+	    $(RT)/x86/bb_flat_text_test.c \
+	    $(RT)/x86/sm_codegen_x64_emit.c \
+	    $(RT)/x86/sm_prog.c \
+	    -Lout -lscrip_rt -lgc -lm \
+	    -Wl,-rpath,$(shell pwd)/out \
+	    -o out/bb_flat_text_test
+	@echo "Built: out/bb_flat_text_test"
 	@echo "Built: out/sm_phase2_sim_test"
 
 # ── scrip — unified driver (all modes, all frontends) ────────────────────────
