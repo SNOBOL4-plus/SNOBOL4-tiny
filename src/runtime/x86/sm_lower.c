@@ -1278,14 +1278,16 @@ static void lower_stmt(SM_Program *p, LabelTable *lt, const STMT_t *s)
         else
             sm_emit_i(p, SM_PUSH_LIT_I, 0);       /* no = at all → no replacement */
 
-        sm_emit(p, SM_EXEC_STMT);
-        /* operand a[0].s = subject variable name for write-back (NULL if not a simple var) */
+        /* a[0].s = subject variable name for write-back (NULL if not a simple var);
+         * a[1].i = has_eq flag.
+         * Use sm_emit_si so a[0].s is strdup'd — pure-SNO programs free the IR
+         * (code_free in scrip_sm.c) immediately after sm_lower returns, which would
+         * leave a dangling pointer if we stored s->subject->sval directly. */
         {
             const char *sname = NULL;
             if (s->subject && (s->subject->kind == E_VAR || s->subject->kind == E_KEYWORD))
                 sname = s->subject->sval;
-            p->instrs[p->count - 1].a[0].s = sname;
-            p->instrs[p->count - 1].a[1].i = s->has_eq;
+            sm_emit_si(p, SM_EXEC_STMT, sname, (int64_t)s->has_eq);
         }
         goto emit_gotos;
     }
