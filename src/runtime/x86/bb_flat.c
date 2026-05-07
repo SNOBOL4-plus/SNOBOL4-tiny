@@ -568,25 +568,27 @@ bb_box_fn bb_build_flat(PATND_t *p)
     /* Emit all nodes flat into this buffer */
     flat_emit_node(p, &lbl_succ, &lbl_fail, &lbl_root_beta);
 
-    /* ── PAT_γ: success — rax = Σ+Δ_start (captured by node), rdx = advance
-     * For the flat model: nodes jump here after advancing Δ.
-     * Return spec(Σ+match_start, matched_len).
-     * Simplification: return (Σ+Δ_entry, Δ_now - Δ_entry).
-     * We stash entry Δ in r11 at the very top of α. */
-    /* Actually: nodes already advanced Δ. Return spec(NULL+1, 0) as a
-     * non-empty sentinel — Phase 3 uses spec_is_empty() only, not σ/δ values
-     * for the match extent (those come from Δ before/after).
-     * So: rax = non-NULL sentinel (Σ+Δ), rdx = 0 is sufficient for
-     * the Phase 3 loop which checks spec_is_empty() and reads Δ directly. */
+    /* ── PAT_γ: success — return DESCR_t{v=DT_S, slen=0, s=Σ+Δ}.
+     * The flat model doesn't track match length in the return value; the
+     * caller (Phase 3 in stmt_exec.c) reads Δ before/after the call to
+     * recover the match extent.  What matters here is that the broker's
+     * IS_FAIL_fn(val) correctly reports success: v=DT_S ≠ DT_FAIL.
+     *
+     * scan_body_fn_u9 computes r->start = Δ - sp.δ; with sp.δ=0 the start
+     * collapses to Δ (i.e. an empty match at end).  This is the historical
+     * behaviour of the flat path; non-zero δ propagation is future work. */
     bb_label_define(&lbl_succ);
-    emit_sigma_plus_delta();          /* rax = Σ+Δ (non-NULL → success) */
-    bb_emit_byte(0x31); bb_emit_byte(0xD2);   /* xor edx, edx */
+    emit_sigma_plus_delta();                      /* rdx slot needs σ; we set rdx below */
+    /* mov rdx, rax  — 48 89 C2 */
+    bb_emit_byte(0x48); bb_emit_byte(0x89); bb_emit_byte(0xC2);
+    /* mov eax, DT_S(=1)  (slen=0 in high 32) */
+    bb_emit_byte(0xB8); bb_emit_u32(1);
     bb_insn_ret();
 
-    /* ── PAT_ω: failure */
+    /* ── PAT_ω: failure — return FAILDESCR (rax=DT_FAIL=99, rdx=0) */
     bb_label_define(&lbl_fail);
-    bb_insn_xor_eax_eax();
-    bb_emit_byte(0x31); bb_emit_byte(0xD2);   /* xor edx, edx */
+    bb_emit_byte(0xB8); bb_emit_u32(99);          /* mov eax, 99 */
+    bb_emit_byte(0x31); bb_emit_byte(0xD2);       /* xor edx, edx */
     bb_insn_ret();
 
     int nbytes = bb_emit_end();

@@ -201,13 +201,21 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    /* Default execution mode: --sm-run (not when --monitor or --jit-emit) */
+    /* Default execution mode: --jit-run (not when --monitor or --jit-emit).
+     * Mode-3 (jit-run) is the closest stand-in for mode-4 (jit-emit-x64) while
+     * mode-4 is being built — emit-time bytes-into-`.s` is just mode-3's runtime
+     * bytes-into-`bb_pool` written somewhere else.  Daily testing should hit
+     * the path closest to destination.  --sm-run / --ir-run remain opt-in for
+     * fall-back testing. */
     if (!mode_ir_run && !mode_sm_run && !mode_jit_run && !mode_monitor &&
         !mode_jit_emit_x64)
-        mode_sm_run = 1;
+        mode_jit_run = 1;
 
-    /* Default BB mode: --bb-driver unless --bb-live explicitly set */
-    if (!bb_driver && !bb_live) bb_driver = 1;
+    /* Default BB mode: --bb-live (mode-4's existence proof — bb_emit dual-mode
+     * + bb_flat for invariants + bb_pool for variant runtime emit IS the
+     * architecture for mode-4).  --bb-driver remains opt-in for fall-back
+     * testing. */
+    if (!bb_driver && !bb_live) bb_live = 1;
 
     /* Suppress unused warning for bb_driver (not yet wired to stmt_exec.c guard) */
     (void)bb_driver;
