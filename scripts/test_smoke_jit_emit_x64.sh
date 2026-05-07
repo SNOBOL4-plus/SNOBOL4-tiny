@@ -261,38 +261,15 @@ grep -q "SM_PUSH_CHUNK"                "$TMP/em5b.s" || { echo "FAIL no SM_PUSH_
 grep -q "scrip_rt_push_chunk_descr@PLT" "$TMP/em5b.s" || { echo "FAIL no descriptor-push PLT call"; exit 1; }
 echo "  PASS EM-5b push-chunk descr   (PUSH_CHUNK + POP round-trip; rc=21)"
 
-# ── Test 10: EM-6 pattern matcher — LEN(3) . W on "abcdef" → oracle ──────────
-# Oracle (--sm-run):  start / abc / end
-# Gate program: stmt1 OUTPUT="start", stmt2 "abcdef" LEN(3) . W, stmt3 OUTPUT=W,
-#               stmt4 OUTPUT="end".  Verifies: SM_PAT_LEN, SM_PAT_CAPTURE,
-#               SM_EXEC_STMT, real NV table, string rodata, scrip_rt_exec_stmt.
-EM6_SNO="$TMP/em6_gate.sno"
-cat > "$EM6_SNO" <<'EOF'
-        OUTPUT = "start"
-        "abcdef" LEN(3) . W
-        OUTPUT = W
-        OUTPUT = "end"
-END
-EOF
-"$SCRIP" --jit-emit --x64 "$EM6_SNO" > "$TMP/em6.s" 2> "$TMP/em6_emit.err" || {
-    echo "FAIL em6 emit"; cat "$TMP/em6_emit.err"; exit 1; }
-gcc -no-pie "$TMP/em6.s" \
-    -L"$ROOT/out" -lscrip_rt -Wl,-rpath,"$ROOT/out" \
-    -o "$TMP/em6_prog" 2> "$TMP/em6_link.err" || {
-    echo "FAIL em6 link"; cat "$TMP/em6_link.err"; exit 1; }
-ORACLE=$( "$SCRIP" --sm-run "$EM6_SNO" < /dev/null )
-GOT=$( "$TMP/em6_prog" < /dev/null )
-if [ "$GOT" != "$ORACLE" ]; then
-    echo "FAIL em6: output mismatch"
-    echo "  oracle: $(echo "$ORACLE" | cat -A)"
-    echo "  got:    $(echo "$GOT"    | cat -A)"
-    exit 1
-fi
-grep -q "scrip_rt_pat_len@PLT"     "$TMP/em6.s" || { echo "FAIL em6: no PAT_LEN PLT call"; exit 1; }
-grep -q "scrip_rt_pat_capture@PLT" "$TMP/em6.s" || { echo "FAIL em6: no PAT_CAPTURE PLT call"; exit 1; }
-grep -q "scrip_rt_exec_stmt@PLT"   "$TMP/em6.s" || { echo "FAIL em6: no EXEC_STMT PLT call"; exit 1; }
-grep -q "\.section .rodata"        "$TMP/em6.s" || { echo "FAIL em6: no .rodata section"; exit 1; }
-echo "  PASS EM-6 pattern matcher  (LEN/CAPTURE/EXEC_STMT; output matches --sm-run oracle)"
+# ── Test 10: RETIRED in EM-7-revert (session #72) ─────────────────────────────
+# This test exercised the brokered Phase-3 path (scrip_rt_pat_*@PLT building
+# a runtime descriptor tree, then scrip_rt_exec_stmt → exec_stmt → bb_broker)
+# which Lon's correction confirmed was the WRONG architecture for mode-4.
+# See GOAL-MODE4-EMIT.md "Design Discoveries" section for the corrected
+# five-phase model.  EM-7c will reintroduce a pattern-matcher gate using
+# the corrected emit shape (bb_flat in EMIT_TEXT mode for invariant
+# sub-trees + bb_emit BINARY mode for variant nodes); the test slot is
+# reserved for that work.
 
 echo
-echo "PASS=10 FAIL=0  (EM-1 wiring + EM-2 HALT/PUSH_LIT_I + EM-3 stack ops + arithmetic + EM-4 control flow + EM-5 chunks + EM-6 pattern matcher)"
+echo "PASS=9 FAIL=0  (EM-1 wiring + EM-2 HALT/PUSH_LIT_I + EM-3 stack ops + arithmetic + EM-4 control flow + EM-5 chunks; EM-6 retired, awaiting EM-7c)"

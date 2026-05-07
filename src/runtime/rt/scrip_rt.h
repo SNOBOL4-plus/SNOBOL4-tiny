@@ -125,58 +125,22 @@ void scrip_rt_set_last_ok(int ok);
  * SM_CALL_CHUNK with known entry_pc bakes direct `call .LpcN`. */
 void scrip_rt_push_chunk_descr(int64_t entry_pc, int64_t arity);
 
-/* ── EM-6 surface — pattern builder ─────────────────────────────────── */
+/* ── EM-6 surface — REMOVED in EM-7-revert (session #72) ─────────────────
+ *
+ * The brokered Phase-3 pattern-builder ABI (scrip_rt_pat_lit,
+ * scrip_rt_pat_span, ..., scrip_rt_pat_capture, scrip_rt_pat_boxval) and
+ * the broker entry scrip_rt_exec_stmt have been removed from the
+ * emitted-code path.  Lon's correction: this descriptor-tree-then-
+ * broker model was the wrong architecture for mode-4.  See
+ * GOAL-MODE4-EMIT.md "Design Discoveries" section for the corrected
+ * five-phase model.  EM-7a/b/c will reintroduce pattern emit using the
+ * proven dual-mode bb_emit infrastructure (bb_flat in EMIT_TEXT mode for
+ * invariant sub-trees, bb_emit BINARY mode for variant nodes), with
+ * Phase-3 as a direct call to the root chunk's α — no broker, no
+ * pat-stack, no runtime descriptor tree.
+ * ──────────────────────────────────────────────────────────────────────── */
 
-/* Baked-literal primitives. */
-void scrip_rt_pat_lit(const char *s);        /* SM_PAT_LIT   */
-void scrip_rt_pat_refname(const char *name); /* SM_PAT_REFNAME */
-
-/* Primitives that pop a charset or integer from the SM value stack. */
-void scrip_rt_pat_span(void);                /* SM_PAT_SPAN    */
-void scrip_rt_pat_break(void);               /* SM_PAT_BREAK   */
-void scrip_rt_pat_any(void);                 /* SM_PAT_ANY     */
-void scrip_rt_pat_notany(void);              /* SM_PAT_NOTANY  */
-void scrip_rt_pat_len(void);                 /* SM_PAT_LEN     */
-void scrip_rt_pat_pos(void);                 /* SM_PAT_POS     */
-void scrip_rt_pat_rpos(void);                /* SM_PAT_RPOS    */
-void scrip_rt_pat_tab(void);                 /* SM_PAT_TAB     */
-void scrip_rt_pat_rtab(void);                /* SM_PAT_RTAB    */
-
-/* Nullary pattern constructors. */
-void scrip_rt_pat_arb(void);
-void scrip_rt_pat_rem(void);
-void scrip_rt_pat_fence(void);
-void scrip_rt_pat_fail(void);
-void scrip_rt_pat_abort(void);
-void scrip_rt_pat_succeed(void);
-void scrip_rt_pat_bal(void);
-void scrip_rt_pat_eps(void);
-
-/* Combinators (pop from pat-stack). */
-void scrip_rt_pat_arbno(void);               /* SM_PAT_ARBNO  (pops inner)  */
-void scrip_rt_pat_fence1(void);              /* SM_PAT_FENCE1 (pops child)  */
-void scrip_rt_pat_cat(void);                 /* SM_PAT_CAT    (pops r, l)   */
-void scrip_rt_pat_alt(void);                 /* SM_PAT_ALT    (pops r, l)   */
-
-/* Deref: pop DESCR_t from vstack, interpret as pattern, push to patstack. */
-void scrip_rt_pat_deref(void);               /* SM_PAT_DEREF  */
-
-/* Capture: pops child from patstack.
- * kind: 0=conditional(.), 1=immediate($), 2=cursor(@). */
-void scrip_rt_pat_capture(const char *varname, int kind); /* SM_PAT_CAPTURE */
-
-/* Boxval: pop patstack top, push as DT_P onto vstack. */
-void scrip_rt_pat_boxval(void);              /* SM_PAT_BOXVAL */
-
-/* Execute one SNOBOL4 statement.
- * subj_name: variable name for write-back (NULL = anonymous).
- * has_repl:  1 if a replacement DESCR_t was pushed onto the SM vstack.
- * Stack on entry (TOS last): [subject_descr] [replacement_or_zero].
- * Pat-stack holds the assembled pattern.
- * Sets last_ok (1=:S, 0=:F); resets pat-stack to empty. */
-void scrip_rt_exec_stmt(const char *subj_name, int has_repl);
-
-/* ── EM-7 additions ──────────────────────────────────────────────────────── */
+/* ── EM-7-pre keepers ──────────────────────────────────────────────────── */
 
 /* SM_CONCAT: pop two DESCRs from vstack, push concatenation result. */
 void scrip_rt_concat(void);
@@ -207,16 +171,9 @@ void scrip_rt_call(const char *name, int nargs);
  * through to next instruction). */
 int scrip_rt_do_return(int kind, int cond);
 
-/* SM_PAT_CAPTURE_FN_ARGS: . *fname(args) / $ *fname(args).
- * fname: function name; is_imm: 0=conditional(.), 1=immediate($); nargs from stack.
- * Pops nargs DESCR values from vstack, pops child from pat-stack,
- * pushes assembled capture pattern onto pat-stack. */
-void scrip_rt_pat_capture_fn_args(const char *fname, int is_imm, int nargs);
-
-/* SM_PAT_USERCALL_ARGS: *fname(args).
- * fname: function name; nargs from stack.
- * Pops nargs DESCR values from vstack, pushes deferred-call pattern. */
-void scrip_rt_pat_usercall_args(const char *fname, int nargs);
+/* SM_PAT_CAPTURE_FN_ARGS / SM_PAT_USERCALL_ARGS runtime helpers were
+ * REMOVED in EM-7-revert (session #72) along with the rest of the
+ * brokered Phase-3 path. */
 
 #ifdef __cplusplus
 }

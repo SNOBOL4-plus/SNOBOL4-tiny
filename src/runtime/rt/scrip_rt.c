@@ -1,30 +1,35 @@
 /*
- * scrip_rt.c — libscrip_rt.so implementation (M-JITEM-X64 / EM-1..EM-6)
+ * scrip_rt.c — libscrip_rt.so implementation (M-JITEM-X64 / EM-1..EM-7-pre)
  *
  * Authors: Lon Jones Cherryholmes · Claude Sonnet
- * Date: 2026-05-06
+ * Date: 2026-05-06; EM-7-revert 2026-05-07
  *
  * EM-1: init / finalize skeleton.
  * EM-2: push_int / pop_int / halt / unhandled_op.
  * EM-3: push_str / pop_descr / arith / nv_get(stub) / nv_set(stub) / pop_void.
  * EM-4: last_ok flag.
  * EM-5: push_chunk_descr.
- * EM-6: full SNOBOL4 runtime linked in.
- *   - scrip_rt_init calls bb_pool_init() + SNO_INIT_fn() + registers builtins.
- *   - scrip_rt_nv_get / scrip_rt_nv_set: real (NV_GET_fn / NV_SET_fn).
- *   - scrip_rt_arith: string coercion via to_int() / to_real().
- *   - scrip_rt_pat_*: pat-stack mirror of sm_interp.c SM_PAT_* dispatch.
- *   - scrip_rt_exec_stmt: delegates to exec_stmt() from stmt_exec.c.
+ * EM-6: [REVERTED in EM-7-revert, session #72] The full pattern-builder
+ *   ABI (scrip_rt_pat_*, scrip_rt_exec_stmt) and the runtime pat-stack
+ *   (g_pat_stack[], g_pat_sp) are removed.  Lon's correction: this
+ *   brokered descriptor-tree-then-broker model was the wrong architecture
+ *   for emitted code.  See GOAL-MODE4-EMIT.md "Design Discoveries"
+ *   section.  EM-7a/b/c will reintroduce pattern emit using the proven
+ *   dual-mode bb_emit infrastructure (bb_flat in EMIT_TEXT mode for
+ *   invariant sub-trees baked as flat .text chunks; bb_emit BINARY mode
+ *   for variant nodes built into bb_pool RX memory at runtime).
+ *   The full SNOBOL4 runtime stays linked in (bb_pool, snobol4_pattern,
+ *   stmt_exec, etc.) — those objects will be called by EM-7c via the
+ *   bb_build_flat / bb_build_binary entries already proven in mode-3.
+ * EM-7-pre keepers: scrip_rt_concat / scrip_rt_push_null /
+ *   scrip_rt_coerce_num / scrip_rt_call / scrip_rt_do_return.  These are
+ *   Phase 1/4/5 concerns, orthogonal to BB / pattern matching.
  *
- * Value type throughout: DESCR_t (snobol4.h / descr.h).  ScripRtVal /
- * ScripRtTag are gone.  Every stack slot is a DESCR_t; DT_* tag constants
- * come from descr.h.
+ * Value type throughout: DESCR_t (snobol4.h / descr.h).
  *
  * State:
- *   g_vstack[]   — DESCR_t value stack (fixed cap for EM-6).
+ *   g_vstack[]   — DESCR_t value stack (cap = VSTACK_CAP).
  *   g_vtop       — next free slot (0 = empty).
- *   g_pat_stack[]— DESCR_t pat-stack (mirrors sm_interp.c g_pat_stack).
- *   g_pat_sp     — next free pat-stack slot.
  *   g_halt_rc    — rc from most recent scrip_rt_halt().
  *   g_halt_set   — nonzero once halt has been called.
  *   g_last_ok    — success flag for SM_JUMP_S / SM_JUMP_F.
@@ -96,13 +101,13 @@ extern DESCR_t (*g_user_call_hook)(const char *, DESCR_t *, int);
  *============================================================================*/
 
 #define VSTACK_CAP   65536  /* EM-7: beauty.sno self-host needs deep stack (256 was insufficient) */
-#define PATSTACK_CAP  64
 
 static DESCR_t g_vstack[VSTACK_CAP];
 static int     g_vtop    = 0;
 
-static DESCR_t g_pat_stack[PATSTACK_CAP];
-static int     g_pat_sp   = 0;
+/* g_pat_stack[] / g_pat_sp removed in EM-7-revert (session #72) — the
+ * brokered runtime descriptor-tree state had no place in the corrected
+ * five-phase mode-4 model. */
 
 static int     g_halt_rc  = 0;
 static int     g_halt_set = 0;
@@ -130,41 +135,11 @@ static DESCR_t vstack_pop(void)
     return g_vstack[--g_vtop];
 }
 
-static void pat_push(DESCR_t d)
-{
-    if (g_pat_sp >= PATSTACK_CAP) {
-        fprintf(stderr, "libscrip_rt: pat-stack overflow (cap=%d).\n", PATSTACK_CAP);
-        abort();
-    }
-    g_pat_stack[g_pat_sp++] = d;
-}
+/* pat_push / pat_pop_internal removed in EM-7-revert (session #72) along
+ * with the rest of the brokered Phase-3 path. */
 
-static DESCR_t pat_pop_internal(void)
-{
-    if (g_pat_sp <= 0) {
-        fprintf(stderr, "libscrip_rt: pat-stack underflow.\n");
-        abort();
-    }
-    return g_pat_stack[--g_pat_sp];
-}
-
-/* Pop a charset string from vstack; return pointer valid for this call.
- * The string is owned by the DESCR_t; lifetime matches the GC heap. */
-static const char *vstack_pop_str(void)
-{
-    DESCR_t d = vstack_pop();
-    if (d.v == DT_S) return d.s ? d.s : "";
-    /* Coerce via VARVAL_fn (handles DT_I -> decimal string etc.) */
-    char *s = VARVAL_fn(d);
-    return s ? s : "";
-}
-
-static int64_t vstack_pop_int64(void)
-{
-    DESCR_t d = vstack_pop();
-    if (d.v == DT_I) return d.i;
-    return to_int(d);
-}
+/* vstack_pop_str / vstack_pop_int64 helpers were used only by the
+ * EM-6 pattern-builder ABI, removed in EM-7-revert (session #72). */
 
 /*==============================================================================
  * EM-6 builtin shims — registered with register_fn so exec_stmt can
@@ -360,130 +335,18 @@ void scrip_rt_push_chunk_descr(int64_t entry_pc, int64_t arity)
 }
 
 /*==============================================================================
- * EM-6 entries — pattern builder
+ * EM-6 entries — REMOVED in EM-7-revert (session #72)
+ *
+ * The full pattern-builder ABI (scrip_rt_pat_lit, scrip_rt_pat_span, ...,
+ * scrip_rt_pat_capture, scrip_rt_pat_boxval) and the broker entry
+ * scrip_rt_exec_stmt have been removed.  See the file-top comment block
+ * for rationale.  The proven pattern-construction primitives in
+ * snobol4_pattern.c (pat_lit, pat_span, pat_arb, pat_assign_*, ...) are
+ * still linked into libscrip_rt.so and remain available — EM-7c will
+ * call them from the corrected emit-time path (bb_flat in EMIT_TEXT
+ * mode) and the runtime emitter (bb_emit BINARY mode) without the
+ * descriptor-tree pat-stack intermediary.
  *============================================================================*/
-
-void scrip_rt_pat_lit(const char *s)
-{
-    pat_push(pat_lit(s ? s : ""));
-}
-
-void scrip_rt_pat_refname(const char *name)
-{
-    pat_push(pat_ref(name ? name : ""));
-}
-
-void scrip_rt_pat_span(void)
-{
-    const char *cs = vstack_pop_str();
-    pat_push(pat_span(cs));
-}
-
-void scrip_rt_pat_break(void)
-{
-    const char *cs = vstack_pop_str();
-    pat_push(pat_break_(cs));
-}
-
-void scrip_rt_pat_any(void)
-{
-    const char *cs = vstack_pop_str();
-    pat_push(pat_any_cs(cs));
-}
-
-void scrip_rt_pat_notany(void)
-{
-    const char *cs = vstack_pop_str();
-    pat_push(pat_notany(cs));
-}
-
-void scrip_rt_pat_len(void)   { pat_push(pat_len(vstack_pop_int64())); }
-void scrip_rt_pat_pos(void)   { pat_push(pat_pos(vstack_pop_int64())); }
-void scrip_rt_pat_rpos(void)  { pat_push(pat_rpos(vstack_pop_int64())); }
-void scrip_rt_pat_tab(void)   { pat_push(pat_tab(vstack_pop_int64())); }
-void scrip_rt_pat_rtab(void)  { pat_push(pat_rtab(vstack_pop_int64())); }
-
-void scrip_rt_pat_arb(void)     { pat_push(pat_arb()); }
-void scrip_rt_pat_rem(void)     { pat_push(pat_rem()); }
-void scrip_rt_pat_fence(void)   { pat_push(pat_fence()); }
-void scrip_rt_pat_fail(void)    { pat_push(pat_fail()); }
-void scrip_rt_pat_abort(void)   { pat_push(pat_abort()); }
-void scrip_rt_pat_succeed(void) { pat_push(pat_succeed()); }
-void scrip_rt_pat_bal(void)     { pat_push(pat_bal()); }
-void scrip_rt_pat_eps(void)     { pat_push(pat_epsilon()); }
-
-void scrip_rt_pat_arbno(void)
-{
-    DESCR_t inner = pat_pop_internal();
-    pat_push(pat_arbno(inner));
-}
-
-void scrip_rt_pat_fence1(void)
-{
-    DESCR_t child = pat_pop_internal();
-    pat_push(pat_fence_p(child));
-}
-
-void scrip_rt_pat_cat(void)
-{
-    DESCR_t right = pat_pop_internal();
-    DESCR_t left  = pat_pop_internal();
-    pat_push(pat_cat(left, right));
-}
-
-void scrip_rt_pat_alt(void)
-{
-    DESCR_t right = pat_pop_internal();
-    DESCR_t left  = pat_pop_internal();
-    pat_push(pat_alt(left, right));
-}
-
-void scrip_rt_pat_deref(void)
-{
-    DESCR_t v = vstack_pop();
-    if (v.v == DT_P) {
-        pat_push(v);                        /* already a pattern */
-    } else if (v.v == DT_S && v.s) {
-        pat_push(pat_lit(v.s));             /* string -> literal */
-    } else {
-        char *name = VARVAL_fn(v);
-        pat_push(pat_ref(name ? name : ""));
-    }
-}
-
-void scrip_rt_pat_capture(const char *varname, int kind)
-{
-    DESCR_t child = pat_pop_internal();
-    DESCR_t var   = NAME_fn(varname ? varname : "");
-    if (kind == 1)
-        pat_push(pat_assign_imm(child, var));
-    else if (kind == 2)
-        pat_push(pat_cat(child, pat_at_cursor(varname ? varname : "")));
-    else
-        pat_push(pat_assign_cond(child, var));
-}
-
-void scrip_rt_pat_boxval(void)
-{
-    /* Pop top of pat-stack, push as DT_P onto vstack. */
-    vstack_push(pat_pop_internal());
-}
-
-void scrip_rt_exec_stmt(const char *subj_name, int has_repl)
-{
-    /* Stack layout (TOS last, matches sm_interp.c SM_EXEC_STMT):
-     *   [subject_descr]  [replacement_or_zero]  <- TOS
-     * The replacement slot is ALWAYS pushed (as INTVAL(0) when has_repl=0).
-     * We must ALWAYS pop it, regardless of has_repl. */
-    DESCR_t repl   = vstack_pop();   /* always pop: repl or INTVAL(0) placeholder */
-    DESCR_t subj_d = vstack_pop();   /* subject descriptor */
-    DESCR_t pat_d  = (g_pat_sp > 0) ? pat_pop_internal() : pat_epsilon();
-
-    int ok = exec_stmt(subj_name, &subj_d, pat_d,
-                       has_repl ? &repl : NULL, has_repl);
-    g_last_ok = ok;
-    g_pat_sp  = 0;  /* reset pat-stack after each statement */
-}
 
 /*==============================================================================
  * EM-7 entries
@@ -696,35 +559,11 @@ int scrip_rt_do_return(int kind, int cond)
     return 1;
 }
 
-/* SM_PAT_CAPTURE_FN_ARGS: . *fname(args) / $ *fname(args)
- * fname: function name; is_imm: 0=conditional, 1=immediate; nargs from vstack. */
-extern DESCR_t pat_assign_callcap(DESCR_t child, const char *fnc_name,
-                                  DESCR_t *args, int nargs);
-extern DESCR_t pat_assign_callcap_named_imm(DESCR_t child, const char *fnc_name,
-                                            DESCR_t *args, int nargs,
-                                            char **names, int nnames);
-
-void scrip_rt_pat_capture_fn_args(const char *fname, int is_imm, int nargs)
-{
-    DESCR_t *argv = nargs > 0
-        ? (DESCR_t *)GC_MALLOC((size_t)nargs * sizeof(DESCR_t))
-        : NULL;
-    for (int i = nargs - 1; i >= 0; i--) argv[i] = vstack_pop();
-    DESCR_t child = pat_pop_internal();
-    const char *nm = fname ? fname : "";
-    pat_push(is_imm
-        ? pat_assign_callcap_named_imm(child, nm, argv, nargs, NULL, 0)
-        : pat_assign_callcap(child, nm, argv, nargs));
-}
-
-void scrip_rt_pat_usercall_args(const char *fname, int nargs)
-{
-    DESCR_t *argv = nargs > 0
-        ? (DESCR_t *)GC_MALLOC((size_t)nargs * sizeof(DESCR_t))
-        : NULL;
-    for (int i = nargs - 1; i >= 0; i--) argv[i] = vstack_pop();
-    pat_push(pat_user_call(fname ? fname : "", argv, nargs));
-}
+/* SM_PAT_CAPTURE_FN_ARGS / SM_PAT_USERCALL_ARGS runtime helpers and
+ * their pat_assign_callcap[_named_imm] externs were REMOVED in
+ * EM-7-revert (session #72) along with the rest of the brokered
+ * Phase-3 path.  The underlying pat_assign_callcap* primitives in
+ * snobol4_pattern.c remain available for EM-7c. */
 
 /*==============================================================================
  * EM-6 stubs — symbols pulled in transitively by eval_code.c / eval_pat.c

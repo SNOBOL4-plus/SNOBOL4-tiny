@@ -40,12 +40,19 @@
  *         direct call to .Lpc<entry_pc>), SM_RETURN (native ret).
  *         Conditional return variants (SM_RETURN_S/F, SM_FRETURN[_S/_F],
  *         SM_NRETURN[_S/_F]) still trap via emit_sm_unhandled.
- *   EM-6: SM_PAT_* opcodes emit PLT calls to scrip_rt_pat_*().
- *         SM_EXEC_STMT emits PLT call to scrip_rt_exec_stmt().
- *         SM_PAT_REFNAME, SM_PAT_BOXVAL, SM_PAT_CAPTURE,
- *         SM_PAT_DEREF, SM_PAT_FENCE1 baked.
- *         emit_bb_box() upgraded: now emits real PLT calls for all
- *         EM-6 covered opcodes; falls through to unhandled for rest.
+ *   EM-6: [REVERTED in EM-7-revert] SM_PAT_*, SM_EXEC_STMT, and the
+ *         scrip_rt_pat_*@PLT helpers were removed from the emitted-code
+ *         path.  Lon's correction: the brokered descriptor-tree model
+ *         was the wrong architecture.  See GOAL-MODE4-EMIT.md "Design
+ *         Discoveries" section for the corrected five-phase model.
+ *         EM-7a/b/c will reintroduce pattern emit using bb_flat in
+ *         EMIT_TEXT mode (invariant sub-trees baked into .text) plus
+ *         bb_emit BINARY mode (variant nodes built into bb_pool RX
+ *         memory at runtime), with Phase-3 as a direct call to the
+ *         root chunk's α — no broker, no pat-stack, no descriptor tree.
+ *   EM-7-pre keepers (kept after revert): SM_CALL, SM_CONCAT,
+ *         SM_PUSH_NULL, SM_COERCE_NUM, all 8 conditional return
+ *         variants.  These are Phase 1/4/5 concerns, orthogonal to BB.
  */
 
 #include "sm_codegen_x64_emit.h"
@@ -743,130 +750,26 @@ static int emit_sm_stno(FILE *out, const SM_Instr *ins, int pc,
 }
 
 /* -----------------------------------------------------------------------
- * EM-6 helper: lea rdi, [rip + .Lstr_N] + PLT call (const char* arg).
- * String must have been interned in the global StrTable by strtab_collect.
- * ----------------------------------------------------------------------- */
-static int emit_pat_call_str(FILE *out, const char *fn_plt,
-                             const char *ptr_str, const char *annotation)
-{
-    char lbl[32], act[80], call[64];
-    strtab_label(lbl, sizeof(lbl), ptr_str ? ptr_str : "");
-    snprintf(act, sizeof(act), "lea     rdi, [rip + %s]", lbl);
-    if (sm_line(out, "", act, annotation) < 0) return -1;
-    snprintf(call, sizeof(call), "call    %s@PLT", fn_plt);
-    return sm_line(out, "", call, "");
-}
-
-/* EM-6 helper: lea rdi + mov esi + PLT call (const char*, int). */
-static int emit_pat_call_str_int(FILE *out, const char *fn_plt,
-                                 const char *ptr_str, int ival,
-                                 const char *annotation)
-{
-    char lbl[32], act[80], call[64];
-    strtab_label(lbl, sizeof(lbl), ptr_str ? ptr_str : "");
-    snprintf(act, sizeof(act), "lea     rdi, [rip + %s]", lbl);
-    if (sm_line(out, "", act, annotation) < 0) return -1;
-    snprintf(act, sizeof(act), "mov     esi, %d", ival);
-    if (sm_line(out, "", act, "") < 0) return -1;
-    snprintf(call, sizeof(call), "call    %s@PLT", fn_plt);
-    return sm_line(out, "", call, "");
-}
-
-/* EM-6 helper: bare PLT call (nullary pat constructors / vstack-arg ops). */
-static int emit_pat_call_0(FILE *out, const char *fn_plt, const char *annot)
-{
-    char call[64];
-    snprintf(call, sizeof(call), "call    %s@PLT", fn_plt);
-    return sm_line(out, "", call, annot);
-}
-
-/* -----------------------------------------------------------------------
- * BB box emitter (emit_bb_box) -- EM-6
- *
- * Each SM_PAT_* opcode emits a PLT call into libscrip_rt.so that builds
- * the runtime pat-stack (mirrors sm_interp.c SM_PAT_* dispatch).
- * SM_EXEC_STMT is in the main dispatch switch (not here).
- *
- * Architecture note (settled session #67): the four-port alpha/beta/
- * gamma/omega proc layout is for the JIT-run path.  Mode-4 emit builds
- * the pat-stack via sequential scrip_rt_pat_* calls then fires
- * scrip_rt_exec_stmt -- no per-box proc needed for EM-6.
+ * EM-7-revert (session #72, 2026-05-07): the EM-6 emit_pat_call_*
+ * helpers and emit_bb_box (the brokered Phase-3 dispatcher) are
+ * REMOVED.  Lon's correction: the brokered runtime descriptor-tree
+ * model — scrip_rt_pat_*@PLT building a runtime pat-stack, then
+ * scrip_rt_exec_stmt → exec_stmt → bb_broker — was the wrong
+ * architecture for emitted code.  See GOAL-MODE4-EMIT.md "Design
+ * Discoveries" section for the corrected five-phase model.  EM-7a/b/c
+ * will reintroduce pattern-side emit using the proven dual-mode
+ * bb_emit infrastructure (bb_flat in EMIT_TEXT mode for invariant
+ * sub-trees baked into .text; bb_emit BINARY mode for variant nodes
+ * emitted into bb_pool RX memory at runtime; direct-call Phase-3 to
+ * the root chunk's α — no broker, no pat-stack, no descriptor tree).
+ * Until those rungs land, all SM_PAT_* opcodes fall through to
+ * emit_sm_unhandled in the dispatch switch.
  * ----------------------------------------------------------------------- */
 
-static int emit_bb_box(FILE *out, const SM_Instr *ins, int pc)
-{
-    (void)pc;
-    char annot[64];
-
-    switch (ins->op) {
-
-    /* ── Literal-arg primitives ──────────────────────────────────── */
-    case SM_PAT_LIT: {
-        const char *s = ins->a[0].s ? ins->a[0].s : "";
-        snprintf(annot, sizeof(annot), "# PAT_LIT str=\"%.30s\"", s);
-        return emit_pat_call_str(out, "scrip_rt_pat_lit", s, annot);
-    }
-    case SM_PAT_REFNAME: {
-        const char *s = ins->a[0].s ? ins->a[0].s : "";
-        snprintf(annot, sizeof(annot), "# PAT_REFNAME var=%s", s);
-        return emit_pat_call_str(out, "scrip_rt_pat_refname", s, annot);
-    }
-
-    /* ── Charset / integer-from-vstack primitives ───────────────── */
-    case SM_PAT_SPAN:    return emit_pat_call_0(out, "scrip_rt_pat_span",    "# PAT_SPAN");
-    case SM_PAT_BREAK:   return emit_pat_call_0(out, "scrip_rt_pat_break",   "# PAT_BREAK");
-    case SM_PAT_ANY:     return emit_pat_call_0(out, "scrip_rt_pat_any",     "# PAT_ANY");
-    case SM_PAT_NOTANY:  return emit_pat_call_0(out, "scrip_rt_pat_notany",  "# PAT_NOTANY");
-    case SM_PAT_LEN:     return emit_pat_call_0(out, "scrip_rt_pat_len",     "# PAT_LEN");
-    case SM_PAT_POS:     return emit_pat_call_0(out, "scrip_rt_pat_pos",     "# PAT_POS");
-    case SM_PAT_RPOS:    return emit_pat_call_0(out, "scrip_rt_pat_rpos",    "# PAT_RPOS");
-    case SM_PAT_TAB:     return emit_pat_call_0(out, "scrip_rt_pat_tab",     "# PAT_TAB");
-    case SM_PAT_RTAB:    return emit_pat_call_0(out, "scrip_rt_pat_rtab",    "# PAT_RTAB");
-
-    /* ── Nullary constructors ────────────────────────────────────── */
-    case SM_PAT_ARB:     return emit_pat_call_0(out, "scrip_rt_pat_arb",     "# PAT_ARB");
-    case SM_PAT_REM:     return emit_pat_call_0(out, "scrip_rt_pat_rem",     "# PAT_REM");
-    case SM_PAT_FENCE:   return emit_pat_call_0(out, "scrip_rt_pat_fence",   "# PAT_FENCE");
-    case SM_PAT_FAIL:    return emit_pat_call_0(out, "scrip_rt_pat_fail",    "# PAT_FAIL");
-    case SM_PAT_ABORT:   return emit_pat_call_0(out, "scrip_rt_pat_abort",   "# PAT_ABORT");
-    case SM_PAT_SUCCEED: return emit_pat_call_0(out, "scrip_rt_pat_succeed", "# PAT_SUCCEED");
-    case SM_PAT_BAL:     return emit_pat_call_0(out, "scrip_rt_pat_bal",     "# PAT_BAL");
-    case SM_PAT_EPS:     return emit_pat_call_0(out, "scrip_rt_pat_eps",     "# PAT_EPS");
-
-    /* ── Pat-stack combinators ───────────────────────────────────── */
-    case SM_PAT_ARBNO:   return emit_pat_call_0(out, "scrip_rt_pat_arbno",   "# PAT_ARBNO");
-    case SM_PAT_FENCE1:  return emit_pat_call_0(out, "scrip_rt_pat_fence1",  "# PAT_FENCE1");
-    case SM_PAT_CAT:     return emit_pat_call_0(out, "scrip_rt_pat_cat",     "# PAT_CAT");
-    case SM_PAT_ALT:     return emit_pat_call_0(out, "scrip_rt_pat_alt",     "# PAT_ALT");
-
-    /* ── Deref / boxval ─────────────────────────────────────────── */
-    case SM_PAT_DEREF:   return emit_pat_call_0(out, "scrip_rt_pat_deref",   "# PAT_DEREF");
-    case SM_PAT_BOXVAL:  return emit_pat_call_0(out, "scrip_rt_pat_boxval",  "# PAT_BOXVAL");
-
-    /* ── Capture ─────────────────────────────────────────────────── */
-    case SM_PAT_CAPTURE: {
-        const char *vname = ins->a[0].s ? ins->a[0].s : "";
-        int kind = (int)ins->a[1].i;
-        snprintf(annot, sizeof(annot), "# PAT_CAPTURE %s kind=%d", vname, kind);
-        return emit_pat_call_str_int(out, "scrip_rt_pat_capture",
-                                     vname, kind, annot);
-    }
-
-    default: {
-        /* SM_PAT_CAPTURE_FN, SM_PAT_USERCALL, etc. -- unhandled in EM-6. */
-        char act[80];
-        snprintf(act, sizeof(act), "mov     edi, %d", (int)ins->op);
-        if (sm_line(out, "", act, "# UNHANDLED SM_PAT_* (not baked EM-6)") < 0)
-            return -1;
-        return sm_line(out, "", "call    scrip_rt_unhandled_op@PLT", "");
-    }
-    }
-}
-
 /* -----------------------------------------------------------------------
- * EM-7 emitters: SM_CALL, SM_CONCAT, SM_PUSH_NULL, SM_COERCE_NUM,
- *                SM_RETURN_S/F, SM_FRETURN[_S/_F], SM_NRETURN[_S/_F],
- *                SM_PAT_CAPTURE_FN_ARGS, SM_PAT_USERCALL_ARGS.
+ * EM-7-pre keepers: SM_CALL, SM_CONCAT, SM_PUSH_NULL, SM_COERCE_NUM,
+ *                   SM_RETURN_S/F, SM_FRETURN[_S/_F], SM_NRETURN[_S/_F].
+ * These are Phase 1/4/5 concerns, orthogonal to BB / pattern-matching.
  * ----------------------------------------------------------------------- */
 
 /* SM_CONCAT: pop right then left; push CONCAT result.  All in libscrip_rt. */
@@ -948,47 +851,12 @@ static int emit_sm_return_variant(FILE *out, sm_opcode_t op, int pc)
     return 0;
 }
 
-/* SM_PAT_CAPTURE_FN_ARGS:  . *fn(args) / $ *fn(args)  — pops nargs+child.
- *   a[0].s = fname; a[1].i = is_imm; a[2].i = nargs.  */
-static int emit_sm_pat_capture_fn_args(FILE *out, const SM_Instr *ins, int pc)
-{
-    (void)pc;
-    const char *fname  = ins->a[0].s ? ins->a[0].s : "";
-    int         is_imm = (int)ins->a[1].i;
-    int         nargs  = (int)ins->a[2].i;
-    char lbl[32], act[96], annot[80];
-    strtab_label(lbl, sizeof(lbl), fname);
-    snprintf(act,   sizeof(act),   "lea     rdi, [rip + %s]", lbl);
-    snprintf(annot, sizeof(annot), "# fname=\"%s\"", fname);
-    if (sm_line(out, "", act, annot) < 0) return -1;
-    snprintf(act,   sizeof(act),   "mov     esi, %d", is_imm);
-    snprintf(annot, sizeof(annot), "# is_imm=%d", is_imm);
-    if (sm_line(out, "", act, annot) < 0) return -1;
-    snprintf(act,   sizeof(act),   "mov     edx, %d", nargs);
-    snprintf(annot, sizeof(annot), "# nargs=%d", nargs);
-    if (sm_line(out, "", act, annot) < 0) return -1;
-    return sm_line(out, "", "call    scrip_rt_pat_capture_fn_args@PLT",
-                   "# SM_PAT_CAPTURE_FN_ARGS");
-}
-
-/* SM_PAT_USERCALL_ARGS:  *fn(args) — pops nargs (no child).
- *   a[0].s = fname; a[1].i = nargs.  */
-static int emit_sm_pat_usercall_args(FILE *out, const SM_Instr *ins, int pc)
-{
-    (void)pc;
-    const char *fname = ins->a[0].s ? ins->a[0].s : "";
-    int         nargs = (int)ins->a[1].i;
-    char lbl[32], act[96], annot[80];
-    strtab_label(lbl, sizeof(lbl), fname);
-    snprintf(act,   sizeof(act),   "lea     rdi, [rip + %s]", lbl);
-    snprintf(annot, sizeof(annot), "# fname=\"%s\"", fname);
-    if (sm_line(out, "", act, annot) < 0) return -1;
-    snprintf(act,   sizeof(act),   "mov     esi, %d", nargs);
-    snprintf(annot, sizeof(annot), "# nargs=%d", nargs);
-    if (sm_line(out, "", act, annot) < 0) return -1;
-    return sm_line(out, "", "call    scrip_rt_pat_usercall_args@PLT",
-                   "# SM_PAT_USERCALL_ARGS");
-}
+/* SM_PAT_CAPTURE_FN_ARGS / SM_PAT_USERCALL_ARGS emitters were removed
+ * in EM-7-revert (session #72) along with the rest of the brokered
+ * Phase-3 path.  See the EM-7-revert banner above emit_sm_concat for
+ * rationale.  These opcodes fall through to emit_sm_unhandled until
+ * EM-7c reintroduces pattern-side emit using the corrected
+ * bb_flat / bb_emit infrastructure. */
 
 /* -----------------------------------------------------------------------
  * Unhandled opcode trap
@@ -1079,8 +947,8 @@ int sm_codegen_x64_emit(SM_Program *prog, FILE *out, const char *src_path)
             case SM_CALL_CHUNK:   rc = emit_sm_call_chunk(out, ins, pc); break;
             case SM_RETURN:       rc = emit_sm_return(out, pc);          break;
 
-            /* EM-7: SM_CALL (general) + SM_CONCAT + SM_PUSH_NULL + SM_COERCE_NUM
-             * + conditional return variants + SM_PAT_*_ARGS. */
+            /* EM-7-pre keepers: SM_CALL (general) + SM_CONCAT + SM_PUSH_NULL +
+             * SM_COERCE_NUM + conditional return variants. */
             case SM_CALL:         rc = emit_sm_call(out, ins, pc);       break;
             case SM_CONCAT:       rc = emit_sm_concat(out, pc);          break;
             case SM_PUSH_NULL:    rc = emit_sm_push_null(out, pc);       break;
@@ -1093,67 +961,27 @@ int sm_codegen_x64_emit(SM_Program *prog, FILE *out, const char *src_path)
             case SM_FRETURN_F:
             case SM_NRETURN_S:
             case SM_NRETURN_F:    rc = emit_sm_return_variant(out, ins->op, pc); break;
-            case SM_PAT_CAPTURE_FN_ARGS:
-                                  rc = emit_sm_pat_capture_fn_args(out, ins, pc); break;
-            case SM_PAT_USERCALL_ARGS:
-                                  rc = emit_sm_pat_usercall_args(out, ins, pc);   break;
 
             /* SM_STNO -- statement boundary; emits major page break w/ source. */
             case SM_STNO:         rc = emit_sm_stno(out, ins, pc,
                                                     sl_loaded ? &sl : NULL); break;
 
-            /* EM-6: SM_PAT_* opcodes — all route through emit_bb_box()
-             * which dispatches per-opcode to scrip_rt_pat_*@PLT.
-             * SM_EXEC_STMT fires scrip_rt_exec_stmt with subj_name + has_repl. */
-            case SM_PAT_LIT:
-            case SM_PAT_ANY:
-            case SM_PAT_NOTANY:
-            case SM_PAT_SPAN:
-            case SM_PAT_BREAK:
-            case SM_PAT_LEN:
-            case SM_PAT_POS:
-            case SM_PAT_RPOS:
-            case SM_PAT_TAB:
-            case SM_PAT_RTAB:
-            case SM_PAT_ARB:
-            case SM_PAT_ARBNO:
-            case SM_PAT_ALT:
-            case SM_PAT_CAT:
-            case SM_PAT_EPS:
-            case SM_PAT_REM:
-            case SM_PAT_BAL:
-            case SM_PAT_FENCE:
-            case SM_PAT_FENCE1:
-            case SM_PAT_ABORT:
-            case SM_PAT_FAIL:
-            case SM_PAT_SUCCEED:
-            case SM_PAT_CAPTURE:
-            case SM_PAT_DEREF:
-            case SM_PAT_REFNAME:
-            case SM_PAT_BOXVAL:
-                                  rc = emit_bb_box(out, ins, pc);         break;
-
-            case SM_EXEC_STMT: {
-                /* scrip_rt_exec_stmt(const char *subj_name, int has_repl)
-                 * a[0].s = subject variable name for write-back (NULL = anonymous)
-                 * a[1].i = has_repl flag */
-                const char *sname    = ins->a[0].s;
-                int         has_repl = (int)ins->a[1].i;
-                char lbl[32], act[80], annot[64];
-                if (sname) {
-                    strtab_label(lbl, sizeof(lbl), sname);
-                    snprintf(act, sizeof(act), "lea     rdi, [rip + %s]", lbl);
-                    snprintf(annot, sizeof(annot), "# subj=%s", sname);
-                } else {
-                    snprintf(act, sizeof(act), "xor     edi, edi");
-                    snprintf(annot, sizeof(annot), "# subj=NULL (anonymous)");
-                }
-                if (sm_line(out, "", act, annot) < 0) { rc = -1; break; }
-                snprintf(act, sizeof(act), "mov     esi, %d", has_repl);
-                if (sm_line(out, "", act, has_repl ? "# has_repl=1" : "# has_repl=0") < 0) { rc = -1; break; }
-                rc = sm_line(out, "", "call    scrip_rt_exec_stmt@PLT", "# SM_EXEC_STMT");
-                break;
-            }
+            /* EM-7-revert (session #72, 2026-05-07): the brokered Phase-3 path
+             * is REMOVED from the emitted-code path.  Lon's correction:
+             * scrip_rt_pat_*@PLT building a runtime descriptor tree, then
+             * handing it to bb_broker via scrip_rt_exec_stmt → exec_stmt →
+             * bb_broker, was the WRONG architecture.  The corrected model is:
+             * invariant pattern sub-trees baked as flat .text chunks (via
+             * bb_flat in EMIT_TEXT mode), variant nodes emitted into bb_pool
+             * RX memory at runtime via bb_emit BINARY mode, and Phase-3 as a
+             * direct call to the root chunk's α — no broker, no pat-stack,
+             * no descriptor tree.  See GOAL-MODE4-EMIT.md "Design Discoveries"
+             * section.  Until EM-7a/b/c land that wiring, all SM_PAT_*,
+             * SM_EXEC_STMT, SM_PAT_CAPTURE_FN_ARGS, SM_PAT_USERCALL_ARGS
+             * fall through to emit_sm_unhandled (default).  Programs that
+             * use patterns will emit UNHANDLED_OP markers and assemble
+             * cleanly but will not run end-to-end on real frontends; the
+             * EM gate is reduced from PASS=10 to PASS=9 (test 10 retired). */
 
             default:              rc = emit_sm_unhandled(out, ins, pc);  break;
         }
