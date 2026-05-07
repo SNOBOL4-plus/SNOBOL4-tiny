@@ -288,12 +288,13 @@ grep -q "^PASS=18 FAIL=0" "$TMP/em7b.err" || {
 # externally-visible α/β/γ/ω globals.
 gcc -c "$TMP/em7b.s" -o "$TMP/em7b.o" 2> "$TMP/em7b.as_err" || {
     echo "FAIL EM-7b .s does not assemble"; cat "$TMP/em7b.as_err"; exit 1; }
-SYMS=$(objdump -t "$TMP/em7b.o" 2>/dev/null | awk '/_pat_inv_42_0_/{print $NF}' | sort)
+SYMS=$(objdump -t "$TMP/em7b.o" 2>/dev/null | awk '/_pat_inv_42_0_/{print $NF}' | grep -v '_alpha_body$' | sort)
 EXPECT=$(printf "_pat_inv_42_0_alpha\n_pat_inv_42_0_beta\n_pat_inv_42_0_gamma\n_pat_inv_42_0_omega")
 [ "$SYMS" = "$EXPECT" ] || {
     echo "FAIL EM-7b external labels missing or extra"; echo "got: $SYMS"; echo "expect: $EXPECT"; exit 1; }
-# Verify all four are GLOBAL (not local) — `g` flag in objdump column 2
-GLOBAL_COUNT=$(objdump -t "$TMP/em7b.o" 2>/dev/null | awk '/_pat_inv_42_0_/ && $2 ~ /g/ {n++} END{print n+0}')
+# Verify all four entry labels are GLOBAL (not local) — `g` flag in objdump column 2.
+# (`_alpha_body` is internal, may be local; we filter it before counting.)
+GLOBAL_COUNT=$(objdump -t "$TMP/em7b.o" 2>/dev/null | awk '/_pat_inv_42_0_/ && !/_alpha_body/ && $2 ~ /g/ {n++} END{print n+0}')
 [ "$GLOBAL_COUNT" = "4" ] || {
     echo "FAIL EM-7b only $GLOBAL_COUNT/4 entry labels are global"; exit 1; }
 echo "  PASS EM-7b bb_flat TEXT mode (PASS=16 unit + .s assembles + 4/4 external α/β/γ/ω)"

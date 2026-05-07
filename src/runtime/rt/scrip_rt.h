@@ -141,19 +141,63 @@ void scrip_rt_match_blob(void *blob_alpha,
                          const char *subj_name,
                          int has_repl);
 
+/* ── EM-7c-variant surface — pattern-construction ABI (session #80) ──── */
+
+/* The mode-4 emitter emits one call per SM_PAT_* opcode for variant
+ * patterns (those with at least one runtime-dependent leaf — *VAR,
+ * BREAK(VAR), LEN(VAR), etc.).  Each call mirrors the corresponding
+ * sm_interp.c case: builds a PATND_t fragment, pushes it on the
+ * libscrip_rt pat-stack.  SM_PAT_BOXVAL bridges pat-stack → vstack.
+ * SM_EXEC_STMT for variant patterns calls scrip_rt_match_variant,
+ * which dispatches to exec_stmt (which in BB_MODE_LIVE — set by
+ * scrip_rt_init — routes Phase-3 through bb_build_flat/binary +
+ * direct bb_box_fn call, NOT through bb_broker).
+ *
+ * Distinction from the EM-7-pre ABI that was reverted in session #72:
+ * the runtime mechanics are similar (a pat-stack of DESCR_t fragments)
+ * but the Phase-3 route is correct.  Future rung
+ * EM-7c-variant-bb-pool-emit will replace this entire ABI with
+ * per-variant-node bb_pool emit driven by an emit-time partition,
+ * matching the ideal architecture in GOAL-MODE4-EMIT.md.
+ */
+
+void scrip_rt_pat_lit     (const char *s);
+void scrip_rt_pat_refname (const char *name);
+void scrip_rt_pat_span    (void);
+void scrip_rt_pat_break   (void);
+void scrip_rt_pat_any     (void);
+void scrip_rt_pat_notany  (void);
+void scrip_rt_pat_len     (void);
+void scrip_rt_pat_pos     (void);
+void scrip_rt_pat_rpos    (void);
+void scrip_rt_pat_tab     (void);
+void scrip_rt_pat_rtab    (void);
+void scrip_rt_pat_arb     (void);
+void scrip_rt_pat_arbno   (void);
+void scrip_rt_pat_rem     (void);
+void scrip_rt_pat_fence   (void);
+void scrip_rt_pat_fence1  (void);
+void scrip_rt_pat_fail    (void);
+void scrip_rt_pat_abort   (void);
+void scrip_rt_pat_succeed (void);
+void scrip_rt_pat_bal     (void);
+void scrip_rt_pat_eps     (void);
+void scrip_rt_pat_cat     (void);
+void scrip_rt_pat_alt     (void);
+void scrip_rt_pat_deref   (void);
+void scrip_rt_pat_capture (const char *varname, int kind);
+void scrip_rt_pat_boxval  (void);
+
+void scrip_rt_match_variant(const char *subj_name, int has_repl);
+
 /* ── EM-6 surface — REMOVED in EM-7-revert (session #72) ─────────────────
  *
- * The brokered Phase-3 pattern-builder ABI (scrip_rt_pat_lit,
- * scrip_rt_pat_span, ..., scrip_rt_pat_capture, scrip_rt_pat_boxval) and
- * the broker entry scrip_rt_exec_stmt have been removed from the
- * emitted-code path.  Lon's correction: this descriptor-tree-then-
- * broker model was the wrong architecture for mode-4.  See
- * GOAL-MODE4-EMIT.md "Design Discoveries" section for the corrected
- * five-phase model.  EM-7a/b/c will reintroduce pattern emit using the
- * proven dual-mode bb_emit infrastructure (bb_flat in EMIT_TEXT mode for
- * invariant sub-trees, bb_emit BINARY mode for variant nodes), with
- * Phase-3 as a direct call to the root chunk's α — no broker, no
- * pat-stack, no runtime descriptor tree.
+ * The brokered Phase-3 pattern-builder ABI was here.  EM-7c-variant
+ * (session #80) reintroduces a pattern-construction ABI above with
+ * the corrected Phase-3 routing (BB_MODE_LIVE / bb_build_*, not
+ * bb_broker).  See GOAL-MODE4-EMIT.md "Design Discoveries" for why
+ * the broker route was wrong and EM-7c-variant block above for what
+ * still needs to land in EM-7c-variant-bb-pool-emit.
  * ──────────────────────────────────────────────────────────────────────── */
 
 /* ── EM-7-pre keepers ──────────────────────────────────────────────────── */

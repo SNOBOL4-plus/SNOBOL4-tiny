@@ -1531,6 +1531,173 @@ static int emit_sm_pat_baked(FILE *out, const SM_Instr *ins, int pc, int win_idx
 }
 
 /* -----------------------------------------------------------------------
+ * EM-7c-variant (session #80, 2026-05-07) — pattern-construction emitters
+ *
+ * Each SM_PAT_* opcode that's not absorbed into an invariant blob (i.e.,
+ * the pattern is variant, or there's no SM_EXEC_STMT in this region —
+ * pattern-as-rvalue case like `WPAT = BREAK(WORD) SPAN(WORD)`) is emitted
+ * as a thin call to the matching scrip_rt_pat_*() function.  The runtime
+ * builds a PATND_t fragment on its pat-stack; SM_PAT_BOXVAL bridges to
+ * the value stack as DT_P; SM_EXEC_STMT for variant patterns calls
+ * scrip_rt_match_variant which delegates to exec_stmt.
+ *
+ * This is path β from the EM-7c-variant rung's design space (see
+ * GOAL-MODE4-EMIT.md): runtime PATND_t reconstruction + bb_build_*-driven
+ * Phase-3, distinct from EM-7-pre's reverted bb_broker route by virtue
+ * of scrip_rt_init setting g_bb_mode = BB_MODE_LIVE.  The architectural
+ * ideal (path α — per-variant-node bb_pool emit with linker-resolved
+ * invariant child labels) is filed as a follow-up rung
+ * EM-7c-variant-bb-pool-emit.
+ * ----------------------------------------------------------------------- */
+
+/* Helper: emit a no-arg PLT call that pushes a constant pattern node. */
+static int emit_pat_call_0(FILE *out, const char *fname, const char *anno)
+{
+    char act[160];
+    snprintf(act, sizeof(act), "call    %s@PLT", fname);
+    return sm_line(out, "", act, anno ? anno : "");
+}
+
+/* Helper: emit a one-string-arg PLT call.  arg goes to rdi as
+ * `lea rdi, [rip + <strtab_label>]` (or `xor edi, edi` for empty/null). */
+static int emit_pat_call_str(FILE *out, const char *fname, const char *arg,
+                              const char *anno)
+{
+    char lbl[64], act[160], anno_buf[128];
+    if (arg && *arg) {
+        strtab_label(lbl, sizeof(lbl), arg);
+        snprintf(act, sizeof(act), "lea     rdi, [rip + %s]", lbl);
+        snprintf(anno_buf, sizeof(anno_buf), "# arg=\"%.40s\"%s",
+                 arg, (strlen(arg) > 40) ? "..." : "");
+        if (sm_line(out, "", act, anno_buf) < 0) return -1;
+    } else {
+        if (sm_line(out, "", "xor     edi, edi", "# arg=NULL") < 0) return -1;
+    }
+    snprintf(act, sizeof(act), "call    %s@PLT", fname);
+    return sm_line(out, "", act, anno ? anno : "");
+}
+
+/* Helper: emit a string + int args call (for SM_PAT_CAPTURE).
+ * arg0 (rdi) = varname, arg1 (esi) = kind. */
+static int emit_pat_call_str_int(FILE *out, const char *fname,
+                                  const char *arg0, int arg1,
+                                  const char *anno)
+{
+    char lbl[64], act[160], anno_buf[128];
+    if (arg0 && *arg0) {
+        strtab_label(lbl, sizeof(lbl), arg0);
+        snprintf(act, sizeof(act), "lea     rdi, [rip + %s]", lbl);
+        snprintf(anno_buf, sizeof(anno_buf), "# var=%s", arg0);
+        if (sm_line(out, "", act, anno_buf) < 0) return -1;
+    } else {
+        if (sm_line(out, "", "xor     edi, edi", "# var=NULL") < 0) return -1;
+    }
+    snprintf(act, sizeof(act), "mov     esi, %d", arg1);
+    snprintf(anno_buf, sizeof(anno_buf), "# kind=%d", arg1);
+    if (sm_line(out, "", act, anno_buf) < 0) return -1;
+    snprintf(act, sizeof(act), "call    %s@PLT", fname);
+    return sm_line(out, "", act, anno ? anno : "");
+}
+
+/* SM_PAT_LIT: a[0].s = literal string.  Calls scrip_rt_pat_lit(s). */
+static int emit_sm_pat_lit(FILE *out, const SM_Instr *ins, int pc)
+{
+    (void)pc;
+    return emit_pat_call_str(out, "scrip_rt_pat_lit",
+                              ins->a[0].s, "# SM_PAT_LIT");
+}
+
+/* SM_PAT_REFNAME: a[0].s = var name.  Calls scrip_rt_pat_refname(name). */
+static int emit_sm_pat_refname(FILE *out, const SM_Instr *ins, int pc)
+{
+    (void)pc;
+    return emit_pat_call_str(out, "scrip_rt_pat_refname",
+                              ins->a[0].s, "# SM_PAT_REFNAME");
+}
+
+/* SM_PAT_CAPTURE: a[0].s = varname, a[1].i = kind (0/1/2). */
+static int emit_sm_pat_capture(FILE *out, const SM_Instr *ins, int pc)
+{
+    (void)pc;
+    return emit_pat_call_str_int(out, "scrip_rt_pat_capture",
+                                  ins->a[0].s, (int)ins->a[1].i,
+                                  "# SM_PAT_CAPTURE");
+}
+
+/* SM_PAT_<no-arg-no-pop>: ARB / REM / FENCE / FAIL / ABORT / SUCCEED /
+ * BAL / EPS — push a pre-built pattern node on the pat-stack.
+ * SM_PAT_<value-stack-arg>: SPAN / BREAK / ANY / NOTANY (charset) and
+ * LEN / POS / RPOS / TAB / RTAB (int) — runtime pops vstack itself.
+ * SM_PAT_<pat-stack-arg>: ARBNO / FENCE1 / CAT / ALT / DEREF / BOXVAL.
+ * All of these dispatch to a no-arg scrip_rt_pat_*() entry. */
+static int emit_sm_pat_noarg(FILE *out, sm_opcode_t op, int pc)
+{
+    (void)pc;
+    const char *fname;
+    const char *anno;
+    switch (op) {
+    case SM_PAT_SPAN:    fname = "scrip_rt_pat_span";    anno = "# SM_PAT_SPAN";    break;
+    case SM_PAT_BREAK:   fname = "scrip_rt_pat_break";   anno = "# SM_PAT_BREAK";   break;
+    case SM_PAT_ANY:     fname = "scrip_rt_pat_any";     anno = "# SM_PAT_ANY";     break;
+    case SM_PAT_NOTANY:  fname = "scrip_rt_pat_notany";  anno = "# SM_PAT_NOTANY";  break;
+    case SM_PAT_LEN:     fname = "scrip_rt_pat_len";     anno = "# SM_PAT_LEN";     break;
+    case SM_PAT_POS:     fname = "scrip_rt_pat_pos";     anno = "# SM_PAT_POS";     break;
+    case SM_PAT_RPOS:    fname = "scrip_rt_pat_rpos";    anno = "# SM_PAT_RPOS";    break;
+    case SM_PAT_TAB:     fname = "scrip_rt_pat_tab";     anno = "# SM_PAT_TAB";     break;
+    case SM_PAT_RTAB:    fname = "scrip_rt_pat_rtab";    anno = "# SM_PAT_RTAB";    break;
+    case SM_PAT_ARB:     fname = "scrip_rt_pat_arb";     anno = "# SM_PAT_ARB";     break;
+    case SM_PAT_ARBNO:   fname = "scrip_rt_pat_arbno";   anno = "# SM_PAT_ARBNO";   break;
+    case SM_PAT_REM:     fname = "scrip_rt_pat_rem";     anno = "# SM_PAT_REM";     break;
+    case SM_PAT_FENCE:   fname = "scrip_rt_pat_fence";   anno = "# SM_PAT_FENCE";   break;
+    case SM_PAT_FENCE1:  fname = "scrip_rt_pat_fence1";  anno = "# SM_PAT_FENCE1";  break;
+    case SM_PAT_FAIL:    fname = "scrip_rt_pat_fail";    anno = "# SM_PAT_FAIL";    break;
+    case SM_PAT_ABORT:   fname = "scrip_rt_pat_abort";   anno = "# SM_PAT_ABORT";   break;
+    case SM_PAT_SUCCEED: fname = "scrip_rt_pat_succeed"; anno = "# SM_PAT_SUCCEED"; break;
+    case SM_PAT_BAL:     fname = "scrip_rt_pat_bal";     anno = "# SM_PAT_BAL";     break;
+    case SM_PAT_EPS:     fname = "scrip_rt_pat_eps";     anno = "# SM_PAT_EPS";     break;
+    case SM_PAT_CAT:     fname = "scrip_rt_pat_cat";     anno = "# SM_PAT_CAT";     break;
+    case SM_PAT_ALT:     fname = "scrip_rt_pat_alt";     anno = "# SM_PAT_ALT";     break;
+    case SM_PAT_DEREF:   fname = "scrip_rt_pat_deref";   anno = "# SM_PAT_DEREF";   break;
+    case SM_PAT_BOXVAL:  fname = "scrip_rt_pat_boxval";  anno = "# SM_PAT_BOXVAL";  break;
+    default:
+        return -1;  /* should not reach */
+    }
+    return emit_pat_call_0(out, fname, anno);
+}
+
+/* SM_EXEC_STMT for a variant pattern: emit a scrip_rt_match_variant call.
+ * Mirrors emit_sm_exec_stmt_blob's parameter shape (subj_name in rdi,
+ * has_repl in esi). */
+static int emit_sm_exec_stmt_variant(FILE *out, const SM_Instr *ins, int pc)
+{
+    (void)pc;
+    const char *sname = ins->a[0].s;
+    int has_repl      = (int)ins->a[1].i;
+
+    /* Arg 0 (rdi): subj_name as RIP-relative .Lstr_N or NULL. */
+    if (sname && *sname) {
+        char lbl[64];
+        strtab_label(lbl, sizeof(lbl), sname);
+        char act[160], anno[80];
+        snprintf(act, sizeof(act), "lea     rdi, [rip + %s]", lbl);
+        snprintf(anno, sizeof(anno), "# subj_name=%s", sname);
+        if (sm_line(out, "", act, anno) < 0) return -1;
+    } else {
+        if (sm_line(out, "", "xor     edi, edi", "# subj_name=NULL") < 0) return -1;
+    }
+
+    /* Arg 1 (esi): has_repl flag. */
+    char act2[80], ann2[80];
+    snprintf(act2, sizeof(act2), "mov     esi, %d", has_repl);
+    snprintf(ann2, sizeof(ann2), "# has_repl=%d", has_repl);
+    if (sm_line(out, "", act2, ann2) < 0) return -1;
+
+    return sm_line(out, "", "call    scrip_rt_match_variant@PLT",
+                    "# EM-7c-variant: build-then-exec_stmt");
+}
+
+
+/* -----------------------------------------------------------------------
  * Unhandled opcode trap
  * ----------------------------------------------------------------------- */
 
@@ -1683,22 +1850,53 @@ int sm_codegen_x64_emit(SM_Program *prog, FILE *out, const char *src_path)
             case SM_STNO:         rc = emit_sm_stno(out, ins, pc,
                                                     sl_loaded ? &sl : NULL); break;
 
-            /* EM-7-revert (session #72, 2026-05-07): the brokered Phase-3 path
-             * is REMOVED from the emitted-code path.  Lon's correction:
-             * scrip_rt_pat_*@PLT building a runtime descriptor tree, then
-             * handing it to bb_broker via scrip_rt_exec_stmt → exec_stmt →
-             * bb_broker, was the WRONG architecture.  The corrected model is:
-             * invariant pattern sub-trees baked as flat .text chunks (via
-             * bb_flat in EMIT_TEXT mode), variant nodes emitted into bb_pool
-             * RX memory at runtime via bb_emit BINARY mode, and Phase-3 as a
-             * direct call to the root chunk's α — no broker, no pat-stack,
-             * no descriptor tree.  See GOAL-MODE4-EMIT.md "Design Discoveries"
-             * section.  Until EM-7a/b/c land that wiring, all SM_PAT_*,
-             * SM_EXEC_STMT, SM_PAT_CAPTURE_FN_ARGS, SM_PAT_USERCALL_ARGS
-             * fall through to emit_sm_unhandled (default).  Programs that
-             * use patterns will emit UNHANDLED_OP markers and assemble
-             * cleanly but will not run end-to-end on real frontends; the
-             * EM gate is reduced from PASS=10 to PASS=9 (test 10 retired). */
+            /* EM-7c-variant (session #80, 2026-05-07): pattern-construction
+             * opcodes.  Patterns inside an invariant Phase-2 window are
+             * absorbed into the .text-baked _pat_inv_<id>_* blob (handled
+             * by the pattern_window_at_pc hook above this switch).  Patterns
+             * outside any window — either variant (the runtime Phase-2
+             * window built a tree with at least one variant node) or pattern-
+             * as-rvalue (e.g., `WPAT = BREAK(WORD) SPAN(WORD)` builds a
+             * pattern but does not exec one) — are emitted as PLT calls to
+             * the libscrip_rt pat-construction ABI.
+             *
+             * NB: the brokered Phase-3 path that EM-7-revert tore out is
+             * NOT what this rung restores.  The architectural distinction
+             * is in scrip_rt_init's setting g_bb_mode = BB_MODE_LIVE so that
+             * exec_stmt's Phase-3 routes through bb_build_flat / bb_build_binary
+             * → direct bb_box_fn call, not through bb_broker.  See
+             * GOAL-MODE4-EMIT.md "Design Discoveries" section; the bb_pool-
+             * per-variant-node ideal is a follow-up rung. */
+            case SM_PAT_LIT:      rc = emit_sm_pat_lit(out, ins, pc);     break;
+            case SM_PAT_REFNAME:  rc = emit_sm_pat_refname(out, ins, pc); break;
+            case SM_PAT_CAPTURE:  rc = emit_sm_pat_capture(out, ins, pc); break;
+            case SM_PAT_SPAN:
+            case SM_PAT_BREAK:
+            case SM_PAT_ANY:
+            case SM_PAT_NOTANY:
+            case SM_PAT_LEN:
+            case SM_PAT_POS:
+            case SM_PAT_RPOS:
+            case SM_PAT_TAB:
+            case SM_PAT_RTAB:
+            case SM_PAT_ARB:
+            case SM_PAT_ARBNO:
+            case SM_PAT_REM:
+            case SM_PAT_FENCE:
+            case SM_PAT_FENCE1:
+            case SM_PAT_FAIL:
+            case SM_PAT_ABORT:
+            case SM_PAT_SUCCEED:
+            case SM_PAT_BAL:
+            case SM_PAT_EPS:
+            case SM_PAT_CAT:
+            case SM_PAT_ALT:
+            case SM_PAT_DEREF:
+            case SM_PAT_BOXVAL:   rc = emit_sm_pat_noarg(out, ins->op, pc); break;
+
+            /* SM_EXEC_STMT for a variant pattern (invariant patterns are
+             * already handled above by the pattern-window hook → blob call). */
+            case SM_EXEC_STMT:    rc = emit_sm_exec_stmt_variant(out, ins, pc); break;
 
             default:              rc = emit_sm_unhandled(out, ins, pc);  break;
         }

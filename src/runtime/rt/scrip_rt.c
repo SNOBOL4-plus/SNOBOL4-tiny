@@ -43,6 +43,7 @@
 #include "../../runtime/x86/sil_macros.h"   /* EM-7: IS_NAMEPTR / IS_NAMEVAL / NAME_DEREF_PTR */
 #include "../../runtime/x86/bb_pool.h"
 #include "../../runtime/x86/bb_box.h"       /* EM-7c: bb_box_fn + exec_stmt_blob */
+#include "../../runtime/x86/bb_build.h"     /* EM-7c-variant: g_bb_mode + BB_MODE_LIVE */
 
 #include <stdint.h>
 #include <stdio.h>
@@ -106,9 +107,27 @@ extern DESCR_t (*g_user_call_hook)(const char *, DESCR_t *, int);
 static DESCR_t g_vstack[VSTACK_CAP];
 static int     g_vtop    = 0;
 
-/* g_pat_stack[] / g_pat_sp removed in EM-7-revert (session #72) — the
- * brokered runtime descriptor-tree state had no place in the corrected
- * five-phase mode-4 model. */
+/* EM-7c-variant (session #80, 2026-05-07): g_pat_stack[] reintroduced for
+ * the variant-pattern path.  The architecture distinction from EM-7-pre
+ * (session #71) is *not* the existence of a runtime pat-stack — that was
+ * always going to be needed for variant patterns whose tree is built at
+ * runtime (the alternative is a per-variant-node bb_pool emit walker, which
+ * is the destination architecture but a much larger rung).  The distinction
+ * is the *Phase-3 routing*: EM-7-pre routed through bb_broker (descriptor
+ * walker) by relying on the default g_bb_mode == BB_MODE_DRIVER; EM-7c-variant
+ * sets g_bb_mode = BB_MODE_LIVE in scrip_rt_init so exec_stmt routes through
+ * bb_build_flat / bb_build_binary and a direct call to the resulting bb_box_fn,
+ * matching the proven mode-3 pipeline that the goal file calls "mode-4's
+ * existence proof".
+ *
+ * Future rung (EM-7c-variant-bb-pool-emit, the architectural ideal): replace
+ * the runtime PATND_t build with per-variant-node bb_pool emit driven by an
+ * emit-time partition, so invariant subtrees of partly-variant patterns
+ * resolve via linker-baked _pat_inv_<pid>_<sid>_alpha labels rather than being
+ * rebuilt into bb_pool at runtime. */
+#define PATSTACK_CAP 256
+static DESCR_t g_pat_stack[PATSTACK_CAP];
+static int     g_pat_sp = 0;
 
 static int     g_halt_rc  = 0;
 static int     g_halt_set = 0;
@@ -136,11 +155,45 @@ static DESCR_t vstack_pop(void)
     return g_vstack[--g_vtop];
 }
 
-/* pat_push / pat_pop_internal removed in EM-7-revert (session #72) along
- * with the rest of the brokered Phase-3 path. */
+/* EM-7c-variant: pat-stack helpers — used by scrip_rt_pat_*() to assemble
+ * patterns at runtime from the SM_PAT_* opcode sequence emitted into the
+ * mode-4 binary.  See block comment on g_pat_stack[] for the architectural
+ * note. */
+static void pat_push(DESCR_t d)
+{
+    if (g_pat_sp >= PATSTACK_CAP) {
+        fprintf(stderr, "libscrip_rt: pat-stack overflow (cap=%d).\n", PATSTACK_CAP);
+        abort();
+    }
+    g_pat_stack[g_pat_sp++] = d;
+}
 
-/* vstack_pop_str / vstack_pop_int64 helpers were used only by the
- * EM-6 pattern-builder ABI, removed in EM-7-revert (session #72). */
+static DESCR_t pat_pop_internal(void)
+{
+    if (g_pat_sp <= 0) {
+        fprintf(stderr, "libscrip_rt: pat-stack underflow.\n");
+        abort();
+    }
+    return g_pat_stack[--g_pat_sp];
+}
+
+/* EM-7c-variant: vstack coerce helpers — pop TOS as string or int with
+ * the coercions the SM_PAT_*-takes-charset-or-int contract expects.
+ * Mirror sm_interp.c's pop-then-VARVAL_fn / pop-then-(arg.v==DT_I?...). */
+static const char *vstack_pop_str(void)
+{
+    DESCR_t d = vstack_pop();
+    if (d.v == DT_S) return d.s ? d.s : "";
+    char *s = VARVAL_fn(d);
+    return s ? s : "";
+}
+
+static int64_t vstack_pop_int64(void)
+{
+    DESCR_t d = vstack_pop();
+    if (d.v == DT_I) return d.i;
+    return to_int(d);
+}
 
 /*==============================================================================
  * EM-6 builtin shims — registered with register_fn so exec_stmt can
@@ -189,6 +242,15 @@ void scrip_rt_init(int argc, char **argv)
      * Mirrors the init sequence in scrip.c's SM-run mode block. */
     bb_pool_init();
     SNO_INIT_fn();
+
+    /* EM-7c-variant: set BB pattern mode to LIVE so exec_stmt's Phase-3
+     * routes through bb_build_flat / bb_build_binary -> direct bb_box_fn
+     * call, NOT through bb_broker.  This is the routing distinction that
+     * separates the corrected mode-4 architecture from EM-7-pre's reverted
+     * brokered model.  Mode-3 with --bb-live is described in
+     * GOAL-MODE4-EMIT.md as "mode-4's existence proof"; we want emitted
+     * binaries to take the same code path. */
+    g_bb_mode = BB_MODE_LIVE;
 
     register_fn("IDENT",  _rt_IDENT,  1, 2);
     register_fn("DIFFER", _rt_DIFFER, 1, 2);
@@ -379,18 +441,183 @@ void scrip_rt_match_blob(void *blob_alpha,
 }
 
 /*==============================================================================
- * EM-6 entries — REMOVED in EM-7-revert (session #72)
+ * EM-7c-variant entries — pattern-construction ABI (session #80, 2026-05-07)
  *
- * The full pattern-builder ABI (scrip_rt_pat_lit, scrip_rt_pat_span, ...,
- * scrip_rt_pat_capture, scrip_rt_pat_boxval) and the broker entry
- * scrip_rt_exec_stmt have been removed.  See the file-top comment block
- * for rationale.  The proven pattern-construction primitives in
- * snobol4_pattern.c (pat_lit, pat_span, pat_arb, pat_assign_*, ...) are
- * still linked into libscrip_rt.so and remain available — EM-7c will
- * call them from the corrected emit-time path (bb_flat in EMIT_TEXT
- * mode) and the runtime emitter (bb_emit BINARY mode) without the
- * descriptor-tree pat-stack intermediary.
+ * Reintroduces the SM_PAT_* runtime ABI that was deleted in EM-7-revert.
+ * The architectural distinction from EM-7-pre is *not* the existence of
+ * a runtime pat-stack — that's necessary for any path-β style variant
+ * pattern build at runtime — but the Phase-3 routing.  EM-7-pre relied
+ * on the default g_bb_mode = BB_MODE_DRIVER, routing exec_stmt through
+ * bb_broker (the descriptor walker).  This rung sets g_bb_mode =
+ * BB_MODE_LIVE in scrip_rt_init so exec_stmt routes through
+ * bb_build_flat / bb_build_binary -> direct bb_box_fn call, which is
+ * the proven mode-3 pipeline ("mode-4's existence proof" per
+ * GOAL-MODE4-EMIT.md).
+ *
+ * Each scrip_rt_pat_*() mirrors the corresponding case in sm_interp.c's
+ * SM_PAT_* dispatcher byte-for-byte.  Args come from the SM value stack
+ * (charsets, ints, vars) for kinds whose argument is computed; from the
+ * pat-stack (children of CAT/ALT/ARBNO/FENCE1/CAPTURE) for kinds whose
+ * argument is itself a pattern; from the function's parameters
+ * (literals, var names) for kinds whose argument is compile-time
+ * constant.  The result of each is pushed on the pat-stack.
+ *
+ * SM_PAT_BOXVAL bridges pat-stack -> value-stack; emitted as a single
+ * call to scrip_rt_pat_boxval.  Used wherever a pattern is the value
+ * of a value-stack expression (e.g., assignment to WPAT in wordcount).
+ *
+ * SM_EXEC_STMT for variant patterns calls scrip_rt_match_variant, which
+ * pops [subj][repl_or_zero] from value-stack, pops the pattern from
+ * pat-stack, and calls exec_stmt with all five.  exec_stmt in
+ * BB_MODE_LIVE then handles Phases 3-5 with bb_build_flat/binary.
  *============================================================================*/
+
+void scrip_rt_pat_lit(const char *s)
+{
+    pat_push(pat_lit(s ? s : ""));
+}
+
+void scrip_rt_pat_refname(const char *name)
+{
+    pat_push(pat_ref(name ? name : ""));
+}
+
+void scrip_rt_pat_span(void)
+{
+    const char *cs = vstack_pop_str();
+    pat_push(pat_span(cs));
+}
+
+void scrip_rt_pat_break(void)
+{
+    const char *cs = vstack_pop_str();
+    pat_push(pat_break_(cs));
+}
+
+void scrip_rt_pat_any(void)
+{
+    const char *cs = vstack_pop_str();
+    pat_push(pat_any_cs(cs));
+}
+
+void scrip_rt_pat_notany(void)
+{
+    const char *cs = vstack_pop_str();
+    pat_push(pat_notany(cs));
+}
+
+void scrip_rt_pat_len(void)   { pat_push(pat_len (vstack_pop_int64())); }
+void scrip_rt_pat_pos(void)   { pat_push(pat_pos (vstack_pop_int64())); }
+void scrip_rt_pat_rpos(void)  { pat_push(pat_rpos(vstack_pop_int64())); }
+void scrip_rt_pat_tab(void)   { pat_push(pat_tab (vstack_pop_int64())); }
+void scrip_rt_pat_rtab(void)  { pat_push(pat_rtab(vstack_pop_int64())); }
+
+void scrip_rt_pat_arb(void)     { pat_push(pat_arb());     }
+void scrip_rt_pat_rem(void)     { pat_push(pat_rem());     }
+void scrip_rt_pat_fence(void)   { pat_push(pat_fence());   }
+void scrip_rt_pat_fail(void)    { pat_push(pat_fail());    }
+void scrip_rt_pat_abort(void)   { pat_push(pat_abort());   }
+void scrip_rt_pat_succeed(void) { pat_push(pat_succeed()); }
+void scrip_rt_pat_bal(void)     { pat_push(pat_bal());     }
+void scrip_rt_pat_eps(void)     { pat_push(pat_epsilon()); }
+
+void scrip_rt_pat_arbno(void)
+{
+    DESCR_t inner = pat_pop_internal();
+    pat_push(pat_arbno(inner));
+}
+
+void scrip_rt_pat_fence1(void)
+{
+    DESCR_t child = pat_pop_internal();
+    pat_push(pat_fence_p(child));
+}
+
+void scrip_rt_pat_cat(void)
+{
+    DESCR_t right = pat_pop_internal();
+    DESCR_t left  = pat_pop_internal();
+    pat_push(pat_cat(left, right));
+}
+
+void scrip_rt_pat_alt(void)
+{
+    DESCR_t right = pat_pop_internal();
+    DESCR_t left  = pat_pop_internal();
+    pat_push(pat_alt(left, right));
+}
+
+void scrip_rt_pat_deref(void)
+{
+    /* Mirror sm_interp.c's SM_PAT_DEREF case: pop value-stack TOS,
+     * dispatch by tag.  DT_P → already a pattern; DT_S → wrap in literal;
+     * else look up by name (deferred ref). */
+    DESCR_t v = vstack_pop();
+    if (v.v == DT_P) {
+        pat_push(v);
+    } else if (v.v == DT_S && v.s) {
+        pat_push(pat_lit(v.s));
+    } else {
+        char *name = VARVAL_fn(v);
+        pat_push(pat_ref(name ? name : ""));
+    }
+}
+
+void scrip_rt_pat_capture(const char *varname, int kind)
+{
+    /* a[0].s = varname, a[1].i = kind (0=cond, 1=imm, 2=cursor) */
+    DESCR_t child = pat_pop_internal();
+    DESCR_t var   = NAME_fn(varname ? varname : "");
+    if (kind == 1)
+        pat_push(pat_assign_imm(child, var));
+    else if (kind == 2)
+        pat_push(pat_cat(child, pat_at_cursor(varname ? varname : "")));
+    else
+        pat_push(pat_assign_cond(child, var));
+}
+
+void scrip_rt_pat_boxval(void)
+{
+    /* Move pat-stack TOS to value-stack as DT_P. */
+    vstack_push(pat_pop_internal());
+}
+
+/*==============================================================================
+ * scrip_rt_match_variant — SM_EXEC_STMT for variant patterns
+ *
+ * Stack contract (top-of-stack last popped):
+ *   pat-stack:  [pattern_descr]  ← pat-stack TOS
+ *   vstack:     [subj_descr]
+ *               [repl_or_zero]   ← vstack TOS
+ *
+ * The replacement slot is ALWAYS pushed (as INTVAL(0) when has_repl=0,
+ * matching sm_lower's emission convention) so we always pop two from
+ * the vstack regardless of has_repl.
+ *
+ * Arguments:
+ *   subj_name — subject NV name for write-back, or NULL/"" for none
+ *   has_repl  — 1 if the replacement is real, 0 if it's the dummy zero
+ *
+ * Side effects:
+ *   - Calls exec_stmt(subj_name, &subj, pat, has_repl?&repl:NULL, has_repl).
+ *     In BB_MODE_LIVE (set by scrip_rt_init), Phases 3-5 route through
+ *     bb_build_flat/binary -> direct bb_box_fn call.
+ *   - Sets g_last_ok from exec_stmt's return (so SM_JUMP_S/F observe it).
+ *   - Resets g_pat_sp = 0 after each statement (defensive — patterns
+ *     do not leak across statements).
+ *============================================================================*/
+
+void scrip_rt_match_variant(const char *subj_name, int has_repl)
+{
+    DESCR_t repl   = vstack_pop();   /* always pop: real repl or INTVAL(0) */
+    DESCR_t subj_d = vstack_pop();
+    DESCR_t pat_d  = (g_pat_sp > 0) ? pat_pop_internal() : pat_epsilon();
+
+    int ok = exec_stmt(subj_name, &subj_d, pat_d,
+                       has_repl ? &repl : NULL, has_repl);
+    g_last_ok = ok ? 1 : 0;
+    g_pat_sp  = 0;
+}
 
 /*==============================================================================
  * EM-7 entries
