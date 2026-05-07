@@ -42,6 +42,20 @@ static void emit_push_expr(SM_Program *p, const EXPR_t *e)
     sm_emit_ptr(p, SM_PUSH_EXPR, (void *)expr_gc_clone(e));
 }
 
+/* CH-17b': suppress lower_expr's "unhandled expr kind" stderr warning while
+ * lowering proc-body chunks.  These chunks are dead code today (forward-jumped
+ * over; coro_call still walks IR for real execution), so any unhandled-kind
+ * fall-through landing here is harmless — the warning would only mislead.  The
+ * flag is set/cleared around the per-proc emission loop in sm_lower; outside
+ * that scope (i.e., when lower_expr is invoked from lower_stmt for genuinely
+ * executable code), the warning fires as before.  CH-17c will flip coro_call
+ * to dispatch via entry_pc, at which point the unhandled kinds in proc bodies
+ * become reachable and will need real lowering — that is later-rung territory
+ * (CH-17h reactivates CH-15b for the Icon generator kinds; the cset and
+ * E_ALTERNATE / E_ITERATE / E_REVASSIGN / E_REVSWAP gaps will be filled by
+ * the same wave). */
+static int g_chunk_body_lowering = 0;
+
 /* ── Label resolution table ─────────────────────────────────────────────── */
 
 typedef struct {
@@ -1330,7 +1344,8 @@ static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
     }
 
     default:
-        fprintf(stderr, "sm_lower: unhandled expr kind %d\n", (int)e->kind);
+        if (!g_chunk_body_lowering)
+            fprintf(stderr, "sm_lower: unhandled expr kind %d\n", (int)e->kind);
         sm_emit(p, SM_PUSH_NULL);
         return;
     }
@@ -1543,12 +1558,14 @@ SM_Program *sm_lower(const CODE_t *prog)
     lt_init(&lt);
 
     /* CH-17b: emit named-chunk skeletons for every Icon/Raku proc.
+     * CH-17b': fill the chunks with lowered body SM ops.
      *
-     * Skeleton shape (one per proc in proc_table):
+     * Chunk shape (one per proc in proc_table):
      *
      *   SM_JUMP <skip_proc_NN>     ; forward-jump around the chunk
      *   SM_LABEL "<proc_name>"     ; named entry — sm_label_pc_lookup target
-     *   SM_RETURN                  ; empty body for now (CH-17b' adds bodies)
+     *   <lowered body>             ; CH-17b': lower_expr each body child + SM_POP
+     *   SM_RETURN                  ; trailing return (or unreachable after E_RETURN)
      *   <skip_proc_NN>:            ; anonymous skip target
      *
      * After sm_lower returns, sm_resolve_proc_entry_pcs (CH-17a) walks
@@ -1556,23 +1573,86 @@ SM_Program *sm_lower(const CODE_t *prog)
      * sm_label_pc_lookup.  The chunks are unreachable today
      * (coro_call still walks IR) but the entry_pcs validate end-to-end.
      *
-     * Body lowering is CH-17b' territory — separate rung because Icon
-     * proc bodies are EXPR_t chains (not STMT_t) and frame-slot
-     * resolution via icn_scope_patch happens inside coro_call at runtime
-     * today, which is its own architectural decision.
+     * CH-17b' body-lowering details:
      *
-     * Empty-body skeleton is safe: the chunks are forward-jumped over by
-     * the SM_JUMP, so execution falls through them; even if a future
-     * caller invoked one, it would just SM_RETURN immediately. */
+     *   - Body children of E_FNC live at proc->children[1+nparams..nchildren-1].
+     *     proc->ival is nparams.  Param-name children at [1..1+nparams-1] are
+     *     not body — they declare parameters (slot-bound at runtime by
+     *     icn_scope_patch in coro_call); skipped here because lowering them
+     *     would emit SM_PUSH_VAR <param-name> for no benefit, the parameter
+     *     values having already been bound by the caller's frame.
+     *
+     *   - E_GLOBAL declarations (and E_GLOBAL with ival==1 for `static`) are
+     *     not skipped here: lower_expr handles them as no-ops emitting
+     *     SM_PUSH_NULL, which the trailing SM_POP discards.  Static-variable
+     *     persistence semantics still live inside coro_call (lines 408-420 of
+     *     coro_runtime.c) and remain unchanged — that's CH-17g cleanup.
+     *
+     *   - Each body-child expr is value-context-lowered via lower_expr; we
+     *     emit SM_POP after each to discard the result, mirroring how
+     *     statement-context evaluation discards the value of an expression
+     *     statement.  The kinds that appear at proc-body top level
+     *     (E_IF, E_WHILE, E_UNTIL, E_REPEAT, E_RETURN, E_PROC_FAIL,
+     *     E_LOOP_BREAK, E_LOOP_NEXT, E_ASSIGN, E_FNC, E_SEQ_EXPR, E_GLOBAL,
+     *     E_INITIAL, ...) all have lower_expr cases with single-value-push
+     *     stack discipline.  Generator kinds (E_EVERY, E_SUSPEND,
+     *     E_BANG_BINARY, E_TO, E_TO_BY, ...) currently emit
+     *     SM_PUSH_EXPR + SM_BB_PUMP — that's the gating note in
+     *     GOAL-CHUNKS-STEP17.md CH-17b': those legacy emissions are
+     *     acceptable because the chunks are unreachable until CH-17c flips
+     *     coro_call to dispatch via entry_pc.  Unhandled kinds (E_ALTERNATE,
+     *     E_ITERATE, E_CSET_*, E_REVASSIGN, E_REVSWAP) hit lower_expr's
+     *     default case which would normally fprintf to stderr — silenced
+     *     here via g_chunk_body_lowering since these chunks are dead code.
+     *     E_RETURN's lower_expr case already emits SM_RETURN, after which
+     *     our trailing SM_POP + SM_RETURN is dead code — harmless.
+     *
+     *   - The shared LabelTable `lt` is reused.  Icon proc bodies do not use
+     *     SNOBOL4-style stmt labels, so collisions are not a concern in
+     *     practice; if any did appear they'd be statement-scoped within the
+     *     chunk and resolve via the same forward-patch machinery.
+     *
+     *   - Frame-slot resolution via icn_scope_patch is intentionally NOT
+     *     pre-built here.  E_VAR lowers to SM_PUSH_VAR <name>, name-keyed
+     *     through NV_GET_fn at runtime — slot indices on EXPR_t.ival are
+     *     used only by the IR-side coro_call path, which is unaffected.
+     *     Migrating env to lower-time slot baking is later-rung territory
+     *     (CH-17c+ when coro_call is replaced by sm_call_proc).
+     *
+     *   - Empty-body skeleton (and the chunks themselves) remain safe:
+     *     forward-jumped over by the SM_JUMP; even if a future caller
+     *     invoked one before CH-17c, it would just SM_RETURN. */
     for (int pi = 0; pi < proc_count; pi++) {
         const char *nm = proc_table[pi].name;
         if (!nm || !*nm) continue;
-        int skip_jump = sm_emit_i(p, SM_JUMP, 0);   /* patched to skip_lbl below */
+        EXPR_t *proc = proc_table[pi].proc;       /* registered by polyglot_init */
+
+        int skip_jump = sm_emit_i(p, SM_JUMP, 0); /* patched to skip_lbl below */
         /* sm_label_named records the name in a[0].s and the pc in a[1].i
          * — making it findable via sm_label_pc_lookup(p, name). */
         sm_label_named(p, nm);
+
+        /* CH-17b': lower each body child as a value expression and pop the
+         * result.  body_start = 1 + nparams.  Defensive on missing IR.
+         * The g_chunk_body_lowering flag silences lower_expr's
+         * "unhandled expr kind" stderr warning for the duration — chunks
+         * are dead code today, so unhandled-kind fall-throughs are harmless
+         * and the warning would only mislead. */
+        if (proc) {
+            int nparams    = (int)proc->ival;
+            int body_start = 1 + nparams;
+            g_chunk_body_lowering = 1;
+            for (int bi = body_start; bi < proc->nchildren; bi++) {
+                EXPR_t *body_expr = proc->children[bi];
+                if (!body_expr) continue;
+                lower_expr(p, &lt, body_expr);
+                sm_emit(p, SM_POP);
+            }
+            g_chunk_body_lowering = 0;
+        }
+
         sm_emit(p, SM_RETURN);
-        int skip_lbl = sm_label(p);                  /* anonymous skip target */
+        int skip_lbl = sm_label(p);               /* anonymous skip target */
         sm_patch_jump(p, skip_jump, skip_lbl);
     }
 
