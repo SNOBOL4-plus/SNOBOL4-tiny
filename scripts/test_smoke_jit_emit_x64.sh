@@ -282,7 +282,7 @@ fi
 # Run the unit test (writes .s, verifies labels, checks 15 internal asserts)
 "$FLAT_TEXT_TEST" "$TMP/em7b.s" 2> "$TMP/em7b.err" || {
     echo "FAIL EM-7b unit test"; cat "$TMP/em7b.err"; exit 1; }
-grep -q "^PASS=15 FAIL=0" "$TMP/em7b.err" || {
+grep -q "^PASS=16 FAIL=0" "$TMP/em7b.err" || {
     echo "FAIL EM-7b internal pass count"; cat "$TMP/em7b.err"; exit 1; }
 # Independently verify the .s assembles cleanly and produces the four
 # externally-visible α/β/γ/ω globals.
@@ -296,7 +296,7 @@ EXPECT=$(printf "_pat_inv_42_0_alpha\n_pat_inv_42_0_beta\n_pat_inv_42_0_gamma\n_
 GLOBAL_COUNT=$(objdump -t "$TMP/em7b.o" 2>/dev/null | awk '/_pat_inv_42_0_/ && $2 ~ /g/ {n++} END{print n+0}')
 [ "$GLOBAL_COUNT" = "4" ] || {
     echo "FAIL EM-7b only $GLOBAL_COUNT/4 entry labels are global"; exit 1; }
-echo "  PASS EM-7b bb_flat TEXT mode (PASS=15 unit + .s assembles + 4/4 external α/β/γ/ω)"
+echo "  PASS EM-7b bb_flat TEXT mode (PASS=16 unit + .s assembles + 4/4 external α/β/γ/ω)"
 
 echo
 echo "PASS=11 FAIL=0  (EM-1 wiring + EM-2 HALT/PUSH_LIT_I + EM-3 stack ops + arithmetic + EM-4 control flow + EM-5 chunks; EM-6 retired; EM-7a Phase-2 sim; EM-7b bb_flat TEXT mode)"

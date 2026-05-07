@@ -119,9 +119,11 @@ int main(int argc, char **argv) {
     CHECK(strstr(buf, "_pat_inv_42_0_omega:") != NULL,
           "_pat_inv_42_0_omega definition missing");
 
-    /* ── 5. Verify byte-directive emission is happening ── */
-    CHECK(strstr(buf, ".byte 0x49") != NULL,
-          "expected .byte 0x49 (mov r10, imm64 prefix) not found");
+    /* ── 5. Verify readable-mnemonic emission (EM-7b'': no .byte walls) ── */
+    CHECK(strstr(buf, "mov     r10,") != NULL,
+          "expected 'mov r10,' mnemonic (ev_load_r10_delta_ptr) not found");
+    CHECK(strstr(buf, ".byte") == NULL,
+          "unexpected .byte directive in TEXT output (should be mnemonics)");
 
     /* ── 6. Build a fully-invariant ALT pattern (pure literal alt) ── */
     /* Skip this in EM-7b; pat_lit single-leaf is sufficient.  EM-7c

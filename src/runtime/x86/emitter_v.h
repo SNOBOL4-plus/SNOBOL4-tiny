@@ -1,22 +1,25 @@
 /*
- * emitter_v.h — Emitter vtable for dual-mode x86-64 code generation
+ * emitter_v.h — Emitter vtable + instruction-description layer
  *
- * One vtable, two implementations:
- *   emitter_text_new(FILE*)    — writes GAS text directives
- *   emitter_binary_new(buf, size) — writes raw bytes into bb_pool buffer
+ * Two levels of abstraction:
  *
- * The walker (bb_flat.c, bb_build.c, sm_codegen_x64_emit.c) takes
- * emitter_v * and is generic over the emission target.  No
- * if (bb_emit_mode == EMIT_TEXT) branches outside emitter_text.c /
- * emitter_binary.c.
+ * Level 1 — vtable (emitter_v):
+ *   One struct, two implementations (emitter_text, emitter_binary).
+ *   The walker (bb_flat.c) takes emitter_v * and is generic over target.
  *
- * This is the contract the Milestone-3 matrix (x86/JVM/.NET/WASM/JS)
- * and the Snocone bootstrap (EXPRESSION as templates, multiple backends
- * sharing one walker) both require.  Each column of that matrix is one
- * emitter_v instance; the walker is unchanged across columns.
+ * Level 2 — instruction descriptions (bb_insn_desc_t + emit_insn):
+ *   Named instruction kinds with typed args.  TEXT renders real GAS
+ *   mnemonics; BINARY renders the corresponding bytes.  The walker
+ *   calls named inline helpers (ev_load_delta, ev_mov_rax_imm64, ...)
+ *   which each build a bb_insn_desc_t and call e->emit_insn(e, &d).
+ *   Zero byte knowledge in bb_flat.c.
+ *
+ * For the Milestone-3 matrix (x86/JVM/.NET/WASM/JS) and Snocone
+ * bootstrap (EXPRESSION as templates): each backend column is one
+ * emitter_v instance; the walker and helper layer are unchanged.
  *
  * Authors: Lon Jones Cherryholmes · Claude Sonnet 4.6
- * Sprint:  EM-7b' / GOAL-MODE4-EMIT
+ * Sprint:  EM-7b'' / GOAL-MODE4-EMIT
  */
 
 #ifndef EMITTER_V_H
@@ -30,13 +33,57 @@
 /* ── jump kind ────────────────────────────────────────────────────────────── */
 
 typedef enum {
-    JMP_JMP,     /* unconditional */
-    JMP_JE,      /* je  (ZF=1) */
-    JMP_JNE,     /* jne (ZF=0) */
-    JMP_JL,      /* jl  (SF≠OF) */
-    JMP_JGE,     /* jge (SF=OF) */
-    JMP_JG,      /* jg  (ZF=0 && SF=OF) */
+    JMP_JMP = 0,
+    JMP_JE,
+    JMP_JNE,
+    JMP_JL,
+    JMP_JGE,
+    JMP_JG,
 } jmp_kind_t;
+
+/* ── instruction kinds ────────────────────────────────────────────────────── */
+/*
+ * Every distinct instruction form used by bb_flat.c.  TEXT renders a
+ * readable GAS line; BINARY renders the corresponding x86-64 bytes.
+ * Argument slots:  a0=imm64/addr, a1=imm32, a2=imm8, lbl=label ptr.
+ */
+typedef enum {
+    BB_INSN_MOV_R10_IMM64,    /* mov r10, imm64        49 BA <8> */
+    BB_INSN_MOV_RAX_IMM64,    /* mov rax, imm64        48 B8 <8> */
+    BB_INSN_MOV_RDI_IMM64,    /* mov rdi, imm64        48 BF <8> */
+    BB_INSN_MOV_RSI_IMM64,    /* mov rsi, imm64        48 BE <8> */  /* unused; kept for completeness */
+    BB_INSN_MOV_RDX_IMM64,    /* mov rdx, imm64        48 BA <8> */
+    BB_INSN_MOV_ESI_IMM32,    /* mov esi, imm32        BE <4> */
+    BB_INSN_MOV_EAX_IMM32,    /* mov eax, imm32        B8 <4> */
+    BB_INSN_ADD_EAX_IMM32,    /* add eax, imm32        05 <4> */
+    BB_INSN_SUB_EAX_IMM32,    /* sub eax, imm32        2D <4> */
+    BB_INSN_CMP_EAX_IMM32,    /* cmp eax, imm32        3D <4> */
+    BB_INSN_CMP_ESI_IMM8,     /* cmp esi, imm8         83 FE <1> */
+    BB_INSN_MOV_RCX_IMM64,    /* mov rcx, imm64        48 B9 <8> */
+    BB_INSN_MOV_EAX_RCXMEM,   /* mov eax, [rcx]        8B 01 */
+    BB_INSN_MOV_RAX_RCXMEM,   /* mov rax, [rcx]        48 8B 01 */
+    BB_INSN_CMP_EAX_RCXMEM,   /* cmp eax, [rcx]        3B 01 */
+    BB_INSN_MOV_EAX_R10MEM,   /* mov eax, [r10]        41 8B 02 */
+    BB_INSN_MOV_R10MEM_EAX,   /* mov [r10], eax        41 89 02 */
+    BB_INSN_MOV_ECX_EAX,      /* mov ecx, eax          89 C1 */
+    BB_INSN_MOV_RDI_RAX,      /* mov rdi, rax          48 89 C7 */
+    BB_INSN_MOV_RDX_RAX,      /* mov rdx, rax          48 89 C2 */
+    BB_INSN_MOVSXD_RCX_R10MEM,/* movsxd rcx,[r10]      49 63 0A */
+    BB_INSN_LEA_RAX_RAXRCX,   /* lea rax,[rax+rcx]     48 8D 04 08 */
+    BB_INSN_CMP_EAX_ECX,      /* cmp eax, ecx          39 C8 */
+    BB_INSN_TEST_EAX_EAX,     /* test eax, eax         85 C0 */
+    BB_INSN_TEST_RAX_RAX,     /* test rax, rax         48 85 C0 */
+    BB_INSN_XOR_EDX_EDX,      /* xor edx, edx          31 D2 */
+    BB_INSN_RET,               /* ret                   C3 */
+    BB_INSN_CALL_RAX,          /* call rax              FF D0 */
+} bb_insn_kind_t;
+
+typedef struct {
+    bb_insn_kind_t kind;
+    uint64_t       a0;   /* imm64 / address */
+    uint32_t       a1;   /* imm32 */
+    uint8_t        a2;   /* imm8 */
+} bb_insn_desc_t;
 
 /* ── vtable ───────────────────────────────────────────────────────────────── */
 
@@ -44,143 +91,167 @@ typedef struct emitter_v emitter_v;
 
 struct emitter_v {
     /*
-     * emit_bytes — write N raw bytes.
-     *   TEXT:   emits ".byte 0xNN[, 0xNN]...\n" lines (one per call).
-     *   BINARY: writes bytes into the buffer, advances pos.
-     *   anno:   optional inline comment suffix (TEXT only, may be NULL).
+     * emit_insn — emit one instruction described by d.
+     *   TEXT:   writes a single readable GAS line.
+     *   BINARY: writes the corresponding x86-64 bytes.
      */
-    void (*emit_bytes)(emitter_v *e, const uint8_t *bs, int n,
-                       const char *anno_or_null);
+    void (*emit_insn)(emitter_v *e, const bb_insn_desc_t *d);
 
     /*
      * label_define — plant a label at the current position.
      *   TEXT:   emits "name:\n".
-     *   BINARY: records offset; patches all pending forward refs.
+     *   BINARY: records offset; patches forward refs.
      */
     void (*label_define)(emitter_v *e, bb_label_t *lbl);
 
     /*
-     * emit_jmp — emit a jump instruction of the given kind to target.
-     *   TEXT:   emits "    jmp/je/... name\n" (symbolic, assembler resolves).
-     *   BINARY: emits opcode + rel8 or rel32 displacement with forward-ref
-     *           tracking via the emitter's own patch list.
+     * emit_jmp — emit a jump to target of the given kind.
+     *   TEXT:   emits "    jmp/je/... name\n".
+     *   BINARY: opcode + forward-ref patch.
      */
     void (*emit_jmp)(emitter_v *e, bb_label_t *target, jmp_kind_t kind);
 
     /*
-     * emit_call_rax — emit "call rax" (indirect call through rax).
-     *   TEXT:   emits "    call    rax\n"  (with .intel_syntax in effect).
-     *   BINARY: FF D0.
-     */
-    void (*emit_call_rax)(emitter_v *e);
-
-    /*
-     * emit_call_imm64 — load addr into rax, call rax.
-     *   TEXT:   emits "    mov     rax, 0x<addr>\n    call    rax\n" + anno.
-     *   BINARY: REX.W B8 <imm64> + FF D0.
-     *   anno:   optional annotation (TEXT only, may be NULL).
-     */
-    void (*emit_call_imm64)(emitter_v *e, uint64_t addr,
-                            const char *anno_or_null);
-
-    /*
-     * section_text — emit a .text section directive.
-     *   TEXT:   emits ".text\n".
-     *   BINARY: no-op (we are already writing into an RX-destined buffer).
-     */
-    void (*section_text)(emitter_v *e);
-
-    /*
-     * global_sym — emit a .global directive for a symbol name.
+     * global_sym — emit a .global directive.
      *   TEXT:   emits ".global name\n".
-     *   BINARY: no-op (symbols are linker-level; binary mode uses offsets).
+     *   BINARY: no-op.
      */
     void (*global_sym)(emitter_v *e, const char *name);
 
     /*
-     * intel_syntax — emit an .intel_syntax noprefix directive.
-     *   TEXT:   emits ".intel_syntax noprefix\n".
-     *   BINARY: no-op.
-     */
-    void (*intel_syntax)(emitter_v *e);
-
-    /*
-     * pos — current emission cursor in bytes.
-     *   TEXT:   returns an informational byte count (useful for size
-     *           estimates; not used for label patching in text mode).
-     *   BINARY: returns bb_emit_pos — the actual buffer write position.
-     */
-    int (*pos)(emitter_v *e);
-
-    /*
-     * fprintf_raw — emit arbitrary formatted text (TEXT mode only).
-     *   BINARY: no-op.
-     *   Used for section headers, banners, comment blocks that have no
-     *   binary counterpart.
+     * fprintf_raw — arbitrary formatted text (TEXT only, no-op in binary).
      */
     void (*fprintf_raw)(emitter_v *e, const char *fmt, ...);
 
-    /* Implementation-private state */
+    /*
+     * pos — current emission cursor in bytes.
+     */
+    int (*pos)(emitter_v *e);
+
     void *ctx;
 };
 
-/* ── constructors ─────────────────────────────────────────────────────────── */
+/* ── constructors / lifecycle ─────────────────────────────────────────────── */
 
-/*
- * emitter_text_new — create a text-mode emitter writing to `out`.
- * Pass NULL for out to default to stdout.
- * Caller owns the emitter; free with emitter_free().
- */
-emitter_v *emitter_text_new(FILE *out);
-
-/*
- * emitter_binary_new — create a binary-mode emitter writing into `buf[0..size)`.
- * The emitter does NOT own buf; caller must call bb_emit_end_v() then bb_seal().
- * Free with emitter_free() after sealing.
- */
+emitter_v *emitter_text_new  (FILE *out);
 emitter_v *emitter_binary_new(bb_buf_t buf, int size);
+void       emitter_free      (emitter_v *e);
+int        emitter_end       (emitter_v *e);
 
+/* ── convenience macros ───────────────────────────────────────────────────── */
+
+#define EV_LABEL(e, lbl)      (e)->label_define((e), (lbl))
+#define EV_JMP(e, lbl, kind)  (e)->emit_jmp((e), (lbl), (kind))
+#define EV_GLOBAL(e, name)    (e)->global_sym((e), (name))
+#define EV_TEXT(e, ...)       (e)->fprintf_raw((e), __VA_ARGS__)
+
+/* ── inline named helpers — the only API bb_flat.c uses ──────────────────── */
 /*
- * emitter_free — release resources.  Does not free buf or close FILE*.
+ * Each helper builds a bb_insn_desc_t and calls e->emit_insn.
+ * bb_flat.c (and future walkers) call these by name, never by byte.
  */
-void emitter_free(emitter_v *e);
 
-/*
- * emitter_end — binary mode: resolve pending patches, return bytes written.
- *   TEXT mode: returns the informational byte counter.
- *   Aborts on unresolved forward references (binary mode only).
- */
-int emitter_end(emitter_v *e);
+static inline void ev_insn0(emitter_v *e, bb_insn_kind_t k)
+{ bb_insn_desc_t d = {k,0,0,0}; e->emit_insn(e,&d); }
 
-/* ── convenience wrappers ─────────────────────────────────────────────────── */
-/*
- * ev_byte1..ev_byte4: emit 1–4 literal bytes.  These replace the variadic
- * EV_BYTES macro (which hit C89 compound-literal issues in some build
- * configurations).  bb_flat.c uses up to 4 bytes per call site.
- */
-static inline void ev_byte1(emitter_v *e, uint8_t b0)
-{ uint8_t bs[1] = {b0}; e->emit_bytes(e, bs, 1, NULL); }
+static inline void ev_insn_a0(emitter_v *e, bb_insn_kind_t k, uint64_t a0)
+{ bb_insn_desc_t d = {k,a0,0,0}; e->emit_insn(e,&d); }
 
-static inline void ev_byte2(emitter_v *e, uint8_t b0, uint8_t b1)
-{ uint8_t bs[2] = {b0,b1}; e->emit_bytes(e, bs, 2, NULL); }
+static inline void ev_insn_a1(emitter_v *e, bb_insn_kind_t k, uint32_t a1)
+{ bb_insn_desc_t d = {k,0,a1,0}; e->emit_insn(e,&d); }
 
-static inline void ev_byte3(emitter_v *e, uint8_t b0, uint8_t b1, uint8_t b2)
-{ uint8_t bs[3] = {b0,b1,b2}; e->emit_bytes(e, bs, 3, NULL); }
+static inline void ev_insn_a2(emitter_v *e, bb_insn_kind_t k, uint8_t a2)
+{ bb_insn_desc_t d = {k,0,0,a2}; e->emit_insn(e,&d); }
 
-static inline void ev_byte4(emitter_v *e, uint8_t b0, uint8_t b1,
-                            uint8_t b2, uint8_t b3)
-{ uint8_t bs[4] = {b0,b1,b2,b3}; e->emit_bytes(e, bs, 4, NULL); }
+/* r10 = &Δ */
+static inline void ev_load_r10_delta_ptr(emitter_v *e, uint64_t addr)
+{ ev_insn_a0(e, BB_INSN_MOV_R10_IMM64, addr); }
 
-/* EV_BYTES(e, b0 [,b1 [,b2 [,b3]]]) — dispatches to ev_byteN */
-/* Use the inline helpers directly in emitter_v consumer code;
- * or use the EV_BYTES_RAW helper for a slice of a uint8_t array. */
-#define EV_BYTES_RAW(e, arr, n)  (e)->emit_bytes((e), (arr), (n), NULL)
+/* eax = Δ  (via [r10]) */
+static inline void ev_load_delta(emitter_v *e)
+{ ev_insn0(e, BB_INSN_MOV_EAX_R10MEM); }
 
-#define EV_LABEL(e, lbl)         (e)->label_define((e), (lbl))
-#define EV_JMP(e, lbl, kind)     (e)->emit_jmp((e), (lbl), (kind))
-#define EV_CALL_RAX(e)           (e)->emit_call_rax((e))
-#define EV_POS(e)                (e)->pos((e))
-#define EV_GLOBAL(e, name)       (e)->global_sym((e), (name))
-#define EV_TEXT(e, ...)          (e)->fprintf_raw((e), __VA_ARGS__)
+/* Δ = eax  (via [r10]) */
+static inline void ev_store_delta(emitter_v *e)
+{ ev_insn0(e, BB_INSN_MOV_R10MEM_EAX); }
+
+/* rcx = imm64; rax = [rcx]  (load Σ ptr) */
+static inline void ev_load_sigma(emitter_v *e, uint64_t sigma_addr) {
+    ev_insn_a0(e, BB_INSN_MOV_RCX_IMM64,  sigma_addr);
+    ev_insn0  (e, BB_INSN_MOV_RAX_RCXMEM);
+}
+
+/* rcx = imm64; eax = [rcx]  (load Σlen) */
+static inline void ev_load_siglen(emitter_v *e, uint64_t siglen_addr) {
+    ev_insn_a0(e, BB_INSN_MOV_RCX_IMM64,  siglen_addr);
+    ev_insn0  (e, BB_INSN_MOV_EAX_RCXMEM);
+}
+
+/* rax = Σ+Δ  (Σ ptr + cursor) */
+static inline void ev_sigma_plus_delta(emitter_v *e,
+                                       uint64_t sigma_addr)
+{
+    ev_load_sigma(e, sigma_addr);               /* rax = Σ */
+    ev_insn0(e, BB_INSN_MOVSXD_RCX_R10MEM);    /* rcx = (int64)Δ */
+    ev_insn0(e, BB_INSN_LEA_RAX_RAXRCX);       /* rax = rax+rcx */
+}
+
+/* eax = Δ + v; store back */
+static inline void ev_add_delta_imm(emitter_v *e, int32_t v) {
+    ev_load_delta(e);
+    ev_insn_a1(e, BB_INSN_ADD_EAX_IMM32, (uint32_t)v);
+    ev_store_delta(e);
+}
+
+/* eax = Δ - v; store back */
+static inline void ev_sub_delta_imm(emitter_v *e, int32_t v) {
+    ev_load_delta(e);
+    ev_insn_a1(e, BB_INSN_SUB_EAX_IMM32, (uint32_t)v);
+    ev_store_delta(e);
+}
+
+/* eax += imm32 */
+static inline void ev_add_eax_imm32(emitter_v *e, uint32_t v)
+{ ev_insn_a1(e, BB_INSN_ADD_EAX_IMM32, v); }
+
+/* cmp eax, [rcx] where rcx=siglen_addr */
+static inline void ev_cmp_eax_siglen(emitter_v *e, uint64_t siglen_addr) {
+    ev_insn_a0(e, BB_INSN_MOV_RCX_IMM64,  siglen_addr);
+    ev_insn0  (e, BB_INSN_CMP_EAX_RCXMEM);
+}
+
+static inline void ev_mov_rax_imm64(emitter_v *e, uint64_t v)
+{ ev_insn_a0(e, BB_INSN_MOV_RAX_IMM64, v); }
+
+static inline void ev_mov_rdi_imm64(emitter_v *e, uint64_t v)
+{ ev_insn_a0(e, BB_INSN_MOV_RDI_IMM64, v); }
+
+static inline void ev_mov_rdx_imm64(emitter_v *e, uint64_t v)
+{ ev_insn_a0(e, BB_INSN_MOV_RDX_IMM64, v); }
+
+static inline void ev_mov_esi_imm32(emitter_v *e, uint32_t v)
+{ ev_insn_a1(e, BB_INSN_MOV_ESI_IMM32, v); }
+
+static inline void ev_mov_eax_imm32(emitter_v *e, uint32_t v)
+{ ev_insn_a1(e, BB_INSN_MOV_EAX_IMM32, v); }
+
+static inline void ev_cmp_eax_imm32(emitter_v *e, uint32_t v)
+{ ev_insn_a1(e, BB_INSN_CMP_EAX_IMM32, v); }
+
+static inline void ev_sub_eax_imm32(emitter_v *e, uint32_t v)
+{ ev_insn_a1(e, BB_INSN_SUB_EAX_IMM32, v); }
+
+static inline void ev_cmp_esi_imm8(emitter_v *e, uint8_t v)
+{ ev_insn_a2(e, BB_INSN_CMP_ESI_IMM8, v); }
+
+static inline void ev_mov_ecx_eax(emitter_v *e)  { ev_insn0(e, BB_INSN_MOV_ECX_EAX); }
+static inline void ev_mov_rdi_rax(emitter_v *e)  { ev_insn0(e, BB_INSN_MOV_RDI_RAX); }
+static inline void ev_mov_rdx_rax(emitter_v *e)  { ev_insn0(e, BB_INSN_MOV_RDX_RAX); }
+static inline void ev_cmp_eax_ecx(emitter_v *e)  { ev_insn0(e, BB_INSN_CMP_EAX_ECX); }
+static inline void ev_test_eax_eax(emitter_v *e) { ev_insn0(e, BB_INSN_TEST_EAX_EAX); }
+static inline void ev_test_rax_rax(emitter_v *e) { ev_insn0(e, BB_INSN_TEST_RAX_RAX); }
+static inline void ev_xor_edx_edx(emitter_v *e)  { ev_insn0(e, BB_INSN_XOR_EDX_EDX); }
+static inline void ev_ret(emitter_v *e)           { ev_insn0(e, BB_INSN_RET); }
+static inline void ev_call_rax(emitter_v *e)      { ev_insn0(e, BB_INSN_CALL_RAX); }
 
 #endif /* EMITTER_V_H */

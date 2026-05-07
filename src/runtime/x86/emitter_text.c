@@ -1,14 +1,12 @@
 /*
  * emitter_text.c — GAS/text-mode implementation of emitter_v
  *
- * Writes GNU-as directives to a FILE*.  Output is a .s file suitable
- * for `gcc -c` with .intel_syntax noprefix.
- *
- * Labels are symbolic strings; jumps emit "jmp <name>" and the
- * assembler resolves them.  No patch list needed.
+ * emit_insn renders each bb_insn_desc_t as a single readable GAS line
+ * using Intel syntax (matching .intel_syntax noprefix in the .s preamble).
+ * No .byte walls — every instruction is a real mnemonic.
  *
  * Authors: Lon Jones Cherryholmes · Claude Sonnet 4.6
- * Sprint:  EM-7b' / GOAL-MODE4-EMIT
+ * Sprint:  EM-7b'' / GOAL-MODE4-EMIT
  */
 
 #include "emitter_v.h"
@@ -16,161 +14,109 @@
 #include <string.h>
 #include <stdarg.h>
 
-/* ── context ──────────────────────────────────────────────────────────────── */
-
-typedef struct {
-    FILE *out;
-    int   pos;   /* informational byte counter */
-} text_ctx_t;
-
+typedef struct { FILE *out; int pos; } text_ctx_t;
 #define CTX(e) ((text_ctx_t *)((e)->ctx))
+static FILE *outf(emitter_v *e) { FILE *f = CTX(e)->out; return f ? f : stdout; }
 
-/* ── helpers ──────────────────────────────────────────────────────────────── */
+/* ── emit_insn: one GAS line per instruction ─────────────────────────────── */
 
-static FILE *out_of(emitter_v *e) {
-    FILE *f = CTX(e)->out;
-    return f ? f : stdout;
-}
-
-/* ── vtable implementations ───────────────────────────────────────────────── */
-
-static void text_emit_bytes(emitter_v *e, const uint8_t *bs, int n,
-                            const char *anno)
+static void text_emit_insn(emitter_v *e, const bb_insn_desc_t *d)
 {
-    FILE *f = out_of(e);
-    /* Emit all bytes as a single .byte directive line */
-    fprintf(f, "    .byte ");
-    for (int i = 0; i < n; i++) {
-        if (i) fprintf(f, ", ");
-        fprintf(f, "0x%02x", (unsigned)bs[i]);
+    FILE *f = outf(e);
+    uint64_t a0 = d->a0;
+    uint32_t a1 = d->a1;
+    uint8_t  a2 = d->a2;
+
+    switch (d->kind) {
+    /* 64-bit reg ← imm64 */
+    case BB_INSN_MOV_R10_IMM64: fprintf(f,"    mov     r10, 0x%llx\n",(unsigned long long)a0); CTX(e)->pos+=10; break;
+    case BB_INSN_MOV_RAX_IMM64: fprintf(f,"    mov     rax, 0x%llx\n",(unsigned long long)a0); CTX(e)->pos+=10; break;
+    case BB_INSN_MOV_RDI_IMM64: fprintf(f,"    mov     rdi, 0x%llx\n",(unsigned long long)a0); CTX(e)->pos+=10; break;
+    case BB_INSN_MOV_RSI_IMM64: fprintf(f,"    mov     rsi, 0x%llx\n",(unsigned long long)a0); CTX(e)->pos+=10; break;
+    case BB_INSN_MOV_RDX_IMM64: fprintf(f,"    mov     rdx, 0x%llx\n",(unsigned long long)a0); CTX(e)->pos+=10; break;
+    case BB_INSN_MOV_RCX_IMM64: fprintf(f,"    mov     rcx, 0x%llx\n",(unsigned long long)a0); CTX(e)->pos+=10; break;
+    /* 32-bit reg ← imm32 */
+    case BB_INSN_MOV_ESI_IMM32: fprintf(f,"    mov     esi, %u\n",  a1); CTX(e)->pos+=5; break;
+    case BB_INSN_MOV_EAX_IMM32: fprintf(f,"    mov     eax, %u\n",  a1); CTX(e)->pos+=5; break;
+    case BB_INSN_ADD_EAX_IMM32: fprintf(f,"    add     eax, %u\n",  a1); CTX(e)->pos+=5; break;
+    case BB_INSN_SUB_EAX_IMM32: fprintf(f,"    sub     eax, %u\n",  a1); CTX(e)->pos+=5; break;
+    case BB_INSN_CMP_EAX_IMM32: fprintf(f,"    cmp     eax, %u\n",  a1); CTX(e)->pos+=5; break;
+    case BB_INSN_CMP_ESI_IMM8:  fprintf(f,"    cmp     esi, %u\n", (unsigned)a2); CTX(e)->pos+=3; break;
+    /* memory loads */
+    case BB_INSN_MOV_EAX_RCXMEM:   fprintf(f,"    mov     eax, [rcx]\n"); CTX(e)->pos+=2; break;
+    case BB_INSN_MOV_RAX_RCXMEM:   fprintf(f,"    mov     rax, [rcx]\n"); CTX(e)->pos+=3; break;
+    case BB_INSN_CMP_EAX_RCXMEM:   fprintf(f,"    cmp     eax, [rcx]\n"); CTX(e)->pos+=2; break;
+    case BB_INSN_MOV_EAX_R10MEM:   fprintf(f,"    mov     eax, [r10]\n"); CTX(e)->pos+=3; break;
+    case BB_INSN_MOV_R10MEM_EAX:   fprintf(f,"    mov     [r10], eax\n"); CTX(e)->pos+=3; break;
+    /* reg-reg */
+    case BB_INSN_MOV_ECX_EAX:      fprintf(f,"    mov     ecx, eax\n"); CTX(e)->pos+=2; break;
+    case BB_INSN_MOV_RDI_RAX:      fprintf(f,"    mov     rdi, rax\n"); CTX(e)->pos+=3; break;
+    case BB_INSN_MOV_RDX_RAX:      fprintf(f,"    mov     rdx, rax\n"); CTX(e)->pos+=3; break;
+    case BB_INSN_CMP_EAX_ECX:      fprintf(f,"    cmp     eax, ecx\n"); CTX(e)->pos+=2; break;
+    case BB_INSN_TEST_EAX_EAX:     fprintf(f,"    test    eax, eax\n"); CTX(e)->pos+=2; break;
+    case BB_INSN_TEST_RAX_RAX:     fprintf(f,"    test    rax, rax\n"); CTX(e)->pos+=3; break;
+    case BB_INSN_XOR_EDX_EDX:      fprintf(f,"    xor     edx, edx\n"); CTX(e)->pos+=2; break;
+    case BB_INSN_MOVSXD_RCX_R10MEM:fprintf(f,"    movsxd  rcx, dword ptr [r10]\n"); CTX(e)->pos+=3; break;
+    case BB_INSN_LEA_RAX_RAXRCX:   fprintf(f,"    lea     rax, [rax+rcx]\n"); CTX(e)->pos+=4; break;
+    /* control */
+    case BB_INSN_RET:      fprintf(f,"    ret\n"); CTX(e)->pos+=1; break;
+    case BB_INSN_CALL_RAX: fprintf(f,"    call    rax\n"); CTX(e)->pos+=2; break;
     }
-    if (anno) fprintf(f, "    # %s", anno);
-    fprintf(f, "\n");
-    CTX(e)->pos += n;
 }
 
+/* ── label_define ──────────────────────────────────────────────────────────── */
 static void text_label_define(emitter_v *e, bb_label_t *lbl)
-{
-    fprintf(out_of(e), "%s:\n", lbl->name);
-}
+{ fprintf(outf(e), "%s:\n", lbl->name); }
 
+/* ── emit_jmp ──────────────────────────────────────────────────────────────── */
 static void text_emit_jmp(emitter_v *e, bb_label_t *target, jmp_kind_t kind)
 {
-    FILE *f = out_of(e);
-    const char *mn;
-    switch (kind) {
-    case JMP_JMP: mn = "jmp";  break;
-    case JMP_JE:  mn = "je";   break;
-    case JMP_JNE: mn = "jne";  break;
-    case JMP_JL:  mn = "jl";   break;
-    case JMP_JGE: mn = "jge";  break;
-    case JMP_JG:  mn = "jg";   break;
-    default:      mn = "jmp";  break;
-    }
-    fprintf(f, "    %-8s%s\n", mn, target->name);
-    /* Approximate byte count for a near jump: 2 bytes (rel8) or 6 (rel32).
-     * We use 6 conservatively so TEXT pos stays ≥ BINARY pos. */
+    FILE *f = outf(e);
+    const char *mn[] = {"jmp","je","jne","jl","jge","jg"};
+    fprintf(f, "    %-8s%s\n", mn[(int)kind < 6 ? (int)kind : 0], target->name);
     CTX(e)->pos += 6;
 }
 
-static void text_call_rax(emitter_v *e)
-{
-    fprintf(out_of(e), "    call    rax\n");
-    CTX(e)->pos += 2;
-}
-
-static void text_call_imm64(emitter_v *e, uint64_t addr, const char *anno)
-{
-    FILE *f = out_of(e);
-    /* Intel syntax: mov rax, imm64; call rax */
-    fprintf(f, "    mov     rax, 0x%llx\n", (unsigned long long)addr);
-    fprintf(f, "    call    rax");
-    if (anno) fprintf(f, "    # %s", anno);
-    fprintf(f, "\n");
-    CTX(e)->pos += 12;   /* REX.W B8 <8> + FF D0 = 12 bytes */
-}
-
-static void text_section_text(emitter_v *e)
-{
-    fprintf(out_of(e), ".text\n");
-}
-
+/* ── global_sym ────────────────────────────────────────────────────────────── */
 static void text_global_sym(emitter_v *e, const char *name)
-{
-    fprintf(out_of(e), ".global %s\n", name);
-}
+{ fprintf(outf(e), ".global %s\n", name); }
 
-static void text_intel_syntax(emitter_v *e)
-{
-    fprintf(out_of(e), ".intel_syntax noprefix\n");
-}
-
-static int text_pos(emitter_v *e)
-{
-    return CTX(e)->pos;
-}
-
+/* ── fprintf_raw ───────────────────────────────────────────────────────────── */
 static void text_fprintf_raw(emitter_v *e, const char *fmt, ...)
-{
-    FILE *f = out_of(e);
-    va_list ap;
-    va_start(ap, fmt);
-    vfprintf(f, fmt, ap);
-    va_end(ap);
-}
+{ va_list ap; va_start(ap,fmt); vfprintf(outf(e),fmt,ap); va_end(ap); }
 
-/* ── constructor ──────────────────────────────────────────────────────────── */
+/* ── pos ───────────────────────────────────────────────────────────────────── */
+static int text_pos(emitter_v *e) { return CTX(e)->pos; }
 
-static const emitter_v text_vtable_template = {
-    .emit_bytes    = text_emit_bytes,
-    .label_define  = text_label_define,
-    .emit_jmp      = text_emit_jmp,
-    .emit_call_rax = text_call_rax,
-    .emit_call_imm64 = text_call_imm64,
-    .section_text  = text_section_text,
-    .global_sym    = text_global_sym,
-    .intel_syntax  = text_intel_syntax,
-    .pos           = text_pos,
-    .fprintf_raw   = text_fprintf_raw,
-    .ctx           = NULL,
+/* ── constructor ───────────────────────────────────────────────────────────── */
+static const emitter_v text_tmpl = {
+    .emit_insn    = text_emit_insn,
+    .label_define = text_label_define,
+    .emit_jmp     = text_emit_jmp,
+    .global_sym   = text_global_sym,
+    .fprintf_raw  = text_fprintf_raw,
+    .pos          = text_pos,
+    .ctx          = NULL,
 };
 
 emitter_v *emitter_text_new(FILE *out)
 {
     emitter_v *e = malloc(sizeof(emitter_v));
     if (!e) return NULL;
-    *e = text_vtable_template;
+    *e = text_tmpl;
     text_ctx_t *ctx = calloc(1, sizeof(text_ctx_t));
     if (!ctx) { free(e); return NULL; }
-    ctx->out = out;
-    ctx->pos = 0;
+    ctx->out = out; ctx->pos = 0;
     e->ctx = ctx;
     return e;
 }
 
-/* ── emitter_end (TEXT mode) ──────────────────────────────────────────────── */
-/* TEXT mode has no patch list; just return the informational byte count. */
-static int text_end(text_ctx_t *ctx) { return ctx->pos; }
-
-/* ── shared emitter_end / emitter_free ────────────────────────────────────── */
-/* Defined here because both modes need them; binary.c provides its own
- * binary_end() helper called by emitter_end() via the emitter kind flag. */
-
-void emitter_free(emitter_v *e)
-{
-    if (!e) return;
-    free(e->ctx);
-    free(e);
-}
+void emitter_free(emitter_v *e) { if (!e) return; free(e->ctx); free(e); }
 
 int emitter_end(emitter_v *e)
 {
     if (!e) return 0;
-    /* Distinguish TEXT vs BINARY by the emit_bytes vtable slot —
-     * text_emit_bytes is unique to text mode. */
-    if (e->emit_bytes == text_emit_bytes) {
-        return text_end((text_ctx_t *)e->ctx);
-    }
-    /* Binary mode: delegate to bb_emit_end() (which resolves patches). */
+    if (e->emit_insn == text_emit_insn)
+        return CTX(e)->pos;
     return bb_emit_end();
 }
