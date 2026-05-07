@@ -39,4 +39,28 @@
  */
 int sm_codegen_x64_emit(SM_Program *prog, FILE *out, const char *src_path);
 
+/*
+ * EM-7a: Phase-2 SM simulator helpers.
+ *
+ * flat_is_eligible_node(p):
+ *   Single-node invariance check (does NOT recurse into children).
+ *   Returns 1 if this node's kind is bakeable at emit time.
+ *
+ * patnd_is_fully_invariant(p):
+ *   Whole-tree invariance check — equivalent to bb_flat.c's
+ *   flat_is_eligible() but callable from the emitter.
+ *
+ * sm_phase2_to_patnd(prog, start, end, out_variant):
+ *   Walk SM instructions [start, end) (Phase-2 window) and reconstruct
+ *   the PATND_t tree using the same pat_* constructors as the interpreter.
+ *   Sets *out_variant = 1 if any node depends on a runtime value.
+ *   Returns root DT_P DESCR_t (or pat_epsilon() if window is empty).
+ */
+#include "snobol4.h"   /* DESCR_t, PATND_t — forward decl only in header */
+int     flat_is_eligible_node(const PATND_t *p);
+int     patnd_is_fully_invariant(const PATND_t *p);
+DESCR_t sm_phase2_to_patnd(const SM_Program *prog,
+                            int phase2_start, int phase2_end,
+                            int *out_variant);
+
 #endif /* SM_CODEGEN_X64_EMIT_H */

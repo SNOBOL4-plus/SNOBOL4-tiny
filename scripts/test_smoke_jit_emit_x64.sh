@@ -99,6 +99,7 @@ gcc -O0 -g -w -I"$ROOT/src" -I"$ROOT/src/runtime/x86" -I"$ROOT/src/runtime" \
     "$TMP/unh.c" \
     "$ROOT/src/runtime/x86/sm_codegen_x64_emit.c" \
     "$ROOT/src/runtime/x86/sm_prog.c" \
+    -L"$ROOT/out" -lscrip_rt -lgc -lm -Wl,-rpath,"$ROOT/out" \
     -o "$TMP/unh_emitter" 2> "$TMP/unh_build.err" || {
     echo "FAIL unhandled-op harness build"; cat "$TMP/unh_build.err"; exit 1; }
 "$TMP/unh_emitter" "$TMP/unh.s" >/dev/null
@@ -262,14 +263,16 @@ grep -q "scrip_rt_push_chunk_descr@PLT" "$TMP/em5b.s" || { echo "FAIL no descrip
 echo "  PASS EM-5b push-chunk descr   (PUSH_CHUNK + POP round-trip; rc=21)"
 
 # ── Test 10: RETIRED in EM-7-revert (session #72) ─────────────────────────────
-# This test exercised the brokered Phase-3 path (scrip_rt_pat_*@PLT building
-# a runtime descriptor tree, then scrip_rt_exec_stmt → exec_stmt → bb_broker)
-# which Lon's correction confirmed was the WRONG architecture for mode-4.
-# See GOAL-MODE4-EMIT.md "Design Discoveries" section for the corrected
-# five-phase model.  EM-7c will reintroduce a pattern-matcher gate using
-# the corrected emit shape (bb_flat in EMIT_TEXT mode for invariant
-# sub-trees + bb_emit BINARY mode for variant nodes); the test slot is
-# reserved for that work.
+# (reserved slot — see above for rationale)
+
+# ── Test 11: EM-7a Phase-2 simulator unit test ────────────────────────────────
+SIM_TEST="$ROOT/out/sm_phase2_sim_test"
+if [ ! -x "$SIM_TEST" ]; then
+    echo "FAIL sm_phase2_sim_test not built — run: make out/sm_phase2_sim_test"; exit 1
+fi
+SIM_OUT=$("$SIM_TEST" 2>&1)
+echo "$SIM_OUT" | grep -q "^PASS=25 FAIL=0" || { echo "FAIL EM-7a sim test"; echo "$SIM_OUT"; exit 1; }
+echo "  PASS EM-7a Phase-2 sim       (PASS=25: PATND_t reconstruction + flat_is_eligible_node)"
 
 echo
-echo "PASS=9 FAIL=0  (EM-1 wiring + EM-2 HALT/PUSH_LIT_I + EM-3 stack ops + arithmetic + EM-4 control flow + EM-5 chunks; EM-6 retired, awaiting EM-7c)"
+echo "PASS=10 FAIL=0  (EM-1 wiring + EM-2 HALT/PUSH_LIT_I + EM-3 stack ops + arithmetic + EM-4 control flow + EM-5 chunks; EM-6 retired; EM-7a Phase-2 sim)"

@@ -62,6 +62,7 @@
 #include <inttypes.h>
 
 #include "sm_prog.h"
+#include "snobol4.h"         /* DESCR_t, PATND_t, pat_* constructors (EM-7a) */
 #include <string.h>
 
 /* -----------------------------------------------------------------------
@@ -857,6 +858,422 @@ static int emit_sm_return_variant(FILE *out, sm_opcode_t op, int pc)
  * rationale.  These opcodes fall through to emit_sm_unhandled until
  * EM-7c reintroduces pattern-side emit using the corrected
  * bb_flat / bb_emit infrastructure. */
+
+/* =======================================================================
+ * EM-7a — Phase-2 SM simulator: reconstruct PATND_t tree at emit time
+ *
+ * The SM_PAT_* opcodes are a post-order serialisation of the pattern tree.
+ * Simulating them at emit time (path 1 from GOAL-MODE4-EMIT.md) reconstructs
+ * the PATND_t tree using the same pat_* constructors the interpreter uses,
+ * so bb_build_flat / bb_build_binary_node can be called directly on the
+ * result.  The simulator runs inside the scrip process; the pat_* functions
+ * are already linked.
+ *
+ * INVARIANT vs VARIANT:
+ *   A pattern subtree is INVARIANT if every leaf value is known at emit time
+ *   (compile-time constant literal or argument-free constructor).  VARIANT
+ *   means at least one leaf comes from a runtime value-stack argument (a
+ *   variable load or other runtime expression).
+ *
+ *   Invariant subtrees → baked flat into .text via bb_build_flat (EM-7b/c).
+ *   Variant nodes      → emit Phase-2 SM ops at runtime to build bb_pool RX
+ *                        slots and patch γ/ω to children (EM-7c).
+ *
+ * Sim-stack:
+ *   Each slot is a SimVal: either a pat DESCR_t (is_pat=1) or a value-stack
+ *   argument (is_pat=0).  Both carry an is_variant flag that propagates
+ *   upward: a PAT node is variant if any of its inputs was variant.
+ *
+ * flat_is_eligible_node(p):
+ *   Local, per-node invariance check — does NOT recurse into children.
+ *   Matches the node-kind exclusion list in bb_flat.c:flat_is_eligible(),
+ *   but only for the single node.  The recursive whole-tree check is now
+ *   `patnd_is_fully_invariant()` below (replaces the original).
+ *
+ * sm_phase2_to_patnd(prog, start, end, out_variant):
+ *   Walk SM instructions [start, end) that form Phase-2.
+ *   Returns the root PATND_t * via the DESCR_t wrapper (DT_P).
+ *   Sets *out_variant = 1 if any node is variant, 0 otherwise.
+ *   Returns an XEPS node if the window is empty (pure-string match).
+ * ======================================================================= */
+
+/* Maximum sim-stack depth.  Patterns rarely exceed 64 levels. */
+#define PHASE2_SIM_DEPTH  128
+
+typedef struct {
+    DESCR_t val;        /* pat DESCR_t if is_pat, else value-stack DESCR_t */
+    int     is_pat;     /* 1 = pattern on the sim pat-stack */
+    int     is_variant; /* 1 = this value came from a runtime variable */
+} SimVal;
+
+typedef struct {
+    SimVal slots[PHASE2_SIM_DEPTH];
+    int    top;      /* next free slot index (stack grows up) */
+} SimStack;
+
+static void simstack_init(SimStack *ss) { ss->top = 0; }
+
+static void simstack_push(SimStack *ss, SimVal v)
+{
+    if (ss->top < PHASE2_SIM_DEPTH) ss->slots[ss->top++] = v;
+}
+
+static SimVal simstack_pop(SimStack *ss)
+{
+    if (ss->top > 0) return ss->slots[--ss->top];
+    /* Underflow: return a variant epsilon so downstream builds still run */
+    SimVal v; v.val = pat_epsilon(); v.is_pat = 1; v.is_variant = 1;
+    return v;
+}
+
+/* Push a compile-time-constant (invariant) string/int onto the VALUE side */
+static void simstack_push_const_s(SimStack *ss, const char *s)
+{
+    SimVal v;
+    v.val.v  = DT_S;
+    v.val.s  = s;
+    v.val.i  = 0;
+    v.is_pat = 0;
+    v.is_variant = 0;
+    simstack_push(ss, v);
+}
+
+static void simstack_push_const_i(SimStack *ss, int64_t n)
+{
+    SimVal v;
+    v.val.v  = DT_I;
+    v.val.i  = n;
+    v.val.s  = NULL;
+    v.is_pat = 0;
+    v.is_variant = 0;
+    simstack_push(ss, v);
+}
+
+/* Push a runtime (variant) placeholder onto the VALUE side */
+static void simstack_push_variant_val(SimStack *ss)
+{
+    SimVal v;
+    v.val = pat_epsilon(); /* placeholder — actual value not known at emit time */
+    v.is_pat = 0;
+    v.is_variant = 1;
+    simstack_push(ss, v);
+}
+
+/* Wrap a PATND_t (as DESCR_t) into a SimVal with given variant flag */
+static SimVal make_pat_val(DESCR_t d, int is_variant)
+{
+    SimVal v;
+    v.val = d;
+    v.is_pat = 1;
+    v.is_variant = is_variant;
+    return v;
+}
+
+/* ── flat_is_eligible_node: single-node check (no child recursion) ───── */
+int flat_is_eligible_node(const PATND_t *p)
+{
+    if (!p) return 1;
+    switch (p->kind) {
+    /* Mutable-ζ nodes: charset depends on a runtime string → variant */
+    case XSPNC: case XBRKC: case XANYC: case XNNYC:
+    /* Numeric nodes: depend on a runtime integer argument → variant */
+    case XLNTH: case XTB: case XRTB:
+    /* Position nodes: XPOSI/XRPSI always-invariant (no delta) but
+     * their PATND_t uses the num field, which is set at build time.
+     * We keep them invariant here — they have no mutable ζ. */
+    /* Deferred references: runtime variable look-ups → always variant */
+    case XDSAR:
+    /* Named captures via runtime function: XCALLCAP, XATP → variant  */
+    case XCALLCAP: case XATP:
+    /* FENCE fired-flag is mutable state → variant                     */
+    case XFNCE:
+        return 0;
+    default:
+        return 1;
+    }
+}
+
+/* ── patnd_is_fully_invariant: whole-tree check (replaces bb_flat's ─── */
+/* flat_is_eligible for use from the emitter)                            */
+int patnd_is_fully_invariant(const PATND_t *p)
+{
+    if (!p) return 1;
+    if (!flat_is_eligible_node(p)) return 0;
+    /* n>2 XCAT: n-ary chain label management not yet implemented in bb_flat */
+    if (p->kind == XCAT && p->nchildren > 2) return 0;
+    for (int i = 0; i < p->nchildren; i++)
+        if (!patnd_is_fully_invariant(p->children[i])) return 0;
+    return 1;
+}
+
+/* ── PATND_t accessor: extract PATND_t * from a DT_P DESCR_t ─────────── */
+static PATND_t *patnd_of(DESCR_t d)
+{
+    if (d.v != DT_P || !d.s) return NULL;
+    return (PATND_t *)d.s;
+}
+
+/* ── sm_phase2_to_patnd ──────────────────────────────────────────────── */
+/*
+ * Walk SM instructions [phase2_start, phase2_end) and simulate Phase-2
+ * semantics to reconstruct the pattern tree.
+ *
+ * Instructions in this window are SM_PAT_* ops plus supporting value-stack
+ * pushes (SM_PUSH_LIT_S, SM_PUSH_LIT_I, SM_PUSH_VAR, SM_PAT_BOXVAL, etc.).
+ * SM_PUSH_VAR produces a variant value; everything else may be invariant.
+ *
+ * Returns: root DESCR_t (DT_P) wrapping the reconstructed PATND_t.
+ *          If the window is empty, returns pat_epsilon() (invariant).
+ * Sets:    *out_variant = 1 if any node in the tree is variant.
+ *
+ * The returned PATND_t is GC-allocated (pat_* constructors use GC_MALLOC).
+ * It is valid for the duration of the emit call.
+ */
+DESCR_t sm_phase2_to_patnd(const SM_Program *prog,
+                            int phase2_start, int phase2_end,
+                            int *out_variant)
+{
+    SimStack ss;
+    simstack_init(&ss);
+    int has_variant = 0;
+
+    for (int pc = phase2_start; pc < phase2_end; pc++) {
+        const SM_Instr *ins = &prog->instrs[pc];
+        switch (ins->op) {
+
+        /* ── value-stack pushes (Phase-2 argument sources) ───────── */
+        case SM_PUSH_LIT_S:
+            simstack_push_const_s(&ss, ins->a[0].s ? ins->a[0].s : "");
+            break;
+        case SM_PUSH_LIT_I:
+            simstack_push_const_i(&ss, ins->a[0].i);
+            break;
+        case SM_PUSH_VAR:
+            /* Runtime variable load — variant */
+            simstack_push_variant_val(&ss);
+            has_variant = 1;
+            break;
+        case SM_PAT_BOXVAL:
+            /* Moves top of pat-stack to value-stack side (used when
+             * a pattern is stored in a variable for later DEREF).
+             * The SimVal keeps its is_variant flag and is_pat flips. */
+            if (ss.top > 0) ss.slots[ss.top - 1].is_pat = 0;
+            break;
+
+        /* ── leaf pat constructors that need no value-stack arg ──── */
+        case SM_PAT_EPS:
+            simstack_push(&ss, make_pat_val(pat_epsilon(), 0));
+            break;
+        case SM_PAT_ARB:
+            simstack_push(&ss, make_pat_val(pat_arb(), 0));
+            break;
+        case SM_PAT_REM:
+            simstack_push(&ss, make_pat_val(pat_rem(), 0));
+            break;
+        case SM_PAT_FAIL:
+            simstack_push(&ss, make_pat_val(pat_fail(), 0));
+            break;
+        case SM_PAT_SUCCEED:
+            simstack_push(&ss, make_pat_val(pat_succeed(), 0));
+            break;
+        case SM_PAT_ABORT:
+            simstack_push(&ss, make_pat_val(pat_abort(), 0));
+            break;
+        case SM_PAT_BAL:
+            simstack_push(&ss, make_pat_val(pat_bal(), 0));
+            break;
+        case SM_PAT_FENCE:
+            /* FENCE with no arg — push mutable-state node, variant */
+            simstack_push(&ss, make_pat_val(pat_fence(), 1));
+            has_variant = 1;
+            break;
+
+        /* ── leaf constructors: invariant literal ────────────────── */
+        case SM_PAT_LIT: {
+            const char *s = ins->a[0].s ? ins->a[0].s : "";
+            simstack_push(&ss, make_pat_val(pat_lit(s), 0));
+            break;
+        }
+
+        /* ── constructors that pop one value-stack arg ───────────── */
+        case SM_PAT_SPAN: {
+            SimVal arg = simstack_pop(&ss);
+            const char *cs = (arg.val.v == DT_S && arg.val.s) ? arg.val.s : "";
+            int v = arg.is_variant;
+            /* XSPNC is always variant in flat_is_eligible_node
+             * (mutable ζ-delta), so mark variant regardless */
+            simstack_push(&ss, make_pat_val(pat_span(cs), 1));
+            has_variant = 1;
+            (void)v;
+            break;
+        }
+        case SM_PAT_BREAK: {
+            SimVal arg = simstack_pop(&ss);
+            const char *cs = (arg.val.v == DT_S && arg.val.s) ? arg.val.s : "";
+            simstack_push(&ss, make_pat_val(pat_break_(cs), 1));
+            has_variant = 1;
+            break;
+        }
+        case SM_PAT_ANY: {
+            SimVal arg = simstack_pop(&ss);
+            const char *cs = (arg.val.v == DT_S && arg.val.s) ? arg.val.s : "";
+            simstack_push(&ss, make_pat_val(pat_any_cs(cs), 1));
+            has_variant = 1;
+            break;
+        }
+        case SM_PAT_NOTANY: {
+            SimVal arg = simstack_pop(&ss);
+            const char *cs = (arg.val.v == DT_S && arg.val.s) ? arg.val.s : "";
+            simstack_push(&ss, make_pat_val(pat_notany(cs), 1));
+            has_variant = 1;
+            break;
+        }
+        case SM_PAT_LEN: {
+            SimVal arg = simstack_pop(&ss);
+            int64_t n = (arg.val.v == DT_I) ? arg.val.i : 0;
+            int v = arg.is_variant;
+            /* XLNTH is variant (mutable ζ-delta), but the PATND_t is
+             * reconstructed accurately; mark variant for partition. */
+            simstack_push(&ss, make_pat_val(pat_len(n), 1));
+            has_variant = 1;
+            (void)v;
+            break;
+        }
+        case SM_PAT_POS: {
+            SimVal arg = simstack_pop(&ss);
+            int64_t n = (arg.val.v == DT_I) ? arg.val.i : 0;
+            int v = arg.is_variant;
+            /* XPOSI is invariant per flat_is_eligible_node */
+            simstack_push(&ss, make_pat_val(pat_pos(n), v));
+            if (v) has_variant = 1;
+            break;
+        }
+        case SM_PAT_RPOS: {
+            SimVal arg = simstack_pop(&ss);
+            int64_t n = (arg.val.v == DT_I) ? arg.val.i : 0;
+            int v = arg.is_variant;
+            simstack_push(&ss, make_pat_val(pat_rpos(n), v));
+            if (v) has_variant = 1;
+            break;
+        }
+        case SM_PAT_TAB: {
+            SimVal arg = simstack_pop(&ss);
+            int64_t n = (arg.val.v == DT_I) ? arg.val.i : 0;
+            simstack_push(&ss, make_pat_val(pat_tab(n), 1));
+            has_variant = 1;
+            break;
+        }
+        case SM_PAT_RTAB: {
+            SimVal arg = simstack_pop(&ss);
+            int64_t n = (arg.val.v == DT_I) ? arg.val.i : 0;
+            simstack_push(&ss, make_pat_val(pat_rtab(n), 1));
+            has_variant = 1;
+            break;
+        }
+
+        /* ── one-child pat constructors ──────────────────────────── */
+        case SM_PAT_ARBNO: {
+            SimVal inner = simstack_pop(&ss);
+            int v = inner.is_variant;
+            /* XARBN is variant if child is variant (mutable ζ on inner) */
+            simstack_push(&ss, make_pat_val(pat_arbno(inner.val), v));
+            if (v) has_variant = 1;
+            break;
+        }
+        case SM_PAT_FENCE1: {
+            SimVal inner = simstack_pop(&ss);
+            int v = inner.is_variant;
+            simstack_push(&ss, make_pat_val(pat_fence_p(inner.val), 1));
+            has_variant = 1;
+            (void)v;
+            break;
+        }
+
+        /* ── two-child combinators ───────────────────────────────── */
+        case SM_PAT_CAT: {
+            SimVal right = simstack_pop(&ss);
+            SimVal left  = simstack_pop(&ss);
+            int v = left.is_variant | right.is_variant;
+            simstack_push(&ss, make_pat_val(pat_cat(left.val, right.val), v));
+            if (v) has_variant = 1;
+            break;
+        }
+        case SM_PAT_ALT: {
+            SimVal right = simstack_pop(&ss);
+            SimVal left  = simstack_pop(&ss);
+            int v = left.is_variant | right.is_variant;
+            simstack_push(&ss, make_pat_val(pat_alt(left.val, right.val), v));
+            if (v) has_variant = 1;
+            break;
+        }
+
+        /* ── deref: runtime pattern variable lookup → always variant */
+        case SM_PAT_DEREF: {
+            SimVal arg = simstack_pop(&ss);
+            /* We don't know what pattern the variable holds at emit time.
+             * Build an XDSAR node using the name if it came from PUSH_VAR,
+             * otherwise a placeholder XEPS. */
+            DESCR_t d;
+            if (!arg.is_variant && arg.val.v == DT_S && arg.val.s)
+                d = pat_ref(arg.val.s);
+            else
+                d = pat_epsilon();   /* placeholder for variant deref */
+            simstack_push(&ss, make_pat_val(d, 1));
+            has_variant = 1;
+            break;
+        }
+        case SM_PAT_REFNAME: {
+            /* *var — a[0].s = name; always XDSAR, always variant */
+            const char *name = ins->a[0].s ? ins->a[0].s : "";
+            simstack_push(&ss, make_pat_val(pat_ref(name), 1));
+            has_variant = 1;
+            break;
+        }
+
+        /* ── capture wrappers ────────────────────────────────────── */
+        case SM_PAT_CAPTURE: {
+            SimVal child = simstack_pop(&ss);
+            const char *vname = ins->a[0].s ? ins->a[0].s : "";
+            int kind = (int)ins->a[1].i;
+            DESCR_t var = NAME_fn(vname);
+            DESCR_t d;
+            if (kind == 1) d = pat_assign_imm(child.val, var);
+            else           d = pat_assign_cond(child.val, var);
+            /* XFNME/XNME are invariant per flat_is_eligible_node;
+             * variant propagates from child only */
+            simstack_push(&ss, make_pat_val(d, child.is_variant));
+            if (child.is_variant) has_variant = 1;
+            break;
+        }
+        case SM_PAT_CAPTURE_FN:
+        case SM_PAT_CAPTURE_FN_ARGS:
+        case SM_PAT_USERCALL:
+        case SM_PAT_USERCALL_ARGS: {
+            /* XCALLCAP / XATP — always variant (runtime function call) */
+            /* Pop child if CAPTURE_FN* (it has a child pat), else no child */
+            SimVal child = simstack_pop(&ss);
+            const char *fname = ins->a[0].s ? ins->a[0].s : "";
+            DESCR_t d = pat_assign_callcap(child.val, fname, NULL, 0);
+            simstack_push(&ss, make_pat_val(d, 1));
+            has_variant = 1;
+            break;
+        }
+
+        /* ── opcodes that are NOT Phase-2 — skip silently ────────── */
+        /* SM_PUSH_VAR handled above; SM_STORE_VAR, SM_STNO, etc.     */
+        /* are straight-line and never appear inside a Phase-2 window */
+        default:
+            /* Unknown opcode in Phase-2 window: treat as variant     */
+            simstack_push_variant_val(&ss);
+            has_variant = 1;
+            break;
+        }
+    }
+
+    *out_variant = has_variant;
+    if (ss.top == 0) return pat_epsilon();   /* empty window */
+    return ss.slots[ss.top - 1].val;         /* root pattern */
+}
 
 /* -----------------------------------------------------------------------
  * Unhandled opcode trap

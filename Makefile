@@ -110,6 +110,26 @@ out/sm_codegen_x64_emit_test: $(RT)/x86/sm_codegen_x64_emit_test.c \
 	@echo "Built: out/sm_codegen_x64_emit_test"
 
 
+# ── EM-7a Phase-2 simulator unit test ────────────────────────────────────────
+# Links against libscrip_rt.so for pat_* constructors + GC.
+out/sm_phase2_sim_test: $(RT)/x86/sm_phase2_sim_test.c \
+                        $(RT)/x86/sm_codegen_x64_emit.c \
+                        $(RT)/x86/sm_codegen_x64_emit.h \
+                        $(RT)/x86/sm_prog.c \
+                        $(RT)/x86/sm_prog.h \
+                        out/libscrip_rt.so
+	@mkdir -p out
+	$(CC) -O0 -g $(WARN) \
+	    -I$(SRC) -I$(RT)/x86 -I$(RT) -I$(RT)/rt \
+	    -DDYN_ENGINE_LINKED \
+	    $(RT)/x86/sm_phase2_sim_test.c \
+	    $(RT)/x86/sm_codegen_x64_emit.c \
+	    $(RT)/x86/sm_prog.c \
+	    -Lout -lscrip_rt -lgc -lm \
+	    -Wl,-rpath,$(shell pwd)/out \
+	    -o out/sm_phase2_sim_test
+	@echo "Built: out/sm_phase2_sim_test"
+
 # ── scrip — unified driver (all modes, all frontends) ────────────────────────
 # WASM removed from scrip build (2026-04-08): --jit-emit --wasm / emit_wasm.c
 # dropped. Use scrip legacy driver if WASM emission is ever needed.
