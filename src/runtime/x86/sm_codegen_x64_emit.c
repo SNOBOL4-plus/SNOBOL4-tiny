@@ -1624,6 +1624,86 @@ static int emit_sm_pat_capture(FILE *out, const SM_Instr *ins, int pc)
                                   "# SM_PAT_CAPTURE");
 }
 
+/* SM_PAT_CAPTURE_FN: . *func() / $ *func() — a[0].s=fname, a[1].i=is_imm, a[2].s=namelist.
+ * Calls scrip_rt_pat_capture_fn(fname, is_imm, namelist). */
+static int emit_sm_pat_capture_fn(FILE *out, const SM_Instr *ins, int pc)
+{
+    (void)pc;
+    const char *fname    = ins->a[0].s ? ins->a[0].s : "";
+    int         is_imm   = (int)ins->a[1].i;
+    const char *namelist = ins->a[2].s ? ins->a[2].s : "";
+    char act[160], lbl[64], ann[128];
+    /* arg0 rdi = fname */
+    if (*fname) {
+        strtab_label(lbl, sizeof(lbl), fname);
+        snprintf(act, sizeof(act), "lea     rdi, [rip + %s]", lbl);
+        snprintf(ann, sizeof(ann),  "# fname=%s", fname);
+    } else {
+        snprintf(act, sizeof(act), "xor     edi, edi");
+        snprintf(ann, sizeof(ann),  "# fname=NULL");
+    }
+    if (sm_line(out, "", act, ann) < 0) return -1;
+    /* arg1 esi = is_imm */
+    snprintf(act, sizeof(act), "mov     esi, %d", is_imm);
+    if (sm_line(out, "", act, "# is_imm") < 0) return -1;
+    /* arg2 rdx = namelist */
+    if (namelist && *namelist) {
+        strtab_label(lbl, sizeof(lbl), namelist);
+        snprintf(act, sizeof(act), "lea     rdx, [rip + %s]", lbl);
+        if (sm_line(out, "", act, "# namelist") < 0) return -1;
+    } else {
+        if (sm_line(out, "", "xor     edx, edx", "# namelist=NULL") < 0) return -1;
+    }
+    return sm_line(out, "", "call    scrip_rt_pat_capture_fn@PLT", "# SM_PAT_CAPTURE_FN");
+}
+
+/* SM_PAT_CAPTURE_FN_ARGS: . *func(args) / $ *func(args) — args-on-stack form.
+ * a[0].s=fname, a[1].i=is_imm, a[2].i=nargs.
+ * Calls scrip_rt_pat_capture_fn_args(fname, is_imm, nargs). */
+static int emit_sm_pat_capture_fn_args(FILE *out, const SM_Instr *ins, int pc)
+{
+    (void)pc;
+    const char *fname  = ins->a[0].s ? ins->a[0].s : "";
+    int         is_imm = (int)ins->a[1].i;
+    int         nargs  = (int)ins->a[2].i;
+    char act[160], lbl[64], ann[128];
+    if (*fname) {
+        strtab_label(lbl, sizeof(lbl), fname);
+        snprintf(act, sizeof(act), "lea     rdi, [rip + %s]", lbl);
+        snprintf(ann, sizeof(ann),  "# fname=%s", fname);
+    } else {
+        snprintf(act, sizeof(act), "xor     edi, edi");
+        snprintf(ann, sizeof(ann),  "# fname=NULL");
+    }
+    if (sm_line(out, "", act, ann) < 0) return -1;
+    snprintf(act, sizeof(act), "mov     esi, %d", is_imm);
+    if (sm_line(out, "", act, "# is_imm") < 0) return -1;
+    snprintf(act, sizeof(act), "mov     edx, %d", nargs);
+    snprintf(ann, sizeof(ann),  "# nargs=%d", nargs);
+    if (sm_line(out, "", act, ann) < 0) return -1;
+    return sm_line(out, "", "call    scrip_rt_pat_capture_fn_args@PLT",
+                   "# SM_PAT_CAPTURE_FN_ARGS");
+}
+
+/* SM_PAT_USERCALL: bare *func() — a[0].s=fname.
+ * Calls scrip_rt_pat_usercall(fname). */
+static int emit_sm_pat_usercall(FILE *out, const SM_Instr *ins, int pc)
+{
+    (void)pc;
+    return emit_pat_call_str(out, "scrip_rt_pat_usercall",
+                              ins->a[0].s, "# SM_PAT_USERCALL");
+}
+
+/* SM_PAT_USERCALL_ARGS: bare *func(args) — a[0].s=fname, a[1].i=nargs.
+ * Calls scrip_rt_pat_usercall_args(fname, nargs). */
+static int emit_sm_pat_usercall_args(FILE *out, const SM_Instr *ins, int pc)
+{
+    (void)pc;
+    return emit_pat_call_str_int(out, "scrip_rt_pat_usercall_args",
+                                  ins->a[0].s, (int)ins->a[1].i,
+                                  "# SM_PAT_USERCALL_ARGS");
+}
+
 /* SM_PAT_<no-arg-no-pop>: ARB / REM / FENCE / FAIL / ABORT / SUCCEED /
  * BAL / EPS — push a pre-built pattern node on the pat-stack.
  * SM_PAT_<value-stack-arg>: SPAN / BREAK / ANY / NOTANY (charset) and
@@ -1869,7 +1949,11 @@ int sm_codegen_x64_emit(SM_Program *prog, FILE *out, const char *src_path)
              * per-variant-node ideal is a follow-up rung. */
             case SM_PAT_LIT:      rc = emit_sm_pat_lit(out, ins, pc);     break;
             case SM_PAT_REFNAME:  rc = emit_sm_pat_refname(out, ins, pc); break;
-            case SM_PAT_CAPTURE:  rc = emit_sm_pat_capture(out, ins, pc); break;
+            case SM_PAT_CAPTURE:      rc = emit_sm_pat_capture(out, ins, pc); break;
+            case SM_PAT_CAPTURE_FN:   rc = emit_sm_pat_capture_fn(out, ins, pc); break;
+            case SM_PAT_CAPTURE_FN_ARGS: rc = emit_sm_pat_capture_fn_args(out, ins, pc); break;
+            case SM_PAT_USERCALL:     rc = emit_sm_pat_usercall(out, ins, pc); break;
+            case SM_PAT_USERCALL_ARGS: rc = emit_sm_pat_usercall_args(out, ins, pc); break;
             case SM_PAT_SPAN:
             case SM_PAT_BREAK:
             case SM_PAT_ANY:

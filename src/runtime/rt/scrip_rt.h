@@ -187,6 +187,10 @@ void scrip_rt_pat_alt     (void);
 void scrip_rt_pat_deref   (void);
 void scrip_rt_pat_capture (const char *varname, int kind);
 void scrip_rt_pat_boxval  (void);
+void scrip_rt_pat_capture_fn     (const char *fname, int is_imm, const char *namelist);
+void scrip_rt_pat_capture_fn_args(const char *fname, int is_imm, int nargs);
+void scrip_rt_pat_usercall       (const char *fname);
+void scrip_rt_pat_usercall_args  (const char *fname, int nargs);
 
 void scrip_rt_match_variant(const char *subj_name, int has_repl);
 

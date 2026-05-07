@@ -219,14 +219,28 @@ static DESCR_t _rt_DIFFER(DESCR_t *a, int n)
 
 static DESCR_t _rt_usercall(const char *name, DESCR_t *args, int nargs)
 {
-    /* Dispatch *func() in pattern position: look up name in NV table
-     * (it should be a DT_E chunk or a registered C function).
-     * For EM-6 scope the NV table holds only C builtins; chunk dispatch
-     * via scrip_rt_call_chunk is added when EM-6 exercises USERCALL. */
-    DESCR_t fn = NV_GET_fn(name ? name : "");
-    if (IS_FAIL_fn(fn)) return FAILDESCR;
-    /* Fall through to FAILDESCR for unresolved names (safe for EM-6 gate). */
+    /* Dispatch *func() in pattern position.
+     * EM-7d honest deviation: calling user-defined SNOBOL4 functions from
+     * inside a BB pattern match in mode-4 causes re-entrancy that corrupts
+     * the SNOBOL4 interpreter call stack (which is not initialised in the
+     * native execution context).  INVOKE_fn / APPLY_fn both segfault.
+     * Returning FAILDESCR is safe and correct for C builtins that fail;
+     * user-defined functions silently fail the pattern match.
+     * Fix tracked as EM-7d-usercall-reentrant: wire a native-chunk
+     * function pointer table (emitted in .s at startup) so the emitted
+     * binary can call user functions directly via call/ret without
+     * touching the SNOBOL4 interpreter call stack. */
     (void)args; (void)nargs;
+    if (!name || !*name) return FAILDESCR;
+    DESCR_t fn = NV_GET_fn(name);
+    if (!IS_FAIL_fn(fn)) {
+        /* C builtin registered via register_fn — dispatch directly. */
+        if (fn.v == DT_E && fn.ptr) {
+            typedef DESCR_t (*cfn_t)(DESCR_t *, int);
+            cfn_t cfn = (cfn_t)fn.ptr;
+            return cfn(args, nargs);
+        }
+    }
     return FAILDESCR;
 }
 
@@ -590,6 +604,75 @@ void scrip_rt_pat_boxval(void)
 {
     /* Move pat-stack TOS to value-stack as DT_P. */
     vstack_push(pat_pop_internal());
+}
+
+/* SM_PAT_CAPTURE_FN: . *func() / $ *func() — no-args form.
+ * a[0].s=fname, a[1].i=is_imm(0=cond/1=imm), a[2].s=namelist (tab-sep, or NULL).
+ * Pops child from pat-stack; pushes XCALLCAP node. */
+void scrip_rt_pat_capture_fn(const char *fname, int is_imm, const char *namelist)
+{
+    DESCR_t child = pat_pop_internal();
+    if (!fname) fname = "";
+    if (namelist && namelist[0]) {
+        int nnames = 1;
+        for (const char *q = namelist; *q; q++) if (*q == '\t') nnames++;
+        char **names = (char **)GC_MALLOC((size_t)nnames * sizeof(char *));
+        int ni = 0;
+        const char *start = namelist;
+        for (const char *q = namelist; ; q++) {
+            if (*q == '\t' || *q == '\0') {
+                size_t len = (size_t)(q - start);
+                char *nm = (char *)GC_MALLOC(len + 1);
+                memcpy(nm, start, len);  nm[len] = '\0';
+                names[ni++] = nm;
+                if (*q == '\0') break;
+                start = q + 1;
+            }
+        }
+        pat_push(is_imm
+            ? pat_assign_callcap_named_imm(child, fname, NULL, 0, names, nnames)
+            : pat_assign_callcap_named    (child, fname, NULL, 0, names, nnames));
+    } else {
+        pat_push(is_imm
+            ? pat_assign_callcap_named_imm(child, fname, NULL, 0, NULL, 0)
+            : pat_assign_callcap          (child, fname, NULL, 0));
+    }
+}
+
+/* SM_PAT_CAPTURE_FN_ARGS: . *func(args) / $ *func(args) — args-on-stack form.
+ * a[0].s=fname, a[1].i=is_imm, a[2].i=nargs.
+ * Pops nargs from vstack (last-pushed=last arg), pops child from pat-stack. */
+void scrip_rt_pat_capture_fn_args(const char *fname, int is_imm, int nargs)
+{
+    if (!fname) fname = "";
+    DESCR_t *argv = nargs > 0
+        ? (DESCR_t *)GC_MALLOC((size_t)nargs * sizeof(DESCR_t))
+        : NULL;
+    for (int i = nargs - 1; i >= 0; i--) argv[i] = vstack_pop();
+    DESCR_t child = pat_pop_internal();
+    pat_push(is_imm
+        ? pat_assign_callcap_named_imm(child, fname, argv, nargs, NULL, 0)
+        : pat_assign_callcap          (child, fname, argv, nargs));
+}
+
+/* SM_PAT_USERCALL: bare *func() — no-args, no child.
+ * a[0].s=fname. Builds XATP deferred-usercall node. */
+void scrip_rt_pat_usercall(const char *fname)
+{
+    if (!fname) fname = "";
+    pat_push(pat_user_call(fname, NULL, 0));
+}
+
+/* SM_PAT_USERCALL_ARGS: bare *func(args) — args-on-stack form.
+ * a[0].s=fname, a[1].i=nargs. Pops nargs from vstack. */
+void scrip_rt_pat_usercall_args(const char *fname, int nargs)
+{
+    if (!fname) fname = "";
+    DESCR_t *argv = nargs > 0
+        ? (DESCR_t *)GC_MALLOC((size_t)nargs * sizeof(DESCR_t))
+        : NULL;
+    for (int i = nargs - 1; i >= 0; i--) argv[i] = vstack_pop();
+    pat_push(pat_user_call(fname, argv, nargs));
 }
 
 /*==============================================================================
