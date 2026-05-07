@@ -176,6 +176,48 @@ void scrip_rt_pat_boxval(void);              /* SM_PAT_BOXVAL */
  * Sets last_ok (1=:S, 0=:F); resets pat-stack to empty. */
 void scrip_rt_exec_stmt(const char *subj_name, int has_repl);
 
+/* ── EM-7 additions ──────────────────────────────────────────────────────── */
+
+/* SM_CONCAT: pop two DESCRs from vstack, push concatenation result. */
+void scrip_rt_concat(void);
+
+/* SM_PUSH_NULL: push null (empty-string) descriptor, set last_ok=1. */
+void scrip_rt_push_null(void);
+
+/* SM_COERCE_NUM: pop TOS, coerce string→int/real if needed, push result. */
+void scrip_rt_coerce_num(void);
+
+/* SM_CALL: general function call.
+ * name:  function name (INDIR_GET / NAME_PUSH / IDX / ... or user/builtin).
+ * nargs: number of arguments already popped from SM vstack into the runtime's
+ *        internal arg buffer by the emitter's call-setup sequence.
+ * The function name is the compile-time constant from SM_Instr.a[0].s.
+ * Args were pushed left-to-right; this function pops nargs from vstack,
+ * dispatches, and pushes one result.  Sets last_ok. */
+void scrip_rt_call(const char *name, int nargs);
+
+/* SM_RETURN / SM_FRETURN / SM_NRETURN and conditional variants.
+ * kind:  0=RETURN, 1=FRETURN, 2=NRETURN.
+ * cond:  0=unconditional, 1=only-if-last_ok (_S), 2=only-if-not-last_ok (_F).
+ * In mode-4 native-call model, RETURN is a bare ret — the emitter emits `ret`
+ * directly for unconditional RETURN.  This helper handles the cases that need
+ * runtime logic: FRETURN (push FAILDESCR, clear last_ok), NRETURN (push name
+ * descriptor), and all conditional variants that must check g_last_ok first.
+ * Returns 1 if the return should execute (condition met), 0 if not (fall
+ * through to next instruction). */
+int scrip_rt_do_return(int kind, int cond);
+
+/* SM_PAT_CAPTURE_FN_ARGS: . *fname(args) / $ *fname(args).
+ * fname: function name; is_imm: 0=conditional(.), 1=immediate($); nargs from stack.
+ * Pops nargs DESCR values from vstack, pops child from pat-stack,
+ * pushes assembled capture pattern onto pat-stack. */
+void scrip_rt_pat_capture_fn_args(const char *fname, int is_imm, int nargs);
+
+/* SM_PAT_USERCALL_ARGS: *fname(args).
+ * fname: function name; nargs from stack.
+ * Pops nargs DESCR values from vstack, pushes deferred-call pattern. */
+void scrip_rt_pat_usercall_args(const char *fname, int nargs);
+
 #ifdef __cplusplus
 }
 #endif

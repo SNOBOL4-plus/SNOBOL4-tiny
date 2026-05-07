@@ -163,7 +163,7 @@ static void srcline_strip_cr(char *s)
  *   3. Instruction emitters call strtab_label(s) to get the label name.
  * ----------------------------------------------------------------------- */
 
-#define STRTAB_CAP 512
+#define STRTAB_CAP 8192  /* EM-7: beauty.sno has ~2500 unique strings; 8192 gives headroom */
 
 typedef struct {
     const char *s;       /* original pointer from SM_Instr.a[].s */
@@ -251,6 +251,8 @@ static void strtab_collect(const SM_Program *prog)
         case SM_PAT_CAPTURE:
         case SM_PAT_CAPTURE_FN:
         case SM_PAT_USERCALL:
+        case SM_PAT_CAPTURE_FN_ARGS:  /* EM-7: a[0].s = fname */
+        case SM_PAT_USERCALL_ARGS:    /* EM-7: a[0].s = fname */
         case SM_EXEC_STMT:
         case SM_CALL:
             if (ins->a[0].s) strtab_intern(ins->a[0].s);
@@ -862,6 +864,133 @@ static int emit_bb_box(FILE *out, const SM_Instr *ins, int pc)
 }
 
 /* -----------------------------------------------------------------------
+ * EM-7 emitters: SM_CALL, SM_CONCAT, SM_PUSH_NULL, SM_COERCE_NUM,
+ *                SM_RETURN_S/F, SM_FRETURN[_S/_F], SM_NRETURN[_S/_F],
+ *                SM_PAT_CAPTURE_FN_ARGS, SM_PAT_USERCALL_ARGS.
+ * ----------------------------------------------------------------------- */
+
+/* SM_CONCAT: pop right then left; push CONCAT result.  All in libscrip_rt. */
+static int emit_sm_concat(FILE *out, int pc)
+{
+    (void)pc;
+    return sm_line(out, "", "call    scrip_rt_concat@PLT", "# SM_CONCAT");
+}
+
+/* SM_PUSH_NULL: push null (empty-string) descriptor; sets last_ok=1. */
+static int emit_sm_push_null(FILE *out, int pc)
+{
+    (void)pc;
+    return sm_line(out, "", "call    scrip_rt_push_null@PLT", "# SM_PUSH_NULL");
+}
+
+/* SM_COERCE_NUM: unary +; coerce string→int/real if needed. */
+static int emit_sm_coerce_num(FILE *out, int pc)
+{
+    (void)pc;
+    return sm_line(out, "", "call    scrip_rt_coerce_num@PLT", "# SM_COERCE_NUM");
+}
+
+/* SM_CALL: general function call.  All dispatch (pseudo-calls, builtins,
+ * user-defined) lives in scrip_rt_call(name, nargs).
+ *   a[0].s = function name (interned in strtab)
+ *   a[1].i = nargs                                                       */
+static int emit_sm_call(FILE *out, const SM_Instr *ins, int pc)
+{
+    (void)pc;
+    const char *name = ins->a[0].s ? ins->a[0].s : "";
+    int         nargs = (int)ins->a[1].i;
+    char lbl[32], act[96], annot[80];
+    strtab_label(lbl, sizeof(lbl), name);
+    snprintf(act,   sizeof(act),   "lea     rdi, [rip + %s]", lbl);
+    snprintf(annot, sizeof(annot), "# fname=\"%s\"", name);
+    if (sm_line(out, "", act, annot) < 0) return -1;
+    snprintf(act,   sizeof(act),   "mov     esi, %d", nargs);
+    snprintf(annot, sizeof(annot), "# nargs=%d", nargs);
+    if (sm_line(out, "", act, annot) < 0) return -1;
+    return sm_line(out, "", "call    scrip_rt_call@PLT", "# SM_CALL");
+}
+
+/* SM_RETURN_S / SM_RETURN_F / SM_FRETURN[_S/_F] / SM_NRETURN[_S/_F].
+ *
+ * Idiom:  call scrip_rt_do_return(kind, cond)  → eax = 1 if return fires.
+ *         test eax, eax  → jz .skip<pc>  (if 0, fall through)
+ *         ret
+ *      .skip<pc>:        (next instruction)
+ *
+ * For unconditional plain SM_RETURN, emit_sm_return already handles it
+ * (pure native ret).  This handler covers the 8 conditional variants. */
+static int emit_sm_return_variant(FILE *out, sm_opcode_t op, int pc)
+{
+    int kind = 0;  /* RETURN */
+    if (op == SM_FRETURN || op == SM_FRETURN_S || op == SM_FRETURN_F) kind = 1;
+    if (op == SM_NRETURN || op == SM_NRETURN_S || op == SM_NRETURN_F) kind = 2;
+
+    int cond = 0;  /* unconditional */
+    if (op == SM_RETURN_S || op == SM_FRETURN_S || op == SM_NRETURN_S) cond = 1;
+    if (op == SM_RETURN_F || op == SM_FRETURN_F || op == SM_NRETURN_F) cond = 2;
+
+    char act[96], annot[64];
+    snprintf(act,   sizeof(act),   "mov     edi, %d", kind);
+    snprintf(annot, sizeof(annot), "# kind=%d (0=RET 1=FRET 2=NRET)", kind);
+    if (sm_line(out, "", act, annot) < 0) return -1;
+    snprintf(act,   sizeof(act),   "mov     esi, %d", cond);
+    snprintf(annot, sizeof(annot), "# cond=%d (0=uncon 1=:S 2=:F)", cond);
+    if (sm_line(out, "", act, annot) < 0) return -1;
+    if (sm_line(out, "", "call    scrip_rt_do_return@PLT", sm_opcode_name(op)) < 0) return -1;
+    if (sm_line(out, "", "test    eax, eax",                "# fire?") < 0) return -1;
+    char skip_act[64];
+    snprintf(skip_act, sizeof(skip_act), "jz      .Lretskip_%d", pc);
+    if (sm_line(out, "", skip_act,        "# no-fire: fall through") < 0) return -1;
+    if (sm_line(out, "", "ret",                              "# fire: native return") < 0) return -1;
+    char lbl[64];
+    snprintf(lbl, sizeof(lbl), ".Lretskip_%d:", pc);
+    if (fprintf(out, "%s\n", lbl) < 0) return -1;
+    return 0;
+}
+
+/* SM_PAT_CAPTURE_FN_ARGS:  . *fn(args) / $ *fn(args)  — pops nargs+child.
+ *   a[0].s = fname; a[1].i = is_imm; a[2].i = nargs.  */
+static int emit_sm_pat_capture_fn_args(FILE *out, const SM_Instr *ins, int pc)
+{
+    (void)pc;
+    const char *fname  = ins->a[0].s ? ins->a[0].s : "";
+    int         is_imm = (int)ins->a[1].i;
+    int         nargs  = (int)ins->a[2].i;
+    char lbl[32], act[96], annot[80];
+    strtab_label(lbl, sizeof(lbl), fname);
+    snprintf(act,   sizeof(act),   "lea     rdi, [rip + %s]", lbl);
+    snprintf(annot, sizeof(annot), "# fname=\"%s\"", fname);
+    if (sm_line(out, "", act, annot) < 0) return -1;
+    snprintf(act,   sizeof(act),   "mov     esi, %d", is_imm);
+    snprintf(annot, sizeof(annot), "# is_imm=%d", is_imm);
+    if (sm_line(out, "", act, annot) < 0) return -1;
+    snprintf(act,   sizeof(act),   "mov     edx, %d", nargs);
+    snprintf(annot, sizeof(annot), "# nargs=%d", nargs);
+    if (sm_line(out, "", act, annot) < 0) return -1;
+    return sm_line(out, "", "call    scrip_rt_pat_capture_fn_args@PLT",
+                   "# SM_PAT_CAPTURE_FN_ARGS");
+}
+
+/* SM_PAT_USERCALL_ARGS:  *fn(args) — pops nargs (no child).
+ *   a[0].s = fname; a[1].i = nargs.  */
+static int emit_sm_pat_usercall_args(FILE *out, const SM_Instr *ins, int pc)
+{
+    (void)pc;
+    const char *fname = ins->a[0].s ? ins->a[0].s : "";
+    int         nargs = (int)ins->a[1].i;
+    char lbl[32], act[96], annot[80];
+    strtab_label(lbl, sizeof(lbl), fname);
+    snprintf(act,   sizeof(act),   "lea     rdi, [rip + %s]", lbl);
+    snprintf(annot, sizeof(annot), "# fname=\"%s\"", fname);
+    if (sm_line(out, "", act, annot) < 0) return -1;
+    snprintf(act,   sizeof(act),   "mov     esi, %d", nargs);
+    snprintf(annot, sizeof(annot), "# nargs=%d", nargs);
+    if (sm_line(out, "", act, annot) < 0) return -1;
+    return sm_line(out, "", "call    scrip_rt_pat_usercall_args@PLT",
+                   "# SM_PAT_USERCALL_ARGS");
+}
+
+/* -----------------------------------------------------------------------
  * Unhandled opcode trap
  * ----------------------------------------------------------------------- */
 
@@ -949,6 +1078,25 @@ int sm_codegen_x64_emit(SM_Program *prog, FILE *out, const char *src_path)
             case SM_PUSH_CHUNK:   rc = emit_sm_push_chunk(out, ins, pc); break;
             case SM_CALL_CHUNK:   rc = emit_sm_call_chunk(out, ins, pc); break;
             case SM_RETURN:       rc = emit_sm_return(out, pc);          break;
+
+            /* EM-7: SM_CALL (general) + SM_CONCAT + SM_PUSH_NULL + SM_COERCE_NUM
+             * + conditional return variants + SM_PAT_*_ARGS. */
+            case SM_CALL:         rc = emit_sm_call(out, ins, pc);       break;
+            case SM_CONCAT:       rc = emit_sm_concat(out, pc);          break;
+            case SM_PUSH_NULL:    rc = emit_sm_push_null(out, pc);       break;
+            case SM_COERCE_NUM:   rc = emit_sm_coerce_num(out, pc);      break;
+            case SM_FRETURN:
+            case SM_NRETURN:
+            case SM_RETURN_S:
+            case SM_RETURN_F:
+            case SM_FRETURN_S:
+            case SM_FRETURN_F:
+            case SM_NRETURN_S:
+            case SM_NRETURN_F:    rc = emit_sm_return_variant(out, ins->op, pc); break;
+            case SM_PAT_CAPTURE_FN_ARGS:
+                                  rc = emit_sm_pat_capture_fn_args(out, ins, pc); break;
+            case SM_PAT_USERCALL_ARGS:
+                                  rc = emit_sm_pat_usercall_args(out, ins, pc);   break;
 
             /* SM_STNO -- statement boundary; emits major page break w/ source. */
             case SM_STNO:         rc = emit_sm_stno(out, ins, pc,

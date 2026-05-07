@@ -35,6 +35,7 @@
 /* Full SNOBOL4 runtime headers — .so links all runtime objects -fPIC. */
 #include "../../runtime/x86/snobol4.h"
 #include "../../runtime/x86/descr.h"
+#include "../../runtime/x86/sil_macros.h"   /* EM-7: IS_NAMEPTR / IS_NAMEVAL / NAME_DEREF_PTR */
 #include "../../runtime/x86/bb_pool.h"
 
 #include <stdint.h>
@@ -94,7 +95,7 @@ extern DESCR_t (*g_user_call_hook)(const char *, DESCR_t *, int);
  * Internal state
  *============================================================================*/
 
-#define VSTACK_CAP   256
+#define VSTACK_CAP   65536  /* EM-7: beauty.sno self-host needs deep stack (256 was insufficient) */
 #define PATSTACK_CAP  64
 
 static DESCR_t g_vstack[VSTACK_CAP];
@@ -482,6 +483,247 @@ void scrip_rt_exec_stmt(const char *subj_name, int has_repl)
                        has_repl ? &repl : NULL, has_repl);
     g_last_ok = ok;
     g_pat_sp  = 0;  /* reset pat-stack after each statement */
+}
+
+/*==============================================================================
+ * EM-7 entries
+ *============================================================================*/
+
+void scrip_rt_concat(void)
+{
+    /* SM_CONCAT: pop right then left; push CONCAT_fn(left, right). */
+    DESCR_t r = vstack_pop();
+    DESCR_t l = vstack_pop();
+    DESCR_t result = CONCAT_fn(l, r);
+    vstack_push(result);
+    g_last_ok = (result.v != DT_FAIL);
+}
+
+void scrip_rt_push_null(void)
+{
+    /* SM_PUSH_NULL: push null (empty-string) descriptor; null is non-fail. */
+    vstack_push(NULVCL);
+    g_last_ok = 1;
+}
+
+void scrip_rt_coerce_num(void)
+{
+    /* SM_COERCE_NUM: unary +; coerce string to int (or real if not integer). */
+    DESCR_t v = vstack_pop();
+    if (v.v == DT_S) {
+        int64_t iv = to_int(v);
+        if (iv != 0 || (v.s && v.s[0] == '0')) {
+            vstack_push(INTVAL(iv));
+        } else {
+            double rv = to_real(v);
+            vstack_push(REALVAL(rv));
+        }
+    } else {
+        vstack_push(v);
+    }
+    g_last_ok = 1;
+}
+
+/* SM_CALL helpers — pseudo-calls inlined here to avoid a full INVOKE_fn round trip.
+ * The full pseudo-call vocabulary mirrors sm_interp.c's SM_CALL handler. */
+extern DESCR_t subscript_get(DESCR_t arr, DESCR_t idx);
+extern DESCR_t subscript_get2(DESCR_t arr, DESCR_t i, DESCR_t j);
+extern int     subscript_set(DESCR_t arr, DESCR_t idx, DESCR_t val);
+extern int     subscript_set2(DESCR_t arr, DESCR_t i, DESCR_t j, DESCR_t val);
+extern void    sno_fold_name(char *name);
+
+/* Local fold-get / fold-set helpers (mirror nv_fold_get/set in sm_interp.c).
+ * Note: scrip is case-sensitive by default (RULES.md SN-31), so fold is a no-op
+ * in practice — but the SIL-level NV layer may still want canonical names for
+ * cases where the source explicitly uppercases.  Cheap; safe; matches interp. */
+static DESCR_t _rt_nv_fold_get(const char *raw)
+{
+    if (!raw || !*raw) return NULVCL;
+    char *n = GC_strdup(raw); sno_fold_name(n);
+    return NV_GET_fn(n);
+}
+static void _rt_nv_fold_set(const char *raw, DESCR_t val)
+{
+    if (!raw || !*raw) return;
+    char *n = GC_strdup(raw); sno_fold_name(n);
+    NV_SET_fn(n, val);
+}
+
+void scrip_rt_call(const char *name, int nargs)
+{
+    /* Pop nargs from value stack into args[] in original order. */
+    DESCR_t args[32];
+    if (nargs > 32) nargs = 32;
+    for (int k = nargs - 1; k >= 0; k--) args[k] = vstack_pop();
+
+    /* ── Pseudo-calls (handled inline, mirror sm_interp.c) ────────────── */
+    if (name && strcmp(name, "INDIR_GET") == 0) {
+        /* $expr: name on stack, push value */
+        DESCR_t name_d = args[0];
+        DESCR_t val;
+        if (IS_NAMEPTR(name_d))      val = NAME_DEREF_PTR(name_d);
+        else if (IS_NAMEVAL(name_d)) val = _rt_nv_fold_get(name_d.s);
+        else                         val = _rt_nv_fold_get(VARVAL_fn(name_d));
+        vstack_push(val);
+        g_last_ok = 1;
+        return;
+    }
+    if (name && strcmp(name, "NAME_PUSH") == 0) {
+        /* .X: pop name string, push DT_N NAMEVAL */
+        DESCR_t name_d = args[0];
+        const char *vname0 = VARVAL_fn(name_d);
+        char *vname = GC_strdup(vname0 ? vname0 : ""); sno_fold_name(vname);
+        vstack_push(NAMEVAL(vname));
+        g_last_ok = 1;
+        return;
+    }
+    if (name && strcmp(name, "ASGN_INDIR") == 0) {
+        DESCR_t name_d = args[1];
+        DESCR_t val    = args[0];
+        int ok = 0;
+        if (IS_NAMEPTR(name_d)) { *(DESCR_t*)name_d.ptr = val; ok = 1; }
+        else if (IS_NAMEVAL(name_d)) { _rt_nv_fold_set(name_d.s, val); ok = 1; }
+        else {
+            const char *vname0 = VARVAL_fn(name_d);
+            if (vname0 && *vname0) { _rt_nv_fold_set(vname0, val); ok = 1; }
+        }
+        vstack_push(val);
+        g_last_ok = ok;
+        return;
+    }
+    if (name && strcmp(name, "IDX") == 0) {
+        if (nargs == 2) {
+            DESCR_t r = subscript_get(args[0], args[1]);
+            vstack_push(r);
+            g_last_ok = (r.v != DT_FAIL);
+        } else if (nargs == 3) {
+            DESCR_t r = subscript_get2(args[0], args[1], args[2]);
+            vstack_push(r);
+            g_last_ok = (r.v != DT_FAIL);
+        } else {
+            /* N-dim via ITEM builtin */
+            DESCR_t r = INVOKE_fn("ITEM", args, nargs);
+            vstack_push(r);
+            g_last_ok = (r.v != DT_FAIL);
+        }
+        return;
+    }
+    if (name && strcmp(name, "IDX_SET") == 0) {
+        if (nargs == 3) {        /* val, base, idx */
+            DESCR_t val = args[0]; DESCR_t base = args[1]; DESCR_t idx = args[2];
+            g_last_ok = subscript_set(base, idx, val);
+            vstack_push(val);
+        } else if (nargs == 4) {
+            DESCR_t val = args[0]; DESCR_t base = args[1];
+            DESCR_t i = args[2]; DESCR_t j = args[3];
+            g_last_ok = subscript_set2(base, i, j, val);
+            vstack_push(val);
+        } else {
+            DESCR_t r = INVOKE_fn("ITEM_SET", args, nargs);
+            g_last_ok = (r.v != DT_FAIL);
+            vstack_push(args[0]);  /* val */
+        }
+        return;
+    }
+
+    /* SN-6: SNOBOL4 semantics — if any argument is FAIL, the call fails
+     * without invoking the function. */
+    for (int k = 0; k < nargs; k++) {
+        if (args[k].v == DT_FAIL) {
+            vstack_push(FAILDESCR);
+            g_last_ok = 0;
+            return;
+        }
+    }
+
+    /* Default dispatch: INVOKE_fn handles builtins and (via g_user_call_hook)
+     * user-defined chunks.  In mode-4 today, user-defined SNOBOL4 functions
+     * cannot be dispatched yet (no name→native-PC table emitted) — those will
+     * fall through to FAILDESCR.  Tracked as honest deviation for EM-7. */
+    DESCR_t result = INVOKE_fn(name ? name : "", args, nargs);
+    vstack_push(result);
+    g_last_ok = (result.v != DT_FAIL);
+}
+
+/* SM_RETURN / SM_FRETURN / SM_NRETURN and conditional variants.
+ *
+ * In mode-4 with native call/ret, the chunk simply executes `ret` for plain
+ * RETURN — the return value sits on the value stack already (value chunk's
+ * body pushed it).  But FRETURN must replace TOS with FAILDESCR; NRETURN
+ * must pop the value and push the function's name as a NAMEVAL descriptor.
+ * Conditional variants check g_last_ok before doing anything.
+ *
+ * Returns 1 if the return should fire (caller emits `ret`), 0 if not (caller
+ * falls through).  Note: when condition not met, this function does NOT
+ * touch the value stack — the chunk continues normally.
+ *
+ * In the unconditional+plain RETURN case, the emitter does NOT call this
+ * function — it emits `ret` directly.  This function exists for FRETURN /
+ * NRETURN and conditional variants. */
+int scrip_rt_do_return(int kind, int cond)
+{
+    /* cond: 0=unconditional, 1=only if last_ok, 2=only if !last_ok */
+    if (cond == 1 && !g_last_ok) return 0;
+    if (cond == 2 &&  g_last_ok) return 0;
+
+    /* kind: 0=RETURN, 1=FRETURN, 2=NRETURN */
+    if (kind == 1) {
+        /* FRETURN: discard whatever the body produced, push FAILDESCR.
+         * Body already pushed its retval (if any) — pop it; push FAIL. */
+        if (g_vtop > 0) (void)vstack_pop();
+        vstack_push(FAILDESCR);
+        g_last_ok = 0;
+    } else if (kind == 2) {
+        /* NRETURN: pop body's retval; push a NAMEVAL.  Mode-4 deviation:
+         * we don't track the function's retval-slot name at this layer, so
+         * we use the raw value as a NAME if it's a string, else FAILDESCR.
+         * This is enough for the dot-star NRETURN idiom (push_list = .dummy)
+         * because the body explicitly assigned a NAMEVAL via NAME_PUSH. */
+        DESCR_t v = (g_vtop > 0) ? vstack_pop() : FAILDESCR;
+        if (v.v == DT_N) {
+            vstack_push(v);          /* already a NAME */
+        } else if (v.v == DT_S && v.s) {
+            char *n = GC_strdup(v.s); sno_fold_name(n);
+            vstack_push(NAMEVAL(n));
+        } else {
+            vstack_push(FAILDESCR);
+        }
+        g_last_ok = 1;
+    } else {
+        /* RETURN: leave TOS alone; just `ret`. */
+        g_last_ok = (g_vtop > 0 && g_vstack[g_vtop - 1].v != DT_FAIL);
+    }
+    return 1;
+}
+
+/* SM_PAT_CAPTURE_FN_ARGS: . *fname(args) / $ *fname(args)
+ * fname: function name; is_imm: 0=conditional, 1=immediate; nargs from vstack. */
+extern DESCR_t pat_assign_callcap(DESCR_t child, const char *fnc_name,
+                                  DESCR_t *args, int nargs);
+extern DESCR_t pat_assign_callcap_named_imm(DESCR_t child, const char *fnc_name,
+                                            DESCR_t *args, int nargs,
+                                            char **names, int nnames);
+
+void scrip_rt_pat_capture_fn_args(const char *fname, int is_imm, int nargs)
+{
+    DESCR_t *argv = nargs > 0
+        ? (DESCR_t *)GC_MALLOC((size_t)nargs * sizeof(DESCR_t))
+        : NULL;
+    for (int i = nargs - 1; i >= 0; i--) argv[i] = vstack_pop();
+    DESCR_t child = pat_pop_internal();
+    const char *nm = fname ? fname : "";
+    pat_push(is_imm
+        ? pat_assign_callcap_named_imm(child, nm, argv, nargs, NULL, 0)
+        : pat_assign_callcap(child, nm, argv, nargs));
+}
+
+void scrip_rt_pat_usercall_args(const char *fname, int nargs)
+{
+    DESCR_t *argv = nargs > 0
+        ? (DESCR_t *)GC_MALLOC((size_t)nargs * sizeof(DESCR_t))
+        : NULL;
+    for (int i = nargs - 1; i >= 0; i--) argv[i] = vstack_pop();
+    pat_push(pat_user_call(fname ? fname : "", argv, nargs));
 }
 
 /*==============================================================================

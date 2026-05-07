@@ -74,9 +74,10 @@ grep -q "scrip_rt_push_int@PLT"       "$TMP/em2_a.s" || { echo "FAIL no push_int
 grep -q "scrip_rt_halt_tos@PLT"       "$TMP/em2_a.s" || { echo "FAIL no halt_tos call"; exit 1; }
 echo "  PASS PUSH_LIT_I+HALT  (rc=42; emit shape correct)"
 
-# ── Test 2: unhandled-op trap fires on SM_ADD ──────────────────────────
-# Build a tiny inline harness that emits SM_PUSH_LIT_I + SM_PUSH_LIT_I
-# + SM_ADD + SM_HALT.  Run; expect non-zero rc + diagnostic on stderr.
+# ── Test 2: unhandled-op trap fires on SM_INCR ─────────────────────────
+# Build a tiny inline harness that emits SM_PUSH_LIT_I + SM_INCR + SM_HALT.
+# Run; expect non-zero rc + diagnostic on stderr.
+# (SM_CONCAT was used pre-EM-7 — replaced with SM_INCR which remains unhandled.)
 cat > "$TMP/unh.c" <<'CEOF'
 #include "sm_prog.h"
 #include "sm_codegen_x64_emit.h"
@@ -85,8 +86,7 @@ int main(int argc, char **argv) {
     if (argc != 2) return 2;
     SM_Program *p = sm_prog_new();
     sm_emit_i(p, SM_PUSH_LIT_I, 1);
-    sm_emit_i(p, SM_PUSH_LIT_I, 2);
-    sm_emit(p, SM_CONCAT);
+    sm_emit_i(p, SM_INCR, 1);
     sm_emit(p, SM_HALT);
     FILE *f = fopen(argv[1], "w");
     sm_codegen_x64_emit(p, f, NULL);
