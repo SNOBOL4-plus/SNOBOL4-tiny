@@ -286,15 +286,32 @@ static DESCR_t call_native_chunk(const char *fname, void *fn,
         nbound++;
     }
 
-    /* Call the native chunk.  It runs its SM body, pushes its retval via
-     * vstack, and executes `ret`.  Calling convention: void(void) at the
-     * ABI level — the chunk reads/writes the global vstack directly. */
+    /* Snapshot the value-stack depth so we can restore it: the SNOBOL4
+     * user-function calling convention is "value of the function = NV[fname]"
+     * (the body executes `fname = expr`, which is SM_STORE_VAR popping TOS
+     * into NV[fname]).  The chunk does NOT push its retval onto vstack
+     * before `ret` — that's the SM-interp's job (sm_interp.c:1208-1210
+     * does `NV_GET_fn(retval_name)` after the chunk returns).  We mirror
+     * that here: read NV[fname] for the retval; ignore vstack residue. */
+    int saved_vtop = g_vtop;
+
+    /* Call the native chunk.  It runs its SM body and executes `ret`.
+     * Calling convention: void(void) at the ABI level — the chunk
+     * reads/writes the global vstack and NV table directly. */
     typedef void (*chunk_fn_t)(void);
     chunk_fn_t cfn = (chunk_fn_t)fn;
     cfn();
 
-    /* Pop the return value the chunk pushed. */
-    DESCR_t result = (g_vtop > 0) ? vstack_pop() : FAILDESCR;
+    /* SNOBOL4 user-function retval convention: read NV[fname].  Mirrors
+     * sm_interp.c:1208-1210 user-function branch.  If the body never
+     * assigned to fname, NV_GET_fn returns the function's NV slot's
+     * default (DT_SNUL) — same behaviour as the interpreter. */
+    DESCR_t result = NV_GET_fn(fname ? fname : "");
+
+    /* Restore vstack depth — drop any residue the body pushed and didn't
+     * pop.  Mirrors sm_interp.c:1215-1222 which restores caller_sp.  Since
+     * we share one global vstack, "restore" = truncate to pre-call depth. */
+    g_vtop = saved_vtop;
 
     /* Restore saved parameter values. */
     for (int k = nbound - 1; k >= 0; k--)
