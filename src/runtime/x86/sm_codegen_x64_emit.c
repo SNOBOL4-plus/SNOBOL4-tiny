@@ -63,6 +63,7 @@
 
 #include "sm_prog.h"
 #include "snobol4.h"         /* DESCR_t, PATND_t, pat_* constructors (EM-7a) */
+#include "bb_flat.h"         /* bb_build_flat_text, bb_build_flat_text_reset (EM-7c) */
 #include <string.h>
 
 /* -----------------------------------------------------------------------
@@ -1275,6 +1276,246 @@ DESCR_t sm_phase2_to_patnd(const SM_Program *prog,
     return ss.slots[ss.top - 1].val;         /* root pattern */
 }
 
+/* =======================================================================
+ * EM-7c: Pattern window registry + invariant-blob emission
+ * =======================================================================
+ *
+ * Strategy (pure-invariant first; variant nodes deferred to next rung):
+ *
+ * 1. Pre-pass: walk SM_Program, locate every SM_EXEC_STMT.  For each, the
+ *    Phase-2 window is [stmt_start, exec_pc - 2):
+ *      - exec_pc - 1  → Phase-4 push (replacement, real or dummy zero)
+ *      - exec_pc - 2  → Phase-1 push (subject)
+ *      - stmt_start   → instruction immediately after the preceding
+ *                       SM_STNO (or 0 if none)
+ *    Run sm_phase2_to_patnd() on the window.
+ *    If patnd_is_fully_invariant(root): allocate a unique pattern id,
+ *    record [phase2_start, phase2_end, exec_pc, pat_id].
+ *
+ * 2. Emit pre-text section: for each invariant pattern, call
+ *    bb_build_flat_text(root, out, "_pat_inv_<id>") to bake a flat
+ *    .text chunk with externally-visible α/β/γ/ω entry symbols.
+ *
+ * 3. Main dispatch:
+ *      - SM_PAT_* and value-stack pushes inside an invariant Phase-2
+ *        window: emit a NOP comment (the pattern is already baked).
+ *      - SM_EXEC_STMT for an invariant statement: emit a call to
+ *        scrip_rt_match_blob(_pat_inv_<id>_alpha, sname, has_repl).
+ *      - Variant patterns / non-pattern statements: unchanged
+ *        (variant patterns fall through to emit_sm_unhandled until
+ *        the variant-runtime-emitter rung lands).
+ *
+ * Phase-1 (subject push) and Phase-4 (replacement push) are emitted
+ * normally — they leave the value stack at [subj][repl_or_zero] just
+ * before SM_EXEC_STMT, which is exactly the contract scrip_rt_match_blob
+ * expects.
+ * ======================================================================= */
+
+#define MAX_PATTERN_WINDOWS 4096
+
+typedef struct {
+    int  phase2_start;       /* first SM pc inside Phase-2 (inclusive) */
+    int  phase2_end;          /* one past last Phase-2 pc (exclusive) */
+    int  exec_stmt_pc;        /* pc of the SM_EXEC_STMT instruction */
+    int  pat_id;              /* unique id for the _pat_inv_<id>_* labels */
+    int  is_invariant;        /* 1 = baked in .text via bb_build_flat_text */
+    DESCR_t root;             /* PATND_t root from sm_phase2_to_patnd (DT_P) */
+} pattern_window_t;
+
+static pattern_window_t g_pat_windows[MAX_PATTERN_WINDOWS];
+static int              g_pat_windows_n   = 0;
+static int              g_pat_windows_id  = 0;
+
+static void pattern_windows_reset(void)
+{
+    g_pat_windows_n  = 0;
+    g_pat_windows_id = 0;
+}
+
+/* Find the index of the pattern window covering pc, or -1 if pc is not
+ * inside any registered Phase-2 window.  Linear scan — fine because
+ * patterns/program is small (worst case beauty.sno ~hundreds). */
+static int pattern_window_at_pc(int pc)
+{
+    for (int i = 0; i < g_pat_windows_n; i++) {
+        if (pc >= g_pat_windows[i].phase2_start &&
+            pc <  g_pat_windows[i].phase2_end)
+            return i;
+    }
+    return -1;
+}
+
+/* Find the pattern window whose SM_EXEC_STMT is at this pc, or -1. */
+static int pattern_window_for_exec_stmt(int pc)
+{
+    for (int i = 0; i < g_pat_windows_n; i++) {
+        if (g_pat_windows[i].exec_stmt_pc == pc)
+            return i;
+    }
+    return -1;
+}
+
+/* Pre-pass: locate every SM_EXEC_STMT, compute its Phase-2 window,
+ * run the simulator, and register fully-invariant ones.  Variant
+ * windows are NOT registered — their SM_EXEC_STMT will fall through
+ * to emit_sm_unhandled in the main dispatch (variant rung is next). */
+static void pattern_windows_collect(const SM_Program *prog)
+{
+    pattern_windows_reset();
+
+    int stmt_start = 0;   /* PC of the first instruction in the current statement */
+
+    for (int pc = 0; pc < prog->count; pc++) {
+        const SM_Instr *ins = &prog->instrs[pc];
+
+        if (ins->op == SM_STNO) {
+            stmt_start = pc + 1;
+            continue;
+        }
+
+        if (ins->op != SM_EXEC_STMT) continue;
+
+        /* Phase-2 window:
+         *   [stmt_start, pc - 2)  — the two instructions at pc-1 and pc-2
+         *                           are the replacement and subject pushes. */
+        int phase2_end = pc - 2;
+        if (phase2_end < stmt_start) phase2_end = stmt_start;  /* defensive */
+
+        int has_variant = 0;
+        DESCR_t root = sm_phase2_to_patnd(prog, stmt_start, phase2_end, &has_variant);
+
+        if (g_pat_windows_n >= MAX_PATTERN_WINDOWS) {
+            /* Too many patterns — silently drop; variant fallback path
+             * will handle them via emit_sm_unhandled.  Beauty.sno is
+             * well under this cap. */
+            continue;
+        }
+
+        pattern_window_t *w = &g_pat_windows[g_pat_windows_n++];
+        w->phase2_start = stmt_start;
+        w->phase2_end   = phase2_end;
+        w->exec_stmt_pc = pc;
+        w->pat_id       = g_pat_windows_id++;
+        w->root         = root;
+
+        /* Is the entire reconstructed tree invariant AND eligible for
+         * bb_build_flat?  The pure-invariant case is the EM-7c gate;
+         * variant patterns are deferred. */
+        PATND_t *p = (PATND_t *)root.p;
+        w->is_invariant = (!has_variant && p && patnd_is_fully_invariant(p)) ? 1 : 0;
+    }
+}
+
+/* Emit the .text-resident invariant pattern blobs.  Called after the
+ * .rodata section and before the main `.text` instruction stream.
+ * Each invariant pattern gets one labeled chunk with externally-visible
+ * α/β/γ/ω labels (`_pat_inv_<id>_alpha` etc.). */
+static int emit_pattern_blobs(FILE *out)
+{
+    int n_invariant = 0;
+    for (int i = 0; i < g_pat_windows_n; i++) {
+        if (g_pat_windows[i].is_invariant) n_invariant++;
+    }
+    if (n_invariant == 0) return 0;
+
+    /* Reset internal label counters at the start of this emit run.
+     * Within the run, IDs accumulate across patterns (no collisions). */
+    bb_build_flat_text_reset();
+
+    if (fputs(
+        "\n"
+        "# ============================================================================\n"
+        "# EM-7c: invariant pattern blobs (baked from sm_phase2_to_patnd → bb_build_flat_text)\n"
+        "# Each block exposes _pat_inv_<id>_alpha / _beta / _gamma / _omega.\n"
+        "# scrip_rt_match_blob(blob_alpha, ...) drives Phase-3 against these blobs.\n"
+        "# ============================================================================\n"
+        "\t.intel_syntax noprefix\n"
+        "\t.text\n",
+        out) == EOF) return -1;
+
+    for (int i = 0; i < g_pat_windows_n; i++) {
+        pattern_window_t *w = &g_pat_windows[i];
+        if (!w->is_invariant) continue;
+
+        char prefix[64];
+        snprintf(prefix, sizeof(prefix), "_pat_inv_%d", w->pat_id);
+
+        if (fprintf(out,
+            "\n# ---- pattern blob %d (Phase-2 window pc=%d..%d, SM_EXEC_STMT pc=%d) ----\n",
+            w->pat_id, w->phase2_start, w->phase2_end - 1,
+            w->exec_stmt_pc) < 0) return -1;
+
+        PATND_t *p = (PATND_t *)w->root.p;
+        if (bb_build_flat_text(p, out, prefix) != 0) {
+            fprintf(out, "# (bb_build_flat_text returned non-zero — pattern not baked)\n");
+            /* If the bake fails despite the pre-pass marking it invariant,
+             * downgrade — at SM_EXEC_STMT we'll fall back to UNHANDLED. */
+            w->is_invariant = 0;
+        }
+    }
+    return 0;
+}
+
+/* SM_EXEC_STMT for a registered invariant pattern: emit the runtime call.
+ * The value stack at this point holds [subj][repl_or_zero] (top = repl). */
+static int emit_sm_exec_stmt_blob(FILE *out, const SM_Instr *ins, int pc, int win_idx)
+{
+    pattern_window_t *w = &g_pat_windows[win_idx];
+    const char *sname = ins->a[0].s;     /* subject NV name (or NULL) */
+    int has_repl      = (int)ins->a[1].i;
+
+    /* Arg 0 (rdi) = blob_alpha = address of `_pat_inv_<id>_alpha`.
+     * GAS Intel syntax: `lea rdi, [rip + symbol]`. */
+    char act[160];
+    snprintf(act, sizeof(act),
+             "lea     rdi, [rip + _pat_inv_%d_alpha]", w->pat_id);
+    char anno[80];
+    snprintf(anno, sizeof(anno),
+             "# blob entry α  (Phase-2 pc=%d..%d)",
+             w->phase2_start, w->phase2_end - 1);
+    if (sm_line(out, "", act, anno) < 0) return -1;
+
+    /* Arg 1 (rsi) = subj_name — same .Lstr_N convention as SM_PUSH_VAR. */
+    if (sname && *sname) {
+        char lbl[64];
+        strtab_label(lbl, sizeof(lbl), sname);
+        char act2[160];
+        snprintf(act2, sizeof(act2), "lea     rsi, [rip + %s]", lbl);
+        char ann2[80];
+        snprintf(ann2, sizeof(ann2), "# subj_name=%s", sname);
+        if (sm_line(out, "", act2, ann2) < 0) return -1;
+    } else {
+        if (sm_line(out, "", "xor     esi, esi", "# subj_name=NULL") < 0) return -1;
+    }
+
+    /* Arg 2 (edx) = has_repl flag */
+    char act3[80];
+    snprintf(act3, sizeof(act3), "mov     edx, %d", has_repl);
+    char ann3[80];
+    snprintf(ann3, sizeof(ann3), "# has_repl=%d", has_repl);
+    if (sm_line(out, "", act3, ann3) < 0) return -1;
+
+    if (sm_line(out, "", "call    scrip_rt_match_blob@PLT",
+                "# EM-7c: Phase-3+5 against baked invariant blob") < 0) return -1;
+
+    (void)pc;
+    return 0;
+}
+
+/* Emit a comment placeholder for an SM op that was absorbed into an
+ * invariant pattern blob.  Helpful for diff review. */
+static int emit_sm_pat_baked(FILE *out, const SM_Instr *ins, int pc, int win_idx)
+{
+    pattern_window_t *w = &g_pat_windows[win_idx];
+    char anno[120];
+    snprintf(anno, sizeof(anno),
+             "# (baked into _pat_inv_%d at .text — %s)",
+             w->pat_id, sm_opcode_name(ins->op));
+    if (sm_line(out, "", "", anno) < 0) return -1;
+    (void)pc;
+    return 0;
+}
+
 /* -----------------------------------------------------------------------
  * Unhandled opcode trap
  * ----------------------------------------------------------------------- */
@@ -1305,6 +1546,14 @@ int sm_codegen_x64_emit(SM_Program *prog, FILE *out, const char *src_path)
     strtab_collect(prog);
     if (strtab_emit_rodata(out) != 0) return -1;
 
+    /* EM-7c: collect Phase-2 windows (one per SM_EXEC_STMT) and run the
+     * Phase-2 simulator to reconstruct each pattern's PATND_t tree.
+     * Fully-invariant patterns are emitted as flat .text chunks below;
+     * variant patterns will be handled by a follow-up rung (their
+     * SM_EXEC_STMT falls through to emit_sm_unhandled). */
+    pattern_windows_collect(prog);
+    if (emit_pattern_blobs(out) != 0) return -1;
+
     /* EM-4-readability: load the source file once if a path was given. */
     SrcLines sl;
     int sl_loaded = (srclines_load(&sl, src_path) == 0);
@@ -1332,6 +1581,43 @@ int sm_codegen_x64_emit(SM_Program *prog, FILE *out, const char *src_path)
         if (emit_pc_label(out, pc) != 0) {
             if (sl_loaded) srclines_free(&sl);
             return -1;
+        }
+
+        /* EM-7c: pattern-window dispatch hook.  Two cases handled here
+         * before the regular SM dispatch:
+         *
+         *   1. pc inside an invariant Phase-2 window → emit a comment
+         *      placeholder.  Phase-2 ops were the source for the baked
+         *      blob; their runtime effect (building a PATND_t on a
+         *      pat-stack) is not needed because the blob is already in
+         *      .text.
+         *
+         *   2. pc IS an SM_EXEC_STMT for an invariant statement →
+         *      emit a call to scrip_rt_match_blob with the blob entry,
+         *      subj name, and has_repl flag.  Phase-1 (subject) and
+         *      Phase-4 (replacement) pushes immediately preceding this
+         *      pc emit normally and leave the value stack at
+         *      [subj][repl_or_zero] just before this call. */
+        {
+            int win_at  = pattern_window_at_pc(pc);
+            int win_exec = (ins->op == SM_EXEC_STMT) ? pattern_window_for_exec_stmt(pc) : -1;
+
+            if (win_at >= 0 && g_pat_windows[win_at].is_invariant) {
+                int rc = emit_sm_pat_baked(out, ins, pc, win_at);
+                if (rc != 0) {
+                    if (sl_loaded) srclines_free(&sl);
+                    return -1;
+                }
+                continue;
+            }
+            if (win_exec >= 0 && g_pat_windows[win_exec].is_invariant) {
+                int rc = emit_sm_exec_stmt_blob(out, ins, pc, win_exec);
+                if (rc != 0) {
+                    if (sl_loaded) srclines_free(&sl);
+                    return -1;
+                }
+                continue;
+            }
         }
 
         int rc;

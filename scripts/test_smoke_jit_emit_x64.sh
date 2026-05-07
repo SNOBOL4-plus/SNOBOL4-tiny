@@ -298,5 +298,36 @@ GLOBAL_COUNT=$(objdump -t "$TMP/em7b.o" 2>/dev/null | awk '/_pat_inv_42_0_/ && $
     echo "FAIL EM-7b only $GLOBAL_COUNT/4 entry labels are global"; exit 1; }
 echo "  PASS EM-7b bb_flat TEXT mode (PASS=16 unit + .s assembles + 4/4 external α/β/γ/ω)"
 
+# ── Test 13: EM-7c invariant-pattern blob emit shape ───────────────────────────
+# Verifies that an invariant pattern statement produces:
+#   1. a `_pat_inv_<id>_alpha/_beta/_gamma/_omega` block in the emitted `.s`,
+#   2. a `scrip_rt_match_blob@PLT` call at the SM_EXEC_STMT site,
+#   3. an `.s` that assembles AND links cleanly against libscrip_rt.so.
+# Runtime correctness of the linked binary is NOT checked here — bb_flat.c
+# bakes process-address imm64s into its leaf instructions (Σ/Δ/Σlen/lit/memcmp),
+# valid only inside the in-process JIT (mode 3); a follow-up rung
+# (EM-7c-symbolic) routes those through symbolic references that the
+# dynamic linker resolves, at which point this test grows a runtime check.
+cat > "$TMP/em7c_inv.sno" <<'EOF'
+        S = 'abc'
+        S 'b' = 'X'
+        OUTPUT = S
+END
+EOF
+"$SCRIP" --jit-emit --x64 "$TMP/em7c_inv.sno" > "$TMP/em7c.s" 2> "$TMP/em7c.err" || {
+    echo "FAIL EM-7c emit"; cat "$TMP/em7c.err"; exit 1; }
+grep -q "^_pat_inv_0_alpha:"     "$TMP/em7c.s" || {
+    echo "FAIL EM-7c no _pat_inv_0_alpha label"; exit 1; }
+grep -q "^_pat_inv_0_beta:"      "$TMP/em7c.s" || {
+    echo "FAIL EM-7c no _pat_inv_0_beta label"; exit 1; }
+grep -q "scrip_rt_match_blob@PLT" "$TMP/em7c.s" || {
+    echo "FAIL EM-7c no scrip_rt_match_blob@PLT call"; exit 1; }
+gcc -c "$TMP/em7c.s" -o "$TMP/em7c.o" 2> "$TMP/em7c.as_err" || {
+    echo "FAIL EM-7c .s does not assemble"; cat "$TMP/em7c.as_err"; exit 1; }
+gcc -no-pie "$TMP/em7c.o" -L"$ROOT/out" -lscrip_rt -lgc -lm \
+    -Wl,-rpath,"$ROOT/out" -o "$TMP/em7c_bin" 2> "$TMP/em7c.ld_err" || {
+    echo "FAIL EM-7c link"; cat "$TMP/em7c.ld_err"; exit 1; }
+echo "  PASS EM-7c invariant blob   (Phase-2 → bb_build_flat_text → match_blob; .s assembles + links)"
+
 echo
-echo "PASS=11 FAIL=0  (EM-1 wiring + EM-2 HALT/PUSH_LIT_I + EM-3 stack ops + arithmetic + EM-4 control flow + EM-5 chunks; EM-6 retired; EM-7a Phase-2 sim; EM-7b bb_flat TEXT mode)"
+echo "PASS=12 FAIL=0  (EM-1 wiring + EM-2 HALT/PUSH_LIT_I + EM-3 stack ops + arithmetic + EM-4 control flow + EM-5 chunks; EM-6 retired; EM-7a Phase-2 sim; EM-7b bb_flat TEXT mode; EM-7c invariant blob emit)"

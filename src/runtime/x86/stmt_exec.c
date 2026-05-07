@@ -1291,7 +1291,16 @@ int exec_stmt(const char  *subj_name,
 
     /* ── Phase 2: build pattern ─────────────────────────────────────── */
     bb_node_t root;
-    if (pat.v == DT_P && pat.p) {
+    /* EM-7c: mode-4 pre-built blob path.  When pat.v==DT_E with pat.ptr
+     * non-NULL, treat pat.ptr as a bb_box_fn whose code body is already
+     * baked into .text (via bb_build_flat_text) by sm_codegen_x64_emit.c.
+     * Skip the build phase entirely; root.fn = the baked entry, ζ = NULL.
+     * exec_stmt_blob() (declared in snobol4.h) is the public wrapper. */
+    if (pat.v == DT_E && pat.ptr) {
+        root.fn     = (bb_box_fn)pat.ptr;
+        root.ζ      = NULL;
+        root.ζ_size = 0;
+    } else if (pat.v == DT_P && pat.p) {
         int bin_done = 0;
         if (g_bb_mode == BB_MODE_LIVE) {
             /* M-DYN-B13: cache binary blobs keyed on PATND_t* — prevents
@@ -1465,6 +1474,39 @@ Phase4:
 
 Success:
                                                               return 1;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * exec_stmt_blob — EM-7c (GOAL-MODE4-EMIT) entry for pre-built BB blobs
+ *
+ * The mode-4 emitter (sm_codegen_x64_emit.c) bakes invariant pattern
+ * sub-trees as flat .text chunks via bb_build_flat_text.  At Phase-3
+ * time it has a function pointer (the address of `_pat_inv_<id>_alpha`)
+ * but no PATND_t — the tree is gone, only the code remains.
+ *
+ * exec_stmt_blob() lets the emitted binary call into Phase-1+3+4+5
+ * with that pre-built bb_box_fn, skipping Phase-2 entirely.  We use
+ * a DT_E sentinel in pat.ptr to ride exec_stmt's existing flow with
+ * minimal duplication; the new branch in exec_stmt's Phase-2 short-
+ * circuits the build step.
+ *
+ * Parameters: identical to exec_stmt, except pat is replaced by
+ *   root_fn — the entry point of the baked invariant pattern blob
+ *             (i.e. the address of the `_pat_inv_<id>_alpha` symbol).
+ *
+ * Returns 1 → :S, 0 → :F.
+ * ══════════════════════════════════════════════════════════════════════════ */
+int exec_stmt_blob(const char  *subj_name,
+                   DESCR_t     *subj_var,
+                   bb_box_fn    root_fn,
+                   DESCR_t     *repl,
+                   int          has_repl)
+{
+    DESCR_t pat;
+    pat.v    = DT_E;
+    pat.slen = 0;
+    pat.ptr  = (void *)root_fn;
+    return exec_stmt(subj_name, subj_var, pat, repl, has_repl);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════

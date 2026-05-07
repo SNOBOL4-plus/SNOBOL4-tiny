@@ -125,6 +125,22 @@ void scrip_rt_set_last_ok(int ok);
  * SM_CALL_CHUNK with known entry_pc bakes direct `call .LpcN`. */
 void scrip_rt_push_chunk_descr(int64_t entry_pc, int64_t arity);
 
+/* ── EM-7c surface — pre-built BB blob match (mode-4 emit path) ──────── */
+
+/* The mode-4 emitter bakes invariant pattern sub-trees as flat .text
+ * chunks (via bb_build_flat_text); at SM_EXEC_STMT, the emitted code
+ * pushes [subj][repl_or_zero] on the value stack and calls this entry.
+ *
+ *   blob_alpha  — address of `_pat_inv_<id>_alpha` (the baked entry)
+ *   subj_name   — subject NV name for write-back, or NULL
+ *   has_repl    — 1 if a real replacement is on the stack, 0 if dummy
+ *
+ * Result lands on libscrip_rt's last-ok flag (SM_JUMP_S/F observe it).
+ */
+void scrip_rt_match_blob(void *blob_alpha,
+                         const char *subj_name,
+                         int has_repl);
+
 /* ── EM-6 surface — REMOVED in EM-7-revert (session #72) ─────────────────
  *
  * The brokered Phase-3 pattern-builder ABI (scrip_rt_pat_lit,

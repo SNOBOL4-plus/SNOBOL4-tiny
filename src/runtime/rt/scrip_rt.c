@@ -42,6 +42,7 @@
 #include "../../runtime/x86/descr.h"
 #include "../../runtime/x86/sil_macros.h"   /* EM-7: IS_NAMEPTR / IS_NAMEVAL / NAME_DEREF_PTR */
 #include "../../runtime/x86/bb_pool.h"
+#include "../../runtime/x86/bb_box.h"       /* EM-7c: bb_box_fn + exec_stmt_blob */
 
 #include <stdint.h>
 #include <stdio.h>
@@ -332,6 +333,49 @@ void scrip_rt_push_chunk_descr(int64_t entry_pc, int64_t arity)
     d.slen = (uint32_t)arity;
     d.i    = entry_pc;
     vstack_push(d);
+}
+
+/*==============================================================================
+ * EM-7c — pattern match for pre-built BB blobs (mode-4 emit path)
+ *
+ * The mode-4 emitter bakes invariant pattern sub-trees as flat .text
+ * chunks via bb_build_flat_text(), with externally-visible entry
+ * symbols `_pat_inv_<id>_alpha` etc.  At runtime, the emitted binary
+ * pushes the subject and replacement on the SM value stack and calls
+ * scrip_rt_match_blob(blob_alpha, sname, has_repl).
+ *
+ * Stack contract (top-of-stack first, top last popped):
+ *   [repl_or_zero]    ← top
+ *   [subj_descr]
+ *
+ * Parameters:
+ *   blob_alpha   — address of `_pat_inv_<id>_alpha`
+ *   subj_name    — subject variable name for write-back, or NULL
+ *   has_repl     — 1 if a replacement is present
+ *
+ * Calls exec_stmt_blob() (declared in bb_box.h, defined in stmt_exec.c)
+ * with the popped subject + replacement.  Stores the :S/:F result on
+ * the libscrip_rt last-ok flag (so SM_JUMP_S / SM_JUMP_F see it).
+ *============================================================================*/
+
+extern void scrip_rt_set_last_ok(int v);   /* defined below */
+
+void scrip_rt_match_blob(void *blob_alpha,
+                         const char *subj_name,
+                         int has_repl)
+{
+    /* Pop replacement (always present — sm_lower emits SM_PUSH_LIT_I 0
+     * when has_repl=0 to keep the value-stack shape uniform). */
+    DESCR_t repl = vstack_pop();
+    DESCR_t subj = vstack_pop();
+
+    bb_box_fn root_fn = (bb_box_fn)blob_alpha;
+    int ok = exec_stmt_blob(subj_name,
+                            &subj,
+                            root_fn,
+                            has_repl ? &repl : NULL,
+                            has_repl);
+    scrip_rt_set_last_ok(ok);
 }
 
 /*==============================================================================

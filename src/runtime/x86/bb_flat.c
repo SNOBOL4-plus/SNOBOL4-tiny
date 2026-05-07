@@ -351,11 +351,24 @@ bb_box_fn bb_build_flat(PATND_t *p)
 int bb_build_flat_text(PATND_t *p, FILE *out, const char *prefix)
 {
     if (!flat_is_eligible(p)) return -1;
-    g_flat_slot_count = 0; g_flat_node_id = 0;
+    /* EM-7c: do NOT reset g_flat_node_id here — multiple patterns
+     * emitted into the same `.s` rely on the monotonic counter to
+     * avoid internal-label collisions (xcat0_mid_g, xcat1_mid_g, ...).
+     * Use bb_build_flat_text_reset() between unrelated emit runs. */
     emitter_v *e = emitter_text_new(out);
     if (!e) return -1;
     int rc = flat_emit_body_v(e, p, prefix, 1);
     emitter_end(e);
     emitter_free(e);
     return rc;
+}
+
+void bb_build_flat_text_reset(void)
+{
+    /* EM-7c: called by sm_codegen_x64_emit at the start of each emit run
+     * so internal label IDs (xcatN, altN, ...) start from 0 per output `.s`.
+     * Within a single emit run, the counter MUST monotonically increment
+     * to keep labels unique across patterns sharing the same namespace. */
+    g_flat_slot_count = 0;
+    g_flat_node_id    = 0;
 }

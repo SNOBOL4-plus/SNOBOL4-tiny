@@ -71,4 +71,15 @@ bb_box_fn bb_build_flat(PATND_t *p);
  */
 int bb_build_flat_text(PATND_t *p, FILE *out, const char *prefix);
 
+/*
+ * EM-7c: reset internal label/slot counters between unrelated emit runs.
+ *
+ * Called by sm_codegen_x64_emit() at the start of an emit so that the
+ * `xcatN_mid_g`, `altN_c0b`, ... internal labels start at N=0 for each
+ * output `.s` file.  Within a single emit run, do NOT call this between
+ * patterns — the counter must monotonically increment across patterns
+ * sharing the same `.s` namespace to avoid label collisions.
+ */
+void bb_build_flat_text_reset(void);
+
 #endif /* BB_FLAT_H */

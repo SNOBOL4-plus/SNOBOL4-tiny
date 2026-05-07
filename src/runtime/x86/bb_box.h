@@ -199,6 +199,18 @@ extern atp_t   *bb_atp_new(const char *varname);
 struct _PATND_t;  /* forward declaration */
 bb_node_t bb_build(struct _PATND_t *p);
 
+/* EM-7c (GOAL-MODE4-EMIT): mode-4 entry for pre-built BB blobs.
+ * The mode-4 emitter bakes invariant pattern sub-trees as flat .text
+ * chunks via bb_build_flat_text; at Phase-3 the entry is a function
+ * pointer (the address of `_pat_inv_<id>_alpha`) but no PATND_t.
+ * exec_stmt_blob() takes that bb_box_fn directly and skips Phase-2.
+ * Defined in stmt_exec.c. */
+int exec_stmt_blob(const char  *subj_name,
+                   DESCR_t     *subj_var,
+                   bb_box_fn    root_fn,
+                   DESCR_t     *repl,
+                   int          has_repl);
+
 /* U-1: universal box function type and broker mode ───────────────────── */
 /*
  * univ_box_fn — the one true box signature for all five languages.
