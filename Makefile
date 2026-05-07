@@ -75,6 +75,8 @@ RT_PIC_SRCS := \
     $(RT)/x86/eval_pat.c \
     $(RT)/x86/bb_pool.c \
     $(RT)/x86/bb_emit.c \
+    $(RT)/x86/emitter_text.c \
+    $(RT)/x86/emitter_binary.c \
     $(RT)/x86/bb_build.c \
     $(RT)/x86/bb_flat.c \
     $(RT)/x86/bb_boxes.c \
@@ -179,6 +181,8 @@ scrip:
 	$(CC) $(CRT)   -c $(RT)/x86/eval_code.c                  -o $(OBJ)/eval_code.o
 	$(CC) $(CRT)   -c $(RT)/x86/bb_pool.c                    -o $(OBJ)/bb_pool.o
 	$(CC) $(CRT)   -c $(RT)/x86/bb_emit.c                    -o $(OBJ)/bb_emit.o
+	$(CC) $(CRT)   -c $(RT)/x86/emitter_text.c               -o $(OBJ)/emitter_text.o
+	$(CC) $(CRT)   -c $(RT)/x86/emitter_binary.c             -o $(OBJ)/emitter_binary.o
 	$(CC) $(CRT)   -c $(RT)/x86/bb_build.c               -o $(OBJ)/bb_build.o
 	$(CC) $(CRT)   -c $(RT)/x86/bb_flat.c                    -o $(OBJ)/bb_flat.o
 	$(CC) $(CRT) -c $(RT)/x86/bb_boxes.c -o $(OBJ)/bb_boxes.o
