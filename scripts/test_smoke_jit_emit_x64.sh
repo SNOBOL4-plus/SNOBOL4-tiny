@@ -327,7 +327,13 @@ gcc -c "$TMP/em7c.s" -o "$TMP/em7c.o" 2> "$TMP/em7c.as_err" || {
 gcc -no-pie "$TMP/em7c.o" -L"$ROOT/out" -lscrip_rt -lgc -lm \
     -Wl,-rpath,"$ROOT/out" -o "$TMP/em7c_bin" 2> "$TMP/em7c.ld_err" || {
     echo "FAIL EM-7c link"; cat "$TMP/em7c.ld_err"; exit 1; }
-echo "  PASS EM-7c invariant blob   (Phase-2 → bb_build_flat_text → match_blob; .s assembles + links)"
+# EM-7c-symbolic-runtime-correctness: run the linked binary and verify
+# output matches --jit-run (the mode-3 oracle for mode-4).
+EM7C_GOT=$("$TMP/em7c_bin" < /dev/null 2>/dev/null)
+EM7C_WANT=$("$SCRIP" --jit-run "$TMP/em7c_inv.sno" < /dev/null 2>/dev/null)
+[ "$EM7C_GOT" = "$EM7C_WANT" ] || {
+    echo "FAIL EM-7c runtime: got='$EM7C_GOT' want='$EM7C_WANT' (mode-3 oracle)"; exit 1; }
+echo "  PASS EM-7c invariant blob   (Phase-2 → bb_build_flat_text → match_blob; .s assembles + links + runtime output='$EM7C_GOT')"
 
 echo
-echo "PASS=12 FAIL=0  (EM-1 wiring + EM-2 HALT/PUSH_LIT_I + EM-3 stack ops + arithmetic + EM-4 control flow + EM-5 chunks; EM-6 retired; EM-7a Phase-2 sim; EM-7b bb_flat TEXT mode; EM-7c invariant blob emit)"
+echo "PASS=12 FAIL=0  (EM-1 wiring + EM-2 HALT/PUSH_LIT_I + EM-3 stack ops + arithmetic + EM-4 control flow + EM-5 chunks; EM-6 retired; EM-7a Phase-2 sim; EM-7b bb_flat TEXT mode; EM-7c invariant blob emit + runtime correctness)"

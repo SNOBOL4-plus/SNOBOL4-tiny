@@ -314,30 +314,43 @@ static int flat_is_eligible(PATND_t *p)
 static int flat_emit_body_v(emitter_v *e, PATND_t *p,
                             const char *prefix, int text_externalise)
 {
-    bb_label_t lbl_alpha, lbl_succ, lbl_fail, lbl_beta;
-    bb_label_initf(&lbl_alpha, "%s_alpha", prefix);
-    bb_label_initf(&lbl_succ,  "%s_gamma", prefix);
-    bb_label_initf(&lbl_fail,  "%s_omega", prefix);
-    bb_label_initf(&lbl_beta,  "%s_beta",  prefix);
+    bb_label_t lbl_alpha, lbl_alpha_body, lbl_succ, lbl_fail, lbl_beta;
+    bb_label_initf(&lbl_alpha,      "%s_alpha",      prefix);
+    bb_label_initf(&lbl_alpha_body, "%s_alpha_body", prefix);
+    bb_label_initf(&lbl_succ,       "%s_gamma",      prefix);
+    bb_label_initf(&lbl_fail,       "%s_omega",      prefix);
+    bb_label_initf(&lbl_beta,       "%s_beta",       prefix);
 
+    /* TEXT mode: external _alpha label must be at the TRUE function entry
+     * (before the r10-setup preamble), so that bb_broker can call fn(ζ,0)
+     * or fn(ζ,1) and have r10 = &Δ ready.  The dispatch then jumps to
+     * lbl_alpha_body (α path) or lbl_beta (β path).
+     * BINARY mode: the function starts at offset 0 which IS the preamble;
+     * no external symbols emitted, so the label placement doesn't matter. */
     if (text_externalise) {
         EV_GLOBAL(e, lbl_alpha.name);
         EV_GLOBAL(e, lbl_beta.name);
         EV_GLOBAL(e, lbl_succ.name);
         EV_GLOBAL(e, lbl_fail.name);
+        /* External alpha = function entry (before preamble) */
+        EV_LABEL(e, &lbl_alpha);
     }
 
-    /* entry: r10 = &Δ; cmp esi, 0; je alpha (α path); else jmp beta
+    /* entry: r10 = &Δ; cmp esi, 0; je alpha_body (α path); else jmp beta
      * TEXT:   lea r10, [rip + Δ]   (via BB_INSN_LEA_R10_SYM)
      * BINARY: mov r10, imm64       (via ev_load_r10_delta_ptr)           */
     {   bb_insn_desc_t d = {BB_INSN_LEA_R10_SYM, ADDR_DELTA, 0, 0, SYM_DELTA};
         e->emit_insn(e, &d);
     }
     ev_cmp_esi_imm8(e, 0);
-    EV_JMP(e, &lbl_alpha, JMP_JE);
-    EV_JMP(e, &lbl_beta,  JMP_JMP);
+    EV_JMP(e, &lbl_alpha_body, JMP_JE);
+    EV_JMP(e, &lbl_beta,       JMP_JMP);
 
-    EV_LABEL(e, &lbl_alpha);
+    /* Internal alpha_body label (dispatch target within function).
+     * In BINARY mode, lbl_alpha is also defined here (same offset = function
+     * start + preamble size; fine since binary blobs are called at offset 0). */
+    EV_LABEL(e, &lbl_alpha_body);
+    if (!text_externalise) EV_LABEL(e, &lbl_alpha);   /* binary: alpha = alpha_body */
     flat_emit_node(e, p, &lbl_succ, &lbl_fail, &lbl_beta);
 
     /* PAT_gamma: success → return DESCR_t{v=DT_S=1, rdx=Σ+Δ} */
