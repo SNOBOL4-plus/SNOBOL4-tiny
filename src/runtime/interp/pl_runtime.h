@@ -22,6 +22,11 @@
 
 typedef struct Pl_PredEntry_t {
     const char *key; EXPR_t *choice; struct Pl_PredEntry_t *next;
+    /* CH-17a: entry_pc is the SM_Program pc of the predicate's named chunk.
+     * Populated by sm_resolve_proc_entry_pcs after sm_lower runs.  -1 means
+     * no chunk emitted yet (CH-17d will start emitting predicate chunks).
+     * Once CH-17g lands, the choice field is deleted. */
+    int entry_pc;
 } Pl_PredEntry;
 
 typedef struct { Pl_PredEntry *buckets[PL_PRED_TABLE_SIZE_FWD]; } Pl_PredTable;

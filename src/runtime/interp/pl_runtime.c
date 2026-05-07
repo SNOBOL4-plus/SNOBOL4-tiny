@@ -149,7 +149,7 @@ unsigned pl_pred_hash(const char *s) {
 void pl_pred_table_insert(Pl_PredTable *pt, const char *key, EXPR_t *choice) {
     unsigned h = pl_pred_hash(key);
     Pl_PredEntry *e = malloc(sizeof(Pl_PredEntry));
-    e->key = key; e->choice = choice; e->next = pt->buckets[h]; pt->buckets[h] = e;
+    e->key = key; e->choice = choice; e->entry_pc = -1; e->next = pt->buckets[h]; pt->buckets[h] = e;
 }
 EXPR_t *pl_pred_table_lookup(Pl_PredTable *pt, const char *key) {
     for (Pl_PredEntry *e = pt->buckets[pl_pred_hash(key)]; e; e = e->next)

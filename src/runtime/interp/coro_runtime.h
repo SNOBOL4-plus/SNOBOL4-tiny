@@ -27,7 +27,12 @@
 /*------------------------------------------------------------------------
  * Types
  *------------------------------------------------------------------------*/
-typedef struct { const char *name; EXPR_t *proc; } IcnProcEntry;
+/* CH-17a: entry_pc is the SM_Program pc of the proc body's named chunk.
+ * Populated by sm_resolve_proc_entry_pcs(SM_Program*) after sm_lower runs.
+ * -1 means no chunk emitted yet (CH-17b will start emitting Icon/Raku proc
+ * chunks; until then every entry remains -1 and consumers fall back to the
+ * legacy proc-pointer path).  Once CH-17g lands, the proc field is deleted. */
+typedef struct { const char *name; EXPR_t *proc; int entry_pc; } IcnProcEntry;
 
 typedef struct { EXPR_t *node; long cur; const char *sval; } IcnGenEntry_d;
 

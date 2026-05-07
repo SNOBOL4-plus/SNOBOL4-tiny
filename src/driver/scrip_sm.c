@@ -9,15 +9,64 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <setjmp.h>
 #include "scrip_sm.h"
 #include "../runtime/x86/sm_lower.h"
+#include "../runtime/x86/sm_prog.h"           /* CH-17a: sm_label_pc_lookup */
 #include "../runtime/common/ir_clone.h"
+#include "../runtime/interp/coro_runtime.h"   /* CH-17a: proc_table */
+#include "../runtime/interp/pl_runtime.h"     /* CH-17a: g_pl_pred_table */
 #include "interp_private.h"   /* label_table_build, prescan_defines, label_table_clear_stmts */
 #include "polyglot.h"         /* RS-26: polyglot_lang_mask, polyglot_init, LANG_SNO */
 
 extern int g_sno_err_active;
 extern jmp_buf g_sno_err_jmp;
+
+/* CH-17a: resolve entry_pcs from sm_lower's named-label table.
+ *
+ * After sm_lower runs, every Icon/Raku proc and Prolog predicate in proc_table /
+ * g_pl_pred_table looks itself up by name in the SM_Program's label table.  When
+ * sm_lower has emitted a named SM_LABEL chunk for that proc (CH-17b for Icon/Raku,
+ * CH-17d for Prolog), the lookup returns a valid pc; otherwise -1.  CH-17a is
+ * pure scaffolding — sm_lower does not yet emit named proc-body chunks for any
+ * frontend, so every entry_pc remains -1 here.  Subsequent rungs flip producers,
+ * then consumers, then delete the legacy EXPR_t* paths.
+ *
+ * Env var SCRIP_PROC_ENTRY_PCS=1 prints a summary line per resolved entry. */
+static void sm_resolve_proc_entry_pcs(SM_Program *p)
+{
+    int show = getenv("SCRIP_PROC_ENTRY_PCS") != NULL;
+    if (show)
+        fprintf(stderr, "[CH-17a] resolve entry_pcs (proc_table=%d procs, pl_pred_table=hash)\n",
+                proc_count);
+    /* Icon / Raku proc table */
+    for (int i = 0; i < proc_count; i++) {
+        const char *nm = proc_table[i].name;
+        int pc = nm ? sm_label_pc_lookup(p, nm) : -1;
+        proc_table[i].entry_pc = pc;
+        if (show)
+            fprintf(stderr, "[CH-17a]   proc[%d] name=%-20s entry_pc=%d\n",
+                    i, nm ? nm : "(null)", pc);
+    }
+    /* Prolog pred table — walk all hash buckets */
+    extern unsigned pl_pred_hash(const char *);
+    int pl_total = 0, pl_resolved = 0;
+    for (int b = 0; b < PL_PRED_TABLE_SIZE_FWD; b++) {
+        for (Pl_PredEntry *e = g_pl_pred_table.buckets[b]; e; e = e->next) {
+            int pc = e->key ? sm_label_pc_lookup(p, e->key) : -1;
+            e->entry_pc = pc;
+            pl_total++;
+            if (pc >= 0) pl_resolved++;
+            if (show)
+                fprintf(stderr, "[CH-17a]   pred  key=%-20s entry_pc=%d\n",
+                        e->key ? e->key : "(null)", pc);
+        }
+    }
+    if (show)
+        fprintf(stderr, "[CH-17a] summary: pl_total=%d pl_resolved=%d (others=-1 are CH-17b/d territory)\n",
+                pl_total, pl_resolved);
+}
 
 SM_Program *sm_preamble(void *prog_void)
 {
@@ -41,6 +90,12 @@ SM_Program *sm_preamble(void *prog_void)
         fprintf(stderr, "scrip: sm_lower failed\n");
         return NULL;
     }
+
+    /* CH-17a: resolve entry_pcs for every proc / Prolog predicate.  Pure
+     * scaffolding: today every entry resolves to -1 because sm_lower does not
+     * yet emit named proc-body chunks (CH-17b/d will).  Consumers still use
+     * the legacy proc/EXPR_t* paths until CH-17c/e flip them. */
+    sm_resolve_proc_entry_pcs(sm);
 
     /* RS-9b: SM_Program is self-contained for SNOBOL4 — emit_push_expr
      * GC-clones the EXPR_t subtrees so SM owns them.  Free the IR.
