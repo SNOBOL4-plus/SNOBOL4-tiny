@@ -63,6 +63,16 @@ extern int exec_stmt(const char *subj_name, DESCR_t *subj_var,
 extern char    *VARVAL_fn(DESCR_t d);
 extern DESCR_t  NV_GET_fn(const char *name);
 
+/* CHUNKS-step17b'' (CH-17b''): forwarders to the active Icon frame's env slots.
+ * Defined in coro_runtime.c for production builds, stubbed in sm_interp_test.c
+ * for the unit-test world.  Returns FAILDESCR / no-op when frame_depth == 0
+ * — chunks emitted with frame-slot opcodes are dead code today (CH-17c flips
+ * the consumer that reaches them).  Pure-DESCR_t signatures: no EXPR_t leakage
+ * across the SM-runtime/IR-runtime boundary. */
+extern DESCR_t  icn_frame_env_load(int slot);
+extern void     icn_frame_env_store(int slot, DESCR_t val);
+extern int      icn_frame_env_active(void);   /* 1 if frame_depth > 0 */
+
 /* OE-10: Icon/Prolog BB opcode support */
 #include "bb_broker.h"
 #include <setjmp.h>
@@ -1339,6 +1349,43 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
             DESCR_t r = sm_pop(st);
             DESCR_t l = sm_pop(st);
             st->last_ok = (l.i < r.i);
+            break;
+        }
+
+        /* CHUNKS-step17b'' (CH-17b''): SM_LOAD_FRAME — push IcnFrame.env[slot]
+         * of the active Icon frame onto the value stack.  Outside an Icon frame
+         * (frame_depth == 0), push FAILDESCR / clear last_ok — chunks emitted
+         * with frame-slot ops are dead code until CH-17c flips the consumer
+         * that reaches them, so the FAIL fallback never fires on real programs.
+         * Mirrors the slot-resolution logic that bb_eval_value does for E_VAR
+         * when frame_depth > 0 (coro_value.c:382–399). */
+        case SM_LOAD_FRAME: {
+            int slot = (int)ins->a[0].i;
+            if (icn_frame_env_active() && slot >= 0) {
+                sm_push(st, icn_frame_env_load(slot));
+                st->last_ok = 1;
+            } else {
+                sm_push(st, FAILDESCR);
+                st->last_ok = 0;
+            }
+            break;
+        }
+
+        /* CHUNKS-step17b'' (CH-17b''): SM_STORE_FRAME — pop TOS into IcnFrame.env[slot].
+         * Like SM_STORE_VAR / SM_STORE_GLOCAL, the value is left on the stack
+         * after the store (mirrors interp_eval E_ASSIGN's "return val" semantics
+         * so chained assigns / value-context assignments compose). */
+        case SM_STORE_FRAME: {
+            int slot = (int)ins->a[0].i;
+            DESCR_t v = sm_pop(st);
+            if (icn_frame_env_active() && slot >= 0) {
+                icn_frame_env_store(slot, v);
+                sm_push(st, v);
+                st->last_ok = 1;
+            } else {
+                sm_push(st, FAILDESCR);
+                st->last_ok = 0;
+            }
             break;
         }
 

@@ -84,6 +84,36 @@ int  frame_active(EXPR_t *n) {
     for (int i=0;i<f->gen_depth;i++) if(f->gen[i].node==n) return 1; return 0;
 }
 
+/* CHUNKS-step17b'' (CH-17b''): pure-DESCR_t forwarders to FRAME.env[slot].
+ * Used by sm_interp.c's SM_LOAD_FRAME / SM_STORE_FRAME handlers so the SM
+ * runtime can read/write Icon frame slots without including coro_runtime.h
+ * (which would expose EXPR_t / IR types across the SM/IR boundary).
+ *
+ * Semantics mirror coro_value.c:382–399 for E_VAR with frame_depth > 0:
+ *   slot in [0, FRAME.env_n) → use FRAME.env[slot]; else FAILDESCR.
+ * Outside an Icon frame (frame_depth == 0), icn_frame_env_active() returns 0
+ * and the caller pushes FAILDESCR — the chunk-shaped consumer dispatch
+ * (CH-17c+) is the only path that reaches these calls in real programs. */
+int icn_frame_env_active(void) {
+    return frame_depth > 0;
+}
+DESCR_t icn_frame_env_load(int slot) {
+    if (frame_depth <= 0) return FAILDESCR;
+    IcnFrame *f = &FRAME;
+    if (slot < 0 || slot >= f->env_n) return FAILDESCR;
+    return f->env[slot];
+}
+void icn_frame_env_store(int slot, DESCR_t val) {
+    if (frame_depth <= 0) return;
+    IcnFrame *f = &FRAME;
+    if (slot < 0 || slot >= FRAME_SLOT_MAX) return;
+    /* env_n grows up to the highest slot stored — mirrors how
+     * icn_scope_patch + the bb_eval_value E_ASSIGN path together
+     * extend env_n implicitly in the IR walker today. */
+    if (slot >= f->env_n) f->env_n = slot + 1;
+    f->env[slot] = val;
+}
+
 /* Icon scan state globals (not per-frame: scan nesting is within one call).
  * IC-9 (2026-05-01): defaults match Icon spec — at program start, before any `?`,
  * &pos = 1 and &subject = "" (the empty string), not 0 / &null. */

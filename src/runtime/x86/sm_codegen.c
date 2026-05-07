@@ -1026,6 +1026,27 @@ static void h_icmp_lt(void)
     STATE->last_ok = 0;
 }
 
+/* CHUNKS-step17b'' (CH-17b''): SM_LOAD_FRAME — named FATAL stub.
+ * JIT codegen for frame-slot ops is M5 territory; until then, the JIT path
+ * emits this stub which prints a clear FATAL.  Today it is unreachable
+ * because chunks (the only emit site for SM_LOAD_FRAME) are dead code:
+ * forward-jumped over by SM_JUMP, never executed.  CH-17c will flip the
+ * consumer to dispatch via entry_pc — at which point this opcode becomes
+ * live in --sm-run / --jit-run via the SM dispatch loop only; JIT-emit
+ * (mode 4, --jit-emit --x64) extends the stub to real native codegen later. */
+static void h_load_frame(void)
+{
+    fprintf(stderr, "FATAL: SM_LOAD_FRAME reached in JIT codegen — M5 not yet implemented\n");
+    STATE->last_ok = 0;
+}
+
+/* CHUNKS-step17b'' (CH-17b''): SM_STORE_FRAME — named FATAL stub (mirror of LOAD). */
+static void h_store_frame(void)
+{
+    fprintf(stderr, "FATAL: SM_STORE_FRAME reached in JIT codegen — M5 not yet implemented\n");
+    STATE->last_ok = 0;
+}
+
 /* Unimplemented stubs — emit warning, set last_ok=0 */
 static void h_unimpl(void)
 {
@@ -1132,6 +1153,8 @@ static void init_handler_table(void)
     g_handlers[SM_STORE_GLOCAL] = h_store_glocal;  /* CHUNKS-step14b */
     g_handlers[SM_ICMP_GT]      = h_icmp_gt;       /* CHUNKS-step15a: named FATAL — JIT gen is M5 */
     g_handlers[SM_ICMP_LT]      = h_icmp_lt;       /* CHUNKS-step15a: named FATAL — JIT gen is M5 */
+    g_handlers[SM_LOAD_FRAME]   = h_load_frame;    /* CHUNKS-step17b'': named FATAL — JIT gen is M5 */
+    g_handlers[SM_STORE_FRAME]  = h_store_frame;   /* CHUNKS-step17b'': named FATAL — JIT gen is M5 */
     /* Opcodes still stubbed as h_unimpl — by design, not by omission:
      *   SM_ACOMP, SM_LCOMP  — emitted by sm_lower for E_EQ/E_NE/E_LT/etc.
      *     (SNOBOL4 numeric/string comparison EKinds) but NEVER actually

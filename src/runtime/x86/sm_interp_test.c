@@ -71,6 +71,16 @@ DESCR_t INVOKE_fn(const char *name, DESCR_t *args, int nargs) {
     return NULVCL;
 }
 
+/* CHUNKS-step17b'' (CH-17b''): stubs for the Icon frame-env forwarders.
+ * The unit-test world has no Icon frame stack; report "no frame active"
+ * so SM_LOAD_FRAME / SM_STORE_FRAME push FAILDESCR and clear last_ok.
+ * The frame-slot opcodes are only emitted by sm_lower for chunks
+ * (which the unit tests do not exercise), so this path is never hit
+ * by existing tests; the stubs exist purely to satisfy the linker. */
+int icn_frame_env_active(void) { return 0; }
+DESCR_t icn_frame_env_load(int slot) { (void)slot; return FAILDESCR; }
+void icn_frame_env_store(int slot, DESCR_t val) { (void)slot; (void)val; }
+
 #endif /* FULL_RUNTIME_LINKED */
 
 /* ── Test harness ───────────────────────────────────────────────────── */

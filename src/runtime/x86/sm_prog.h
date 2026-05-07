@@ -215,6 +215,26 @@ typedef enum {
      * Used by E_TO_BY chunks for the negative-step loop-exit test. */
     SM_ICMP_LT,
 
+    /* CHUNKS-step17b'' (CH-17b''): frame-slot read/write — read/write
+     * IcnFrame.env[slot] of the active Icon frame.
+     * a[0].i = slot index (0..FRAME_SLOT_MAX-1).
+     *
+     * Semantics inside an Icon frame (frame_depth > 0):
+     *   SM_LOAD_FRAME  : push frame_stack[frame_depth-1].env[slot]; last_ok=1.
+     *   SM_STORE_FRAME : pop value, write to that slot, push value back; last_ok=1.
+     *
+     * Outside an Icon frame (frame_depth == 0): push FAILDESCR / clear last_ok
+     * (mirrors SM_LOAD_GLOCAL's behaviour outside a generator drive).  This is
+     * safe because chunks emitted with frame-slot ops are only reachable via
+     * the chunk-shaped consumer dispatch (CH-17c+); until then they are dead
+     * code, forward-jumped over by their enclosing SM_JUMP.
+     *
+     * The slot index is baked at lower-time by sm_lower's per-proc scope
+     * construction (mirrors coro_runtime.c's icn_scope_patch but without
+     * mutating EXPR_t.ival in place).  See sm_lower.c chunk-body emission. */
+    SM_LOAD_FRAME,
+    SM_STORE_FRAME,
+
     SM_OPCODE_COUNT
 } sm_opcode_t;
 

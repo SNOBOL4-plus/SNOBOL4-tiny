@@ -56,6 +56,47 @@ static void emit_push_expr(SM_Program *p, const EXPR_t *e)
  * the same wave). */
 static int g_chunk_body_lowering = 0;
 
+/* CHUNKS-step17b'' (CH-17b''): per-proc IcnScope active during chunk-body
+ * lowering.  Mirrors what coro_call's icn_scope_patch builds at runtime — but
+ * built at lower-time and consulted (read-only) by the E_VAR / E_ASSIGN cases
+ * in lower_expr so chunks emit SM_LOAD_FRAME slot / SM_STORE_FRAME slot for
+ * params + locals, leaving SM_PUSH_VAR / SM_STORE_VAR for true globals,
+ * builtins, and other-proc references.
+ *
+ * Built and torn down in the per-proc emission loop below; NULL outside that
+ * loop.  E_VAR / E_ASSIGN consult it gated on g_chunk_body_lowering so the
+ * stmt-level lowering (which still walks IR via coro_call) is unaffected. */
+static IcnScope *g_chunk_scope = NULL;
+
+/* Read-only mirror of coro_runtime.c's icn_scope_patch — walks the proc body's
+ * EXPR_t tree and grows `sc` with non-global E_VAR + E_GLOBAL-decl names.  Does
+ * NOT mutate EXPR_t.ival in place (the IR walker's slot indices were already
+ * written by coro_call earlier when the proc was first invoked, OR will be
+ * written next time it runs the IR path; both are safe because slot numbers
+ * are deterministic — same scope-add order yields same slots).  This walker
+ * gives us the same scope without committing to mutate IR at this time. */
+static void chunk_scope_walk(IcnScope *sc, EXPR_t *e) {
+    if (!e) return;
+    if (e->kind == E_GLOBAL) {
+        for (int i = 0; i < e->nchildren; i++)
+            if (e->children[i] && e->children[i]->sval)
+                scope_add(sc, e->children[i]->sval);
+        return;
+    }
+    if (e->kind == E_VAR && e->sval) {
+        /* Mirror icn_scope_patch: globals (registered via global_register at
+         * polyglot_init time) bridge to the SNO NV store — they DON'T get a
+         * frame slot.  Non-global, non-keyword vars become slots in entry
+         * order (params first, then E_GLOBAL-decl names, then any encountered
+         * here).  Names starting with '&' are keywords — leave them alone
+         * (lowered as SM_PUSH_VAR with verbatim sval). */
+        if (e->sval[0] != '&' && !is_global(e->sval))
+            scope_add(sc, e->sval);
+    }
+    for (int i = 0; i < e->nchildren; i++)
+        chunk_scope_walk(sc, e->children[i]);
+}
+
 /* ── Label resolution table ─────────────────────────────────────────────── */
 
 typedef struct {
@@ -576,9 +617,22 @@ static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
         return;
 
     /* ── References ── */
-    case E_VAR:
-        sm_emit_s(p, SM_PUSH_VAR, e->sval ? e->sval : "");
+    case E_VAR: {
+        const char *vn = e->sval ? e->sval : "";
+        /* CHUNKS-step17b'' (CH-17b''): inside chunk-body lowering, consult the
+         * per-proc scope: if `vn` resolved to a frame slot, emit SM_LOAD_FRAME.
+         * Globals, keywords ('&'-prefixed), and unscoped names fall through
+         * to SM_PUSH_VAR — same shape as the legacy emission outside chunks. */
+        if (g_chunk_body_lowering && g_chunk_scope && vn[0] && vn[0] != '&') {
+            int slot = scope_get(g_chunk_scope, vn);
+            if (slot >= 0) {
+                sm_emit_i(p, SM_LOAD_FRAME, slot);
+                return;
+            }
+        }
+        sm_emit_s(p, SM_PUSH_VAR, vn);
         return;
+    }
     case E_KEYWORD: {
         /* Keywords are registered uppercase (LCASE, UCASE, etc.) but the lexer
          * preserves the source case after stripping '&'. Uppercase before lookup. */
@@ -715,8 +769,20 @@ static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
         lower_expr(p, lt, e->nchildren > 1 ? e->children[1] : NULL);
         if (e->nchildren > 0 && e->children[0]) {
             const EXPR_t *lhs = e->children[0];
-            if (lhs->kind == E_VAR)
-                sm_emit_s(p, SM_STORE_VAR, lhs->sval ? lhs->sval : "");
+            if (lhs->kind == E_VAR) {
+                const char *vn = lhs->sval ? lhs->sval : "";
+                /* CHUNKS-step17b'' (CH-17b''): inside chunk-body lowering,
+                 * consult per-proc scope.  Frame slot → SM_STORE_FRAME slot.
+                 * Globals / keywords / unscoped names → SM_STORE_VAR (NV store). */
+                if (g_chunk_body_lowering && g_chunk_scope && vn[0] && vn[0] != '&') {
+                    int slot = scope_get(g_chunk_scope, vn);
+                    if (slot >= 0) {
+                        sm_emit_i(p, SM_STORE_FRAME, slot);
+                        return;
+                    }
+                }
+                sm_emit_s(p, SM_STORE_VAR, vn);
+            }
             else if (lhs->kind == E_KEYWORD) {
                 /* uppercase keyword name for NV store, matching read path */
                 const char *kraw = lhs->sval ? lhs->sval : "";
@@ -1612,12 +1678,19 @@ SM_Program *sm_lower(const CODE_t *prog)
      *     practice; if any did appear they'd be statement-scoped within the
      *     chunk and resolve via the same forward-patch machinery.
      *
-     *   - Frame-slot resolution via icn_scope_patch is intentionally NOT
-     *     pre-built here.  E_VAR lowers to SM_PUSH_VAR <name>, name-keyed
-     *     through NV_GET_fn at runtime — slot indices on EXPR_t.ival are
-     *     used only by the IR-side coro_call path, which is unaffected.
-     *     Migrating env to lower-time slot baking is later-rung territory
-     *     (CH-17c+ when coro_call is replaced by sm_call_proc).
+     *   - CH-17b'': frame-slot resolution IS pre-built at lower-time.  Per
+     *     proc, an IcnScope is constructed mirroring coro_runtime.c's
+     *     icn_scope_patch (params first, then E_GLOBAL-decl names, then any
+     *     non-global E_VAR encountered in the body).  The scope is installed
+     *     via g_chunk_scope so lower_expr's E_VAR / E_ASSIGN cases emit
+     *     SM_LOAD_FRAME / SM_STORE_FRAME for in-scope names, falling back to
+     *     SM_PUSH_VAR / SM_STORE_VAR for globals / keywords / unscoped names.
+     *     This mirrors what bb_eval_value does at runtime when frame_depth>0,
+     *     but bakes the slot decisions at lower-time.  IR is NOT mutated:
+     *     scope_add only writes into the side table.  Slot order matches
+     *     icn_scope_patch's order, so when CH-17c flips coro_call to dispatch
+     *     via sm_call_proc, args[i] populates FRAME.env[i] at the same slot
+     *     that the chunk's SM_LOAD_FRAME reads from.
      *
      *   - Empty-body skeleton (and the chunks themselves) remain safe:
      *     forward-jumped over by the SM_JUMP; even if a future caller
@@ -1632,23 +1705,46 @@ SM_Program *sm_lower(const CODE_t *prog)
          * — making it findable via sm_label_pc_lookup(p, name). */
         sm_label_named(p, nm);
 
-        /* CH-17b': lower each body child as a value expression and pop the
-         * result.  body_start = 1 + nparams.  Defensive on missing IR.
-         * The g_chunk_body_lowering flag silences lower_expr's
-         * "unhandled expr kind" stderr warning for the duration — chunks
-         * are dead code today, so unhandled-kind fall-throughs are harmless
-         * and the warning would only mislead. */
+        /* CH-17b' + CH-17b'': lower each body child as a value expression and
+         * pop the result.  body_start = 1 + nparams.  Defensive on missing IR.
+         *
+         *   g_chunk_body_lowering — silences lower_expr's "unhandled expr kind"
+         *   stderr warning for the duration; chunks are dead code today so the
+         *   warning would only mislead.  Also gates the new frame-slot
+         *   emission below on chunk-body context.
+         *
+         *   g_chunk_scope (CH-17b'') — per-proc IcnScope built fresh: params
+         *   become slots 0..nparams-1; E_GLOBAL-decl locals follow; any
+         *   non-global E_VAR encountered in the body extends the scope.
+         *   The walker mirrors icn_scope_patch but without IR mutation. */
         if (proc) {
             int nparams    = (int)proc->ival;
             int body_start = 1 + nparams;
-            g_chunk_body_lowering = 1;
+
+            /* Build per-proc scope.  Stored on the stack — automatically torn
+             * down when this `if` block exits.  scope_add returns the same
+             * slot for the same name, so re-adding params via the body walk
+             * is safe.  Order matches icn_scope_patch (params, then E_GLOBALs
+             * via the E_GLOBAL branch of chunk_scope_walk, then encountered
+             * E_VARs in tree-walk order). */
+            IcnScope chunk_sc; chunk_sc.n = 0;
+            for (int i = 0; i < nparams && i < FRAME_SLOT_MAX; i++) {
+                EXPR_t *pn = proc->children[1+i];
+                if (pn && pn->sval) scope_add(&chunk_sc, pn->sval);
+            }
+            for (int bi = body_start; bi < proc->nchildren; bi++)
+                chunk_scope_walk(&chunk_sc, proc->children[bi]);
+
+            g_chunk_scope          = &chunk_sc;
+            g_chunk_body_lowering  = 1;
             for (int bi = body_start; bi < proc->nchildren; bi++) {
                 EXPR_t *body_expr = proc->children[bi];
                 if (!body_expr) continue;
                 lower_expr(p, &lt, body_expr);
                 sm_emit(p, SM_POP);
             }
-            g_chunk_body_lowering = 0;
+            g_chunk_body_lowering  = 0;
+            g_chunk_scope          = NULL;
         }
 
         sm_emit(p, SM_RETURN);
