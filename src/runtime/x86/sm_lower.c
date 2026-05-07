@@ -25,6 +25,7 @@
 #include "../../ir/ir.h"
 #include "../../runtime/common/ir_clone.h"   /* RS-9b: expr_gc_clone */
 #include "../../runtime/interp/coro_runtime.h"  /* CH-17b: proc_table for chunk skeletons */
+#include "../../runtime/interp/pl_runtime.h"    /* CH-17d: g_pl_pred_table for pred-chunk skeletons */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1763,6 +1764,37 @@ SM_Program *sm_lower(const CODE_t *prog)
         sm_emit(p, SM_RETURN);
         int skip_lbl = sm_label(p);               /* anonymous skip target */
         sm_patch_jump(p, skip_jump, skip_lbl);
+    }
+
+    /* CH-17d: emit named-chunk skeletons for every Prolog predicate.
+     *
+     * Symmetrical to the Icon/Raku proc-chunk loop above, but driven by
+     * g_pl_pred_table instead of proc_table.
+     *
+     * Chunk shape (one per predicate, keyed by "name/arity"):
+     *
+     *   SM_JUMP <skip_pred_NN>     ; forward-jump around the chunk
+     *   SM_LABEL "name/arity"      ; named entry — sm_label_pc_lookup target
+     *   SM_RETURN                  ; skeleton body — CH-17f will fill this in
+     *   <skip_pred_NN>:            ; anonymous skip target
+     *
+     * Producer fires; consumer is dormant.  sm_resolve_proc_entry_pcs
+     * (CH-17a) walks g_pl_pred_table after sm_lower returns and populates
+     * entry_pc via sm_label_pc_lookup — previously all Prolog entry_pcs
+     * stayed -1.  The chunks are forward-jumped over so nothing reaches
+     * them at runtime; gates are byte-identical to baseline.
+     *
+     * Body lowering (full E_CHOICE/E_CLAUSE IR walk) is CH-17f territory.
+     * This rung only validates that the resolver finds non-(-1) entry_pcs. */
+    for (int b = 0; b < PL_PRED_TABLE_SIZE_FWD; b++) {
+        for (Pl_PredEntry *e = g_pl_pred_table.buckets[b]; e; e = e->next) {
+            if (!e->key || !*e->key) continue;
+            int skip_jump_pl = sm_emit_i(p, SM_JUMP, 0); /* patched below */
+            sm_label_named(p, e->key);                    /* named entry point */
+            sm_emit(p, SM_RETURN);                        /* skeleton — CH-17f fills body */
+            int skip_lbl_pl  = sm_label(p);
+            sm_patch_jump(p, skip_jump_pl, skip_lbl_pl);
+        }
     }
 
     /* First pass: lower all statements */
