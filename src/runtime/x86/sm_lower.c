@@ -1031,10 +1031,166 @@ static void lower_expr(SM_Program *p, LabelTable *lt, const EXPR_t *e)
      * Prolog-specific nodes use SM_BB_ONCE (find one solution).
      * ══════════════════════════════════════════════════════════════════════ */
 
-    /* Icon generators */
+    /* ══════════════════════════════════════════════════════════════════════
+     * Generator/backtracking nodes → BB broker
+     * SM_PUSH_EXPR bakes the EXPR_t* in; SM_BB_PUMP drives via bb_broker.
+     * Prolog-specific nodes use SM_BB_ONCE (find one solution).
+     * ══════════════════════════════════════════════════════════════════════ */
+
+    /* CHUNKS-step15a: E_TO / E_TO_BY migrated to SM chunks + SM_BB_PUMP_SM.
+     * gen-local slot layout (shared across E_TO and E_TO_BY):
+     *   glocal[0] = lo   (integer lower bound)
+     *   glocal[1] = hi   (integer upper bound)
+     *   glocal[2] = cur  (current value, updated each resume)
+     *   glocal[3] = step (E_TO_BY only; E_TO implicitly 1)
+     *
+     * Chunk shape (E_TO):
+     *   SM_JUMP  skip_pc          ; jump over body to SM_BB_PUMP_SM
+     * entry_pc:
+     *   SM_RESUME                 ; documentation hook for future JIT
+     *   lower_expr(lo)            ; evaluate lo bound
+     *   SM_STORE_GLOCAL 0         ; glocal[0] = lo (value stays on stack)
+     *   SM_POP                    ; discard
+     *   lower_expr(hi)            ; evaluate hi bound
+     *   SM_STORE_GLOCAL 1         ; glocal[1] = hi
+     *   SM_POP
+     *   SM_LOAD_GLOCAL 0          ; cur = lo
+     *   SM_STORE_GLOCAL 2         ; glocal[2] = cur
+     *   SM_POP
+     * loop_pc:
+     *   SM_LOAD_GLOCAL 2          ; push cur
+     *   SM_LOAD_GLOCAL 1          ; push hi
+     *   SM_ICMP_GT                ; last_ok = (cur > hi)
+     *   SM_JUMP_S exit_pc         ; exhausted → exit
+     *   SM_LOAD_GLOCAL 2          ; push cur as yielded value
+     *   SM_SUSPEND                ; yield; resume after this point
+     *   SM_LOAD_GLOCAL 2          ; push cur
+     *   SM_INCR step              ; cur += step (1 for E_TO)
+     *   SM_STORE_GLOCAL 2         ; glocal[2] = new cur
+     *   SM_POP
+     *   SM_JUMP loop_pc           ; next iteration
+     * exit_pc:
+     *   SM_PUSH_NULL              ; ω: generator exhausted
+     *   SM_RETURN
+     * skip_pc:
+     *   SM_BB_PUMP_SM entry_pc    ; drive the chunk as a generator
+     */
+    case E_TO: {
+        const EXPR_t *lo_expr = (e->nchildren > 0) ? e->children[0] : NULL;
+        const EXPR_t *hi_expr = (e->nchildren > 1) ? e->children[1] : NULL;
+        int skip_jump = sm_emit_i(p, SM_JUMP, 0);       /* forward jump — patched to skip_pc */
+        int entry_pc  = sm_label(p);                     /* chunk entry point */
+        sm_emit(p, SM_RESUME);                           /* JIT hook */
+        /* initialise glocals: lo, hi, cur */
+        if (lo_expr) lower_expr(p, lt, lo_expr);
+        else         sm_emit_i(p, SM_PUSH_LIT_I, 0);
+        sm_emit_i(p, SM_STORE_GLOCAL, 0);               /* glocal[0] = lo */
+        sm_emit(p, SM_POP);
+        if (hi_expr) lower_expr(p, lt, hi_expr);
+        else         sm_emit_i(p, SM_PUSH_LIT_I, 0);
+        sm_emit_i(p, SM_STORE_GLOCAL, 1);               /* glocal[1] = hi */
+        sm_emit(p, SM_POP);
+        sm_emit_i(p, SM_LOAD_GLOCAL, 0);                /* cur = lo */
+        sm_emit_i(p, SM_STORE_GLOCAL, 2);               /* glocal[2] = cur */
+        sm_emit(p, SM_POP);
+        /* loop: test cur > hi; yield cur; cur++ */
+        int loop_pc = sm_label(p);
+        sm_emit_i(p, SM_LOAD_GLOCAL, 2);                /* push cur */
+        sm_emit_i(p, SM_LOAD_GLOCAL, 1);                /* push hi */
+        sm_emit(p, SM_ICMP_GT);                          /* last_ok = (cur > hi) */
+        int exit_jump = sm_emit_i(p, SM_JUMP_S, 0);     /* patched to exit_pc */
+        sm_emit_i(p, SM_LOAD_GLOCAL, 2);                /* push cur = yielded value */
+        sm_emit(p, SM_SUSPEND);                          /* yield cur */
+        sm_emit_i(p, SM_LOAD_GLOCAL, 2);                /* push cur for increment */
+        sm_emit_i(p, SM_INCR, 1);                        /* cur + 1 */
+        sm_emit_i(p, SM_STORE_GLOCAL, 2);               /* glocal[2] = cur+1 */
+        sm_emit(p, SM_POP);
+        sm_emit_i(p, SM_JUMP, loop_pc);                  /* back to loop */
+        int exit_pc_here = sm_label(p);
+        sm_patch_jump(p, exit_jump, exit_pc_here);
+        sm_emit(p, SM_PUSH_NULL);                        /* ω */
+        sm_emit(p, SM_RETURN);
+        int skip_pc = sm_label(p);
+        sm_patch_jump(p, skip_jump, skip_pc);
+        sm_emit_ii(p, SM_PUSH_CHUNK, (int64_t)entry_pc, 0); /* push chunk descriptor */
+        sm_emit(p, SM_BB_PUMP_SM);                           /* pop + drive as generator */
+        return;
+    }
+
+    case E_TO_BY: {
+        /* E_TO_BY(lo, hi, step) — same shape as E_TO but step is glocal[3].
+         * Children: [0]=lo, [1]=hi, [2]=step.
+         * Mirrors coro_bb_to_by semantics:
+         *   step > 0: exit when cur > hi
+         *   step < 0: exit when cur < hi
+         *   step == 0: treated as +1 (degenerate) — same as positive case.
+         * Loop dispatches on step sign each iteration via SM_ICMP_LT against 0. */
+        const EXPR_t *lo_expr   = (e->nchildren > 0) ? e->children[0] : NULL;
+        const EXPR_t *hi_expr   = (e->nchildren > 1) ? e->children[1] : NULL;
+        const EXPR_t *step_expr = (e->nchildren > 2) ? e->children[2] : NULL;
+        int skip_jump = sm_emit_i(p, SM_JUMP, 0);
+        int entry_pc  = sm_label(p);
+        sm_emit(p, SM_RESUME);
+        /* initialise glocals: lo, hi, step, cur */
+        if (lo_expr) lower_expr(p, lt, lo_expr);
+        else         sm_emit_i(p, SM_PUSH_LIT_I, 0);
+        sm_emit_i(p, SM_STORE_GLOCAL, 0);
+        sm_emit(p, SM_POP);
+        if (hi_expr) lower_expr(p, lt, hi_expr);
+        else         sm_emit_i(p, SM_PUSH_LIT_I, 0);
+        sm_emit_i(p, SM_STORE_GLOCAL, 1);
+        sm_emit(p, SM_POP);
+        if (step_expr) lower_expr(p, lt, step_expr);
+        else           sm_emit_i(p, SM_PUSH_LIT_I, 1);
+        sm_emit_i(p, SM_STORE_GLOCAL, 3);               /* glocal[3] = step */
+        sm_emit(p, SM_POP);
+        sm_emit_i(p, SM_LOAD_GLOCAL, 0);                /* cur = lo */
+        sm_emit_i(p, SM_STORE_GLOCAL, 2);
+        sm_emit(p, SM_POP);
+        /* loop: dispatch on step sign for exit test */
+        int loop_pc = sm_label(p);
+        sm_emit_i(p, SM_LOAD_GLOCAL, 3);                /* push step */
+        sm_emit_i(p, SM_PUSH_LIT_I, 0);                 /* push 0 */
+        sm_emit(p, SM_ICMP_LT);                          /* last_ok = (step < 0) */
+        int neg_branch = sm_emit_i(p, SM_JUMP_S, 0);    /* if step<0 → neg_test */
+        /* positive-step exit test: cur > hi */
+        sm_emit_i(p, SM_LOAD_GLOCAL, 2);                /* push cur */
+        sm_emit_i(p, SM_LOAD_GLOCAL, 1);                /* push hi */
+        sm_emit(p, SM_ICMP_GT);
+        int exit_jump_pos = sm_emit_i(p, SM_JUMP_S, 0); /* if cur>hi → exit */
+        int body_jump = sm_emit_i(p, SM_JUMP, 0);        /* skip neg_test → body */
+        /* negative-step exit test: cur < hi */
+        int neg_pc = sm_label(p);
+        sm_patch_jump(p, neg_branch, neg_pc);
+        sm_emit_i(p, SM_LOAD_GLOCAL, 2);                /* push cur */
+        sm_emit_i(p, SM_LOAD_GLOCAL, 1);                /* push hi */
+        sm_emit(p, SM_ICMP_LT);
+        int exit_jump_neg = sm_emit_i(p, SM_JUMP_S, 0); /* if cur<hi → exit */
+        /* body: yield cur; cur += step */
+        int body_pc = sm_label(p);
+        sm_patch_jump(p, body_jump, body_pc);
+        sm_emit_i(p, SM_LOAD_GLOCAL, 2);                /* yield cur */
+        sm_emit(p, SM_SUSPEND);
+        sm_emit_i(p, SM_LOAD_GLOCAL, 2);                /* cur for addition */
+        sm_emit_i(p, SM_LOAD_GLOCAL, 3);                /* step */
+        sm_emit(p, SM_ADD);                              /* cur + step */
+        sm_emit_i(p, SM_STORE_GLOCAL, 2);
+        sm_emit(p, SM_POP);
+        sm_emit_i(p, SM_JUMP, loop_pc);
+        int exit_pc_here = sm_label(p);
+        sm_patch_jump(p, exit_jump_pos, exit_pc_here);
+        sm_patch_jump(p, exit_jump_neg, exit_pc_here);
+        sm_emit(p, SM_PUSH_NULL);
+        sm_emit(p, SM_RETURN);
+        int skip_pc = sm_label(p);
+        sm_patch_jump(p, skip_jump, skip_pc);
+        sm_emit_ii(p, SM_PUSH_CHUNK, (int64_t)entry_pc, 0);
+        sm_emit(p, SM_BB_PUMP_SM);
+        return;
+    }
+
+    /* Icon generators — remaining kinds still use legacy emit_push_expr + SM_BB_PUMP */
     case E_EVERY:
-    case E_TO:
-    case E_TO_BY:
     case E_SUSPEND:
     case E_BANG_BINARY:
     case E_LCONCAT:

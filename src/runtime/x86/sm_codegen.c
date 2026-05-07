@@ -1012,6 +1012,20 @@ static void h_store_glocal(void)
     }
 }
 
+/* CHUNKS-step15a: SM_ICMP_GT — named FATAL stub; JIT codegen is M5 territory. */
+static void h_icmp_gt(void)
+{
+    fprintf(stderr, "FATAL: SM_ICMP_GT reached in JIT codegen — M5 not yet implemented\n");
+    STATE->last_ok = 0;
+}
+
+/* CHUNKS-step15a: SM_ICMP_LT — named FATAL stub; JIT codegen is M5 territory. */
+static void h_icmp_lt(void)
+{
+    fprintf(stderr, "FATAL: SM_ICMP_LT reached in JIT codegen — M5 not yet implemented\n");
+    STATE->last_ok = 0;
+}
+
 /* Unimplemented stubs — emit warning, set last_ok=0 */
 static void h_unimpl(void)
 {
@@ -1116,6 +1130,8 @@ static void init_handler_table(void)
     g_handlers[SM_RESUME]       = h_resume;    /* CHUNKS-step14: named FATAL — JIT gen is M5 */
     g_handlers[SM_LOAD_GLOCAL]  = h_load_glocal;   /* CHUNKS-step14b */
     g_handlers[SM_STORE_GLOCAL] = h_store_glocal;  /* CHUNKS-step14b */
+    g_handlers[SM_ICMP_GT]      = h_icmp_gt;       /* CHUNKS-step15a: named FATAL — JIT gen is M5 */
+    g_handlers[SM_ICMP_LT]      = h_icmp_lt;       /* CHUNKS-step15a: named FATAL — JIT gen is M5 */
     /* Opcodes still stubbed as h_unimpl — by design, not by omission:
      *   SM_ACOMP, SM_LCOMP  — emitted by sm_lower for E_EQ/E_NE/E_LT/etc.
      *     (SNOBOL4 numeric/string comparison EKinds) but NEVER actually

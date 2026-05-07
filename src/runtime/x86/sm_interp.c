@@ -1324,6 +1324,24 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
             break;
         }
 
+        /* CHUNKS-step15a: SM_ICMP_GT — integer compare greater-than.
+         * Pops right (TOS) then left (TOS-1).  Sets last_ok = (left.i > right.i).
+         * Pushes nothing.  Used by E_TO / E_TO_BY generator chunk loop-exit test. */
+        case SM_ICMP_GT: {
+            DESCR_t r = sm_pop(st);
+            DESCR_t l = sm_pop(st);
+            st->last_ok = (l.i > r.i);
+            break;
+        }
+
+        /* CHUNKS-step15a: SM_ICMP_LT — mirror of SM_ICMP_GT for negative-step E_TO_BY. */
+        case SM_ICMP_LT: {
+            DESCR_t r = sm_pop(st);
+            DESCR_t l = sm_pop(st);
+            st->last_ok = (l.i < r.i);
+            break;
+        }
+
         default:
             fprintf(stderr, "sm_interp: unhandled opcode %d (%s) at pc=%d\n",
                     (int)ins->op, sm_opcode_name(ins->op), st->pc - 1);

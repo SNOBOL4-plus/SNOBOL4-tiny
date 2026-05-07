@@ -206,6 +206,15 @@ typedef enum {
     SM_LOAD_GLOCAL,
     SM_STORE_GLOCAL,
 
+    /* CHUNKS-step15a: SM_ICMP_GT — integer compare greater-than.
+     * Pops two DT_I values (right = TOS, left = TOS-1).
+     * Sets last_ok = (left.i > right.i).  Pushes nothing.
+     * Used by E_TO / E_TO_BY generator chunks for the loop-exit test. */
+    SM_ICMP_GT,
+    /* CHUNKS-step15a: SM_ICMP_LT — integer compare less-than (mirror of GT).
+     * Used by E_TO_BY chunks for the negative-step loop-exit test. */
+    SM_ICMP_LT,
+
     SM_OPCODE_COUNT
 } sm_opcode_t;
 
