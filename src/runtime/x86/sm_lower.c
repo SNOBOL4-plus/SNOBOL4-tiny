@@ -24,6 +24,7 @@
 #include "../../frontend/snobol4/scrip_cc.h"
 #include "../../ir/ir.h"
 #include "../../runtime/common/ir_clone.h"   /* RS-9b: expr_gc_clone */
+#include "../../runtime/interp/coro_runtime.h"  /* CH-17b: proc_table for chunk skeletons */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1540,6 +1541,40 @@ SM_Program *sm_lower(const CODE_t *prog)
     SM_Program *p  = sm_prog_new();
     LabelTable  lt;
     lt_init(&lt);
+
+    /* CH-17b: emit named-chunk skeletons for every Icon/Raku proc.
+     *
+     * Skeleton shape (one per proc in proc_table):
+     *
+     *   SM_JUMP <skip_proc_NN>     ; forward-jump around the chunk
+     *   SM_LABEL "<proc_name>"     ; named entry — sm_label_pc_lookup target
+     *   SM_RETURN                  ; empty body for now (CH-17b' adds bodies)
+     *   <skip_proc_NN>:            ; anonymous skip target
+     *
+     * After sm_lower returns, sm_resolve_proc_entry_pcs (CH-17a) walks
+     * proc_table and sets entry_pc to the SM_LABEL's pc via
+     * sm_label_pc_lookup.  The chunks are unreachable today
+     * (coro_call still walks IR) but the entry_pcs validate end-to-end.
+     *
+     * Body lowering is CH-17b' territory — separate rung because Icon
+     * proc bodies are EXPR_t chains (not STMT_t) and frame-slot
+     * resolution via icn_scope_patch happens inside coro_call at runtime
+     * today, which is its own architectural decision.
+     *
+     * Empty-body skeleton is safe: the chunks are forward-jumped over by
+     * the SM_JUMP, so execution falls through them; even if a future
+     * caller invoked one, it would just SM_RETURN immediately. */
+    for (int pi = 0; pi < proc_count; pi++) {
+        const char *nm = proc_table[pi].name;
+        if (!nm || !*nm) continue;
+        int skip_jump = sm_emit_i(p, SM_JUMP, 0);   /* patched to skip_lbl below */
+        /* sm_label_named records the name in a[0].s and the pc in a[1].i
+         * — making it findable via sm_label_pc_lookup(p, name). */
+        sm_label_named(p, nm);
+        sm_emit(p, SM_RETURN);
+        int skip_lbl = sm_label(p);                  /* anonymous skip target */
+        sm_patch_jump(p, skip_jump, skip_lbl);
+    }
 
     /* First pass: lower all statements */
     int stno = 0;
