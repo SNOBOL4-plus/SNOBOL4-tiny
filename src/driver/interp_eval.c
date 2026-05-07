@@ -2297,7 +2297,11 @@ DESCR_t interp_eval(EXPR_t *e)
                     Term **_pl_args = (nargs > 0) ? pl_env_new(nargs) : NULL;
                     Term **_saved   = g_pl_env;
                     g_pl_env = _pl_args;
-                    bb_node_t _root = pl_box_choice(_choice, g_pl_env, nargs);
+                    /* CH-17e: use SM-chunk path when entry_pc is resolved */
+                    Pl_PredEntry *_pe = pl_pred_entry_lookup(_pk);
+                    bb_node_t _root = (_pe && _pe->entry_pc >= 0)
+                        ? pl_box_choice_pc(_pe->entry_pc, g_pl_env, nargs)
+                        : pl_box_choice(_choice, g_pl_env, nargs);
                     int _ok = bb_broker(_root, BB_ONCE, NULL, NULL);
                     g_pl_env = _saved;
                     return _ok ? INTVAL(1) : FAILDESCR;
@@ -2739,14 +2743,15 @@ DESCR_t interp_eval(EXPR_t *e)
         return NULVCL;
     case E_CHOICE: {
         /* Drive clause selection via the Byrd box broker.
-         * pl_box_choice builds the full OR/CAT/head-unify box tree.
-         * bb_broker drives α (BB_ONCE) — OR-box retries β internally per clause.
-         * g_pl_env holds the caller's arg Term** array (arity slots).
-         * Returns INTVAL(1) on first solution (γ), FAILDESCR on ω. */
+         * CH-17e: when entry_pc >= 0 (SM chunk lowered by CH-17d/f), use
+         * pl_box_choice_pc; otherwise fall back to IR-walk pl_box_choice. */
         if (!g_pl_active) return NULVCL;
         int arity = 0;
         if (e->sval) { const char *sl = strrchr(e->sval, '/'); if (sl) arity = atoi(sl+1); }
-        bb_node_t root = pl_box_choice(e, g_pl_env, arity);
+        Pl_PredEntry *_pe2 = e->sval ? pl_pred_entry_lookup(e->sval) : NULL;
+        bb_node_t root = (_pe2 && _pe2->entry_pc >= 0)
+            ? pl_box_choice_pc(_pe2->entry_pc, g_pl_env, arity)
+            : pl_box_choice(e, g_pl_env, arity);
         int ok = bb_broker(root, BB_ONCE, NULL, NULL);
         return ok ? INTVAL(1) : FAILDESCR;
     }

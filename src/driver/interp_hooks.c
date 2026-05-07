@@ -160,7 +160,11 @@ DESCR_t _usercall_hook(const char *name, DESCR_t *args, int nargs) {
                         NULL);
                 Term **saved_env = g_pl_env;
                 g_pl_env = pl_args;
-                bb_node_t root = pl_box_choice(choice, g_pl_env, nargs);
+                /* CH-17e: prefer SM-chunk path when entry_pc resolved */
+                Pl_PredEntry *_hpe = pl_pred_entry_lookup(pl_key);
+                bb_node_t root = (_hpe && _hpe->entry_pc >= 0)
+                    ? pl_box_choice_pc(_hpe->entry_pc, g_pl_env, nargs)
+                    : pl_box_choice(choice, g_pl_env, nargs);
                 int ok = bb_broker(root, BB_ONCE, NULL, NULL);
                 g_pl_env = saved_env;
                 return ok ? INTVAL(1) : FAILDESCR;

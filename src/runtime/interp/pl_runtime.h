@@ -46,6 +46,8 @@ extern int           g_pl_active;
 EXPR_t *pl_pred_table_lookup(Pl_PredTable *pt, const char *key);
 void    pl_pred_table_insert(Pl_PredTable *pt, const char *key, EXPR_t *choice);
 EXPR_t *pl_pred_table_lookup_global(const char *key);
+/* CH-17e: return the full Pl_PredEntry* so callers can read entry_pc */
+Pl_PredEntry *pl_pred_entry_lookup(const char *key);
 
 Term  **pl_env_new(int n);
 Term   *pl_unified_term_from_expr(EXPR_t *e, Term **env);

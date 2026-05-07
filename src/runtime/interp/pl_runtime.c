@@ -161,6 +161,12 @@ EXPR_t *pl_pred_table_lookup(Pl_PredTable *pt, const char *key) {
 EXPR_t *pl_pred_table_lookup_global(const char *key) {
     return pl_pred_table_lookup(&g_pl_pred_table, key);
 }
+/* CH-17e: return full Pl_PredEntry* for entry_pc access */
+Pl_PredEntry *pl_pred_entry_lookup(const char *key) {
+    for (Pl_PredEntry *e = g_pl_pred_table.buckets[pl_pred_hash(key)]; e; e = e->next)
+        if (e->key && strcmp(e->key, key) == 0) return e;
+    return NULL;
+}
 
 /*----------------------------------------------------------------------------------------------------------------------------
  * pl_pred_table_get_or_create_choice — find or create the E_CHOICE node for key in the global pred table.
@@ -1882,7 +1888,11 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
                 int umark = trail_mark(utrail);
                 Term **saved_env = g_pl_env;
                 g_pl_env = uargs;
-                bb_node_t uroot = pl_box_choice(uch, g_pl_env, call_arity);
+                /* CH-17e: prefer SM-chunk path when entry_pc resolved */
+                Pl_PredEntry *_upe1 = pl_pred_entry_lookup(ukey);
+                bb_node_t uroot = (_upe1 && _upe1->entry_pc >= 0)
+                    ? pl_box_choice_pc(_upe1->entry_pc, g_pl_env, call_arity)
+                    : pl_box_choice(uch, g_pl_env, call_arity);
                 int uok = bb_broker(uroot, BB_ONCE, NULL, NULL);
                 g_pl_env = saved_env;
                 if (!uok) trail_unwind(utrail, umark);
@@ -1957,7 +1967,11 @@ int interp_exec_pl_builtin(EXPR_t *goal, Term **env) {
                     if (uok) {
                         Term **saved_env = g_pl_env;
                         g_pl_env = uargs;
-                        bb_node_t uroot = pl_box_choice(uch, g_pl_env, arity);
+                        /* CH-17e: prefer SM-chunk path when entry_pc resolved */
+                        Pl_PredEntry *_upe2 = pl_pred_entry_lookup(ukey);
+                        bb_node_t uroot = (_upe2 && _upe2->entry_pc >= 0)
+                            ? pl_box_choice_pc(_upe2->entry_pc, g_pl_env, arity)
+                            : pl_box_choice(uch, g_pl_env, arity);
                         uok = bb_broker(uroot, BB_ONCE, NULL, NULL);
                         g_pl_env = saved_env;
                     }

@@ -546,6 +546,37 @@ bb_node_t pl_box_choice(EXPR_t *choice_node, Term **caller_args, int arity) {
     return (bb_node_t){ pl_choice_fn, ζ, 0 };
 }
 
+/* CH-17e: pl_box_choice_pc — SM-chunk variant.
+ *
+ * When Pl_PredEntry.entry_pc >= 0 (chunk lowered by CH-17d/f), call the
+ * chunk via sm_call_chunk(entry_pc) rather than walking the IR tree via
+ * pl_box_choice(EXPR_t*).  The chunk body is SK-only (SM_RETURN) until
+ * CH-17f fills it; sm_call_chunk returns FAILDESCR on empty stack, which
+ * is the correct "no solution" result for a skeleton-only predicate.
+ *
+ * State: simple one-shot box — α calls the chunk; β returns ω.
+ * No trail manipulation needed here: the chunk body itself will manage
+ * unification/trail once CH-17f fills real bodies in. */
+typedef struct { int entry_pc; int fired; } pl_chunk_t;
+
+static DESCR_t pl_chunk_fn(void *zeta, int entry) {
+    extern DESCR_t sm_call_chunk(int);
+    pl_chunk_t *z = zeta;
+    if (entry == β || z->fired) return FAILDESCR;
+    z->fired = 1;
+    DESCR_t r = sm_call_chunk(z->entry_pc);
+    return IS_FAIL_fn(r) ? FAILDESCR : NULVCL;
+}
+
+bb_node_t pl_box_choice_pc(int entry_pc, Term **caller_args, int arity) {
+    (void)caller_args; (void)arity;   /* args wired into chunk frame by CH-17f */
+    if (entry_pc < 0) return pl_box_fail();
+    pl_chunk_t *z = calloc(1, sizeof(pl_chunk_t));
+    z->entry_pc = entry_pc;
+    z->fired    = 0;
+    return (bb_node_t){ pl_chunk_fn, z, 0 };
+}
+
 bb_node_t pl_box_choice_call(EXPR_t *goal, Term **env) {
     if (!goal || !goal->sval) return pl_box_fail();
     int arity = goal->nchildren;
