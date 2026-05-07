@@ -413,6 +413,30 @@ static void h_bb_pump_case(void)
     STATE->last_ok = matched;
 }
 
+/* CHUNKS-step15: BB pump for an SM generator chunk — JIT mirror of
+ * SM_BB_PUMP_SM handler in sm_interp.c.  The chunk body itself runs
+ * interpreted via bb_broker_drive_sm → sm_interp_run, identical to how
+ * h_bb_pump_case routes per-arm chunks through sm_call_chunk → the
+ * interpreter.  No JIT-of-the-chunk-body needed in this rung; that is
+ * M5/EM-10 territory.  The two handlers must stay in lockstep. */
+static void h_bb_pump_sm(void)
+{
+    DESCR_t d = POP();
+    if (d.v != DT_E || d.slen != 1) {
+        STATE->last_ok = 0;
+        return;
+    }
+    int entry_pc = (int)d.i;
+    SM_Program *prog = g_current_sm_prog;
+    if (!prog || entry_pc < 0 || entry_pc >= prog->count) {
+        STATE->last_ok = 0;
+        return;
+    }
+    SmGenState *gs = sm_gen_state_new(entry_pc);
+    int ticks = bb_broker_drive_sm(gs, jit_pump_print, NULL);
+    STATE->last_ok = (ticks > 0);
+}
+
 static void h_store_var(void)
 {
     DESCR_t val = POP();
@@ -957,6 +981,37 @@ static void h_resume(void) {
     STATE->last_ok = 0;
 }
 
+/* CHUNKS-step14b: SM_LOAD_GLOCAL / SM_STORE_GLOCAL JIT mirrors.
+ * Identical semantics to the sm_interp.c handlers — see those for the
+ * exhaustive comment.  Like SM_BB_PUMP_SM, these execute against the
+ * shared g_current_gen_state owned by bb_broker_drive_sm; nothing
+ * JIT-specific. */
+static void h_load_glocal(void)
+{
+    int slot = (int)CUR_INS->a[0].i;
+    if (g_current_gen_state && slot >= 0 && slot < SM_GEN_LOCAL_MAX) {
+        PUSH(g_current_gen_state->locals[slot]);
+        STATE->last_ok = 1;
+    } else {
+        PUSH(FAILDESCR);
+        STATE->last_ok = 0;
+    }
+}
+
+static void h_store_glocal(void)
+{
+    int slot = (int)CUR_INS->a[0].i;
+    DESCR_t v = POP();
+    if (g_current_gen_state && slot >= 0 && slot < SM_GEN_LOCAL_MAX) {
+        g_current_gen_state->locals[slot] = v;
+        PUSH(v);
+        STATE->last_ok = 1;
+    } else {
+        PUSH(FAILDESCR);
+        STATE->last_ok = 0;
+    }
+}
+
 /* Unimplemented stubs — emit warning, set last_ok=0 */
 static void h_unimpl(void)
 {
@@ -1056,8 +1111,11 @@ static void init_handler_table(void)
      * E_FNC + SM_PUSH_EXPR + SM_BB_PUMP wrapper for top-level call_main. */
     g_handlers[SM_BB_PUMP_PROC] = h_bb_pump_proc;
     g_handlers[SM_BB_PUMP_CASE] = h_bb_pump_case;
+    g_handlers[SM_BB_PUMP_SM]   = h_bb_pump_sm;
     g_handlers[SM_SUSPEND]      = h_suspend;   /* CHUNKS-step14: named FATAL — JIT gen is M5 */
     g_handlers[SM_RESUME]       = h_resume;    /* CHUNKS-step14: named FATAL — JIT gen is M5 */
+    g_handlers[SM_LOAD_GLOCAL]  = h_load_glocal;   /* CHUNKS-step14b */
+    g_handlers[SM_STORE_GLOCAL] = h_store_glocal;  /* CHUNKS-step14b */
     /* Opcodes still stubbed as h_unimpl — by design, not by omission:
      *   SM_ACOMP, SM_LCOMP  — emitted by sm_lower for E_EQ/E_NE/E_LT/etc.
      *     (SNOBOL4 numeric/string comparison EKinds) but NEVER actually

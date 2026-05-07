@@ -42,6 +42,9 @@ typedef struct {
  * sm_interp_run fills it in when SM_SUSPEND fires; bb_broker_drive_sm
  * restores it on each resume call.
  * (Forward-declared as typedef struct SmGenState in sm_prog.h.) */
+#define SM_GEN_LOCAL_MAX 8   /* CHUNKS-step14b: gen-local slots per chunk invocation;
+                                covers every Icon generator kind in CHUNKS-step15
+                                (E_TO 3 slots, E_TO_BY 4, E_LIMIT 2, etc.) */
 struct SmGenState {
     int      entry_pc;   /* initial entry pc (for first call) */
     int      resume_pc;  /* pc to resume from (instruction after last SM_SUSPEND) */
@@ -52,6 +55,13 @@ struct SmGenState {
     int      sp;         /* saved sp */
     int      stack_cap;  /* allocated capacity of stack[] */
     int      last_ok;    /* saved last_ok at suspend time */
+    /* CHUNKS-step14b: per-invocation gen-local slots — accessed via
+     * SM_LOAD_GLOCAL / SM_STORE_GLOCAL.  Survive SUSPEND/RESUME the same
+     * way `stack` does (they are part of the SmGenState, which is the
+     * persistent envelope).  Each Icon generator kind allocates a fixed
+     * static count of these at chunk start; the count itself is encoded
+     * in the lowering, never stored. */
+    DESCR_t  locals[SM_GEN_LOCAL_MAX];
 };
 
 /* Interpreter state */
@@ -109,5 +119,10 @@ DESCR_t sm_call_chunk(int entry_pc);
  */
 SmGenState *sm_gen_state_new(int entry_pc);
 int bb_broker_drive_sm(SmGenState *gs, void (*body_fn)(DESCR_t val, void *arg), void *arg);
+
+/* CHUNKS-step14b: the active SmGenState (set by bb_broker_drive_sm around
+ * each sm_interp_run call).  Used by SM_SUSPEND, SM_LOAD_GLOCAL,
+ * SM_STORE_GLOCAL handlers in both sm_interp.c and sm_codegen.c. */
+extern SmGenState *g_current_gen_state;
 
 #endif /* SM_INTERP_H */

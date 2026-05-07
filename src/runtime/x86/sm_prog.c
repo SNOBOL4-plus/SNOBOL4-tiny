@@ -176,7 +176,7 @@ static const char *opnames[SM_OPCODE_COUNT] = {
     "SM_PAT_USERCALL",
     "SM_PAT_USERCALL_ARGS",
     "SM_EXEC_STMT",
-    "SM_BB_PUMP","SM_BB_ONCE","SM_BB_PUMP_PROC","SM_BB_PUMP_CASE",
+    "SM_BB_PUMP","SM_BB_ONCE","SM_BB_PUMP_PROC","SM_BB_PUMP_CASE","SM_BB_PUMP_SM",
     "SM_CALL","SM_RETURN","SM_FRETURN","SM_NRETURN",
     "SM_RETURN_S","SM_RETURN_F","SM_FRETURN_S","SM_FRETURN_F","SM_NRETURN_S","SM_NRETURN_F",
     "SM_DEFINE",
@@ -185,7 +185,7 @@ static const char *opnames[SM_OPCODE_COUNT] = {
     "SM_INCR","SM_DECR","SM_LCOMP","SM_RCOMP","SM_TRIM","SM_ACOMP",
     "SM_SPCINT","SM_SPREAL",
     "SM_PAT_BOXVAL",
-    "SM_SUSPEND","SM_RESUME",
+    "SM_SUSPEND","SM_RESUME","SM_LOAD_GLOCAL","SM_STORE_GLOCAL",
 };
 
 const char *sm_opcode_name(sm_opcode_t op)

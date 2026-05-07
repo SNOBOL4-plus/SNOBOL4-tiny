@@ -137,6 +137,16 @@ typedef enum {
      * or the default if present, or pushes NULVCL.  No EXPR_t is
      * constructed at lowering time and none is walked by this opcode. */
     SM_BB_PUMP_CASE,
+    /* CHUNKS-step15: BB pump for a generator chunk — replaces the legacy
+     * emit_push_expr + SM_BB_PUMP pair for migrated Icon generator kinds
+     * (E_TO, E_TO_BY in CH-15a; later kinds in subsequent rungs).  Pops
+     * a chunk descriptor (DT_E, slen=1, i=entry_pc) from TOS, allocates
+     * an SmGenState rooted at entry_pc, and drives the chunk with
+     * bb_broker_drive_sm(gs, pump_print, NULL) — same statement-context
+     * print semantics as SM_BB_PUMP for un-migrated kinds.  No EXPR_t
+     * is constructed at lowering time and none is walked by this opcode;
+     * the chunk body lowers to pure SM with explicit SM_SUSPEND points. */
+    SM_BB_PUMP_SM,
 
     /* Functions */
     SM_CALL,
@@ -184,6 +194,17 @@ typedef enum {
      *   documentation marker / future hook point for JIT codegen. */
     SM_SUSPEND,
     SM_RESUME,
+
+    /* CHUNKS-step14b: gen-local slot access — read/write SmGenState->locals[N].
+     * a[0].i = slot index (0..SM_GEN_LOCAL_MAX-1).  Only meaningful inside a
+     * generator chunk being driven by bb_broker_drive_sm; outside that
+     * context (g_current_gen_state == NULL) SM_LOAD_GLOCAL pushes FAILDESCR
+     * and SM_STORE_GLOCAL is a no-op (with last_ok cleared).  These slots
+     * survive SUSPEND/RESUME because the SmGenState is the persistent
+     * envelope — they are the per-invocation equivalent of the closure-state
+     * struct that coro_bb_to et al. allocate fresh per coro_eval call. */
+    SM_LOAD_GLOCAL,
+    SM_STORE_GLOCAL,
 
     SM_OPCODE_COUNT
 } sm_opcode_t;

@@ -96,11 +96,12 @@ static void chunks_audit_register(void) {
     atexit(chunks_audit_summary);
 }
 
-/* CHUNKS-step14: pointer to the SmGenState currently being driven by
- * bb_broker_drive_sm.  NULL when not inside a generator drive.  SM_SUSPEND
- * writes the suspended state here and sm_interp_run returns
- * SM_INTERP_SUSPENDED. */
-static SmGenState *g_current_gen_state = NULL;
+/* CHUNKS-step14: pointer to the active SmGenState (the one owned by the
+ * outermost bb_broker_drive_sm tick).  NULL when not inside a generator drive.
+ * SM_SUSPEND writes the suspended state here and sm_interp_run returns
+ * SM_INTERP_SUSPENDED.  Exposed (non-static) since CHUNKS-step14b so the JIT
+ * codegen handlers for SM_LOAD_GLOCAL / SM_STORE_GLOCAL can reach it. */
+SmGenState *g_current_gen_state = NULL;
 
 /* OE-10: body_fn for BB_PUMP — print each generated Icon value to stdout */
 static void pump_print(DESCR_t val, void *arg) {
@@ -863,6 +864,34 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
             break;
         }
 
+        /* CHUNKS-step15: BB pump for an SM generator chunk — replaces the
+         * legacy emit_push_expr + SM_BB_PUMP pair for migrated Icon
+         * generator kinds (CH-15a: E_TO, E_TO_BY).  Pops chunk descriptor
+         * (DT_E, slen=1, .i = entry_pc) from TOS, allocates an SmGenState
+         * rooted at that entry_pc, and drives the chunk via
+         * bb_broker_drive_sm with the same pump_print body that
+         * SM_BB_PUMP uses — preserving Icon's statement-context
+         * "every yielded value is printed" semantics.  No EXPR_t walk
+         * anywhere on this path: the chunk body is pure SM with explicit
+         * SM_SUSPEND yield points. */
+        case SM_BB_PUMP_SM: {
+            DESCR_t d = sm_pop(st);
+            if (d.v != DT_E || d.slen != 1) {
+                /* Not a chunk descriptor — treat as failed pump */
+                st->last_ok = 0;
+                break;
+            }
+            int entry_pc = (int)d.i;
+            if (entry_pc < 0 || entry_pc >= prog->count) {
+                st->last_ok = 0;
+                break;
+            }
+            SmGenState *gs = sm_gen_state_new(entry_pc);
+            int ticks = bb_broker_drive_sm(gs, pump_print, NULL);
+            st->last_ok = (ticks > 0);
+            break;
+        }
+
         /* ── Functions (stubs — wired in U3) ───────────────────────── */
 
         case SM_CALL: {
@@ -1261,6 +1290,39 @@ int sm_interp_run(SM_Program *prog, SM_State *st)
          * time SM_RESUME would execute on re-entry, pc is already past it. */
         case SM_RESUME:
             break;
+
+        /* CHUNKS-step14b: SM_LOAD_GLOCAL — push gen-local slot N onto value stack.
+         * Only meaningful inside a generator chunk driven by bb_broker_drive_sm.
+         * Outside that context, push FAILDESCR and clear last_ok so callers
+         * see the slot as unavailable (mirrors SM_PUSH_VAR's FAIL handling). */
+        case SM_LOAD_GLOCAL: {
+            int slot = (int)ins->a[0].i;
+            if (g_current_gen_state && slot >= 0 && slot < SM_GEN_LOCAL_MAX) {
+                sm_push(st, g_current_gen_state->locals[slot]);
+                st->last_ok = 1;
+            } else {
+                sm_push(st, FAILDESCR);
+                st->last_ok = 0;
+            }
+            break;
+        }
+
+        /* CHUNKS-step14b: SM_STORE_GLOCAL — pop TOS into gen-local slot N.
+         * The value is preserved on the stack (mirrors SM_STORE_VAR's
+         * push-back-the-value semantics) so chained stores compose. */
+        case SM_STORE_GLOCAL: {
+            int slot = (int)ins->a[0].i;
+            DESCR_t v = sm_pop(st);
+            if (g_current_gen_state && slot >= 0 && slot < SM_GEN_LOCAL_MAX) {
+                g_current_gen_state->locals[slot] = v;
+                sm_push(st, v);
+                st->last_ok = 1;
+            } else {
+                sm_push(st, FAILDESCR);
+                st->last_ok = 0;
+            }
+            break;
+        }
 
         default:
             fprintf(stderr, "sm_interp: unhandled opcode %d (%s) at pc=%d\n",

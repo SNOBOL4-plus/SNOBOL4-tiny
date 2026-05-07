@@ -305,6 +305,102 @@ static void test_generator_suspend_resume(void)
     sm_prog_free(p);
 }
 
+/* CHUNKS-step14b: gen-local slot survival across SUSPEND.
+ * Build a chunk that initializes locals[0]=100, yields, then on each resume
+ * loads locals[0], increments, stores back, yields.  Three yields expected:
+ * 100, 101, 102.  Proves the locals[] array in SmGenState survives across
+ * SUSPEND/RESUME boundaries — the foundation for E_TO/E_TO_BY in CHUNKS-step15a. */
+static void test_gen_locals_survive_suspend(void)
+{
+    printf("--- test_gen_locals_survive_suspend ---\n");
+    nv_reset();
+    gen_count = 0;
+
+    SM_Program *p = sm_prog_new();
+    sm_emit(p, SM_RESUME);              /* landing pad */
+    sm_emit_i(p, SM_PUSH_LIT_I, 100);
+    sm_emit_i(p, SM_STORE_GLOCAL, 0);   /* locals[0] = 100; leaves 100 on TOS */
+    sm_emit(p, SM_SUSPEND);             /* yield 100 */
+
+    sm_emit_i(p, SM_LOAD_GLOCAL, 0);
+    sm_emit_i(p, SM_INCR, 1);
+    sm_emit_i(p, SM_STORE_GLOCAL, 0);   /* locals[0] = 101 */
+    sm_emit(p, SM_SUSPEND);             /* yield 101 */
+
+    sm_emit_i(p, SM_LOAD_GLOCAL, 0);
+    sm_emit_i(p, SM_INCR, 1);
+    sm_emit_i(p, SM_STORE_GLOCAL, 0);   /* locals[0] = 102 */
+    sm_emit(p, SM_SUSPEND);             /* yield 102 */
+
+    sm_emit(p, SM_RETURN);
+
+    SM_Program *saved_prog = g_current_sm_prog;
+    g_current_sm_prog = p;
+
+    SmGenState *gs    = sm_gen_state_new(0);
+    int         ticks = bb_broker_drive_sm(gs, collect_gen_val, NULL);
+
+    g_current_sm_prog = saved_prog;
+
+    CHECK(ticks == 3, "gen-locals: tick count == 3");
+    CHECK(gen_count == 3, "gen-locals: body_fn called 3 times");
+    CHECK(gen_collected[0] == 100, "gen-locals: first yield == 100");
+    CHECK(gen_collected[1] == 101, "gen-locals: second yield == 101 (locals survived)");
+    CHECK(gen_collected[2] == 102, "gen-locals: third yield == 102 (locals survived twice)");
+
+    sm_prog_free(p);
+}
+
+/* CHUNKS-step14b: gen-locals are private to each SmGenState invocation.
+ * Two independent generators using locals[0] must not interfere — even
+ * when they share the same entry_pc.  Drive gen_a fully, then drive
+ * gen_b fully on the same chunk; each must see its own private 100/101/102.
+ * (Sequential, not concurrent — but both allocate their own SmGenState.) */
+static void test_gen_locals_isolated_per_invocation(void)
+{
+    printf("--- test_gen_locals_isolated_per_invocation ---\n");
+    nv_reset();
+
+    SM_Program *p = sm_prog_new();
+    sm_emit(p, SM_RESUME);
+    sm_emit_i(p, SM_PUSH_LIT_I, 100);
+    sm_emit_i(p, SM_STORE_GLOCAL, 0);
+    sm_emit(p, SM_SUSPEND);
+    sm_emit_i(p, SM_LOAD_GLOCAL, 0);
+    sm_emit_i(p, SM_INCR, 1);
+    sm_emit_i(p, SM_STORE_GLOCAL, 0);
+    sm_emit(p, SM_SUSPEND);
+    sm_emit(p, SM_RETURN);
+
+    SM_Program *saved_prog = g_current_sm_prog;
+    g_current_sm_prog = p;
+
+    /* First invocation */
+    gen_count = 0;
+    SmGenState *gs_a = sm_gen_state_new(0);
+    int ticks_a = bb_broker_drive_sm(gs_a, collect_gen_val, NULL);
+    int64_t a_first  = gen_collected[0];
+    int64_t a_second = gen_collected[1];
+
+    /* Second invocation — fresh SmGenState, same chunk */
+    gen_count = 0;
+    SmGenState *gs_b = sm_gen_state_new(0);
+    int ticks_b = bb_broker_drive_sm(gs_b, collect_gen_val, NULL);
+    int64_t b_first  = gen_collected[0];
+    int64_t b_second = gen_collected[1];
+
+    g_current_sm_prog = saved_prog;
+
+    CHECK(ticks_a == 2, "gen-isolation: first invocation ticks == 2");
+    CHECK(ticks_b == 2, "gen-isolation: second invocation ticks == 2");
+    CHECK(a_first == 100,  "gen-isolation: a yields 100");
+    CHECK(a_second == 101, "gen-isolation: a yields 101");
+    CHECK(b_first == 100,  "gen-isolation: b also yields 100 (locals are fresh)");
+    CHECK(b_second == 101, "gen-isolation: b also yields 101");
+
+    sm_prog_free(p);
+}
+
 /* ── main ────────────────────────────────────────────────────────────── */
 
 int main(void)
@@ -318,6 +414,8 @@ int main(void)
     test_concat();
     test_incr_decr();
     test_generator_suspend_resume();
+    test_gen_locals_survive_suspend();
+    test_gen_locals_isolated_per_invocation();
 
     if (failures == 0)
         printf("\nAll tests PASSED.\n");
