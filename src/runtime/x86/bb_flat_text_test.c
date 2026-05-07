@@ -120,10 +120,17 @@ int main(int argc, char **argv) {
           "_pat_inv_42_0_omega definition missing");
 
     /* ── 5. Verify readable-mnemonic emission (EM-7b'': no .byte walls) ── */
-    CHECK(strstr(buf, "mov     r10,") != NULL,
-          "expected 'mov r10,' mnemonic (ev_load_r10_delta_ptr) not found");
+    /* EM-7c-symbolic: r10 now loaded via 'lea r10, [rip + Δ]' (symbolic). */
+    CHECK(strstr(buf, "lea     r10, [rip + ") != NULL,
+          "expected 'lea r10, [rip + Δ]' mnemonic (EM-7c-symbolic) not found");
     CHECK(strstr(buf, ".byte") == NULL,
           "unexpected .byte directive in TEXT output (should be mnemonics)");
+
+    /* ── 5b. EM-7c-symbolic: PLT call to memcmp + symbolic Σlen ref ── */
+    CHECK(strstr(buf, "memcmp@PLT") != NULL,
+          "expected 'call memcmp@PLT' (EM-7c-symbolic) not found");
+    CHECK(strstr(buf, "[rip + ") != NULL,
+          "expected at least one [rip + sym] reference (EM-7c-symbolic) not found");
 
     /* ── 6. Build a fully-invariant ALT pattern (pure literal alt) ── */
     /* Skip this in EM-7b; pat_lit single-leaf is sufficient.  EM-7c

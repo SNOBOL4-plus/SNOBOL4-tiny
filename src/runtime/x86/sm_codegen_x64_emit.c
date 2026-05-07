@@ -219,6 +219,19 @@ static void strtab_label(char *buf, size_t bufsz, const char *s)
     snprintf(buf, bufsz, ".Lstr_ERR");
 }
 
+/* EM-7c-symbolic: intern_str callback installed on text emitters so that
+ * bb_flat.c can route literal strings through the SM-side .Lstr_N strtab.
+ * Uses a static buffer — safe because callers only need the label momentarily
+ * to build a bb_insn_desc_t.sym before emit_insn consumes it. */
+static char g_intern_str_buf[64];
+static const char *codegen_intern_str(emitter_v *unused, const char *s)
+{
+    (void)unused;
+    if (s) strtab_intern(s);          /* ensure entry exists */
+    strtab_label(g_intern_str_buf, sizeof(g_intern_str_buf), s ? s : "");
+    return g_intern_str_buf;
+}
+
 /* Escape a C string for GNU-as .string directive.
  * Only escapes \, ", and control chars that matter. */
 static void strtab_escape(char *out, size_t outsz, const char *s)
@@ -1420,6 +1433,7 @@ static int emit_pattern_blobs(FILE *out)
 
     /* Reset internal label counters at the start of this emit run.
      * Within the run, IDs accumulate across patterns (no collisions). */
+    bb_flat_set_intern_str(codegen_intern_str);  /* EM-7c-symbolic: route lits through strtab */
     bb_build_flat_text_reset();
 
     if (fputs(

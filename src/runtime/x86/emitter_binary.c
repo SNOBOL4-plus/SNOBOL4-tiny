@@ -71,6 +71,13 @@ static void binary_emit_insn(emitter_v *e, const bb_insn_desc_t *d)
     /* control */
     case BB_INSN_RET:      b1(0xC3); break;
     case BB_INSN_CALL_RAX: b2(0xFF,0xD0); break;
+    /* EM-7c-symbolic: in BINARY mode, fall back to imm64 (in-process JIT) */
+    /* LEA_RCX_SYM → mov rcx, imm64 */
+    case BB_INSN_LEA_RCX_SYM:  b2(0x48,0xB9); imm64(a0); break;
+    /* CALL_SYM_PLT → mov rax, imm64; call rax */
+    case BB_INSN_CALL_SYM_PLT: b2(0x48,0xB8); imm64(a0); b2(0xFF,0xD0); break;
+    /* LEA_R10_SYM → mov r10, imm64 (binary: movabs r10, addr) */
+    case BB_INSN_LEA_R10_SYM:  b2(0x49,0xBA); imm64(a0); break;
     }
 }
 
@@ -109,6 +116,8 @@ static const emitter_v binary_tmpl = {
     .global_sym   = binary_global_sym,
     .fprintf_raw  = binary_fprintf_raw,
     .pos          = binary_pos,
+    .intern_str   = NULL,
+    .is_text      = 0,
     .ctx          = NULL,
 };
 

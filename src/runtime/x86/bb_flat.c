@@ -28,11 +28,25 @@
 static int g_flat_node_id   = 0;
 static int g_flat_slot_count = 0;
 
-/* ── address constants baked at emit time ────────────────────────────────── */
-/* Passed into ev_ helpers so bb_flat.c never touches a byte encoding. */
+/* ── address constants — EM-7c-symbolic ──────────────────────────────────── */
+/* Symbol names for globals exported by libscrip_rt.so.                      */
+/* TEXT mode: ev_lea_rcx_sym emits  lea rcx, [rip + sym]                     */
+/* BINARY mode: ev_lea_rcx_sym emits mov rcx, imm64  (process-address)       */
+#define SYM_SIGMA   "\xCE\xA3"          /* UTF-8: Σ */
+#define SYM_SIGLEN  "\xCE\xA3""len"     /* UTF-8: Σlen */
+#define SYM_DELTA   "\xCE\x94"          /* UTF-8: Δ */
 #define ADDR_SIGMA   ((uint64_t)(uintptr_t)&Σ)
 #define ADDR_SIGLEN  ((uint64_t)(uintptr_t)&Σlen)
 #define ADDR_DELTA   ((uint64_t)(uintptr_t)&Δ)
+
+/* ── intern_str hook — set by sm_codegen_x64_emit before calling bb_build_flat_text */
+/* NULL = no strtab available (BINARY mode or standalone use).               */
+static const char *(*g_flat_intern_str)(emitter_v *e, const char *s) = NULL;
+
+void bb_flat_set_intern_str(const char *(*fn)(emitter_v *, const char *))
+{
+    g_flat_intern_str = fn;
+}
 
 /* ── forward declarations ────────────────────────────────────────────────── */
 static void flat_emit_node(emitter_v *e, PATND_t *p,
@@ -131,21 +145,30 @@ static void flat_emit_lit(emitter_v *e, const char *lit, int len,
     ev_cmp_eax_siglen(e, ADDR_SIGLEN);                  /* cmp eax, [Σlen] */
     EV_JMP(e, lbl_fail, JMP_JG);
 
-    /* memcmp(Σ+Δ, lit, len): set up rdi=Σ+Δ, rsi=lit, rdx=len, call memcmp */
+    /* memcmp(Σ+Δ, lit, len): set up rdi=Σ+Δ, rsi=lit, rdx=len */
     ev_sigma_plus_delta(e, ADDR_SIGMA);                 /* rax = Σ+Δ */
     ev_mov_rdi_rax(e);                                  /* rdi = Σ+Δ */
-    ev_mov_rax_imm64(e, (uint64_t)(uintptr_t)lit);      /* rax = &lit */
-    /* rsi = rax (lit ptr) — use mov rsi via rax */
-    /* Note: rsi is arg2; use mov rdx for len, mov rdi done, now rsi=lit */
-    /* We route lit ptr through rax → rsi via the RSI_IMM64 helper */
     ev_mov_rdx_imm64(e, (uint64_t)(uint32_t)len);       /* rdx = len */
-    /* rsi = lit — load via rax already set, use imm64 directly */
-    {   /* rsi = lit ptr */
-        bb_insn_desc_t d = {BB_INSN_MOV_RSI_IMM64, (uint64_t)(uintptr_t)lit, 0, 0};
+
+    /* rsi = lit ptr: TEXT mode → use strtab label; BINARY → raw ptr */
+    if (e->is_text && e->intern_str) {
+        const char *lbl = e->intern_str(e, lit);        /* e.g. ".Lstr_N" */
+        bb_insn_desc_t d = {BB_INSN_LEA_RCX_SYM, (uint64_t)(uintptr_t)lit, 0, 0, lbl};
+        e->emit_insn(e, &d);                            /* lea rcx, [rip + .Lstr_N] */
+        /* mov rsi, rcx — route through rcx since we have no LEA_RSI_SYM */
+        { bb_insn_desc_t d2 = {BB_INSN_MOV_RSI_IMM64, 0, 0, 0, NULL};
+          /* TEXT: emit "mov rsi, rcx" — but we lack MOV_RSI_RCX insn.
+           * Use fprintf_raw for this one-off: */
+          e->fprintf_raw(e, "    mov     rsi, rcx\n");
+        }
+    } else {
+        /* BINARY / no-strtab: bake raw pointer (in-process mode-3 valid) */
+        bb_insn_desc_t d = {BB_INSN_MOV_RSI_IMM64, (uint64_t)(uintptr_t)lit, 0, 0, NULL};
         e->emit_insn(e, &d);
     }
-    ev_mov_rax_imm64(e, (uint64_t)(uintptr_t)memcmp);  /* rax = &memcmp */
-    ev_call_rax(e);                                     /* call memcmp */
+
+    /* call memcmp — TEXT: call memcmp@PLT; BINARY: mov rax, ptr; call rax */
+    ev_call_sym_plt(e, "memcmp", (uint64_t)(uintptr_t)memcmp);
     ev_test_eax_eax(e);                                 /* test eax, eax */
     EV_JMP(e, lbl_fail, JMP_JNE);
 
@@ -203,6 +226,7 @@ static void flat_emit_rpos(emitter_v *e, int n, bb_label_t *lbl_succ,
 
 /* ── leaf: charset (ANY/NOTANY/SPAN/BRK) ───────────────────────────────── */
 static void flat_emit_charset_call(emitter_v *e, bb_box_fn c_fn,
+                                   const char *c_fn_name,
                                    const char *chars,
                                    bb_label_t *lbl_succ, bb_label_t *lbl_fail,
                                    bb_label_t *lbl_beta)
@@ -214,8 +238,7 @@ static void flat_emit_charset_call(emitter_v *e, bb_box_fn c_fn,
     /* α: call c_fn(z, 0) */
     ev_mov_rdi_imm64(e, (uint64_t)(uintptr_t)z);
     ev_mov_esi_imm32(e, 0);
-    ev_mov_rax_imm64(e, (uint64_t)(uintptr_t)c_fn);
-    ev_call_rax(e);
+    ev_call_sym_plt(e, c_fn_name, (uint64_t)(uintptr_t)c_fn);
     ev_test_rax_rax(e);
     EV_JMP(e, lbl_succ, JMP_JNE);
     EV_JMP(e, lbl_fail, JMP_JMP);
@@ -224,8 +247,7 @@ static void flat_emit_charset_call(emitter_v *e, bb_box_fn c_fn,
     EV_LABEL(e, lbl_beta);
     ev_mov_rdi_imm64(e, (uint64_t)(uintptr_t)z);
     ev_mov_esi_imm32(e, 1);
-    ev_mov_rax_imm64(e, (uint64_t)(uintptr_t)c_fn);
-    ev_call_rax(e);
+    ev_call_sym_plt(e, c_fn_name, (uint64_t)(uintptr_t)c_fn);
     ev_test_rax_rax(e);
     EV_JMP(e, lbl_succ, JMP_JNE);
     EV_JMP(e, lbl_fail, JMP_JMP);
@@ -256,10 +278,10 @@ static void flat_emit_node(emitter_v *e, PATND_t *p,
     case XRPSI: flat_emit_rpos(e, (int)p->num, lbl_succ, lbl_fail, lbl_beta); break;
     case XCAT:  flat_emit_xcat(e, p, lbl_succ, lbl_fail, lbl_beta); break;
     case XOR:   flat_emit_alt (e, p, lbl_succ, lbl_fail, lbl_beta); break;
-    case XSPNC: flat_emit_charset_call(e, bb_span,   p->STRVAL_fn?p->STRVAL_fn:"", lbl_succ, lbl_fail, lbl_beta); break;
-    case XANYC: flat_emit_charset_call(e, bb_any,    p->STRVAL_fn?p->STRVAL_fn:"", lbl_succ, lbl_fail, lbl_beta); break;
-    case XBRKC: flat_emit_charset_call(e, bb_brk,    p->STRVAL_fn?p->STRVAL_fn:"", lbl_succ, lbl_fail, lbl_beta); break;
-    case XNNYC: flat_emit_charset_call(e, bb_notany, p->STRVAL_fn?p->STRVAL_fn:"", lbl_succ, lbl_fail, lbl_beta); break;
+    case XSPNC: flat_emit_charset_call(e, bb_span,   "bb_span",    p->STRVAL_fn?p->STRVAL_fn:"", lbl_succ, lbl_fail, lbl_beta); break;
+    case XANYC: flat_emit_charset_call(e, bb_any,    "bb_any",     p->STRVAL_fn?p->STRVAL_fn:"", lbl_succ, lbl_fail, lbl_beta); break;
+    case XBRKC: flat_emit_charset_call(e, bb_brk,    "bb_brk",     p->STRVAL_fn?p->STRVAL_fn:"", lbl_succ, lbl_fail, lbl_beta); break;
+    case XNNYC: flat_emit_charset_call(e, bb_notany, "bb_notany",  p->STRVAL_fn?p->STRVAL_fn:"", lbl_succ, lbl_fail, lbl_beta); break;
     default:
         EV_LABEL(e, lbl_beta);
         EV_JMP(e, lbl_fail, JMP_JMP);
@@ -305,8 +327,12 @@ static int flat_emit_body_v(emitter_v *e, PATND_t *p,
         EV_GLOBAL(e, lbl_fail.name);
     }
 
-    /* entry: r10 = &Δ; cmp esi, 0; je alpha (α path); else jmp beta */
-    ev_load_r10_delta_ptr(e, ADDR_DELTA);
+    /* entry: r10 = &Δ; cmp esi, 0; je alpha (α path); else jmp beta
+     * TEXT:   lea r10, [rip + Δ]   (via BB_INSN_LEA_R10_SYM)
+     * BINARY: mov r10, imm64       (via ev_load_r10_delta_ptr)           */
+    {   bb_insn_desc_t d = {BB_INSN_LEA_R10_SYM, ADDR_DELTA, 0, 0, SYM_DELTA};
+        e->emit_insn(e, &d);
+    }
     ev_cmp_esi_imm8(e, 0);
     EV_JMP(e, &lbl_alpha, JMP_JE);
     EV_JMP(e, &lbl_beta,  JMP_JMP);
@@ -357,6 +383,7 @@ int bb_build_flat_text(PATND_t *p, FILE *out, const char *prefix)
      * Use bb_build_flat_text_reset() between unrelated emit runs. */
     emitter_v *e = emitter_text_new(out);
     if (!e) return -1;
+    e->intern_str = g_flat_intern_str;  /* wire strtab callback if set */
     int rc = flat_emit_body_v(e, p, prefix, 1);
     emitter_end(e);
     emitter_free(e);

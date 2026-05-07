@@ -76,13 +76,24 @@ typedef enum {
     BB_INSN_XOR_EDX_EDX,      /* xor edx, edx          31 D2 */
     BB_INSN_RET,               /* ret                   C3 */
     BB_INSN_CALL_RAX,          /* call rax              FF D0 */
+    /* ── symbolic kinds (EM-7c-symbolic) ──────────────────────────────────── */
+    /* TEXT:   lea rcx, [rip + sym]   (RIP-relative GOT/data reference)      */
+    /* BINARY: mov rcx, a0            (imm64 process-address fallback)        */
+    BB_INSN_LEA_RCX_SYM,
+    /* TEXT:   lea r10, [rip + sym]   (RIP-relative, used for &Δ at entry)   */
+    /* BINARY: mov r10, a0            (imm64 process-address fallback)        */
+    BB_INSN_LEA_R10_SYM,
+    /* TEXT:   call sym@PLT           (PLT-indirect function call)            */
+    /* BINARY: mov rax, a0; call rax  (imm64 + indirect-call fallback)        */
+    BB_INSN_CALL_SYM_PLT,
 } bb_insn_kind_t;
 
 typedef struct {
     bb_insn_kind_t kind;
-    uint64_t       a0;   /* imm64 / address */
+    uint64_t       a0;   /* imm64 / address (BINARY fallback for SYM kinds) */
     uint32_t       a1;   /* imm32 */
     uint8_t        a2;   /* imm8 */
+    const char    *sym;  /* symbol name for BB_INSN_LEA_RCX_SYM / BB_INSN_CALL_SYM_PLT */
 } bb_insn_desc_t;
 
 /* ── vtable ───────────────────────────────────────────────────────────────── */
@@ -128,6 +139,19 @@ struct emitter_v {
      */
     int (*pos)(emitter_v *e);
 
+    /*
+     * intern_str — register a literal string and return its asm label.
+     *   TEXT:   adds the string to the .rodata strtab; returns ".Lstr_N".
+     *   BINARY: no-op; returns NULL (caller uses raw pointer for in-process).
+     * May be NULL if the emitter does not support string interning.
+     */
+    const char *(*intern_str)(emitter_v *e, const char *s);
+
+    /* is_text — 1 if this is a TEXT emitter, 0 if BINARY.
+     * Callers that need to know the mode at the call site use this flag
+     * rather than comparing function pointers. */
+    int is_text;
+
     void *ctx;
 };
 
@@ -152,16 +176,40 @@ int        emitter_end       (emitter_v *e);
  */
 
 static inline void ev_insn0(emitter_v *e, bb_insn_kind_t k)
-{ bb_insn_desc_t d = {k,0,0,0}; e->emit_insn(e,&d); }
+{ bb_insn_desc_t d = {k,0,0,0,NULL}; e->emit_insn(e,&d); }
 
 static inline void ev_insn_a0(emitter_v *e, bb_insn_kind_t k, uint64_t a0)
-{ bb_insn_desc_t d = {k,a0,0,0}; e->emit_insn(e,&d); }
+{ bb_insn_desc_t d = {k,a0,0,0,NULL}; e->emit_insn(e,&d); }
 
 static inline void ev_insn_a1(emitter_v *e, bb_insn_kind_t k, uint32_t a1)
-{ bb_insn_desc_t d = {k,0,a1,0}; e->emit_insn(e,&d); }
+{ bb_insn_desc_t d = {k,0,a1,0,NULL}; e->emit_insn(e,&d); }
 
 static inline void ev_insn_a2(emitter_v *e, bb_insn_kind_t k, uint8_t a2)
-{ bb_insn_desc_t d = {k,0,0,a2}; e->emit_insn(e,&d); }
+{ bb_insn_desc_t d = {k,0,0,a2,NULL}; e->emit_insn(e,&d); }
+
+
+/* ── EM-7c-symbolic: symbolic load/call helpers ───────────────────────────── */
+/*
+ * ev_lea_rcx_sym — load address of a named symbol into rcx.
+ *   TEXT:   lea rcx, [rip + sym]
+ *   BINARY: mov rcx, imm64  (imm64 = process address for in-process JIT)
+ */
+static inline void ev_lea_rcx_sym(emitter_v *e, const char *sym, uint64_t addr_fallback)
+{
+    bb_insn_desc_t d = {BB_INSN_LEA_RCX_SYM, addr_fallback, 0, 0, sym};
+    e->emit_insn(e, &d);
+}
+
+/*
+ * ev_call_sym_plt — call a named function via PLT.
+ *   TEXT:   call sym@PLT
+ *   BINARY: mov rax, imm64; call rax  (imm64 = function pointer for in-process JIT)
+ */
+static inline void ev_call_sym_plt(emitter_v *e, const char *sym, uint64_t fn_fallback)
+{
+    bb_insn_desc_t d = {BB_INSN_CALL_SYM_PLT, fn_fallback, 0, 0, sym};
+    e->emit_insn(e, &d);
+}
 
 /* r10 = &Δ */
 static inline void ev_load_r10_delta_ptr(emitter_v *e, uint64_t addr)
@@ -177,14 +225,14 @@ static inline void ev_store_delta(emitter_v *e)
 
 /* rcx = imm64; rax = [rcx]  (load Σ ptr) */
 static inline void ev_load_sigma(emitter_v *e, uint64_t sigma_addr) {
-    ev_insn_a0(e, BB_INSN_MOV_RCX_IMM64,  sigma_addr);
-    ev_insn0  (e, BB_INSN_MOV_RAX_RCXMEM);
+    ev_lea_rcx_sym(e, "\xCE\xA3", sigma_addr);      /* lea/mov rcx, &Σ */
+    ev_insn0      (e, BB_INSN_MOV_RAX_RCXMEM);      /* rax = [rcx] = Σ */
 }
 
 /* rcx = imm64; eax = [rcx]  (load Σlen) */
 static inline void ev_load_siglen(emitter_v *e, uint64_t siglen_addr) {
-    ev_insn_a0(e, BB_INSN_MOV_RCX_IMM64,  siglen_addr);
-    ev_insn0  (e, BB_INSN_MOV_EAX_RCXMEM);
+    ev_lea_rcx_sym(e, "\xCE\xA3""len", siglen_addr); /* lea/mov rcx, &Σlen */
+    ev_insn0      (e, BB_INSN_MOV_EAX_RCXMEM);       /* eax = [rcx] = Σlen */
 }
 
 /* rax = Σ+Δ  (Σ ptr + cursor) */
@@ -196,7 +244,11 @@ static inline void ev_sigma_plus_delta(emitter_v *e,
     ev_insn0(e, BB_INSN_LEA_RAX_RAXRCX);       /* rax = rax+rcx */
 }
 
-/* eax = Δ + v; store back */
+/* cmp eax, [rcx] where rcx=siglen_addr */
+static inline void ev_cmp_eax_siglen(emitter_v *e, uint64_t siglen_addr) {
+    ev_lea_rcx_sym(e, "\xCE\xA3""len", siglen_addr); /* lea/mov rcx, &Σlen */
+    ev_insn0      (e, BB_INSN_CMP_EAX_RCXMEM);
+}
 static inline void ev_add_delta_imm(emitter_v *e, int32_t v) {
     ev_load_delta(e);
     ev_insn_a1(e, BB_INSN_ADD_EAX_IMM32, (uint32_t)v);
@@ -213,12 +265,6 @@ static inline void ev_sub_delta_imm(emitter_v *e, int32_t v) {
 /* eax += imm32 */
 static inline void ev_add_eax_imm32(emitter_v *e, uint32_t v)
 { ev_insn_a1(e, BB_INSN_ADD_EAX_IMM32, v); }
-
-/* cmp eax, [rcx] where rcx=siglen_addr */
-static inline void ev_cmp_eax_siglen(emitter_v *e, uint64_t siglen_addr) {
-    ev_insn_a0(e, BB_INSN_MOV_RCX_IMM64,  siglen_addr);
-    ev_insn0  (e, BB_INSN_CMP_EAX_RCXMEM);
-}
 
 static inline void ev_mov_rax_imm64(emitter_v *e, uint64_t v)
 { ev_insn_a0(e, BB_INSN_MOV_RAX_IMM64, v); }
@@ -253,5 +299,6 @@ static inline void ev_test_rax_rax(emitter_v *e) { ev_insn0(e, BB_INSN_TEST_RAX_
 static inline void ev_xor_edx_edx(emitter_v *e)  { ev_insn0(e, BB_INSN_XOR_EDX_EDX); }
 static inline void ev_ret(emitter_v *e)           { ev_insn0(e, BB_INSN_RET); }
 static inline void ev_call_rax(emitter_v *e)      { ev_insn0(e, BB_INSN_CALL_RAX); }
+
 
 #endif /* EMITTER_V_H */

@@ -61,6 +61,17 @@ static void text_emit_insn(emitter_v *e, const bb_insn_desc_t *d)
     /* control */
     case BB_INSN_RET:      fprintf(f,"    ret\n"); CTX(e)->pos+=1; break;
     case BB_INSN_CALL_RAX: fprintf(f,"    call    rax\n"); CTX(e)->pos+=2; break;
+    /* EM-7c-symbolic: RIP-relative symbol load and PLT call */
+    case BB_INSN_LEA_RCX_SYM:
+        fprintf(f,"    lea     rcx, [rip + %s]\n", d->sym ? d->sym : "??sym??");
+        CTX(e)->pos += 7; break;
+    case BB_INSN_CALL_SYM_PLT:
+        fprintf(f,"    call    %s@PLT\n", d->sym ? d->sym : "??sym??");
+        CTX(e)->pos += 5; break;
+    /* BB_INSN_LEA_R10_SYM: lea r10, [rip + sym]  (7 bytes) */
+    case BB_INSN_LEA_R10_SYM:
+        fprintf(f,"    lea     r10, [rip + %s]\n", d->sym ? d->sym : "??sym??");
+        CTX(e)->pos += 7; break;
     }
 }
 
@@ -96,6 +107,8 @@ static const emitter_v text_tmpl = {
     .global_sym   = text_global_sym,
     .fprintf_raw  = text_fprintf_raw,
     .pos          = text_pos,
+    .intern_str   = NULL,   /* set by bb_build_flat_text when strtab is available */
+    .is_text      = 1,
     .ctx          = NULL,
 };
 

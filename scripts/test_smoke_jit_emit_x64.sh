@@ -282,7 +282,7 @@ fi
 # Run the unit test (writes .s, verifies labels, checks 15 internal asserts)
 "$FLAT_TEXT_TEST" "$TMP/em7b.s" 2> "$TMP/em7b.err" || {
     echo "FAIL EM-7b unit test"; cat "$TMP/em7b.err"; exit 1; }
-grep -q "^PASS=16 FAIL=0" "$TMP/em7b.err" || {
+grep -q "^PASS=18 FAIL=0" "$TMP/em7b.err" || {
     echo "FAIL EM-7b internal pass count"; cat "$TMP/em7b.err"; exit 1; }
 # Independently verify the .s assembles cleanly and produces the four
 # externally-visible α/β/γ/ω globals.
